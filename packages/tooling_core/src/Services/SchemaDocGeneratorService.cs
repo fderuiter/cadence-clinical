@@ -161,14 +161,18 @@ public static class SchemaDocGeneratorService
 
     private static bool RunExporter(string repoRoot, string exportDir)
     {
-        var psi = new ProcessStartInfo("dotnet")
+        var invocation = ExporterBinaryResolver.ResolveInvocation(
+            repoRoot,
+            ExporterProject,
+            ["--output-dir", exportDir]);
+        var psi = new ProcessStartInfo(invocation.FileName)
         {
             WorkingDirectory = repoRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        foreach (string arg in new[] { "run", "--project", ExporterProject, "--", "--output-dir", exportDir })
+        foreach (string arg in invocation.Arguments)
         {
             psi.ArgumentList.Add(arg);
         }
@@ -176,7 +180,7 @@ public static class SchemaDocGeneratorService
         using var process = Process.Start(psi);
         if (process == null)
         {
-            Console.WriteLine("[ERROR] Could not start 'dotnet run' for the schema documentation exporter.");
+            Console.WriteLine("[ERROR] Could not start 'dotnet' for the schema documentation exporter.");
             return false;
         }
 

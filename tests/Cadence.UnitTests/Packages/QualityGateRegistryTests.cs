@@ -636,6 +636,28 @@ public sealed class QualityGateRegistryTests : IDisposable
             .Should().BeTrue("push-scoped CI runs skip merge-readiness cleanly");
     }
 
+    [Fact]
+    public void DotnetFormatGate_UnscopedFolderMode_SkipsExcludedDirectoriesWithoutSolutionAndFailsOnBadSource()
+    {
+        var gate = QualityGates.Find("dotnet-format")!;
+        Write(".editorconfig", "root = true\n[*.cs]\nindent_style = space\nindent_size = 4\n");
+        Write("apps/tickets/src/Clean.cs", "namespace Tickets;\n\npublic static class Clean\n{\n    public static int Value => 1;\n}\n");
+
+        const string malformed = "namespace Ignored;\n\npublic static class Bad\n{\n        public static int Value => 1;\n}\n";
+        Write("apps/tickets/src/obj/Debug/net10.0/Generated.g.cs", malformed);
+        Write("apps/tickets/src/bin/Debug/net10.0/Generated.cs", malformed);
+        Write(".cadence/cli-artifacts/Generated.cs", malformed);
+        Write("apps/web/node_modules/pkg/Generated.cs", malformed);
+
+        File.Exists(Path.Combine(_root, "Cadence.sln")).Should().BeFalse();
+        gate.Run(Context()).Should().BeTrue(
+            "unscoped dotnet-format must run in folder mode without Cadence.sln and ignore excluded build/tool directories");
+
+        Write("apps/tickets/src/Malformed.cs", malformed);
+        gate.Run(Context()).Should().BeFalse(
+            "unscoped folder-mode dotnet-format must fail when a non-excluded C# source file violates .editorconfig whitespace");
+    }
+
     private GateContext Context(string[]? files = null, bool preCommit = false, string? baseRef = null, string? pushBefore = null) =>
         new(_root, files, preCommit, BaseRef: baseRef, PushBefore: pushBefore);
 

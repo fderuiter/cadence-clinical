@@ -9,8 +9,8 @@ public static class PreCommitOpenApiService
 {
     private const string OpenApiExporterProject = "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj";
     /// <summary>
-    /// The <c>openapi</c> gate. When staged C# files exist, exports specs for affected services.
-    /// When no C# files are staged, skips service host startup for sub-second execution.
+    /// The <c>openapi</c> gate. When <paramref name="targetFiles"/> is provided or <paramref name="quick"/> is <c>true</c>,
+    /// exports specs only for affected services and skips service host startup when no C# backend contracts are touched.
     /// </summary>
     public static int ExecutePreCommitOpenApi(
         string? repoRoot = null,
@@ -20,17 +20,8 @@ public static class PreCommitOpenApiService
     {
         repoRoot ??= FindRepoRoot();
 
-        if (!quick)
+        if (!quick && targetFiles is null)
         {
-            if (targetFiles is not null)
-            {
-                var explicitList = targetFiles.ToList();
-                if (explicitList.Count == 0)
-                {
-                    return 0;
-                }
-            }
-
             return OpenApiDriftValidatorService.ValidateDrift(repoRoot);
         }
 
@@ -52,7 +43,8 @@ public static class PreCommitOpenApiService
             }
         }
 
-        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit: true, indexReader, out var ownedReader);
+        bool useIndexScope = quick || indexReader is not null;
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit: useIndexScope, indexReader, out var ownedReader);
         using (ownedReader)
         {
             var existingFiles = files
@@ -62,47 +54,51 @@ public static class PreCommitOpenApiService
                 .Select(rel => rel!)
                 .ToList();
 
+            string scopeLabel = useIndexScope ? "staged" : "targeted";
             var (shouldExport, targetServices, hasCsharpFiles) = AnalyzeBackendContractChanges(existingFiles);
             if (!hasCsharpFiles)
             {
-                Console.WriteLine("No staged C# backend changes detected. Skipping service startup (lightweight docs check)...");
-                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: true, indexReader: reader);
+                Console.WriteLine($"No {scopeLabel} C# backend changes detected. Skipping service startup (lightweight docs check)...");
+                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: useIndexScope, indexReader: reader);
             }
 
             if (!shouldExport)
             {
-                Console.WriteLine("Staged C# changes do not affect microservice API contracts. Skipping service startup...");
-                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: true, indexReader: reader);
+                Console.WriteLine($"{char.ToUpperInvariant(scopeLabel[0])}{scopeLabel[1..]} C# changes do not affect microservice API contracts. Skipping service startup...");
+                return ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: useIndexScope, indexReader: reader);
             }
 
             if (targetServices is not null)
             {
-                Console.WriteLine($"Staged C# changes detected for microservice(s): {string.Join(", ", targetServices)}");
+                Console.WriteLine($"{char.ToUpperInvariant(scopeLabel[0])}{scopeLabel[1..]} C# changes detected for microservice(s): {string.Join(", ", targetServices)}");
             }
             else
             {
-                Console.WriteLine("Staged C# changes detected in shared packages/solution files. Triggering multi-service OpenAPI export...");
+                Console.WriteLine($"{char.ToUpperInvariant(scopeLabel[0])}{scopeLabel[1..]} C# changes detected in shared packages/solution files. Triggering multi-service OpenAPI export...");
             }
 
-            var closureRoots = ResolveTargetClosureProjects(repoRoot, existingFiles, targetServices, out bool requireRepoWideCheck);
-            List<string> overlappingUnstaged = requireRepoWideCheck
-                ? GitIndexReader.GetOverlappingUnstagedPaths(
-                    repoRoot,
-                    static p => GitIndexReader.IsMsBuildInputPath(p) || IsOpenApiDocPath(p))
-                : GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
-                    repoRoot,
-                    closureRoots,
-                    reader,
-                    IsOpenApiDocPath);
-            if (overlappingUnstaged.Count > 0)
+            if (useIndexScope)
             {
-                string sample = string.Join(", ", overlappingUnstaged.Take(5));
-                Console.WriteLine($"[ERROR] Unstaged or untracked working-tree edits overlap MSBuild/OpenAPI inputs ({sample}). Stage or stash them before committing so staged OpenAPI contracts can be verified fail-closed.");
-                return 1;
+                var closureRoots = ResolveTargetClosureProjects(repoRoot, existingFiles, targetServices, out bool requireRepoWideCheck);
+                List<string> overlappingUnstaged = requireRepoWideCheck
+                    ? GitIndexReader.GetOverlappingUnstagedPaths(
+                        repoRoot,
+                        static p => GitIndexReader.IsMsBuildInputPath(p) || IsOpenApiDocPath(p))
+                    : GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
+                        repoRoot,
+                        closureRoots,
+                        reader,
+                        IsOpenApiDocPath);
+                if (overlappingUnstaged.Count > 0)
+                {
+                    string sample = string.Join(", ", overlappingUnstaged.Take(5));
+                    Console.WriteLine($"[ERROR] Unstaged or untracked working-tree edits overlap MSBuild/OpenAPI inputs ({sample}). Stage or stash them before committing so staged OpenAPI contracts can be verified fail-closed.");
+                    return 1;
+                }
             }
 
             int syncResult = OpenApiSyncService.SyncOpenApiSpec(validate: true, repoRoot, targetServices);
-            int docsResult = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: true, indexReader: reader);
+            int docsResult = ApiDocsGeneratorService.GenerateApiDocs(validate: true, repoRoot, preCommit: useIndexScope, indexReader: reader);
             return syncResult != 0 || docsResult != 0 ? 1 : 0;
         }
     }

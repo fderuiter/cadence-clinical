@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -14,6 +15,8 @@ namespace Cadence.ToolingCore.Services;
 /// </summary>
 public static class OpenApiSyncService
 {
+    public const int DefaultMaxParallelism = 4;
+
     private const string ExporterProject = "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj";
 
     public static int SyncOpenApiSpec(bool validate = false, string? repoRoot = null, IEnumerable<string>? targetServices = null)
@@ -107,6 +110,178 @@ public static class OpenApiSyncService
         return drift;
     }
 
+    public static bool TryParseMaxParallelism(string[] args, out int maxParallelism, out string? error)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+
+        maxParallelism = DefaultMaxParallelism;
+        error = null;
+
+        bool expectValueNext = false;
+        for (int i = 0; i < args.Length; i++)
+        {
+            string arg = args[i];
+            string? rawValue;
+            if (expectValueNext)
+            {
+                rawValue = arg;
+                expectValueNext = false;
+            }
+            else if (string.Equals(arg, "--max-parallelism", StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 >= args.Length)
+                {
+                    error = "Option '--max-parallelism' requires a positive integer value.";
+                    return false;
+                }
+
+                expectValueNext = true;
+                continue;
+            }
+            else if (arg.StartsWith("--max-parallelism=", StringComparison.OrdinalIgnoreCase))
+            {
+                rawValue = arg["--max-parallelism=".Length..];
+            }
+            else
+            {
+                continue;
+            }
+
+            if (!int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) || parsed < 1)
+            {
+                error = $"Invalid '--max-parallelism' value '{rawValue}'. Expected an integer >= 1.";
+                return false;
+            }
+
+            maxParallelism = parsed;
+        }
+
+        return true;
+    }
+
+    public static JsonObject AggregateOpenApiSpecs(
+        string outputDir,
+        string repoRoot,
+        IReadOnlyDictionary<string, JsonObject> newlyExported)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputDir);
+        ArgumentException.ThrowIfNullOrWhiteSpace(repoRoot);
+        ArgumentNullException.ThrowIfNull(newlyExported);
+
+        var aggregatedPaths = new JsonObject();
+        var aggregatedSchemas = new JsonObject();
+
+        string fallbackDir = Path.Combine(repoRoot, "docs", "openapi");
+
+        var specFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Directory.Exists(outputDir))
+        {
+            foreach (string f in Directory.GetFiles(outputDir, "*_openapi.json"))
+            {
+                specFiles.Add(Path.GetFileName(f));
+            }
+        }
+
+        if (Directory.Exists(fallbackDir))
+        {
+            foreach (string f in Directory.GetFiles(fallbackDir, "*_openapi.json"))
+            {
+                specFiles.Add(Path.GetFileName(f));
+            }
+        }
+
+        var orderedFiles = specFiles
+            .Where(f => !f.Equals("cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (string fileName in orderedFiles)
+        {
+            string serviceName = fileName.Replace("_openapi.json", "", StringComparison.OrdinalIgnoreCase);
+            JsonObject? doc = null;
+
+            if (newlyExported.TryGetValue(serviceName, out JsonObject? exportedDoc))
+            {
+                doc = exportedDoc;
+            }
+            else
+            {
+                string outputFilePath = Path.Combine(outputDir, fileName);
+                string fallbackFilePath = Path.Combine(fallbackDir, fileName);
+                string? targetReadPath = null;
+                if (File.Exists(outputFilePath))
+                {
+                    targetReadPath = outputFilePath;
+                }
+                else if (File.Exists(fallbackFilePath))
+                {
+                    targetReadPath = fallbackFilePath;
+                }
+
+                if (targetReadPath != null)
+                {
+                    doc = ParseOrNull(File.ReadAllText(targetReadPath)) as JsonObject;
+                }
+            }
+
+            if (doc == null)
+            {
+                continue;
+            }
+
+            if (doc["paths"] is JsonObject paths)
+            {
+                foreach (var pathKv in paths)
+                {
+                    if (!aggregatedPaths.ContainsKey(pathKv.Key))
+                    {
+                        aggregatedPaths[pathKv.Key] = pathKv.Value?.DeepClone();
+                    }
+                }
+            }
+
+            if (doc["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
+            {
+                foreach (var schemaKv in schemas)
+                {
+                    if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
+                    {
+                        aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
+                    }
+                }
+            }
+        }
+
+        return new JsonObject
+        {
+            ["openapi"] = "3.1.0",
+            ["info"] = new JsonObject
+            {
+                ["title"] = "Cadence Clinical Unified Gateway API",
+                ["description"] = "Unified microservices API contract for Cadence Clinical Platform.\nEnforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance.",
+                ["version"] = "1.0.0-PROD"
+            },
+            ["servers"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["url"] = "https://api.ccrsoft.com/api/v1",
+                    ["description"] = "Production API Gateway"
+                },
+                new JsonObject
+                {
+                    ["url"] = "http://localhost:8000/api/v1",
+                    ["description"] = "Local Dev Gateway Proxy"
+                }
+            },
+            ["paths"] = aggregatedPaths,
+            ["components"] = new JsonObject
+            {
+                ["schemas"] = aggregatedSchemas
+            }
+        };
+    }
+
     private static IEnumerable<string> StaleSpecs(string exportedDir, string committedDir)
     {
         if (!Directory.Exists(committedDir))
@@ -136,30 +311,30 @@ public static class OpenApiSyncService
 
     private static bool RunExporter(string repoRoot, string exportDir, IReadOnlyList<string>? targetServices = null)
     {
-        var psi = new ProcessStartInfo("dotnet")
+        var exporterArgs = new List<string> { "--output-dir", exportDir };
+        if (targetServices != null && targetServices.Count > 0)
+        {
+            exporterArgs.Add("--services");
+            exporterArgs.Add(string.Join(",", targetServices));
+        }
+
+        var invocation = ExporterBinaryResolver.ResolveInvocation(repoRoot, ExporterProject, exporterArgs);
+        var psi = new ProcessStartInfo(invocation.FileName)
         {
             WorkingDirectory = repoRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        psi.ArgumentList.Add("run");
-        psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(ExporterProject);
-        psi.ArgumentList.Add("--");
-        psi.ArgumentList.Add("--output-dir");
-        psi.ArgumentList.Add(exportDir);
-
-        if (targetServices != null && targetServices.Count > 0)
+        foreach (string arg in invocation.Arguments)
         {
-            psi.ArgumentList.Add("--services");
-            psi.ArgumentList.Add(string.Join(",", targetServices));
+            psi.ArgumentList.Add(arg);
         }
 
         using var process = Process.Start(psi);
         if (process == null)
         {
-            Console.WriteLine("[ERROR] Could not start 'dotnet run' for the OpenAPI exporter.");
+            Console.WriteLine("[ERROR] Could not start 'dotnet' for the OpenAPI exporter.");
             return false;
         }
 
