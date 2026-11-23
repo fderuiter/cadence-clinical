@@ -1305,7 +1305,7 @@
     </div>
 
     <!-- Forensics Dossier Modal -->
-    <div v-if="showDossierModal" class="modal-backdrop">
+    <div v-if="showDossierModal" class="modal-backdrop" role="presentation">
       <div
         ref="dossierModalRef"
         class="dossier-modal"

@@ -176,6 +176,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1030,6 +1040,15 @@
         ],
         "summary": "Assign site trial task delegation requiring Principal Investigator sign-off.",
         "operationId": "DelegateSiteTasks",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1091,6 +1110,15 @@
         ],
         "summary": "Revoke or end a delegated trial duty with reason for change.",
         "operationId": "RevokeSiteTasks",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1152,6 +1180,15 @@
         ],
         "summary": "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.",
         "operationId": "SignOffDelegation",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1221,6 +1258,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1269,6 +1313,13 @@
             "name": "site_id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -10658,7 +10709,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Standards.AttestationRejected\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.ProductFamilyNotEntitled\u0060, \u0060K.Standards.AttestationRejected\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -10709,6 +10760,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.ProductFamilyNotEntitled",
             "status": 403
           },
           {
@@ -10847,7 +10902,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Standards.AttestationRejected\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.ProductFamilyNotEntitled\u0060, \u0060K.Standards.AttestationRejected\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -10898,6 +10953,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.ProductFamilyNotEntitled",
             "status": 403
           },
           {
@@ -11817,7 +11876,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060, \u0060K.Validation.AttestationRejected\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.ProductFamilyNotEntitled\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060, \u0060K.Validation.AttestationRejected\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -11868,6 +11927,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.ProductFamilyNotEntitled",
             "status": 403
           },
           {
@@ -12010,7 +12073,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060, \u0060K.Validation.AttestationRejected\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.ProductFamilyNotEntitled\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060, \u0060K.Validation.AttestationRejected\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12061,6 +12124,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.ProductFamilyNotEntitled",
             "status": 403
           },
           {
@@ -12281,7 +12348,7 @@
           "Kernel"
         ],
         "summary": "The caller\u0027s tenant commercial subscription tier, trial state, and enabled product families.",
-        "description": "Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent. Audit trails, electronic signatures, authorization checks, and regulated record exports remain active regardless of tier or trial expiry.",
+        "description": "Requires an enrolled TenantMembership and an active Grant visible via GrantNodeVisibility. BillingConfirmation is masked unless the caller holds billing permission. Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent.",
         "operationId": "KernelGetEntitlements",
         "responses": {
           "200": {
@@ -12317,13 +12384,55 @@
         }
       }
     },
+    "/api/v1/kernel/entitlements/posture": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Minimal internal tenant commercial posture for the API gateway.",
+        "description": "Restricted to svc:gateway-entitlements. Returns read-only state, enabled product families, and quantitative scoping caps while omitting BillingConfirmation.",
+        "operationId": "KernelGetEntitlementPosture",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEntitlementPostureResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/entitlements/tier": {
       "post": {
         "tags": [
           "Kernel"
         ],
         "summary": "Switches the tenant\u0027s commercial evaluation tier in place while preserving trial countdown and clinical records.",
-        "description": "Updates enabled product families on an active Trialing or Active subscription without activating billing or extending the original 30-day trial window. Refused with K.Subscription.Expired when the trial has expired.",
+        "description": "Requires caller Idempotency-Key and signed X-Change-Reason headers. Updates enabled product families on an active Trialing or Active subscription in one atomic transaction without activating billing or extending the original 30-day trial window.",
         "operationId": "KernelUpgradeSubscriptionTier",
         "requestBody": {
           "content": {
@@ -12468,8 +12577,8 @@
         "tags": [
           "Kernel"
         ],
-        "summary": "Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation.",
-        "description": "Requires study phase, study duration, participating countries, site count, participant count, active study count, and a purchase order or quote reference before transitioning a Trialing or Expired workspace to Active and clearing read-only restrictions.",
+        "summary": "Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token.",
+        "description": "Requires caller Idempotency-Key and signed X-Change-Reason headers, study scoping parameters, and a verified cryptographic commercial quote token (or CommercialOperators.BillingOperator) before transitioning a Trialing or Expired workspace to Active in one atomic transaction.",
         "operationId": "KernelActivateSubscription",
         "requestBody": {
           "content": {
@@ -12513,7 +12622,7 @@
             }
           },
           "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.QuoteInvalid\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12560,6 +12669,10 @@
           },
           {
             "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Commercial.QuoteInvalid",
             "status": 403
           },
           {
@@ -12618,8 +12731,8 @@
         "tags": [
           "Kernel"
         ],
-        "summary": "Provisions an isolated self-service trial workspace for an authenticated OIDC caller.",
-        "description": "Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim. Idempotently provisions Tenant, sponsor Organization, pseudonymous Person, TenantMembership, Sponsor Admin and Sponsor Designer Roles/Grants, and a Trialing Subscription with Blueprint \u002B Capture entitlements, then writes tenant_id and initial roles back to Keycloak.",
+        "summary": "Provisions an isolated self-service trial workspace for an unbound authenticated OIDC caller.",
+        "description": "Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim, study/site scope, or clinical realm roles. Requires caller Idempotency-Key and signed X-Change-Reason headers.",
         "operationId": "KernelBootstrapTrialWorkspace",
         "requestBody": {
           "content": {
@@ -12658,8 +12771,8 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.OnboardingCallerInvalid\u0060, \u0060K.Subscription.Expired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12668,8 +12781,8 @@
               }
             }
           },
-          "403": {
-            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Commercial.OnboardingCallerInvalid\u0060, \u0060K.Subscription.Expired\u0060.",
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -18218,6 +18331,12 @@
               "null",
               "string"
             ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -18293,6 +18412,12 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
             "type": [
               "null",
               "string"
@@ -18556,6 +18681,12 @@
             "type": "string"
           },
           "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
             "type": [
               "null",
               "string"
@@ -29300,6 +29431,34 @@
           }
         }
       },
+      "Kernel_KernelEntitlementPostureResponse": {
+        "required": [
+          "is_read_only",
+          "product_families"
+        ],
+        "type": "object",
+        "properties": {
+          "is_read_only": {
+            "type": "boolean"
+          },
+          "product_families": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scoping": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelPostureScopingResponse"
+              }
+            ]
+          }
+        }
+      },
       "Kernel_KernelEntitlementsResponse": {
         "required": [
           "tenant_ref",
@@ -30033,6 +30192,60 @@
           },
           "kind": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelPostureScopingResponse": {
+        "required": [
+          "study_phase",
+          "study_duration_months",
+          "countries",
+          "site_count",
+          "participant_count",
+          "active_study_count"
+        ],
+        "type": "object",
+        "properties": {
+          "study_phase": {
+            "type": "string"
+          },
+          "study_duration_months": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "countries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "site_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "participant_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active_study_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -31635,8 +31848,7 @@
           "countries",
           "site_count",
           "participant_count",
-          "active_study_count",
-          "billing_confirmation"
+          "active_study_count"
         ],
         "type": "object",
         "properties": {
@@ -31682,7 +31894,10 @@
             "format": "int32"
           },
           "billing_confirmation": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

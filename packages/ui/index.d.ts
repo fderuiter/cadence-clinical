@@ -177,7 +177,11 @@ export const EmptyState: DefineComponent<
 export const ClinicalModal: DefineComponent<
   {
     modelValue?: boolean;
+    isOpen?: boolean;
+    open?: boolean;
     title?: string;
+    ariaLabel?: string;
+    ariaLabelledby?: string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
@@ -190,9 +194,15 @@ export const ClinicalModal: DefineComponent<
     restoreFocus?: boolean | (() => HTMLElement | null);
     teleport?: boolean | string;
     id?: string;
+    overlayId?: string;
     dialogClass?: string | any[] | Record<string, boolean>;
     backdropClass?: string | any[] | Record<string, boolean>;
+    headerClass?: string | any[] | Record<string, boolean>;
+    bodyClass?: string | any[] | Record<string, boolean>;
+    footerClass?: string | any[] | Record<string, boolean>;
     closeLabel?: string;
+    showHeader?: boolean;
+    showFooter?: boolean;
   },
   {},
   any

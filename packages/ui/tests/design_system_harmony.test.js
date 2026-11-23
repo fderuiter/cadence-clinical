@@ -686,4 +686,144 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(missingTabularNums).toEqual([]);
     });
   });
+
+  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545)", () => {
+    const MIGRATED_WEB_OVERLAY_FILES = [
+      "views/DocumentManagerView.vue",
+      "components/clinical/ProtocolTrainingConsole.vue",
+      "components/clinical/AdaptiveDoseEscalationConsole.vue",
+      "components/clinical/CecAdjudicationConsole.vue",
+      "components/clinical/CellGeneTherapyCocConsole.vue",
+      "components/clinical/ClinicalGanttVisualizer.vue",
+      "components/clinical/ClinicalLakehouseConsole.vue",
+      "components/clinical/SensorTelemetryConsole.vue",
+      "components/clinical/SsuGreenlightConsole.vue",
+      "components/clinical/StatisticalComputingConsole.vue",
+      "components/econsent/IcfSectionEditor.vue",
+      "views/DataLockView.vue",
+      "views/ParticipantWalletView.vue",
+      "views/ICFBuilderView.vue",
+      "views/NotificationsView.vue",
+      "components/persona/CrcFormRenderer.vue",
+      "components/persona/CraVerificationConsole.vue",
+      "components/quality/RactMatrixViewer.vue",
+      "views/QualityCockpitView.vue",
+      "views/CtmsView.vue",
+    ];
+
+    const FORMERLY_SUPPRESSED_BACKDROP_FILES = [
+      "views/DocumentManagerView.vue",
+      "components/clinical/CecAdjudicationConsole.vue",
+      "components/clinical/ClinicalGanttVisualizer.vue",
+      "components/clinical/ClinicalLakehouseConsole.vue",
+      "components/clinical/SensorTelemetryConsole.vue",
+      "views/DataLockView.vue",
+      "views/ParticipantWalletView.vue",
+      "views/KnowledgeView.vue",
+    ];
+
+    it("migrates all 20 formerly unguarded apps/web overlay components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+      for (const relPath of MIGRATED_WEB_OVERLAY_FILES) {
+        const fullPath = path.join(webSrcDir, relPath);
+        const content = fs.readFileSync(fullPath, "utf-8");
+        expect(
+          /\b(?:ClinicalModal|ClinicalDrawer)\b/.test(content),
+          `${relPath} must use ClinicalModal or ClinicalDrawer from packages/ui`
+        ).toBe(true);
+      }
+
+      const backdropSuppressionRe =
+        /eslint-disable[^\n]*(?:vuejs-accessibility\/click-events-have-key-events|vuejs-accessibility\/no-static-element-interactions)[\s\S]{0,240}?<(?:div|section|aside)\b[^>]*class=["'][^"']*(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)/i;
+
+      for (const relPath of FORMERLY_SUPPRESSED_BACKDROP_FILES) {
+        const content = fs.readFileSync(path.join(webSrcDir, relPath), "utf-8");
+        expect(
+          backdropSuppressionRe.test(content),
+          `${relPath} must not contain vuejs-accessibility backdrop suppressions`
+        ).toBe(false);
+      }
+
+      const appVueFiles = [
+        ...walkFiles(webSrcDir, [".vue"]),
+        ...walkFiles(portalSrcDir, [".vue"]),
+      ];
+      const violatingFiles = appVueFiles
+        .filter((file) =>
+          backdropSuppressionRe.test(fs.readFileSync(file, "utf-8"))
+        )
+        .map((file) => path.relative(repoRoot, file));
+      expect(violatingFiles).toEqual([]);
+    });
+
+    it("enforces prefers-reduced-motion rules on shared ClinicalModal and ClinicalDrawer surfaces", () => {
+      const modalVue = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalModal.vue"),
+        "utf-8"
+      );
+      const drawerVue = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalDrawer.vue"),
+        "utf-8"
+      );
+
+      expect(modalVue).toMatch(
+        /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
+      );
+      expect(drawerVue).toMatch(
+        /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
+      );
+    });
+
+    it("rejects raw overlay divs and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const rawOverlayResults = await eslint.lintText(
+        `<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+  <div v-if="open" class="modal-overlay" @click.self="open = false">
+    <div class="modal-card"><h3>Raw Dialog</h3></div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+const open = ref(true);
+</script>
+`,
+        { filePath: path.join(webSrcDir, "views/__SyntheticRawOverlay.vue") }
+      );
+
+      const ruleIds = rawOverlayResults[0].messages.map((m) => m.ruleId);
+      expect(
+        ruleIds.filter((id) => id === "custom-vue/no-raw-overlays").length
+      ).toBeGreaterThanOrEqual(2);
+
+      const compliantResults = await eslint.lintText(
+        `<template>
+  <ClinicalModal v-model="open" :teleport="false" title="Compliant Dialog">
+    <p>Guarded modal content</p>
+  </ClinicalModal>
+</template>
+<script setup>
+import { ref } from "vue";
+import { ClinicalModal } from "ui";
+const open = ref(true);
+</script>
+`,
+        {
+          filePath: path.join(
+            webSrcDir,
+            "views/__SyntheticCompliantOverlay.vue"
+          ),
+        }
+      );
+
+      const compliantErrors = compliantResults[0].messages.filter(
+        (m) => m.ruleId === "custom-vue/no-raw-overlays"
+      );
+      expect(compliantErrors).toEqual([]);
+    });
+  });
 });

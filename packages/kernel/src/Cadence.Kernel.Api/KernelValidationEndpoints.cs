@@ -16,6 +16,7 @@ using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -54,6 +55,13 @@ public static class KernelValidationEndpoints
     private static readonly Capability ExplainFindingCapability = new("validation_finding.explain", VerbClass.Approve);
     private static readonly Capability RegisterStandardCapability = new("standard.register", VerbClass.Execute);
     private static readonly Capability ApproveStandardCapability = new("standard.approve", VerbClass.Approve);
+    private static readonly ProductFamily[] BlueprintEntitlement = [ProductFamily.Blueprint];
+    private static readonly ProductFamily[] ValidationDecisionEntitlements =
+    [
+        ProductFamily.Blueprint,
+        ProductFamily.Capture,
+        ProductFamily.Assure,
+    ];
 
     /// <summary>The canonical concrete action path for approving a library item reference.</summary>
     public static string ApproveLibraryItemAction(string itemRef) =>
@@ -114,6 +122,7 @@ public static class KernelValidationEndpoints
             .ProducesKernelErrors([
                 .. KernelErrors.CommandPipeline,
                 .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                CommercialErrors.ProductFamilyNotEntitled,
                 KernelErrors.AlreadyExists,
                 StandardsErrors.LibraryItemUnknown,
                 StandardsErrors.InvalidTransition,
@@ -131,6 +140,7 @@ public static class KernelValidationEndpoints
             .ProducesKernelErrors([
                 .. KernelErrors.CommandPipeline,
                 .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                CommercialErrors.ProductFamilyNotEntitled,
                 KernelErrors.AlreadyExists,
                 StandardsErrors.LibraryItemUnknown,
                 StandardsErrors.InvalidTransition,
@@ -208,6 +218,7 @@ public static class KernelValidationEndpoints
             .ProducesKernelErrors([
                 .. KernelErrors.CommandPipeline,
                 .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                CommercialErrors.ProductFamilyNotEntitled,
                 KernelErrors.AlreadyExists,
                 ValidationErrors.FindingUnknown,
                 ValidationErrors.InvalidTransition,
@@ -224,6 +235,7 @@ public static class KernelValidationEndpoints
             .ProducesKernelErrors([
                 .. KernelErrors.CommandPipeline,
                 .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                CommercialErrors.ProductFamilyNotEntitled,
                 KernelErrors.AlreadyExists,
                 ValidationErrors.FindingUnknown,
                 ValidationErrors.InvalidTransition,
@@ -367,6 +379,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckWorkspaceEntitlementAsync(context, tenant, BlueprintEntitlement, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -539,6 +556,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckWorkspaceEntitlementAsync(context, tenant, BlueprintEntitlement, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -1105,6 +1127,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckWorkspaceEntitlementAsync(context, tenant, ValidationDecisionEntitlements, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -1154,6 +1181,32 @@ public static class KernelValidationEndpoints
 
         var updated = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false) ?? existing;
         return TypedResults.Ok(KernelValidationFindingResponse.From(updated));
+    }
+
+    private static async Task<ProblemHttpResult?> CheckWorkspaceEntitlementAsync(
+        HttpContext context,
+        TenantId tenant,
+        IReadOnlyList<ProductFamily> requiredAnyOf,
+        CancellationToken cancellationToken)
+    {
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is not { } entitlementReader)
+        {
+            return null;
+        }
+
+        var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+        var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (entitlements.IsReadOnly)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+        }
+
+        if (!requiredAnyOf.Any(required => entitlements.ProductFamilies.Contains(required)))
+        {
+            return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+        }
+
+        return null;
     }
 
     private static ProblemHttpResult? ReadWriteHeaders(
