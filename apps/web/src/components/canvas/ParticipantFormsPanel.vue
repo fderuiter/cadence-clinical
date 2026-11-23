@@ -91,6 +91,14 @@
             {{ totalOpenQueries === 1 ? "query" : "queries" }}
           </span>
           <span
+            v-if="totalErrorFindings > 0"
+            class="clinical-badge clinical-badge--error cb-badge cb-badge--error-finding"
+            data-testid="casebook-error-findings"
+          >
+            {{ totalErrorFindings }} error
+            {{ totalErrorFindings === 1 ? "finding" : "findings" }}
+          </span>
+          <span
             v-if="verifiedFormsCount > 0"
             class="clinical-badge clinical-badge--verified cb-badge cb-badge--verified"
           >
@@ -559,6 +567,7 @@ interface LifecycleBadge {
   tone:
     | "query-open"
     | "query-answered"
+    | "error-finding"
     | "verified"
     | "partial-sdv"
     | "unverified"
@@ -686,6 +695,16 @@ function canAddRepeat(instances: EcrfFormSummary[]): boolean {
   return !instances.some((inst) => Boolean(inst.locked || inst.frozen));
 }
 
+function isFormSummaryComplete(summary: EcrfFormSummary): boolean {
+  return (
+    Boolean(summary.complete) &&
+    toFormSummaryCount(summary.missing_required_count) === 0 &&
+    toFormSummaryCount(summary.open_query_count) === 0 &&
+    toFormSummaryCount(summary.answered_query_count) === 0 &&
+    toFormSummaryCount(summary.open_error_finding_count) === 0
+  );
+}
+
 function cellClasses(row: StudyScheduleRow, colIdx: number, visitId: string) {
   const instances = cellForms(row.collectionSpecId, visitId);
   const scheduled = isCellScheduled(row, colIdx);
@@ -696,9 +715,11 @@ function cellClasses(row: StudyScheduleRow, colIdx: number, visitId: string) {
     return ["matrix-cell", "matrix-cell--not-started"];
   }
   const hasOpenQ = instances.some(
-    (f) => toFormSummaryCount(f.open_query_count) > 0
+    (f) =>
+      toFormSummaryCount(f.open_query_count) > 0 ||
+      toFormSummaryCount(f.open_error_finding_count) > 0
   );
-  const allComplete = instances.every((f) => f.complete);
+  const allComplete = instances.every((f) => isFormSummaryComplete(f));
   return [
     "matrix-cell",
     allComplete ? "matrix-cell--complete" : "matrix-cell--incomplete",
@@ -713,7 +734,7 @@ function instanceAriaLabel(
   idx: number,
   total: number
 ): string {
-  const status = inst.complete ? "complete" : "incomplete";
+  const status = isFormSummaryComplete(inst) ? "complete" : "incomplete";
   if (total > 1) {
     return `#${idx + 1} · v${inst.version} — ${specName} at ${visitName}, ${status}`;
   }
@@ -724,11 +745,20 @@ function completenessLabel(summary: EcrfFormSummary): string {
   const recorded = toFormSummaryCount(summary.recorded_count);
   const total = toFormSummaryCount(summary.item_count);
   const missingReq = toFormSummaryCount(summary.missing_required_count);
-  if (summary.complete) {
+  const errorFindings = toFormSummaryCount(summary.open_error_finding_count);
+  const openQueries = toFormSummaryCount(summary.open_query_count);
+  const answeredQueries = toFormSummaryCount(summary.answered_query_count);
+  if (isFormSummaryComplete(summary)) {
     return `Complete (${recorded}/${total})`;
   }
   if (missingReq > 0) {
     return `Incomplete (${recorded}/${total} recorded, ${missingReq} req missing)`;
+  }
+  if (errorFindings > 0) {
+    return `Incomplete (${recorded}/${total} recorded, ${errorFindings} ${errorFindings === 1 ? "error finding" : "error findings"})`;
+  }
+  if (openQueries + answeredQueries > 0) {
+    return `Incomplete (${recorded}/${total} recorded, active queries)`;
   }
   return `Incomplete (${recorded}/${total} recorded)`;
 }
@@ -737,9 +767,18 @@ function lifecycleBadges(summary: EcrfFormSummary): LifecycleBadge[] {
   const badges: LifecycleBadge[] = [];
   const openQueries = toFormSummaryCount(summary.open_query_count);
   const answeredQueries = toFormSummaryCount(summary.answered_query_count);
+  const errorFindings = toFormSummaryCount(summary.open_error_finding_count);
   const verified = toFormSummaryCount(summary.verified_count);
   const unverified = toFormSummaryCount(summary.unverified_count);
 
+  if (errorFindings > 0) {
+    badges.push({
+      key: "error-findings",
+      label: `${errorFindings} ${errorFindings === 1 ? "error finding" : "error findings"}`,
+      tone: "error-finding",
+      testId: "badge-error-findings",
+    });
+  }
   if (openQueries > 0) {
     badges.push({
       key: "open-q",
@@ -832,6 +871,8 @@ function clinicalBadgeModifier(tone: LifecycleBadge["tone"]): string {
       return "clinical-badge--frozen";
     case "query-open":
       return "clinical-badge--queried";
+    case "error-finding":
+      return "clinical-badge--error";
     case "partial-sdv":
     case "sig-superseded":
       return "clinical-badge--warning";
@@ -910,7 +951,10 @@ const scheduledCompleteCells = computed(() => {
       const col = sched.columns[colIdx];
       if (!col) continue;
       const instances = cellForms(row.collectionSpecId, col.activityId);
-      if (instances.length > 0 && instances.every((f) => f.complete)) {
+      if (
+        instances.length > 0 &&
+        instances.every((f) => isFormSummaryComplete(f))
+      ) {
         count++;
       }
     }
@@ -919,11 +963,17 @@ const scheduledCompleteCells = computed(() => {
 });
 
 const incompleteFormsCount = computed(
-  () => forms.value.filter((f) => !f.complete).length
+  () => forms.value.filter((f) => !isFormSummaryComplete(f)).length
 );
 const totalOpenQueries = computed(() =>
   forms.value.reduce(
     (sum, f) => sum + toFormSummaryCount(f.open_query_count),
+    0
+  )
+);
+const totalErrorFindings = computed(() =>
+  forms.value.reduce(
+    (sum, f) => sum + toFormSummaryCount(f.open_error_finding_count),
     0
   )
 );
