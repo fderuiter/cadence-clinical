@@ -714,6 +714,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  siteId: {
+    type: String,
+    default: "",
+  },
   protocolVersion: {
     type: String,
     default: "",
@@ -766,6 +770,7 @@ async function refreshData() {
 
     const asnQuery = { user_id: userId };
     if (effectiveStudyId.value) asnQuery.study_id = effectiveStudyId.value;
+    if (props.siteId) asnQuery.site_id = props.siteId;
 
     const asnList = await trainingApi.listAssignments(asnQuery);
     assignments.value = Array.isArray(asnList) ? asnList : [];
@@ -836,7 +841,7 @@ function selectModule(index) {
 }
 
 watch(
-  () => [effectiveStudyId.value, props.protocolVersion],
+  () => [effectiveStudyId.value, props.siteId, props.protocolVersion],
   () => {
     selectedAssignmentId.value = "";
     selectedCurriculumId.value = "";
@@ -944,7 +949,11 @@ async function loadDelegations() {
   }
   loadingDelegations.value = true;
   try {
-    const res = await trainingApi.listDelegations({ study_id: studyId });
+    const delQuery = { study_id: studyId };
+    if (props.siteId) {
+      delQuery.site_id = props.siteId;
+    }
+    const res = await trainingApi.listDelegations(delQuery);
     delegations.value = Array.isArray(res) ? res : [];
   } catch (err) {
     console.error("Failed to load delegations:", err);

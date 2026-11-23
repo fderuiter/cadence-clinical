@@ -646,6 +646,15 @@ internal sealed class KernelCommandTransaction(
             return;
         }
 
+        if (_scopeLocked
+            && (type == typeof(Assertion) || type == typeof(Attestation))
+            && _claimed.All(c => c.Type == typeof(Assertion) || c.Type == typeof(Attestation))
+            && !_claimed.Any(c => c.Type == type && c.Key != key))
+        {
+            _claimed.Add((type, key));
+            return;
+        }
+
         if (_governanceStudy is not null)
         {
             if (type != typeof(Applicability)
@@ -681,7 +690,9 @@ internal sealed class KernelCommandTransaction(
 
     /// <summary>
     /// Stamps GxP audit fields on the changed aggregates and captures their change sets, the primary one first: the one
-    /// changed aggregate (K-TX-1), or a form instance followed by the observations a form save changed (ADR-2622).
+    /// changed aggregate (K-TX-1), a form instance followed by the observations a form save changed (ADR-2622), a study
+    /// governance aggregate followed by its study's applicability records (ADR-2606), or a scope-locked lock/release
+    /// assertion paired with its inline electronic signature (ADR-2621).
     /// </summary>
     private List<ChangedAggregate> StampAggregates()
     {
@@ -692,9 +703,18 @@ internal sealed class KernelCommandTransaction(
             .ToList();
         if (changed.Count > 1)
         {
-            changed = _governanceStudy is { } studyId
-                ? OrderGovernanceSave(studyId, changed)
-                : OrderFormSave(changed);
+            if (_scopeLocked)
+            {
+                changed = OrderSignedLockAssertion(changed);
+            }
+            else if (_governanceStudy is { } studyId)
+            {
+                changed = OrderGovernanceSave(studyId, changed);
+            }
+            else
+            {
+                changed = OrderFormSave(changed);
+            }
         }
 
         return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
@@ -741,6 +761,32 @@ internal sealed class KernelCommandTransaction(
         }
 
         return applicabilities;
+    }
+
+    /// <summary>
+    /// The aggregates of an atomic signed lock or lock release: the lock/release assertion first, followed by the
+    /// attestation bound to that assertion (ADR-2621).
+    /// </summary>
+    private List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderSignedLockAssertion(
+        List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed)
+    {
+        if (changed.Count == 2)
+        {
+            var assertionEntry = changed.SingleOrDefault(c => c.Module is null && c.Entry.State == EntityState.Added && c.Entry.Entity is Assertion);
+            var attestationEntry = changed.SingleOrDefault(c => c.Module is null && c.Entry.State == EntityState.Added && c.Entry.Entity is Attestation);
+            if (assertionEntry.Entry?.Entity is Assertion assertion
+                && attestationEntry.Entry?.Entity is Attestation attestation
+                && (assertion.IsLock || assertion.RetractsId is not null)
+                && assertion.AttestationId == attestation.Id
+                && attestation.TargetKind == NodeKinds.Assertion
+                && attestation.TargetId == assertion.Id.Value)
+            {
+                return [assertionEntry, attestationEntry];
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"K-TX-1: {execution.CommandType} may add only a lock/release assertion and its bound attestation under a scope lock (ADR-2621).");
     }
 
     /// <summary>

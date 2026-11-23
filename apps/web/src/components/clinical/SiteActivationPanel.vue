@@ -457,6 +457,7 @@ function onPickSite(event) {
   const chosen = event.target?.value || "";
   if (chosen) {
     siteCode.value = chosen;
+    store.activeSiteId = chosen;
   }
 }
 
@@ -514,11 +515,15 @@ function formatTimestamp(iso) {
 
 function selectAssignedStudy(study) {
   studyCode.value = study;
+  if (!props.studyCode) {
+    store.activeStudyId = study;
+  }
   if (canCheck.value) checkStatus();
 }
 
 function selectAssignedSite(site) {
   siteCode.value = site;
+  store.activeSiteId = site;
   if (canCheck.value) checkStatus();
 }
 
