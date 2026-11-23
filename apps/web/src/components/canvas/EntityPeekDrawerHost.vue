@@ -61,7 +61,7 @@ import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeft, ExternalLink, PanelRight } from "lucide-vue-next";
 import { ClinicalDrawer } from "ui";
-import { resolveEntityPeek } from "../../canvas/nodeResolver";
+import { resolveEntityPeek } from "../../canvas/entityPeekResolver";
 import { useEntityPeekDrawer } from "../../composables/useEntityPeekDrawer";
 
 const route = useRoute();

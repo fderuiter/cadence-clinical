@@ -595,6 +595,7 @@ public sealed class CommercialAndOnboardingUnitTests
                 RegisterTenantMembership rtm => rtm.TenantMembershipId,
                 ProvisionSubscription ps => ps.SubscriptionId,
                 GrantProductEntitlement gpe => gpe.ProductEntitlementId,
+                DefineWorkQueue dwq => new WorkQueueDefinitionState(dwq.WorkQueueDefinitionId, dwq.Code, 1, dwq.Title, dwq.Capability, dwq.VerbClass, dwq.Source),
                 _ => throw new NotSupportedException($"Unexpected onboarding command {command.GetType().Name}."),
             };
             return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));

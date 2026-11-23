@@ -61,66 +61,52 @@ public static class RbacExplanationBuilder
             switch (requirement)
             {
                 case PermissionRequirement permReq:
-                {
-                    string actionPhrase = PermissionMatrix.DescribePermission(permReq.Permission);
-                    IReadOnlyList<string> holders = PermissionMatrix.RolesHolding(permReq.Permission);
-                    string rolePhrase = PermissionMatrix.DescribeRoles(holders);
-                    string conditionText = $"Assign a {rolePhrase} role to {actionPhrase}.";
-                    conditions.Add(EvaluatedCondition.Unsatisfied(RolePermissionCondition, conditionText));
-                    nextActions.Add(new NextAction(
-                        $"Request a {rolePhrase} role assignment from your study or workspace administrator.",
-                        Capability: permReq.Permission,
-                        Target: subject));
-                    primaryClaim ??= $"{callerRoleSummary} cannot {actionPhrase}.";
-                    if (string.Equals(errorCode, "FORBIDDEN", StringComparison.Ordinal))
                     {
-                        errorCode = "FORBIDDEN_PERMISSION";
+                        string actionPhrase = PermissionMatrix.DescribePermission(permReq.Permission);
+                        IReadOnlyList<string> holders = PermissionMatrix.RolesHolding(permReq.Permission);
+                        string rolePhrase = PermissionMatrix.DescribeRoles(holders);
+                        string conditionText = $"Assign a {rolePhrase} role to {actionPhrase}.";
+                        conditions.Add(EvaluatedCondition.Unsatisfied(RolePermissionCondition, conditionText));
+                        nextActions.Add(new NextAction(
+                            $"Request a {rolePhrase} role assignment from your study or workspace administrator.",
+                            Capability: permReq.Permission,
+                            Target: subject));
+                        primaryClaim ??= $"{callerRoleSummary} cannot {actionPhrase}.";
+                        if (string.Equals(errorCode, "FORBIDDEN", StringComparison.Ordinal))
+                        {
+                            errorCode = "FORBIDDEN_PERMISSION";
+                        }
+
+                        break;
                     }
 
-                    break;
-                }
-
                 case RoleRequirement roleReq:
-                {
-                    string rolePhrase = PermissionMatrix.DescribeRoles(roleReq.RequiredRoles);
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        RoleCondition,
-                        $"Assign a {rolePhrase} role before performing this clinical action."));
-                    nextActions.Add(new NextAction(
-                        $"Request a {rolePhrase} role assignment from your workspace administrator.",
-                        Target: subject));
-                    primaryClaim ??= $"{callerRoleSummary} does not hold the required {rolePhrase} role.";
-                    errorCode = "FORBIDDEN_PERMISSION";
-                    break;
-                }
+                    {
+                        string rolePhrase = PermissionMatrix.DescribeRoles(roleReq.RequiredRoles);
+                        conditions.Add(EvaluatedCondition.Unsatisfied(
+                            RoleCondition,
+                            $"Assign a {rolePhrase} role before performing this clinical action."));
+                        nextActions.Add(new NextAction(
+                            $"Request a {rolePhrase} role assignment from your workspace administrator.",
+                            Target: subject));
+                        primaryClaim ??= $"{callerRoleSummary} does not hold the required {rolePhrase} role.";
+                        errorCode = "FORBIDDEN_PERMISSION";
+                        break;
+                    }
 
                 case TenantScopeRequirement:
-                {
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        TenantScopeCondition,
-                        "Select an active verified clinical workspace before accessing tenant records."));
-                    nextActions.Add(new NextAction(
-                        "Switch to an active verified workspace or ask your workspace administrator to activate tenant access."));
-                    primaryClaim ??= ClinicalScopeGuard.TenantAccessDeniedDetail;
-                    errorCode = SetScopeCodeIfUnclassified(errorCode);
-                    break;
-                }
+                    {
+                        conditions.Add(EvaluatedCondition.Unsatisfied(
+                            TenantScopeCondition,
+                            "Select an active verified clinical workspace before accessing tenant records."));
+                        nextActions.Add(new NextAction(
+                            "Switch to an active verified workspace or ask your workspace administrator to activate tenant access."));
+                        primaryClaim ??= ClinicalScopeGuard.TenantAccessDeniedDetail;
+                        errorCode = SetScopeCodeIfUnclassified(errorCode);
+                        break;
+                    }
 
                 case CallerStudyScopeRequirement:
-                {
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        StudyScopeCondition,
-                        "Assign your account to at least one clinical study before accessing study records."));
-                    nextActions.Add(new NextAction(
-                        "Request study assignment from your Sponsor Data Manager or workspace administrator."));
-                    primaryClaim ??= ClinicalScopeGuard.StudyAccessDeniedDetail;
-                    errorCode = SetScopeCodeIfUnclassified(errorCode);
-                    break;
-                }
-
-                case CallerStudyAndSiteScopeRequirement:
-                {
-                    if (!ClinicalScopeGuard.HasAnyStudyAssignment(principal))
                     {
                         conditions.Add(EvaluatedCondition.Unsatisfied(
                             StudyScopeCondition,
@@ -128,103 +114,117 @@ public static class RbacExplanationBuilder
                         nextActions.Add(new NextAction(
                             "Request study assignment from your Sponsor Data Manager or workspace administrator."));
                         primaryClaim ??= ClinicalScopeGuard.StudyAccessDeniedDetail;
-                    }
-                    else
-                    {
-                        conditions.Add(EvaluatedCondition.Unsatisfied(
-                            SiteScopeCondition,
-                            "Assign your site-scoped account to at least one clinical site before accessing site records."));
-                        nextActions.Add(new NextAction(
-                            "Request clinical site assignment from your Sponsor Data Manager or study coordinator lead."));
-                        primaryClaim ??= ClinicalScopeGuard.SiteAccessDeniedDetail;
+                        errorCode = SetScopeCodeIfUnclassified(errorCode);
+                        break;
                     }
 
-                    errorCode = SetScopeCodeIfUnclassified(errorCode);
-                    break;
-                }
+                case CallerStudyAndSiteScopeRequirement:
+                    {
+                        if (!ClinicalScopeGuard.HasAnyStudyAssignment(principal))
+                        {
+                            conditions.Add(EvaluatedCondition.Unsatisfied(
+                                StudyScopeCondition,
+                                "Assign your account to at least one clinical study before accessing study records."));
+                            nextActions.Add(new NextAction(
+                                "Request study assignment from your Sponsor Data Manager or workspace administrator."));
+                            primaryClaim ??= ClinicalScopeGuard.StudyAccessDeniedDetail;
+                        }
+                        else
+                        {
+                            conditions.Add(EvaluatedCondition.Unsatisfied(
+                                SiteScopeCondition,
+                                "Assign your site-scoped account to at least one clinical site before accessing site records."));
+                            nextActions.Add(new NextAction(
+                                "Request clinical site assignment from your Sponsor Data Manager or study coordinator lead."));
+                            primaryClaim ??= ClinicalScopeGuard.SiteAccessDeniedDetail;
+                        }
+
+                        errorCode = SetScopeCodeIfUnclassified(errorCode);
+                        break;
+                    }
 
                 case StudyScopeRequirement:
-                {
-                    string? studyId = StudyScopeAuthorizationHandler.RouteValue<StudyScopeRouteParameter>(context, p => p.Name);
-                    NodeRef? studyTarget = TryParseNodeRef(NodeKinds.Study, studyId);
-                    subject ??= studyTarget;
-                    string label = string.IsNullOrWhiteSpace(studyId) ? "the requested study" : $"study {studyId}";
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        StudyScopeCondition,
-                        $"Assign your account to {label} before accessing its clinical records.",
-                        EvidenceFor(studyTarget)));
-                    nextActions.Add(new NextAction(
-                        $"Request assignment to {label} from your Sponsor Data Manager.",
-                        Target: studyTarget));
-                    primaryClaim ??= $"Your account is not assigned to {label}.";
-                    errorCode = SetScopeCodeIfUnclassified(errorCode);
-                    break;
-                }
-
-                case SiteScopeRequirement:
-                {
-                    if (!ClinicalScopeGuard.HasAnyStudyAssignment(principal))
                     {
+                        string? studyId = StudyScopeAuthorizationHandler.RouteValue<StudyScopeRouteParameter>(context, p => p.Name);
+                        NodeRef? studyTarget = TryParseNodeRef(NodeKinds.Study, studyId);
+                        subject ??= studyTarget;
+                        string label = string.IsNullOrWhiteSpace(studyId) ? "the requested study" : $"study {studyId}";
                         conditions.Add(EvaluatedCondition.Unsatisfied(
                             StudyScopeCondition,
-                            "Assign your account to at least one clinical study before accessing clinical site records."));
+                            $"Assign your account to {label} before accessing its clinical records.",
+                            EvidenceFor(studyTarget)));
                         nextActions.Add(new NextAction(
-                            "Request study assignment from your Sponsor Data Manager or workspace administrator."));
-                        primaryClaim ??= ClinicalScopeGuard.StudyAccessDeniedDetail;
-                    }
-                    else
-                    {
-                        string? siteId = StudyScopeAuthorizationHandler.RouteValue<SiteScopeRouteParameter>(context, p => p.Name);
-                        NodeRef? siteTarget = TryParseNodeRef(NodeKinds.StudySite, siteId);
-                        subject ??= siteTarget;
-                        string label = string.IsNullOrWhiteSpace(siteId) ? "the requested clinical site" : $"clinical site {siteId}";
-                        conditions.Add(EvaluatedCondition.Unsatisfied(
-                            SiteScopeCondition,
-                            $"Assign your account to {label} before accessing its records.",
-                            EvidenceFor(siteTarget)));
-                        nextActions.Add(new NextAction(
-                            $"Request assignment to {label} from your Sponsor Data Manager or Principal Investigator.",
-                            Target: siteTarget));
+                            $"Request assignment to {label} from your Sponsor Data Manager.",
+                            Target: studyTarget));
                         primaryClaim ??= $"Your account is not assigned to {label}.";
+                        errorCode = SetScopeCodeIfUnclassified(errorCode);
+                        break;
                     }
 
-                    errorCode = SetScopeCodeIfUnclassified(errorCode);
-                    break;
-                }
+                case SiteScopeRequirement:
+                    {
+                        if (!ClinicalScopeGuard.HasAnyStudyAssignment(principal))
+                        {
+                            conditions.Add(EvaluatedCondition.Unsatisfied(
+                                StudyScopeCondition,
+                                "Assign your account to at least one clinical study before accessing clinical site records."));
+                            nextActions.Add(new NextAction(
+                                "Request study assignment from your Sponsor Data Manager or workspace administrator."));
+                            primaryClaim ??= ClinicalScopeGuard.StudyAccessDeniedDetail;
+                        }
+                        else
+                        {
+                            string? siteId = StudyScopeAuthorizationHandler.RouteValue<SiteScopeRouteParameter>(context, p => p.Name);
+                            NodeRef? siteTarget = TryParseNodeRef(NodeKinds.StudySite, siteId);
+                            subject ??= siteTarget;
+                            string label = string.IsNullOrWhiteSpace(siteId) ? "the requested clinical site" : $"clinical site {siteId}";
+                            conditions.Add(EvaluatedCondition.Unsatisfied(
+                                SiteScopeCondition,
+                                $"Assign your account to {label} before accessing its records.",
+                                EvidenceFor(siteTarget)));
+                            nextActions.Add(new NextAction(
+                                $"Request assignment to {label} from your Sponsor Data Manager or Principal Investigator.",
+                                Target: siteTarget));
+                            primaryClaim ??= $"Your account is not assigned to {label}.";
+                        }
+
+                        errorCode = SetScopeCodeIfUnclassified(errorCode);
+                        break;
+                    }
 
                 case ChangeJustificationRequirement:
-                {
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        ChangeJustificationCondition,
-                        "Provide a 21 CFR Part 11 reason for change before modifying regulated clinical records."));
-                    nextActions.Add(new NextAction(
-                        "Enter a clinical reason for change and submit the request again.",
-                        Target: subject));
-                    primaryClaim ??= "Modifying this regulated record requires a 21 CFR Part 11 reason for change.";
-                    break;
-                }
+                    {
+                        conditions.Add(EvaluatedCondition.Unsatisfied(
+                            ChangeJustificationCondition,
+                            "Provide a 21 CFR Part 11 reason for change before modifying regulated clinical records."));
+                        nextActions.Add(new NextAction(
+                            "Enter a clinical reason for change and submit the request again.",
+                            Target: subject));
+                        primaryClaim ??= "Modifying this regulated record requires a 21 CFR Part 11 reason for change.";
+                        break;
+                    }
 
                 case AuditorReadOnlyRequirement:
-                {
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        AuditorReadOnlyCondition,
-                        "Regulatory Auditor accounts are restricted to read-only inspection access."));
-                    nextActions.Add(new NextAction(
-                        "Sign in with an operational study role to create or modify clinical records."));
-                    primaryClaim ??= "Regulatory Auditor accounts are restricted to read-only inspection access.";
-                    break;
-                }
+                    {
+                        conditions.Add(EvaluatedCondition.Unsatisfied(
+                            AuditorReadOnlyCondition,
+                            "Regulatory Auditor accounts are restricted to read-only inspection access."));
+                        nextActions.Add(new NextAction(
+                            "Sign in with an operational study role to create or modify clinical records."));
+                        primaryClaim ??= "Regulatory Auditor accounts are restricted to read-only inspection access.";
+                        break;
+                    }
 
                 case UndeclaredEndpointRequirement:
-                {
-                    conditions.Add(EvaluatedCondition.Unsatisfied(
-                        EndpointPolicyCondition,
-                        "This route has no declared clinical authorization policy and is denied by default."));
-                    nextActions.Add(new NextAction(
-                        "Contact platform support if this clinical operation should be enabled."));
-                    primaryClaim ??= "This endpoint is denied because it declares no clinical authorization policy.";
-                    break;
-                }
+                    {
+                        conditions.Add(EvaluatedCondition.Unsatisfied(
+                            EndpointPolicyCondition,
+                            "This route has no declared clinical authorization policy and is denied by default."));
+                        nextActions.Add(new NextAction(
+                            "Contact platform support if this clinical operation should be enabled."));
+                        primaryClaim ??= "This endpoint is denied because it declares no clinical authorization policy.";
+                        break;
+                    }
             }
         }
 

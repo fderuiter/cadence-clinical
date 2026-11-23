@@ -2,7 +2,12 @@
  * Shared NodeRef parser and peek-drawer handler registry for <EntityLink>,
  * <ClinicalExplanation>, and <ClinicalGatedAction> (ADR-2482, K-EXP-2).
  */
-let activePeekHandler = null;
+import {
+  invokeEntityPeekHandler,
+  registerEntityPeekHandler,
+} from "./entityPeekHandler.js";
+
+export { registerEntityPeekHandler };
 
 const KIND_LABELS = {
   tenant: "Workspace",
@@ -118,23 +123,10 @@ export function stripRawPermissionTokens(text) {
     .trim();
 }
 
-export function registerEntityPeekHandler(handler) {
-  activePeekHandler = typeof handler === "function" ? handler : null;
-  return () => {
-    if (activePeekHandler === handler) {
-      activePeekHandler = null;
-    }
-  };
-}
-
 export function openEntityPeek(nodeRef, context = {}) {
   const parsed = parseNodeRef(nodeRef);
   if (parsed.masked || !parsed.raw) {
     return false;
   }
-  if (typeof activePeekHandler === "function") {
-    activePeekHandler({ nodeRef: parsed.raw, parsed, ...context });
-    return true;
-  }
-  return false;
+  return invokeEntityPeekHandler({ nodeRef: parsed.raw, parsed, ...context });
 }

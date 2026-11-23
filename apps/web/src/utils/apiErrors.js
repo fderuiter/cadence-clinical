@@ -3,19 +3,11 @@
  * Response, an RFC 7807 problem-details body, or a network error) into one readable message.
  */
 export function describeApiError(err) {
-  const __firstArg = err;
-  const __problemExp = extractProblemExplanation(__firstArg);
-  if (
-    __problemExp &&
-    typeof __problemExp.claim === "string" &&
-    __problemExp.claim.trim()
-  ) {
-    const __unmetText = __problemExp.unmetConditions
-      .filter((d) => d && d !== __problemExp.claim.trim())
-      .join(" ");
-    return __unmetText
-      ? `${__problemExp.claim.trim()} ${__unmetText}`
-      : __problemExp.claim.trim();
+  const exp = extractProblemExplanation(err);
+  if (exp && typeof exp.claim === "string" && exp.claim.trim()) {
+    const claim = exp.claim.trim();
+    const unmet = exp.unmetConditions.filter((d) => d && d !== claim).join(" ");
+    return unmet ? `${claim} ${unmet}` : claim;
   }
   const status = err?.status ?? err?.response?.status;
   const problem = err?.data ?? err?.body ?? err?.problem;

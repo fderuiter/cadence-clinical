@@ -410,8 +410,9 @@ public static partial class PermissionMatrix
         var piBase = ClonePermissions(_rolePermissions[RoleNormalization.ROLE_INVESTIGATOR]);
         piBase["rtsm_unblind"] = ["write"];
         piBase["eisf_document"] = ["create", "read", "update", "delete", "sync"];
-        // Only the PI (and those acting as PI) signs the site delegation log; a sub-investigator does not (#5311).
+        // Only the PI (and those acting as PI) signs the site delegation log; a sub-investigator does not (#5311, ADR-2648).
         piBase["delegation_log"] = ["read", "sign"];
+        piBase["ctms_doa"].UnionWith(["sign_off", "sign"]);
 
         _rolePermissions[RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR] = ClonePermissions(piBase);
         _rolePermissions[RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN] = ClonePermissions(piBase);
