@@ -252,10 +252,11 @@ public static class DuplicationDetectorService
                 }
             }
 
-            // The pre-commit gate passes every staged file; like the full scan, only duplicates involving a C# file fail.
-            bool csDuplicatesFound = duplicatesFound.Any(d => d.Loc1.File.EndsWith(".cs", StringComparison.Ordinal) || d.Loc2.File.EndsWith(".cs", StringComparison.Ordinal));
+            // The pre-commit gate passes every staged file; like the full scan, duplicates involving a C# or JavaScript file fail.
+            bool enforcedDuplicatesFound = duplicatesFound.Any(d =>
+                IsEnforcedDuplicationFile(d.Loc1.File) || IsEnforcedDuplicationFile(d.Loc2.File));
 
-            if (csDuplicatesFound)
+            if (enforcedDuplicatesFound)
             {
                 Console.WriteLine($"[ERROR] Code duplication detected above threshold ({duplicatesFound.Count} duplicates found).");
                 return 1;
@@ -264,6 +265,12 @@ public static class DuplicationDetectorService
             Console.WriteLine("✔ Code duplication check passed cleanly.");
             return 0;
         }
+    }
+
+    private static bool IsEnforcedDuplicationFile(string relativePath)
+    {
+        return relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsScannableDuplicationPath(string relativePath)
