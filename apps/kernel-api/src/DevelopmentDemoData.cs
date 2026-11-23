@@ -20,7 +20,6 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
-using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -153,14 +152,10 @@ internal static partial class DevelopmentDemoData
 
         foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
-            if (!await IsMemberEnrolledAsync(tenant, userSeed.Subject, scopes, cancellationToken).ConfigureAwait(false))
-            {
-                await seeder.EnsurePersonRegisteredAsync(
-                    new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
-                    cancellationToken).ConfigureAwait(false);
-            }
-
+            var personId = ids.Person(userSeed.Subject);
+            await seeder.SendAsync(
+                new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
             await seeder.SendAsync(
                 new RegisterTenantMembership(tenant, ids.TenantMembership(userSeed.Username), personId, Key($"membership:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
@@ -572,15 +567,6 @@ internal static partial class DevelopmentDemoData
         return version?.Status == ProtocolVersionStatus.Approved;
     }
 
-    private static async Task<bool> IsMemberEnrolledAsync(
-        TenantId tenant, string subject, IServiceScopeFactory scopes, CancellationToken cancellationToken)
-    {
-        await using var scope = scopes.CreateAsyncScope();
-        return await scope.ServiceProvider.GetRequiredService<ITenantMembershipReader>()
-            .HasMembershipAsync(tenant, subject, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
     private static ProtocolDesign BuildDemoProtocolDesign(
         ConceptRef systolic,
         ConceptRef diastolic,
@@ -706,23 +692,6 @@ internal static partial class DevelopmentDemoData
                 : throw new InvalidOperationException(
                     $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
         }
-
-        /// <summary>
-        /// Registers a global <c>kernel.people</c> row when needed, tolerating <see cref="KernelErrors.AlreadyExists"/>
-        /// when another tenant on the same PostgreSQL cluster already registered the person under forced RLS (K-ID-4).
-        /// </summary>
-        public async Task EnsurePersonRegisteredAsync(RegisterPerson command, CancellationToken cancellationToken)
-        {
-            await using var scope = scopes.CreateAsyncScope();
-            var services = scope.ServiceProvider;
-            services.GetRequiredService<ServiceActorScope>().Actor = DevelopmentTenantBootstrap.Operator;
-            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess && !string.Equals(result.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Could not seed the demo study in tenant {tenant}: {nameof(RegisterPerson)} was refused with {result.Error?.Code} ({result.Error?.Message}).");
-            }
-        }
     }
 
     /// <summary>
@@ -764,6 +733,8 @@ internal static partial class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 
         public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 
