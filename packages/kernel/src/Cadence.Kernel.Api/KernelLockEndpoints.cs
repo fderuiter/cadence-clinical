@@ -20,7 +20,7 @@ using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
-using Cadence.Security.Rbac;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -67,6 +67,7 @@ public static class KernelLockEndpoints
         var locks = kernel.MapGroup("/locks").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel locks");
 
         locks.MapPost(string.Empty, ApplyAsync)
+            .AllowExpiredTenantWrite()
             .WithName("KernelApplyLock")
             .WithSummary("Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -78,6 +79,7 @@ public static class KernelLockEndpoints
             .RequireElectronicSignature(ApplyLockSemanticAction, _ => ApplyLockAction);
 
         locks.MapPost("/{lockRef}/release", ReleaseAsync)
+            .AllowExpiredTenantWrite()
             .WithName("KernelReleaseLock")
             .WithSummary("Releases a Frozen or Locked assertion with a signed retracting assertion (lock.release).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -114,8 +116,6 @@ public static class KernelLockEndpoints
         IKernelCommandSender sender,
         IAuthorizationProbe probe,
         ILockRecords locks,
-        ITenantEntitlementReader entitlements,
-        IClock clock,
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
     {
@@ -170,14 +170,10 @@ public static class KernelLockEndpoints
             ? AttestationId.FromGuid(givenAtt)
             : AttestationId.FromGuid(DeriveDeterministicGuid(tenant, idempotencyKey, "attest"));
 
-        // Pre-check lock.apply, subscription write status, target existence, duplicate locks, and Locked readiness before
-        // sending Attest (which is a [BaselineKernelCommand]) so rejected lock attempts never write orphan attestations.
-        var gatewayReadOnly = IsGatewayReadOnly(context);
-        var entitlement = await entitlements.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        var isSubscriptionReadOnly = gatewayReadOnly || entitlement.IsReadOnly;
-
+        // Pre-check lock.apply, target existence, duplicate locks, and Locked readiness before sending Attest
+        // (which is a [BaselineKernelCommand]) so rejected lock attempts never write orphan attestations.
         var canApply = await probe.CanIAsync(tenant, ApplyLockCapability, studyNode, cancellationToken).ConfigureAwait(false);
-        if (canApply.Permitted && !isSubscriptionReadOnly)
+        if (canApply.Permitted)
         {
             var precheck = await locks.PrecheckApplyAsync(tenant, studyId, scope, kind, cancellationToken).ConfigureAwait(false);
             var readyToSign = precheck.ScopeExistsInStudy
@@ -204,11 +200,6 @@ public static class KernelLockEndpoints
 
                 attestationId = attestResult.Value;
             }
-        }
-
-        if (gatewayReadOnly && !entitlement.IsReadOnly)
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
         }
 
         var applyResult = await sender.SendAsync(
@@ -243,8 +234,6 @@ public static class KernelLockEndpoints
         IKernelCommandSender sender,
         IAuthorizationProbe probe,
         ILockRecords locks,
-        ITenantEntitlementReader entitlements,
-        IClock clock,
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
     {
@@ -276,8 +265,7 @@ public static class KernelLockEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        var existing = await locks.FindAsync(tenant, lockId, cancellationToken).ConfigureAwait(false);
-        StudyId studyId;
+        StudyId? requestedStudyId = null;
         if (!string.IsNullOrWhiteSpace(request?.StudyRef))
         {
             if (!NodeRef.TryParse(request.StudyRef, out var studyNode) || studyNode.Kind != NodeKinds.Study || studyNode.Version is not null)
@@ -285,17 +273,16 @@ public static class KernelLockEndpoints
                 return KernelProblems.BadRequest("Invalid study reference", "Name study_ref as an unversioned study NodeRef (study:<uuid>).");
             }
 
-            studyId = StudyId.FromGuid(studyNode.Id);
+            requestedStudyId = StudyId.FromGuid(studyNode.Id);
         }
-        else
-        {
-            if (existing is null)
-            {
-                return KernelErrorEndpoints.Problem(KernelErrors.NotFound);
-            }
 
-            studyId = existing.StudyId;
+        var existing = await locks.FindAsync(tenant, lockId, cancellationToken).ConfigureAwait(false);
+        if (existing is null || (requestedStudyId is { } expectedStudy && existing.StudyId != expectedStudy))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.NotFound);
         }
+
+        var studyId = existing.StudyId;
 
         var releaseId = request?.AssertionId is { } givenRel && givenRel != Guid.Empty
             ? AssertionId.FromGuid(givenRel)
@@ -304,10 +291,8 @@ public static class KernelLockEndpoints
             ? AttestationId.FromGuid(givenAtt)
             : AttestationId.FromGuid(DeriveDeterministicGuid(tenant, idempotencyKey, "release-attest"));
 
-        var gatewayReadOnly = IsGatewayReadOnly(context);
-        var entitlement = await entitlements.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         var canRelease = await probe.CanIAsync(tenant, ReleaseLockCapability, NodeRef.For(studyId), cancellationToken).ConfigureAwait(false);
-        if (canRelease.Permitted && !gatewayReadOnly && !entitlement.IsReadOnly && existing is not null && existing.StudyId == studyId && !existing.Released)
+        if (canRelease.Permitted && !existing.Released)
         {
             var statement = LockStatement.Release(releaseId, lockId);
             var attestResult = await sender.SendAsync(
@@ -327,11 +312,6 @@ public static class KernelLockEndpoints
             }
 
             attestationId = attestResult.Value;
-        }
-
-        if (gatewayReadOnly && !entitlement.IsReadOnly)
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
         }
 
         var releaseResult = await sender.SendAsync(
@@ -712,9 +692,6 @@ public static class KernelLockEndpoints
         guidBytes[8] = (byte)((guidBytes[8] & 0x3F) | 0x80);
         return new Guid(guidBytes);
     }
-
-    private static bool IsGatewayReadOnly(HttpContext context) =>
-        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal { TenantReadOnly: true };
 
     private static ProblemHttpResult ElectronicSignatureRequiredProblem() =>
         TypedResults.Problem(

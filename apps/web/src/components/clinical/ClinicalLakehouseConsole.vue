@@ -540,135 +540,121 @@
     </div>
 
     <!-- Create Version-Pinned Snapshot Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="showCreateModal"
-      class="modal-overlay"
-      @click.self="showCreateModal = false"
+    <ClinicalModal
+      v-model="showCreateModal"
+      :teleport="false"
+      :dismissible="!isCreating"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      title="📸 Create Version-Pinned Clinical Snapshot Pool"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>📸 Create Version-Pinned Clinical Snapshot Pool</h3>
-          <button
-            type="button"
-            class="btn-modal-close"
-            @click="showCreateModal = false"
-          >
-            &times;
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label" for="snap-study"
-              >Study Identifier <span class="required">*</span></label
-            >
-            <input
-              id="snap-study"
-              v-model="createForm.study_id"
-              type="text"
-              class="form-input"
-              placeholder="e.g. STUDY-901"
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="snap-tag"
-              >Version Tag <span class="required">*</span></label
-            >
-            <input
-              id="snap-tag"
-              v-model="createForm.version_tag"
-              type="text"
-              class="form-input"
-              placeholder="e.g. v1.0.0-INTERIM-1"
-            />
-            <small class="form-help"
-              >Immutable version identifier. Once sealed, this snapshot pool
-              cannot be modified.</small
-            >
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="snap-milestone"
-              >Lock Milestone <span class="required">*</span></label
-            >
-            <select
-              id="snap-milestone"
-              v-model="createForm.milestone"
-              class="form-select"
-            >
-              <option value="INTERIM_ANALYSIS_1">Interim Analysis 1</option>
-              <option value="INTERIM_ANALYSIS_2">Interim Analysis 2</option>
-              <option value="DATABASE_LOCK">Final Database Lock</option>
-              <option value="SAFETY_REVIEW">Periodic Safety Review</option>
-              <option value="REGULATORY_SUBMISSION">
-                Regulatory Submission
-              </option>
-              <option value="PROTOCOL_FREEZE">Protocol Freeze</option>
-              <option value="ADJUDICATION_MILESTONE">
-                BICR Adjudication Milestone
-              </option>
-              <option value="CUSTOM">Custom Milestone</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="snap-lock-id"
-              >Associated Relational DataLock ID</label
-            >
-            <input
-              id="snap-lock-id"
-              v-model="createForm.lock_id"
-              type="text"
-              class="form-input"
-              placeholder="e.g. LOCK-STUDY-901-FINAL"
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="snap-reason"
-              >GxP Rationale / Reason for Snapshot
-              <span class="required">*</span></label
-            >
-            <textarea
-              id="snap-reason"
-              v-model="createForm.reason_for_snapshot"
-              class="form-textarea"
-              rows="3"
-              placeholder="Detail the clinical or regulatory necessity for creating and sealing this snapshot pool..."
-            />
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showCreateModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="!isCreateFormValid || isCreating"
-            @click="submitCreateSnapshot"
-          >
-            {{
-              isCreating
-                ? "Sealing Snapshot..."
-                : "Seal & Cryptographically Lock Snapshot"
-            }}
-          </button>
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="snap-study"
+          >Study Identifier <span class="required">*</span></label
+        >
+        <input
+          id="snap-study"
+          v-model="createForm.study_id"
+          type="text"
+          class="form-input"
+          placeholder="e.g. STUDY-901"
+        />
       </div>
-    </div>
+
+      <div class="form-group">
+        <label class="form-label" for="snap-tag"
+          >Version Tag <span class="required">*</span></label
+        >
+        <input
+          id="snap-tag"
+          v-model="createForm.version_tag"
+          type="text"
+          class="form-input"
+          placeholder="e.g. v1.0.0-INTERIM-1"
+        />
+        <small class="form-help"
+          >Immutable version identifier. Once sealed, this snapshot pool cannot
+          be modified.</small
+        >
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="snap-milestone"
+          >Lock Milestone <span class="required">*</span></label
+        >
+        <select
+          id="snap-milestone"
+          v-model="createForm.milestone"
+          class="form-select"
+        >
+          <option value="INTERIM_ANALYSIS_1">Interim Analysis 1</option>
+          <option value="INTERIM_ANALYSIS_2">Interim Analysis 2</option>
+          <option value="DATABASE_LOCK">Final Database Lock</option>
+          <option value="SAFETY_REVIEW">Periodic Safety Review</option>
+          <option value="REGULATORY_SUBMISSION">Regulatory Submission</option>
+          <option value="PROTOCOL_FREEZE">Protocol Freeze</option>
+          <option value="ADJUDICATION_MILESTONE">
+            BICR Adjudication Milestone
+          </option>
+          <option value="CUSTOM">Custom Milestone</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="snap-lock-id"
+          >Associated Relational DataLock ID</label
+        >
+        <input
+          id="snap-lock-id"
+          v-model="createForm.lock_id"
+          type="text"
+          class="form-input"
+          placeholder="e.g. LOCK-STUDY-901-FINAL"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="snap-reason"
+          >GxP Rationale / Reason for Snapshot
+          <span class="required">*</span></label
+        >
+        <textarea
+          id="snap-reason"
+          v-model="createForm.reason_for_snapshot"
+          class="form-textarea"
+          rows="3"
+          placeholder="Detail the clinical or regulatory necessity for creating and sealing this snapshot pool..."
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isCreating"
+          @click="showCreateModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!isCreateFormValid || isCreating"
+          @click="submitCreateSnapshot"
+        >
+          {{
+            isCreating
+              ? "Sealing Snapshot..."
+              : "Seal & Cryptographically Lock Snapshot"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ClinicalModal } from "ui";
 import { computed, onMounted, ref } from "vue";
 import {
   demoNowIso,

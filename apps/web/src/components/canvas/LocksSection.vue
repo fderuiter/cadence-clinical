@@ -330,6 +330,26 @@
           >
             Sign &amp; apply {{ applyKind }}
           </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-mini-freeze"
+            :disabled="busy || !applyScopeRef.trim()"
+            @click="openQuickApplyDialog('Frozen')"
+          >
+            Quick Freeze…
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-mini-lock"
+            :disabled="
+              busy ||
+              !applyScopeRef.trim() ||
+              (readiness !== null && !readiness.ready_for_lock)
+            "
+            @click="openQuickApplyDialog('Locked')"
+          >
+            Quick Lock…
+          </button>
         </div>
       </form>
 
@@ -459,8 +479,8 @@
                 v-if="!entry.masked && !entry.released && entry.ref"
                 :data-testid="`release-lock-${entry.ref}`"
                 type="button"
-                class="btn btn-secondary"
-                :disabled="busy || !releaseReason.trim()"
+                class="btn btn-secondary btn-mini-unlock"
+                :disabled="busy"
                 @click="openReleaseModal(entry.ref, entry.kind)"
               >
                 Release
@@ -480,6 +500,58 @@
       </p>
     </template>
 
+    <ClinicalModal
+      :open="Boolean(quickDialog)"
+      :teleport="false"
+      :dismissible="!busy"
+      :title="quickDialogTitle"
+      @close="closeQuickDialog"
+    >
+      <div class="quick-dialog-body">
+        <p class="quick-dialog-target">
+          <strong>Study:</strong> {{ studyCode }}
+          <template v-if="quickDialog?.mode === 'apply'">
+            · <strong>Target scope:</strong>
+            <code>{{ applyScopeRef }}</code>
+          </template>
+          <template v-else-if="quickDialog?.mode === 'release'">
+            · <strong>Assertion:</strong>
+            <code>{{ quickDialog.lockRef }}</code>
+          </template>
+        </p>
+        <div class="field-group">
+          <label for="quick-lock-reason-input">
+            GxP reason for change (required)
+          </label>
+          <textarea
+            id="quick-lock-reason-input"
+            v-model="quickDialogReason"
+            class="quick-dialog-textarea"
+            rows="3"
+            placeholder="Document the clinical or monitoring rationale for this signed lock action…"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="busy"
+          @click="closeQuickDialog"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="busy || !quickDialogReason.trim()"
+          @click="confirmQuickDialog"
+        >
+          Continue to Signature
+        </button>
+      </template>
+    </ClinicalModal>
+
     <SignatureCaptureModal
       v-if="modalOp"
       :is-open="Boolean(modalOp)"
@@ -498,6 +570,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ClinicalModal } from "ui";
 import {
   describeLockError,
   kernelApi,
@@ -594,6 +667,23 @@ type ModalOperation =
     };
 
 const modalOp = ref<ModalOperation | null>(null);
+
+type QuickDialogState =
+  | { mode: "apply"; kind: KernelLockKind }
+  | { mode: "release"; lockRef: string; lockKind: string };
+
+const quickDialog = ref<QuickDialogState | null>(null);
+const quickDialogReason = ref("");
+
+const quickDialogTitle = computed(() => {
+  if (!quickDialog.value) return "Clinical Lock Justification";
+  if (quickDialog.value.mode === "release") {
+    return `Release ${quickDialog.value.lockKind} Assertion`;
+  }
+  return quickDialog.value.kind === "Frozen"
+    ? "Soft Freeze Data Scope"
+    : "Apply Cryptographic Hard Lock";
+});
 
 const signerUsername = computed(
   () => authStore?.user?.email || authStore?.user?.username || "data-manager"
@@ -1048,6 +1138,39 @@ watch(
   { immediate: true }
 );
 
+function openQuickApplyDialog(kind: KernelLockKind) {
+  if (busy.value || !applyScopeRef.value.trim()) return;
+  if (
+    kind === "Locked" &&
+    readiness.value !== null &&
+    !readiness.value.ready_for_lock
+  ) {
+    return;
+  }
+  applyKind.value = kind;
+  quickDialogReason.value = applyReason.value;
+  quickDialog.value = { mode: "apply", kind };
+}
+
+function closeQuickDialog() {
+  quickDialog.value = null;
+}
+
+function confirmQuickDialog() {
+  const state = quickDialog.value;
+  const reason = quickDialogReason.value.trim();
+  if (!state || !reason) return;
+  quickDialog.value = null;
+  if (state.mode === "apply") {
+    applyKind.value = state.kind;
+    applyReason.value = reason;
+    openApplyModal();
+  } else {
+    releaseReason.value = reason;
+    openReleaseModal(state.lockRef, state.lockKind);
+  }
+}
+
 function openApplyModal() {
   if (isApplyDisabled.value) return;
   outcome.value = null;
@@ -1060,7 +1183,11 @@ function openApplyModal() {
 }
 
 function openReleaseModal(lockRef: string, lockKind: string) {
-  if (!releaseReason.value.trim()) return;
+  if (!releaseReason.value.trim()) {
+    quickDialogReason.value = "";
+    quickDialog.value = { mode: "release", lockRef, lockKind };
+    return;
+  }
   outcome.value = null;
   modalOp.value = {
     mode: "release",
@@ -1292,6 +1419,34 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 
 .apply-actions {
   margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-dialog-target {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-body);
+}
+
+.quick-dialog-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
 }
 
 .release-reason-bar {

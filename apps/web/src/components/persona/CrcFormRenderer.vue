@@ -612,250 +612,210 @@
     </div>
 
     <!-- Subject Enrollment Modal Dialog -->
-    <div
-      v-if="showEnrollModal"
-      id="enroll-subject-modal"
-      class="modal-overlay"
-      style="display: flex"
+    <ClinicalModal
+      v-model="showEnrollModal"
+      :teleport="false"
+      overlay-id="enroll-subject-modal"
+      dialog-class="modal"
+      :title="`➕ ${$t('ecrf.enrollModal.header')}`"
     >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">➕ {{ $t("ecrf.enrollModal.header") }}</div>
-        <div class="modal-body">
-          <p
-            style="
-              font-size: 0.9rem;
-              color: var(--semantic-color-text-secondary);
-            "
-          >
-            {{ $t("ecrf.enrollModal.desc") }}
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label
-              for="enroll-subject-id"
-              style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.subjectId") }}</label
-            >
-            <input
-              id="enroll-subject-id"
-              v-model="enrollForm.subjectId"
-              type="text"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              placeholder="e.g. SUBJ-101-011"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label
-              for="enroll-site-id"
-              style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.siteId") }}</label
-            >
-            <select
-              id="enroll-site-id"
-              v-model="enrollForm.siteId"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-            >
-              <option value="SITE-101">SITE-101 (Main Clinical Center)</option>
-              <option value="SITE-102">
-                SITE-102 (Regional Oncology Center)
-              </option>
-              <option value="SITE-103">
-                SITE-103 (Metropolitan Research Site)
-              </option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label
-              for="enroll-consent-date"
-              style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.consentDate") }}</label
-            >
-            <input
-              id="enroll-consent-date"
-              v-model="enrollForm.consentDate"
-              type="date"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label
-              for="enroll-arm-id"
-              style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.assignedArm") }}</label
-            >
-            <select
-              id="enroll-arm-id"
-              v-model="enrollForm.armId"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-            >
-              <option value="ARM-A">
-                Arm A: Active Cadence-001 (10mg/day)
-              </option>
-              <option value="ARM-B">Arm B: Placebo Control</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label
-              for="enroll-change-reason"
-              style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.changeReason") }}</label
-            >
-            <input
-              id="enroll-change-reason"
-              v-model="enrollForm.changeReason"
-              type="text"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              placeholder="Initial subject enrollment"
-            />
-          </div>
-        </div>
-        <div
-          class="modal-footer"
+      <p style="font-size: 0.9rem; color: var(--semantic-color-text-secondary)">
+        {{ $t("ecrf.enrollModal.desc") }}
+      </p>
+      <div class="form-group" style="margin-bottom: 12px">
+        <label
+          for="enroll-subject-id"
+          style="font-size: 0.85rem; font-weight: 600"
+          >{{ $t("ecrf.enrollModal.subjectId") }}</label
+        >
+        <input
+          id="enroll-subject-id"
+          v-model="enrollForm.subjectId"
+          type="text"
+          class="form-control"
           style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 16px;
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+          placeholder="e.g. SUBJ-101-011"
+        />
+      </div>
+      <div class="form-group" style="margin-bottom: 12px">
+        <label
+          for="enroll-site-id"
+          style="font-size: 0.85rem; font-weight: 600"
+          >{{ $t("ecrf.enrollModal.siteId") }}</label
+        >
+        <select
+          id="enroll-site-id"
+          v-model="enrollForm.siteId"
+          class="form-control"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
           "
         >
-          <button
-            id="btn-cancel-enroll"
-            class="btn btn-secondary"
-            @click="showEnrollModal = false"
-          >
-            {{ $t("ecrf.enrollModal.cancel") }}
-          </button>
-          <button
-            id="btn-confirm-enroll"
-            class="btn btn-primary"
-            style="
-              background-color: var(--semantic-color-interactive-primary);
-              color: white;
-            "
-            :disabled="!enrollForm.subjectId.trim()"
-            @click="handleEnrollSubmit"
-          >
-            {{ $t("ecrf.enrollModal.submit") }}
-          </button>
-        </div>
+          <option value="SITE-101">SITE-101 (Main Clinical Center)</option>
+          <option value="SITE-102">SITE-102 (Regional Oncology Center)</option>
+          <option value="SITE-103">
+            SITE-103 (Metropolitan Research Site)
+          </option>
+        </select>
       </div>
-    </div>
+      <div class="form-group" style="margin-bottom: 12px">
+        <label
+          for="enroll-consent-date"
+          style="font-size: 0.85rem; font-weight: 600"
+          >{{ $t("ecrf.enrollModal.consentDate") }}</label
+        >
+        <input
+          id="enroll-consent-date"
+          v-model="enrollForm.consentDate"
+          type="date"
+          class="form-control"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+        />
+      </div>
+      <div class="form-group" style="margin-bottom: 12px">
+        <label
+          for="enroll-arm-id"
+          style="font-size: 0.85rem; font-weight: 600"
+          >{{ $t("ecrf.enrollModal.assignedArm") }}</label
+        >
+        <select
+          id="enroll-arm-id"
+          v-model="enrollForm.armId"
+          class="form-control"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+        >
+          <option value="ARM-A">Arm A: Active Cadence-001 (10mg/day)</option>
+          <option value="ARM-B">Arm B: Placebo Control</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px">
+        <label
+          for="enroll-change-reason"
+          style="font-size: 0.85rem; font-weight: 600"
+          >{{ $t("ecrf.enrollModal.changeReason") }}</label
+        >
+        <input
+          id="enroll-change-reason"
+          v-model="enrollForm.changeReason"
+          type="text"
+          class="form-control"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+          placeholder="Initial subject enrollment"
+        />
+      </div>
+      <template #footer>
+        <button
+          id="btn-cancel-enroll"
+          type="button"
+          class="btn btn-secondary"
+          @click="showEnrollModal = false"
+        >
+          {{ $t("ecrf.enrollModal.cancel") }}
+        </button>
+        <button
+          id="btn-confirm-enroll"
+          type="button"
+          class="btn btn-primary"
+          style="
+            background-color: var(--semantic-color-interactive-primary);
+            color: var(--semantic-color-surface);
+          "
+          :disabled="!enrollForm.subjectId.trim()"
+          @click="handleEnrollSubmit"
+        >
+          {{ $t("ecrf.enrollModal.submit") }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Re-Consent Gate Blocking Modal Dialog -->
-    <div
-      v-if="showReconsentGateModal"
-      id="reconsent-gate-modal"
-      class="modal-overlay"
-      style="display: flex"
+    <ClinicalModal
+      v-model="showReconsentGateModal"
+      :teleport="false"
+      overlay-id="reconsent-gate-modal"
+      dialog-class="modal"
+      :title="`⚠️ ${$t('ecrf.gateModal.header')}`"
     >
-      <div class="modal" style="max-width: 520px">
-        <div
-          class="modal-header"
+      <p
+        style="
+          font-size: 0.95rem;
+          color: var(--semantic-color-error-text-deep);
+          font-weight: 600;
+        "
+      >
+        {{ $t("ecrf.gateModal.subjectGated", { id: selectedSubjectId }) }}
+      </p>
+      <p
+        style="font-size: 0.875rem; color: var(--semantic-color-text-secondary)"
+      >
+        {{ $t("ecrf.gateModal.desc") }}
+      </p>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showReconsentGateModal = false"
+        >
+          {{ $t("ecrf.gateModal.close") }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
           style="
+            background-color: var(--semantic-color-error);
+            color: var(--semantic-color-surface);
+          "
+          @click="
+            showReconsentGateModal = false;
+            $emit('open-econsent-modal');
+          "
+        >
+          ✍️ {{ $t("ecrf.form.openEconsent") }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="
+            border: 1px solid var(--semantic-color-error);
             color: var(--semantic-color-error-text-dark);
-            display: flex;
-            align-items: center;
-            gap: 8px;
+          "
+          @click="
+            showReconsentGateModal = false;
+            $emit('open-paper-icf-modal');
           "
         >
-          <span>⚠️</span> {{ $t("ecrf.gateModal.header") }}
-        </div>
-        <div class="modal-body">
-          <p
-            style="
-              font-size: 0.95rem;
-              color: var(--semantic-color-error-text-deep);
-              font-weight: 600;
-            "
-          >
-            {{ $t("ecrf.gateModal.subjectGated", { id: selectedSubjectId }) }}
-          </p>
-          <p
-            style="
-              font-size: 0.875rem;
-              color: var(--semantic-color-text-secondary);
-            "
-          >
-            {{ $t("ecrf.gateModal.desc") }}
-          </p>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 16px;
-          "
-        >
-          <button
-            class="btn btn-secondary"
-            @click="showReconsentGateModal = false"
-          >
-            {{ $t("ecrf.gateModal.close") }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            style="background-color: var(--semantic-color-error); color: white"
-            @click="
-              showReconsentGateModal = false;
-              $emit('open-econsent-modal');
-            "
-          >
-            ✍️ {{ $t("ecrf.form.openEconsent") }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            style="
-              border: 1px solid var(--semantic-color-error);
-              color: var(--semantic-color-error-text-dark);
-            "
-            @click="
-              showReconsentGateModal = false;
-              $emit('open-paper-icf-modal');
-            "
-          >
-            📄 {{ $t("ecrf.form.uploadPaperIcf") }}
-          </button>
-        </div>
-      </div>
-    </div>
+          📄 {{ $t("ecrf.form.uploadPaperIcf") }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- eConsent Signing Modal Dialog -->
     <SignatureCaptureModal
@@ -878,96 +838,89 @@
     />
 
     <!-- Paper ICF Upload Modal Dialog -->
-    <div
-      v-if="showPaperIcfModal"
-      id="paper-icf-modal"
-      class="modal-overlay"
-      style="display: flex"
+    <ClinicalModal
+      :open="showPaperIcfModal"
+      :teleport="false"
+      :dismissible="!reconsentSubmitting"
+      overlay-id="paper-icf-modal"
+      dialog-class="modal"
+      title="Register Signed Paper ICF (v2.0.0)"
+      @close="$emit('update:showPaperIcfModal', false)"
     >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">Register Signed Paper ICF (v2.0.0)</div>
-        <div class="modal-body">
-          <p>
-            Upload or register site-verified paper Informed Consent Form for
-            Subject <strong>{{ selectedSubjectId }}</strong>.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Date ICF Signed by Subject:</label
-            >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              :value="paperIcfDate"
-              type="date"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              @input="$emit('update:paperIcfDate', $event.target.value)"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Investigator Verification Note:</label
-            >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              :value="paperIcfNote"
-              type="text"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              placeholder="Paper ICF verified and archived in ISF binder."
-              @input="$emit('update:paperIcfNote', $event.target.value)"
-            />
-          </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 16px;
-          "
+      <p>
+        Upload or register site-verified paper Informed Consent Form for Subject
+        <strong>{{ selectedSubjectId }}</strong>.
+      </p>
+      <div class="form-group" style="margin-bottom: 12px">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label style="font-size: 0.85rem; font-weight: 600"
+          >Date ICF Signed by Subject:</label
         >
-          <button
-            class="btn btn-secondary"
-            @click="$emit('update:showPaperIcfModal', false)"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            style="
-              background-color: var(--semantic-color-interactive-primary);
-              color: white;
-            "
-            :disabled="reconsentSubmitting"
-            @click="$emit('handle-complete-reconsent', 'PAPER_UPLOAD')"
-          >
-            {{ reconsentSubmitting ? "Uploading..." : "Verify & Unlock eCRF" }}
-          </button>
-        </div>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          :value="paperIcfDate"
+          type="date"
+          class="form-control"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+          @input="$emit('update:paperIcfDate', $event.target.value)"
+        />
       </div>
-    </div>
+      <div class="form-group" style="margin-bottom: 12px">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label style="font-size: 0.85rem; font-weight: 600"
+          >Investigator Verification Note:</label
+        >
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          :value="paperIcfNote"
+          type="text"
+          class="form-control"
+          style="
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+          "
+          placeholder="Paper ICF verified and archived in ISF binder."
+          @input="$emit('update:paperIcfNote', $event.target.value)"
+        />
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="reconsentSubmitting"
+          @click="$emit('update:showPaperIcfModal', false)"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          style="
+            background-color: var(--semantic-color-interactive-primary);
+            color: var(--semantic-color-surface);
+          "
+          :disabled="reconsentSubmitting"
+          @click="$emit('handle-complete-reconsent', 'PAPER_UPLOAD')"
+        >
+          {{ reconsentSubmitting ? "Uploading..." : "Verify & Unlock eCRF" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { ClinicalFormField } from "ui";
+import { ClinicalFormField, ClinicalModal } from "ui";
 import { isScreenAvailable } from "../../router/availability.js";
 import { useClinicalStore } from "../../stores/clinical";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";

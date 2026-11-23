@@ -1115,6 +1115,22 @@ async function loadStudyDirectory() {
   studyDirectoryError.value = "";
   try {
     visibleStudies.value = await kernelApi.listStudies();
+    if (
+      !studyCode.value &&
+      (route.query.section === "locks" || route.query.section === "exports") &&
+      visibleStudies.value.length > 0
+    ) {
+      await router.replace(
+        studyLocation(
+          {
+            stage: stage.value?.id,
+            section: section.value?.id,
+          },
+          visibleStudies.value[0].code
+        )
+      );
+      return;
+    }
   } catch (err) {
     studyDirectoryError.value = describeKernelError(err);
   } finally {

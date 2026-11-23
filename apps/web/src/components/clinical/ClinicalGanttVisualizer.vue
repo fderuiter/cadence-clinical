@@ -354,91 +354,80 @@
     </div>
 
     <!-- timing properties Popover/Modal -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isModalOpen"
-      class="gantt-modal-backdrop"
-      @click.self="closeModal"
+    <ClinicalModal
+      v-model="isModalOpen"
+      :teleport="false"
+      size="md"
+      backdrop-class="gantt-modal-backdrop"
+      dialog-class="gantt-modal-content card"
+      title="⚙️ Edit Encounter Timing Property"
+      @close="closeModal"
     >
       <div
-        class="gantt-modal-content card"
         style="
-          max-width: 500px;
-          width: 100%;
-          padding: 24px;
-          box-shadow:
-            0 20px 25px -5px rgba(0, 0, 0, 0.1),
-            0 10px 10px -5px rgba(0, 0, 0, 0.04);
-          z-index: 10000;
-          background: white;
-          border-radius: 12px;
-          position: relative;
+          margin-bottom: 16px;
+          background-color: var(--semantic-color-surface-muted);
+          border: 1px solid var(--semantic-color-border);
+          padding: 10px;
+          border-radius: 6px;
         "
       >
         <div
           style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 12px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--semantic-color-text-dark);
           "
         >
-          <h3
-            style="
-              margin: 0;
-              font-weight: bold;
-              color: var(--primary);
-              font-size: 1.15rem;
-            "
-          >
-            ⚙️ Edit Encounter Timing Property
-          </h3>
-          <button
-            style="background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--semantic-color-text-secondary); hover: color:var(--semantic-color-text-secondary)"
-            aria-label="Close modal"
-            @click="closeModal"
-          >
-            &times;
-          </button>
+          Encounter: {{ selectedVisit?.encounter_name }}
         </div>
-
         <div
           style="
-            margin-bottom: 16px;
-            background-color: var(--semantic-color-surface-muted);
-            border: 1px solid var(--semantic-color-border);
-            padding: 10px;
-            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--semantic-color-text-secondary);
+            font-family: monospace;
+            margin-top: 2px;
           "
         >
-          <div
+          ID: {{ selectedVisit?.encounter_id }} | Epoch:
+          {{ selectedVisit?.epoch_id }}
+        </div>
+      </div>
+
+      <!-- Popover Fields -->
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <!-- Target / Planned Day -->
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label
             style="
-              font-weight: bold;
+              font-weight: 600;
+              display: block;
+              margin-bottom: 4px;
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-body);
+            "
+          >
+            Target Day Offset
+          </label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <input
+            v-model.number="form.planned_day"
+            type="number"
+            min="0"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid var(--border);
+              border-radius: 6px;
               font-size: 0.9rem;
-              color: var(--semantic-color-text-dark);
             "
-          >
-            Encounter: {{ selectedVisit?.encounter_name }}
-          </div>
-          <div
-            style="
-              font-size: 0.75rem;
-              color: var(--semantic-color-text-secondary);
-              font-family: monospace;
-              margin-top: 2px;
-            "
-          >
-            ID: {{ selectedVisit?.encounter_id }} | Epoch:
-            {{ selectedVisit?.epoch_id }}
-          </div>
+            placeholder="e.g. 14"
+          />
         </div>
 
-        <!-- Popover Fields -->
-        <div style="display: flex; flex-direction: column; gap: 14px">
-          <!-- Target / Planned Day -->
+        <!-- Min/Max Offsets -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
@@ -450,11 +439,11 @@
                 color: var(--semantic-color-text-body);
               "
             >
-              Target Day Offset
+              Min Offset (Days)
             </label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
-              v-model.number="form.planned_day"
+              v-model.number="form.min_offset"
               type="number"
               min="0"
               style="
@@ -464,71 +453,9 @@
                 border-radius: 6px;
                 font-size: 0.9rem;
               "
-              placeholder="e.g. 14"
+              placeholder="e.g. 1"
             />
           </div>
-
-          <!-- Min/Max Offsets -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label
-                style="
-                  font-weight: 600;
-                  display: block;
-                  margin-bottom: 4px;
-                  font-size: 0.85rem;
-                  color: var(--semantic-color-text-body);
-                "
-              >
-                Min Offset (Days)
-              </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model.number="form.min_offset"
-                type="number"
-                min="0"
-                style="
-                  width: 100%;
-                  padding: 8px;
-                  border: 1px solid var(--border);
-                  border-radius: 6px;
-                  font-size: 0.9rem;
-                "
-                placeholder="e.g. 1"
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label
-                style="
-                  font-weight: 600;
-                  display: block;
-                  margin-bottom: 4px;
-                  font-size: 0.85rem;
-                  color: var(--semantic-color-text-body);
-                "
-              >
-                Max Offset (Days)
-              </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model.number="form.max_offset"
-                type="number"
-                min="0"
-                style="
-                  width: 100%;
-                  padding: 8px;
-                  border: 1px solid var(--border);
-                  border-radius: 6px;
-                  font-size: 0.9rem;
-                "
-                placeholder="e.g. 3"
-              />
-            </div>
-          </div>
-
-          <!-- Anchor Reference -->
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
@@ -540,12 +467,13 @@
                 color: var(--semantic-color-text-body);
               "
             >
-              Anchor Reference Milestone
+              Max Offset (Days)
             </label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
-              v-model="form.anchor_reference"
-              type="text"
+              v-model.number="form.max_offset"
+              type="number"
+              min="0"
               style="
                 width: 100%;
                 padding: 8px;
@@ -553,111 +481,134 @@
                 border-radius: 6px;
                 font-size: 0.9rem;
               "
-              placeholder="e.g. Screening, Day 1, baseline_visit"
+              placeholder="e.g. 3"
             />
-          </div>
-
-          <!-- Required Justification (21 CFR Part 11) -->
-          <div
-            class="form-group"
-            style="
-              border-top: 1px dashed var(--semantic-color-border-control);
-              padding-top: 14px;
-              margin-top: 4px;
-            "
-          >
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label
-              style="
-                font-weight: bold;
-                display: block;
-                margin-bottom: 4px;
-                font-size: 0.85rem;
-                color: var(--error);
-              "
-            >
-              Compliance Change Justification *
-            </label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="form.justification"
-              rows="2.5"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 6px;
-                font-size: 0.85rem;
-              "
-              placeholder="Specify the scientific, regulatory, or operational reason for this schedule alteration..."
-            />
-            <span
-              style="
-                font-size: 0.75rem;
-                color: var(--semantic-color-text-secondary);
-                margin-top: 2px;
-                display: block;
-              "
-            >
-              Change audit ledger entry will be logged under Annex 11 protocol.
-            </span>
-          </div>
-
-          <!-- Inline Validation Error Alert Banner -->
-          <div
-            v-if="validationError"
-            style="
-              background-color: var(--semantic-color-error-bg-soft);
-              border: 1px solid var(--semantic-color-error-border);
-              color: var(--semantic-color-error);
-              padding: 10px;
-              border-radius: 6px;
-              font-size: 0.8rem;
-            "
-          >
-            <strong>Validation Error:</strong> {{ validationError }}
-          </div>
-
-          <!-- Action Buttons -->
-          <div
-            style="
-              display: flex;
-              justify-content: flex-end;
-              gap: 12px;
-              border-top: 1px solid var(--border);
-              padding-top: 14px;
-              margin-top: 4px;
-            "
-          >
-            <button
-              class="btn btn-secondary"
-              style="padding: 8px 14px; font-size: 0.85rem"
-              @click="closeModal"
-            >
-              Cancel
-            </button>
-            <button
-              class="btn btn-primary"
-              :disabled="!isFormValid"
-              style="
-                padding: 8px 16px;
-                font-size: 0.85rem;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-              "
-              @click="saveTiming"
-            >
-              💾 Save Changes
-            </button>
           </div>
         </div>
+
+        <!-- Anchor Reference -->
+        <div class="form-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label
+            style="
+              font-weight: 600;
+              display: block;
+              margin-bottom: 4px;
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-body);
+            "
+          >
+            Anchor Reference Milestone
+          </label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <input
+            v-model="form.anchor_reference"
+            type="text"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              font-size: 0.9rem;
+            "
+            placeholder="e.g. Screening, Day 1, baseline_visit"
+          />
+        </div>
+
+        <!-- Required Justification (21 CFR Part 11) -->
+        <div
+          class="form-group"
+          style="
+            border-top: 1px dashed var(--semantic-color-border-control);
+            padding-top: 14px;
+            margin-top: 4px;
+          "
+        >
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label
+            style="
+              font-weight: bold;
+              display: block;
+              margin-bottom: 4px;
+              font-size: 0.85rem;
+              color: var(--error);
+            "
+          >
+            Compliance Change Justification *
+          </label>
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <textarea
+            v-model="form.justification"
+            rows="2.5"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              font-size: 0.85rem;
+            "
+            placeholder="Specify the scientific, regulatory, or operational reason for this schedule alteration..."
+          />
+          <span
+            style="
+              font-size: 0.75rem;
+              color: var(--semantic-color-text-secondary);
+              margin-top: 2px;
+              display: block;
+            "
+          >
+            Change audit ledger entry will be logged under Annex 11 protocol.
+          </span>
+        </div>
+
+        <!-- Inline Validation Error Alert Banner -->
+        <div
+          v-if="validationError"
+          role="alert"
+          style="
+            background-color: var(--semantic-color-error-bg-soft);
+            border: 1px solid var(--semantic-color-error-border);
+            color: var(--semantic-color-error);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+          "
+        >
+          <strong>Validation Error:</strong> {{ validationError }}
+        </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="padding: 8px 14px; font-size: 0.85rem"
+          @click="closeModal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!isFormValid"
+          style="
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          "
+          @click="saveTiming"
+        >
+          💾 Save Changes
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
+import { ClinicalModal } from "ui";
 import { ref, computed, reactive } from "vue";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";

@@ -23,12 +23,16 @@ using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Modules.Execution.Endpoints;
+using Cadence.Rules.Packs;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
+using Cadence.TestSupport.Kernel.Rules;
 
 using FluentAssertions;
 
@@ -779,44 +783,6 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             explanation.GetProperty("next_actions").GetArrayLength().Should().BeGreaterThan(0);
         }
 
-        // Expired subscription (both persisted SubscriptionStatus.Expired and signed TenantReadOnly) gets 403 K.Subscription.Expired and writes zero Attestation rows!
-        var subscriptionId = await _scenario.Protocol.OkAsync(
-            new ProvisionSubscription(
-                tenant,
-                SubscriptionId.New(),
-                Cadence.Kernel.Tenancy.CommercialTier.Select,
-                Cadence.Kernel.Tenancy.SubscriptionStatus.Trialing,
-                Tick().AddDays(30),
-                KernelProtocolScenario.Key(),
-                "Provision trial subscription"),
-            ct);
-        await _scenario.Protocol.OkAsync(
-            new ExpireSubscription(tenant, subscriptionId, KernelProtocolScenario.Key(), "Expire trial subscription"),
-            ct);
-        using (var expiredDm = Client(code, DataManager, tenantReadOnly: true))
-        using (var expiredLock = await expiredDm.SendAsync(
-            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
-            {
-                study_ref = studyRef,
-                scope_ref = enrollmentARef,
-                kind = "Frozen",
-                meaning = "Approved",
-            }),
-            ct))
-        {
-            expiredLock.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            (await ProblemCodeAsync(expiredLock, ct)).Should().Be(KernelErrors.SubscriptionExpired.Code);
-        }
-        await _scenario.Protocol.OkAsync(
-            new ActivateSubscription(
-                tenant,
-                subscriptionId,
-                Cadence.Kernel.Tenancy.CommercialTier.Select,
-                new Cadence.Kernel.Tenancy.SubscriptionScoping("Phase 2", 24, ["US"], 2, 50, 1, "PO-LOCK-READY-01"),
-                KernelProtocolScenario.Key(),
-                "Reactivate workspace subscription"),
-            ct);
-
         // Unknown target scope also fails BEFORE Attest -> still zero new Attestation rows!
         using (var missingScopeLock = await dm.SendAsync(
             BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
@@ -1187,6 +1153,138 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode, TenantReadOnly: tenantReadOnly));
+    }
+
+    /// <summary>
+    /// On an expired workspace subscription, closeout lock application/release and form instance electronic signatures
+    /// remain active, while non-closeout step-up endpoints such as <c>POST /api/v1/kernel/library-items/{itemRef}/approve</c>
+    /// fail closed with <c>403 K.Subscription.Expired</c> without writing orphan <c>Attestation</c> rows.
+    /// </summary>
+    [Fact(DisplayName = "ExpiredWorkspace_PreservesCloseoutLocksAndFormSignatures_WhileBlockingLibraryItemApprovalWithoutOrphanAttestation")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task ExpiredWorkspacePreservesCloseoutLocksAndFormSignaturesWhileBlockingLibraryItemApprovalWithoutOrphanAttestation()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, _, _, _, _, _, formA, _) = await SeedStudyAsync(ct);
+        var studyRef = NodeRef.For(study).ToString();
+
+        await IssueAsync(tenant, DataManager, "library_item.draft", AuthorityScope.Tenant(), ct);
+        await IssueAsync(tenant, DataManager, "library_item.approve", AuthorityScope.Tenant(), ct);
+
+        var drafted = await _scenario.Protocol.OkAsync(
+            new DraftLibraryItem(
+                tenant,
+                LibraryItemId.New(),
+                LibraryItemKind.RulePack,
+                "vitals-closeout-check",
+                "Vitals Closeout Rule Pack",
+                RulePackJson.ToJson(SampleRulePacks.Sample()),
+                [],
+                KernelProtocolScenario.Key(),
+                "Draft rule pack prior to trial expiry"),
+            ct);
+        var packRef = NodeRef.For(drafted.Id).ToString();
+
+        // Provision and expire the workspace subscription in PostgreSQL.
+        var subscriptionId = SubscriptionId.New(Tick());
+        await _scenario.Protocol.OkAsync(
+            new ProvisionSubscription(
+                tenant,
+                subscriptionId,
+                CommercialTier.Individual,
+                SubscriptionStatus.Trialing,
+                Tick().AddDays(30),
+                KernelProtocolScenario.Key(),
+                "Provision trial subscription"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new ExpireSubscription(
+                tenant,
+                subscriptionId,
+                KernelProtocolScenario.Key(),
+                "Expire trial subscription"),
+            ct);
+
+        using var expiredDm = Client(code, DataManager, tenantReadOnly: true);
+        using var staleHeaderDm = Client(code, DataManager, tenantReadOnly: false);
+
+        int attestationsBefore;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            attestationsBefore = await db.Attestations.CountAsync(ct);
+        }
+
+        // 1. Non-closeout step-up approval (library-items/{packRef}/approve) is blocked by both ExpiredSubscriptionWriteGuardMiddleware
+        //    (when X-Tenant-Read-Only: true) and KernelValidationEndpoints (when gateway cache is briefly stale), writing zero orphan Attestations!
+        foreach (var client in new[] { expiredDm, staleHeaderDm })
+        {
+            var approveSigToken = TestSecurityContext.CreateSigToken(
+                DataManager,
+                KernelValidationEndpoints.ApproveLibraryItemAction(packRef),
+                KernelValidationEndpoints.ApproveLibraryItemSemanticAction);
+            using var approveReq = BuildRequest(
+                HttpMethod.Post,
+                $"library-items/{packRef}/approve",
+                "Attempt rule pack approval after trial expiry",
+                approveSigToken,
+                KernelProtocolScenario.Key(),
+                new { });
+            using var approveRes = await client.SendAsync(approveReq, ct);
+            approveRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            (await ProblemCodeAsync(approveRes, ct)).Should().Be(KernelErrors.SubscriptionExpired.Code);
+        }
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Attestations.CountAsync(ct)).Should().Be(
+                attestationsBefore,
+                "blocked library-item approval on an expired workspace must never leave an orphan Attestation row");
+        }
+
+        // 2. Regulated closeout form signature (/api/v1/execution/forms/{formA}/signatures) remains active while expired!
+        using (var formGet = await expiredDm.GetAsync(new Uri($"{FormEndpoints.RoutePrefix}/{formA.Value:D}", UriKind.Relative), ct))
+        {
+            formGet.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var formJson = JsonDocument.Parse(await formGet.Content.ReadAsStringAsync(ct));
+            string contentHash = formJson.RootElement.GetProperty("content_hash").GetString()!;
+            using var signReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/{formA.Value:D}/signatures", UriKind.Relative));
+            signReq.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+            signReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("PI closeout signature on expired workspace"));
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(DataManager, FormSignatureEndpoints.SignAction(formA.Value), FormSignatureEndpoints.SignSemanticAction));
+            signReq.Content = JsonContent.Create(new { meaning = "approved", content_hash = contentHash });
+            using var signRes = await expiredDm.SendAsync(signReq, ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
+        }
+
+        // 3. Regulated closeout lock application and release (/api/v1/kernel/locks) remain active while expired!
+        var appliedLock = await SendAsync<KernelLockResponse>(
+            expiredDm,
+            BuildRequest(
+                HttpMethod.Post,
+                "locks",
+                LockReason,
+                ApplyToken(DataManager),
+                KernelProtocolScenario.Key(),
+                new { study_ref = studyRef, scope_ref = studyRef, kind = "Locked", meaning = "Approved" }),
+            HttpStatusCode.Created,
+            ct);
+        appliedLock.Ref.Should().StartWith("assertion:");
+
+        var releasedLock = await SendAsync<KernelLockResponse>(
+            expiredDm,
+            BuildRequest(
+                HttpMethod.Post,
+                $"locks/{appliedLock.Ref}/release",
+                ReleaseReason,
+                ReleaseToken(DataManager, appliedLock.Ref!),
+                KernelProtocolScenario.Key(),
+                new { study_ref = studyRef, meaning = "Responsibility" }),
+            HttpStatusCode.OK,
+            ct);
+        releasedLock.ReleasedAt.Should().NotBeNull();
     }
 
     private static HttpRequestMessage BuildRequest(

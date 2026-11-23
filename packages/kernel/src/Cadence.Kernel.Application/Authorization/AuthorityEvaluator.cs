@@ -11,6 +11,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -124,8 +125,20 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
     /// <summary>Dedicated service account for self-service trial workspace onboarding.</summary>
     public static readonly Actor TrialOnboardingOperator = Actor.ServiceAccount("kernel-trial-onboarding");
 
+    /// <summary>Dedicated service account for commercial billing operations.</summary>
+    public static readonly Actor CommercialBillingOperator = CommercialOperators.BillingOperator;
+
     /// <summary>The capabilities a platform operator holds without a grant.</summary>
     public static readonly FrozenSet<string> PlatformCapabilities = FrozenSet.Create(StringComparer.Ordinal, "tenant.provision", "grant.issue", "role.define");
+
+    /// <summary>The commercial subscription capabilities held exclusively by <see cref="CommercialBillingOperator"/> when registered as a host operator.</summary>
+    public static readonly FrozenSet<string> CommercialBillingCapabilities = FrozenSet.Create(
+        StringComparer.Ordinal,
+        "subscription.provision",
+        "subscription.activate",
+        "subscription.expire",
+        "entitlement.grant",
+        "entitlement.revoke");
 }
 
 /// <summary>
@@ -158,6 +171,9 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     /// <summary>Condition: the actor is a platform operator.</summary>
     public const string PlatformOperatorCondition = "actor.platform_operator";
 
+    /// <summary>Condition: the actor is the dedicated commercial billing operator.</summary>
+    public const string CommercialBillingOperatorCondition = "actor.commercial_billing_operator";
+
     /// <summary>Condition: an automation agent acts only within its verb classes.</summary>
     public const string AgentVerbCondition = "actor.agent_verb";
 
@@ -186,11 +202,20 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         }
 
         var token = request.Capability.Token;
-        if (request.Actor.Kind == ActorKind.ServiceAccount && options.PlatformOperators.Contains(request.Actor.Id)
-            && KernelAuthorityOptions.PlatformCapabilities.Contains(token))
+        if (request.Actor.Kind == ActorKind.ServiceAccount && options.PlatformOperators.Contains(request.Actor.Id))
         {
-            return AuthorizationDecision.Permit(
-                conditions: EvaluatedCondition.Satisfied(PlatformOperatorCondition, $"{request.Actor.Id} operates the platform"));
+            if (KernelAuthorityOptions.PlatformCapabilities.Contains(token))
+            {
+                return AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(PlatformOperatorCondition, $"{request.Actor.Id} operates the platform"));
+            }
+
+            if (request.Actor == CommercialOperators.BillingOperator
+                && KernelAuthorityOptions.CommercialBillingCapabilities.Contains(token))
+            {
+                return AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(CommercialBillingOperatorCondition, $"{request.Actor.Id} operates commercial billing"));
+            }
         }
 
         if (request.Resource.Kind == NodeKinds.Grant && token is "grant.delegate" or "grant.revoke")
