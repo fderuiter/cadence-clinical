@@ -35,19 +35,21 @@ by the web client and the subject portal.
   ([ADR-2537](../../docs/adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md)).
   It is excluded from the root `ui` runtime bundle so `axe-core` never ships in
   production or demo builds.
-- `src/components/`: 22 shared Vue components re-exported from the root `ui`
+- `src/components/`: 24 shared Vue components re-exported from the root `ui`
   entry (`FileUploadModal`, `MediaPlayer`, `ModalErrorAlert`,
   `common/EmptyState`, and `clinical/` components `AiActionButton`,
-  `AiSuggestionDrawer`, `AuditLogViewer`, `ClinicalDataTable`, `ClinicalDrawer`,
-  `ClinicalDropzone`, `ClinicalFieldLayout`, `ClinicalFormField`,
-  `ClinicalIconButton`, `ClinicalInput`, `ClinicalLookupInput`, `ClinicalModal`,
-  `ClinicalQueryFlag`, `ClinicalQueryPanel`, `ClinicalRadioGroup`,
-  `ConfidenceBadge`, `PersonaSwitcher`, `SignOutConfirmModal`).
+  `AiSuggestionDrawer`, `AuditLogViewer`, `ClinicalContextBar`,
+  `ClinicalDataTable`, `ClinicalDrawer`, `ClinicalDropzone`,
+  `ClinicalFieldLayout`, `ClinicalFormField`, `ClinicalIconButton`,
+  `ClinicalInput`, `ClinicalLookupInput`, `ClinicalModal`, `ClinicalQueryFlag`,
+  `ClinicalQueryPanel`, `ClinicalRadioGroup`, `ClinicalTabs`, `ConfidenceBadge`,
+  `PersonaSwitcher`, `SignOutConfirmModal`).
 - `src/composables/`: reactive `useFocusTrap(targetRef, options)` (focus
   containment, LIFO nested overlay stack, background sibling
   `inert`/`aria-hidden="true"` reconciliation with
   `[data-focus-trap-exempt="true"]` live-alert exemptions, `Escape` dismissal or
-  lock-screen blocking, and trigger focus restoration),
+  lock-screen blocking, and trigger focus restoration with
+  `options.fallbackFocus` and parent-trap stack fallback when triggers unmount),
   `useEscapeClose(onClose, options)` (LIFO topmost dismissal for non-trapped
   overlays), `getFocusableElements(container)`,
   `trapTabFocus(event, container)`, `useAsyncRetry`, and `useSignOutGuard`
@@ -66,21 +68,28 @@ by the web client and the subject portal.
   `>= 4.5:1` contrast, `--color-border-control` /
   `--semantic-color-border-control` delivering `>= 3:1` interactive control
   boundary contrast per SC 1.4.11 while preserving `--semantic-color-border` for
-  passive dividers, wallet gradient tokens `--semantic-color-wallet-start` and
-  `--semantic-color-wallet-end`, viewport-relative drawer width tiers
-  `--drawer-width-sm` [440px], `--drawer-width-md` [480px], `--drawer-width-lg`
-  [640px], `--drawer-width-xl` [920px] and semantic mappings
-  `--semantic-drawer-width-*`, the AI output colour `--semantic-color-ai`,
-  `--semantic-color-ai-bg` and `--semantic-color-ai-border` reserved exclusively
-  for agent output per UX-8 and ADR-2635, global `*` `box-sizing` reset,
-  low-specificity `:focus-visible` keyboard outlines, `.form-actions` layout,
+  passive dividers, pointer target tokens `--control-target-min: 24px` /
+  `--semantic-control-target-min` per SC 2.5.8 alongside
+  `--touch-target-min: 48px` / `--semantic-touch-target-min` per SC 2.5.5, a
+  shared low-specificity two-color `:focus-visible` indicator pairing a `2px`
+  `--semantic-color-text-on-solid` inner halo with a `3px`
+  `--semantic-color-accent` outer outline plus `@media (forced-colors: active)`
+  `Highlight` outlines per ADR-2646, wallet gradient tokens
+  `--semantic-color-wallet-start` and `--semantic-color-wallet-end`,
+  viewport-relative drawer width tiers `--drawer-width-sm` [440px],
+  `--drawer-width-md` [480px], `--drawer-width-lg` [640px], `--drawer-width-xl`
+  [920px] and semantic mappings `--semantic-drawer-width-*`, the AI output
+  colour `--semantic-color-ai`, `--semantic-color-ai-bg` and
+  `--semantic-color-ai-border` reserved exclusively for agent output per UX-8
+  and ADR-2635, global `*` `box-sizing` reset, `.form-actions` layout,
   `.btn-primary` brand colors, `.sr-only` visually hidden screen-reader utility
   class, global `font-variant-numeric: tabular-nums` table rules covering all
-  application tables without per-component `<style scoped>` copies, and global
-  `@media (prefers-reduced-motion: reduce)` rules) and responsive utilities
-  (`48px` `.touch-target`, `.min-touch-target`, and `.touch-target-interactive`
-  helpers, plus `.drawer-mobile-full` and `.drawer-panel-mobile-full` for
-  <=640px viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
+  application tables without per-component `<style scoped>` copies per ADR-2650,
+  and global `@media (prefers-reduced-motion: reduce)` rules) and responsive
+  utilities (`48px` `.touch-target`, `.min-touch-target`, and
+  `.touch-target-interactive` helpers, `.btn-sm` `24x24px` compact target floor,
+  plus `.drawer-mobile-full` and `.drawer-panel-mobile-full` for <=640px
+  viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
 - `index.d.ts`: type declarations; `scripts/generate-types.js` runs before the
   build.
 

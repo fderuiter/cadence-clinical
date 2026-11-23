@@ -74,12 +74,18 @@ port 5174.
   defaults to `/subject-portal/` and honours `VITE_BASE_PATH`, such as
   `/cadence-clinical/subject-portal/` on GitHub Pages,
   [ADR-2550](../../docs/adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md)),
-  giving each view a URL: `/` (tasks), `/questionnaire`, `/compliance`,
-  `/inbox`, `/consent`, `/wallet`, `/lay-summaries`, and `/unavailable`. Outside
-  explicit `demo` builds, unbacked tabs (`wallet`, `lay-summaries`) are hidden
-  from navigation and direct visits redirect to `/unavailable`
-  (`UnavailableView.vue`) with a return action to My Tasks. A deep link to
-  `/questionnaire` without a questionnaire in progress opens My Tasks.
+  giving each view a URL: `/` and `/tasks` (tasks), `/questionnaire`,
+  `/compliance`, `/inbox`, `/consent`, `/wallet`, `/lay-summaries`, and
+  `/unavailable`. Outside explicit `demo` builds, unbacked `/api/v1/interop/*`
+  and `/api/v1/econsent/*` screens (`tasks`, `questionnaire`, `compliance`,
+  `inbox`, `consent`, and `lay-summaries` in `DEMO_AVAILABLE_SCREENS`) are
+  hidden from navigation, skipped during startup bootstrap so zero unbacked
+  `/api/v1/interop/*` or `/api/v1/econsent/*` requests fire, and redirected to
+  `/unavailable` (`UnavailableView.vue`) on direct visits. Authenticated online
+  participants (`AUTHENTICATED_SCREENS = {"wallet"}`) land on `/wallet`
+  (`My Wallet`) from `/` and see a **Go to My Wallet** return link on
+  `UnavailableView.vue` (while demo builds preserve all 6 tabs and **Return to
+  My Tasks**).
 - **PIN-wrapped offline encryption & recovery (ADR-2360).** Queued ePRO
   submissions and drafts are AES-GCM encrypted in per-user IndexedDB
   (`SubjectPortalSyncDB_${userId}`). Only the PBKDF2-wrapped master key is
@@ -183,8 +189,8 @@ service on port 5174.
 
 ## Dependencies
 
-- Runtime: `vue`, `vue-router`, `pinia` and the workspace packages
-  [ui](../../packages/ui/README.md) and
+- Runtime: `vue`, `vue-router`, `pinia`, `lucide-vue-next` and the workspace
+  packages [ui](../../packages/ui/README.md) and
   [usdm-schemas](../../packages/usdm-schemas/README.md); `keycloak-js` is loaded
   on demand.
 - Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW,

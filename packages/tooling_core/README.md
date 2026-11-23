@@ -1,8 +1,8 @@
 # Cadence.ToolingCore
 
 Implementation library behind the Cadence CLI: repository validators, generators
-and gate runners, plus two standalone exporters (OpenAPI specs and database
-schema docs).
+and gate runners, plus three standalone tools (OpenAPI specs, database schema
+docs, and the design-time PostgreSQL database migrator).
 
 ## Projects
 
@@ -35,8 +35,8 @@ schema docs).
     `DependencyValidatorService` (fail-closed JSON validation across workspace
     `package.json` and `.config/dotnet-tools.json` manifests plus forbidden
     client-side crypto and runtime test-harness package checks),
-    `VulnerabilityAuditorService` (fail-closed `.NET`, `pnpm` and `pip-audit`
-    CVE auditing against `docs/SDLC/vulnerability_exclusions_ledger.json`),
+    `VulnerabilityAuditorService` (fail-closed `.NET` and `pnpm` CVE auditing
+    against `docs/SDLC/vulnerability_exclusions_ledger.json`),
     `DemoManifestGeneratorService` (exports and verifies
     `packages/demo-fixtures` from `packages/demo-fixtures/demo-seed.json`,
     `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` via source-generated
@@ -80,7 +80,13 @@ schema docs).
   never opens a database connection. `SchemaDocGeneratorService` and
   `MigrationToolingService` run it for `generate-schema-doc`,
   `check schema-doc`, and `migrations verify`.
-- Time (K-TIME-3): all three projects ban `DateTime.Now/UtcNow`.
+- `packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj`:
+  non-AOT console app that loads all 18 design-time `DbContext` assemblies
+  (`PersistenceModuleCatalog.All`), pre-creates the 15 `SearchPath` service
+  schemas, and applies pending EF Core PostgreSQL migrations across all 19
+  schemas (`kernel`, `identity_vault`, `execution`, `intelligence`, and 15
+  service schemas) out of process so `Cadence.Cli` stays `PublishAot=true`.
+- Time (K-TIME-3): all four projects ban `DateTime.Now/UtcNow`.
   `CreateAdrService.CreateAdr` takes the date.
 
 ## Key dependencies
@@ -90,14 +96,16 @@ schema docs).
   `Microsoft.EntityFrameworkCore`, `Spectre.Console`.
 - `Cadence.OpenApiExporter`: `Cadence.ToolingCore`, the execution, designer and
   gateway service projects, `Microsoft.AspNetCore.Mvc.Testing`.
-- `Cadence.SchemaDocExporter`: `Cadence.Database`, `Cadence.ToolingCore`,
-  `Cadence.Kernel.Persistence`, `Cadence.Modules.Intelligence`,
-  `Cadence.Modules.Execution`, and the 15 app projects that own a DbContext.
+- `Cadence.SchemaDocExporter` and `Cadence.DatabaseMigrator`:
+  `Cadence.Database`, `Cadence.ToolingCore`, `Cadence.Kernel.Persistence`,
+  `Cadence.Modules.Intelligence`, `Cadence.Modules.Execution`, and the 15 app
+  projects that own a DbContext.
 
 ## Referenced by
 
-[packages/cli](../cli/README.md), `Cadence.OpenApiExporter`, `apps/gateway`
-(project reference only; no gateway code uses it),
+[packages/cli](../cli/README.md), `Cadence.OpenApiExporter`,
+`Cadence.SchemaDocExporter`, `Cadence.DatabaseMigrator`, `apps/gateway` (project
+reference only; no gateway code uses it),
 `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`,
 `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`.
 

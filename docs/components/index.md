@@ -12,10 +12,17 @@ design system in `ui` (`packages/ui`).
   occupy full viewport width with `font-variant-numeric: tabular-nums` digit
   alignment.
 - **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus
-  management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), live
-  regions for terminology lookup feedback, 48px touch targets, `>= 4.5:1` AA
-  semantic text/status token contrast, and `>= 3:1` interactive control boundary
-  contrast (`--semantic-color-border-control`).
+  management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`),
+  two-color `:focus-visible` indicators (`2px` `--semantic-color-text-on-solid`
+  inner halo + `3px` `--semantic-color-accent` outer outline delivering
+  `>= 6.34:1` contrast across light, brand, and dark surfaces, with
+  `@media (forced-colors: active)` `Highlight` outlines), live regions for
+  terminology lookup feedback, `48px` enhanced touch targets
+  (`--semantic-touch-target-min`) on `.clinical-input` and `.touch-target`,
+  `24px` minimum pointer targets (`--semantic-control-target-min`) on compact
+  controls per SC 2.5.8, `>= 4.5:1` AA semantic text/status token contrast, and
+  `>= 3:1` interactive control boundary contrast
+  (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles
   across clinical workflows.
 
@@ -23,9 +30,12 @@ design system in `ui` (`packages/ui`).
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the
+All 24 Vue components and interaction helpers are exported directly from the
 root `ui` package:
 
+- `ClinicalContextBar` (`navigation`, `list`, `link`): Accessible clinical scope
+  breadcrumb landmark linking Studies, study, site, participant, and current
+  workflow.
 - [`ClinicalDataTable`](./data-table.md) (`table`, `region`, `columnheader`):
   Accessible, sortable, paginated clinical dataset table with row selection and
   tabular numerals.
@@ -50,6 +60,9 @@ root `ui` package:
 - `ClinicalFormField` (`group`): Schema-driven CDASH form field dispatcher.
 - `ClinicalInput` (`textbox`): Accessible 48px touch-target clinical text input.
 - `ClinicalRadioGroup` (`radiogroup`): Accessible clinical radio group fieldset.
+- `ClinicalTabs` (`tablist`, `tab`, `tabpanel`): Accessible WAI-ARIA tablist
+  with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/
+  `Home`/`End` navigation.
 - `ClinicalLookupInput` (`combobox`, `aria-live`): Real-time terminology lookup
   field with dynamic status indicators.
 - `ClinicalQueryFlag` (`button`): Discrepancy query status indicator button.
@@ -71,7 +84,8 @@ root `ui` package:
 - `createSrOnlyActionButton` (`button` helper): Imperative DOM `<button>`
   builder appending `.sr-only` target context after the visible verb.
 - `useFocusTrap` / `getFocusableElements` (Keyboard helper): Reactive keyboard
-  focus containment and focusable element discovery.
+  focus containment, focusable element discovery, and `fallbackFocus` /
+  parent-trap focus restoration.
 - `useEscapeClose` (Keyboard helper): Stack-aware `Escape` dismissal composable.
 - `useAsyncRetry` (Async helper): Reactive async execution and retry state
   helper.

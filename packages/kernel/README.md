@@ -408,6 +408,18 @@ var amended = await sender.SendAsync(
   `ContentHash.OfBytes` computes the hash the storage adapter records.
 - **Signing.** `Attest` accepts `artifact_version` targets with the version's
   content hash.
+- **Exports.** `GET /api/v1/kernel/studies/{studyRef}/exports` and
+  `GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook` synchronously
+  dispatch `[BaselineKernelCommand]` `ExportStudySnapshot` (`study.export`) and
+  `ExportEnrollmentCasebook` (`enrollment.export`) through
+  `IKernelCommandSender`, registering an immutable `Dataset` `Artifact`,
+  emitting `StudySnapshotExported` or `EnrollmentCasebookExported`, and
+  recording blinded versus unblinded disclosure on the tenant's audit chain;
+  unauthorized export requests record a denied `ProvenanceActivity` and
+  `AuditEntry` before reading clinical rows. Historical `as_of` snapshots
+  reconstruct governing protocol versions and draft snapshots bitemporally at
+  `(asOf, asOf)` via `FormVersionSnapshots`, `AuditEntries`, and
+  `Effectivities`.
 - **Database.** `artifacts` and `artifact_versions` are tenant-isolated;
   `artifact_versions` is insert-only (`KA001`) with check constraints on the
   hash, size and number.
@@ -761,11 +773,13 @@ computes its zoom path (`tenant → study → country → study_site → enrollm
 `tenant → organization → site`) and lists its children with counts. A
 participant appears in a study as its enrollment, titled by its subject code; an
 enrollment with no responsible study site sits directly under its study
-(`ZoomRules.EnrollmentParent`). Protocol versions, study standards, validation
-runs and findings sit under their study, a protocol element under the version
-that last governed it, and an attestation under the object it signs. When a
-slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom
-parent.
+(`ZoomRules.EnrollmentParent`). Collection instances and standalone observations
+sit under their enrollment, form-bound observations under their collection
+instance, concepts under their tenant, protocol versions, study standards,
+validation runs and findings under their study, a protocol element under the
+version that last governed it, and an attestation under the object it signs.
+When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's
+zoom parent.
 
 ## Standards Registry and MDR (ADR-2460)
 
@@ -953,11 +967,11 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   `GrantNodeVisibility` as the host's `INodeVisibility`. A reader sees what a
   grant it holds in effect covers, the organization, study and country above
   that scope, participants and sites through the study sites they reach, and
-  tenant reference data; blinded `observation` and `validation_finding` nodes
-  classified through `IBlindedTreatmentClassifier` are masked `Blinded` unless
-  `enrollment.unblind` is permitted (including `K-AI-6` agent-requester
-  intersection and `K-AUTH-5` qualifications). Everything else out of scope is
-  masked `NotPermitted`.
+  tenant reference data; blinded `observation`, `validation_finding`,
+  `assertion`, and `form_query` nodes classified through
+  `IBlindedTreatmentClassifier` are masked `Blinded` unless `enrollment.unblind`
+  is permitted (including `K-AI-6` agent-requester intersection and `K-AUTH-5`
+  qualifications). Everything else out of scope is masked `NotPermitted`.
 - **Qualifications (ADR-2459).** `RecordQualification` files a qualification
   held by an actor: `Training`, `ProtocolTraining` (naming its protocol
   version), `Credential` or `Certificate`, with a lower snake_case code, a
@@ -1335,9 +1349,9 @@ purchase-order/quote `billing_confirmation`; `422 K.Commercial.ScopingInvalid`
 otherwise). When a trial subscription expires, `KernelCommandPipeline` and
 `ExpiredSubscriptionWriteGuardMiddleware` refuse non-baseline workspace
 mutations with `403 K.Subscription.Expired` while keeping
-`[BaselineKernelCommand]` commands (`Attest`, authority governance,
-IdentityVault privacy actions, scoped `ActivateSubscription`) and regulated
-reads and exports unrestricted.
+`[BaselineKernelCommand]` commands (`Attest`, `ExportStudySnapshot`,
+`ExportEnrollmentCasebook`, authority governance, IdentityVault privacy actions,
+scoped `ActivateSubscription`) and regulated reads and exports unrestricted.
 
 ## Migrations
 

@@ -194,8 +194,7 @@ const calculateSum = (columnId) => {
   background-color: var(--semantic-color-surface);
 }
 
-.cell-input:focus {
-  outline: none;
+.cell-input:focus-visible {
   border-color: var(--primary);
 }
 

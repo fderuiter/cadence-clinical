@@ -55,16 +55,19 @@ Common commands:
 - `test`: test runner wrapper.
 - `ci [--job <job>] [--allow-missing-tools] [--allow-db-skip] [--allow-skip] [--base <ref>] [--list]`:
   runs the pull-request jobs of `.github/workflows/ci.yml` locally (including
-  `actionlint` and forwarding `--base <ref>` to CLI checks), failing on missing
-  tools or PostgreSQL unless `--allow-missing-tools` or `--allow-db-skip` (or
-  `--allow-skip` for both) is passed (`Services/CiPlan.cs`,
-  `Services/LocalCiRunner.cs`).
+  `actionlint`, diff-scoped `container-security`, and `--base <ref>` forwarding
+  to scoped CLI checks), failing on missing tools, Docker daemon, or
+  PostgreSQL/`*.database.txt` evidence unless `--allow-missing-tools` or
+  `--allow-db-skip` (or `--allow-skip` for both) is passed
+  (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`).
 - `rulesets [--dry-run] [--repo <owner/repo>]`: validates
   `.github/rulesets/*.json` against workflow definitions and reconciles them to
   GitHub Repository Rulesets via `gh api` (`Services/RulesetService.cs`).
 - `doctor`: checks the local toolchain and environment (`.NET 10 SDK`, `pnpm`
   pin, `detect-secrets`, `actionlint`, `hadolint`, `shellcheck`, PostgreSQL).
-- `db reset`, `db migrate`: database utilities.
+- `db reset`, `db migrate`: PostgreSQL schema reset and multi-schema EF Core
+  migration utilities (`Services/DatabaseResetService.cs`,
+  `Cadence.DatabaseMigrator`).
 - `migrations add`, `migrations script`, `migrations list`, `migrations verify`:
   unified EF Core migration tooling across all 18 persistence modules
   (`PersistenceModuleCatalog`, `MigrationToolingService`), writing SQL review
@@ -93,8 +96,7 @@ top-level commands.
   `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`,
   `Cadence.Kernel.Abstractions`.
 - Packages: `System.CommandLine`, `Spectre.Console`,
-  `Npgsql.EntityFrameworkCore.PostgreSQL`,
-  `Microsoft.EntityFrameworkCore.Sqlite`.
+  `Npgsql.EntityFrameworkCore.PostgreSQL`.
 
 ## Referenced by
 
@@ -147,8 +149,10 @@ which CI runs (ADR-2249, ADR-2496). Make targets that use the CLI delegate to
   shrinks and reorders pass.
 - `tests/Cadence.UnitTests/Packages/RulesetServiceTests.cs`: the `rulesets` gate
   and `cadence rulesets` reconciliation command (`Services/RulesetService.cs`),
-  covering strict status checks, `CI Gate` upstream job coverage, workflow
-  parity, `--dry-run`, and fail-closed `gh api` sync.
+  covering `pull_request`-only branch bypasses, release-admin-only signed `v*`
+  tag rulesets, strict status checks, unconditional `CI Gate` upstream job
+  coverage, workflow parity, staged `GitIndexReader` pre-commit checks,
+  `--dry-run`, and fail-closed `gh api` sync.
 - `tests/Cadence.UnitTests/Packages/ScaffoldPostAndBlogGatesTests.cs`:
   `cadence scaffold post` (`Commands/ScaffoldCommands.cs`), documentation index
   auto-registration, and VitePress theme `.vue` boundary validation.
@@ -156,5 +160,10 @@ which CI runs (ADR-2249, ADR-2496). Make targets that use the CLI delegate to
   is no terminal (`Services/CliConsole.cs`), including the CLI run as a process
   with redirected output and `TERM=linux` or no `TERM`, which must print its
   failure.
+- `tests/Cadence.UnitTests/Packages/DatabaseResetServiceTests.cs`:
+  `ConnectionStrings__cadence` -> `POSTGRES_CONNECTION_STRING` precedence,
+  `Production` environment rejection, and fail-closed
+  `NpgsqlConnectionStringBuilder` host validation across PostgreSQL URIs and
+  key-value strings.
 - Architecture rules cover the assembly:
   `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.

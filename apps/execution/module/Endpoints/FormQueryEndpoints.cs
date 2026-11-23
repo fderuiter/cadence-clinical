@@ -130,9 +130,16 @@ internal static class FormQueryEndpoints
         var form = CollectionInstanceId.FromGuid(formId);
         var queries = await ReadAsync(contexts, tenant, q => q.FormId == form, cancellationToken).ConfigureAwait(false);
         var states = ProjectStates(queries, temporalFilter, clock);
+        var canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
         var revisions = Revisions(record);
         var queryContext = await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([.. states.Select(s => FormQueryResponse.From(s, revisions, queryContext))]);
+        return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([
+            .. states.Select(s => FormQueryResponse.From(
+                s,
+                revisions,
+                queryContext,
+                maskBlinded: !canUnblind && record.IsQueryBlinded(s.ItemId, s.ObservationId))),
+        ]);
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListQueriesAsync(
@@ -298,6 +305,7 @@ internal static class FormQueryEndpoints
         ICollectionInstanceRecords forms,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
+        IKernelReadAccess access,
         IKernelNavigator navigator,
         CancellationToken cancellationToken)
     {
@@ -382,7 +390,7 @@ internal static class FormQueryEndpoints
             return KernelErrorEndpoints.Problem(result.Error!);
         }
 
-        var response = await RespondAsync(forms, navigator, tenant, state, cancellationToken).ConfigureAwait(false);
+        var response = await RespondAsync(forms, navigator, access, tenant, state, cancellationToken).ConfigureAwait(false);
         return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}/queries/{state.QueryId.Value:D}", response);
     }
 
@@ -445,7 +453,7 @@ internal static class FormQueryEndpoints
         {
             var historicalQueries = await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment, cancellationToken).ConfigureAwait(false);
             var historicalStates = ProjectStates(historicalQueries, filter.Temporal, clock);
-            var historicalResponses = await ShapeQueriesAsync(historicalStates, null, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            var historicalResponses = await ShapeQueriesAsync(historicalStates, null, null, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(ApplyPostFilters(historicalResponses, parsedFilters, filter, offset, limit));
         }
 
@@ -455,7 +463,7 @@ internal static class FormQueryEndpoints
             var pagedQueries = await ReadCurrentPageAsync(
                 contexts, tenant, q => q.EnrollmentId == enrollment, parsedFilters, filter.Escalated, offset, limit, cancellationToken).ConfigureAwait(false);
             var pagedStates = ProjectStates(pagedQueries, filter.Temporal, clock);
-            var pagedResponses = await ShapeQueriesAsync(pagedStates, null, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            var pagedResponses = await ShapeQueriesAsync(pagedStates, null, null, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(pagedResponses);
         }
 
@@ -474,12 +482,12 @@ internal static class FormQueryEndpoints
                 .Take(limit)
                 .ToList();
             var filteredStates = ProjectStates(filteredQueries, filter.Temporal, clock);
-            var filteredResponses = await ShapeQueriesAsync(filteredStates, null, preloadedRevisions, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            var filteredResponses = await ShapeQueriesAsync(filteredStates, null, preloadedRevisions, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(filteredResponses);
         }
 
         var states = ProjectStates(queries, filter.Temporal, clock);
-        var responses = await ShapeQueriesAsync(states, null, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+        var responses = await ShapeQueriesAsync(states, null, null, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(ApplyPostFilters(responses, parsedFilters, filter, offset, limit));
     }
 
@@ -538,7 +546,7 @@ internal static class FormQueryEndpoints
         {
             var historicalQueries = await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), cancellationToken).ConfigureAwait(false);
             var historicalStates = ProjectStates(historicalQueries, filter.Temporal, clock);
-            var historicalResponses = await ShapeQueriesAsync(historicalStates, visibleEnrollments, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            var historicalResponses = await ShapeQueriesAsync(historicalStates, visibleEnrollments, null, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok(ApplyPostFilters(historicalResponses, parsedFilters, filter, offset, limit));
         }
 
@@ -563,14 +571,14 @@ internal static class FormQueryEndpoints
                 .ToList();
             var changedStates = ProjectStates(pagedCandidates, filter.Temporal, clock);
             var changedResponses = await ShapeQueriesAsync(
-                changedStates, visibleEnrollments, preloadedRevisions, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+                changedStates, visibleEnrollments, preloadedRevisions, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
             return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(changedResponses);
         }
 
         var queries = await ReadCurrentPageAsync(
             contexts, tenant, q => allowed.Contains(q.EnrollmentId), parsedFilters, filter.Escalated, offset, limit, cancellationToken).ConfigureAwait(false);
         var states = ProjectStates(queries, filter.Temporal, clock);
-        var responses = await ShapeQueriesAsync(states, visibleEnrollments, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+        var responses = await ShapeQueriesAsync(states, visibleEnrollments, null, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(responses);
     }
 
@@ -605,6 +613,7 @@ internal static class FormQueryEndpoints
         IReadOnlyDictionary<ObservationId, int>? preloadedRevisions,
         TenantId tenant,
         ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
         IKernelNavigator navigator,
         CancellationToken cancellationToken)
     {
@@ -672,7 +681,21 @@ internal static class FormQueryEndpoints
             }
         }
 
-        return [.. queries.Select(q => FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId)))];
+        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
+        foreach (var enrollmentId in queries.Select(q => q.EnrollmentId).Distinct())
+        {
+            canUnblindByEnrollment[enrollmentId] = await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false);
+        }
+
+        return [
+            .. queries.Select(q =>
+            {
+                var maskBlinded = !canUnblindByEnrollment[q.EnrollmentId]
+                    && recordsById.TryGetValue(q.FormId, out var rec)
+                    && rec.IsQueryBlinded(q.ItemId, q.ObservationId);
+                return FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId), maskBlinded);
+            }),
+        ];
     }
 
     private static bool IsValueChanged(FormQuery query, IReadOnlyDictionary<ObservationId, int> revisions) =>
@@ -887,20 +910,28 @@ internal static class FormQueryEndpoints
             command(tenant, query.EnrollmentId, FormEndpoints.IdempotencyKey(context), services.ChangeReason.Read(context) ?? string.Empty),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         return result.Value is { } state
-            ? TypedResults.Ok(await RespondAsync(services.Forms, services.Navigator, tenant, state, cancellationToken).ConfigureAwait(false))
+            ? TypedResults.Ok(await RespondAsync(services.Forms, services.Navigator, services.Access, tenant, state, cancellationToken).ConfigureAwait(false))
             : KernelErrorEndpoints.Problem(result.Error!);
     }
 
     private static async Task<FormQueryResponse> RespondAsync(
         ICollectionInstanceRecords forms,
         IKernelNavigator navigator,
+        IKernelReadAccess access,
         TenantId tenant,
         FormQueryState state,
         CancellationToken cancellationToken)
     {
         var record = await forms.FindAsync(tenant, state.FormId, cancellationToken).ConfigureAwait(false);
         var queryContext = record is null ? null : await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
-        return FormQueryResponse.From(state, record is null ? new Dictionary<ObservationId, int>() : Revisions(record), queryContext);
+        var maskBlinded = record is not null
+            && record.IsQueryBlinded(state.ItemId, state.ObservationId)
+            && !await access.CanUnblindAsync(tenant, state.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        return FormQueryResponse.From(
+            state,
+            record is null ? new Dictionary<ObservationId, int>() : Revisions(record),
+            queryContext,
+            maskBlinded);
     }
 
     private static async Task<List<FormQuery>> ReadAsync(
@@ -1060,9 +1091,16 @@ internal sealed record FormQueryListFilter(
 }
 
 /// <summary>The services a query step needs, bound from DI as one parameter.</summary>
+/// <param name="Forms">The kernel's form records, for the value's current revision.</param>
+/// <param name="Contexts">The module's tenant-scoped reads.</param>
+/// <param name="Sender">The kernel command path.</param>
+/// <param name="ChangeReason">The signed change reason.</param>
+/// <param name="Navigator">Kernel navigation, for site and subject codes.</param>
+/// <param name="Access">Read-access and unblinding probe for masking responses.</param>
 internal sealed record FormQueryCommandServices(
     [FromServices] ICollectionInstanceRecords Forms,
     [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext> Contexts,
     [FromServices] IKernelCommandSender Sender,
     [FromServices] IKernelChangeReason ChangeReason,
-    [FromServices] IKernelNavigator Navigator);
+    [FromServices] IKernelNavigator Navigator,
+    [FromServices] IKernelReadAccess Access);

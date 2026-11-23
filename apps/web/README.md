@@ -53,10 +53,17 @@ only to the API gateway, which forwards requests to the backend services.
   and self-service study creation on `/studies`, lifecycle stages and sections,
   synchronous ODM v1.3.2 XML / USDM v4 JSON and bundled CDISC Library eCRF draft
   import (`ProtocolImportPanel.vue` inside `ProtocolVersionsSection.vue`), the
-  browser mirror of the kernel NodeRef (ADR-2481), the palette, pulse,
-  participants and collapsible inspector rail. `src/stores/studyCanvas.ts` holds
-  what it has read from Execution and caches kernel Schedule of Activities
-  options per `studyCode`.
+  browser mirror of the kernel NodeRef (ADR-2481), prioritized inspector
+  selection across `?node=`, `?observation=`, `?form=`, `?proposal=`, and
+  `?participant=` (`src/composables/useCanvasSelection.ts`), WAI-ARIA roving
+  toolbar navigation (`src/composables/useRovingToolbar.ts`), dry-run kernel
+  capability probing (`src/composables/useKernelCanI.ts`), recoverable error
+  disclosures (`CanvasErrorAlert.vue` wrapping `SupportDetails.vue`), the
+  palette, pulse, participants and collapsible inspector rail.
+  `src/stores/studyCanvas.ts` holds what it has read from Execution, coordinates
+  the global `⌘E` / `Ctrl+E` Explain shortcut across `AppShell.vue` and
+  `StudyCanvasView.vue`, and caches kernel Schedule of Activities options per
+  `studyCode`.
 - `src/mocks/`: MSW handlers for offline and demo use.
 - `tests/`: Vitest unit tests; `tests/e2e/`: Playwright specs.
 

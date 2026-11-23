@@ -203,7 +203,12 @@ The coordinator needs `collection.open`, `collection.record` and
 manager needs `execution.query.raise`, `execution.query.manage`,
 `collection.record_unasked` (to query blank items), `observation.verify` and
 `assertion.retract`. Without a grant every query command is denied (403
-`K.Authorization.Denied`).
+`K.Authorization.Denied`). Items bound to randomization or treatment-assignment
+concepts are masked in place (`NullFlavor.Masked` on values and revisions,
+redacted form hashes and signature payloads, masked pre-commit preview findings,
+and masked query text and messages) unless the caller holds `enrollment.unblind`
+on the enrollment, and `EvaluateEditChecksOnCollectionChanged` suppresses
+automated queries on blinded items to prevent side-channel leaks (K-AUTH-4).
 
 The consumers' service accounts need tenant-wide grants in every tenant that
 uses forms: `svc:execution-forms` needs `execution.form.open`, and

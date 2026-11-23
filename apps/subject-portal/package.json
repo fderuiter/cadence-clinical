@@ -16,6 +16,7 @@
   "dependencies": {
     "demo-fixtures": "workspace:*",
     "keycloak-js": "catalog:",
+    "lucide-vue-next": "catalog:",
     "pinia": "catalog:",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",

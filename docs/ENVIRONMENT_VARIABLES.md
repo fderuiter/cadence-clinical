@@ -19,14 +19,12 @@ Development included (ADR-2260).
 ## Hosting
 
 - `ASPNETCORE_ENVIRONMENT` — Read by every service (ASP.NET Core host) and
-  `packages/cli/src/Services/DatabaseResetService.cs:123`. Default:
-  `Production`. Not required.
-- `CADENCE_ENV` — Read by
-  `packages/cli/src/Services/DatabaseResetService.cs:122` (refuses `db reset` in
-  Production). Default: `Development`. Not required.
-- `ENVIRONMENT` — Read by
-  `packages/cli/src/Services/DatabaseResetService.cs:124`. Default:
-  `Development`. Not required.
+  `packages/cli/src/Services/DatabaseResetService.cs`. Default: `Production`.
+  Not required.
+- `CADENCE_ENV` — Read by `packages/cli/src/Services/DatabaseResetService.cs`
+  (refuses `db reset` in Production). Default: `Development`. Not required.
+- `ENVIRONMENT` — Read by `packages/cli/src/Services/DatabaseResetService.cs`.
+  Default: `Development`. Not required.
 - `CADENCE_TRUSTED_PROXIES` — Read by every service
   (`packages/telemetry/src/CadenceHttpHardening.cs`, ADR-2491). Default: none
   (only loopback is trusted). Set behind a proxy as comma-separated IP addresses
@@ -54,14 +52,15 @@ All services share the `cadence` database, each in its own schema; see
 
 - `ConnectionStrings__cadence` — Read by
   `packages/database/src/CadenceDatabaseExtensions.cs`
-  (`ResolvePostgresConnectionString`), used by every service with a `DbContext`.
-  Default: none. Required (or `POSTGRES_CONNECTION_STRING`).
-- `POSTGRES_CONNECTION_STRING` — Read by the same resolver after
-  `ConnectionStrings__cadence`, every design-time `*DbContextFactory.cs`
-  (`dotnet ef`, via `ResolveDesignTimeConnectionString` or `-- --connection`),
-  and `packages/cli/src/Services/DatabaseResetService.cs`. Default: none.
-  Required (or `ConnectionStrings__cadence`); `dotnet ef` and `db reset` need
-  it.
+  (`ResolvePostgresConnectionString`), used by every service with a `DbContext`,
+  `packages/cli/src/Services/DatabaseResetService.cs` (`db reset`,
+  `db migrate`), and `Cadence.DatabaseMigrator`. Default: none. Required (or
+  `POSTGRES_CONNECTION_STRING`).
+- `POSTGRES_CONNECTION_STRING` — Read by the same resolvers after
+  `ConnectionStrings__cadence` and every design-time `*DbContextFactory.cs`
+  (`dotnet ef`, via `ResolveDesignTimeConnectionString` or `-- --connection`).
+  Default: none. Required (or `ConnectionStrings__cadence`); `dotnet ef`,
+  `db reset`, and `db migrate` need it.
 - `Database__MigrateOnStartup` — Read by
   `packages/database/src/CadenceMigrationHostedService.cs` (every service with a
   `DbContext`). Default: `false`. Not required; applies migrations before
@@ -69,9 +68,6 @@ All services share the `cadence` database, each in its own schema; see
 - `Database__MigrateOnly` — Read by
   `packages/database/src/CadenceMigrationHostedService.cs`. Default: `false`.
   Not required; applies migrations and exits 0 (deployment job).
-- `DATABASE_URL` — Read by
-  `packages/cli/src/Services/DatabaseResetService.cs:174` (accepts
-  `postgresql+asyncpg://` URLs). Default: none. Not required.
 
 ## Execution service
 

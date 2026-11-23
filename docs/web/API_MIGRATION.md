@@ -191,15 +191,18 @@ SDV and site activation parts are the only ones with a real backend behind them.
   `classifyIntelligence`, `stageQcDocument`, `getQcQueue`, `submitQcReview`,
   `exportDocuments`, `listExportJobs`, `getExportJob`, `downloadExportJob`):
   `DocumentManagerView.vue` provides a standalone study/site scope picker on
-  `/etmf` (and inherits `:study-id` / `:site-id` inside Clinical Canvas),
-  renders UX-9 scope-assignment guidance on HTTP `403` (`FORBIDDEN_SCOPE`),
-  streams verified `SHA-256` document bytes in `PdfPreviewModal.vue`, downloads
-  ZIP exports via authenticated `Blob` requests in `ExportJobDrawer.vue`,
-  persists `DRAFT` -> `TECHNICAL_QC` submissions and inline DIA taxonomy edits,
-  and enforces `authority.ts` role gates (`canReadEtmf`, `canStageEtmfQc`,
-  `canTagEtmf`, `canReviewEtmfQc`, `canExportEtmf`). eTMF signs and forwards
-  site document completeness snapshots to Execution
-  (`POST /api/v1/execution/webhooks/etmf`) as `etmf_service`.
+  `/etmf` synchronized via `?studyId=` and `useActiveStudyScope()` without
+  synthetic study defaults outside demo mode (and inherits `:study-id` /
+  `:site-id` inside Clinical Canvas), renders UX-9 scope-assignment guidance on
+  HTTP `403` (`FORBIDDEN_SCOPE`), streams verified `SHA-256` document bytes in
+  `PdfPreviewModal.vue`, downloads ZIP exports via authenticated `Blob` requests
+  in `ExportJobDrawer.vue`, persists `DRAFT` -> `TECHNICAL_QC` submissions and
+  inline DIA taxonomy edits
+  (`PATCH /api/v1/etmf/documents/{documentId}/taxonomy`), and enforces
+  `authority.ts` role gates (`canReadEtmf`, `canStageEtmfQc`, `canTagEtmf`,
+  `canReviewEtmfQc`, `canExportEtmf`). eTMF signs and forwards site document
+  completeness snapshots to Execution (`POST /api/v1/execution/webhooks/etmf`)
+  as `etmf_service`.
 - **Study Training curricula, staff assignments & PI delegation bulk sign-off
   (`ADR-2643`)** (`trainingApi.listCurricula`, `getCurriculum`,
   `batchAssignCurriculum`, `listAssignments`, `getAssignmentDetail`,
@@ -225,19 +228,29 @@ SDV and site activation parts are the only ones with a real backend behind them.
   `executionApi.getSiteComplianceStatus`, `executionApi.activateSite`): the
   study-centric shell from [CLINICAL_CANVAS.md](../ux/CLINICAL_CANVAS.md) UX-1
   (`AppShell.vue`) wraps every authenticated screen (`StudyCanvasView.vue`,
-  `EcrfView.vue`, `CtmsView.vue`, `OverviewView.vue`) in one persistent header
-  with **Studies**, **Data collection** and **Site readiness** primary
-  navigation, a single global **⌘K** command palette, the persona view switcher
-  (UX-6), **Orientation** checklist/tour controls and **Help & SOPs**, with no
-  legacy product sidebar, sandbox banner or telemetry footer. Study home counts
-  participants by state in one summary call (`executionApi.getSubjectCounts`,
-  `GET /api/v1/execution/subjects/counts`); each count opens the participants it
-  counts. Participants pages 50 at a time with subject code search (`?q=`),
-  state (`?status=`) and study site (`?site=`) filters; selecting one fills the
-  inspector and puts its NodeRef (`participant:<uuid>`, ADR-2481) in the URL,
-  and cold links resolve participant details by surrogate UUID or subject code.
-  Participant simulation stays disabled naming #4888. Stages and sections with
-  no service are empty, not mocked.
+  `EcrfView.vue`, `CtmsView.vue`, `DocumentManagerView.vue`,
+  `StudyTrainingView.vue`, `OverviewView.vue`) in one persistent header with
+  **Studies**, **Data collection** and **Site readiness** primary navigation, a
+  single global **⌘K** command palette (including study-scoped **Trial
+  documents**, **Study training**, and **Orientation** entries), the persona
+  view switcher (UX-6), **Orientation** checklist/tour controls and **Help &
+  SOPs**, with no legacy product sidebar, sandbox banner or telemetry footer.
+  `useActiveStudyScope()` (`src/composables/useActiveStudyScope.ts`,
+  `src/stores/studyScopeBridge.ts`) and `resolveActiveWorkspaceScope()`
+  (`src/canvas/palette.ts`) keep active study and site scope unified across
+  `/studies/:studyCode`, `/ctms`, `/ssu`, `/ecrf`, `/etmf`, `/training`, and
+  `/overview` without synthesizing demo study codes outside demo builds, and
+  `ObservationView.vue` resolves `/observations/:nodeId` lineage via
+  `studyStep.ref` + `kernelApi.getNode` into `/studies/:studyCode`. Study home
+  counts participants by state in one summary call
+  (`executionApi.getSubjectCounts`, `GET /api/v1/execution/subjects/counts`);
+  each count opens the participants it counts. Participants pages 50 at a time
+  with subject code search (`?q=`), state (`?status=`) and study site (`?site=`)
+  filters; selecting one fills the inspector and puts its NodeRef
+  (`participant:<uuid>`, ADR-2481) in the URL, and cold links resolve
+  participant details by surrogate UUID or subject code. Participant simulation
+  stays disabled naming #4888. Stages and sections with no service are empty,
+  not mocked.
 - **Participant data (#4828)** (`executionApi.listObservations`,
   `listFormSubmissions`, `verifyObservationSdv`, `flagObservationSdv`; queries
   through `ecrfQueriesApi.listForEnrollment` and `transition`, #5461): "Open

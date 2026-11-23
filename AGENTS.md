@@ -336,14 +336,14 @@ or `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
   `pnpm --filter web test:e2e:workflows`).
 - **Quality gates and auto-fix:**
   `dotnet restore Cadence.sln && pnpm cadence check` (all 42 gates, including
-  `public-bundle`, `branch-freshness`, `architecture-tests`, `unit-tests`, and
-  `demo-manifest`; `--pre-commit` for staged blobs, `--base <ref>` or
-  `--push-before <sha>` for scoped diffs, `--exclude <gate>` to skip specific
-  gates, or `<gate>` for one gate such as `markdown`, `deid`, `adrs`,
-  `workflow-security`, or `rulesets`), `pnpm cadence fix [--full] [--openapi]`,
-  `pnpm cadence rulesets [--dry-run]`, and `./scripts/setup_wizard.sh --minimal`
-  (provisions `detect-secrets`, `pip-audit`, `actionlint`, `hadolint`, and
-  `shellcheck`).
+  `actionlint`, `hadolint`, `public-bundle`, `branch-freshness`,
+  `architecture-tests`, `unit-tests`, and `demo-manifest`; `--pre-commit` for
+  staged blobs, `--base <ref>` or `--push-before <sha>` for scoped diffs,
+  `--exclude <gate>` to skip specific gates, or `<gate>` for one gate such as
+  `markdown`, `deid`, `adrs`, `workflow-security`, or `rulesets`),
+  `pnpm cadence fix [--full] [--openapi]`, `pnpm cadence rulesets [--dry-run]`,
+  and `./scripts/setup_wizard.sh --minimal` (provisions `detect-secrets`,
+  `actionlint`, `hadolint`, and `shellcheck`).
 - **Database and migrations:** `pnpm cadence db reset`,
   `pnpm cadence db migrate`, and
   `pnpm cadence migrations <add|script|list|verify>` across all 18 persistence
@@ -386,14 +386,16 @@ automated Dependabot edits:
 Active pull-request and release jobs in `.github/workflows/ci.yml` and
 `.github/workflows/conflict-check.yml` back two required GitHub Actions
 (`integration_id: 15368`) branch ruleset checks on `main` and `release/*`
-(`strict_required_status_checks_policy: true`): `CI Gate` and
-`Check for Merge Conflicts`. `.github/rulesets/version_tags.json` enforces
-`creation`, `required_signatures`, `deletion`, and `non_fast_forward` on
-`refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole`
-`5`, `bypass_mode: "always"`), and `.github/workflows/production-pipeline.yml`
-and `.github/workflows/deploy-docs.yml` accept `on: workflow_call` only from
+(`strict_required_status_checks_policy: true`, administrator
+`bypass_mode: "pull_request"`): `CI Gate` and `Check for Merge Conflicts`.
+`.github/rulesets/version_tags.json` enforces `creation`, `required_signatures`,
+`deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned
+to release admins (`RepositoryRole` `5`, `bypass_mode: "always"`), and
+`.github/workflows/production-pipeline.yml` and
+`.github/workflows/deploy-docs.yml` accept `on: workflow_call` only from
 `ci.yml`. See [docs/CI.md](docs/CI.md) for the full job inventory and failure
-runbook, and verify or reconcile rulesets with `pnpm cadence check rulesets` and
+runbook, and verify or reconcile rulesets with `pnpm cadence check rulesets`
+(and staged index blobs via `pnpm cadence check --pre-commit`) and
 `pnpm cadence rulesets [--dry-run]`.
 
 ## GxP compliance sync

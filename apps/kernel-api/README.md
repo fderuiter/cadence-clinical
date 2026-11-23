@@ -183,12 +183,13 @@ to provision the `Tenant`, sponsor `Organization`, starter `SiteInstitution`,
 default sandbox `Site`, pseudonymous `Person`, `TenantMembership`, initial
 `sponsor_admin`, `sponsor_designer`, and `site_investigator` `Role` and `Grant`
 records (excluding commercial operator capabilities `subscription.activate`,
-`subscription.expire`, `entitlement.grant`, and `entitlement.revoke`), and
-bitemporal `SubscriptionPeriod` (`Trialing`) + `ProductEntitlement` rows
-(`Blueprint`, `Capture`, plus tier-included families), then writes `tenant_id`,
-explicit `site_id` (starter sandbox site), empty initial `study_ids` (never
-wildcard `*`), and realm roles (`Sponsor Admin`, `Sponsor Designer`,
-`Site Investigator`) back to Keycloak (`ADMIN_EDIT`) fail-closed
+`subscription.expire`, `entitlement.grant`, and `entitlement.revoke`), the
+delegable `TRIAL_DATA_MANAGER` role template, and bitemporal
+`SubscriptionPeriod` (`Trialing`) + `ProductEntitlement` rows (`Blueprint`,
+`Capture`, plus tier-included families), then writes `tenant_id`, explicit
+`site_id` (starter sandbox site), empty initial `study_ids` (never wildcard
+`*`), and realm roles (`Sponsor Admin`, `Sponsor Designer`, `Site Investigator`)
+back to Keycloak (`ADMIN_EDIT`) fail-closed
 (`502 K.Commercial.IdentityProviderSyncFailed`) via `KeycloakOnboardingClient`.
 
 ### Study creation, site setup & synchronous protocol draft import (ADR-2476, ADR-2552)
@@ -253,23 +254,24 @@ from the gateway-signed identity (`X-Change-Reason`, ADR-2495;
 
 Applying or releasing a clinical lock requires an `Idempotency-Key`, a signed
 `X-Change-Reason`, and a fresh single-use 60-second `X-Sig-Token` (21 CFR Part
-11). `POST locks` validates `!IsReadOnly`, target existence, duplicate locks,
-and lock readiness before recording `Attest` over the canonical `LockStatement`
-and dispatching `ApplyLock` or `ReleaseLock`, leaving zero orphan `Attestation`
-rows on rejected writes. `Locked` assertions require zero open `Queried`
-assertions and zero missing required `CollectionItem`s
-(`409 K.Assertion.ScopeNotReady` with a structured `Explanation`); `Frozen`
-remains available while sites answer and monitors close queries. Study exports
-and participant casebooks project canonical bitemporal kernel state at
-`as_of(valid_at, known_at)` (`K-TRUTH-1`), exclude `IdentityVault` direct
-identifiers, and emit explicit `masked` placeholders for unauthorized sites or
-blinded treatment values (`K-AUTH-4`).
+11). `ApplyLock` and `ReleaseLock` validate target existence, duplicate locks,
+and lock readiness before recording the `Attestation` over the canonical
+`LockStatement` atomically inside the `StudyId`-authorized command transaction,
+leaving zero orphan `Attestation` rows on rejected writes. `Locked` assertions
+require zero open `Queried` assertions and zero missing required
+`CollectionItem`s (`409 K.Assertion.ScopeNotReady` with a structured
+`Explanation`); `Frozen` remains available while sites answer and monitors close
+queries. Study exports and participant casebooks project canonical bitemporal
+kernel state at `as_of(valid_at, known_at)` (`K-TRUTH-1`), exclude
+`IdentityVault` direct identifiers, and emit explicit `masked` placeholders for
+unauthorized sites or blinded treatment values (`K-AUTH-4`).
 
 - `POST locks`: applies a `Frozen` or `Locked` assertion (`lock.apply`) across
   `study`, `study_site`, `enrollment`, `collection_instance` or `observation`
-  after preflighting readiness, verifying `X-Sig-Token`, and recording `Attest`.
+  after validating readiness and `X-Sig-Token`, recording the step-up
+  `Attestation` atomically.
 - `POST locks/{lockRef}/release`: releases an active lock (`lock.release`) with
-  a step-up signed retracting assertion and `Attest`.
+  a step-up signed retracting assertion and atomic `Attestation`.
 - `GET studies/{studyRef}/locks?as_of=&active_only=`: lists locks recorded for a
   study at an optional bitemporal `as_of` coordinate, masking unauthorized or
   blinded scopes in place.

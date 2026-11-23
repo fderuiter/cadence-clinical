@@ -28,8 +28,13 @@
 <script setup>
 // Modal dialogs in the demo workspace use ClinicalModal from packages/ui.
 import { computed, defineAsyncComponent, ref, watch } from "vue";
-import { useRoute } from "vue-router";
 import CtmsLiveWorkspace from "./CtmsLiveWorkspace.vue";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -44,65 +49,88 @@ const props = defineProps({
 });
 
 const scopeStore = useClinicalScopeStore();
-const route = useRoute();
+const { route, router } = resolveRouteAndRouter();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const demoBuild = isDemoBuild();
+const isStandaloneRoute = computed(
+  () => !props.sectionMode && !props.studyCode
+);
 
 const demoWorkspaceRef = ref(null);
 const liveWorkspaceRef = ref(null);
 
-const initialQueryStudy =
-  typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
-const initialQuerySite =
-  typeof route?.query?.siteId === "string" && route.query.siteId.trim()
-    ? route.query.siteId.trim()
-    : typeof route?.query?.site === "string"
-      ? route.query.site.trim()
-      : "";
+const initialRouteScope = readRouteScopeQuery(route);
 
 // Apply incoming route/prop scope synchronously before child panels render.
 if (props.studyCode.trim()) {
-  scopeStore.activeStudyId = props.studyCode.trim();
+  const fixedStudy = props.studyCode.trim();
+  setActiveStudyCode(fixedStudy);
+  scopeStore.activeStudyId = fixedStudy;
+} else if (initialRouteScope.studyId) {
+  setActiveStudyCode(initialRouteScope.studyId);
+  scopeStore.activeStudyId = initialRouteScope.studyId;
+} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+  scopeStore.activeStudyId = activeStudyCode.value;
 }
 if (props.initialSiteId.trim()) {
   scopeStore.activeSiteId = props.initialSiteId.trim();
 }
 if (route && route.query) {
-  if (initialQueryStudy) {
-    scopeStore.activeStudyId = initialQueryStudy;
+  const hasExplicitRouteScope = Boolean(
+    initialRouteScope.studyId ||
+    initialRouteScope.siteId ||
+    initialRouteScope.subjectId
+  );
+  if (isStandaloneRoute.value && hasExplicitRouteScope) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  } else {
+    if (initialRouteScope.siteId) {
+      scopeStore.activeSiteId = initialRouteScope.siteId;
+    }
+    if (initialRouteScope.subjectId) {
+      scopeStore.activeSubjectId = initialRouteScope.subjectId;
+    }
   }
-  if (initialQuerySite) {
-    scopeStore.activeSiteId = initialQuerySite;
-  }
-  if (typeof route.query.subjectId === "string" && route.query.subjectId) {
-    scopeStore.activeSubjectId = route.query.subjectId;
-  }
-  if (typeof route.query.visitId === "string" && route.query.visitId) {
-    scopeStore.activeVisitId = route.query.visitId;
+  if (initialRouteScope.visitId) {
+    scopeStore.activeVisitId = initialRouteScope.visitId;
   }
 }
 
 watch(
-  [
-    () => route?.query?.studyId,
-    () => route?.query?.siteId,
-    () => route?.query?.site,
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
   ],
-  ([nextStudy, nextSiteId, nextSite]) => {
-    const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
-    if (trimmedStudy) {
-      scopeStore.activeStudyId = trimmedStudy;
+  () => {
+    if (!route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
     }
-    const trimmedSite =
-      typeof nextSiteId === "string" && nextSiteId.trim()
-        ? nextSiteId.trim()
-        : typeof nextSite === "string"
-          ? nextSite.trim()
-          : "";
-    if (trimmedSite) {
-      scopeStore.activeSiteId = trimmedSite;
+    if (isStandaloneRoute.value) {
+      scopeStore.activeStudyId = nextScope.studyId || activeStudyCode.value;
+      scopeStore.activeSiteId = nextScope.siteId;
+      scopeStore.activeSubjectId = nextScope.subjectId;
+      return;
+    }
+    if (nextScope.studyId) {
+      scopeStore.activeStudyId = nextScope.studyId;
+    }
+    if (nextScope.siteId) {
+      scopeStore.activeSiteId = nextScope.siteId;
     }
   }
 );
+
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode.trim() && next && next !== scopeStore.activeStudyId) {
+    scopeStore.activeStudyId = next;
+  }
+});
 
 const activeTab = computed({
   get: () =>
@@ -117,6 +145,25 @@ const activeTab = computed({
     }
   },
 });
+
+watch(
+  [
+    () => scopeStore.activeStudyId,
+    () => scopeStore.activeSiteId,
+    () => scopeStore.activeSubjectId,
+  ],
+  ([nextStudy, nextSite, nextSubject]) => {
+    if (nextStudy) {
+      setActiveStudyCode(nextStudy);
+    }
+    if (!isStandaloneRoute.value) return;
+    void replaceRouteQueryParams(router, route, {
+      studyId: nextStudy || null,
+      siteId: nextSite || null,
+      subjectId: nextSubject || null,
+    });
+  }
+);
 
 const effectiveDelegatedStaff = computed(
   () => demoWorkspaceRef.value?.effectiveDelegatedStaff ?? []
