@@ -484,8 +484,12 @@
 <script setup>
 import { ClinicalDrawer } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
-import * as VueRouter from "vue-router";
 import { kernelApi } from "../api/kernelApi";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
 import {
   ETMF_QC_REVIEW_ROLE_REASON,
   ETMF_READ_ROLE_REASON,
@@ -528,10 +532,7 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
-const route =
-  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
-const router =
-  typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
+const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
@@ -634,6 +635,11 @@ async function loadStudyDirectoryOptions() {
         const defaultCode = studies[0]?.code || "";
         if (defaultCode) {
           syncScope(defaultCode, standaloneSiteInput.value);
+          void replaceRouteQueryParams(router, route, {
+            studyId: defaultCode,
+            siteId: standaloneSiteInput.value || null,
+            subjectId: clinicalStore.activeSubjectId || null,
+          });
           await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
         }
       }
@@ -649,19 +655,11 @@ async function applyStandaloneScope() {
   const nextSite = standaloneSiteInput.value.trim();
   syncScope(nextStudy, nextSite);
 
-  if (router && route) {
-    try {
-      await router.replace({
-        query: {
-          ...route.query,
-          studyId: nextStudy || undefined,
-          siteId: nextSite || undefined,
-        },
-      });
-    } catch {
-      // Ignore router navigation errors in isolated test mounts.
-    }
-  }
+  await replaceRouteQueryParams(router, route, {
+    studyId: nextStudy || null,
+    siteId: nextSite || null,
+    subjectId: clinicalStore.activeSubjectId || null,
+  });
 
   await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
   if (activeWorkspaceTab.value === "qc-queue") {
@@ -673,19 +671,34 @@ async function applyStandaloneScope() {
 }
 
 watch(
-  () => [props.studyId, props.siteId, route?.query?.studyId],
-  async (
-    [propStudy, nextSite, queryStudy],
-    [prevPropStudy, prevSite, prevQueryStudy] = []
-  ) => {
-    const nextStudy =
-      (typeof propStudy === "string" && propStudy.trim()) ||
-      (typeof queryStudy === "string" && queryStudy.trim()) ||
-      "";
-    const prevStudy =
-      (typeof prevPropStudy === "string" && prevPropStudy.trim()) ||
-      (typeof prevQueryStudy === "string" && prevQueryStudy.trim()) ||
-      "";
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+  ],
+  async () => {
+    if (props.studyId || !route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+    clinicalStore.activeSubjectId = nextScope.subjectId;
+    if (
+      resolvedStudy !== standaloneStudyInput.value ||
+      nextScope.siteId !== standaloneSiteInput.value
+    ) {
+      syncScope(resolvedStudy, nextScope.siteId);
+      await etmfStore.fetchBinderTree(resolvedStudy || undefined);
+      if (canRead.value) {
+        await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+      }
+    }
+  }
+);
+
+watch(
+  () => [props.studyId, props.siteId],
+  async ([nextStudy, nextSite], [prevStudy, prevSite]) => {
     if (!nextStudy && nextSite === prevSite) return;
     syncScope(nextStudy || etmfStore.currentStudyId, nextSite || "");
     await etmfStore.fetchBinderTree(nextStudy || undefined);
@@ -894,20 +907,9 @@ async function handleAcceptClassification(doc) {
 }
 
 onMounted(async () => {
-  const queryStudy =
-    typeof route?.query?.studyId === "string"
-      ? route.query.studyId
-      : typeof route?.query?.study_id === "string"
-        ? route.query.study_id
-        : "";
-  const querySite =
-    typeof route?.query?.siteId === "string"
-      ? route.query.siteId
-      : typeof route?.query?.site_id === "string"
-        ? route.query.site_id
-        : typeof route?.query?.site === "string"
-          ? route.query.site
-          : "";
+  const routeScope = readRouteScopeQuery(route);
+  const queryStudy = routeScope.studyId;
+  const querySite = routeScope.siteId;
 
   const initialStudy =
     props.studyId ||
@@ -926,11 +928,11 @@ onMounted(async () => {
   if (initialStudy || initialSite) {
     syncScope(initialStudy, initialSite);
   }
-  if (route?.query?.subjectId) {
-    clinicalStore.activeSubjectId = String(route.query.subjectId);
+  if (routeScope.subjectId) {
+    clinicalStore.activeSubjectId = routeScope.subjectId;
   }
-  if (route?.query?.visitId) {
-    clinicalStore.activeVisitId = String(route.query.visitId);
+  if (routeScope.visitId) {
+    clinicalStore.activeVisitId = routeScope.visitId;
   }
 
   if (!canRead.value) {
