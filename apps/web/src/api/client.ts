@@ -9,12 +9,6 @@ import {
 } from "./authorization.js";
 import { isDemoBuild } from "../utils/demoMode";
 
-declare global {
-  interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
-  }
-}
-
 export function getBaseUrl(): string {
   const env = import.meta.env as Record<string, string | undefined> | undefined;
   const configured = env?.VITE_API_BASE_URL;
@@ -166,7 +160,7 @@ async function dispatchWithDynamicBase(
   return executeWithSingleFlightRetry(input, init);
 }
 
-export function createOpenApiClient<T extends {} = Record<string, any>>(
+export function createOpenApiClient<T extends {} = Record<string, unknown>>(
   baseUrl?: string
 ) {
   const hasExplicitBaseUrl = baseUrl !== undefined;
