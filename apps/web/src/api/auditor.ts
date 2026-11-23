@@ -48,32 +48,6 @@ export const auditorService = {
   },
 
   /**
-   * Retrieves Quality EQMS audit log events.
-   */
-  getQualityAuditLogs(
-    params: AuditLogParams = {},
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/quality/audit-logs", {
-        params: {
-          query: {
-            user_id: params.user_id,
-            action: params.action,
-            entity_type: params.entity_type,
-            start_date: params.start_date || params.start_time,
-            end_date: params.end_date || params.end_time,
-            record_id: params.record_id,
-            limit: params.limit,
-            offset: params.offset,
-          },
-        },
-        ...options,
-      })
-    );
-  },
-
-  /**
    * Retrieves the execution ledger integrity verification.
    */
   getExecutionIntegrity(options: Record<string, unknown> = {}) {

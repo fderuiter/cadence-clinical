@@ -20,7 +20,6 @@ vi.mock("../src/api/notifications", () => {
   return {
     notificationsService: {
       getNotifications: vi.fn(),
-      getNotification: vi.fn(),
       acknowledgeNotification: vi.fn(),
       resolveNotification: vi.fn(),
     },

@@ -33,9 +33,8 @@ for randomisation, CGT supply verification and toxicity grading.
   default, because the save path stamps it. `AuditLogEntry.Timestamp` is
   `required`.
 - Python reference sources remain for behaviour the C# port lacks or does not
-  test yet: `operations/engine.py`, `operations/evaluator.py`,
-  `operations/models.py`, `timeline/engine.py` and `timeline/models.py`. They
-  are not the implementation;
+  test yet: `timeline/engine.py` and `timeline/models.py`. They are not the
+  implementation;
   [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md)
   says what each needs before it goes.
 

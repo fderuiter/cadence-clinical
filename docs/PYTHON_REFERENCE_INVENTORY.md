@@ -24,25 +24,11 @@ README's "Python reference sources" line too.
 
 | Package                                      | Port missing | Port untested | Ported, deletion pending |
 | -------------------------------------------- | -----------: | ------------: | -----------------------: |
-| [packages/ddf](#packagesddf)                 |            1 |             0 |                        0 |
-| [packages/engine_core](#packagesengine_core) |            5 |             0 |                        0 |
-| [packages/security](#packagessecurity)       |            7 |             0 |                        0 |
-
-## packages/ddf
-
-| Python file           | What it does                          | C# today | Status       | Notes |
-| --------------------- | ------------------------------------- | -------- | ------------ | ----- |
-| `dataset_json_etl.py` | eCRF observations → SDTM Dataset-JSON | none     | Port missing |       |
+| [packages/engine_core](#packagesengine_core) |            2 |             0 |                        0 |
+| [packages/security](#packagessecurity)       |            5 |             0 |                        0 |
 
 ## packages/engine_core
 
-- **`operations/engine.py`** (`Port missing`) — Site startup greenlight facade.
-  _C# today:_ none.
-- **`operations/evaluator.py`** (`Port missing`) — Greenlight rules: IRB,
-  contract, staff qualification, facility, IP depot. _C# today:_ none. _Notes:_
-  Spec K-TIME-4/5 and K-AUTH-5 are the target.
-- **`operations/models.py`** (`Port missing`) — Greenlight models. _C# today:_
-  none.
 - **`timeline/engine.py`** (`Port missing`) — Visit-window schedule and
   deviation assessment. _C# today:_ `ExpectedSchedule` (kernel,
   [ADR-2487](adr/2026-09-30-expected-schedule-as-a-pure-function.md)) places
@@ -57,11 +43,6 @@ README's "Python reference sources" line too.
 
 ## packages/security
 
-- **`auditor_token.py`** (`Port missing`) — Issues and validates time-boxed
-  read-only auditor JWTs signed with `GATEWAY_SECRET` (with a hard-coded
-  fallback). _C# today:_ none (`AuditorWriteGuardMiddleware.cs` only enforces
-  read-only access). _Notes:_ Likely a Keycloak concern under ADR-2256, so the
-  owner could decide to drop it.
 - **`cert_store.py`** (`Port missing`) — X.509 register, revoke, CRL status,
   self-signed and trust checks. _C# today:_ none.
 - **`crypto_verifier.py`** (`Port missing`) — `verify_electronic_signature`:
@@ -75,11 +56,6 @@ README's "Python reference sources" line too.
   and the gateway service URLs
   ([ADR-2490](adr/2026-09-30-fail-fast-startup-validation-of-required-settings.md)).
   _Notes:_ See note S1.
-- **`permissions.py`** (`Port missing`) — Second permission scheme:
-  `PermissionEnum` (`study:read`, `rtsm:randomize`, …), `RoleEnum`, role →
-  permission map. _C# today:_ none (C# `PermissionMatrix` uses a different
-  resource → actions scheme; none of the 26 colon permissions exist in C#).
-  _Notes:_ Ask the owner whether spec §9.3 capability tokens make it obsolete.
 - **`rbac.py`** (`Port missing`) — Role aliases, role → resource → action
   matrix, `Principal`, site/study scope, payload masking, auditor checks. _C#
   today:_ `packages/security/src/Rbac/RoleNormalization.cs`,

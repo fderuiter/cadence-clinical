@@ -78,10 +78,7 @@ needs `UsdmImportOptions` to name one.
   `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`,
   embedded into the assembly.
-- Python reference sources remain for behaviour the C# port lacks or does not
-  test yet: `dataset_json_etl.py` (#5042). It is not the implementation;
-  [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md)
-  says what it needs before it goes.
+- No Python reference sources remain (#4789).
 
 ## Key dependencies
 

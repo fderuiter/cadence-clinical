@@ -21,12 +21,20 @@ only to the API gateway, which forwards requests to the backend services.
   single-flight token refresh and retry on HTTP `401` before ending an expired
   session
   ([ADR-2551](../../docs/adr/2026-11-20-share-session-logout-and-signature-primitives.md)).
-- `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts`
-  from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`);
-  the `api-clients` quality gate and `tests/api/generated_types.test.js` fail
-  when they drift from the specs.
+- `scripts/generate-api-types.js` and `scripts/generate-canvas-contracts.js`:
+  generate `src/api/generated/<service>.ts` from
+  `docs/openapi/<service>_openapi.json` and `src/canvas/generated/*.ts` from the
+  canonical `.NET` kernel (`NodeKinds.cs`), RBAC (`RoleNormalization.cs`,
+  `PermissionMatrix*.cs`), and Execution (`SubjectStateCodec.cs`,
+  `SubjectTransitionGraph.cs`, `SubjectAuthority.cs`) sources
+  (`pnpm --filter web generate:api`); the `api-clients` quality gate,
+  `tests/api/generated_types.test.js`, and `tests/canvas/contracts.spec.ts` fail
+  when they drift.
 - `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role
-  normalisation.
+  normalisation, `clinicalScope.ts` (`useClinicalScopeStore`) holds live
+  study/site/participant scope, and `src/stores/demo/*` isolates synthetic USDM,
+  CTMS, eCRF, ledger, and ingestion slices behind the `clinical.ts`
+  (`useClinicalStore`) facade.
 - `src/views/`, `src/components/`, `src/features/`, `src/composables/`,
   `src/router/`: UI components and views. `src/components/AppShell.vue` provides
   the application shell layout, including responsive header navigation with a
