@@ -30,6 +30,7 @@ interface SessionCacheBucket {
   studySites: Map<string, StudySiteOption[]>;
   studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
   enrollments: Map<string, NodeRef>;
+  enrollmentStudySites: Map<string, string>;
   enrollmentInFlight: Map<string, Promise<NodeRef | null>>;
   enrollmentDetails: Map<string, KernelEnrollmentLookupDetail>;
   enrollmentDetailInFlight: Map<
@@ -50,6 +51,7 @@ function createSessionCacheBucket(): SessionCacheBucket {
     studySites: new Map(),
     studySitesInFlight: new Map(),
     enrollments: new Map(),
+    enrollmentStudySites: new Map(),
     enrollmentInFlight: new Map(),
     enrollmentDetails: new Map(),
     enrollmentDetailInFlight: new Map(),
@@ -81,6 +83,7 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.studySites.clear();
   bucket.studySitesInFlight.clear();
   bucket.enrollments.clear();
+  bucket.enrollmentStudySites.clear();
   bucket.enrollmentInFlight.clear();
   bucket.enrollmentDetails.clear();
   bucket.enrollmentDetailInFlight.clear();
@@ -141,6 +144,10 @@ function enrollmentDetailKey(
   subjectCode: string
 ): string {
   return `${scope}::enrollment-detail::${encodeURIComponent(normalizedStudy)}::${encodeURIComponent(subjectCode)}`;
+}
+
+function enrollmentSiteKey(scope: string, enrollmentId: string): string {
+  return `${scope}::enrollment-site::${encodeURIComponent(enrollmentId)}`;
 }
 
 /** Clears all cached positive study references, study site options, enrollment references, and schedules immediately. */
@@ -339,6 +346,7 @@ export function findKernelEnrollmentRef(
       const parsed = parseNodeRef(found.enrollment_ref);
       const resolved = parsed?.kind === "enrollment" ? parsed : null;
       const resolvedStudyRef = found.study_ref?.trim() || null;
+      const resolvedSiteRef = found.study_site_ref?.trim() || null;
       const hasEnrollmentNumber =
         found !== null &&
         typeof found === "object" &&
@@ -370,6 +378,17 @@ export function findKernelEnrollmentRef(
         getKernelStudyCallerScopeKey() === scope
       ) {
         bucket.enrollments.set(key, resolved);
+        if (resolvedSiteRef) {
+          const siteParsed = parseNodeRef(resolvedSiteRef);
+          const unversionedSiteRef =
+            siteParsed?.kind === "study_site"
+              ? `${siteParsed.kind}:${siteParsed.id}`
+              : resolvedSiteRef;
+          bucket.enrollmentStudySites.set(
+            enrollmentSiteKey(scope, resolved.id),
+            unversionedSiteRef
+          );
+        }
         bucket.enrollments.set(
           enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
           resolved
@@ -475,6 +494,22 @@ export function invalidateKernelEnrollmentDetail(
   const normalizedStudy = normalizeStudyCode(trimmedStudy);
   bucket.enrollmentDetails.delete(
     enrollmentDetailKey(scope, normalizedStudy, trimmedSubject)
+  );
+}
+
+/**
+ * Unversioned `study_site:<id>` reference cached for `enrollmentId` in the active caller scope from a prior
+ * `findKernelEnrollmentRef` lookup, or null when not yet cached.
+ */
+export function getCachedEnrollmentStudySiteRef(
+  enrollmentId: string
+): string | null {
+  const trimmed = enrollmentId.trim();
+  if (!trimmed) return null;
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  return (
+    bucket.enrollmentStudySites.get(enrollmentSiteKey(scope, trimmed)) ?? null
   );
 }
 

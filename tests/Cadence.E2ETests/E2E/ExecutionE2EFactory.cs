@@ -87,7 +87,8 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
                 Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
             }
 
-            _postgresContainer = new PostgreSqlBuilder(PostgresTestImage.Image).Build();
+            _postgresContainer = new PostgreSqlBuilder(PostgresTestImage.Image)
+                .Build();
 
             await _postgresContainer.StartAsync().ConfigureAwait(false);
             _connectionString = _postgresContainer.GetConnectionString();
