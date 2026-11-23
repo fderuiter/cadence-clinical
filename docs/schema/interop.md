@@ -44,6 +44,7 @@ Entity: `ClinicalQuery`
 | `TestCode` | `character varying(100)` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `VisitId` | `character varying(255)` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -194,6 +195,7 @@ Entity: `EproSubmissionDefeated`
 | `OfflineSyncMarkersJson` | `jsonb` | no |  |  |
 | `Status` | `character varying(100)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -220,6 +222,7 @@ Entity: `EproSubmissionQuarantine`
 | `TriageHistoryJson` | `jsonb` | no |  |  |
 | `UpdatedAt` | `timestamp with time zone` | no |  |  |
 | `ValidationErrorsJson` | `jsonb` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -291,6 +294,7 @@ Entity: `InteropAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -318,6 +322,7 @@ Entity: `BiostatExportAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -482,6 +487,7 @@ Entity: `SensorDailySummaryRecord`
 | `TbrLevel2Percentage` | `double precision` | yes |  |  |
 | `TirPercentage` | `double precision` | yes |  |  |
 | `TotalSteps` | `integer` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -522,6 +528,7 @@ Entity: `SensorSafetyAlertRecord`
 | `ThresholdValue` | `double precision` | no |  |  |
 | `TriggeredAt` | `timestamp with time zone` | no |  |  |
 | `Unit` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -561,6 +568,7 @@ Entity: `SensorTelemetryStreamRecord`
 | `StartTimestamp` | `timestamp with time zone` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

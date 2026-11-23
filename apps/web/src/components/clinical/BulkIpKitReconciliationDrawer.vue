@@ -896,8 +896,9 @@ onMounted(() => {
   color: var(--semantic-color-surface);
 }
 .badge-rtsm {
-  background: var(--semantic-color-ai);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
+  border: 1px solid var(--semantic-color-purple-border);
 }
 .badge-atomic {
   background: var(--semantic-color-success);

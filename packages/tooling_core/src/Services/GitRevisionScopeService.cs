@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -51,6 +52,84 @@ public sealed record GitRevisionScope(
     string EffectiveBaseRef,
     IReadOnlyList<string> Files,
     bool UsedTrackedFallback = false);
+
+/// <summary>Outcome of fetching a remote base ref before merge-readiness or local CI execution.</summary>
+public sealed record GitFetchResult(
+    bool Succeeded,
+    string RemoteName,
+    string RemoteBranch,
+    string TrackingRef,
+    string ErrorMessage);
+
+/// <summary>Outcome of <c>git merge-tree --write-tree</c> between a base ref and <c>HEAD</c>.</summary>
+public sealed record GitMergeTreeResult(
+    bool Succeeded,
+    bool HasConflicts,
+    string EffectiveBaseRef,
+    string? BaseCommit,
+    string? HeadCommit,
+    string? MergeBaseCommit,
+    int BehindCount,
+    string? TreeOid,
+    IReadOnlyList<string> ConflictingFiles,
+    string? ErrorMessage);
+
+/// <summary>Outcome of synthesizing a temporary merged commit object from <see cref="GitMergeTreeResult"/>.</summary>
+public sealed record GitSynthesizedMergeResult(
+    GitMergeTreeResult MergeTree,
+    string? MergeCommitSha);
+
+/// <summary>Disposable detached Git worktree allocated under <see cref="Path.GetTempPath"/>.</summary>
+public sealed class DetachedGitWorktree : IDisposable
+{
+    private bool _disposed;
+
+    public DetachedGitWorktree(string originRepoRoot, string worktreePath, string commitSha)
+    {
+        OriginRepoRoot = originRepoRoot;
+        WorktreePath = worktreePath;
+        CommitSha = commitSha;
+    }
+
+    /// <summary>The primary repository root that owns the shared Git object store and refs.</summary>
+    public string OriginRepoRoot { get; }
+
+    /// <summary>The temporary worktree directory under <see cref="Path.GetTempPath"/>.</summary>
+    public string WorktreePath { get; }
+
+    /// <summary>The commit SHA checked out in detached <c>HEAD</c> mode.</summary>
+    public string CommitSha { get; }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _ = GitRevisionScopeService.RunGitCaptured(OriginRepoRoot, "worktree", "remove", "--force", WorktreePath);
+
+        if (Directory.Exists(WorktreePath))
+        {
+            try
+            {
+                foreach (var file in new DirectoryInfo(WorktreePath).EnumerateFiles("*", SearchOption.AllDirectories))
+                {
+                    file.Attributes = FileAttributes.Normal;
+                }
+
+                Directory.Delete(WorktreePath, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Best-effort cleanup when child processes release handles asynchronously.
+            }
+        }
+
+        _ = GitRevisionScopeService.RunGitCaptured(OriginRepoRoot, "worktree", "prune");
+    }
+}
 
 /// <summary>
 /// Centralizes Git diff and revision range resolution for <c>Cadence.Cli</c> and <c>Cadence.ToolingCore</c> quality gates.
@@ -297,6 +376,392 @@ public static class GitRevisionScopeService
         return RunGitSingleLine(repoRoot, "merge-base", effectiveBaseRef, "HEAD");
     }
 
+    /// <summary>
+    /// Splits a remote-tracking base ref (such as <c>origin/main</c> or <c>refs/remotes/origin/release/1.0</c>) into
+    /// its remote name, remote branch name, and local tracking ref (<c>refs/remotes/&lt;remote&gt;/&lt;branch&gt;</c>).
+    /// </summary>
+    public static bool TrySplitRemoteRef(
+        string repoRoot,
+        string? baseRef,
+        out string remoteName,
+        out string remoteBranch,
+        out string trackingRef)
+    {
+        remoteName = string.Empty;
+        remoteBranch = string.Empty;
+        trackingRef = string.Empty;
+
+        string normalized = NormalizeBaseRef(baseRef);
+        if (normalized.StartsWith("refs/remotes/", StringComparison.Ordinal))
+        {
+            normalized = normalized["refs/remotes/".Length..];
+        }
+        else if (normalized.StartsWith("refs/heads/", StringComparison.Ordinal))
+        {
+            normalized = normalized["refs/heads/".Length..];
+        }
+
+        var remotes = HasGitRepository(repoRoot)
+            ? (RunGitLines(repoRoot, "remote") ?? []).OrderByDescending(r => r.Length).ToList()
+            : [];
+
+        foreach (string configuredRemote in remotes)
+        {
+            string prefix = configuredRemote + "/";
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal) && normalized.Length > prefix.Length)
+            {
+                remoteName = configuredRemote;
+                remoteBranch = normalized[prefix.Length..];
+                trackingRef = $"refs/remotes/{remoteName}/{remoteBranch}";
+                return true;
+            }
+        }
+
+        int slashIndex = normalized.IndexOf('/', StringComparison.Ordinal);
+        if (slashIndex > 0 && slashIndex < normalized.Length - 1)
+        {
+            remoteName = normalized[..slashIndex];
+            remoteBranch = normalized[(slashIndex + 1)..];
+            trackingRef = $"refs/remotes/{remoteName}/{remoteBranch}";
+            return true;
+        }
+
+        if (remotes.Contains("origin", StringComparer.Ordinal) && normalized.Length > 0)
+        {
+            remoteName = "origin";
+            remoteBranch = normalized;
+            trackingRef = $"refs/remotes/origin/{remoteBranch}";
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Fetches the remote branch backing <paramref name="baseRef"/> into its local remote-tracking ref without tags.
+    /// Fails closed when <paramref name="repoRoot"/> is not a Git repository, no remote can be resolved, or <c>git fetch</c> fails.
+    /// </summary>
+    public static GitFetchResult FetchBaseRef(string repoRoot, string? baseRef = null)
+    {
+        string effectiveBaseRef = NormalizeBaseRef(baseRef);
+        if (!HasGitRepository(repoRoot))
+        {
+            return new GitFetchResult(false, string.Empty, string.Empty, effectiveBaseRef, $"'{repoRoot}' is not a Git repository.");
+        }
+
+        if (!TrySplitRemoteRef(repoRoot, effectiveBaseRef, out string remoteName, out string remoteBranch, out string trackingRef))
+        {
+            return new GitFetchResult(
+                false,
+                string.Empty,
+                string.Empty,
+                effectiveBaseRef,
+                $"Cannot determine a Git remote and branch to fetch for base ref '{effectiveBaseRef}'.");
+        }
+
+        var (exitCode, stdout, stderr) = RunGitCaptured(
+            repoRoot,
+            "fetch",
+            "--no-tags",
+            remoteName,
+            $"+refs/heads/{remoteBranch}:{trackingRef}");
+
+        if (exitCode == 0)
+        {
+            return new GitFetchResult(true, remoteName, remoteBranch, trackingRef, string.Empty);
+        }
+
+        string details;
+        if (!string.IsNullOrWhiteSpace(stderr))
+        {
+            details = stderr.Trim();
+        }
+        else if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            details = stdout.Trim();
+        }
+        else
+        {
+            details = $"git fetch exited with code {exitCode}.";
+        }
+
+        return new GitFetchResult(false, remoteName, remoteBranch, trackingRef, details);
+    }
+
+    /// <summary>
+    /// Returns how many commits <paramref name="head"/> is behind <paramref name="baseRef"/> (<c>git rev-list --count &lt;head&gt;..&lt;baseRef&gt;</c>),
+    /// or <c>null</c> when either revision cannot be resolved.
+    /// </summary>
+    public static int? TryGetBehindCount(string repoRoot, string? baseRef = null, string head = "HEAD")
+    {
+        if (!HasGitRepository(repoRoot))
+        {
+            return null;
+        }
+
+        string effectiveBaseRef = NormalizeBaseRef(baseRef);
+        string? rawCount = RunGitSingleLine(repoRoot, "rev-list", "--count", $"{head}..{effectiveBaseRef}");
+        return int.TryParse(rawCount, NumberStyles.None, CultureInfo.InvariantCulture, out int count)
+            ? count
+            : null;
+    }
+
+    /// <summary>
+    /// Evaluates whether <paramref name="head"/> merges cleanly with <paramref name="baseRef"/> using
+    /// <c>git merge-tree --write-tree --name-only --no-messages -z</c> without mutating the index or working tree.
+    /// </summary>
+    public static GitMergeTreeResult PreviewMergeTree(string repoRoot, string? baseRef = null, string head = "HEAD")
+    {
+        string effectiveBaseRef = NormalizeBaseRef(baseRef);
+        if (!HasGitRepository(repoRoot))
+        {
+            return new GitMergeTreeResult(
+                false,
+                false,
+                effectiveBaseRef,
+                null,
+                null,
+                null,
+                0,
+                null,
+                [],
+                $"'{repoRoot}' is not a Git repository.");
+        }
+
+        string? headCommit = TryResolveCommitSha(repoRoot, head);
+        if (string.IsNullOrEmpty(headCommit))
+        {
+            return new GitMergeTreeResult(
+                false,
+                false,
+                effectiveBaseRef,
+                null,
+                null,
+                null,
+                0,
+                null,
+                [],
+                $"Cannot resolve '{head}' commit in '{repoRoot}'.");
+        }
+
+        string? baseCommit = TryResolveCommitSha(repoRoot, effectiveBaseRef);
+        if (string.IsNullOrEmpty(baseCommit))
+        {
+            return new GitMergeTreeResult(
+                false,
+                false,
+                effectiveBaseRef,
+                null,
+                headCommit,
+                null,
+                0,
+                null,
+                [],
+                $"Base ref '{effectiveBaseRef}' was not found. Run 'git fetch origin main' first.");
+        }
+
+        string? mergeBase = RunGitSingleLine(repoRoot, "merge-base", baseCommit, headCommit);
+        if (string.IsNullOrEmpty(mergeBase))
+        {
+            return new GitMergeTreeResult(
+                false,
+                false,
+                effectiveBaseRef,
+                baseCommit,
+                headCommit,
+                null,
+                0,
+                null,
+                [],
+                $"Base ref '{effectiveBaseRef}' shares no common history with '{head}'.");
+        }
+
+        int behindCount = TryGetBehindCount(repoRoot, baseCommit, headCommit) ?? 0;
+        var (exitCode, stdout, stderr) = RunGitCaptured(
+            repoRoot,
+            "merge-tree",
+            "--write-tree",
+            "--name-only",
+            "--no-messages",
+            "-z",
+            baseCommit,
+            headCommit);
+
+        string[] parts = stdout.Split('\0', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        string? treeOid = parts.FirstOrDefault();
+
+        if (exitCode == 0 && !string.IsNullOrWhiteSpace(treeOid))
+        {
+            return new GitMergeTreeResult(
+                true,
+                false,
+                effectiveBaseRef,
+                baseCommit,
+                headCommit,
+                mergeBase,
+                behindCount,
+                treeOid,
+                [],
+                null);
+        }
+
+        if (exitCode == 1)
+        {
+            var conflicts = NormalizePaths(parts.Skip(1));
+            string conflictSummary = conflicts.Count > 0 ? string.Join(", ", conflicts) : "(unknown paths)";
+            return new GitMergeTreeResult(
+                false,
+                true,
+                effectiveBaseRef,
+                baseCommit,
+                headCommit,
+                mergeBase,
+                behindCount,
+                treeOid,
+                conflicts,
+                $"Merge conflicts detected between '{effectiveBaseRef}' and '{head}': {conflictSummary}");
+        }
+
+        string error = !string.IsNullOrWhiteSpace(stderr)
+            ? stderr.Trim()
+            : $"git merge-tree failed with exit code {exitCode}.";
+        return new GitMergeTreeResult(
+            false,
+            false,
+            effectiveBaseRef,
+            baseCommit,
+            headCommit,
+            mergeBase,
+            behindCount,
+            treeOid,
+            [],
+            error);
+    }
+
+    /// <summary>
+    /// Synthesizes a merged commit object via <c>git merge-tree --write-tree</c> and <c>git commit-tree</c> when
+    /// <paramref name="head"/> is behind <paramref name="baseRef"/>, or reuses <paramref name="head"/> directly when it
+    /// already incorporates <paramref name="baseRef"/>. Leaves refs, index, and working tree untouched.
+    /// </summary>
+    public static GitSynthesizedMergeResult SynthesizeMergedCommit(
+        string repoRoot,
+        string? baseRef = null,
+        string head = "HEAD")
+    {
+        var preview = PreviewMergeTree(repoRoot, baseRef, head);
+        if (!preview.Succeeded ||
+            string.IsNullOrEmpty(preview.BaseCommit) ||
+            string.IsNullOrEmpty(preview.HeadCommit) ||
+            string.IsNullOrEmpty(preview.TreeOid))
+        {
+            return new GitSynthesizedMergeResult(preview, null);
+        }
+
+        if (preview.BehindCount == 0 || string.Equals(preview.BaseCommit, preview.HeadCommit, StringComparison.Ordinal))
+        {
+            return new GitSynthesizedMergeResult(preview, preview.HeadCommit);
+        }
+
+        var (exitCode, stdout, stderr) = RunGitCaptured(
+            repoRoot,
+            "-c",
+            "user.name=Cadence CI",
+            "-c",
+            "user.email=ci@example.invalid", // deid-ignore: synthetic local git commit-tree identity
+            "-c",
+            "commit.gpgsign=false",
+            "commit-tree",
+            preview.TreeOid,
+            "-p",
+            preview.BaseCommit,
+            "-p",
+            preview.HeadCommit,
+            "-m",
+            $"Synthesize merged CI tree ({preview.EffectiveBaseRef} + {head})");
+
+        string? commitSha = stdout
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+
+        if (exitCode != 0 || string.IsNullOrWhiteSpace(commitSha))
+        {
+            string detail = string.IsNullOrWhiteSpace(stderr)
+                ? $"git commit-tree exited with code {exitCode}."
+                : stderr.Trim();
+            return new GitSynthesizedMergeResult(preview with { Succeeded = false, ErrorMessage = detail }, null);
+        }
+
+        return new GitSynthesizedMergeResult(preview, commitSha);
+    }
+
+    /// <summary>
+    /// Creates a detached temporary Git worktree under <see cref="Path.GetTempPath"/> checked out at <paramref name="commitSha"/>.
+    /// </summary>
+    public static bool TryCreateDetachedWorktree(
+        string repoRoot,
+        string commitSha,
+        out DetachedGitWorktree? worktree,
+        out string? errorMessage,
+        string directoryPrefix = "cadence-ci-worktree")
+    {
+        worktree = null;
+        errorMessage = null;
+
+        if (!HasGitRepository(repoRoot))
+        {
+            errorMessage = $"'{repoRoot}' is not a Git repository.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(commitSha))
+        {
+            errorMessage = "Commit SHA for detached worktree must not be empty.";
+            return false;
+        }
+
+        string tempWorktreePath = Path.Combine(Path.GetTempPath(), $"{directoryPrefix}-{Guid.NewGuid():N}");
+        var (exitCode, stdout, stderr) = RunGitCaptured(
+            repoRoot,
+            "worktree",
+            "add",
+            "--detach",
+            tempWorktreePath,
+            commitSha);
+
+        if (exitCode != 0)
+        {
+            if (!string.IsNullOrWhiteSpace(stderr))
+            {
+                errorMessage = stderr.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(stdout))
+            {
+                errorMessage = stdout.Trim();
+            }
+            else
+            {
+                errorMessage = $"git worktree add exited with code {exitCode}.";
+            }
+
+            if (Directory.Exists(tempWorktreePath))
+            {
+                try
+                {
+                    Directory.Delete(tempWorktreePath, recursive: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Best-effort cleanup of partially created worktree directory.
+                }
+            }
+
+            return false;
+        }
+
+        worktree = new DetachedGitWorktree(repoRoot, tempWorktreePath, commitSha);
+        return true;
+    }
+
     /// <summary>Resolves a Git revision to its commit SHA (<c>rev-parse --verify -q &lt;rev&gt;^{commit}</c>).</summary>
     public static string? TryResolveCommitSha(string repoRoot, string revision) =>
         HasGitRepository(repoRoot)
@@ -506,6 +971,12 @@ public static class GitRevisionScopeService
 
     public static string? RunGitRaw(string repoRoot, params string[] args)
     {
+        var (exitCode, stdout, _) = RunGitCaptured(repoRoot, args);
+        return exitCode == 0 ? stdout : null;
+    }
+
+    public static (int ExitCode, string Stdout, string Stderr) RunGitCaptured(string repoRoot, params string[] args)
+    {
         var psi = new ProcessStartInfo("git")
         {
             WorkingDirectory = repoRoot,
@@ -513,6 +984,7 @@ public static class GitRevisionScopeService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
         foreach (string arg in args)
         {
             psi.ArgumentList.Add(arg);
@@ -523,18 +995,18 @@ public static class GitRevisionScopeService
             using var process = Process.Start(psi);
             if (process is null)
             {
-                return null;
+                return (-1, string.Empty, "Failed to start git process.");
             }
 
             var stderrTask = process.StandardError.ReadToEndAsync();
             string stdout = process.StandardOutput.ReadToEnd();
-            _ = stderrTask.GetAwaiter().GetResult();
+            string stderr = stderrTask.GetAwaiter().GetResult();
             process.WaitForExit();
-            return process.ExitCode == 0 ? stdout : null;
+            return (process.ExitCode, stdout, stderr);
         }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException)
         {
-            return null;
+            return (-1, string.Empty, ex.Message);
         }
     }
 

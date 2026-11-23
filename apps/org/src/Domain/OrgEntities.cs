@@ -1,5 +1,9 @@
 using System;
 
+using Cadence.Database.Temporal;
+
+using NpgsqlTypes;
+
 namespace Cadence.Apps.Org.Domain;
 
 
@@ -39,6 +43,28 @@ public class DelegationOfAuthority
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
+}
+
+public class DelegationOfAuthorityPeriod : IBitemporalPeriodEntity
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DelegationOfAuthorityId { get; set; } = string.Empty;
+    public string DelegatorId { get; set; } = string.Empty;
+    public string DelegateeId { get; set; } = string.Empty;
+    public string SiteCode { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string DutiesJson { get; set; } = "[]";
+    public bool IsActive { get; set; } = true;
+    public string? Signature { get; set; }
+    public DateTimeOffset? SignedAt { get; set; }
+    public string? SignedBy { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? RevokedBy { get; set; }
+    public string? RevocationReason { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
+    public NpgsqlRange<DateTimeOffset> RecordedPeriod { get; set; }
 }
 
 public class TrainingLog
