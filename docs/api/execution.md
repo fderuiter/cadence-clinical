@@ -65,6 +65,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `PUT` | `/api/v1/execution/subjects/{subjectId}/demographics` | UpdateSubjectDemographics |  |
 | `DELETE` | `/api/v1/execution/subjects/{subjectId}/demographics` | DeleteSubjectDemographics |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/randomize` | RandomizeSubject | Randomises an enrolled participant under the live scheme and assigns a kit when it needs one. |
+| `PATCH` | `/api/v1/execution/subjects/{subjectId}/site` | AssignSubjectSite | Assigns a clinical site to a screening subject and synchronizes screening enrollment with the kernel. |
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/state` | UpdateSubjectState |  |
 | `POST` | `/api/v1/execution/webhooks/etmf` | EtmfCompletenessWebhook |  |
 | `GET` | `/healthz` | ExecutionHealthCheck | Execution engine health probe. |
