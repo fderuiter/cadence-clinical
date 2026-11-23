@@ -84,18 +84,29 @@ function extractInitialJsAssetsFromHtml(
 
 describe("apps/web cold-boot bundle budget & chunk isolation", () => {
   it("keeps index.html initial JS within budget and excludes authoring, USDM/zod, and route-only API modules", async () => {
-    const result = await build({
-      root: WEB_ROOT,
-      configFile: VITE_CONFIG_PATH,
-      mode: "production",
-      logLevel: "silent",
-      define: {
-        "process.env.NODE_ENV": JSON.stringify("production"),
-      },
-      build: {
-        write: false,
-      },
-    });
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    let result: Awaited<ReturnType<typeof build>>;
+    try {
+      result = await build({
+        root: WEB_ROOT,
+        configFile: VITE_CONFIG_PATH,
+        mode: "production",
+        logLevel: "silent",
+        define: {
+          "process.env.NODE_ENV": JSON.stringify("production"),
+        },
+        build: {
+          write: false,
+        },
+      });
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    }
 
     const outputs = Array.isArray(result) ? result : [result];
     const bundleItems = outputs.flatMap((entry) =>

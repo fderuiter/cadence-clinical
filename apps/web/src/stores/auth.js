@@ -17,6 +17,7 @@ import {
   rehydrateClinicalPersona,
   resetClinicalSession,
   resolveWebRedirectUri,
+  runLogoutCleanups,
   saveWebReturnUrl,
   webSessionCoordinator,
 } from "../auth/sessionCoordinator.js";
@@ -723,6 +724,7 @@ export const useAuthStore = defineStore("auth", {
       this.isLoggingOut = true;
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
+      runLogoutCleanups();
       try {
         resetClinicalSession(this._p);
       } catch {

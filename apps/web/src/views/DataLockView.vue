@@ -558,220 +558,213 @@
     </div>
 
     <!-- Lock Action Modal Dialog -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isLockModalOpen"
-      class="modal-overlay"
-      @click.self="isLockModalOpen = false"
+    <ClinicalModal
+      :open="isLockModalOpen"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      :title="
+        lockForm.action === 'FREEZE'
+          ? '❄️ Soft Freeze Data Scope'
+          : '🔒 Execute Cryptographic Hard Lock'
+      "
+      dialog-class="modal-card"
+      @close="isLockModalOpen = false"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h3>
-            {{
-              lockForm.action === "FREEZE"
-                ? "❄️ Soft Freeze Data Scope"
-                : "🔒 Execute Cryptographic Hard Lock"
-            }}
-          </h3>
-          <button class="modal-close-btn" @click="isLockModalOpen = false">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-target-info">
-            <p>
-              <strong>Target Scope:</strong> {{ lockForm.scope_type }} (<code>{{
-                lockForm.scope_id
-              }}</code
-              >)
-            </p>
-            <p><strong>Study ID:</strong> {{ lockForm.study_id }}</p>
-          </div>
+      <div class="modal-target-info">
+        <p>
+          <strong>Target Scope:</strong> {{ lockForm.scope_type }} (<code>{{
+            lockForm.scope_id
+          }}</code
+          >)
+        </p>
+        <p><strong>Study ID:</strong> {{ lockForm.study_id }}</p>
+      </div>
 
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Lock Mode:</label>
-            <div class="radio-row">
-              <label class="radio-label">
-                <input v-model="lockForm.action" type="radio" value="FREEZE" />
-                <span>FREEZE (Monitoring Hold)</span>
-              </label>
-              <label class="radio-label">
-                <input
-                  v-model="lockForm.action"
-                  type="radio"
-                  value="HARD_LOCK"
-                />
-                <span>HARD_LOCK (21 CFR Part 11 Seal)</span>
-              </label>
-            </div>
-          </div>
-
-          <div v-if="lockForm.action === 'HARD_LOCK'" class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label"
-              >Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label
-            >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              v-model="lockForm.sig_token"
-              type="password"
-              class="form-input"
-              placeholder="Enter re-authentication JWT or passkey token..."
-            />
-            <small class="form-help">
-              Required for Part 11 Hard Lock authorization.
-            </small>
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label"
-              >GxP Reason for Change:
-              <span class="required-star">*</span></label
-            >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="lockForm.reason"
-              class="form-textarea"
-              rows="3"
-              placeholder="Enter formal reason for locking this data scope..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isLockModalOpen = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="!lockForm.reason.trim() || isSubmitting"
-            @click="submitLock"
-          >
-            {{ isSubmitting ? "Locking..." : "Confirm Lock Operation" }}
-          </button>
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Lock Mode:</label>
+        <div class="radio-row">
+          <label class="radio-label">
+            <input v-model="lockForm.action" type="radio" value="FREEZE" />
+            <span>FREEZE (Monitoring Hold)</span>
+          </label>
+          <label class="radio-label">
+            <input v-model="lockForm.action" type="radio" value="HARD_LOCK" />
+            <span>HARD_LOCK (21 CFR Part 11 Seal)</span>
+          </label>
         </div>
       </div>
-    </div>
+
+      <div v-if="lockForm.action === 'HARD_LOCK'" class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label"
+          >Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label
+        >
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          v-model="lockForm.sig_token"
+          type="password"
+          class="form-input"
+          placeholder="Enter re-authentication JWT or passkey token..."
+        />
+        <small class="form-help">
+          Required for Part 11 Hard Lock authorization.
+        </small>
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label"
+          >GxP Reason for Change: <span class="required-star">*</span></label
+        >
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <textarea
+          v-model="lockForm.reason"
+          class="form-textarea"
+          rows="3"
+          placeholder="Enter formal reason for locking this data scope..."
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="isLockModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!lockForm.reason.trim() || isSubmitting"
+          @click="submitLock"
+        >
+          {{ isSubmitting ? "Locking..." : "Confirm Lock Operation" }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Unlock Justification Modal Dialog (Strict >= 50 Chars) -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="isUnlockModalOpen"
-      class="modal-overlay"
-      @click.self="isUnlockModalOpen = false"
+    <ClinicalModal
+      :open="isUnlockModalOpen"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      title="🔓 GxP Unlock Override Justification"
+      dialog-class="modal-card unlock-modal"
+      @close="isUnlockModalOpen = false"
     >
-      <div class="modal-card unlock-modal">
-        <div class="modal-header">
-          <h3>🔓 GxP Unlock Override Justification</h3>
-          <button class="modal-close-btn" @click="isUnlockModalOpen = false">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="alert-warning-banner">
-            <span class="banner-icon">⚠️</span>
-            <div>
-              <strong>Regulatory Integrity Warning (21 CFR Part 11)</strong>
-              <p>
-                Unlocking previously locked clinical data requires a detailed
-                justification of at least
-                <strong>50 characters</strong> detailing clinical necessity,
-                PI/CRA approval, and discrepancy scope.
-              </p>
-            </div>
-          </div>
-
-          <div class="modal-target-info">
-            <p>
-              <strong>Unlocking Scope:</strong>
-              {{ unlockForm.scope_type }} (<code>{{ unlockForm.scope_id }}</code
-              >)
-            </p>
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">
-              Mandatory Unlock Justification (&ge; 50 Characters):
-              <span class="required-star">*</span>
-            </label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <textarea
-              v-model="unlockForm.justification"
-              class="form-textarea"
-              :class="{
-                'input-valid': isJustificationValid,
-                'input-invalid':
-                  unlockForm.justification.length > 0 && !isJustificationValid,
-              }"
-              rows="4"
-              placeholder="Describe the clinical rationale, CRA monitor approval, and specific queries necessitating this unlock override..."
-            />
-            <div class="char-counter-row">
-              <span
-                class="char-counter"
-                :class="{
-                  'counter-met': isJustificationValid,
-                  'counter-unmet': !isJustificationValid,
-                }"
-              >
-                {{ unlockForm.justification.length }} / 50 characters required
-              </span>
-              <span v-if="isJustificationValid" class="counter-status valid">
-                ✓ Justification length criteria satisfied
-              </span>
-              <span v-else class="counter-status invalid">
-                Minimum 50 characters required to unlock
-              </span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">GxP Reason for Change Code:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="unlockForm.reason_code" class="form-select">
-              <option value="CRA_QUERY_CORRECTION">
-                CRA Monitor Query Resolution
-              </option>
-              <option value="SAFETY_EVENT_UPDATE">
-                Adverse Event / SAE Timely Update
-              </option>
-              <option value="PROTOCOL_DEVIATION_CORRECTION">
-                Protocol Deviation Correction
-              </option>
-              <option value="AUDITOR_OVERRIDE">
-                Quality / Auditor Requested Re-entry
-              </option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isUnlockModalOpen = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-danger"
-            :disabled="!isJustificationValid || isSubmitting"
-            @click="submitUnlock"
-          >
-            {{ isSubmitting ? "Unlocking..." : "Confirm Unlock Override" }}
-          </button>
+      <div class="alert-warning-banner">
+        <span class="banner-icon">⚠️</span>
+        <div>
+          <strong>Regulatory Integrity Warning (21 CFR Part 11)</strong>
+          <p>
+            Unlocking previously locked clinical data requires a detailed
+            justification of at least
+            <strong>50 characters</strong> detailing clinical necessity, PI/CRA
+            approval, and discrepancy scope.
+          </p>
         </div>
       </div>
-    </div>
+
+      <div class="modal-target-info">
+        <p>
+          <strong>Unlocking Scope:</strong>
+          {{ unlockForm.scope_type }} (<code>{{ unlockForm.scope_id }}</code
+          >)
+        </p>
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">
+          Mandatory Unlock Justification (&ge; 50 Characters):
+          <span class="required-star">*</span>
+        </label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <textarea
+          v-model="unlockForm.justification"
+          class="form-textarea"
+          :class="{
+            'input-valid': isJustificationValid,
+            'input-invalid':
+              unlockForm.justification.length > 0 && !isJustificationValid,
+          }"
+          rows="4"
+          placeholder="Describe the clinical rationale, CRA monitor approval, and specific queries necessitating this unlock override..."
+        />
+        <div class="char-counter-row">
+          <span
+            class="char-counter"
+            :class="{
+              'counter-met': isJustificationValid,
+              'counter-unmet': !isJustificationValid,
+            }"
+          >
+            {{ unlockForm.justification.length }} / 50 characters required
+          </span>
+          <span v-if="isJustificationValid" class="counter-status valid">
+            ✓ Justification length criteria satisfied
+          </span>
+          <span v-else class="counter-status invalid">
+            Minimum 50 characters required to unlock
+          </span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">GxP Reason for Change Code:</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <select v-model="unlockForm.reason_code" class="form-select">
+          <option value="CRA_QUERY_CORRECTION">
+            CRA Monitor Query Resolution
+          </option>
+          <option value="SAFETY_EVENT_UPDATE">
+            Adverse Event / SAE Timely Update
+          </option>
+          <option value="PROTOCOL_DEVIATION_CORRECTION">
+            Protocol Deviation Correction
+          </option>
+          <option value="AUDITOR_OVERRIDE">
+            Quality / Auditor Requested Re-entry
+          </option>
+        </select>
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="isUnlockModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          :disabled="!isJustificationValid || isSubmitting"
+          @click="submitUnlock"
+        >
+          {{ isSubmitting ? "Unlocking..." : "Confirm Unlock Override" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script>
+import { ClinicalModal } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 
 export default {
   name: "DataLockView",
+  components: {
+    ClinicalModal,
+  },
   data() {
     return {
       isLoading: false,

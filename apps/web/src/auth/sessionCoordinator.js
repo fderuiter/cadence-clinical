@@ -14,6 +14,23 @@ export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
 let authSessionBridge = null;
 let clinicalSessionBridge = null;
 let sessionEndedHandler = null;
+const logoutCleanupHandlers = new Set();
+
+export function registerLogoutCleanup(handler) {
+  if (typeof handler === "function") {
+    logoutCleanupHandlers.add(handler);
+  }
+}
+
+export function runLogoutCleanups() {
+  for (const handler of logoutCleanupHandlers) {
+    try {
+      handler();
+    } catch {
+      // Ignore cleanup errors during logout
+    }
+  }
+}
 
 /**
  * Computes the current in-app relative path (`pathname` stripped of Vite `BASE_URL` + `search` + `hash`).
