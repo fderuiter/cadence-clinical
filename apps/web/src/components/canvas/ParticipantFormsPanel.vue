@@ -10,23 +10,27 @@
         {{ matrixActive ? "Casebook" : "Forms" }}
       </h3>
       <div class="forms-head-actions">
-        <router-link
+        <component
+          :is="routerLinkComponent || 'a'"
           v-if="enrollmentId && newFormLocation"
           id="record-open-form"
           class="btn btn-secondary forms-open-btn"
-          :to="newFormLocation"
+          v-bind="linkAttrs(newFormLocation)"
+          @click="onFallbackLinkClick($event, newFormLocation)"
         >
           Open new form
-        </router-link>
-        <router-link
+        </component>
+        <component
+          :is="routerLinkComponent || 'a'"
           v-if="isDemoBuild() && enrollmentId && handoffLocation"
           id="record-handoff-standalone"
           data-testid="record-ecrf-handoff"
           class="btn btn-secondary forms-open-btn"
-          :to="handoffLocation"
+          v-bind="linkAttrs(handoffLocation)"
+          @click="onFallbackLinkClick($event, handoffLocation)"
         >
           Open standalone form view
-        </router-link>
+        </component>
       </div>
     </div>
 
@@ -222,16 +226,28 @@
                   >
                     Not started
                   </span>
-                  <router-link
+                  <component
+                    :is="routerLinkComponent || 'a'"
                     v-if="cellNewLocation(row.collectionSpecId, col.activityId)"
                     :id="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     :data-testid="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     class="matrix-open-link"
-                    :to="cellNewLocation(row.collectionSpecId, col.activityId)!"
+                    v-bind="
+                      linkAttrs(
+                        cellNewLocation(row.collectionSpecId, col.activityId)
+                      )
+                    "
                     :aria-label="`Open form: ${row.name} for ${col.name}`"
+                    @click="
+                      onCellLinkClick(
+                        $event,
+                        row.collectionSpecId,
+                        col.activityId
+                      )
+                    "
                   >
                     Open form
-                  </router-link>
+                  </component>
                 </div>
 
                 <div v-else class="matrix-instances">
@@ -246,10 +262,11 @@
                     :data-form-id="inst.form_id"
                   >
                     <div class="matrix-instance-top">
-                      <router-link
+                      <component
+                        :is="routerLinkComponent || 'a'"
                         :id="`record-form-link-${inst.form_id}`"
                         class="forms-link matrix-instance-link"
-                        :to="formLocation(inst.form_id)"
+                        v-bind="linkAttrs(formLocation(inst.form_id))"
                         :aria-label="
                           instanceAriaLabel(
                             inst,
@@ -260,6 +277,7 @@
                               .length
                           )
                         "
+                        @click="onFormLinkClick($event, inst.form_id)"
                       >
                         <template
                           v-if="
@@ -270,9 +288,15 @@
                           #{{ idx + 1 }} · v{{ inst.version }}
                         </template>
                         <template v-else>
-                          {{ row.name }}
+                          {{ row.name
+                          }}<span
+                            v-if="inst.planned_activity_id"
+                            class="sr-only"
+                          >
+                            · {{ inst.planned_activity_id }}</span
+                          >
                         </template>
-                      </router-link>
+                      </component>
                     </div>
                     <div class="cb-badges">
                       <span
@@ -300,7 +324,8 @@
                       </span>
                     </div>
                   </div>
-                  <router-link
+                  <component
+                    :is="routerLinkComponent || 'a'"
                     v-if="
                       cellNewLocation(row.collectionSpecId, col.activityId) &&
                       canAddRepeat(
@@ -310,11 +335,22 @@
                     :id="`matrix-repeat-${row.collectionSpecId}-${col.activityId}`"
                     :data-testid="`matrix-repeat-${row.collectionSpecId}-${col.activityId}`"
                     class="matrix-repeat-link"
-                    :to="cellNewLocation(row.collectionSpecId, col.activityId)!"
+                    v-bind="
+                      linkAttrs(
+                        cellNewLocation(row.collectionSpecId, col.activityId)
+                      )
+                    "
                     :aria-label="`+ Add repeat for ${row.name} at ${col.name}`"
+                    @click="
+                      onCellLinkClick(
+                        $event,
+                        row.collectionSpecId,
+                        col.activityId
+                      )
+                    "
                   >
                     + Add repeat
-                  </router-link>
+                  </component>
                 </div>
               </td>
             </tr>
@@ -338,16 +374,18 @@
             v-if="activeSchedule.unscheduledRows.length > 0"
             class="unscheduled-triggers"
           >
-            <router-link
+            <component
+              :is="routerLinkComponent || 'a'"
               v-for="spec in activeSchedule.unscheduledRows"
               :key="spec.collectionSpecId"
               :id="`unscheduled-open-${spec.collectionSpecId}`"
               :data-testid="`unscheduled-open-${spec.collectionSpecId}`"
               class="btn btn-secondary forms-open-btn"
-              :to="cellNewLocation(spec.collectionSpecId, null)!"
+              v-bind="linkAttrs(cellNewLocation(spec.collectionSpecId, null))"
+              @click="onCellLinkClick($event, spec.collectionSpecId, null)"
             >
               + {{ spec.name }}
-            </router-link>
+            </component>
           </div>
         </div>
 
@@ -366,10 +404,12 @@
             class="forms-item"
           >
             <div class="forms-item-main">
-              <router-link
+              <component
+                :is="routerLinkComponent || 'a'"
                 :id="`record-form-link-${entry.summary.form_id}`"
                 class="forms-link"
-                :to="formLocation(entry.summary.form_id)"
+                v-bind="linkAttrs(formLocation(entry.summary.form_id))"
+                @click="onFormLinkClick($event, entry.summary.form_id)"
               >
                 {{
                   entry.summary.collection_title ||
@@ -378,7 +418,7 @@
                   #{{ entry.ordinal }}</template
                 >
                 · Unscheduled
-              </router-link>
+              </component>
               <span
                 class="clinical-badge cb-badge"
                 :class="
@@ -426,16 +466,18 @@
             class="forms-item"
           >
             <div class="forms-item-main">
-              <router-link
+              <component
+                :is="routerLinkComponent || 'a'"
                 :id="`record-form-link-${summary.form_id}`"
                 class="forms-link"
-                :to="formLocation(summary.form_id)"
+                v-bind="linkAttrs(formLocation(summary.form_id))"
+                @click="onFormLinkClick($event, summary.form_id)"
               >
                 {{ summary.collection_title || summary.collection_spec_id
                 }}<template v-if="summary.planned_activity_id">
                   · {{ summary.planned_activity_id }}</template
                 >
-              </router-link>
+              </component>
               <span
                 class="clinical-badge cb-badge"
                 :class="
@@ -495,6 +537,7 @@
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
             :to="formLocation(summary.form_id)!"
+            @click="emit('select-form', summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
             }}<template v-if="summary.planned_activity_id">
@@ -506,6 +549,7 @@
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
             :href="fallbackHref(formLocation(summary.form_id))"
+            @click="onFormLinkClick($event, summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
             }}<template v-if="summary.planned_activity_id">
@@ -546,6 +590,7 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfFormsApi,
@@ -606,6 +651,11 @@ const routerLinkComponent =
   instance?.appContext.components.RouterLink ||
   instance?.appContext.components["router-link"] ||
   null;
+const useRouterFn =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter
+    : null;
+const fallbackRouter = useRouterFn ? useRouterFn() : null;
 
 function fallbackHref(loc: RouteLocationRaw | null | undefined): string {
   if (!loc) return "#";
@@ -623,9 +673,50 @@ function fallbackHref(loc: RouteLocationRaw | null | undefined): string {
   return "#";
 }
 
+function linkAttrs(
+  loc: RouteLocationRaw | null | undefined
+): Record<string, unknown> {
+  return routerLinkComponent ? { to: loc } : { href: fallbackHref(loc) };
+}
+
 const emit = defineEmits<{
   (e: "forms-loaded", forms: EcrfFormSummary[]): void;
+  (e: "select-form", formId: string): void;
+  (
+    e: "select-new-cell",
+    payload: { collectionSpecId: string; plannedActivityId: string | null }
+  ): void;
 }>();
+
+function onFallbackLinkClick(
+  event: MouseEvent,
+  loc: RouteLocationRaw | null | undefined
+) {
+  if (routerLinkComponent || !loc) return;
+  event.preventDefault();
+  if (typeof fallbackRouter?.push === "function") {
+    void fallbackRouter.push(loc);
+  } else if (typeof fallbackRouter?.replace === "function") {
+    void fallbackRouter.replace(loc);
+  }
+}
+
+function onFormLinkClick(event: MouseEvent, formId: string) {
+  emit("select-form", formId);
+  onFallbackLinkClick(event, props.formLocation(formId));
+}
+
+function onCellLinkClick(
+  event: MouseEvent,
+  collectionSpecId: string,
+  plannedActivityId: string | null
+) {
+  emit("select-new-cell", { collectionSpecId, plannedActivityId });
+  onFallbackLinkClick(
+    event,
+    cellNewLocation(collectionSpecId, plannedActivityId)
+  );
+}
 
 const canvas = useStudyCanvasStore();
 const forms = ref<EcrfFormSummary[]>([]);

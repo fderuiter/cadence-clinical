@@ -69,8 +69,11 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   (or an EDC integration account holding the `crc` role). `POST /invoices/{id}/erp-export` is called by a finance officer
   or an ERP integration account holding `finance_officer`. Both record that account as the actor.
 - **Separation of duties.** Approval and remittance signing share the finance role, so the handler refuses (`409`) a
-  remittance signature from the user who approved the invoice. Compiling with `auto_approve` also needs
-  `payments_invoice:approve`.
+  remittance signature from the user who approved the invoice. Expense submission and expense review likewise share site
+  clinical roles (`crc`, `investigator`), so `POST /participant/expenses/{claimId}/review` and `ParticipantExpenseClaim.Approve`
+  refuse (`409`) an approval from the user who submitted the claim (`CreatedBy == caller.UserId`), bound `AdjustedAmount`
+  between `$0.01` and `claim.GrossAmount`, and recompute `TaxDeduction` and `NetAmount` on the server. Compiling with
+  `auto_approve` also needs `payments_invoice:approve`.
 - **Identity in records.** Handlers take the actor from the signed principal (`PaymentsCaller`): the `sub` claim as the
   user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`) as
   `UserRoles`. Audit rows, `CreatedBy`, `ApprovedBy`, `ReviewedBy`,
@@ -84,11 +87,14 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   and never reaches staff directory, card-issuance, W-9 verification, claim-review, or invoice routes (`403` with zero
   database mutations). Every `/participant/me/*` handler resolves the wallet through `ResolveOwnWalletAsync` bound to
   `PaymentsCaller.UserId`, refuses (`403`) any cross-participant `subjectId` or `walletId`, masks card/routing/account
-  identifiers before serialization, enforces the `<= $100.00` (`<= $75.00` meal) / `>= 0.90` OCR confidence / IRS
-  `$600.00` verified W-9 auto-approval policy, persists `(WalletId, IdempotencyKey)` deduplication keys across
-  `/participant/me/expenses` and `/participant/me/disburse` so retries never double-credit or double-debit balances,
-  and computes diary synchronization stipends strictly from server-side `ParticipantStipendRule` rows (`400` if a
-  request supplies an `amount`).
+  identifiers before serialization, enforces the server-computed `<= $100.00` (`<= $75.00` server meal per-diem cap) /
+  `>= 0.90` server-bound OCR confidence (from receipt bytes or a single-use HMAC token issued by `ocr-extract`, with
+  manual field edits and duplicate receipt SHA-256 digests held in `PENDING_REVIEW`) / IRS `$600.00` verified W-9
+  auto-approval policy, persists `(WalletId, IdempotencyKey)` deduplication keys across `/participant/me/expenses` and
+  `/participant/me/disburse` so retries never double-credit or double-debit balances, and computes diary synchronization
+  stipends strictly from server-side `ParticipantStipendRule` rows (`400` if a request supplies an `amount`). Staff
+  `POST /participant/expenses` applies the same server-computed OCR confidence, receipt deduplication, and `$75.00` meal
+  per-diem cap rules without trusting client `OcrConfidence`, `ReceiptOcrData`, or `PerDiemCap`.
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
 - **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md), [ADR-2660](../../docs/adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md)).**
   Every handler reaches only the studies in the caller's signed `study_ids` and, for a site-scoped role (CRC,

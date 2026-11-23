@@ -119,6 +119,9 @@ public sealed class DeidComplianceServiceTests : IDisposable
     [InlineData("apps/execution/src/bin/Debug/app.json", true)]
     [InlineData("apps/web/src/views/Home.test.ts", true)]
     [InlineData(".deid-baseline.txt", true)]
+    [InlineData("baselines/deid/apps/web.baseline.txt", true)]
+    [InlineData("baselines/secrets/config.json", true)]
+    [InlineData("baselines/secrets/apps/web.secrets.baseline.json", true)]
     [InlineData("packages/deid/src/DeidDetector.cs", true)]
     [InlineData("README.md", false)]
     [InlineData("AGENTS.md", false)]
@@ -186,8 +189,8 @@ public sealed class DeidComplianceServiceTests : IDisposable
         // If origin/release/1.0 baselines Commit 1 and a hotfix branch adds an unbaselined Dockerfile, --base origin/release/1.0 scans the hotfix diff.
         string key = DeidComplianceService.BaselineKey(
             new DeidFinding("apps/web/PatientCard.vue", 1, 17, DetectorCategory.SsnNationalId),
-            "<template><span>000-12-3456</span></template>");
-        Write(DeidComplianceService.BaselineFile, $"# baseline\n{key}\n");
+            "000-12-3456");
+        Write(DeidComplianceService.GetShardRelativePath("apps/web/PatientCard.vue"), $"# baseline\n{key}\n");
         Git("add", "-A");
         Git("commit", "-q", "-m", "baseline existing finding on release");
         Git("update-ref", "refs/remotes/origin/release/1.0", "HEAD");
@@ -201,17 +204,17 @@ public sealed class DeidComplianceServiceTests : IDisposable
     }
 
     [Fact]
-    public void BaselineKey_SurvivesTheLineMoving_AndChangesWhenTheLineChanges()
+    public void BaselineKey_HashesTrimmedMatchedToken_SurvivesSurroundingNonPhiEdits_AndChangesWhenTokenChanges()
     {
         var first = new DeidFinding("a.cs", 3, 5, DetectorCategory.Dates);
         var moved = first with { Line = 40, Column = 9 };
 
-        DeidComplianceService.BaselineKey(first, "  x = \"1971-03-14\";").Should()
-            .Be(DeidComplianceService.BaselineKey(moved, "x = \"1971-03-14\";  "))
+        DeidComplianceService.BaselineKey(first, "  1971-03-14  ").Should()
+            .Be(DeidComplianceService.BaselineKey(moved, "1971-03-14"))
             .And.StartWith("a.cs|dates|")
             .And.NotContain("1971");
-        DeidComplianceService.BaselineKey(first, "x = \"1971-03-15\";").Should()
-            .NotBe(DeidComplianceService.BaselineKey(first, "x = \"1971-03-14\";"));
+        DeidComplianceService.BaselineKey(first, "1971-03-15").Should()
+            .NotBe(DeidComplianceService.BaselineKey(first, "1971-03-14"));
     }
 
     [Fact]
@@ -230,28 +233,89 @@ public sealed class DeidComplianceServiceTests : IDisposable
     }
 
     [Fact]
-    public void ScanDeidCompliance_FailsOnANewFinding_AndPassesOnceItIsBaselined()
+    public void ScanDeidCompliance_PassesOnNonPhiLineEdits_AndFailsWhenMatchedTokenChanges()
     {
-        string seed = Write("apps/x/Seed.cs", "var dob = \"1971-03-14\";\n");
+        string seed = Write("apps/x/Seed.vue", "<template><span class=\"old-token\">1971-03-14</span></template>\n");
         string clean = Write("apps/x/Clean.cs", "var answer = 42;\n");
 
         DeidComplianceService.ScanDeidCompliance([seed, clean], _dir).Should().Be(1);
 
-        string key = DeidComplianceService.BaselineKey(new DeidFinding("apps/x/Seed.cs", 1, 12, DetectorCategory.Dates), "var dob = \"1971-03-14\";");
-        Write(DeidComplianceService.BaselineFile, $"# header\n{key}\n");
+        string key = DeidComplianceService.BaselineKey(
+            new DeidFinding("apps/x/Seed.vue", 1, 35, DetectorCategory.Dates),
+            "1971-03-14");
+        Write(DeidComplianceService.GetShardRelativePath("apps/x/Seed.vue"), $"# header\n{key}\n");
         DeidComplianceService.ScanDeidCompliance([seed, clean], _dir).Should().Be(0);
+
+        // Non-PHI CSS / markup refactor on the baselined line keeps the matched token unchanged and must pass with 0!
+        Write("apps/x/Seed.vue", "<template>\n  <div style=\"color: var(--cadence-fg-primary)\">Born: 1971-03-14</div>\n</template>\n");
+        DeidComplianceService.ScanDeidCompliance([seed, clean], _dir).Should().Be(0);
+
+        // Changing the matched token itself must fail with both a new finding and a stale baseline entry.
+        Write("apps/x/Seed.vue", "<template>\n  <div style=\"color: var(--cadence-fg-primary)\">Born: 1971-03-15</div>\n</template>\n");
+        DeidComplianceService.ScanDeidCompliance([seed, clean], _dir).Should().Be(1);
     }
 
     [Fact]
     public void ScanDeidCompliance_FailsOnAStaleEntryForAScannedFile_ButIgnoresEntriesForOtherFiles()
     {
         string clean = Write("apps/x/Clean.cs", "var answer = 42;\n");
+        string shardRel = DeidComplianceService.GetShardRelativePath("apps/x/Clean.cs");
 
-        Write(DeidComplianceService.BaselineFile, "apps/x/Other.cs|dates|0123456789abcdef\n");
+        Write(shardRel, "apps/x/Other.cs|dates|0123456789abcdef\n");
         DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(0);
 
-        Write(DeidComplianceService.BaselineFile, "apps/x/Clean.cs|dates|0123456789abcdef\n");
+        Write(shardRel, "apps/x/Clean.cs|dates|0123456789abcdef\n");
         DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
+    }
+
+    [Fact]
+    public void ScanDeidCompliance_ScopedUpdateBaseline_SubtractsOnlyResolvedEntries_DeletesEmptyShards_AndNeverAddsNewFindings()
+    {
+        string alphaFixed = Write("apps/alpha/Fixed.cs", "var clean = 1;\n");
+        string alphaKept = Write("apps/alpha/Kept.cs", "var dob = \"1971-03-14\";\n");
+        string betaResolved = Write("apps/beta/Resolved.cs", "var clean = 2;\n");
+        Write("packages/gamma/Untouched.cs", "var dob = \"1982-06-01\";\n");
+
+        string keptKey = DeidComplianceService.BaselineKey(
+            new DeidFinding("apps/alpha/Kept.cs", 1, 12, DetectorCategory.Dates),
+            "1971-03-14");
+        string staleAlphaKey = DeidComplianceService.BaselineKey(
+            new DeidFinding("apps/alpha/Fixed.cs", 1, 12, DetectorCategory.Dates),
+            "1970-01-02");
+        string staleBetaKey = DeidComplianceService.BaselineKey(
+            new DeidFinding("apps/beta/Resolved.cs", 1, 12, DetectorCategory.Dates),
+            "1975-09-10");
+        string gammaKey = DeidComplianceService.BaselineKey(
+            new DeidFinding("packages/gamma/Untouched.cs", 1, 12, DetectorCategory.Dates),
+            "1982-06-01");
+
+        DeidComplianceService.WriteBaselineShards(_dir, [keptKey, staleAlphaKey, staleBetaKey, gammaKey]);
+        string gammaShardPath = Path.Combine(_dir, "baselines/deid/packages/gamma.baseline.txt");
+        string betaShardPath = Path.Combine(_dir, "baselines/deid/apps/beta.baseline.txt");
+        string alphaShardPath = Path.Combine(_dir, "baselines/deid/apps/alpha.baseline.txt");
+        string gammaBefore = File.ReadAllText(gammaShardPath);
+
+        string? prevUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+
+            // Scoped update on apps/alpha/Fixed.cs and apps/beta/Resolved.cs prunes staleAlphaKey, deletes empty beta shard, and leaves gamma untouched.
+            DeidComplianceService.ScanDeidCompliance([alphaFixed, betaResolved], _dir).Should().Be(0);
+            File.Exists(betaShardPath).Should().BeFalse("empty apps/beta shard must be deleted");
+            File.ReadAllText(gammaShardPath).Should().Be(gammaBefore, "untouched shard must not be rewritten");
+            File.ReadAllText(alphaShardPath).Should().Contain(keptKey).And.NotContain(staleAlphaKey);
+
+            // Introducing a brand-new violation under CADENCE_UPDATE_BASELINE=1 must still fail (1) and never write the new finding to disk.
+            string alphaNewViolation = Write("apps/alpha/NewViolation.cs", "var ssn = \"000-12-3456\";\n");
+            string alphaBeforeNewViolation = File.ReadAllText(alphaShardPath);
+            DeidComplianceService.ScanDeidCompliance([alphaNewViolation, alphaKept], _dir).Should().Be(1);
+            File.ReadAllText(alphaShardPath).Should().Be(alphaBeforeNewViolation, "CADENCE_UPDATE_BASELINE=1 must never add new findings");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
+        }
     }
 
     private string Write(string relativePath, string content)

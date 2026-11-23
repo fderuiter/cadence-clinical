@@ -478,9 +478,18 @@ public class CadenceSecurityUnitTests
             problem.RootElement.GetProperty("code").GetString().Should().Be("K.Commercial.ProductFamilyNotEntitled");
         }
 
-        // 3. Baseline kernel/signature routes (/api/v1/kernel/entitlements, /api/v1/kernel/locks, /api/v1/kernel/studies/.../exports, /api/v1/signatures) always pass regardless of module entitlements.
+        // 3. Baseline kernel/signature routes (/api/v1/kernel/entitlements, /api/v1/kernel/locks, /api/v1/kernel/enrollments/lookup, /api/v1/kernel/studies/.../exports, /api/v1/kernel/sites GET, /api/v1/kernel/studies/.../sites GET, /api/v1/signatures) always pass regardless of module entitlements.
         var zeroFamilyPrincipal = individualPrincipal with { ProductFamilies = [] };
-        foreach (string baselinePath in new[] { "/api/v1/kernel/entitlements", "/api/v1/kernel/locks", "/api/v1/kernel/enrollments/lookup", "/api/v1/kernel/studies/study:1/exports", "/api/v1/signatures" })
+        foreach (string baselinePath in new[]
+        {
+            "/api/v1/kernel/entitlements",
+            "/api/v1/kernel/locks",
+            "/api/v1/kernel/enrollments/lookup",
+            "/api/v1/kernel/studies/study:1/exports",
+            "/api/v1/kernel/sites",
+            "/api/v1/kernel/studies/study:1/sites",
+            "/api/v1/signatures",
+        })
         {
             var baselineContext = new DefaultHttpContext();
             baselineContext.Request.Method = HttpMethods.Get;
@@ -493,6 +502,38 @@ public class CadenceSecurityUnitTests
                 return Task.CompletedTask;
             });
             baselineRan.Should().BeTrue($"{baselinePath} is a regulated baseline route and must never be gated behind module ProductFamily entitlements");
+        }
+
+        // 4. Site setup writes (/api/v1/kernel/sites, /api/v1/kernel/studies/.../sites) succeed with Capture or Orbit even without Blueprint, and fail closed for Vigil-only callers.
+        var captureOnlyPrincipal = individualPrincipal with { ProductFamilies = ["Capture"] };
+        var vigilOnlyPrincipal = individualPrincipal with { ProductFamilies = ["Vigil"] };
+        foreach (string siteWritePath in new[] { "/api/v1/kernel/sites", "/api/v1/kernel/studies/study:1/sites" })
+        {
+            var captureWriteCtx = new DefaultHttpContext();
+            captureWriteCtx.Request.Method = HttpMethods.Post;
+            captureWriteCtx.Request.Path = siteWritePath;
+            captureWriteCtx.Items[GatewayAuthenticationHandler.PrincipalItemKey] = captureOnlyPrincipal;
+            bool captureWriteRan = false;
+            await guard.InvokeAsync(captureWriteCtx, _ =>
+            {
+                captureWriteRan = true;
+                return Task.CompletedTask;
+            });
+            captureWriteRan.Should().BeTrue($"{siteWritePath} POST should be allowed for Capture-entitled workspaces");
+
+            var vigilWriteCtx = new DefaultHttpContext();
+            vigilWriteCtx.Request.Method = HttpMethods.Post;
+            vigilWriteCtx.Request.Path = siteWritePath;
+            vigilWriteCtx.Items[GatewayAuthenticationHandler.PrincipalItemKey] = vigilOnlyPrincipal;
+            vigilWriteCtx.Response.Body = new MemoryStream();
+            bool vigilWriteRan = false;
+            await guard.InvokeAsync(vigilWriteCtx, _ =>
+            {
+                vigilWriteRan = true;
+                return Task.CompletedTask;
+            });
+            vigilWriteRan.Should().BeFalse();
+            vigilWriteCtx.Response.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         }
     }
 
