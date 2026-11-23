@@ -9,6 +9,10 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!-- xunit.v3 4.x transitively imports xunit.v3.mtp-v2, which defaults IsTestingPlatformApplication=true and causes
+         Microsoft.Testing.Platform.MSBuild to reject VSTest targets on .NET 10 SDK (#6038). Keep VSTest active unless a
+         project explicitly opts into UseMicrosoftTestingPlatformRunner so VSTest filtering and TRX GxP gates work. -->
+    <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == '' and '$(UseMicrosoftTestingPlatformRunner)' != 'true'">false</IsTestingPlatformApplication>
 
     <!-- Lockstep Dependency Cohort Versions (ADR-2527) -->
     <DotNetServicingVersion>10.0.15</DotNetServicingVersion>

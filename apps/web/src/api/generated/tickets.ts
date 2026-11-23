@@ -67,7 +67,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    patch: operations["UpdateTicket"];
     trace?: never;
   };
   "/api/v1/tickets/{ticket_id}/comments": {
@@ -263,6 +263,18 @@ export interface components {
       root_cause_category?: null | string;
       assignee_user?: null | string;
     };
+    Tickets_UpdateTicketRequestDto: {
+      title?: null | string;
+      description?: null | string;
+      priority?: null | string;
+      status?: null | string;
+      assignee_user?: null | string;
+      resolution_code?: null | string;
+      root_cause_summary?: null | string;
+      root_cause_category?: null | string;
+      /** Format: int32 */
+      expected_version_index?: null | number | string;
+    };
   };
   responses: never;
   parameters: never;
@@ -414,7 +426,10 @@ export interface operations {
   };
   GetTicket: {
     parameters: {
-      query?: never;
+      query?: {
+        revision?: number | string;
+        as_of?: string;
+      };
       header?: never;
       path: {
         ticket_id: string;
@@ -452,6 +467,77 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+    };
+  };
+  UpdateTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticket_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Tickets_UpdateTicketRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Tickets_TicketResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

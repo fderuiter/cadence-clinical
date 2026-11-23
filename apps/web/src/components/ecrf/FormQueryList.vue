@@ -16,7 +16,7 @@
       @update:bulk-note="bulkNote = $event"
       @update:bulk-reason="bulkReason = $event"
       @select-eligible="selectAllEligible"
-      @clear-selection="selectedQueryIds = []"
+      @clear-selection="clearSelectedQueries"
       @confirm-bulk="confirmBulk"
     />
 
@@ -68,6 +68,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import {
   actionTakesText,
@@ -277,16 +278,57 @@ function selectAllEligible() {
   selectedQueryIds.value = eligibleQueries.value.map((q) => q.query_id);
 }
 
+function clearSelectedQueries() {
+  selectedQueryIds.value = [];
+  void handoffFocus(["#btn-select-eligible-queries", "#query-bulk-action"]);
+}
+
+function restoreQueryActionFocus(
+  queryId: string | undefined,
+  preferredAction?: FormQueryAction
+) {
+  void handoffFocus([
+    queryId && preferredAction ? `#btn-${preferredAction}-${queryId}` : null,
+    queryId
+      ? () => {
+          const row = document.getElementById(`query-${queryId}`);
+          return (
+            row?.querySelector<HTMLElement>(
+              ".form-query-buttons button:not([disabled])"
+            ) ?? null
+          );
+        }
+      : null,
+    queryId ? `#query-open-form-${queryId}` : null,
+    "#btn-select-eligible-queries",
+    "#query-bulk-action",
+    () =>
+      document.querySelector<HTMLElement>(
+        '[data-testid="form-query-list"] button:not([disabled])'
+      ),
+    "#ecrf-form-queries-title",
+    "#study-queries-title",
+  ]);
+}
+
 function begin(query: FormQueryResponse, action: FormQueryAction) {
   pendingAction.value = { queryId: query.query_id, action };
   actionText.value = "";
   actionReason.value = "";
+  void handoffFocus(
+    [`#query-text-${query.query_id}`, `#query-reason-${query.query_id}`],
+    {
+      scrollIfOffscreen: true,
+    }
+  );
 }
 
 function dismiss() {
+  const previous = pendingAction.value;
   pendingAction.value = null;
   actionText.value = "";
   actionReason.value = "";
+  restoreQueryActionFocus(previous?.queryId, previous?.action);
 }
 
 async function confirm(query: FormQueryResponse) {
@@ -314,6 +356,18 @@ async function confirmBulk() {
   if (failedIds.size === 0) {
     bulkNote.value = "";
     bulkReason.value = "";
+  }
+  if (selectedEligibleQueries.value.length === 0) {
+    void handoffFocus([
+      "#btn-select-eligible-queries",
+      "#query-bulk-action",
+      () =>
+        document.querySelector<HTMLElement>(
+          '[data-testid="form-query-list"] button:not([disabled])'
+        ),
+      "#ecrf-form-queries-title",
+      "#study-queries-title",
+    ]);
   }
 }
 </script>

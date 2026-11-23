@@ -47,8 +47,10 @@ export function toggleEntityPeekDocked() {
 export function useEntityPeekDrawer() {
   if (!registered) {
     registerEntityPeekHandler((payload: Record<string, unknown>) => {
-      const nodeRef = typeof payload?.nodeRef === "string" ? payload.nodeRef : "";
-      const label = typeof payload?.label === "string" ? payload.label : undefined;
+      const nodeRef =
+        typeof payload?.nodeRef === "string" ? payload.nodeRef : "";
+      const label =
+        typeof payload?.label === "string" ? payload.label : undefined;
       openEntityPeekDrawer({ nodeRef, label });
     });
     registered = true;

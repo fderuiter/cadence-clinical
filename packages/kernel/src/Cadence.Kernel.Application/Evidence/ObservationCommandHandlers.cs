@@ -9,7 +9,9 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -87,7 +89,8 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
 /// then checks the expected version, then appends the revision. The version is also the commit-time concurrency token.
 /// A withdrawal does not refuse a correction: the observation was captured before it (<see cref="CaptureConditions"/>).
 /// </summary>
-internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObservation, ObservationState>
+internal sealed class CorrectObservationHandler(IConceptRegistry? concepts = null)
+    : ICommandHandler<CorrectObservation, ObservationState>
 {
     public async Task<CommandResult<ObservationState>> HandleAsync(CorrectObservation command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -129,16 +132,20 @@ internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObserva
             && collectionInstance.Members.FirstOrDefault(m => m.ObservationId == command.ObservationId) is { } member
             && await context.Work.ReadAsync<ProtocolVersion>(collectionInstance.ProtocolVersionId, cancellationToken).ConfigureAwait(false) is { } version
             && CollectionSpecs.Of(version, collectionInstance.CollectionSpecId)
-                ?.Items.FirstOrDefault(i => string.Equals(i.Id, member.ItemId, StringComparison.Ordinal)) is { } specItem
-            && specItem.Admits(command.Value) is { } itemProblem)
+                ?.Items.FirstOrDefault(i => string.Equals(i.Id, member.ItemId, StringComparison.Ordinal)) is { } specItem)
         {
-            return CollectionErrors.ValuesInvalid.WithMessage(itemProblem) with
+            var itemProblem = specItem.Admits(command.Value)
+                ?? await CheckTerminologyAsync(command.TenantId, specItem, command.Value, cancellationToken).ConfigureAwait(false);
+            if (itemProblem is not null)
             {
-                Errors = new Dictionary<string, string[]>(StringComparer.Ordinal)
+                return CollectionErrors.ValuesInvalid.WithMessage(itemProblem) with
                 {
-                    [member.ItemId] = [itemProblem],
-                },
-            };
+                    Errors = new Dictionary<string, string[]>(StringComparer.Ordinal)
+                    {
+                        [member.ItemId] = [itemProblem],
+                    },
+                };
+            }
         }
 
         var superseded = observation.Revision;
@@ -152,6 +159,35 @@ internal sealed class CorrectObservationHandler : ICommandHandler<CorrectObserva
 
         // The pipeline increments the version once when it commits the modified aggregate.
         return ObservationStates.Of(observation, version: observation.VersionIndex + 1);
+    }
+
+    private async Task<string?> CheckTerminologyAsync(
+        TenantId tenant,
+        CollectionItem item,
+        ObservationValue value,
+        CancellationToken cancellationToken)
+    {
+        if (concepts is null || item.Terminology is not { } terminology || value is not CodedValue coded)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(terminology.Codelist))
+        {
+            var groupEntries = await concepts
+                .GetGroupAsync(tenant, terminology.CodeSystemVersionId, terminology.Codelist, cancellationToken)
+                .ConfigureAwait(false);
+            return groupEntries.Any(e => string.Equals(e.Code, coded.Code, StringComparison.Ordinal))
+                ? null
+                : $"Item {item.Id} rejects code '{coded.Code}': it is not in codelist '{terminology.Codelist}' of code system version {terminology.CodeSystemVersionId}.";
+        }
+
+        var foundEntries = await concepts
+            .LookupAsync(tenant, new Coding(terminology.CodeSystemVersionId, coded.Code), cancellationToken)
+            .ConfigureAwait(false);
+        return foundEntries.Count > 0
+            ? null
+            : $"Item {item.Id} rejects code '{coded.Code}': it is not in code system version {terminology.CodeSystemVersionId}.";
     }
 }
 

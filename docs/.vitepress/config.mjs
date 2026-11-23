@@ -2,6 +2,7 @@ import { defineConfig } from "vitepress";
 import { withMermaid } from "vitepress-plugin-mermaid";
 import crypto from "crypto";
 import path from "path";
+import process from "process";
 import { fileURLToPath } from "url";
 
 import {
