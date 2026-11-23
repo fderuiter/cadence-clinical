@@ -6,7 +6,9 @@
   >
     <div class="section-header-row">
       <div>
-        <h3 id="ctms-monitoring-title" class="card-title">Monitoring visits</h3>
+        <h3 id="ctms-monitoring-title" class="card-title" tabindex="-1">
+          Monitoring visits
+        </h3>
         <p class="section-subtitle">
           Schedule monitoring visits, record structured trip findings, compile
           Part 11 signed visit letters, and complete supervisory sign-off.

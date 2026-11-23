@@ -4,7 +4,7 @@ Canonical synthetic trial catalog shared across the public static demos (`apps/w
 
 ## Overview
 
-`demo-fixtures` exports the single reference study (`CADENCE-101`), sponsor (`CADENCE-PHARMA`), sites (`SITE-101` and `SITE-102`), screened participants (`SUBJ-101-001`, `SUBJ-101-002`, `SUBJ-102-001`), deterministic RFC 9562 UUIDv8 identifiers, fixed epoch (`2026-01-05T09:00:00Z`), and eight role-named Keycloak realm personas (`crc.site101`, `pi.site101`, `cra.monitor`, `dm.lead`, `designer_demo`, `designer.lead`, `safety.officer`, `auditor.lead`).
+`demo-fixtures` exports the single reference study (`CADENCE-101`), sponsor (`CADENCE-PHARMA`), sites (`SITE-101` and `SITE-102`), screened participants (`SUBJ-101-001`, `SUBJ-101-002`, `SUBJ-102-001`), deterministic RFC 9562 UUIDv8 identifiers, fixed epoch (`2026-01-05T09:00:00Z`), and eleven role-named Keycloak realm personas (`crc.site101`, `pi.site101`, `cra.monitor`, `dm.lead`, `designer_demo`, `designer.lead`, `safety.officer`, `auditor.lead`, `stat.author`, `stat.approver`, `pharmacist.site101`).
 
 ## Generation and Drift Verification
 

@@ -25,7 +25,8 @@ const activeTrapStack = [];
 const handledEvents = new WeakSet();
 const managedBackgroundNodes = new Map();
 
-const resolveOption = (val) => (typeof val === "function" ? val() : unref(val));
+export const resolveOption = (val) =>
+  typeof val === "function" ? val() : unref(val);
 
 const isExemptLiveElement = (el) => {
   if (!el || typeof el.getAttribute !== "function") return false;
@@ -158,13 +159,13 @@ const reconcileBackgroundInert = () => {
   }
 };
 
-const isJSDOMEnv = () =>
+export const isJSDOMEnv = () =>
   typeof navigator !== "undefined" &&
   (navigator.userAgent.includes("jsdom") ||
     navigator.userAgent.includes("Node.js") ||
     (typeof window !== "undefined" && typeof window.happyDOM !== "undefined"));
 
-const isElementInertOrHidden = (el, container) => {
+export const isElementInertOrHidden = (el, container) => {
   if (!el || el.disabled) return true;
   let node = el;
   while (node && node !== container) {
