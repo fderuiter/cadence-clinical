@@ -377,7 +377,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/organizations", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createOrganization(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createOrganization(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -391,7 +395,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/sites", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createSite(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createSite(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -399,27 +407,42 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
       return HttpResponse.json(result.data, { status: 201 });
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) =>
-      HttpResponse.json(
-        store.listStudySites(decodeURIComponent(String(params.studyRef)))
-      )
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) => {
+      const result = store.listStudySites(
+        decodeURIComponent(String(params.studyRef))
+      );
+      if (Array.isArray(result)) {
+        return HttpResponse.json(result);
+      }
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.post(
       "*/api/v1/kernel/studies/:studyRef/sites",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         const reason = readRequiredReasonHeader(request);
+        const idempotencyKey =
+          request.headers.get("Idempotency-Key") ||
+          request.headers.get("idempotency-key") ||
+          "";
         const result = store.linkSiteToStudy(
           decodeURIComponent(String(params.studyRef)),
           body,
-          { reason }
+          { reason, idempotencyKey }
         );
         if (result.error) {
           return HttpResponse.json(result.error.problem, {
             status: result.error.status,
           });
         }
-        return HttpResponse.json(result.data, { status: 201 });
+        return HttpResponse.json(result.data, {
+          status: result.replayed ? 200 : 201,
+        });
       }
     ),
     http.get("*/api/v1/kernel/protocol-templates", () =>
