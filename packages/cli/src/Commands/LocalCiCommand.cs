@@ -13,8 +13,8 @@ using Spectre.Console;
 namespace Cadence.Cli.Commands;
 
 /// <summary>
-/// <c>cadence ci</c>: runs the jobs of <c>.github/workflows/ci.yml</c> on this machine (#5017), because GitHub Actions
-/// does not run jobs for this repository until 2027.
+/// <c>cadence ci</c>: mirrors the pull-request jobs of <c>.github/workflows/ci.yml</c> locally (#5017) so contributors
+/// can verify full workflow parity before pushing to GitHub Actions.
 /// </summary>
 public static class LocalCiCommand
 {
@@ -39,10 +39,14 @@ public static class LocalCiCommand
         };
         var baseRef = new Option<string>("--base")
         {
-            Description = "Ref that changed files and CLI check steps are compared with (CI uses origin/<base_ref>)",
+            Description = "Ref that changed files, merged worktree synthesis, and CLI check steps are compared with (CI uses origin/<base_ref>)",
             DefaultValueFactory = _ => GitRevisionScopeService.DefaultBaseRef,
         };
         baseRef.Validators.Add(RejectOptionLikeValue);
+        var offline = new Option<bool>("--offline")
+        {
+            Description = "Skip 'git fetch' before synthesizing the merged worktree (air-gapped debugging only)",
+        };
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
@@ -50,6 +54,7 @@ public static class LocalCiCommand
         command.Options.Add(allowDbSkip);
         command.Options.Add(allowSkip);
         command.Options.Add(baseRef);
+        command.Options.Add(offline);
         command.Options.Add(list);
         command.SetAction(result =>
         {
@@ -59,7 +64,8 @@ public static class LocalCiCommand
                 allowMissingTools: result.GetValue(allowMissingTools) || skipAll,
                 allowDbSkip: result.GetValue(allowDbSkip) || skipAll,
                 baseRef: result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
-                list: result.GetValue(list));
+                list: result.GetValue(list),
+                offline: result.GetValue(offline));
         });
     }
 
@@ -80,8 +86,16 @@ public static class LocalCiCommand
         bool allowSkip,
         string baseRef,
         bool list,
-        LocalCiEnvironment? environment = null) =>
-        Execute(jobKeys, allowMissingTools: allowSkip, allowDbSkip: allowSkip, baseRef: baseRef, list: list, environment: environment);
+        LocalCiEnvironment? environment = null,
+        bool offline = false) =>
+        Execute(
+            jobKeys,
+            allowMissingTools: allowSkip,
+            allowDbSkip: allowSkip,
+            baseRef: baseRef,
+            list: list,
+            environment: environment,
+            offline: offline);
 
     public static int Execute(
         string[] jobKeys,
@@ -89,7 +103,8 @@ public static class LocalCiCommand
         bool allowDbSkip,
         string baseRef,
         bool list,
-        LocalCiEnvironment? environment = null)
+        LocalCiEnvironment? environment = null,
+        bool offline = false)
     {
         IReadOnlyList<CiJob> jobs;
         try
@@ -118,7 +133,10 @@ public static class LocalCiCommand
             }
         });
 
-        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowMissingTools, allowDbSkip, baseRef, jobKeys), environment);
+        var results = LocalCiRunner.Run(
+            jobs,
+            new LocalCiOptions(allowMissingTools, allowDbSkip, baseRef, Offline: offline, RequestedJobs: jobKeys),
+            environment);
         PrintSummary(results, jobKeys.Length == 0);
         return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;
     }

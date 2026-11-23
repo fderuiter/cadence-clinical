@@ -304,6 +304,8 @@ port, address variable and gateway routes; the gateway and the AppHost are built
 from it, and `ServiceTopologyTests` fails when `docker/docker-compose.yml` or
 this table disagrees with it. Each service has a README with its details.
 
+<!-- running-services:begin (generated from packages/topology/src/ServiceTopology.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
+
 | Service                                       | Project                      | Port | Gateway routes (`/api/v1/…`)      | Persistence                           |
 | --------------------------------------------- | ---------------------------- | ---- | --------------------------------- | ------------------------------------- |
 | [gateway](apps/gateway/README.md)             | `Cadence.Apps.Gateway`       | 8000 | all below                         | none                                  |
@@ -315,7 +317,7 @@ this table disagrees with it. Each service has a README with its details.
 | [imaging](apps/imaging/README.md)             | `Cadence.Apps.Imaging`       | 8014 | `imaging`                         | `ImagingDbContext`                    |
 | [safety](apps/safety/README.md)               | `Cadence.Apps.Safety`        | 8008 | `safety`                          | `SafetyDbContext`                     |
 | [econsent](apps/econsent/README.md)           | `Cadence.Apps.Econsent`      | 8011 | `econsent`                        | `EconsentDbContext`                   |
-| [knowledge](apps/knowledge/README.md)         | `Cadence.Apps.Knowledge`     | 8015 | `knowledge`                       | `KnowledgeDbContext`                  |
+| [knowledge](apps/knowledge/README.md)         | `Cadence.Apps.Knowledge`     | 8015 | `knowledge`, `training`           | `KnowledgeDbContext`                  |
 | [designer](apps/designer/README.md)           | `Cadence.Apps.Designer`      | 8001 | `studies`, `protocols`            | none yet                              |
 | [tickets](apps/tickets/README.md)             | `Cadence.Apps.Tickets`       | 8009 | `tickets`                         | `TicketsDbContext`                    |
 | [quality](apps/quality/README.md)             | `Cadence.Apps.Quality`       | 8005 | `quality`                         | `QualityDbContext`                    |
@@ -324,6 +326,8 @@ this table disagrees with it. Each service has a README with its details.
 | [fileshare](apps/fileshare/README.md)         | `Cadence.Apps.Fileshare`     | 8013 | `fileshare`                       | `FileshareDbContext` + MinIO          |
 | [notifications](apps/notifications/README.md) | `Cadence.Apps.Notifications` | 8006 | `notifications`                   | `NotificationsDbContext`              |
 | [kernel-api](apps/kernel-api/README.md)       | `Cadence.Kernel.Host`        | 8018 | `kernel`, `ai`, `execution/forms` | `KernelDbContext` + module DbContexts |
+
+<!-- running-services:end -->
 
 ### Service status and ADR-2610 disposition
 
@@ -352,8 +356,8 @@ this table disagrees with it. Each service has a README with its details.
   **Disposition:** Module (#5378).
 - **[econsent](apps/econsent/README.md):** Features on its own schema.
   **Disposition:** Module (#5378).
-- **[knowledge](apps/knowledge/README.md):** Features on its own schema.
-  **Disposition:** Module (#5378).
+- **[knowledge](apps/knowledge/README.md):** Features on its own schema
+  (`knowledge`, `training` gateway routes). **Disposition:** Module (#5378).
 - **[designer](apps/designer/README.md):** Scaffold. **Disposition:** Module
   (#5378).
 - **[tickets](apps/tickets/README.md):** Scaffold. **Disposition:** Module,
@@ -394,24 +398,20 @@ the old host's gateway cluster, AppHost entry and compose service together.
 
 Other runtime pieces:
 
-- **Web client** (`apps/web`): Vue 3 + Vite (port 3000, compose `web`); signs in
-  through Keycloak.
-- **Subject portal** (`apps/subject-portal`): Participant PWA (port 5174,
-  compose `subject-portal`).
-- **Aspire AppHost** (`apps/apphost`): Local orchestration of PostgreSQL
-  (database `cadence`), MinIO, Keycloak, every .NET service and the web app; a
-  `core` profile runs the gateway, kernel API, execution and web only,
-  optionally on an existing PostgreSQL and Keycloak.
-- **Keycloak** (`docker/cadence-realm.json`): OIDC identity provider (port
-  8080), realm `cadence`.
-- **PostgreSQL 18** (compose `postgres`): One `cadence` database with a schema
-  per service (ADR-2447).
-- **MinIO, ClamAV** (compose profile `storage`): Object storage (fileshare,
-  through `packages/storage`) and upload scanning (no service calls ClamAV yet).
-- **Front proxy** (compose `front-proxy`, nginx): Port 8000; forwards the web
-  apps' API calls to the gateway.
-- **Other compose services** (`docker/docker-compose.yml`): `dotnet-dev`
-  (profile `dotnet` SDK container with isolated NuGet and MSBuild volumes).
+<!-- runtime-components:begin (generated from packages/topology/src/ServiceTopology.cs and apps/*/vite.config.js by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Component              | Path                          | Notes                                                                                                                    |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Web client             | `apps/web`                    | Vue 3 + Vite (port 3000, compose `web`); signs in through Keycloak                                                       |
+| Subject portal         | `apps/subject-portal`         | Participant PWA (port 5174, compose `subject-portal`)                                                                    |
+| Aspire AppHost         | `apps/apphost`                | Runs 18 .NET hosts + web apps; `core` profile runs `gateway`, `execution`, `etmf`, `ctms`, `knowledge`, `kernel` + `web` |
+| Keycloak               | `docker/cadence-realm.json`   | OIDC identity provider (port 8080), realm `cadence`                                                                      |
+| PostgreSQL 18          | compose `postgres`            | One `cadence` database partitioned across 18 EF Core module schemas (ADR-2447)                                           |
+| MinIO, ClamAV          | compose profile `storage`     | Object storage (`packages/storage`) and upload scanning (ClamAV not wired yet)                                           |
+| Front proxy            | compose `front-proxy` (nginx) | Port 8000; forwards the web apps' API calls to the gateway                                                               |
+| Other compose services | `docker/docker-compose.yml`   | `dotnet-dev` (`dotnet` SDK container with isolated NuGet and MSBuild volumes)                                            |
+
+<!-- runtime-components:end -->
 
 ## 4. Request path and security
 
@@ -440,15 +440,19 @@ Decided in
   allow anonymous access.
 - Application code takes identity and roles from the verified claims only. A PI
   signature records the authenticated caller as signer.
-- Signing a PI form approval needs a fresh re-authentication: the gateway
+- Signing a regulated action needs a fresh re-authentication: the gateway
   re-checks the signer's password with Keycloak and issues a 60-second
-  `X-Sig-Token` bound to the user, form and meaning
+  `X-Sig-Token` bound to the user, resource and meaning
   ([ADR-2259](docs/adr/2026-09-29-electronic-signature-step-up-re-authentication.md)).
-  Batch PI sign-off and the delegation-log sign-off bind the token to the exact
-  targets (`batch_id`). Each token signs once: Execution, eConsent and Knowledge
-  record its use in PostgreSQL, in their own schema, so single use holds across
-  instances and restarts, and a host that maps a signed route without a durable
-  store refuses to start outside Development (#5434)
+  Multi-target actions such as delegation-log bulk sign-off also bind the token
+  to the exact targets (`batch_id`). Each token signs once: every host that maps
+  any of the 14 `RequireElectronicSignature` endpoints registers
+  `AddCadenceDurableSigTokenStore<TContext>()` (6 registrations across
+  `econsent`, `execution`, `kernel` via `ExecutionSignatureTokenDbContext`,
+  `knowledge`, `safety`, and `tickets`, writing `consumed_signature_tokens` in
+  its own schema) so single use holds across instances and restarts, and a host
+  that maps a signed route without a durable store refuses to start outside
+  Development (#5434)
   ([ADR-2515](docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
 - The web app signs in only through Keycloak (authorization code + PKCE) and
   keeps tokens in memory; only the opt-in demo build uses an offline demo
@@ -481,6 +485,38 @@ Decided in
   (default 600) and answers 429 with `Retry-After` above it
   ([ADR-2491](docs/adr/2026-09-30-http-edge-hardening-forwarded-headers-hsts-rate-limits.md)).
 
+<!-- architecture-signatures:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+Signature-gated routes (`14` endpoints across `6` durable token stores):
+
+| Durable signature token store                                                         | Registration                               |
+| ------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `econsent` (`EconsentDbContext` → `econsent.consumed_signature_tokens`)               | `apps/econsent/src/Program.cs`             |
+| `execution` (`ExecutionDbContext` → `edc.consumed_signature_tokens`)                  | `apps/execution/src/Program.cs`            |
+| `kernel` (`ExecutionSignatureTokenDbContext` → `execution.consumed_signature_tokens`) | `apps/execution/module/ExecutionModule.cs` |
+| `knowledge` (`KnowledgeDbContext` → `knowledge.consumed_signature_tokens`)            | `apps/knowledge/src/Program.cs`            |
+| `safety` (`SafetyDbContext` → `safety.consumed_signature_tokens`)                     | `apps/safety/src/Program.cs`               |
+| `tickets` (`TicketsDbContext` → `tickets.consumed_signature_tokens`)                  | `apps/tickets/src/Program.cs`              |
+
+| Host        | Endpoint                                                                                            | `semantic_action`                      | `action`                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/capture-consent`                                     | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/capture-consent`                          |
+| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`            | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` |
+| `execution` | `POST /api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                                         | `execution.cec.chair_adjudicate`       | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                              |
+| `execution` | `POST /api/v1/execution/labs/toxicity/review/{review_id}/action`                                    | `execution.lab_toxicity_review.action` | `/api/v1/execution/labs/toxicity/review/{review_id}/action`                         |
+| `execution` | `POST /api/v1/execution/randomization/schemes/{schemeId}/approve`                                   | `execution.form.approve`               | `/api/v1/execution/randomization/schemes/{schemeId}/approve`                        |
+| `execution` | `POST /api/v1/execution/subjects/{subjectId}/randomize`                                             | `execution.subject.randomize`          | `/api/v1/execution/subjects/{subjectId}/randomize`                                  |
+| `kernel`    | `POST /api/v1/execution/forms/{formId}/signatures`                                                  | `execution.form.sign`                  | `/api/v1/execution/forms/{formId}/signatures`                                       |
+| `kernel`    | `POST /api/v1/kernel/library-items/{itemRef}/approve`                                               | `kernel.library_item.approve`          | `/api/v1/kernel/library-items/{itemRef}/approve`                                    |
+| `kernel`    | `POST /api/v1/kernel/locks`                                                                         | `kernel.lock.apply`                    | `/api/v1/kernel/locks`                                                              |
+| `kernel`    | `POST /api/v1/kernel/locks/{lockRef}/release`                                                       | `kernel.lock.release`                  | `/api/v1/kernel/locks/{lockRef}/release`                                            |
+| `kernel`    | `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`                                        | `kernel.protocol_version.approve`      | `/api/v1/kernel/protocol-versions/{versionRef}/approve`                             |
+| `knowledge` | `POST /api/v1/training/delegations/bulk-signoff`                                                    | `knowledge.delegation.sign_off`        | `/api/v1/training/delegations/bulk-signoff` (`batch_id` SHA-256)                    |
+| `safety`    | `POST /api/v1/safety/dsur/{id}/approve` (alias `POST /api/v1/safety/periodic-reports/{id}/approve`) | `safety.periodic_report.approve`       | `/api/v1/safety/dsur/{reportId}/approve`                                            |
+| `tickets`   | `POST /api/v1/tickets/{ticket_id}/sign`                                                             | `tickets.ticket.sign`                  | `/api/v1/tickets/{ticket_id}/sign`                                                  |
+
+<!-- architecture-signatures:end -->
+
 In the target architecture, authority is computed from evidence (training,
 delegation, qualification) by the kernel's policy evaluator (ADR-2251), not from
 role strings.
@@ -490,8 +526,8 @@ role strings.
 - **PostgreSQL 18 through EF Core 10 + Npgsql** (tests, CI and compose pin one
   image, ADR-2533). `AddCadencePostgresDbContext` (`packages/database`) resolves
   `ConnectionStrings:cadence` (set by the Aspire AppHost), then
-  `POSTGRES_CONNECTION_STRING`. Only the `Development` environment falls back to
-  the local compose database; any other environment fails at startup.
+  `POSTGRES_CONNECTION_STRING`. Every environment fails closed at startup when
+  neither key is set (ADR-2260); there is no built-in database fallback.
   Transient-failure retries are enabled.
 - **One database, a schema per service**
   ([ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)):
@@ -499,7 +535,8 @@ role strings.
   set to its own module schema (`ctms`, `execution`, …). The kernel owns the
   `kernel` schema.
 - **Migrations** live in each service's `Infrastructure/Persistence/Migrations/`
-  and are managed with `pnpm cadence migrations` (see
+  and are managed with `pnpm cadence migrations` (and the
+  `scripts/manage_migrations.sh` / `scripts/manage_migrations.ps1` wrappers; see
   [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true` applies them at
   startup; `Database__MigrateOnly=true` runs them as a deployment job and exits.
   See the [database runbook](docs/OPERATIONAL_DATABASE.md).
@@ -560,9 +597,23 @@ role strings.
   `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR
   Part 11) and attributes every write to a real user or a named service account
   ([ADR-2257](docs/adr/2026-09-29-attributable-audit-actors-and-named-service-accounts.md)).
-  Only Execution registers it today; the other services map an audit table it
-  does not write and set audit fields by hand until
-  `AddCadencePostgresDbContext` registers it for every context (#5312).
+  Four standalone service hosts register it today (`execution`, `knowledge`,
+  `safety`, `tickets`); the kernel host writes its own command-pipeline audit
+  chain (`kernel`), and the remaining standalone services set audit fields
+  directly until `AddCadencePostgresDbContext` registers it for every context
+  (#5312).
+
+<!-- architecture-audit-hosts:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Host        | DbContext            | Schema      | Registration                    |
+| ----------- | -------------------- | ----------- | ------------------------------- |
+| `execution` | `ExecutionDbContext` | `edc`       | `apps/execution/src/Program.cs` |
+| `knowledge` | `KnowledgeDbContext` | `knowledge` | `apps/knowledge/src/Program.cs` |
+| `safety`    | `SafetyDbContext`    | `safety`    | `apps/safety/src/Program.cs`    |
+| `tickets`   | `TicketsDbContext`   | `tickets`   | `apps/tickets/src/Program.cs`   |
+
+<!-- architecture-audit-hosts:end -->
+
 - **Transactions:** an explicit EF Core transaction runs inside the execution
   strategy so transient-failure retries replay the whole unit; where one
   `SaveChangesAsync` is the whole write, no explicit transaction is opened

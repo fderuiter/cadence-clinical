@@ -30,7 +30,7 @@ design system in `ui` (`packages/ui`).
 
 ## Component & Composable Catalog
 
-All 24 Vue components and interaction helpers are exported directly from the
+All 25 Vue components and interaction helpers are exported directly from the
 root `ui` package:
 
 - `ClinicalContextBar` (`navigation`, `list`, `link`): Accessible clinical scope
@@ -40,9 +40,12 @@ root `ui` package:
   Accessible, sortable, paginated clinical dataset table with row selection and
   tabular numerals.
 - [`ClinicalModal`](./modal.md) (`dialog`, `aria-modal="true"`): Accessible
-  modal dialog with focus trap and backdrop blur.
+  modal dialog with focus trap, `ariaDescribedby` support, and backdrop blur.
 - [`ClinicalDrawer`](./modal.md) (`dialog`, `aria-modal="true"`): Accessible
   slide-over drawer with reactive focus containment.
+- `ClinicalToastHost` (`region`, `alert`, `status`): Focus-trap-exempt toast
+  host persisting `error` alerts, pausing timed status toasts on hover/focus,
+  and splitting live roles.
 - `ClinicalDropzone` (`button`, `status`): Accessible drag-and-drop and native
   `<button type="button">` file selector with live selected-file status and
   sibling remove.
@@ -84,8 +87,8 @@ root `ui` package:
 - `createSrOnlyActionButton` (`button` helper): Imperative DOM `<button>`
   builder appending `.sr-only` target context after the visible verb.
 - `useFocusTrap` / `getFocusableElements` (Keyboard helper): Reactive keyboard
-  focus containment, focusable element discovery, and `fallbackFocus` /
-  parent-trap focus restoration.
+  focus containment, modal stack queries (`hasActiveModalFocusTrap`), and
+  `fallbackFocus` / visible fallback restoration.
 - `useEscapeClose` (Keyboard helper): Stack-aware `Escape` dismissal composable.
 - `useAsyncRetry` (Async helper): Reactive async execution and retry state
   helper.

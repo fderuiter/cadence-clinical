@@ -17,6 +17,34 @@ public class ConsentDocument
     public string ReasonForChange { get; set; } = string.Empty;
 }
 
+public class ConsentDocumentRevision
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DocumentId { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public string StudyCode { get; set; } = string.Empty;
+    public string SiteCode { get; set; } = string.Empty;
+    public string DocumentName { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public required DateTimeOffset RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+
+    public static ConsentDocumentRevision FromDocument(ConsentDocument doc, DateTimeOffset recordedAt, string recordedBy) =>
+        new()
+        {
+            DocumentId = doc.Id,
+            RevisionNumber = doc.VersionIndex,
+            StudyCode = doc.StudyId,
+            SiteCode = doc.SiteId,
+            DocumentName = doc.DocumentName,
+            Content = doc.Content,
+            RecordedAt = recordedAt,
+            RecordedBy = recordedBy,
+            ReasonForChange = doc.ReasonForChange,
+        };
+}
+
 public class EtmfArchivalDelivery
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();

@@ -47,8 +47,9 @@ port 5174.
 - `src/data/mock-data.js`: Synthetic demo data loaded only in explicit `demo`
   builds (`--mode demo` or `VITE_DEMO_MODE=true`).
 - `src/sync-queue.js`: IndexedDB-backed offline submission queue encrypted via
-  an ADR-2360 memory-only PIN-derived key (never persisted unwrapped in
-  IndexedDB).
+  an ADR-2360 non-extractable `CryptoKey` in memory (never persisted unwrapped
+  in IndexedDB), reusing per-participant open database handles and a volatile
+  decrypted projection cache wiped on lock, PIN reset, user switch, or sign-out.
 - `src/mocks/`: MSW handlers, started only in explicit `demo` builds
   (`--mode demo`, `VITE_DEMO_MODE=true`, or `VITE_ENABLE_MSW=true`).
 - `src/style.css`: Styles.

@@ -1,30 +1,112 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 
+using Cadence.ToolingCore.Services;
+using Cadence.Topology;
+
 namespace Cadence.Cli.Services;
 
 /// <summary>
-/// Renders the gate tables in <c>docs/cli.md</c> and <c>docs/CI.md</c> from <see cref="QualityGates"/>. Each table sits
-/// between a <see cref="BeginMarker"/> and an <see cref="EndMarker"/> line; <c>cadence generate-cli-docs</c> rewrites
-/// it and the <c>cli-docs</c> gate fails when it is stale. The tables are written the way Prettier formats them, so
-/// the pre-commit Prettier check leaves them alone.
+/// Synthesizes Prettier-aligned Markdown tables and marker regions across portal and SDLC guides from authoritative
+/// code metadata (<see cref="QualityGates"/>, <see cref="ServiceTopology"/>, <see cref="PortCheckerService"/>, Vite
+/// configs, EF Core schema docs, <c>RequireElectronicSignature</c> endpoints, durable signature token stores, and
+/// <c>GxPAuditInterceptor</c> host registrations). Rewritten by <c>cadence generate-cli-docs</c> and <c>cadence fix</c>;
+/// checked fail-closed by the <c>cli-docs</c> quality gate.
 /// </summary>
 public static class GateDocs
 {
-    /// <summary>The line that opens a generated gate table.</summary>
-    public const string BeginMarker = "<!-- quality-gates:begin (generated from QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    /// <summary>Describes one marker-delimited documentation region synthesized from code metadata.</summary>
+    public sealed record GeneratedRegion(
+        string RelativePath,
+        string RegionId,
+        string OpeningMarker,
+        string ClosingMarker,
+        Func<string, string> Render);
 
-    /// <summary>The line that closes a generated gate table.</summary>
+    /// <summary>The line that opens a generated quality-gate table.</summary>
+    public const string BeginMarker = "<!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+
+    /// <summary>The line that closes a generated quality-gate table.</summary>
     public const string EndMarker = "<!-- quality-gates:end -->";
 
-    /// <summary>The documents that carry a generated gate table, relative to the repository root, and their tables.</summary>
+    public const string CheckPortsBeginMarker = "<!-- check-ports:begin (generated from packages/tooling_core/src/Services/PortCheckerService.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string CheckPortsEndMarker = "<!-- check-ports:end -->";
+
+    public const string DevServicePortsBeginMarker = "<!-- dev-service-ports:begin (generated from packages/topology/src/ServiceTopology.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string DevServicePortsEndMarker = "<!-- dev-service-ports:end -->";
+
+    public const string RunningServicesBeginMarker = "<!-- running-services:begin (generated from packages/topology/src/ServiceTopology.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string RunningServicesEndMarker = "<!-- running-services:end -->";
+
+    public const string RuntimeComponentsBeginMarker = "<!-- runtime-components:begin (generated from packages/topology/src/ServiceTopology.cs and apps/*/vite.config.js by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string RuntimeComponentsEndMarker = "<!-- runtime-components:end -->";
+
+    public const string ArchitectureSignaturesBeginMarker = "<!-- architecture-signatures:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureSignaturesEndMarker = "<!-- architecture-signatures:end -->";
+
+    public const string ArchitectureAuditHostsBeginMarker = "<!-- architecture-audit-hosts:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureAuditHostsEndMarker = "<!-- architecture-audit-hosts:end -->";
+
+    public const string DatabaseModulesBeginMarker = "<!-- database-module-schemas:begin (generated from docs/schema/README.md and PersistenceModuleCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string DatabaseModulesEndMarker = "<!-- database-module-schemas:end -->";
+
+    public const string SignedEndpointsBeginMarker = "<!-- signed-endpoints:begin (generated from RequireElectronicSignature call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string SignedEndpointsEndMarker = "<!-- signed-endpoints:end -->";
+
+    public const string DurableSigStoresBeginMarker = "<!-- durable-sig-token-stores:begin (generated from AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string DurableSigStoresEndMarker = "<!-- durable-sig-token-stores:end -->";
+
+    private sealed record ArchitectureServiceDescriptor(
+        string Directory,
+        string Project,
+        string PersistenceOverride);
+
+    private static readonly IReadOnlyList<ArchitectureServiceDescriptor> ArchitectureServiceOrder =
+    [
+        new("execution", "Cadence.Apps.Execution", "`ExecutionDbContext`"),
+        new("ctms", "Cadence.Apps.Ctms", "`CtmsDbContext`"),
+        new("etmf", "Cadence.Apps.Etmf", "`EtmfDbContext`"),
+        new("payments", "Cadence.Apps.Payments", "`PaymentsDbContext`"),
+        new("interop", "Cadence.Apps.Interop", "`InteropDbContext`"),
+        new("imaging", "Cadence.Apps.Imaging", "`ImagingDbContext`"),
+        new("safety", "Cadence.Apps.Safety", "`SafetyDbContext`"),
+        new("econsent", "Cadence.Apps.Econsent", "`EconsentDbContext`"),
+        new("knowledge", "Cadence.Apps.Knowledge", "`KnowledgeDbContext`"),
+        new("designer", "Cadence.Apps.Designer", "none yet"),
+        new("tickets", "Cadence.Apps.Tickets", "`TicketsDbContext`"),
+        new("quality", "Cadence.Apps.Quality", "`QualityDbContext`"),
+        new("org", "Cadence.Apps.Org", "`OrgDbContext`"),
+        new("eisf", "Cadence.Apps.Eisf", "`EisfDbContext`"),
+        new("fileshare", "Cadence.Apps.Fileshare", "`FileshareDbContext` + MinIO"),
+        new("notifications", "Cadence.Apps.Notifications", "`NotificationsDbContext`"),
+        new("kernel-api", "Cadence.Kernel.Host", "`KernelDbContext` + module DbContexts"),
+    ];
+
+    /// <summary>The documents that carry a generated quality-gate table, preserved for existing callers.</summary>
     public static IReadOnlyList<(string RelativePath, Func<string> Render)> Regions { get; } =
     [
         ("docs/cli.md", RenderCliTable),
         ("docs/CI.md", RenderCiTable),
+    ];
+
+    /// <summary>All synthesized documentation regions across portal, architecture, database, and SDLC guides.</summary>
+    public static IReadOnlyList<GeneratedRegion> AllRegions { get; } =
+    [
+        new("docs/cli.md", "quality-gates", BeginMarker, EndMarker, _ => RenderCliTable()),
+        new("docs/cli.md", "check-ports", CheckPortsBeginMarker, CheckPortsEndMarker, RenderCliCheckPortsRegion),
+        new("docs/CI.md", "quality-gates", BeginMarker, EndMarker, _ => RenderCiTable()),
+        new("docs/LOCAL_DEV_ENVIRONMENT.md", "dev-service-ports", DevServicePortsBeginMarker, DevServicePortsEndMarker, RenderLocalDevPortsTable),
+        new("ARCHITECTURE.md", "running-services", RunningServicesBeginMarker, RunningServicesEndMarker, RenderArchitectureServicesTable),
+        new("ARCHITECTURE.md", "runtime-components", RuntimeComponentsBeginMarker, RuntimeComponentsEndMarker, RenderArchitectureRuntimeComponentsTable),
+        new("ARCHITECTURE.md", "architecture-signatures", ArchitectureSignaturesBeginMarker, ArchitectureSignaturesEndMarker, RenderArchitectureSignaturesRegion),
+        new("ARCHITECTURE.md", "architecture-audit-hosts", ArchitectureAuditHostsBeginMarker, ArchitectureAuditHostsEndMarker, RenderArchitectureAuditHostsRegion),
+        new("docs/OPERATIONAL_DATABASE.md", "database-module-schemas", DatabaseModulesBeginMarker, DatabaseModulesEndMarker, RenderOperationalDatabaseModulesTable),
+        new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "signed-endpoints", SignedEndpointsBeginMarker, SignedEndpointsEndMarker, RenderSignatureContractEndpointsTable),
+        new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "durable-sig-token-stores", DurableSigStoresBeginMarker, DurableSigStoresEndMarker, RenderSignatureContractStoresTable),
     ];
 
     /// <summary>The <c>docs/cli.md</c> table: names, whether a gate takes files, and what the pre-commit hook does.</summary>
@@ -49,52 +131,292 @@ public static class GateDocs
         $"`pnpm cadence check` runs these {QualityGates.All.Count} gates in this order:\n\n" +
         RenderTable(["Gate", "What it checks"], QualityGates.All.Select(g => new[] { $"`{g.Name}`", g.Checks }));
 
-    /// <summary>Replaces each document's generated table. Returns 1 when a document or its markers are missing.</summary>
+    /// <summary>The <c>docs/cli.md</c> port summary derived from <see cref="PortCheckerService.DefaultPorts"/>.</summary>
+    public static string RenderCliCheckPortsRegion(string repoRoot)
+    {
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        string formatted = PortCheckerService.FormatPortRanges(topology.CheckedPorts);
+        return $"`check-ports` probes these {topology.CheckedPorts.Count.ToString(CultureInfo.InvariantCulture)} default ports on `127.0.0.1`\n(`PortCheckerService.DefaultPorts`): {formatted}.";
+    }
+
+    /// <summary>The <c>docs/LOCAL_DEV_ENVIRONMENT.md</c> service, port, and schema table.</summary>
+    public static string RenderLocalDevPortsTable(string repoRoot)
+    {
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var dbModules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+        string kernelSchemas = ResolveKernelSchemasDisplay(dbModules);
+
+        var left = new List<(string Name, int Port, string Schema)>
+        {
+            ("front proxy (nginx) → gateway", topology.GatewayPort, "none"),
+        };
+
+        var orderedServices = topology.Services.OrderBy(s => s.Port).ToList();
+        foreach (var svc in orderedServices.Take(9))
+        {
+            left.Add((FormatLocalDevServiceName(svc), svc.Port, ResolveServiceSchemaDisplay(svc, dbModules, kernelSchemas)));
+        }
+
+        left.Add(("PostgreSQL", topology.PostgresPort, "`cadence` (database)"));
+
+        var right = new List<(string Name, int Port, string Schema)>();
+        foreach (var svc in orderedServices.Skip(9))
+        {
+            right.Add((FormatLocalDevServiceName(svc), svc.Port, ResolveServiceSchemaDisplay(svc, dbModules, kernelSchemas)));
+        }
+
+        right.Add(("Keycloak", topology.KeycloakPort, "(own store)"));
+        right.Add(("web (`apps/web`)", topology.WebPort, "none"));
+        right.Add(("subject-portal (`apps/subject-portal`)", topology.SubjectPortalPort, "none"));
+
+        int rowCount = Math.Max(left.Count, right.Count);
+        var rows = new List<string[]>(rowCount);
+        for (int i = 0; i < rowCount; i++)
+        {
+            (string Name, int Port, string Schema) l = i < left.Count ? left[i] : ("", 0, "");
+            (string Name, int Port, string Schema) r = i < right.Count ? right[i] : ("", 0, "");
+            rows.Add(
+            [
+                l.Name,
+                l.Name.Length == 0 ? "" : l.Port.ToString(CultureInfo.InvariantCulture),
+                l.Schema,
+                r.Name,
+                r.Name.Length == 0 ? "" : r.Port.ToString(CultureInfo.InvariantCulture),
+                r.Schema,
+            ]);
+        }
+
+        return RenderTable(
+            ["Service", "Host port", "Database schema", "Service", "Host port", "Database schema"],
+            rows);
+    }
+
+    /// <summary>The <c>ARCHITECTURE.md</c> §3 running-services table derived from <see cref="ServiceTopology"/>.</summary>
+    public static string RenderArchitectureServicesTable(string repoRoot)
+    {
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var byDirectory = topology.Services.ToDictionary(s => s.Directory, StringComparer.Ordinal);
+        var descriptorsByDir = ArchitectureServiceOrder.ToDictionary(d => d.Directory, StringComparer.Ordinal);
+
+        var rows = new List<string[]>
+        {
+            new[]
+            {
+                "[gateway](apps/gateway/README.md)",
+                "`Cadence.Apps.Gateway`",
+                topology.GatewayPort.ToString(CultureInfo.InvariantCulture),
+                "all below",
+                "none",
+            },
+        };
+
+        foreach (var descriptor in ArchitectureServiceOrder)
+        {
+            if (!byDirectory.TryGetValue(descriptor.Directory, out var svc))
+            {
+                continue;
+            }
+
+            rows.Add(
+            [
+                $"[{svc.Directory}](apps/{svc.Directory}/README.md)",
+                $"`{descriptor.Project}`",
+                svc.Port.ToString(CultureInfo.InvariantCulture),
+                FormatArchitectureRoutes(svc),
+                descriptor.PersistenceOverride,
+            ]);
+        }
+
+        foreach (var extra in topology.Services.Where(s => !descriptorsByDir.ContainsKey(s.Directory)))
+        {
+            rows.Add(
+            [
+                $"[{extra.Directory}](apps/{extra.Directory}/README.md)",
+                $"`Cadence.Apps.{char.ToUpperInvariant(extra.Name[0])}{extra.Name[1..]}`",
+                extra.Port.ToString(CultureInfo.InvariantCulture),
+                FormatArchitectureRoutes(extra),
+                extra.Database ? $"`{char.ToUpperInvariant(extra.Name[0])}{extra.Name[1..]}DbContext`" : "none",
+            ]);
+        }
+
+        return RenderTable(
+            ["Service", "Project", "Port", "Gateway routes (`/api/v1/…`)", "Persistence"],
+            rows);
+    }
+
+    /// <summary>The <c>ARCHITECTURE.md</c> §3 runtime-components table derived from topology, AppHost, and Vite configs.</summary>
+    public static string RenderArchitectureRuntimeComponentsTable(string repoRoot)
+    {
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var dbModules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+        int totalDotnetHosts = topology.Services.Count + 1;
+        string coreHosts = string.Join(", ", topology.CoreBackendHosts.Select(h => $"`{h}`"));
+        string schemaCountText = dbModules.Count > 0
+            ? $"One `cadence` database partitioned across {dbModules.Count.ToString(CultureInfo.InvariantCulture)} EF Core module schemas (ADR-2447)"
+            : "One `cadence` database with a schema per module (ADR-2447)";
+
+        string[][] rows =
+        [
+            ["Web client", "`apps/web`", $"Vue 3 + Vite (port {topology.WebPort.ToString(CultureInfo.InvariantCulture)}, compose `web`); signs in through Keycloak"],
+            ["Subject portal", "`apps/subject-portal`", $"Participant PWA (port {topology.SubjectPortalPort.ToString(CultureInfo.InvariantCulture)}, compose `subject-portal`)"],
+            ["Aspire AppHost", "`apps/apphost`", $"Runs {totalDotnetHosts.ToString(CultureInfo.InvariantCulture)} .NET hosts + web apps; `core` profile runs {coreHosts} + `web`"],
+            ["Keycloak", "`docker/cadence-realm.json`", $"OIDC identity provider (port {topology.KeycloakPort.ToString(CultureInfo.InvariantCulture)}), realm `cadence`"],
+            ["PostgreSQL 18", "compose `postgres`", schemaCountText],
+            ["MinIO, ClamAV", "compose profile `storage`", "Object storage (`packages/storage`) and upload scanning (ClamAV not wired yet)"],
+            ["Front proxy", "compose `front-proxy` (nginx)", $"Port {topology.GatewayPort.ToString(CultureInfo.InvariantCulture)}; forwards the web apps' API calls to the gateway"],
+            ["Other compose services", "`docker/docker-compose.yml`", "`dotnet-dev` (`dotnet` SDK container with isolated NuGet and MSBuild volumes)"],
+        ];
+
+        return RenderTable(["Component", "Path", "Notes"], rows);
+    }
+
+    /// <summary>The <c>ARCHITECTURE.md</c> §4 electronic-signature routes and durable token-store summary.</summary>
+    public static string RenderArchitectureSignaturesRegion(string repoRoot)
+    {
+        var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+
+        string storeTable = RenderTable(
+            ["Durable signature token store", "Registration"],
+            stores.Select(s => new[]
+            {
+                $"`{s.Host}` (`{s.DbContext}` → `{s.Table}`)",
+                $"`{s.RelativeFilePath}`",
+            }));
+
+        string endpointTable = RenderTable(
+            ["Host", "Endpoint", "`semantic_action`", "`action`"],
+            endpoints.Select(FormatSignedEndpointRow));
+
+        return
+            $"Signature-gated routes (`{endpoints.Count.ToString(CultureInfo.InvariantCulture)}` endpoints across `{stores.Count.ToString(CultureInfo.InvariantCulture)}` durable token stores):\n\n" +
+            storeTable +
+            "\n" +
+            endpointTable;
+    }
+
+    /// <summary>The <c>ARCHITECTURE.md</c> §5 <c>GxPAuditInterceptor</c> host registrations table.</summary>
+    public static string RenderArchitectureAuditHostsRegion(string repoRoot)
+    {
+        var hosts = CodeMetadataCatalog.GetAuditInterceptorHosts(repoRoot);
+        return RenderTable(
+            ["Host", "DbContext", "Schema", "Registration"],
+            hosts.Select(h => new[]
+            {
+                $"`{h.Host}`",
+                $"`{h.DbContext}`",
+                $"`{h.Schema}`",
+                $"`{h.RelativeFilePath}`",
+            }));
+    }
+
+    /// <summary>The <c>docs/OPERATIONAL_DATABASE.md</c> table synchronized with all 18 modules in <c>docs/schema/README.md</c> and <c>PersistenceModuleCatalog</c>.</summary>
+    public static string RenderOperationalDatabaseModulesTable(string repoRoot)
+    {
+        var modules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+        return RenderTable(
+            ["Module", "Host", "Schema", "DbContext", "Project"],
+            modules.Select(m => new[]
+            {
+                $"[{m.Module}](schema/{m.Module}.md)",
+                string.Equals(m.Host, "kernel", StringComparison.Ordinal) ? "`kernel` (`apps/kernel-api`)" : $"`{m.Host}`",
+                $"`{m.Schema}`",
+                $"`{m.DbContext}`",
+                $"`{m.ProjectRelativePath}`",
+            }));
+    }
+
+    /// <summary>The <c>docs/SDLC/Signature_Token_Cryptographic_Contract.md</c> §2 signature-gated endpoints table.</summary>
+    public static string RenderSignatureContractEndpointsTable(string repoRoot)
+    {
+        var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        return RenderTable(
+            ["Host", "Endpoint", "`semantic_action`", "`action`"],
+            endpoints.Select(FormatSignedEndpointRow));
+    }
+
+    /// <summary>The <c>docs/SDLC/Signature_Token_Cryptographic_Contract.md</c> §3 durable signature token stores table.</summary>
+    public static string RenderSignatureContractStoresTable(string repoRoot)
+    {
+        var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+        return RenderTable(
+            ["Host", "DbContext", "Table", "Registration"],
+            stores.Select(s => new[]
+            {
+                $"`{s.Host}`",
+                $"`{s.DbContext}`",
+                $"`{s.Table}`",
+                $"`{s.RelativeFilePath}`",
+            }));
+    }
+
+    /// <summary>Replaces every document's generated marker regions. Returns 1 when any target file or marker is missing.</summary>
     public static int Write(string repoRoot)
     {
         int exitCode = 0;
-        foreach (var (relativePath, render) in Regions)
+        foreach (var group in AllRegions.GroupBy(r => r.RelativePath, StringComparer.Ordinal))
         {
-            string path = Path.Combine(repoRoot, relativePath);
-            string? updated = File.Exists(path) ? ReplaceRegion(File.ReadAllText(path), render()) : null;
-            if (updated is null)
+            string path = Path.Combine(repoRoot, group.Key);
+            if (!File.Exists(path))
             {
-                Console.WriteLine($"[ERROR] {relativePath} is missing or has no '{EndMarker}'-terminated gate table to update.");
+                Console.WriteLine($"[ERROR] {group.Key} is missing and cannot receive generated documentation regions.");
                 exitCode = 1;
                 continue;
             }
 
-            File.WriteAllText(path, updated);
+            string text = File.ReadAllText(path).ReplaceLineEndings("\n");
+            bool fileOk = true;
+            foreach (var region in group)
+            {
+                string? next = ReplaceRegion(text, region.OpeningMarker, region.ClosingMarker, region.Render(repoRoot));
+                if (next is null)
+                {
+                    Console.WriteLine($"[ERROR] {group.Key} has no '{region.RegionId}' marker region ('{region.OpeningMarker}' .. '{region.ClosingMarker}').");
+                    exitCode = 1;
+                    fileOk = false;
+                    continue;
+                }
+
+                text = next;
+            }
+
+            if (fileOk)
+            {
+                File.WriteAllText(path, text);
+            }
         }
 
         return exitCode;
     }
 
-    /// <summary>Returns <c>true</c> when every document's generated table matches the registry.</summary>
+    /// <summary>Returns <c>true</c> when every document's generated marker regions exist and match code metadata.</summary>
     public static bool Check(string repoRoot)
     {
         bool passed = true;
-        foreach (var (relativePath, render) in Regions)
+        foreach (var group in AllRegions.GroupBy(r => r.RelativePath, StringComparer.Ordinal))
         {
-            string path = Path.Combine(repoRoot, relativePath);
+            string path = Path.Combine(repoRoot, group.Key);
             if (!File.Exists(path))
             {
-                Console.WriteLine($"[ERROR] {relativePath} not found; it must carry the generated quality gate table.");
+                Console.WriteLine($"[ERROR] {group.Key} not found; it must carry its generated documentation regions.");
                 passed = false;
                 continue;
             }
 
             string content = File.ReadAllText(path).ReplaceLineEndings("\n");
-            string? expected = ReplaceRegion(content, render());
-            if (expected is null)
+            foreach (var region in group)
             {
-                Console.WriteLine($"[ERROR] {relativePath} has no generated quality gate table (the '{BeginMarker}' and '{EndMarker}' lines).");
-                passed = false;
-            }
-            else if (expected != content)
-            {
-                Console.WriteLine($"[ERROR] The quality gate table in {relativePath} does not match packages/cli/src/Services/QualityGates.cs. Run 'pnpm cadence generate-cli-docs'.");
-                passed = false;
+                string? expected = ReplaceRegion(content, region.OpeningMarker, region.ClosingMarker, region.Render(repoRoot));
+                if (expected is null)
+                {
+                    Console.WriteLine($"[ERROR] {group.Key} has no generated '{region.RegionId}' region (the '{region.OpeningMarker}' and '{region.ClosingMarker}' lines).");
+                    passed = false;
+                }
+                else if (!string.Equals(expected, content, StringComparison.Ordinal))
+                {
+                    Console.WriteLine($"[ERROR] The '{region.RegionId}' generated region in {group.Key} is out of date. Run 'pnpm cadence generate-cli-docs'.");
+                    passed = false;
+                }
             }
         }
 
@@ -102,20 +424,27 @@ public static class GateDocs
     }
 
     /// <summary>
-    /// Puts <paramref name="body"/> between the markers in <paramref name="document"/>, or returns <c>null</c> when the
-    /// markers are missing or out of order.
+    /// Puts <paramref name="body"/> between <see cref="BeginMarker"/> and <see cref="EndMarker"/> in <paramref name="document"/>,
+    /// or returns <c>null</c> when the markers are missing or out of order.
     /// </summary>
-    public static string? ReplaceRegion(string document, string body)
+    public static string? ReplaceRegion(string document, string body) =>
+        ReplaceRegion(document, BeginMarker, EndMarker, body);
+
+    /// <summary>
+    /// Puts <paramref name="body"/> between <paramref name="beginMarker"/> and <paramref name="endMarker"/> in
+    /// <paramref name="document"/>, or returns <c>null</c> when the markers are missing or out of order.
+    /// </summary>
+    public static string? ReplaceRegion(string document, string beginMarker, string endMarker, string body)
     {
         string text = document.ReplaceLineEndings("\n");
-        int begin = text.IndexOf(BeginMarker + "\n", StringComparison.Ordinal);
-        int end = text.IndexOf("\n" + EndMarker, StringComparison.Ordinal);
+        int begin = text.IndexOf(beginMarker + "\n", StringComparison.Ordinal);
+        int end = text.IndexOf("\n" + endMarker, StringComparison.Ordinal);
         if (begin < 0 || end < begin)
         {
             return null;
         }
 
-        int bodyStart = begin + BeginMarker.Length + 1;
+        int bodyStart = begin + beginMarker.Length + 1;
         return text[..bodyStart] + "\n" + body.TrimEnd('\n') + "\n" + text[end..];
     }
 
@@ -137,6 +466,64 @@ public static class GateDocs
 
         return sb.ToString();
     }
+
+    private static string[] FormatSignedEndpointRow(CodeMetadataCatalog.SignedEndpointMetadata endpoint)
+    {
+        string routeCell = endpoint.AliasRoute is { Length: > 0 } alias
+            ? $"`{endpoint.Method} {endpoint.Route}` (alias `{alias}`)"
+            : $"`{endpoint.Method} {endpoint.Route}`";
+        string actionCell = endpoint.UsesBatchBinding
+            ? $"`{endpoint.ActionTemplate}` (`batch_id` SHA-256)"
+            : $"`{endpoint.ActionTemplate}`";
+        return [$"`{endpoint.Host}`", routeCell, $"`{endpoint.SemanticAction}`", actionCell];
+    }
+
+    private static string FormatLocalDevServiceName(CadenceService service) =>
+        string.Equals(service.Name, "kernel", StringComparison.Ordinal)
+            ? $"kernel (`apps/{service.Directory}`)"
+            : service.Name;
+
+    private static string ResolveKernelSchemasDisplay(IReadOnlyList<CodeMetadataCatalog.DatabaseModuleSchema> dbModules)
+    {
+        string[] schemas = dbModules
+            .Where(m => string.Equals(m.Host, "kernel", StringComparison.Ordinal))
+            .Select(m => m.Schema)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s switch
+            {
+                "kernel" => 0,
+                "intelligence" => 1,
+                "execution" => 2,
+                _ => 3,
+            })
+            .ThenBy(s => s, StringComparer.Ordinal)
+            .Select(s => $"`{s}`")
+            .ToArray();
+        return schemas.Length > 0 ? string.Join(", ", schemas) : "`kernel`, `intelligence`, `execution`";
+    }
+
+    private static string ResolveServiceSchemaDisplay(
+        CadenceService service,
+        IReadOnlyList<CodeMetadataCatalog.DatabaseModuleSchema> dbModules,
+        string kernelSchemas)
+    {
+        if (!service.Database)
+        {
+            return "none";
+        }
+
+        if (string.Equals(service.Name, "kernel", StringComparison.Ordinal))
+        {
+            return kernelSchemas;
+        }
+
+        var module = dbModules.FirstOrDefault(m => string.Equals(m.Module, service.Name, StringComparison.Ordinal));
+        string schema = module?.Schema ?? (string.Equals(service.Name, "execution", StringComparison.Ordinal) ? "edc" : service.Name);
+        return $"`{schema}`";
+    }
+
+    private static string FormatArchitectureRoutes(CadenceService service) =>
+        string.Join(", ", service.RoutePrefixes.Select(p => $"`{p}`"));
 
     private static void AppendRow(StringBuilder sb, string[] row, int[] widths)
     {

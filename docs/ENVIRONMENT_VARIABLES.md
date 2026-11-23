@@ -2,9 +2,10 @@
 
 Every configuration key the .NET services, CLI and web apps read, with where it
 is read. The template with local defaults is [`.env.example`](../.env.example).
-`cadence check` warns when code reads an environment variable that
-`.env.example` does not list, and when `.env.example` lists a key this page does
-not.
+`cadence check` (`env-vars`) fails closed when code reads an environment
+variable that `.env.example` or this page does not list, when `.env.example` and
+this page disagree on concrete keys, or when a repository file path cited on
+this page does not exist.
 
 ASP.NET Core services read these through `IConfiguration`, so environment
 variables, `appsettings*.json` and command-line arguments all work; `__` in an
@@ -33,7 +34,8 @@ Development included (ADR-2260).
   not an address or range fails startup.
 - `AppHost__Profile` — Read by `apps/apphost/src/Program.cs` (Aspire AppHost
   only). Default: `full`. Not required; `full` runs every service, `core` runs
-  the gateway, execution, kernel and web only
+  the 6 core backend hosts (`gateway`, `execution`, `etmf`, `ctms`, `knowledge`,
+  `kernel`) and `web`
   ([AppHost README](../apps/apphost/README.md#profiles-and-existing-infrastructure)),
   and any other value stops the AppHost.
 - `AppHost__OidcAuthority` — Read by `apps/apphost/src/Program.cs` (Aspire
@@ -432,8 +434,8 @@ otherwise.
 - `DOTNET_INSTALL_PS1_SHA256` — Read by `scripts/setup_dotnet_env.ps1:63`.
   Default: `e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6`.
 - `GH_TOKEN`, `GITHUB_TOKEN` — Read by
-  `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10`. Default:
-  none.
+  `packages/cli/src/Services/RulesetService.cs` (`gh api` reconciliation) and
+  `.github/workflows/ci.yml`. Default: none.
 - `RTM_DRAFT`, `GENERATE_RTM_DRAFT` — Read by
   `packages/compliance/src/RtmGeneratorService.cs:124-125` (honoured by
   `generate-rtm` and `check rtm`; `gxp sync` and `gxp snapshot` ignore them).

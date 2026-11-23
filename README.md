@@ -122,14 +122,28 @@ cd cadence-clinical
 dotnet build Cadence.sln                        # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj      # unit tests
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-pnpm install --frozen-lockfile                  # frontend workspace
+pnpm install --frozen-lockfile && pnpm --filter ui build          # frontend workspace & shared UI package
 ```
 
 ### Running the services
 
-Every service refuses to start without `GATEWAY_SECRET` (at least 32
-characters), and the gateway refuses to start without `OIDC_AUTHORITY`
-([ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)).
+Services fail closed at startup without their required configuration (there are
+no built-in credential or database fallbacks in any environment;
+[ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md),
+[ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md)):
+
+- Every service requires `GATEWAY_SECRET` (at least 32 characters), and the
+  gateway requires `OIDC_AUTHORITY`.
+- Every database-backed service requires `ConnectionStrings__cadence` (or
+  `POSTGRES_CONNECTION_STRING`) and `AUDIT_LOG_SECRET_KEY`.
+- Domain services require their cryptographic keys at startup (for example
+  `DemographicsEncryption__KeyBase64` and `RANDOMIZATION_ALLOCATION_KEY` on
+  `execution`; `FIELD_ENCRYPTION_KEY` on `econsent` and `payments`;
+  `FIELD_LOOKUP_HASH_KEY` and `CADENCE_SCE_SIGNING_KEY` on `interop`;
+  `CADENCE_IMAGING_DEID_SIGNING_KEY` and
+  `CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY` on `imaging`). Local-development
+  templates live in [`.env.example`](.env.example).
+
 Every non-health request must come through the gateway with a Keycloak token, so
 the web client has to sign in; its token-less demo mode can no longer reach the
 API.

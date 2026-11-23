@@ -306,6 +306,19 @@ public sealed class QualityGateRegistryTests : IDisposable
             Git("commit", "-q", "-am", "grow the baseline");
             return Context();
         },
+        ["merge-readiness"] = () =>
+        {
+            Write("apps/shared.cs", "class Shared { int Value = 1; }\n");
+            CommitOnMainThenBranch();
+            Write("apps/shared.cs", "class Shared { int Value = 2; }\n");
+            Git("commit", "-q", "-am", "feature change");
+            Git("checkout", "-q", "main");
+            Write("apps/shared.cs", "class Shared { int Value = 3; }\n");
+            Git("commit", "-q", "-am", "upstream change");
+            Git("update-ref", "refs/remotes/origin/main", "HEAD");
+            Git("checkout", "-q", "feature");
+            return Context();
+        },
         ["public-bundle"] = () =>
         {
             const string validCsp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self'\">";
@@ -353,7 +366,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(42);
+        QualityGates.All.Should().HaveCount(43);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -491,7 +504,14 @@ public sealed class QualityGateRegistryTests : IDisposable
         var gate = QualityGates.Find("duplication")!;
         var context = Context(files: ["apps/web/src/style.css", "apps/subject-portal/src/style.css"], preCommit: true);
 
-        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# file, even when pre-commit passes staged files");
+        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# or JavaScript file, even when pre-commit passes staged files");
+
+        string jsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const val{i} = input + {i};"));
+        Write("apps/web/src/dup.js", $"export function compute(input) {{\n{jsLines}\n  return val18;\n}}\n");
+        Write("apps/subject-portal/src/dup.js", $"export function compute(input) {{\n{jsLines}\n  return val18;\n}}\n");
+
+        var jsContext = Context(files: ["apps/web/src/dup.js", "apps/subject-portal/src/dup.js"], preCommit: true);
+        gate.Run(jsContext).Should().BeFalse("duplication gate rejects staged JavaScript duplicates over 15 normalized lines");
     }
 
     [Fact]
@@ -594,13 +614,26 @@ public sealed class QualityGateRegistryTests : IDisposable
             "docs/valid.md",
             "# Valid Guide\n\n" +
             "Read [the valid\nknown section](target.md#known-section) and skip `[inline](missing.md)`.\n\n" +
+            "<!-- sample-table:begin (generated from CodeMetadataCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->\n\n" +
+            $"| Generated | Details |\n| --- | --- |\n| row | {wideCell} |\n\n" +
+            "<!-- sample-table:end -->\n\n" +
             "| Service | Port |\n| --- | --- |\n| kernel | 8018 |\n\n" +
             $"```text\n{wideCell} {wideCell}\n```\n");
         Write("docs/SRS.md", $"# Software Requirements Specification\n\n{unwrappedProse} {unwrappedProse}\n\n| Req | Text |\n| --- | --- |\n| 1 | {wideCell} |\n");
         Write("docs/adr/2026-01-01-sample.md", $"# ADR-9999: Sample\n\n{unwrappedProse} {unwrappedProse}\n");
 
         gate.Run(Context(files: ["docs/target.md", "docs/valid.md", "docs/SRS.md", "docs/adr/2026-01-01-sample.md"]))
-            .Should().BeTrue("valid wrapped links, fenced code blocks, and width-exempt specifications pass markdown validation");
+            .Should().BeTrue("valid wrapped links, fenced code blocks, synthesized regions, and width-exempt specifications pass markdown validation");
+
+        Write(
+            "docs/post-region-wide.md",
+            "# Post-Region Check\n\n" +
+            "<!-- sample-table:begin (generated from CodeMetadataCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->\n\n" +
+            $"| Generated | Details |\n| --- | --- |\n| row | {wideCell} |\n\n" +
+            "<!-- sample-table:end -->\n\n" +
+            $"{unwrappedProse}\n");
+        gate.Run(Context(files: ["docs/post-region-wide.md"]))
+            .Should().BeFalse("prose after a closed synthesized region must still obey active-doc width limits");
     }
 
     [Fact]
@@ -622,6 +655,104 @@ public sealed class QualityGateRegistryTests : IDisposable
             .ToArray();
         QualityGateOrchestrator.RunQualityGates(excludedGates: nonFileGates, preCommit: true, repoRoot: _root)
             .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
+    }
+
+    [Fact]
+    public void MergeReadinessGate_FailsWhenBaseRefMissingOrConflicted_AndPassesWhenCleanOrPushScoped()
+    {
+        var gate = QualityGates.Find("merge-readiness")!;
+        QualityGates.Find("check-merge-readiness").Should().BeSameAs(gate);
+        gate.PreCommit.Should().Be(PreCommitMode.Skipped);
+
+        Write("apps/one.cs", "class One {}\n");
+        CommitOnMainThenBranch();
+        Git("update-ref", "-d", "refs/remotes/origin/main");
+
+        gate.Run(Context()).Should().BeFalse("missing origin/main must fail merge-readiness closed");
+
+        Git("checkout", "-q", "main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+        Git("checkout", "-q", "feature");
+        Write("apps/two.cs", "class Two {}\n");
+        Git("add", "apps/two.cs");
+        Git("commit", "-q", "-m", "clean feature commit");
+
+        gate.Run(Context()).Should().BeTrue("a non-conflicting branch over origin/main passes merge-readiness");
+        gate.Run(Context(pushBefore: "0000000000000000000000000000000000000000"))
+            .Should().BeTrue("push-scoped CI runs skip merge-readiness cleanly");
+    }
+
+    [Fact]
+    public void ApiClientsAndVulnerabilitiesGates_AreQuickAndFileScopedInPreCommit()
+    {
+        var apiClients = QualityGates.Find("api-clients")!;
+        apiClients.TakesFiles.Should().BeTrue();
+        apiClients.PreCommit.Should().Be(PreCommitMode.Quick);
+        apiClients.PreCommitNote.Should().NotBeNullOrWhiteSpace();
+
+        var vulnerabilities = QualityGates.Find("vulnerabilities")!;
+        vulnerabilities.TakesFiles.Should().BeTrue();
+        vulnerabilities.PreCommit.Should().Be(PreCommitMode.Quick);
+        vulnerabilities.PreCommitNote.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void RunQualityGates_FailFastStopsAtFirstFailureInPreCommit_AndReportsAllFailuresWhenUnscoped()
+    {
+        // Both trailing-whitespace ("note.md   \n") and path-patterns ("scratch/notes.txt") fail.
+        // trailing-whitespace runs before path-patterns in QualityGates.All.
+        Write("docs/note.md", "# Note   \n");
+        Write("scratch/notes.txt", "forbidden directory\n");
+        Git("init", "-q", "-b", "main");
+        Git("config", "user.email", "fixture@example.invalid");
+        Git("config", "user.name", "Fixture");
+        Git("config", "commit.gpgsign", "false");
+        Git("add", "docs/note.md", "scratch/notes.txt");
+
+        string[] excluded = QualityGates.All
+            .Select(g => g.Name)
+            .Where(n => n is not "trailing-whitespace" and not "path-patterns")
+            .ToArray();
+
+        string preCommitOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: true, repoRoot: _root)
+                .Should().Be(1));
+        preCommitOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.NotContain("[PATH VIOLATION]", "pre-commit defaults to fail-fast and exits on the first failing gate");
+
+        string explicitNonFailFastPreCommitOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: true, repoRoot: _root, failFast: false)
+                .Should().Be(1));
+        explicitNonFailFastPreCommitOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.Contain("[PATH VIOLATION]", "--fail-fast=false overrides the pre-commit fail-fast default");
+
+        string fullOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: false, repoRoot: _root)
+                .Should().Be(1));
+        fullOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.Contain("[PATH VIOLATION]", "unscoped cadence check continues running remaining gates");
+
+        string fullFailFastOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: false, repoRoot: _root, failFast: true)
+                .Should().Be(1));
+        fullFailFastOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.NotContain("[PATH VIOLATION]", "explicit --fail-fast stops full cadence check on the first failure");
+    }
+
+    private static string CaptureConsoleOutput(Action action)
+    {
+        var originalOut = Console.Out;
+        using var writer = new StringWriter();
+        Console.SetOut(writer);
+        try
+        {
+            action();
+            return writer.ToString();
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
     }
 
     private GateContext Context(string[]? files = null, bool preCommit = false, string? baseRef = null, string? pushBefore = null) =>

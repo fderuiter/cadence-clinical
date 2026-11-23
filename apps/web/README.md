@@ -167,19 +167,21 @@ In a demo build:
   `AVAILABLE_SCREENS` restrictions intact in standard, test, and production
   builds.
 
-Some regulated actions have no API behind them yet: enrolment, re-consent,
-queries and SDV from the eCRF (Execution serves queries and SDV, and the
-Clinical Canvas uses them, but the eCRF's belong to its sample form until real
-form definitions exist, #4828), query transitions in the rules screen, ticket
-workflow and signatures, safety and CEC sign-offs, eConsent signing and ICF
-publishing, protocol commit, medical coding suggestions, and quality actions.
-Each one starts with `allowUnbackedAction("<what it does>")` from
-`src/utils/unbackedActions.js`. Outside a demo build that refuses the action,
-tells the user nothing was saved, and returns `false` so the caller changes
-nothing (#4827). Actions whose outcome only a service can produce (subject
-screening, the cross-domain anomaly scan, candidate query adjudication) call
-`refuseUnbackedAction(...)` instead, which refuses in every build. Remove the
-call when the action moves onto a real endpoint.
+Some regulated actions have no API behind them yet: enrolment, queries and SDV
+from the eCRF (Execution serves queries and SDV, and the Clinical Canvas uses
+them, but the eCRF's belong to its sample form until real form definitions
+exist, #4828; informed consent and re-consent in
+`src/composables/useConsentGating.js` persist through
+`POST /api/v1/execution/subjects/{subjectId}/consent`), query transitions in the
+rules screen, ticket workflow and signatures, safety and CEC sign-offs, eConsent
+signing and ICF publishing, protocol commit, medical coding suggestions, and
+quality actions. Each one starts with `allowUnbackedAction("<what it does>")`
+from `src/utils/unbackedActions.js`. Outside a demo build that refuses the
+action, tells the user nothing was saved, and returns `false` so the caller
+changes nothing (#4827). Actions whose outcome only a service can produce
+(subject screening, the cross-domain anomaly scan, candidate query adjudication)
+call `refuseUnbackedAction(...)` instead, which refuses in every build. Remove
+the call when the action moves onto a real endpoint.
 
 ## Screen availability
 
@@ -235,8 +237,14 @@ or Assist prompt is active, keeps the zoom path, navigator and inspector sticky
 while scrolling, shows only what a service serves (participants and their counts
 with debounced subject code search `?q=`, state and study site `?site=` filters,
 O(1) cold participant deep-link resolution by surrogate UUID or subject code,
-adding a participant and changing a participant's state, site activation, the
-study-wide `Data -> Queries` worklist across visible enrollments at
+adding a participant, recording informed consent, step-up participant
+randomization with stratification factors, emergency unblinding for principal
+investigators and authorized ER physicians, blind-safe assigned kit vs.
+unblinded treatment arm display in `CanvasInspector.vue`, changing a
+participant's state, RTSM randomization scheme drafting and second-person
+step-up approval plus `ACTIVE_AT_SITE` IP kit seeding in
+`src/components/clinical/RtsmSupplySection.vue`, site activation, the study-wide
+`Data -> Queries` worklist across visible enrollments at
 `GET /api/v1/execution/forms/queries?study_id=` with debounced
 status/owner/origin/priority/site/participant/value-changed URL filters synced
 via `router.replace` in `src/components/canvas/QueriesSection.vue` that keep

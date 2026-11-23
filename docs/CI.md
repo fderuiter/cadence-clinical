@@ -6,16 +6,18 @@ failure locally. The Cadence CLI runs as `pnpm cadence <command>` (a wrapper for
 
 ## Workflows
 
-- **`ci.yml`** (Pull requests, pushes to `main`, `release/*`, and `v*` tags, and
-  ref-guarded `workflow_dispatch` on protected refs): Style, lint and frontend
-  builds, quality sentinels, Native AOT and docs builds, workflow and container
-  security audits, .NET tests (including kernel consumer contracts), frontend
-  unit and Playwright E2E accessibility, clinical workflow, and browser-to-DB
-  TRX tests, GxP compliance checks, `CI Gate`, safe automerge, and CI-gated
-  release/docs `workflow_call` callers.
-- **`conflict-check.yml`** (Pull requests: opened, synchronize, reopened): Emits
-  `Check for Merge Conflicts` and fails when the PR conflicts with its base
-  branch (shallow checkout, no `.NET` install).
+- **`ci.yml`** (Pull requests, merge queue (`merge_group`), pushes to `main`,
+  `release/*`, and `v*` tags, and ref-guarded `workflow_dispatch` on protected
+  refs): Style, lint and frontend builds, quality sentinels, Native AOT and docs
+  builds, workflow and container security audits, .NET tests (including kernel
+  consumer contracts), frontend unit and Playwright E2E accessibility, clinical
+  workflow, and browser-to-DB TRX tests, GxP compliance checks, `CI Gate`, safe
+  automerge, and CI-gated release/docs `workflow_call` callers.
+- **`conflict-check.yml`** (Pull requests: opened, synchronize, reopened, and
+  merge queue `merge_group`): Emits `Check for Merge Conflicts` and fails via
+  `git merge-tree --write-tree` when a PR conflicts with its base branch
+  (`merge_group` runs validate the queued merge tree; shallow checkout, no
+  `.NET` install).
 - **`production-pipeline.yml`** (Called via `on: workflow_call` by `ci.yml`
   after all 11 CI gates pass on `main`, `release/*`, and `v*` tags): Verifies
   NuGet/pnpm vulnerabilities and merged `.NET` + browser TRX / `*.database.txt`
@@ -57,17 +59,18 @@ failure locally. The Cadence CLI runs as `pnpm cadence <command>` (a wrapper for
    `check api-clients` (`ApiClientValidatorService`, typechecking generated web
    OpenAPI types and clients).
 3. **.NET Quality & Sentinel Checks** (`dotnet-quality`): builds `Cadence.sln`,
-   fetches `origin "$BASE_REF"` on pull requests, runs `cadence check` excluding
-   `prettier`, `eslint`, `actionlint`, `hadolint`, `detect-secrets`,
-   `api-clients`, `vulnerabilities`, `public-bundle`, `architecture-tests`, and
-   `unit-tests` with `--base "origin/$BASE_REF"` on pull requests and
-   `--push-before "$BEFORE_SHA"` on pushes (executing the remaining 32 gates
-   once, including `dotnet-format`, `dotnet-format-style`, `yaml`,
-   `trailing-whitespace`, `end-of-file`, `clean-secrets`, `adrs`, `codeowners`,
-   `workflow-security`, `rulesets`, `deid`, `security`, `schema-doc`, `openapi`,
-   `demo-manifest`, `rtm`, `gxp-snapshot`, `baseline-ratchet`,
-   `branch-freshness`, and `duplication`), runs `Cadence.ArchitectureTests`
-   (ArchUnitNET), and uploads `duplication_summary.json`
+   fetches `origin "$BASE_BRANCH"` on pull requests and `merge_group` runs, runs
+   `cadence check` excluding `prettier`, `eslint`, `actionlint`, `hadolint`,
+   `detect-secrets`, `api-clients`, `vulnerabilities`, `public-bundle`,
+   `architecture-tests`, and `unit-tests` with `--base "origin/$BASE_BRANCH"` on
+   pull requests and `merge_group` runs and `--push-before "$BEFORE_SHA"` on
+   pushes (executing the remaining 33 gates once, including `dotnet-format`,
+   `dotnet-format-style`, `yaml`, `trailing-whitespace`, `end-of-file`,
+   `clean-secrets`, `adrs`, `codeowners`, `workflow-security`, `rulesets`,
+   `deid`, `security`, `schema-doc`, `openapi`, `demo-manifest`, `rtm`,
+   `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`,
+   and `duplication`), runs `Cadence.ArchitectureTests` (ArchUnitNET), and
+   uploads `duplication_summary.json`
    (`duplication-summary-${{ github.run_id }}-${{ github.run_attempt }}`,
    `retention-days: 400`).
 4. **Native AOT Compilation** (`native-aot-build`) and **Documentation
@@ -195,26 +198,32 @@ failure locally. The Cadence CLI runs as `pnpm cadence <command>` (a wrapper for
 `.github/rulesets/main.json` (`refs/heads/main`) and
 `.github/rulesets/release_branches.json` (`refs/heads/release/*`) restrict
 repository-administrator bypasses (`actor_id: 5`, `RepositoryRole`) to
-`bypass_mode: "pull_request"`, enforce
-`strict_required_status_checks_policy: true`, non-fast-forward, deletion, and
-pull-request review protections, and require only two GitHub Actions
-(`integration_id: 15368`) checks: `CI Gate` (`ci.yml`) and
-`Check for Merge Conflicts` (`conflict-check.yml`), blocking direct pushes and
-web edits while keeping locally verified pull request merges unblocked until
-2027 and decoupling branch protection rules from internal CI job refactors.
-`.github/rulesets/version_tags.json` enforces `creation`, `required_signatures`,
-`deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned
-to release admins (`actor_id: 5`, `actor_type: "RepositoryRole"`,
-`bypass_mode: "always"`). The `rulesets` quality gate
-(`pnpm cadence check rulesets`, and against staged index blobs in
+`bypass_mode: "pull_request"` (rejecting `"always"` direct-push bypasses),
+enforce `strict_required_status_checks_policy: true`, non-fast-forward,
+deletion, and code-owner pull-request review protections, and require only two
+GitHub Actions (`integration_id: 15368`) checks: `CI Gate` (`ci.yml`) and
+`Check for Merge Conflicts` (`conflict-check.yml`), decoupling branch protection
+rules from internal CI job refactors. `.github/rulesets/main.json` also declares
+a `merge_queue` rule (`SQUASH`, `ALLGREEN`), and both `ci.yml` and
+`conflict-check.yml` subscribe to `merge_group` triggers alongside
+`pull_request`. `.github/rulesets/version_tags.json` enforces `creation`,
+`required_signatures`, `deletion`, and `non_fast_forward` on `refs/tags/v*` with
+`bypass_actors` pinned to release admins (`actor_id: 5`,
+`actor_type: "RepositoryRole"`, `bypass_mode: "always"`). The `rulesets` quality
+gate (`pnpm cadence check rulesets`, and against staged index blobs in
 `pnpm cadence check --pre-commit`) fails closed if `.github/rulesets` is missing
-and verifies ruleset JSON schema, `pull_request`-only branch bypass modes, tag
-signing/creation/deletion/non-fast-forward protections, strict status check
-policy, unconditional `CI Gate` upstream job coverage, and workflow parity.
-While GitHub Actions runners stay paused until 2027, maintainers reconcile
-declarative rulesets locally with admin credentials using
-`pnpm cadence rulesets --dry-run` (preview) and `pnpm cadence rulesets`
-(`gh api` sync; fails non-zero on API or permission errors).
+and verifies ruleset JSON schema, `pull_request`-only branch bypasses,
+release-admin tag signing/creation/deletion/non-fast-forward protections,
+`merge_queue` parameters, strict status check policy, unconditional `CI Gate`
+upstream job coverage, and `pull_request` + `merge_group` workflow parity
+(`pnpm cadence rulesets --dry-run` also validates `CI Gate` upstream job
+coverage when `.github/rulesets` is absent). Maintainers preview and reconcile
+rulesets with admin credentials via `pnpm cadence rulesets --dry-run` and
+`pnpm cadence rulesets` (`gh api` sync; fails non-zero on API or permission
+errors): `--profile paused-actions` (the default when hosted runners are paused)
+omits `required_status_checks` and `merge_queue` so paused runners do not
+deadlock PRs, whereas `--profile active-actions` reconciles the full declarative
+ruleset payload including status checks and merge queue enforcement.
 
 `native-aot-build` in `ci.yml` along with `production-pipeline.yml` and
 `deploy-docs.yml` cache `./bin/cadence` via `actions/cache` (keyed on global
@@ -239,8 +248,7 @@ and `deploy-docs` (`deploy-docs.yml`, on `main`, gated on all 11 validation jobs
 independently of `release-and-archive` so documentation publishing and release
 archiving run in parallel).
 
-While GitHub Actions is paused, verify container and dependency alignment
-locally:
+Verify container and dependency alignment locally before pushing:
 
 ```bash
 pnpm cadence check hadolint
@@ -257,11 +265,16 @@ properties (`Directory.Build.props`, `Directory.Packages.props`,
 `.config/dotnet-tools.json`, statistical Dockerfiles, and
 `.github/dependabot.yml` (ADR-2527).
 
-> [!IMPORTANT] GitHub Actions does not run jobs for this repository until 2027:
-> every check on a pull request fails within seconds without running. Until
-> then, run `pnpm cadence ci` (or `make ci`) before merging. It runs the
-> pull-request jobs above (starting with `actionlint`, including diff-scoped
-> `container-security`) on your machine with the same commands, requires
+> [!IMPORTANT] GitHub Actions runs `.github/workflows/ci.yml` and
+> `.github/workflows/conflict-check.yml` on pull requests, `merge_group` runs,
+> and pushes (`main`, `release/*`, and `v*` tags). Before pushing or merging,
+> run `pnpm cadence ci` (or `make ci`) locally: it fetches `origin/main` (unless
+> `--offline` is passed for air-gapped debugging), synthesizes a merged commit
+> via `git merge-tree --write-tree` (failing immediately with conflicted file
+> paths on conflict), and runs the pull-request jobs above (starting with
+> `actionlint`, including diff-scoped `container-security`) inside a disposable
+> detached worktree under `Path.GetTempPath()` while reusing read-only
+> `.cadence` toolchains from your checkout without mutating it. It requires
 > `actionlint`, `hadolint`, and `shellcheck` (in `.cadence/bin` or on `PATH`),
 > `detect-secrets-hook` (in `.cadence/venv`, `.venv` or on `PATH`), `bash` on
 > `PATH`, `docker` (with a running Docker daemon) and `trivy` when container or
@@ -289,12 +302,12 @@ registry across existing runtime jobs with `--exclude` (`actionlint` runs in
 `public-bundle` runs in `docs-build` and `deploy-docs.yml` after static bundle
 compilation; `architecture-tests` runs as its own step in `dotnet-quality`;
 `unit-tests` runs inside `dotnet-tests`; and `dotnet-quality` runs the remaining
-32 gates by excluding those ten, passing `--base "origin/$BASE_REF"` on pull
-requests and `--push-before "$BEFORE_SHA"` on pushes). Run one gate with
-`pnpm cadence check <gate>`; an unknown gate name (or unknown `--exclude` gate)
-fails. While GitHub Actions remains disabled until 2027, contributors running
-pre-commit hooks, `pnpm cadence check` or `pnpm cadence ci` locally must restore
-`Cadence.sln` (`dotnet restore Cadence.sln`), provision local guardrails via
+33 gates by excluding those ten, passing `--base "origin/$BASE_BRANCH"` on pull
+requests and `merge_group` runs and `--push-before "$BEFORE_SHA"` on pushes).
+Run one gate with `pnpm cadence check <gate>`; an unknown gate name (or unknown
+`--exclude` gate) fails. Contributors running pre-commit hooks,
+`pnpm cadence check` or `pnpm cadence ci` locally must restore `Cadence.sln`
+(`dotnet restore Cadence.sln`), provision local guardrails via
 `./scripts/setup_wizard.sh --minimal` (or `./scripts/setup_wizard.ps1 -Minimal`,
 which installs `detect-secrets==1.5.0` into `.cadence/venv` and SHA-256-verified
 `actionlint` v1.7.12, `hadolint` v2.15.1, and `shellcheck` v0.11.0 into
@@ -312,54 +325,55 @@ what the pre-commit hook does with it. `QualityGateRegistryTests` runs every
 gate against a fixture that must make it fail, so a gate that cannot fail does
 not get in.
 
-<!-- quality-gates:begin (generated from QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
+<!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-`pnpm cadence check` runs these 42 gates in this order:
+`pnpm cadence check` runs these 43 gates in this order:
 
-| Gate                  | What it checks                                                                                                                                                         |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dotnet-format`       | Whitespace formatting against `.editorconfig` (`dotnet format whitespace`)                                                                                             |
-| `dotnet-format-style` | Roslyn code-style rules (`dotnet format style`)                                                                                                                        |
-| `prettier`            | Prettier formatting across JS, TS, Vue, CSS, JSON, Markdown and YAML files                                                                                             |
-| `eslint`              | ESLint and duplicate store identifier checks across JS, TS and Vue files                                                                                               |
-| `actionlint`          | GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)                                |
-| `hadolint`            | Dockerfile best-practice and syntax linting (`hadolint --failure-threshold error`) from `.cadence/bin` or `PATH` (fails closed when missing)                           |
-| `yaml`                | YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys                                                                                 |
-| `trailing-whitespace` | No trailing spaces or tabs at the end of lines in text files                                                                                                           |
-| `end-of-file`         | Non-empty UTF-8 text files end with a newline character                                                                                                                |
-| `clean-secrets`       | Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it                                                         |
-| `detect-secrets`      | Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)               |
-| `duplication`         | Duplicated code blocks over 15 normalized lines involving a C# file                                                                                                    |
-| `cli-docs`            | `docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry                                       |
-| `adrs`                | ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes                                                                                      |
-| `arch-drift`          | `docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings                                                     |
-| `sanitizer`           | Requirement tags in Markdown are upper case (`@req:PRD-…`); fixes them in normal mode and reports errors read-only during pre-commit                                   |
-| `markdown`            | Markdown headings, multi-line links, prose/table widths, and `.NET` test paths (`tests/Cadence.*`)                                                                     |
-| `env-vars`            | Environment variables read in code are in `.env.example` and `docs/ENVIRONMENT_VARIABLES.md`                                                                           |
-| `dev-env`             | Service ports in `docs/LOCAL_DEV_ENVIRONMENT.md` match the gateway and the Aspire AppHost                                                                              |
-| `readmes`             | Each directory under `apps/` and `packages/` has a README with a title                                                                                                 |
-| `codeowners`          | Path pattern existence and owner handle syntax in `.github/CODEOWNERS`                                                                                                 |
-| `workflow-security`   | 40-hex action SHAs, `sha256:` `docker://` digests, `persist-credentials: false`, ref-guarded `workflow_dispatch` inputs, and least-privilege `.github/` permissions    |
-| `rulesets`            | Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin tag bypasses, strict checks, and `CI Gate` parity |
-| `imports`             | No `using` of another service's namespace across `apps/<service>`                                                                                                      |
-| `security`            | Hard-coded secret patterns across source, Vue templates and build scripts (private keys, cloud keys, API tokens, compliance secrets)                                   |
-| `deid`                | PHI/PII in source and authored docs (vendored CDISC/NCI and SDLC runs excluded), ratcheted by `.deid-baseline.txt`; non-PHI lines take `deid-ignore`                   |
-| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`                                                                             |
-| `api-clients`         | The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them                                                        |
-| `schema-doc`          | `docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks                           |
-| `path-patterns`       | No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/`           |
-| `query-linter`        | No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal                                                         |
-| `vulnerabilities`     | NuGet and pnpm dependency vulnerabilities not exempted in `docs/SDLC/vulnerability_exclusions_ledger.json` (fails closed on missing or broken scanners)                |
-| `dependencies`        | Valid JSON in workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto or test-harness packages in runtime `dependencies`         |
-| `doc-index`           | Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`                                                                                       |
-| `demo-manifest`       | `packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`            |
-| `rtm`                 | Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts                          |
-| `gxp-snapshot`        | The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)                            |
-| `baseline-ratchet`    | No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) grew without a `Baseline-Growth: <path> - <reason>` commit trailer                   |
-| `public-bundle`       | Zero-exemption scan of VitePress, staff, and participant `dist/` bundles for PII, secrets, local URLs, CSP, `axe-core`/`keycloak-js`, preloads, and byte budgets       |
-| `branch-freshness`    | Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy                                                   |
-| `architecture-tests`  | Hexagonal layering and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)                                                 |
-| `unit-tests`          | .NET unit test suite (`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)                                                                                              |
+| Gate                  | What it checks                                                                                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       | Whitespace formatting against `.editorconfig` (`dotnet format whitespace`)                                                                                            |
+| `dotnet-format-style` | Roslyn code-style rules (`dotnet format style`)                                                                                                                       |
+| `prettier`            | Prettier formatting across JS, TS, Vue, CSS, JSON, Markdown and YAML files                                                                                            |
+| `eslint`              | ESLint and duplicate store identifier checks across JS, TS and Vue files                                                                                              |
+| `actionlint`          | GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)                               |
+| `hadolint`            | Dockerfile best-practice and syntax linting (`hadolint --failure-threshold error`) from `.cadence/bin` or `PATH` (fails closed when missing)                          |
+| `yaml`                | YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys                                                                                |
+| `trailing-whitespace` | No trailing spaces or tabs at the end of lines in text files                                                                                                          |
+| `end-of-file`         | Non-empty UTF-8 text files end with a newline character                                                                                                               |
+| `clean-secrets`       | Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it                                                        |
+| `detect-secrets`      | Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)              |
+| `duplication`         | Duplicated code blocks over 15 normalized lines involving a C# or JavaScript file                                                                                     |
+| `cli-docs`            | `docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata                             |
+| `adrs`                | ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes                                                                                     |
+| `arch-drift`          | Compose, topology, Vite ports, `core` hosts, DB schemas, signed routes, token stores, and `GxPAuditInterceptor` parity across architecture, DB, and SDLC docs         |
+| `sanitizer`           | Requirement tags in Markdown are upper case (`@req:PRD-…`); fixes them in normal mode and reports errors read-only during pre-commit                                  |
+| `markdown`            | Markdown headings, multi-line links, prose/table widths, and `.NET` test paths (`tests/Cadence.*`)                                                                    |
+| `env-vars`            | Bidirectional parity of environment variables across source code, `.env.example`, and `docs/ENVIRONMENT_VARIABLES.md`, plus cited file path existence                 |
+| `dev-env`             | Service/Vite ports, database schemas, `core` hosts, and standalone startup keys in `docs/LOCAL_DEV_ENVIRONMENT.md` match `ServiceTopology`, gateway, and AppHost      |
+| `readmes`             | Each directory under `apps/` and `packages/` has a README with a title                                                                                                |
+| `codeowners`          | Path pattern existence and owner handle syntax in `.github/CODEOWNERS`                                                                                                |
+| `workflow-security`   | 40-hex action SHAs, `sha256:` `docker://` digests, `persist-credentials: false`, ref-guarded `workflow_dispatch` inputs, and least-privilege `.github/` permissions   |
+| `rulesets`            | Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, bypass scopes, `merge_queue` policy, strict checks, and `CI Gate` / `merge_group` parity            |
+| `imports`             | No `using` of another service's namespace across `apps/<service>`                                                                                                     |
+| `security`            | Hard-coded secret patterns across source, Vue templates and build scripts (private keys, cloud keys, API tokens, compliance secrets)                                  |
+| `deid`                | PHI/PII in source and authored docs (vendored CDISC/NCI and SDLC runs excluded), ratcheted by `.deid-baseline.txt`; non-PHI lines take `deid-ignore`                  |
+| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`                                                                            |
+| `api-clients`         | The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them                                                       |
+| `schema-doc`          | `docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks                          |
+| `path-patterns`       | No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/`          |
+| `query-linter`        | No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal                                                        |
+| `vulnerabilities`     | NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners) |
+| `dependencies`        | Valid JSON in workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto or test-harness packages in runtime `dependencies`        |
+| `doc-index`           | Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`                                                                                      |
+| `demo-manifest`       | `packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`           |
+| `rtm`                 | Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts                         |
+| `gxp-snapshot`        | The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)                           |
+| `baseline-ratchet`    | No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) grew without a `Baseline-Growth: <path> - <reason>` commit trailer                  |
+| `merge-readiness`     | Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts                   |
+| `public-bundle`       | Zero-exemption scan of VitePress, staff, and participant `dist/` bundles for PII, secrets, local URLs, CSP, `axe-core`/`keycloak-js`, preloads, and byte budgets      |
+| `branch-freshness`    | Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy                                                  |
+| `architecture-tests`  | Hexagonal layering and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)                                                |
+| `unit-tests`          | .NET unit test suite (`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)                                                                                             |
 
 <!-- quality-gates:end -->
 
@@ -417,7 +431,8 @@ exist) before delegating to `node scripts/run-cli.js check --pre-commit`.
 `cadence check --pre-commit` executes every gate in `QualityGates.cs`
 fail-closed against staged Git index blobs (`GitIndexReader` via
 `git cat-file --batch`, without acquiring `.git/index.lock` or mutating
-working-tree files), treating deletion-only and clean merge commits
+working-tree files), stopping at the first failing gate by default
+(`--fail-fast`) and treating deletion-only and clean merge commits
 (`TargetFiles = []`) as a no-op across file-scoped gates (with the quick
 variants listed in [cli.md](cli.md#cadence-check)):
 
@@ -435,26 +450,31 @@ variants listed in [cli.md](cli.md#cadence-check)):
   on lowercase `@req:prd-…` tags), and `detect-secrets` validate staged index
   blobs (40-char commit SHAs, `sha256:` container digests,
   `persist-credentials: false`, least-privilege permissions, ref-guarded typed
-  `workflow_dispatch` inputs, declarative `.github/rulesets/*.json` presence and
-  `pull_request`-only branch bypasses with `CI Gate` workflow parity, YAML
-  syntax, whitespace/EOF hygiene, and secrets against `.secrets.baseline` via
-  `.cadence/venv`, `PATH`, or `uvx`) without touching unstaged working-tree
-  edits.
+  `workflow_dispatch` inputs, declarative `.github/rulesets/*.json` presence,
+  `pull_request`-only branch bypasses, `merge_queue` policy, and `CI Gate` /
+  `merge_group` workflow parity, YAML syntax, whitespace/EOF hygiene, and
+  secrets against `.secrets.baseline` via `.cadence/venv`, `PATH`, or `uvx`)
+  without touching unstaged working-tree edits.
 - `schema-doc` runs the drift check when staged files include Entity Framework
-  entities, migrations, configurations, or `docs/schema`; `openapi` exports
-  specs only for the services the staged C# files touch (both failing closed if
-  unstaged edits overlap MSBuild/spec inputs); `demo-manifest` validates
-  materialized staged seed and fixture blobs only when staged files touch
-  `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, or
-  `docker/cadence-realm.json`; `adrs` checks staged files for architectural
-  changes while accepting ADRs already added on the branch; and `gxp-snapshot`
-  and `baseline-ratchet` check the staged copies against `HEAD`
-  (`baseline-ratchet` admits staged growth when
+  entities, migrations, configurations, or `docs/schema`; `openapi` walks
+  reverse `<ProjectReference>` edges so staged C# edits boot only dependent
+  OpenAPI hosts (triggering full 17-service export only on global MSBuild
+  changes, and failing closed if unstaged edits overlap MSBuild/spec inputs);
+  `api-clients` runs `generate:api --check` and `tsc --noEmit` when staged files
+  touch `docs/openapi` or frontend inputs; `vulnerabilities` validates
+  `docs/SDLC/vulnerability_exclusions_ledger.json` offline and runs only
+  ecosystem scanners whose manifests, lockfiles, or ledger entries are staged;
+  `demo-manifest` validates materialized staged seed and fixture blobs only when
+  staged files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`,
+  `ExecutionDbSeeder.cs`, or `docker/cadence-realm.json`; `adrs` checks staged
+  files for architectural changes while accepting ADRs already added on the
+  branch; and `gxp-snapshot` and `baseline-ratchet` check the staged copies
+  against `HEAD` (`baseline-ratchet` admits staged growth when
   `CADENCE_BASELINE_GROWTH="<reason>"` is set, requiring a matching
-  `Baseline-Growth: <path> - <reason>` trailer on the commit). `public-bundle`,
-  `branch-freshness`, `architecture-tests`, and `unit-tests` are skipped on
-  commit so local commits stay fast and offline; `pnpm cadence check`,
-  `make verify`, and CI run every gate in full.
+  `Baseline-Growth: <path> - <reason>` trailer on the commit).
+  `merge-readiness`, `public-bundle`, `branch-freshness`, `architecture-tests`,
+  and `unit-tests` are skipped on commit so local commits stay fast and offline;
+  `pnpm cadence check`, `make verify`, and CI run every gate in full.
 
 There is no pre-push hook. Requirement tags and test results are checked in CI
 by the compliance job; run `pnpm cadence gxp sync` before pushing test changes,

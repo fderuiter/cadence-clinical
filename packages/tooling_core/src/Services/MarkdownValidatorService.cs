@@ -138,6 +138,7 @@ public static partial class MarkdownValidatorService
                 bool enforceWidths = !IsWidthExemptDoc(relPath);
                 char fenceChar = '\0';
                 int fenceLen = 0;
+                string? activeGeneratedRegionId = null;
 
                 int startLine = 0;
                 if (lines.Length > 1 && lines[0].TrimEnd('\r') == "---")
@@ -162,6 +163,22 @@ public static partial class MarkdownValidatorService
                     }
 
                     string trimmed = line.TrimStart();
+                    string trimmedBoth = trimmed.TrimEnd();
+
+                    if (activeGeneratedRegionId is null)
+                    {
+                        var beginMatch = GeneratedRegionBeginRegex().Match(trimmedBoth);
+                        if (beginMatch.Success)
+                        {
+                            activeGeneratedRegionId = beginMatch.Groups[1].Value;
+                            continue;
+                        }
+                    }
+                    else if (string.Equals(trimmedBoth, $"<!-- {activeGeneratedRegionId}:end -->", StringComparison.Ordinal))
+                    {
+                        activeGeneratedRegionId = null;
+                        continue;
+                    }
 
                     if (trimmed.StartsWith('#'))
                     {
@@ -182,7 +199,7 @@ public static partial class MarkdownValidatorService
                         }
                     }
 
-                    if (!enforceWidths)
+                    if (!enforceWidths || activeGeneratedRegionId is not null)
                     {
                         continue;
                     }
@@ -218,6 +235,9 @@ public static partial class MarkdownValidatorService
         StandaloneInlineLinkRegex().IsMatch(line) ||
         LinkReferenceDefinitionRegex().IsMatch(line) ||
         StandaloneUrlRegex().IsMatch(line);
+
+    [GeneratedRegex(@"^<!--\s*([a-z0-9-]+):begin\b[^\r\n]*\bdo not edit\b[^\r\n]*-->$")]
+    private static partial Regex GeneratedRegionBeginRegex();
 
     [GeneratedRegex(@"^\s*(?:>\s*)*(?:(?:[-*+]|\d+\.)\s+)?[*_(]*\[(?:[^\[\]\s]+|[^\[\]]{1,80})\]\([^\s()]+\)[*_.,;:·)\s]*$")]
     private static partial Regex StandaloneInlineLinkRegex();

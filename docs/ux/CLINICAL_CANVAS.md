@@ -504,10 +504,23 @@ spec) before its capability is built. Each has an issue under epic #4719.
 
 ## 8. Relationship to the current web app
 
-`apps/web` today is a Vue client typed against Python-era API specifications and
-is being moved onto the real .NET API under epic #4833; only Execution is a real
-backend so far. This document does not ask that work to change course. It adds
-three constraints for any screen built or rebuilt from now on:
+`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`18`
+hosts behind `apps/gateway` on port `8000`; epic #4833). Its API layer in
+`apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions
+(`apps/web/scripts/generate-api-types.js` ->
+`apps/web/src/api/generated/<contract>.ts`, enforced by
+`cadence check api-clients`) discovered automatically from every
+`docs/openapi/*_openapi.json` service and module contract (excluding the
+aggregated `cdisc_openapi.json` snapshot;
+[docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend,
+`apps/kernel-api` composes three EF Core module schemas (`kernel`,
+`intelligence`, and `execution`), and `14` mutating routes across `econsent`,
+`execution`, `kernel`, `knowledge`, `safety`, and `tickets` enforce 21 CFR Part
+11 electronic signatures via `.RequireElectronicSignature(...)`
+([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
+Screens still migrating off legacy contracts are tracked in
+[docs/web/API_MIGRATION.md](../web/API_MIGRATION.md); this document sets three
+constraints for every screen built or rebuilt:
 
 1. Use the three-pane model (UX-3) and study-centric navigation (UX-1) for new
    screens.
@@ -517,34 +530,35 @@ three constraints for any screen built or rebuilt from now on:
 3. Render authorization and blinding outcomes as the kernel returns them (UX-9,
    §5).
 
-The first shell is in `apps/web` at `/studies/:studyCode`
+The Canvas shell is in `apps/web` at `/studies/:studyCode`
 (`StudyCanvasView.vue`). It has the lifecycle rail, the three panes (collapsing
 an empty inspector into a toggle rail to widen the workspace until a study
 object or Assist prompt is selected, and keeping the zoom path, navigator and
 inspector sticky on scroll), visible-on-focus skip links to `#main-content` and
 `#canvas-workspace`, the zoom path, the `⌘K` palette, and the `⌘E` / `Ctrl+E`
-Explain shortcut (`useStudyCanvasStore`), and shows only what Execution and the
-kernel serve today: participants by state on study home (an interim count from
-Execution's list totals until Pulse metrics are Indicators, D6), the study's
-recent activity on study home from the kernel's activity stream (PX-11), newest
-first and filterable by family, with entries about hidden objects kept in place
-as hidden, the Participants section (filtering by subject code search, state and
-study site, adding a participant in screening, and moving a participant between
-the states Execution allows, less unblinding), Site activation (keeping the
-activation control rendered while disabled with an inline Explain disclosure
-backed by `kernelApi.canI('study_site.activate', studySiteRef)` and
-`KernelExplanation`), the study-wide `Data → Queries` worklist (debounced text
-filters synced in place via `router.replace`, keeping the query list and any
-in-progress draft or bulk selection mounted during refreshes), and a
-participant's data (opened case report forms from Execution's enrollment form
-list, embedded form opening with per-study cached Schedule of Activities
-selectors and a loading skeleton before controls render, item entry, queries
-with their transitions and links to target forms and observations, and embedded
-kernel observation inspection and correction). Selections across `?node=`,
-`?observation=`, `?form=collection_instance:<id>`, `?proposal=`, and
-`?participant=` (keeping `?form=new` bound to the participant until a form
-instance loads) are resolved through `useCanvasSelection`, seeded into
-`nodeResolver` summaries, and shown in the zoom path
+Explain shortcut (`useStudyCanvasStore`), and integrates `execution` and
+`kernel` reads and workflows: participants by state on study home (an interim
+count from Execution's list totals until Pulse metrics are Indicators, D6), the
+study's recent activity on study home from the kernel's activity stream (PX-11),
+newest first and filterable by family, with entries about hidden objects kept in
+place as hidden, the Participants section (filtering by subject code search,
+state and study site, adding a participant in screening, and moving a
+participant between the states Execution allows, less unblinding), Site
+activation (keeping the activation control rendered while disabled with an
+inline Explain disclosure backed by
+`kernelApi.canI('study_site.activate', studySiteRef)` and `KernelExplanation`),
+the study-wide `Data → Queries` worklist (debounced text filters synced in place
+via `router.replace`, keeping the query list and any in-progress draft or bulk
+selection mounted during refreshes), and a participant's data (opened case
+report forms from Execution's enrollment form list, embedded form opening with
+per-study cached Schedule of Activities selectors and a loading skeleton before
+controls render, item entry, queries with their transitions and links to target
+forms and observations, and embedded kernel observation inspection and
+correction). Selections across `?node=`, `?observation=`,
+`?form=collection_instance:<id>`, `?proposal=`, and `?participant=` (keeping
+`?form=new` bound to the participant until a form instance loads) are resolved
+through `useCanvasSelection`, seeded into `nodeResolver` summaries, and shown in
+the zoom path
 (`Studies / <study> / Site <site> / <participant> / <form> / <observation>`);
 cold links resolve a participant's summary directly from Execution by surrogate
 UUID or subject code, and direct visits to `/observations/:observationRef`

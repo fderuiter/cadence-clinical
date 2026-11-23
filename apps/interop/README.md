@@ -100,13 +100,17 @@ signatures and audit entries name the signed caller
 Reconciliation candidates come only from source data (#5432):
 
 - `POST /esource/ingest` parses the posted FHIR `Bundle` (`RawFhirBundleJson`;
-  `SiteId` and `EhrSystemId` are required). `FhirObservationMapper` turns each
-  Observation with an id, an `effectiveDateTime`, a numeric `valueQuantity` and
-  a supported LOINC code (systolic and diastolic blood pressure, pulse,
-  temperature, weight, height, glucose) into one candidate. The candidate
-  carries the bundle's value, unit, time and raw resource. Unsupported
-  Observations are skipped and named in the response, and a resource already
-  filed for the same variable is not filed twice.
+  `SiteId` and `EhrSystemId` are required, and `StudyId`, `SiteId`, `SubjectId`
+  and `EhrSystemId` are trimmed). `FhirObservationMapper` turns each Observation
+  with an id, an `effectiveDateTime`, a numeric `valueQuantity` and a supported
+  LOINC code (systolic and diastolic blood pressure, pulse, temperature, weight,
+  height, glucose) into one candidate. The candidate carries the bundle's value,
+  unit, time and raw resource. Unsupported Observations are skipped and named in
+  the response, and a resource already filed for the same subject, site and
+  variable is not filed twice. If the subject already has candidates under
+  another site in the study, an unauthorized site caller is refused (`403`) and
+  a multi-site caller sending a conflicting `SiteId` receives `409` without
+  candidate details.
 - Candidates are not compared with the eCRF here, so their discrepancy type is
   `NOT_COMPARED` and they carry no eCRF value.
 - A payload that is not a bundle, or a bundle with nothing to map, returns `400`

@@ -29,8 +29,8 @@ clinical kernel. The disposition of the scaffold services is tracked in issue
   visit letter PDF/dispatch fields, greenlight gates, transactional outbox,
   tenant RLS, and persisted `StudyId`/`SiteId` scope columns
   (`20261122171757_AddCtmsStudyAndSiteScopeColumns`).
-- `../Templates/`: Liquid templates (`confirmation_letter.liquid`,
-  `follow_up_letter.liquid`) embedded into the assembly and rendered via
+- `../Templates/`: Liquid templates (`confirmation_letter.html.liquid`,
+  `follow_up_letter.html.liquid`) embedded into the assembly and rendered via
   `Cadence.Kernel.Templating`.
 
 ## HTTP surface

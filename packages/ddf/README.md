@@ -22,9 +22,10 @@ if (result.IsSuccess)
 ```
 
 USDM ids become element ids. Each Biomedical Concept resolves to the tenant's
-current concept version, and a missing one fails the import. Timings become
-study days (no day 0) with windows. A study with several versions or designs
-needs `UsdmImportOptions` to name one.
+current concept version, and a missing one fails the import. Timings become SDTM
+study days (no day 0; a `P0D` `Fixed Reference` baseline normalizes to day 1)
+with windows. A study with several versions or designs needs `UsdmImportOptions`
+to name one.
 
 ## Project
 

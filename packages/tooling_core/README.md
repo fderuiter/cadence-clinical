@@ -16,10 +16,13 @@ docs, and the design-time PostgreSQL database migrator).
     `--push-before`, and `git ls-files -z` tracked-file diff scoping),
     `GitIndexReader` and `StagedBlobWorkspace` (lock-free staged Git index blob
     reader via `git cat-file --batch` and disposable workspace materializer for
-    `--pre-commit` gates), `CliLinterGateService` (fail-closed `actionlint` and
-    `hadolint` gates plus `shellcheck` resolution from `.cadence/bin` or
-    `PATH`), `WorkflowSecurityValidatorService` (GitHub Actions workflow
-    security, 40-char commit SHA pinning, `sha256:` container digests,
+    `--pre-commit` gates), `ExporterBuildFreshness` (`--no-build` freshness
+    check across transitive `<ProjectReference>` inputs for
+    `Cadence.OpenApiExporter` and `Cadence.SchemaDocExporter`),
+    `CliLinterGateService` (fail-closed `actionlint` and `hadolint` gates plus
+    `shellcheck` resolution from `.cadence/bin` or `PATH`),
+    `WorkflowSecurityValidatorService` (GitHub Actions workflow security,
+    40-char commit SHA pinning, `sha256:` container digests,
     `persist-credentials: false`, and least-privilege permissions),
     `YamlSyntaxValidatorService` (Native AOT YAML 1.2 validator),
     `FileHygieneValidatorService` (`trailing-whitespace` and `end-of-file`
@@ -36,14 +39,20 @@ docs, and the design-time PostgreSQL database migrator).
     `package.json` and `.config/dotnet-tools.json` manifests plus forbidden
     client-side crypto and runtime test-harness package checks),
     `VulnerabilityAuditorService` (fail-closed `.NET` and `pnpm` CVE auditing
-    against `docs/SDLC/vulnerability_exclusions_ledger.json`),
-    `DemoManifestGeneratorService` (exports and verifies
-    `packages/demo-fixtures` from `packages/demo-fixtures/demo-seed.json`,
-    `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` via source-generated
-    `System.Text.Json`), `SyncGxPService`, `ScaffoldServiceService`,
-    `SelfHealService` (subdirectory-safe `cadence fix` pipeline with diff-based
-    schema, OpenAPI, and web client type regeneration, plus canonical demo
-    manifest sync), `OpenApiSyncService`, `PersistenceModuleCatalog` and
+    against `docs/SDLC/vulnerability_exclusions_ledger.json`, scoped to modified
+    ecosystem manifests/lockfiles/ledger in `--pre-commit`),
+    `ApiClientValidatorService` (verifies generated OpenAPI client types and
+    runs `tsc --noEmit`, scoped to `docs/openapi/` and frontend/canvas-contract
+    inputs in `--pre-commit`), `DemoManifestGeneratorService` (exports and
+    verifies `packages/demo-fixtures` from
+    `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs`, and
+    `docker/cadence-realm.json` via source-generated `System.Text.Json`),
+    `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`
+    (subdirectory-safe `cadence fix` pipeline with diff-based schema, OpenAPI,
+    and web client type regeneration, plus canonical demo manifest sync),
+    `OpenApiSyncService`, `PreCommitOpenApiService` (reverse
+    `<ProjectReference>` graph traversal mapping staged backend edits to
+    dependent OpenAPI-exporting hosts), `PersistenceModuleCatalog` and
     `MigrationToolingService` (canonical 18-module persistence catalog and
     `cadence migrations add|script|list|verify` workflow writing SQL scripts to
     `TestResults/migrations/`), `SchemaDocGeneratorService`,

@@ -95,7 +95,11 @@ kernel concepts. The type-by-type plan is in the
   for a permuted-block scheme, generates the whole list from a cryptographic
   source with every slot's arm encrypted.
   `GET /api/v1/execution/randomization/schemes?study_id=` lists the versions
-  without their list. Site staff randomise an enrolled participant with
+  without their list. Seeded site IP kits (`POST /api/v1/execution/rtsm/kits`)
+  normalize omitted or `AVAILABLE` status to `ACTIVE_AT_SITE` and encrypt any
+  supplied `treatment_arm` via `IAllocationProtector` so
+  `ListAssignableKitsAsync` can match them during allocation. Site staff
+  randomise an enrolled participant with
   `POST /api/v1/execution/subjects/{subjectId}/randomize` (body
   `stratification_factors`, header `X-Change-Reason`). It answers `403` with an
   audit entry when the site is not activated or the participant has no current
@@ -161,11 +165,14 @@ unblinding records the caller, the reason and the time on the subject
 audit entry. The arm is stored only encrypted, on the randomisation allocation,
 never on the subject. Subject detail returns `treatment_group` and
 `investigational_product_id` (the assigned kit) only when the caller's signed
-identity has the `unblinded_access` claim (the gateway's `X-Unblinded-Access`),
-and `null` otherwise; the subject returned by a state change or demographics
-edit carries no treatment group at all. These role checks become grants from the
-Trust engine (#4781). The header is decoded with `ChangeReasonHeader` from
-`packages/security` (plain ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8,
+identity has the `unblinded_access` claim (the gateway's `X-Unblinded-Access`)
+or when the subject is in `UNBLINDED` status and the caller holds an emergency
+unblinding role (`SubjectAuthority.CanUnblind`: `principal_investigator` or
+`authorized_er_physician`), and `null` otherwise; the subject returned by a
+state change or demographics edit carries no treatment group at all. These role
+checks become grants from the Trust engine (#4781). The header is decoded with
+`ChangeReasonHeader` from `packages/security` (plain ASCII, or RFC 8187
+`UTF-8''` percent-encoded UTF-8,
 [ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md));
 never read it from `Request.Headers` directly. `GATEWAY_SECRET` (at least 32
 characters) is required at startup; see

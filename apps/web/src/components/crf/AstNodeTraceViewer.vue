@@ -81,7 +81,7 @@ function getValueClass(val) {
 }
 
 .node-function {
-  color: var(--semantic-color-ai-border);
+  color: var(--semantic-color-purple-inverse-text);
   font-weight: bold;
 }
 

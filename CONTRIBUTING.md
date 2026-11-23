@@ -98,11 +98,11 @@ Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`,
 `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`,
 `openapi`, `rtm`, `duplication`, `security`, `deid`, `vulnerabilities`.
 
-**Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions does
-not run jobs for this repository until 2027, so this is the check that stands in
-for CI: it runs the pull-request jobs of `.github/workflows/ci.yml` locally
-(including `actionlint`) with the same commands, and fails when a required
-binary (`actionlint`, `hadolint`, or `shellcheck` in `.cadence/bin` or `PATH`,
+**Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions runs
+`.github/workflows/ci.yml` on pull requests and pushes, and `pnpm cadence ci`
+runs the same pull-request validation jobs locally before pushing (including
+`actionlint`) with the same commands, failing when a required binary
+(`actionlint`, `hadolint`, or `shellcheck` in `.cadence/bin` or `PATH`,
 `detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing
 or the .NET tests have no PostgreSQL unless `--allow-missing-tools` or
 `--allow-db-skip` (or `--allow-skip` for both) is passed
@@ -198,12 +198,17 @@ Every PR updates what its change makes stale, in the same PR:
   `report.xml`) or build output. `.secrets.baseline` tracks accepted
   detect-secrets findings.
 - Never commit PHI or PII. The `deid` gate runs the full de-identification
-  detector (14 categories) over every tracked file outside `tests/`, `docs/`,
-  `scripts/` and similar folders, and fails on any finding not in
-  `.deid-baseline.txt`. That baseline may only shrink. When a flagged line is
-  not PHI (demo data, a code-system URL), put a `deid-ignore` comment on that
-  line rather than adding to the baseline. When the gate reports stale baseline
-  entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
+  detector (14 categories) over application code, authored `docs/`, root portal
+  documents, `.vue` templates, and client `stores/` — excluding `tests/`,
+  `scripts/`, `docker/`, vendored standards (`docs/CDISC/`, `docs/NCI/`),
+  generated `docs/openapi/` and `docs/schema/`, and the GxP snapshot outputs
+  (`docs/SDLC/runs/`, `Requirements_Traceability_Matrix.md`,
+  `IQ_OQ_PQ_Execution_Report.md`) — and fails on any finding not in
+  `.deid-baseline.txt` (`DeidComplianceService.cs`). That baseline may only
+  shrink. When a flagged line is not PHI (demo data, a code-system URL), put a
+  `deid-ignore` comment on that line rather than adding to the baseline. When
+  the gate reports stale baseline entries, drop them with
+  `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
 - Ratchet baselines (`kernel-boundaries.baseline.txt`, `.deid-baseline.txt`,
   `.secrets.baseline` and any other `*.baseline.txt`) may only shrink. The
   `baseline-ratchet` gate fails on uncommitted working-tree growth and when any

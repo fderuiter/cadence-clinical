@@ -718,14 +718,21 @@ and UI state stay with the application's form. Commands in
   collection time (K-TIME-8, through `EffectivityResolution`). Its design must
   have the CollectionSpec, and the planned activity must list it (422 otherwise;
   409 when no version is effective). The version is a `GovernedBy` lineage input
-  of the form and of every observation version a save writes.
+  of the form and of every observation version a save writes. When the
+  enrollment has an `Enrolled` period and the planned activity has a timing,
+  `OpenCollectionInstance` also evaluates `ExpectedSchedule.Compute` and
+  `ExpectedSchedule.Assess` from `CollectedAt` and the `Enrolled` start date
+  without reading a wall clock (K-TIME-3, K-TIME-7) and returns the optional
+  `VisitTimingAssessment` on `CollectionInstanceState` (never persisted and
+  never blocking early or late capture; ADR-2507). Unscheduled forms, untimed
+  event-driven activities and screening enrollments return `null`.
 - A save names items by their CollectionSpec item id; the observation records
   the item's concept. The validator refuses a malformed save (no values, an item
   or observation id named twice, a negative revision) with `K.Command.Invalid`.
   The handler refuses, with an error per item, an item the spec lacks and a
-  value the item does not admit (kind, UCUM unit, code-system version; 422).
-  Required items and ranges are edit checks that run after commit (ADR-2622
-  §4.4).
+  value the item does not admit (kind, UCUM unit, code-system version, and
+  codelist or code-system membership via `IConceptRegistry`; 422). Required
+  items and ranges are edit checks that run after commit (ADR-2622 §4.4).
 - One stale expected revision (0 for an item with no value yet) refuses the
   whole save with 409 and an error per stale item; a value equal to the current
   one is left as it is. The result returns every value of the form with its
@@ -743,9 +750,9 @@ and UI state stay with the application's form. Commands in
 - The form is a lock scope (spec §10.5): a lock on it refuses saves, and
   corrections and assertions of its values made one at a time.
   `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in
-  the governing version's order), its values with their revisions, the
-  assertions about them, the signatures over the form and the locks in force in
-  one call.
+  the governing version's order) with hydrated codelist options, its values with
+  their revisions, the assertions about them, the signatures over the form and
+  the locks in force in one call.
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence),
   besides each value's `ObservationRecorded` or `ObservationCorrected`. Nothing
   consumes `CollectedValuesSaved` yet; edit checks will (#5368).
@@ -1230,13 +1237,24 @@ compares a protocol version with the version it was forked from and returns a
 function of spec K-TIME-7. It reads no clock and stores nothing.
 
 - `Plan(design)` returns the timed planned activities as `PlannedVisit`s,
-  ordered by study day, epoch order and activity id. Activities without a timing
-  are event-driven and left out.
+  ordered by study day, epoch order and activity id, normalizing any `Day 0`
+  timing to `StudyDay 1`. Activities without a timing are event-driven and left
+  out.
+- `NormalizeStudyDay(studyDay)` maps `0` to `1` while keeping all other positive
+  and negative study days intact, and `OffsetOfStudyDay(studyDay)` returns the
+  signed calendar-day offset from `Day 1` (`0` for `0` or `1`, `studyDay - 1`
+  for positive days, `studyDay` for negative pre-baseline days).
+  `ScheduleOfActivitiesDiff`, `SimulationEngine`, `MatrixGapAnalyzer` and USDM
+  `P0D` `Fixed Reference` imports share these helpers so legacy `Day 0` designs
+  and SDTM `Day 1` designs never produce false epoch-regression warnings or
+  schedule diffs, while compiled `ScheduleOfActivities` columns preserve raw
+  `StudyDay` values.
 - `Compute(design, referenceStart, asOf)` places them on the calendar: target
   date, window start and end, and `VisitWindowStatus` at `asOf`. Pass
   site-calendar dates.
-- `DateOfStudyDay(referenceStart, day)` uses the SDTM `--DY` convention: day 1
-  is the reference start, day -1 the day before, and a day-0 timing is day 1.
+- `DateOfStudyDay(referenceStart, day)` uses `OffsetOfStudyDay` for the SDTM
+  `--DY` convention: day 1 is the reference start, day -1 the day before, and a
+  day-0 timing is day 1.
 - `Assess(expectedVisit, actualDate)` measures a visit that happened: calendar
   days from the target, `Early`, `InWindow` or `Late`, and days outside the
   window (ADR-2507). It has no severity; the study's Quality rules decide how

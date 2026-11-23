@@ -153,7 +153,7 @@ namespace Cadence.Apps.Execution.Endpoints;
   `SaveChangesAsync` is already atomic and needs no transaction.
 - Register contexts with `AddCadencePostgresDbContext` (`packages/database`). It
   resolves `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`, and
-  fails outside `Development` when neither is set.
+  fails closed at startup when neither is set (ADR-2260).
 
 ### 3. Nullability and immutability
 
@@ -327,35 +327,40 @@ or `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
 
 - **Build and format:** `dotnet build Cadence.sln`,
   `dotnet format Cadence.sln --verify-no-changes`, and `pnpm build`
-  (`pnpm build:demo` for demo bundles).
+  (`packages/ui`, `apps/web`, and `apps/subject-portal`; `pnpm build:demo` for
+  demo bundles).
 - **Tests:** `pnpm cadence test --fast` (.NET unit, architecture, and kernel SDK
   consumer tests), `pnpm cadence test --integration` (needs PostgreSQL; add
   `CADENCE_TEST_BROWSER=1` for the browser correction test), and `pnpm test`
-  (frontend unit + portal tests; Playwright E2E via
-  `pnpm --filter subject-portal test:e2e`, `pnpm --filter web test:e2e`, and
-  `pnpm --filter web test:e2e:workflows`).
+  (`pnpm --filter ui build`, workspace Vitest, and VitePress portal tests;
+  Playwright E2E via `pnpm --filter subject-portal test:e2e`,
+  `pnpm --filter web test:e2e`, and `pnpm --filter web test:e2e:workflows`).
 - **Quality gates and auto-fix:**
-  `dotnet restore Cadence.sln && pnpm cadence check` (all 42 gates, including
-  `actionlint`, `hadolint`, `public-bundle`, `branch-freshness`,
-  `architecture-tests`, `unit-tests`, and `demo-manifest`; `--pre-commit` for
-  staged blobs, `--base <ref>` or `--push-before <sha>` for scoped diffs,
-  `--exclude <gate>` to skip specific gates, or `<gate>` for one gate such as
-  `markdown`, `deid`, `adrs`, `workflow-security`, or `rulesets`),
-  `pnpm cadence fix [--full] [--openapi]`, `pnpm cadence rulesets [--dry-run]`,
+  `dotnet restore Cadence.sln && pnpm cadence check` (all 43 gates, including
+  `actionlint`, `hadolint`, `merge-readiness`, `public-bundle`,
+  `branch-freshness`, `architecture-tests`, `unit-tests`, and `demo-manifest`;
+  `--pre-commit` for staged blobs with fail-fast by default, `--fail-fast` to
+  stop at the first failure, `--base <ref>` or `--push-before <sha>` for scoped
+  diffs, `--exclude <gate>` to skip specific gates, or `<gate>` for one gate
+  such as `markdown`, `deid`, `adrs`, `workflow-security`, or `rulesets`),
+  `pnpm cadence fix [--full] [--openapi]`,
+  `pnpm cadence rulesets [--dry-run] [--profile <paused-actions|active-actions>]`,
   and `./scripts/setup_wizard.sh --minimal` (provisions `detect-secrets`,
   `actionlint`, `hadolint`, and `shellcheck`).
 - **Database and migrations:** `pnpm cadence db reset`,
   `pnpm cadence db migrate`, and
   `pnpm cadence migrations <add|script|list|verify>` across all 18 persistence
   modules.
-
-- **Compliance and diagnostics:** `pnpm cadence gxp sync` (branch validation),
-  `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (integration owner only),
-  and `pnpm cadence doctor --auto-fix`.
+- **Compliance and diagnostics:** `pnpm cadence gxp sync [--results-dir <dir>]`
+  (branch validation),
+  `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot [--results-dir <dir>]`
+  (integration owner / release pipeline), and `pnpm cadence doctor --auto-fix`.
 
 <!-- prettier-ignore -->
 - **Local CI:** `CADENCE_TEST_POSTGRES=<connection string> pnpm cadence ci` <!-- pragma: allowlist secret -->
-  (GitHub Actions runners stay off until 2027; see [docs/CI.md](docs/CI.md).)
+  (synthesizes a temporary merged worktree against `--base <ref>` and runs the
+  PR validation jobs locally before pushing; pass `--offline` to skip
+  `git fetch`, and see [docs/CI.md](docs/CI.md).)
 
 For every CLI command, quality gate, container scan, ruleset sync, and setup
 wizard, see [docs/cli.md](docs/cli.md) and [docs/CI.md](docs/CI.md).

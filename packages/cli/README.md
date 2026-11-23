@@ -39,30 +39,33 @@ dotnet run --project packages/cli/src/Cadence.Cli.csproj -- --help
 
 Common commands:
 
-- `check [gate] [files] [--pre-commit] [--exclude <gate>] [--base <ref>] [--push-before <sha>]`:
+- `check [gate] [files] [--pre-commit] [--fail-fast] [--exclude <gate>] [--base <ref>] [--push-before <sha>]`:
   runs every gate in `Services/QualityGates.cs` (reading staged Git index blobs
-  under `--pre-commit`, scoping branch/push diffs under `--base` /
+  and stopping on the first failure by default under `--pre-commit`, stopping
+  early under `--fail-fast`, scoping branch/push diffs under `--base` /
   `--push-before`, or skipping `--exclude` gates), or one gate such as
   `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`,
   `rulesets`, `yaml`, `detect-secrets`, `readmes`, `markdown`, `adrs`,
   `demo-manifest`, `arch-drift`, `imports`, `dependencies`, `gxp-snapshot`,
-  `baseline-ratchet`, `public-bundle`, `branch-freshness`, `architecture-tests`,
-  or `unit-tests`.
+  `baseline-ratchet`, `merge-readiness`, `public-bundle`, `branch-freshness`,
+  `architecture-tests`, or `unit-tests`.
 - `fix [--full] [--openapi]`: runs the self-healing pipeline from any
   subdirectory (`SelfHealService`): C# and Prettier formatting,
-  `.secrets.baseline` normalization, doc/ADR/CLI/demo index sync, and diff-based
-  EF Core schema, OpenAPI, and web API client regeneration.
+  `.secrets.baseline` normalization, doc/ADR/ADR-index/CLI/demo sync, and
+  diff-based EF Core schema, OpenAPI, and web API client regeneration.
 - `test`: test runner wrapper.
-- `ci [--job <job>] [--allow-missing-tools] [--allow-db-skip] [--allow-skip] [--base <ref>] [--list]`:
-  runs the pull-request jobs of `.github/workflows/ci.yml` locally (including
-  `actionlint`, diff-scoped `container-security`, and `--base <ref>` forwarding
-  to scoped CLI checks), failing on missing tools, Docker daemon, or
-  PostgreSQL/`*.database.txt` evidence unless `--allow-missing-tools` or
-  `--allow-db-skip` (or `--allow-skip` for both) is passed
-  (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`).
-- `rulesets [--dry-run] [--repo <owner/repo>]`: validates
-  `.github/rulesets/*.json` against workflow definitions and reconciles them to
-  GitHub Repository Rulesets via `gh api` (`Services/RulesetService.cs`).
+- `ci [--job <job>] [--allow-missing-tools] [--allow-db-skip] [--allow-skip] [--base <ref>] [--offline] [--list]`:
+  fetches `--base <ref>` (unless `--offline`), synthesizes a disposable detached
+  merged worktree via `git merge-tree --write-tree`, and runs the pull-request
+  jobs of `.github/workflows/ci.yml` locally (including `actionlint`,
+  diff-scoped `container-security`, and `--base <ref>` forwarding), failing on
+  missing tools, Docker daemon, or PostgreSQL/`*.database.txt` evidence unless
+  `--allow-missing-tools` or `--allow-db-skip` (or `--allow-skip` for both) is
+  passed (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`).
+- `rulesets [--dry-run] [--profile <paused-actions|active-actions>] [--repo <owner/repo>]`:
+  validates `.github/rulesets/*.json` against `pull_request` + `merge_group`
+  workflow definitions and reconciles them to GitHub Repository Rulesets via
+  `gh api` (`Services/RulesetService.cs`).
 - `doctor`: checks the local toolchain and environment (`.NET 10 SDK`, `pnpm`
   pin, `detect-secrets`, `actionlint`, `hadolint`, `shellcheck`, PostgreSQL).
 - `db reset`, `db migrate`: PostgreSQL schema reset and multi-schema EF Core
@@ -150,9 +153,10 @@ which CI runs (ADR-2249, ADR-2496). Make targets that use the CLI delegate to
 - `tests/Cadence.UnitTests/Packages/RulesetServiceTests.cs`: the `rulesets` gate
   and `cadence rulesets` reconciliation command (`Services/RulesetService.cs`),
   covering `pull_request`-only branch bypasses, release-admin-only signed `v*`
-  tag rulesets, strict status checks, unconditional `CI Gate` upstream job
-  coverage, workflow parity, staged `GitIndexReader` pre-commit checks,
-  `--dry-run`, and fail-closed `gh api` sync.
+  tag rulesets, `merge_queue` policy, strict status checks, unconditional
+  `CI Gate` upstream job coverage, `pull_request` / `merge_group` workflow
+  parity, staged `GitIndexReader` pre-commit checks, `--profile` payload
+  projection, `--dry-run`, and fail-closed `gh api` sync.
 - `tests/Cadence.UnitTests/Packages/ScaffoldPostAndBlogGatesTests.cs`:
   `cadence scaffold post` (`Commands/ScaffoldCommands.cs`), documentation index
   auto-registration, and VitePress theme `.vue` boundary validation.

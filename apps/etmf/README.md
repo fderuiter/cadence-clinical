@@ -74,8 +74,14 @@ eTMF routes need an `etmf_document` or `etmf_taxonomy` permission
 is assigned to; document, QC queue, and export-job lists are narrowed to the
 caller's studies and sites, explicit unassigned `study_id` or `site_id` queries
 return `403` ProblemDetails (`code: "FORBIDDEN_SCOPE"`), and a document or job
-outside the caller's scope answers `404` or `403` (`FORBIDDEN_SCOPE`). Audit
-entries record the signed caller and roles
+outside the caller's scope answers `404` or `403` (`FORBIDDEN_SCOPE`). HTTP
+intake and taxonomy updates enforce single-segment `Filename` and `Section`
+validation (`400 Bad Request` on empty segments, path separators, control
+characters, or `.`/`..`), asynchronous filing consumers sanitize event titles
+and section codes, and `EtmfExportPackager` confines every exported ZIP entry
+inside `Zone_XX/Section_YY/` with `Path.GetFullPath` verification and
+deterministic `Id`-disambiguated names. Audit entries record the signed caller
+and roles
 ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
 ## Persistence

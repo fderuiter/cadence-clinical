@@ -148,11 +148,11 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
-        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# file",
+        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# or JavaScript file",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
-            "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
+            "`docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
             ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))
@@ -161,7 +161,7 @@ public static class QualityGates
             PreCommitNote = "checks staged architectural changes against branch ADRs",
         },
         new("arch-drift", ["validate-architecture-drift"],
-            "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
+            "Compose, topology, Vite ports, `core` hosts, DB schemas, signed routes, token stores, and `GxPAuditInterceptor` parity across architecture, DB, and SDLC docs",
             ctx => ArchitectureDriftValidatorService.ValidateArchitectureDrift(ctx.RepoRoot) == 0),
         new("sanitizer", ["path-requirement-sanitizer"],
             "Requirement tags in Markdown are upper case (`@req:PRD-…`); fixes them in normal mode and reports errors read-only during pre-commit",
@@ -176,10 +176,10 @@ public static class QualityGates
             ctx => MarkdownValidatorService.ValidateMarkdown(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("env-vars", ["validate-environment-variables"],
-            "Environment variables read in code are in `.env.example` and `docs/ENVIRONMENT_VARIABLES.md`",
+            "Bidirectional parity of environment variables across source code, `.env.example`, and `docs/ENVIRONMENT_VARIABLES.md`, plus cited file path existence",
             ctx => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: ctx.RepoRoot) == 0),
         new("dev-env", ["validate-dev-environment", "dev-environment"],
-            "Service ports in `docs/LOCAL_DEV_ENVIRONMENT.md` match the gateway and the Aspire AppHost",
+            "Service/Vite ports, database schemas, `core` hosts, and standalone startup keys in `docs/LOCAL_DEV_ENVIRONMENT.md` match `ServiceTopology`, gateway, and AppHost",
             ctx => DevEnvironmentValidatorService.ValidateDevEnvironment(ctx.RepoRoot) == 0),
         new("readmes", ["validate-readmes"], "Each directory under `apps/` and `packages/` has a README with a title",
             ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
@@ -190,7 +190,7 @@ public static class QualityGates
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin tag bypasses, strict checks, and `CI Gate` parity",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, bypass scopes, `merge_queue` policy, strict checks, and `CI Gate` / `merge_group` parity",
             ctx => RulesetService.Validate(ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
@@ -214,7 +214,12 @@ public static class QualityGates
         },
         new("api-clients", ["validate-api-clients"],
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
-            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
+            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `generate:api --check` and `tsc` on staged OpenAPI/web edits",
+        },
         new("schema-doc", ["auto-stage-schema-doc"],
             "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
@@ -231,8 +236,13 @@ public static class QualityGates
             ctx => QueryLinterService.LintQueries(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
-            "NuGet and pnpm dependency vulnerabilities not exempted in `docs/SDLC/vulnerability_exclusions_ledger.json` (fails closed on missing or broken scanners)",
-            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
+            "NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
+            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot, targetFiles: ctx.TargetFiles, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks ledger offline; scans ecosystems with staged manifest/lock edits",
+        },
         new("dependencies", ["validate-dependencies"],
             "Valid JSON in workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto or test-harness packages in runtime `dependencies`",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
@@ -262,6 +272,13 @@ public static class QualityGates
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks staged files vs `HEAD` (`CADENCE_BASELINE_GROWTH` admits growth)",
+        },
+        new("merge-readiness", ["check-merge-readiness"],
+            "Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
+            CheckMergeReadiness)
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "keeps pre-commit offline; runs in `cadence check`, `ci`, and PRs",
         },
         new("public-bundle", ["validate-public-bundle"],
             "Zero-exemption scan of VitePress, staff, and participant `dist/` bundles for PII, secrets, local URLs, CSP, `axe-core`/`keycloak-js`, preloads, and byte budgets",
@@ -412,6 +429,11 @@ public static class QualityGates
             }
         }
 
+        if (string.Equals(subcommand, "whitespace", StringComparison.Ordinal))
+        {
+            return RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", ".", "--folder", "--verify-no-changes") == 0;
+        }
+
         return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;
     }
 
@@ -466,6 +488,42 @@ public static class QualityGates
         string normalized = file.Replace('\\', '/');
         return normalized.StartsWith("docs/schema/", StringComparison.OrdinalIgnoreCase) &&
                normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool CheckMergeReadiness(GateContext ctx)
+    {
+        if (ctx.PreCommit)
+        {
+            return true;
+        }
+
+        string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
+        if (!string.IsNullOrWhiteSpace(ctx.PushBefore) &&
+            string.IsNullOrWhiteSpace(ctx.BaseRef) &&
+            GitRevisionScopeService.TryResolveCommitSha(ctx.RepoRoot, "HEAD") is not null)
+        {
+            Console.WriteLine($"[MERGE-READINESS] Push scope (--push-before) verified on HEAD; skipping branch merge-tree check against '{effectiveBaseRef}'.");
+            return true;
+        }
+
+        var preview = GitRevisionScopeService.PreviewMergeTree(ctx.RepoRoot, effectiveBaseRef, "HEAD");
+        if (!preview.Succeeded)
+        {
+            Console.WriteLine($"[MERGE-READINESS] [ERROR] {preview.ErrorMessage}");
+            if (preview.HasConflicts && preview.ConflictingFiles.Count > 0)
+            {
+                foreach (string conflictPath in preview.ConflictingFiles)
+                {
+                    Console.WriteLine($"  ✖ {conflictPath}");
+                }
+            }
+
+            return false;
+        }
+
+        Console.WriteLine(
+            $"[MERGE-READINESS] ✔ HEAD merges cleanly with '{preview.EffectiveBaseRef}' (behind by {preview.BehindCount} commit(s); tree {preview.TreeOid}).");
+        return true;
     }
 
     private static bool CheckDemoManifest(GateContext ctx)
@@ -608,6 +666,7 @@ public static class QualityGates
             }
         }
     }
+
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');
 
     private static int RunQuietProcess(string workingDirectory, string fileName, params string[] arguments)
