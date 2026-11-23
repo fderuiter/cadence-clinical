@@ -13,6 +13,129 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const VIRTUAL_TLDTS_ID = "\0virtual:tldts-browser-shim";
+const TLDTS_BROWSER_SHIM_SOURCE = `
+const MULTI_PART_SUFFIXES = new Set([
+  "github.io",
+  "gitlab.io",
+  "pages.dev",
+  "vercel.app",
+  "netlify.app",
+  "co.uk",
+  "org.uk",
+  "ac.uk",
+  "gov.uk",
+  "com.au",
+  "org.au",
+  "co.jp",
+  "co.nz",
+  "com.br",
+]);
+
+function extractHost(input) {
+  if (typeof input !== "string" || !input) return "";
+  let host = input.trim().toLowerCase();
+  if (host.includes("://")) {
+    try {
+      host = new URL(host).hostname.toLowerCase();
+    } catch {
+      return "";
+    }
+  } else {
+    const slash = host.indexOf("/");
+    if (slash !== -1) host = host.slice(0, slash);
+    if (!host.startsWith("[")) {
+      const colon = host.indexOf(":");
+      if (colon !== -1) host = host.slice(0, colon);
+    }
+  }
+  return host.endsWith(".") ? host.slice(0, -1) : host;
+}
+
+export function getHostname(input) {
+  const host = extractHost(input);
+  return host || null;
+}
+
+export function getPublicSuffix(input) {
+  const host = extractHost(input);
+  if (!host || host.includes(":") || /^\\d+(\\.\\d+){3}$/.test(host)) return null;
+  const parts = host.split(".");
+  if (parts.length < 2) return parts[0] || null;
+  const lastTwo = parts.slice(-2).join(".");
+  return MULTI_PART_SUFFIXES.has(lastTwo) ? lastTwo : parts[parts.length - 1];
+}
+
+export function getDomain(input) {
+  const host = extractHost(input);
+  if (!host || host.includes(":") || /^\\d+(\\.\\d+){3}$/.test(host)) return null;
+  const parts = host.split(".");
+  if (parts.length < 2) return null;
+  const lastTwo = parts.slice(-2).join(".");
+  if (MULTI_PART_SUFFIXES.has(lastTwo)) {
+    return parts.length >= 3 ? parts.slice(-3).join(".") : null;
+  }
+  return lastTwo;
+}
+
+export function getFullDomain(input) {
+  return getDomain(input) === null ? null : getHostname(input);
+}
+
+export function getSubdomain(input) {
+  const domain = getDomain(input);
+  const host = getHostname(input);
+  if (!domain || !host || host === domain) return domain ? "" : null;
+  return host.slice(0, host.length - domain.length - 1);
+}
+
+export function getDomainWithoutSuffix(input) {
+  const domain = getDomain(input);
+  const suffix = getPublicSuffix(input);
+  if (!domain || !suffix || domain === suffix) return null;
+  return domain.slice(0, domain.length - suffix.length - 1);
+}
+
+export function parse(input) {
+  const hostname = getHostname(input);
+  const domain = getDomain(input);
+  const publicSuffix = getPublicSuffix(input);
+  const isIp = Boolean(
+    hostname && (hostname.includes(":") || /^\\d+(\\.\\d+){3}$/.test(hostname))
+  );
+  return {
+    hostname,
+    isIp,
+    subdomain: getSubdomain(input),
+    domain,
+    publicSuffix,
+    domainWithoutSuffix: getDomainWithoutSuffix(input),
+    isIcann: Boolean(publicSuffix),
+    isPrivate: false,
+  };
+}
+`;
+
+function createBrowserTldtsShimPlugin() {
+  return {
+    name: "browser-tldts-shim",
+    apply: "build",
+    enforce: "pre",
+    resolveId(source) {
+      if (source === "tldts") {
+        return VIRTUAL_TLDTS_ID;
+      }
+      return null;
+    },
+    load(id) {
+      if (id === VIRTUAL_TLDTS_ID) {
+        return TLDTS_BROWSER_SHIM_SOURCE;
+      }
+      return null;
+    },
+  };
+}
+
 const DEV_PORT = 5174;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint; docker compose names
 // the front proxy).
@@ -27,7 +150,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
-      "../../packages/usdm-schemas/src/epro.ts",
+      "../../packages/usdm-schemas/src/epro-validator.ts",
     ],
     include: [
       "vue",
@@ -36,7 +159,6 @@ export default defineConfig(({ mode }) => ({
       "keycloak-js",
       "msw",
       "msw/browser",
-      "usdm-schemas > zod/mini",
     ],
   },
   plugins: [
@@ -156,6 +278,7 @@ export default defineConfig(({ mode }) => ({
       };
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
+    createBrowserTldtsShimPlugin(),
     createDemoFixturesPlugin(__dirname),
     createConstantFoldDemoModePlugin(__dirname),
   ],

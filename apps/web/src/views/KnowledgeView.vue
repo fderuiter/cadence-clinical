@@ -51,7 +51,7 @@
       >
         <span class="stat-icon alert-icon" aria-hidden="true">📚</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ totalArticlesCount }}
           </span>
           <span class="stat-label">Total SOPs &amp; Guides</span>
@@ -69,7 +69,7 @@
       >
         <span class="stat-icon capa-icon" aria-hidden="true">✅</span>
         <span class="stat-details">
-          <span class="stat-value text-success">
+          <span class="stat-value text-success tabular-nums">
             {{ publishedArticlesCount }}
           </span>
           <span class="stat-label">Active Published SOPs</span>
@@ -88,7 +88,7 @@
       >
         <span class="stat-icon rbqm-icon" aria-hidden="true">🔍</span>
         <span class="stat-details">
-          <span class="stat-value text-warning">
+          <span class="stat-value text-warning tabular-nums">
             {{ inReviewArticlesCount }}
           </span>
           <span class="stat-label">Under Four-Eyes Review</span>
@@ -107,7 +107,7 @@
       >
         <span class="stat-icon breach-icon" aria-hidden="true">📝</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ draftArticlesCount }}
           </span>
           <span class="stat-label">Working Draft Revisions</span>

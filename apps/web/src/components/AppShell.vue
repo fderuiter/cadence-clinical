@@ -1177,6 +1177,7 @@ onUnmounted(() => {
 .setup-progress-pill {
   font-size: 0.75rem;
   font-weight: 600;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--semantic-color-info-bg);

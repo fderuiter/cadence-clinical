@@ -72,7 +72,7 @@
             authStore.trialEndsAtFormatted
           "
           id="overview-trial-countdown"
-          class="overview-countdown-text"
+          class="overview-countdown-text tabular-nums"
         >
           Trial window:
           <strong
@@ -958,6 +958,7 @@ function startGuidedTour() {
 .overview-countdown-text {
   font-size: 0.86rem;
   color: var(--semantic-color-text-dark);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .overview-expired-text {
@@ -1033,6 +1034,7 @@ function startGuidedTour() {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 12px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .subtitle-tag {

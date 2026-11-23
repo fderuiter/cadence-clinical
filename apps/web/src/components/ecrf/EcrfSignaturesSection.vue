@@ -14,6 +14,7 @@
         :key="signature.attestation_id"
         :class="[
           'ecrf-signature',
+          'tabular-nums',
           signature.superseded
             ? 'ecrf-signature--superseded'
             : 'ecrf-signature--current',

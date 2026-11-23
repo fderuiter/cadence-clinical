@@ -100,6 +100,9 @@
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
+                  :data-tabular-nums="
+                    item.value_kind !== 'text' ? 'true' : undefined
+                  "
                   :disabled="
                     formState.locked ||
                     formState.saving ||
