@@ -481,12 +481,13 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(ctmsModal).toBeHidden();
     await expect(createTemplateBtn).toBeFocused();
 
-    // 4. /data-lock: DataLockView ClinicalModal (formerly suppressed backdrop)
+    // 4. /data-lock: Consolidated Clinical Canvas LocksSection ClinicalModal
     await gotoHashRoute(page, "/data-lock");
     const lockTrigger = page
-      .locator(".btn-mini-lock, .btn-mini-freeze, .btn-mini-unlock")
+      .locator(".btn-mini-freeze, .btn-mini-lock, .btn-mini-unlock")
       .first();
     await expect(lockTrigger).toBeVisible();
+    await expect(lockTrigger).toBeEnabled();
     await lockTrigger.focus();
     await lockTrigger.click();
 
