@@ -1,6 +1,7 @@
 import { computed, ref, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
+import { syncActiveStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
 import {
   formatScopeForbiddenGuidance,
@@ -64,7 +65,10 @@ export function useScopedWorkspaceSection(
   );
 
   function syncActiveScope(study?: string, site?: string) {
-    if (study) clinicalStore.activeStudyId = study;
+    if (study) {
+      clinicalStore.activeStudyId = study;
+      syncActiveStudyScope(study);
+    }
     if (site) clinicalStore.activeSiteId = site;
   }
 

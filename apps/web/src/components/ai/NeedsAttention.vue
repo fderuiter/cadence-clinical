@@ -68,7 +68,7 @@ import { computed, ref } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
-import { maskReasonWords } from "../../canvas/nodeResolver";
+import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -98,7 +98,18 @@ const {
       status: "Open",
       limit: LIMIT,
     });
-    if (isCurrent()) proposals.value = open;
+    if (isCurrent()) {
+      proposals.value = open;
+      for (const item of open) {
+        if (item.ref && !item.mask) {
+          seedNodeSummary(item.ref, {
+            kind: "proposal",
+            title: item.intent ?? null,
+            status: item.status ?? null,
+          });
+        }
+      }
+    }
   },
 });
 

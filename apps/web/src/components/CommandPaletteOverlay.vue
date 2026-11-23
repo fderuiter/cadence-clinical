@@ -24,6 +24,7 @@ import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 
 const props = defineProps<{
   isOpen?: boolean;
@@ -39,11 +40,14 @@ const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
-
+const { activeStudyCode: syncedStudyCode, setActiveStudyCode } =
+  useActiveStudyScope();
 const workspaceScope = computed(() =>
   resolveActiveWorkspaceScope(route, canvasStore)
 );
-const activeStudyCode = computed(() => workspaceScope.value.studyCode);
+const activeStudyCode = computed(
+  () => workspaceScope.value.studyCode || syncedStudyCode.value
+);
 
 watch(
   [() => props.isOpen, activeStudyCode],
@@ -60,10 +64,11 @@ const workspaceItems = computed(() =>
     isAuthenticated: Boolean(authStore.isAuthenticated),
     normalizedRoles: authStore.normalizedRoles || [],
     availablePersonas: authStore.availablePersonas || [],
-    activeStudyCode: workspaceScope.value.studyCode,
+    activeStudyCode: activeStudyCode.value,
     activeSiteId: workspaceScope.value.siteId,
     activeExplicitSiteId: workspaceScope.value.explicitSiteId,
     activeSubjectCode: workspaceScope.value.subjectCode,
+    activeParticipantRef: workspaceScope.value.participantRef,
     activeEnrollmentId: workspaceScope.value.enrollmentId,
   })
 );
@@ -81,6 +86,9 @@ function handleAction(action: PaletteWorkspaceAction) {
 }
 
 function handleGo(target: PaletteTarget) {
+  if (target.studyCode) {
+    setActiveStudyCode(target.studyCode);
+  }
   if (target.participant) {
     if (target.studyCode && target.studyCode !== canvasStore.studyCode) {
       canvasStore.openStudy(target.studyCode);

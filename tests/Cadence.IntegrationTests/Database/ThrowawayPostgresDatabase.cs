@@ -54,7 +54,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         }
         else if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1")
         {
-            _container = new PostgreSqlBuilder().WithImage(PostgresTestImage.Image).Build();
+            _container = new PostgreSqlBuilder(PostgresTestImage.Image).Build();
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
             await _container.StartAsync(cts.Token).ConfigureAwait(false);
             _adminConnectionString = _container.GetConnectionString();

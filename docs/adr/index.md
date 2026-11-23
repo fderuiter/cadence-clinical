@@ -447,7 +447,9 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19)
 - [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 - [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](2026-11-20-share-session-logout-and-signature-primitives.md) (2026-11-20)
+- [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) (2026-11-22)
 - [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) (2026-11-22)
+- [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) (2026-11-22)
 
 ### 7. DevOps, Tooling & CI/CD
 

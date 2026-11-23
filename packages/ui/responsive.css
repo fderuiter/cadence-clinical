@@ -266,6 +266,7 @@
   gap: var(--spacing-2xs, 4px) !important;
 }
 
+:root[data-surface-profile] .btn-sm,
 .btn-sm {
   display: inline-flex;
   align-items: center;
@@ -275,6 +276,7 @@
   padding: var(--spacing-xs, 8px) var(--spacing-sm, 12px);
   font-size: var(--font-size-sm, 0.875rem);
   border-radius: var(--radius-xs, 4px);
+  box-sizing: border-box;
 }
 
 @media (min-width: 1280px) and (pointer: fine) {

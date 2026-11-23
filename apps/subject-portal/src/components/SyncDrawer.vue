@@ -146,9 +146,9 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { X } from "lucide-vue-next";
-import { useFocusTrap } from "ui";
+import { getFocusableElements, useFocusTrap } from "ui";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,
@@ -177,6 +177,19 @@ useFocusTrap(drawerRef, {
     }
   },
 });
+
+watch(
+  () => sync.isSyncDrawerOpen,
+  (open) => {
+    if (!open || !drawerRef.value || typeof document === "undefined") return;
+    if (!drawerRef.value.contains(document.activeElement)) {
+      const target =
+        getFocusableElements(drawerRef.value)[0] || drawerRef.value;
+      target.focus();
+    }
+  },
+  { flush: "post" }
+);
 
 function triggerManualSync() {
   syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });

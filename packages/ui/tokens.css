@@ -87,8 +87,9 @@
   --breakpoint-desktop: 1024px;
   --breakpoint-workstation: 1280px;
 
-  /* Touch Target Minimums & Two-Profile Surface Density Contract */
+  /* Touch & Control Target Minimums & Two-Profile Surface Density Contract (WCAG 2.2 SC 2.5.5 / SC 2.5.8, ADR-2646, ADR-2823) */
   --touch-target-min: 48px;
+  --control-target-min: 24px;
   --touch-target-staff: 44px;
   --touch-target-portal: 48px;
   --control-height-compact-sm: 28px;
@@ -265,8 +266,9 @@
   --semantic-spacing-3xl: var(--spacing-3xl);
   --semantic-spacing-4xl: var(--spacing-4xl);
 
-  /* Touch Target */
+  /* Touch & Control Targets */
   --semantic-touch-target-min: var(--touch-target-min);
+  --semantic-control-target-min: var(--control-target-min);
 
   /* Semantic Drawer Width Tiers */
   --semantic-drawer-width-sm: var(--drawer-width-sm);
@@ -520,7 +522,7 @@ samp,
   font-family: var(--font-mono);
 }
 
-/* Global Keyboard Navigation Focus Indicators (WCAG 2.2 AA).
+/* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
    Uses :where() on attribute selectors so max specificity stays <= (0, 1, 1),
    below [aria-invalid="true"]:focus-visible, .skip-link:focus-visible, and .form-group input:focus-visible. */
 button:focus-visible,
@@ -528,10 +530,11 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
+summary:focus-visible,
 :where([role="button"], [tabindex]):focus-visible {
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
 }
 
 /* Shared Form Action Bar & Primary Brand Button Colors */
@@ -595,6 +598,42 @@ td,
   align-items: center;
 }
 
+/* WCAG 2.2 SC 2.5.8 Target Size (Minimum) (24x24px via Technique C42).
+   Excludes inline <a> links under the Inline exception; higher-tier two-profile --surface-* rules override where applicable. */
+:where(
+  :is(
+      button,
+      [role="button"],
+      input:not([type="hidden"]),
+      select,
+      textarea
+    ):not(.sr-only):not(.visually-hidden)
+) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  box-sizing: border-box;
+}
+
+:where([role="button"]:not(.sr-only):not(.visually-hidden)) {
+  display: inline-flex;
+  align-items: center;
+}
+
+:where(
+  :is(input[type="checkbox"], input[type="radio"]):not(.sr-only):not(
+      .visually-hidden
+    )
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  flex-shrink: 0;
+}
+
 /* Centralized styles maintain surface-profile touch target dimensions (44px staff touch / 48px portal / 36px fine desktop) and SC 1.4.11 >= 3:1 boundary contrast */
 .clinical-input input[type="text"],
 .clinical-input input[type="number"],
@@ -618,14 +657,14 @@ td,
   box-sizing: border-box;
 }
 
-.clinical-input input[type="text"]:focus,
-.clinical-input input[type="number"]:focus,
-.clinical-input input[type="date"]:focus,
-.clinical-input input[type="email"]:focus,
-.clinical-input input[type="tel"]:focus,
-.clinical-input select:focus,
-.clinical-input textarea:focus,
-.clinical-input .clinical-input-control:focus {
+.clinical-input input[type="text"]:focus:not(:focus-visible),
+.clinical-input input[type="number"]:focus:not(:focus-visible),
+.clinical-input input[type="date"]:focus:not(:focus-visible),
+.clinical-input input[type="email"]:focus:not(:focus-visible),
+.clinical-input input[type="tel"]:focus:not(:focus-visible),
+.clinical-input select:focus:not(:focus-visible),
+.clinical-input textarea:focus:not(:focus-visible),
+.clinical-input .clinical-input-control:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
   border-color: var(--semantic-color-border-control);
@@ -641,6 +680,7 @@ td,
 .clinical-input .clinical-input-control:focus-visible {
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
   border-color: var(--semantic-color-accent) !important;
 }
 
@@ -654,21 +694,38 @@ textarea[aria-invalid="true"] {
   background-color: var(--semantic-color-error-bg) !important;
 }
 
-.clinical-input.has-error input[type="text"]:focus,
 .clinical-input.has-error input[type="text"]:focus-visible,
-.clinical-input.has-error .clinical-input-control:focus,
 .clinical-input.has-error .clinical-input-control:focus-visible,
-input[aria-invalid="true"]:focus,
 input[aria-invalid="true"]:focus-visible,
-select[aria-invalid="true"]:focus,
 select[aria-invalid="true"]:focus-visible,
-textarea[aria-invalid="true"]:focus,
 textarea[aria-invalid="true"]:focus-visible {
   border: 1px solid var(--semantic-color-error) !important;
   background-color: var(--semantic-color-error-bg) !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
   outline: 3px solid var(--semantic-color-error) !important;
   outline-offset: 2px !important;
+}
+
+@media (forced-colors: active) {
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible,
+  summary:focus-visible,
+  :where([role="button"], [tabindex]):focus-visible,
+  .clinical-input input[type="text"]:focus-visible,
+  .clinical-input input[type="number"]:focus-visible,
+  .clinical-input input[type="date"]:focus-visible,
+  .clinical-input input[type="email"]:focus-visible,
+  .clinical-input input[type="tel"]:focus-visible,
+  .clinical-input select:focus-visible,
+  .clinical-input textarea:focus-visible,
+  .clinical-input .clinical-input-control:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 .validation-error-msg {
@@ -715,11 +772,17 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .radio-option input[type="radio"] {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   accent-color: var(--semantic-color-accent);
   cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .radio-option label,
@@ -865,6 +928,8 @@ textarea[aria-invalid="true"]:focus-visible {
   position: absolute;
   width: 1px;
   height: 1px;
+  min-width: 0;
+  min-height: 0;
   padding: 0;
   margin: -1px;
   overflow: hidden;

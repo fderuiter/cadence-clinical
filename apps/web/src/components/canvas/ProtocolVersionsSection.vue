@@ -242,12 +242,14 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   min-height: var(--surface-control-min-height, 44px);
   min-width: var(--surface-control-min-width, 44px);
   border: none;
+  border-radius: 4px;
   background: none;
   padding: 4px 8px;
   font: inherit;
   font-weight: 600;
   color: var(--primary);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .masked-row {

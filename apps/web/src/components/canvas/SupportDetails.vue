@@ -2,7 +2,9 @@
   <details v-if="hasDetails" class="support-details">
     <summary class="support-details-summary">{{ summaryLabel }}</summary>
     <div class="support-details-body">
-      <p v-if="detail" class="support-details-text">{{ detail }}</p>
+      <p v-if="detail" :id="detailId" class="support-details-text">
+        {{ detail }}
+      </p>
       <p v-if="code" class="support-details-code">
         Diagnostic code: <code>{{ code }}</code>
       </p>
@@ -22,12 +24,14 @@ const props = withDefaults(
     code?: string | null;
     reference?: string | null;
     summaryLabel?: string;
+    detailId?: string;
   }>(),
   {
     detail: null,
     code: null,
     reference: null,
     summaryLabel: "Support details",
+    detailId: undefined,
   }
 );
 

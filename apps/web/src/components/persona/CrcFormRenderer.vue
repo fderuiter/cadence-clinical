@@ -1155,3 +1155,9 @@ function updateFieldValue(fieldId, val) {
   storeInstance.formValues[fieldId] = val;
 }
 </script>
+
+<style scoped>
+#form-VS_DEMO :deep(.clinical-form-field-wrapper) {
+  content-visibility: visible !important;
+}
+</style>
