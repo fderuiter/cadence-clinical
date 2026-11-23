@@ -4,8 +4,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 import {
+  buildModeAwareCspContent,
+  injectHoistedCspMeta as injectHoistedPortalCspMeta,
+  resolveViteOidcOrigin as resolvePortalOidcOrigin,
+} from "../../scripts/vite-hoist-csp.mjs";
+import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
+  createUiWorkspaceAliases,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,65 +22,10 @@ const DEV_PORT = 5174;
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
-export function resolvePortalOidcOrigin({
-  mode = "production",
-  isProduction = true,
-  env = {},
-} = {}) {
-  if (mode === "demo" || env.VITE_DEMO_MODE === "true") {
-    return "";
-  }
-  const rawUrl =
-    (env.VITE_KEYCLOAK_URL || "").trim() ||
-    (isProduction ? "" : "http://localhost:8080/");
-  if (!rawUrl) {
-    return "";
-  }
-  try {
-    const parsed = new URL(rawUrl);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.origin;
-    }
-  } catch {
-    // Ignore relative or malformed URLs
-  }
-  return "";
-}
+export { injectHoistedPortalCspMeta, resolvePortalOidcOrigin };
 
 export function buildSubjectPortalCspContent(options = {}) {
-  const oidcOrigin = resolvePortalOidcOrigin(options);
-  const oidcAwareSources = oidcOrigin ? `'self' ${oidcOrigin}` : "'self'";
-
-  return [
-    "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "media-src 'self'",
-    "worker-src 'self'",
-    `connect-src ${oidcAwareSources}`,
-    `frame-src ${oidcAwareSources}`,
-    "manifest-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join("; ");
-}
-
-export function injectHoistedPortalCspMeta(html, cspContent) {
-  const cspTag = `<meta http-equiv="Content-Security-Policy" content="${cspContent}" />`;
-  const stripped = html.replace(
-    /\s*<meta\b[^>]*\bhttp-equiv\s*=\s*(?:"Content-Security-Policy"|'Content-Security-Policy'|Content-Security-Policy)[^>]*>/gi,
-    ""
-  );
-  if (/<head\b[^>]*>/i.test(stripped)) {
-    return stripped.replace(
-      /<head\b[^>]*>/i,
-      (headOpen) => `${headOpen}\n    ${cspTag}`
-    );
-  }
-  return `${cspTag}\n${stripped}`;
+  return buildModeAwareCspContent(options);
 }
 
 export default defineConfig(({ mode }) => ({
@@ -212,27 +163,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
   },
   resolve: {
-    alias: [
-      // The mock gateway and Vitest accessibility matcher are kept out of the library's root export (#5335).
-      {
-        find: /^ui\/testing$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/mockGateway.js"
-        ),
-      },
-      {
-        find: /^ui\/vitest$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/accessibility-matcher.js"
-        ),
-      },
-      {
-        find: /^ui$/,
-        replacement: path.resolve(__dirname, "../../packages/ui/index.js"),
-      },
-    ],
+    alias: createUiWorkspaceAliases(__dirname),
   },
   build: {
     outDir: "dist",

@@ -22,6 +22,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
     public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
 
     public DbSet<TmfDocument> TmfDocuments => Set<TmfDocument>();
+    public DbSet<TmfDocumentRevision> TmfDocumentRevisions => Set<TmfDocumentRevision>();
     public DbSet<TmfExpectedDocument> TmfExpectedDocuments => Set<TmfExpectedDocument>();
     public DbSet<TmfAuditLedgerSeal> TmfAuditLedgerSeals => Set<TmfAuditLedgerSeal>();
     public DbSet<TmfAuditLog> TmfAuditLogs => Set<TmfAuditLog>();
@@ -35,6 +36,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfiguration(new TmfDocumentConfiguration());
+        modelBuilder.ApplyConfiguration(new TmfDocumentRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new TmfExpectedDocumentConfiguration());
         modelBuilder.ApplyConfiguration(new TmfAuditLedgerSealConfiguration());
         modelBuilder.ApplyConfiguration(new TmfAuditLogConfiguration());

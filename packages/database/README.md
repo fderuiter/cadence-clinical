@@ -86,3 +86,9 @@ After changing an entity or its configuration, run `pnpm cadence migrations add 
 ```bash
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages"
 ```
+
+## Standalone Concurrency, Bitemporal Intervals, and Insert-Only Revisions
+
+- `StandaloneTenantModelExtensions` automatically configures `VersionIndex` or a shadow `_version` concurrency token on every tenant-scoped standalone entity.
+- `StandaloneConcurrencyTokenInterceptor` advances `int` and `long` concurrency tokens from `OriginalValue + 1` once per committed mutation, and `StandaloneConcurrencyExceptionHandler` maps `DbUpdateConcurrencyException` to HTTP `409` ProblemDetails (`CONCURRENCY_CONFLICT`).
+- `StandaloneTemporalSql`, `StandaloneBitemporalModelExtensions`, and `StandaloneInsertOnlySql` install `K-XS-2`-compliant PostgreSQL `tstzrange` + `btree_gist` exclusion constraints (`KT001`), `as_of(valid_at, known_at)` queries, and `enforce_insert_only` triggers (`KA001`) across standalone schemas.

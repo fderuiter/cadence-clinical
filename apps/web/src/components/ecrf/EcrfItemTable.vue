@@ -50,7 +50,52 @@
                 </div>
               </th>
               <td>
+                <select
+                  v-if="item.codelist_options?.length"
+                  :id="`ecrf-item-${item.item_id}`"
+                  :value="formState.entries[item.item_id]?.text ?? ''"
+                  :disabled="
+                    formState.locked ||
+                    formState.saving ||
+                    !!formState.entries[item.item_id]?.missing
+                  "
+                  :aria-invalid="!!formState.itemErrors[item.item_id]"
+                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  @change="
+                    emit(
+                      'entry-text',
+                      item.item_id,
+                      ($event.target as HTMLSelectElement).value
+                    )
+                  "
+                >
+                  <option value="">Select…</option>
+                  <option
+                    v-if="
+                      formState.entries[item.item_id]?.text &&
+                      !item.codelist_options.some(
+                        (option) =>
+                          option.code === formState.entries[item.item_id]?.text
+                      )
+                    "
+                    :value="formState.entries[item.item_id]?.text"
+                  >
+                    {{ formState.entries[item.item_id]?.text }}
+                  </option>
+                  <option
+                    v-for="option in item.codelist_options"
+                    :key="option.code"
+                    :value="option.code"
+                  >
+                    {{
+                      option.display && option.display !== option.code
+                        ? `${option.display} (${option.code})`
+                        : option.code
+                    }}
+                  </option>
+                </select>
                 <input
+                  v-else
                   :id="`ecrf-item-${item.item_id}`"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"

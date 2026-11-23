@@ -6,8 +6,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 import {
+  buildModeAwareCspContent,
+  injectHoistedCspMeta as injectHoistedWebCspMeta,
+  resolveViteOidcOrigin as resolveWebOidcOrigin,
+} from "../../scripts/vite-hoist-csp.mjs";
+import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
+  createUiWorkspaceAliases,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,68 +24,14 @@ const DEV_PORT = 3000;
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 const IS_E2E_BUILD = process.env.CADENCE_E2E_BUILD === "1";
 
-export function resolveWebOidcOrigin({
-  mode = "production",
-  isProduction = true,
-  env = {},
-} = {}) {
-  if (mode === "demo" || env.VITE_DEMO_MODE === "true") {
-    return "";
-  }
-  const rawUrl =
-    (env.VITE_KEYCLOAK_URL || "").trim() ||
-    (isProduction ? "" : "http://localhost:8080/");
-  if (!rawUrl) {
-    return "";
-  }
-  try {
-    const parsed = new URL(rawUrl);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.origin;
-    }
-  } catch {
-    // Ignore relative or malformed URLs; 'self' already covers same-origin paths
-  }
-  return "";
-}
+export { injectHoistedWebCspMeta, resolveWebOidcOrigin };
 
 export function buildWebCspContent(options = {}) {
-  const oidcOrigin = resolveWebOidcOrigin(options);
-  const connectSources = oidcOrigin ? `'self' ${oidcOrigin}` : "'self'";
-  const frameSources = oidcOrigin
-    ? `'self' blob: ${oidcOrigin}`
-    : "'self' blob:";
-
-  return [
-    "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "media-src 'self' blob:",
-    "worker-src 'self' blob:",
-    `connect-src ${connectSources}`,
-    `frame-src ${frameSources}`,
-    "manifest-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join("; ");
-}
-
-export function injectHoistedWebCspMeta(html, cspContent) {
-  const cspTag = `<meta http-equiv="Content-Security-Policy" content="${cspContent}" />`;
-  const stripped = html.replace(
-    /\s*<meta\b[^>]*\bhttp-equiv\s*=\s*(?:"Content-Security-Policy"|'Content-Security-Policy'|Content-Security-Policy)[^>]*>/gi,
-    ""
-  );
-  if (/<head\b[^>]*>/i.test(stripped)) {
-    return stripped.replace(
-      /<head\b[^>]*>/i,
-      (headOpen) => `${headOpen}\n    ${cspTag}`
-    );
-  }
-  return `${cspTag}\n${stripped}`;
+  return buildModeAwareCspContent(options, {
+    allowBlobMedia: true,
+    allowBlobWorker: true,
+    allowBlobFrame: true,
+  });
 }
 
 const E2E_BOOT_RECOVERY_SCRIPT = `(function () {
@@ -247,25 +199,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      // The mock gateway and Vitest accessibility matcher are kept out of the library's root export (#5335).
-      {
-        find: /^ui\/testing$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/mockGateway.js"
-        ),
-      },
-      {
-        find: /^ui\/vitest$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/accessibility-matcher.js"
-        ),
-      },
-      {
-        find: /^ui$/,
-        replacement: path.resolve(__dirname, "../../packages/ui/dist/index.js"),
-      },
+      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",
