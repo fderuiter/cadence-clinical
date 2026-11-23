@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel;
+using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Modules.Execution.Domain;
 
@@ -16,11 +20,47 @@ public enum FormQueryStatus
     /// <summary>The site answered; the monitor closes it or reopens it.</summary>
     Answered,
 
-    /// <summary>The monitor accepted the answer or the corrected value.</summary>
+    /// <summary>The monitor accepted the answer or the system rule cleared.</summary>
     Closed,
 
     /// <summary>Withdrawn as raised in error; final.</summary>
     Cancelled,
+}
+
+/// <summary>How a query originated.</summary>
+public enum FormQueryOrigin
+{
+    /// <summary>Raised manually by a monitor or data manager.</summary>
+    Manual,
+
+    /// <summary>Raised automatically by a post-commit edit-check rule.</summary>
+    System,
+}
+
+/// <summary>Which role currently owns the next action on a query.</summary>
+public enum FormQueryOwnerRole
+{
+    /// <summary>Site staff (clinical research coordinator or investigator).</summary>
+    Site,
+
+    /// <summary>Clinical research associate / monitor.</summary>
+    Monitor,
+
+    /// <summary>Sponsor or CRO data manager.</summary>
+    DataManager,
+}
+
+/// <summary>Urgency level of a query.</summary>
+public enum FormQueryPriority
+{
+    /// <summary>Low priority discrepancy.</summary>
+    Low,
+
+    /// <summary>Standard discrepancy priority.</summary>
+    Normal,
+
+    /// <summary>High priority or overdue (&gt;= 14 calendar days open) discrepancy.</summary>
+    High,
 }
 
 /// <summary>What happened to a query, in the order it happened.</summary>
@@ -29,25 +69,222 @@ public enum FormQueryMessageKind
     /// <summary>The query was raised.</summary>
     Raised,
 
-    /// <summary>The site answered.</summary>
+    /// <summary>The site answered (explicitly or by correcting the queried value).</summary>
     Answered,
 
     /// <summary>The monitor reopened it.</summary>
     Reopened,
 
-    /// <summary>The monitor closed it.</summary>
+    /// <summary>The monitor or system rule closed it.</summary>
     Closed,
 
-    /// <summary>It was cancelled.</summary>
+    /// <summary>It was cancelled as raised in error.</summary>
     Cancelled,
+
+    /// <summary>It escalated after remaining open for 14 calendar days.</summary>
+    Escalated,
 }
+
+/// <summary>Why closing a query failed.</summary>
+public enum FormQueryCloseDenial
+{
+    /// <summary>The query's status (or manual open state) does not allow closing.</summary>
+    InvalidTransition,
+
+    /// <summary>An answered manual query cannot be closed by the same user who answered it.</summary>
+    SeparationOfDuties,
+}
+
+/// <summary>Outcome of attempting to close a <see cref="FormQuery"/>.</summary>
+/// <param name="Step">The kernel retraction step when closure succeeded; null when denied.</param>
+/// <param name="Denial">Why closure was denied when <paramref name="Step"/> is null.</param>
+public sealed record FormQueryCloseOutcome(KernelAssertionStep? Step, FormQueryCloseDenial? Denial = null);
 
 /// <summary>One step of a query's conversation.</summary>
 /// <param name="Kind">What happened.</param>
-/// <param name="Text">The query, answer or reopening text, or the reason for closing or cancelling.</param>
-/// <param name="By">Who did it.</param>
+/// <param name="Text">The query, answer or reopening text, or the closing/cancelling/escalation note.</param>
+/// <param name="By">Who recorded it.</param>
 /// <param name="At">When it was recorded.</param>
-public sealed record FormQueryMessage(FormQueryMessageKind Kind, string Text, string By, DateTimeOffset At);
+/// <param name="ReasonForChange">The verbatim change reason recorded for the step.</param>
+public sealed record FormQueryMessage(
+    FormQueryMessageKind Kind,
+    string Text,
+    string By,
+    DateTimeOffset At,
+    string ReasonForChange = "");
+
+/// <summary>
+/// Insert-only persisted conversation message row in <c>execution.form_query_messages</c> (<c>KA001</c>).
+/// </summary>
+public sealed class FormQueryMessageRecord
+{
+    private FormQueryMessageRecord()
+    {
+    }
+
+    internal FormQueryMessageRecord(
+        Guid id,
+        TenantId tenantId,
+        FormQueryId queryId,
+        int sequence,
+        FormQueryMessageKind kind,
+        string text,
+        string recordedBy,
+        string reasonForChange,
+        DateTimeOffset recordedAt)
+    {
+        Id = id;
+        TenantId = tenantId;
+        QueryId = queryId;
+        Sequence = sequence;
+        Kind = kind;
+        Text = text;
+        RecordedBy = recordedBy;
+        ReasonForChange = reasonForChange;
+        RecordedAt = recordedAt;
+    }
+
+    /// <summary>Row identifier.</summary>
+    public Guid Id { get; private set; }
+
+    /// <summary>The tenant.</summary>
+    public TenantId TenantId { get; private set; }
+
+    /// <summary>The owning query.</summary>
+    public FormQueryId QueryId { get; private set; }
+
+    /// <summary>1-based message order within the query.</summary>
+    public int Sequence { get; private set; }
+
+    /// <summary>What happened at this step.</summary>
+    public FormQueryMessageKind Kind { get; private set; }
+
+    /// <summary>The message text.</summary>
+    public string Text { get; private set; } = string.Empty;
+
+    /// <summary>Who recorded the message.</summary>
+    public string RecordedBy { get; private set; } = string.Empty;
+
+    /// <summary>Verbatim change reason supplied for the command.</summary>
+    public string ReasonForChange { get; private set; } = string.Empty;
+
+    /// <summary>When the message was recorded.</summary>
+    public DateTimeOffset RecordedAt { get; private set; }
+
+    /// <summary>Projects this persisted record as a value message.</summary>
+    public FormQueryMessage ToMessage() => new(Kind, Text, RecordedBy, RecordedAt, ReasonForChange);
+}
+
+/// <summary>
+/// One bitemporal state interval of a <see cref="FormQuery"/> in <c>execution.form_query_periods</c> (<c>K-TIME-1</c>, <c>K-TIME-2</c>).
+/// </summary>
+public sealed class FormQueryPeriod : IBitemporalEntity
+{
+    private FormQueryPeriod()
+    {
+    }
+
+    internal FormQueryPeriod(
+        Guid id,
+        TenantId tenantId,
+        FormQueryId queryId,
+        FormQueryStatus status,
+        FormQueryOwnerRole ownerRole,
+        string? assignee,
+        FormQueryPriority priority,
+        DateTimeOffset statusSince,
+        DateTimeOffset? dueAt,
+        DateTimeOffset? escalatedAt,
+        string? lastAnsweredBy,
+        AssertionId kernelQueryId,
+        AssertionId? kernelAnswerId,
+        string recordedBy,
+        string reasonForChange,
+        TemporalPeriod period)
+    {
+        Id = id;
+        TenantId = tenantId;
+        QueryId = queryId;
+        Status = status;
+        OwnerRole = ownerRole;
+        Assignee = assignee;
+        Priority = priority;
+        StatusSince = statusSince;
+        DueAt = dueAt;
+        EscalatedAt = escalatedAt;
+        LastAnsweredBy = lastAnsweredBy;
+        KernelQueryId = kernelQueryId;
+        KernelAnswerId = kernelAnswerId;
+        RecordedBy = recordedBy;
+        ReasonForChange = reasonForChange;
+        Period = period;
+    }
+
+    /// <summary>Row identifier.</summary>
+    public Guid Id { get; private set; }
+
+    /// <summary>The tenant.</summary>
+    public TenantId TenantId { get; private set; }
+
+    /// <summary>The owning query.</summary>
+    public FormQueryId QueryId { get; private set; }
+
+    /// <summary>Workflow status during this interval.</summary>
+    public FormQueryStatus Status { get; private set; }
+
+    /// <summary>Owner role during this interval.</summary>
+    public FormQueryOwnerRole OwnerRole { get; private set; }
+
+    /// <summary>Optional assignee identifier during this interval.</summary>
+    public string? Assignee { get; private set; }
+
+    /// <summary>Query priority during this interval.</summary>
+    public FormQueryPriority Priority { get; private set; }
+
+    /// <summary>When the query entered <see cref="Status"/>.</summary>
+    public DateTimeOffset StatusSince { get; private set; }
+
+    /// <summary>14-day SLA due timestamp while <see cref="FormQueryStatus.Open"/>; null otherwise.</summary>
+    public DateTimeOffset? DueAt { get; private set; }
+
+    /// <summary>When the query escalated during its current open window, if escalated.</summary>
+    public DateTimeOffset? EscalatedAt { get; private set; }
+
+    /// <summary>Who last answered the query in this cycle, for separation-of-duties enforcement.</summary>
+    public string? LastAnsweredBy { get; private set; }
+
+    /// <summary>Active kernel <c>Queried</c> assertion id during this interval.</summary>
+    public AssertionId KernelQueryId { get; private set; }
+
+    /// <summary>Active kernel <c>QueryAnswered</c> assertion id during this interval, if any.</summary>
+    public AssertionId? KernelAnswerId { get; private set; }
+
+    /// <summary>Actor that recorded this interval.</summary>
+    public string RecordedBy { get; private set; } = string.Empty;
+
+    /// <summary>Verbatim change reason associated with this interval.</summary>
+    public string ReasonForChange { get; private set; } = string.Empty;
+
+    /// <inheritdoc />
+    public TemporalPeriod Period { get; private set; }
+
+    /// <summary>True when this row represents the un-superseded open-ended truth.</summary>
+    public bool IsCurrent => Period.Recorded.IsOpen && Period.Valid.IsOpen;
+
+    internal void Supersede(DateTimeOffset supersededAt) => Period = Period.Supersede(supersededAt);
+}
+
+/// <summary>Point-in-time snapshot of a <see cref="FormQuery"/> reconstructed from bitemporal history.</summary>
+public sealed record FormQueryTemporalSnapshot(
+    FormQueryStatus Status,
+    FormQueryOwnerRole OwnerRole,
+    string? Assignee,
+    FormQueryPriority Priority,
+    DateTimeOffset StatusSince,
+    DateTimeOffset? DueAt,
+    DateTimeOffset? EscalatedAt,
+    string? LastAnsweredBy,
+    IReadOnlyList<FormQueryMessage> Messages);
 
 /// <summary>
 /// What the kernel must assert for one step of a query (spec §8.2): raise a <c>Queried</c> assertion about the
@@ -74,21 +311,36 @@ public enum KernelAssertionStepKind
 }
 
 /// <summary>
-/// A data query about one revision of one eCRF value (#5461, spec §11: the query workflow is EDC's). It targets the
-/// kernel <c>(ObservationId, Revision)</c> the monitor questioned, so a later correction shows the value changed. The
-/// workflow is Execution's; each step also states a kernel <c>Queried</c> or <c>QueryAnswered</c> assertion, or retracts
-/// one, so other applications count open queries from the kernel (spec §8.2).
+/// Bitemporal data query aggregate about one revision of one eCRF value (<c>PRD-QRY-001</c>, <c>PRD-QRY-002</c>).
+/// Tracks origin (<c>manual</c> | <c>system</c>), ownership (<c>site</c> | <c>monitor</c> | <c>data_manager</c>),
+/// optional assignee, priority, 14-day SLA due date, escalation, separation of duties on closure, append-only
+/// bitemporal state intervals (<c>K-TIME-1</c>/<c>K-TIME-2</c>), and insert-only messages (<c>KA001</c>).
 /// </summary>
-public sealed class FormQuery : AggregateRoot<Guid>
+[DerivedObject]
+public sealed class FormQuery : AggregateRoot<FormQueryId>
 {
-    private readonly List<FormQueryMessage> _messages = [];
+    /// <summary>Calendar days from entering or reopening <see cref="FormQueryStatus.Open"/> until escalation.</summary>
+    public const int OpenSlaDays = 14;
+
+    /// <summary>Maximum length of an optional assignee identifier.</summary>
+    public const int AssigneeMaxLength = 256;
+
+    private readonly List<FormQueryPeriod> _periods = [];
+    private readonly List<FormQueryMessageRecord> _messageRecords = [];
 
     private FormQuery()
     {
     }
 
     private FormQuery(
-        Guid id, TenantId tenantId, CollectionInstanceId formId, EnrollmentId enrollmentId, string itemId, ObservationId observationId, int revision)
+        FormQueryId id,
+        TenantId tenantId,
+        CollectionInstanceId formId,
+        EnrollmentId enrollmentId,
+        string itemId,
+        ObservationId observationId,
+        int revision,
+        FormQueryOrigin origin)
         : base(id)
     {
         TenantId = tenantId;
@@ -97,6 +349,7 @@ public sealed class FormQuery : AggregateRoot<Guid>
         ItemId = itemId;
         ObservationId = observationId;
         Revision = revision;
+        Origin = origin;
     }
 
     /// <summary>The tenant.</summary>
@@ -114,11 +367,38 @@ public sealed class FormQuery : AggregateRoot<Guid>
     /// <summary>The kernel observation holding the value.</summary>
     public ObservationId ObservationId { get; private set; }
 
-    /// <summary>The revision of the value the monitor questioned.</summary>
+    /// <summary>The revision of the value questioned when the query was raised.</summary>
     public int Revision { get; private set; }
 
-    /// <summary>Where the query is in its workflow.</summary>
+    /// <summary>How the query originated (<c>manual</c> or <c>system</c>).</summary>
+    public FormQueryOrigin Origin { get; private set; }
+
+    /// <summary>Where the query currently is in its workflow.</summary>
     public FormQueryStatus Status { get; private set; }
+
+    /// <summary>Role currently responsible for acting on the query.</summary>
+    public FormQueryOwnerRole OwnerRole { get; private set; }
+
+    /// <summary>Optional specific assignee identifier.</summary>
+    public string? Assignee { get; private set; }
+
+    /// <summary>Current query priority.</summary>
+    public FormQueryPriority Priority { get; private set; }
+
+    /// <summary>When the query was initially opened.</summary>
+    public DateTimeOffset OpenedAt { get; private set; }
+
+    /// <summary>When the query entered its current <see cref="Status"/>.</summary>
+    public DateTimeOffset StatusSince { get; private set; }
+
+    /// <summary>14 calendar days from <see cref="StatusSince"/> while <see cref="FormQueryStatus.Open"/>; null otherwise.</summary>
+    public DateTimeOffset? DueAt { get; private set; }
+
+    /// <summary>When the query escalated past its 14-day SLA during the current open window, if escalated.</summary>
+    public DateTimeOffset? EscalatedAt { get; private set; }
+
+    /// <summary>Actor who provided the active answer when <see cref="FormQueryStatus.Answered"/>.</summary>
+    public string? LastAnsweredBy { get; private set; }
 
     /// <summary>The kernel <c>Queried</c> assertion that stands for the query while it is open or answered.</summary>
     public AssertionId KernelQueryId { get; private set; }
@@ -126,16 +406,22 @@ public sealed class FormQuery : AggregateRoot<Guid>
     /// <summary>The kernel <c>QueryAnswered</c> assertion while the query is answered and the answer stands.</summary>
     public AssertionId? KernelAnswerId { get; private set; }
 
+    /// <summary>Every bitemporal state row of this query, including superseded intervals.</summary>
+    public IReadOnlyList<FormQueryPeriod> Periods => _periods;
+
+    /// <summary>Insert-only persisted conversation message rows.</summary>
+    public IReadOnlyList<FormQueryMessageRecord> MessageRecords => _messageRecords;
+
     /// <summary>What happened to the query, oldest first.</summary>
-    public IReadOnlyList<FormQueryMessage> Messages => _messages;
+    public IReadOnlyList<FormQueryMessage> Messages =>
+        [.. _messageRecords.OrderBy(m => m.Sequence).Select(m => m.ToMessage())];
 
     /// <summary>
     /// Raises a query about revision <paramref name="revision"/> of an observation, as the kernel assertion
     /// <paramref name="kernelQueryId"/>.
     /// </summary>
-    /// <exception cref="ArgumentException">An id is empty, the revision is not positive, or the text is not query text.</exception>
     public static (FormQuery Query, KernelAssertionStep Step) Raise(
-        Guid id,
+        FormQueryId id,
         TenantId tenantId,
         CollectionInstanceId formId,
         EnrollmentId enrollmentId,
@@ -145,30 +431,51 @@ public sealed class FormQuery : AggregateRoot<Guid>
         string text,
         AssertionId kernelQueryId,
         string by,
-        DateTimeOffset at)
+        DateTimeOffset at,
+        string reasonForChange = "",
+        FormQueryOrigin origin = FormQueryOrigin.Manual,
+        FormQueryOwnerRole ownerRole = FormQueryOwnerRole.Site,
+        FormQueryPriority priority = FormQueryPriority.Normal,
+        string? assignee = null)
     {
-        if (id == Guid.Empty || tenantId.IsEmpty || formId.IsEmpty || enrollmentId.IsEmpty || observationId.IsEmpty || kernelQueryId.IsEmpty
-            || string.IsNullOrWhiteSpace(itemId) || revision < 1)
+        if (id.IsEmpty || tenantId.IsEmpty || formId.IsEmpty || enrollmentId.IsEmpty || observationId.IsEmpty || kernelQueryId.IsEmpty
+            || string.IsNullOrWhiteSpace(itemId) || revision < 1 || !Enum.IsDefined(origin) || !Enum.IsDefined(ownerRole) || !Enum.IsDefined(priority))
         {
             throw new ArgumentException("A query names its form, enrollment, item, observation, a revision from 1 and its kernel assertion.");
         }
 
-        var query = new FormQuery(id, tenantId, formId, enrollmentId, itemId, observationId, revision)
+        var recordedAt = KernelTimestamps.ToStoredPrecision(at);
+        var normalizedAssignee = NormalizeAssignee(assignee);
+        var trimmed = Text(text);
+        var normalizedReason = NormalizeReason(reasonForChange, trimmed);
+        var dueAt = recordedAt.AddDays(OpenSlaDays);
+
+        var query = new FormQuery(id, tenantId, formId, enrollmentId, itemId.Trim(), observationId, revision, origin)
         {
             Status = FormQueryStatus.Open,
+            OwnerRole = ownerRole,
+            Assignee = normalizedAssignee,
+            Priority = priority,
+            OpenedAt = recordedAt,
+            StatusSince = recordedAt,
+            DueAt = dueAt,
+            EscalatedAt = null,
+            LastAnsweredBy = null,
             KernelQueryId = kernelQueryId,
+            KernelAnswerId = null,
         };
-        var trimmed = Text(text);
-        query._messages.Add(new FormQueryMessage(FormQueryMessageKind.Raised, trimmed, by, at));
+
+        query.AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        query.AppendMessage(FormQueryMessageKind.Raised, trimmed, by, normalizedReason, recordedAt);
         return (query, new KernelAssertionStep(KernelAssertionStepKind.Raise, kernelQueryId, null, trimmed));
     }
 
     /// <summary>True when <paramref name="text"/> is non-empty and fits a kernel assertion.</summary>
     public static bool IsText(string? text) => !string.IsNullOrWhiteSpace(text) && text.Trim().Length <= AssertionText.MaxLength;
 
-    /// <summary>The site answers an open query, as the kernel answer <paramref name="answerId"/>.</summary>
+    /// <summary>The site answers an open query (explicitly or via value edit), moving ownership to <see cref="FormQueryOwnerRole.Monitor"/>.</summary>
     /// <returns>The kernel step, or null when the query is not open.</returns>
-    public KernelAssertionStep? Answer(string text, AssertionId answerId, string by, DateTimeOffset at)
+    public KernelAssertionStep? Answer(string text, AssertionId answerId, string by, DateTimeOffset at, string reasonForChange = "")
     {
         if (Status != FormQueryStatus.Open)
         {
@@ -176,21 +483,33 @@ public sealed class FormQuery : AggregateRoot<Guid>
         }
 
         var trimmed = Text(text);
+        var normalizedReason = NormalizeReason(reasonForChange, trimmed);
+        var recordedAt = NextInstant(at);
+
+        SupersedeCurrent(recordedAt);
         Status = FormQueryStatus.Answered;
+        OwnerRole = FormQueryOwnerRole.Monitor;
+        StatusSince = recordedAt;
+        DueAt = null;
+        EscalatedAt = null;
+        LastAnsweredBy = by;
         KernelAnswerId = answerId;
-        _messages.Add(new FormQueryMessage(FormQueryMessageKind.Answered, trimmed, by, at));
+
+        AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        AppendMessage(FormQueryMessageKind.Answered, trimmed, by, normalizedReason, recordedAt);
         return new KernelAssertionStep(KernelAssertionStepKind.Answer, answerId, KernelQueryId, trimmed);
     }
 
     /// <summary>
-    /// The monitor reopens an answered or closed query. An answered query withdraws its answer, retracted as
-    /// <paramref name="kernelId"/>; a closed one is raised again in the kernel as the new query <paramref name="kernelId"/>.
+    /// The monitor reopens an answered or closed query, returning ownership to <see cref="FormQueryOwnerRole.Site"/>
+    /// with a fresh 14-day SLA window.
     /// </summary>
     /// <returns>The kernel step, or null when the query is open or cancelled.</returns>
-    public KernelAssertionStep? Reopen(string text, AssertionId kernelId, string by, DateTimeOffset at)
+    public KernelAssertionStep? Reopen(string text, AssertionId kernelId, string by, DateTimeOffset at, string reasonForChange = "")
     {
         KernelAssertionStep step;
         var trimmed = Text(text);
+        var normalizedReason = NormalizeReason(reasonForChange, trimmed);
         switch (Status)
         {
             case FormQueryStatus.Answered:
@@ -198,41 +517,240 @@ public sealed class FormQuery : AggregateRoot<Guid>
                 break;
             case FormQueryStatus.Closed:
                 step = new KernelAssertionStep(KernelAssertionStepKind.Raise, kernelId, null, trimmed);
-                KernelQueryId = kernelId;
                 break;
             default:
                 return null;
         }
 
+        var recordedAt = NextInstant(at);
+        SupersedeCurrent(recordedAt);
+        if (Status == FormQueryStatus.Closed)
+        {
+            KernelQueryId = kernelId;
+        }
+
         Status = FormQueryStatus.Open;
+        OwnerRole = FormQueryOwnerRole.Site;
+        StatusSince = recordedAt;
+        DueAt = recordedAt.AddDays(OpenSlaDays);
+        EscalatedAt = null;
+        LastAnsweredBy = null;
         KernelAnswerId = null;
-        _messages.Add(new FormQueryMessage(FormQueryMessageKind.Reopened, trimmed, by, at));
+
+        AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        AppendMessage(FormQueryMessageKind.Reopened, trimmed, by, normalizedReason, recordedAt);
         return step;
     }
 
-    /// <summary>The monitor closes an open or answered query; the kernel query is retracted as <paramref name="retractionId"/>.</summary>
-    /// <returns>The kernel step, or null when the query is closed or cancelled.</returns>
-    public KernelAssertionStep? Close(string reason, AssertionId retractionId, string by, DateTimeOffset at) =>
-        End(FormQueryStatus.Closed, FormQueryMessageKind.Closed, reason, retractionId, by, at);
+    /// <summary>
+    /// Closes a query and retracts its kernel <c>Queried</c> assertion. Enforces separation of duties on manual queries:
+    /// open manual queries cannot be closed directly, and answered manual queries cannot be closed by <see cref="LastAnsweredBy"/>.
+    /// </summary>
+    public FormQueryCloseOutcome Close(string note, AssertionId retractionId, string by, DateTimeOffset at, string? reasonForChange = null)
+    {
+        if (Status is FormQueryStatus.Closed or FormQueryStatus.Cancelled)
+        {
+            return new FormQueryCloseOutcome(null, FormQueryCloseDenial.InvalidTransition);
+        }
+
+        if (Origin == FormQueryOrigin.Manual)
+        {
+            if (Status != FormQueryStatus.Answered)
+            {
+                return new FormQueryCloseOutcome(null, FormQueryCloseDenial.InvalidTransition);
+            }
+
+            if (!string.IsNullOrWhiteSpace(LastAnsweredBy)
+                && string.Equals(by, LastAnsweredBy, StringComparison.Ordinal))
+            {
+                return new FormQueryCloseOutcome(null, FormQueryCloseDenial.SeparationOfDuties);
+            }
+        }
+
+        var trimmed = Text(note);
+        var normalizedReason = NormalizeReason(reasonForChange, trimmed);
+        var recordedAt = NextInstant(at);
+        SupersedeCurrent(recordedAt);
+
+        Status = FormQueryStatus.Closed;
+        StatusSince = recordedAt;
+        DueAt = null;
+        EscalatedAt = null;
+
+        AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        AppendMessage(FormQueryMessageKind.Closed, trimmed, by, normalizedReason, recordedAt);
+        return new FormQueryCloseOutcome(new KernelAssertionStep(KernelAssertionStepKind.Retract, retractionId, KernelQueryId, null));
+    }
 
     /// <summary>An open or answered query is withdrawn as raised in error; the kernel query is retracted.</summary>
     /// <returns>The kernel step, or null when the query is closed or cancelled.</returns>
-    public KernelAssertionStep? Cancel(string reason, AssertionId retractionId, string by, DateTimeOffset at) =>
-        End(FormQueryStatus.Cancelled, FormQueryMessageKind.Cancelled, reason, retractionId, by, at);
-
-    private KernelAssertionStep? End(
-        FormQueryStatus status, FormQueryMessageKind kind, string reason, AssertionId retractionId, string by, DateTimeOffset at)
+    public KernelAssertionStep? Cancel(string note, AssertionId retractionId, string by, DateTimeOffset at, string? reasonForChange = null)
     {
         if (Status is not (FormQueryStatus.Open or FormQueryStatus.Answered))
         {
             return null;
         }
 
-        Status = status;
-        _messages.Add(new FormQueryMessage(kind, Text(reason), by, at));
+        var trimmed = Text(note);
+        var normalizedReason = NormalizeReason(reasonForChange, trimmed);
+        var recordedAt = NextInstant(at);
+        SupersedeCurrent(recordedAt);
+
+        Status = FormQueryStatus.Cancelled;
+        StatusSince = recordedAt;
+        DueAt = null;
+        EscalatedAt = null;
+
+        AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        AppendMessage(FormQueryMessageKind.Cancelled, trimmed, by, normalizedReason, recordedAt);
         return new KernelAssertionStep(KernelAssertionStepKind.Retract, retractionId, KernelQueryId, null);
     }
 
+    /// <summary>
+    /// Escalates an open query that has reached or passed its 14-day <see cref="DueAt"/> timestamp to
+    /// <see cref="FormQueryPriority.High"/> and records <see cref="EscalatedAt"/> in bitemporal history.
+    /// </summary>
+    public bool Escalate(string by, DateTimeOffset at, string reasonForChange = "")
+    {
+        var checkAt = KernelTimestamps.ToStoredPrecision(at);
+        if (Status != FormQueryStatus.Open || EscalatedAt is not null || DueAt is not { } due || checkAt < due)
+        {
+            return false;
+        }
+
+        var recordedAt = NextInstant(checkAt);
+        var note = $"Query open past {OpenSlaDays} calendar days; escalated to high priority.";
+        var normalizedReason = NormalizeReason(reasonForChange, note);
+        SupersedeCurrent(recordedAt);
+
+        Priority = FormQueryPriority.High;
+        EscalatedAt = recordedAt;
+
+        AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        AppendMessage(FormQueryMessageKind.Escalated, note, by, normalizedReason, recordedAt);
+        return true;
+    }
+
+    /// <summary>
+    /// Reconstructs the query's state at <paramref name="validAt"/> as known at <paramref name="knownAt"/>, or null when
+    /// the query had not yet been opened or recorded at those coordinates.
+    /// </summary>
+    public FormQueryTemporalSnapshot? StateAsOf(DateTimeOffset validAt, DateTimeOffset knownAt)
+    {
+        var v = KernelTimestamps.ToStoredPrecision(validAt);
+        var k = KernelTimestamps.ToStoredPrecision(knownAt);
+        var period = _periods.SingleOrDefault(p => p.Period.IsEffectiveAsOf(v, k));
+        if (period is null)
+        {
+            return null;
+        }
+
+        var messages = _messageRecords
+            .Where(m => m.RecordedAt <= v && m.RecordedAt <= k)
+            .OrderBy(m => m.Sequence)
+            .Select(m => m.ToMessage())
+            .ToList();
+        if (messages.Count == 0 && _messageRecords.Count > 0)
+        {
+            messages.Add(_messageRecords.OrderBy(m => m.Sequence).First().ToMessage());
+        }
+
+        return new FormQueryTemporalSnapshot(
+            period.Status,
+            period.OwnerRole,
+            period.Assignee,
+            period.Priority,
+            period.StatusSince,
+            period.DueAt,
+            period.EscalatedAt,
+            period.LastAnsweredBy,
+            messages);
+    }
+
+    private FormQueryPeriod CurrentPeriod() =>
+        _periods.SingleOrDefault(p => p.IsCurrent)
+        ?? throw new InvalidOperationException($"FormQuery {Id} has no current bitemporal period; load it with its periods.");
+
+    private DateTimeOffset NextInstant(DateTimeOffset at)
+    {
+        var stored = KernelTimestamps.ToStoredPrecision(at);
+        var current = CurrentPeriod();
+        var minNext = current.Period.Recorded.Start > current.Period.Valid.Start
+            ? current.Period.Recorded.Start
+            : current.Period.Valid.Start;
+        return stored <= minNext ? minNext.AddMicroseconds(1) : stored;
+    }
+
+    private void SupersedeCurrent(DateTimeOffset effectiveAndRecordedAt)
+    {
+        var current = CurrentPeriod();
+        current.Supersede(effectiveAndRecordedAt);
+        _periods.Add(new FormQueryPeriod(
+            Guid.CreateVersion7(),
+            TenantId,
+            Id,
+            current.Status,
+            current.OwnerRole,
+            current.Assignee,
+            current.Priority,
+            current.StatusSince,
+            current.DueAt,
+            current.EscalatedAt,
+            current.LastAnsweredBy,
+            current.KernelQueryId,
+            current.KernelAnswerId,
+            current.RecordedBy,
+            current.ReasonForChange,
+            new TemporalPeriod(new TimeRange(current.Period.Valid.Start, effectiveAndRecordedAt), TimeRange.From(effectiveAndRecordedAt))));
+    }
+
+    private void AppendPeriod(DateTimeOffset validFrom, DateTimeOffset recordedAt, string by, string reasonForChange) =>
+        _periods.Add(new FormQueryPeriod(
+            Guid.CreateVersion7(),
+            TenantId,
+            Id,
+            Status,
+            OwnerRole,
+            Assignee,
+            Priority,
+            StatusSince,
+            DueAt,
+            EscalatedAt,
+            LastAnsweredBy,
+            KernelQueryId,
+            KernelAnswerId,
+            by,
+            reasonForChange,
+            new TemporalPeriod(TimeRange.From(validFrom), TimeRange.From(recordedAt))));
+
+    private void AppendMessage(FormQueryMessageKind kind, string text, string by, string reasonForChange, DateTimeOffset at) =>
+        _messageRecords.Add(new FormQueryMessageRecord(
+            Guid.CreateVersion7(),
+            TenantId,
+            Id,
+            _messageRecords.Count + 1,
+            kind,
+            text,
+            by,
+            reasonForChange,
+            at));
+
     private static string Text(string text) =>
         IsText(text) ? text.Trim() : throw new ArgumentException($"Query text is non-empty and at most {AssertionText.MaxLength} characters.", nameof(text));
+
+    private static string NormalizeReason(string? reason, string fallback) =>
+        string.IsNullOrWhiteSpace(reason) ? fallback : reason.Trim();
+
+    private static string? NormalizeAssignee(string? assignee)
+    {
+        if (string.IsNullOrWhiteSpace(assignee))
+        {
+            return null;
+        }
+
+        var trimmed = assignee.Trim();
+        return trimmed.Length <= AssigneeMaxLength
+            ? trimmed
+            : throw new ArgumentException($"Assignee may be at most {AssigneeMaxLength} characters.", nameof(assignee));
+    }
 }

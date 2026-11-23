@@ -10,6 +10,7 @@ using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Time;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Infrastructure;
@@ -25,11 +26,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Cadence.Modules.Execution.Endpoints;
 
 /// <summary>
-/// Data queries about eCRF values (#5461): raise a query on the current revision of a form's value or on a blank item,
-/// list a form's, an enrollment's or a study's visible queries with whether the value changed since, and answer, reopen,
-/// close or cancel one. Every write is a command sent through <see cref="IKernelCommandSender"/>, so the kernel authorizes
-/// it against the caller's grants and audits it; there are no batch routes, so a client acting on several queries sends
-/// one command each.
+/// Data queries about eCRF values (#5461, <c>PRD-QRY-001</c>, <c>PRD-QRY-002</c>): raise a query on the current revision
+/// of a form's value or on a blank item, list a form's, an enrollment's or a study's visible queries (including point-in-time
+/// <c>as_of</c> bitemporal reconstruction and owner/origin/priority/escalated filters), answer, reopen, close or cancel one,
+/// run 14-day SLA escalations, and read de-identified daily aging digests.
 /// </summary>
 internal static class FormQueryEndpoints
 {
@@ -47,9 +47,25 @@ internal static class FormQueryEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapGet("/queries/digests", ListAgingDigestsAsync)
+            .WithName("ExecutionListFormQueryAgingDigests")
+            .WithSummary("Lists daily de-identified query aging digests for visible scopes of a study.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/queries/escalate", EscalateOverdueQueriesAsync)
+            .WithName("ExecutionEscalateOverdueFormQueries")
+            .WithSummary("Escalates open queries past their 14-day SLA on IClock and emits daily aging digests (execution.query.manage).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesKernelCommand<EscalateFormQuery>()
+            .ProducesKernelCommand<GenerateFormQueryAgingDigest>();
+
         group.MapGet("/{formId:guid}/queries", ListForFormAsync)
             .WithName("ExecutionListFormQueries")
             .WithSummary("Lists a form's queries, oldest first, each with whether its value changed since it was raised.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -73,12 +89,14 @@ internal static class FormQueryEndpoints
 
         group.MapPost("/{formId:guid}/queries/{queryId:guid}/close", CloseAsync)
             .WithName("ExecutionCloseFormQuery")
-            .WithSummary("Closes an open or answered query; the change reason is the closing note (execution.query.manage).")
+            .WithSummary("Closes an answered manual query (separation of duties) or system query (execution.query.manage).")
+            .Accepts<FormQueryNoteRequest>(isOptional: true, contentType: "application/json")
             .ProducesKernelCommand<CloseFormQuery>();
 
         group.MapPost("/{formId:guid}/queries/{queryId:guid}/cancel", CancelAsync)
             .WithName("ExecutionCancelFormQuery")
             .WithSummary("Cancels an open or answered query raised in error (execution.query.manage).")
+            .Accepts<FormQueryNoteRequest>(isOptional: true, contentType: "application/json")
             .ProducesKernelCommand<CancelFormQuery>();
 
         return endpoints;
@@ -86,11 +104,13 @@ internal static class FormQueryEndpoints
 
     internal static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListForFormAsync(
         Guid formId,
+        [AsParameters] FormQueryTemporalFilter temporalFilter,
         HttpContext context,
         ICollectionInstanceRecords forms,
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
         IKernelReadAccess access,
         IKernelNavigator navigator,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         var tenant = KernelRequestTenant.Get(context);
@@ -99,7 +119,6 @@ internal static class FormQueryEndpoints
             return FormNotFound(formId);
         }
 
-        // Queries are seen by whoever may see the form's enrollment, as its values are (ADR-2457).
         if (!await access.CanSeeAsync(tenant, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false))
         {
             return NotVisible($"form {formId:D}");
@@ -107,9 +126,10 @@ internal static class FormQueryEndpoints
 
         var form = CollectionInstanceId.FromGuid(formId);
         var queries = await ReadAsync(contexts, tenant, q => q.FormId == form, cancellationToken).ConfigureAwait(false);
+        var states = ProjectStates(queries, temporalFilter, clock);
         var revisions = Revisions(record);
         var queryContext = await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([.. queries.Select(q => FormQueryResponse.From(q, revisions, queryContext))]);
+        return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([.. states.Select(s => FormQueryResponse.From(s, revisions, queryContext))]);
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListQueriesAsync(
@@ -119,6 +139,7 @@ internal static class FormQueryEndpoints
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
         IKernelReadAccess access,
         IKernelNavigator navigator,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         var hasEnrollment = filter.EnrollmentId is { } enrollmentGuid && enrollmentGuid != Guid.Empty;
@@ -133,21 +154,118 @@ internal static class FormQueryEndpoints
             return BadRequest("Specify either enrollment_id or study_id, not both.");
         }
 
-        FormQueryStatus? statusFilter = null;
-        if (!string.IsNullOrWhiteSpace(filter.Status))
+        if (!TryParseFilters(filter, out var parsedFilters, out var filterError))
         {
-            if (!Enum.TryParse<FormQueryStatus>(filter.Status.Trim(), ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
-            {
-                return BadRequest($"'{filter.Status}' is not a query status: open, answered, closed or cancelled.");
-            }
-
-            statusFilter = parsed;
+            return BadRequest(filterError!);
         }
 
         var tenant = KernelRequestTenant.Get(context);
         return hasEnrollment
-            ? await ListByEnrollmentAsync(EnrollmentId.FromGuid(filter.EnrollmentId!.Value), statusFilter, filter, tenant, forms, contexts, access, navigator, cancellationToken).ConfigureAwait(false)
-            : await ListByStudyAsync(StudyId.FromGuid(filter.StudyId!.Value), statusFilter, filter, tenant, forms, contexts, access, navigator, cancellationToken).ConfigureAwait(false);
+            ? await ListByEnrollmentAsync(EnrollmentId.FromGuid(filter.EnrollmentId!.Value), parsedFilters, filter, tenant, forms, contexts, access, navigator, clock, cancellationToken).ConfigureAwait(false)
+            : await ListByStudyAsync(StudyId.FromGuid(filter.StudyId!.Value), parsedFilters, filter, tenant, forms, contexts, access, navigator, clock, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<Results<Ok<IReadOnlyList<FormQueryAgingDigestResponse>>, ProblemHttpResult>> ListAgingDigestsAsync(
+        [FromQuery(Name = "study_id")] Guid? studyId,
+        [FromQuery(Name = "site")] string? site,
+        [FromQuery(Name = "recipient_role")] string? recipientRole,
+        HttpContext context,
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        IKernelReadAccess access,
+        IKernelNavigator navigator,
+        CancellationToken cancellationToken)
+    {
+        if (studyId is not { } studyGuid || studyGuid == Guid.Empty)
+        {
+            return BadRequest("Specify study_id to list query aging digests.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var study = StudyId.FromGuid(studyGuid);
+        var studyNode = NodeRef.For(study);
+        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return TypedResults.Problem(title: "Not found", detail: $"Study {studyGuid:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!await access.CanSeeAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false))
+        {
+            return NotVisible($"study {studyGuid:D}");
+        }
+
+        List<FormQueryAgingDigest> digests;
+        await using (var db = contexts.Create(tenant))
+        {
+            digests = await db.FormQueryAgingDigests.AsNoTracking()
+                .Where(d => d.StudyId == study)
+                .OrderByDescending(d => d.DigestDate)
+                .ThenBy(d => d.ScopeKey)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var visible = new List<FormQueryAgingDigestResponse>();
+        foreach (var digest in digests)
+        {
+            if (digest.StudySiteId is { } siteId
+                && !await access.CanSeeAsync(tenant, NodeRef.For(siteId), cancellationToken).ConfigureAwait(false))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(site)
+                && !string.Equals(digest.SiteCode, site.Trim(), StringComparison.OrdinalIgnoreCase)
+                && !(digest.StudySiteId is { } sId && string.Equals(sId.Value.ToString("D"), site.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(recipientRole)
+                && !string.Equals(digest.RecipientRole, recipientRole.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            visible.Add(FormQueryAgingDigestResponse.From(digest));
+        }
+
+        return TypedResults.Ok<IReadOnlyList<FormQueryAgingDigestResponse>>(visible);
+    }
+
+    internal static async Task<Results<Ok<FormQueryEscalationPassResponse>, ProblemHttpResult>> EscalateOverdueQueriesAsync(
+        [FromQuery(Name = "study_id")] Guid? studyId,
+        HttpContext context,
+        IFormQueryEscalationService escalation,
+        IKernelReadAccess access,
+        IKernelChangeReason changeReason,
+        IKernelNavigator navigator,
+        CancellationToken cancellationToken)
+    {
+        if (studyId is not { } studyGuid || studyGuid == Guid.Empty)
+        {
+            return BadRequest("Specify study_id to run query escalation.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var study = StudyId.FromGuid(studyGuid);
+        var studyNode = NodeRef.For(study);
+        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return TypedResults.Problem(title: "Not found", detail: $"Study {studyGuid:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!await access.CanSeeAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false))
+        {
+            return NotVisible($"study {studyGuid:D}");
+        }
+
+        var reason = changeReason.Read(context);
+        var result = await escalation.RunStudyPassAsync(tenant, study, reason, cancellationToken).ConfigureAwait(false);
+        return result.Value is { } outcome
+            ? TypedResults.Ok(new FormQueryEscalationPassResponse(
+                outcome.EscalatedQueries,
+                [.. outcome.Digests.Select(FormQueryAgingDigestResponse.From)]))
+            : KernelErrorEndpoints.Problem(result.Error!);
     }
 
     internal static async Task<Results<Created<FormQueryResponse>, ProblemHttpResult>> RaiseAsync(
@@ -163,7 +281,16 @@ internal static class FormQueryEndpoints
         var tenant = KernelRequestTenant.Get(context);
         var form = CollectionInstanceId.FromGuid(formId);
 
-        // The query is authorized against the form's enrollment, which the client does not send.
+        if (!TryParseOwnerRole(request?.OwnerRole, out var ownerRole))
+        {
+            return BadRequest($"'{request?.OwnerRole}' is not an owner role: site, monitor or data_manager.");
+        }
+
+        if (!TryParsePriority(request?.Priority, out var priority))
+        {
+            return BadRequest($"'{request?.Priority}' is not a priority: low, normal or high.");
+        }
+
         if (await forms.FindAsync(tenant, form, cancellationToken).ConfigureAwait(false) is not { } record)
         {
             return FormNotFound(formId);
@@ -210,17 +337,22 @@ internal static class FormQueryEndpoints
             targetRevision = request?.Revision ?? 0;
         }
 
+        var queryGuid = request?.QueryId is { } given && given != Guid.Empty ? given : Guid.CreateVersion7();
         var result = await sender.SendAsync(
             new RaiseFormQuery(
                 tenant,
-                request?.QueryId is { } given && given != Guid.Empty ? given : Guid.CreateVersion7(),
+                FormQueryId.FromGuid(queryGuid),
                 form,
                 record.EnrollmentId,
                 targetObservation,
                 targetRevision,
                 request?.Text ?? string.Empty,
                 key,
-                reason),
+                reason,
+                Origin: FormQueryOrigin.Manual,
+                OwnerRole: ownerRole ?? FormQueryOwnerRole.Site,
+                Priority: priority ?? FormQueryPriority.Normal,
+                Assignee: request?.Assignee),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (result.Value is not { } state)
         {
@@ -228,38 +360,55 @@ internal static class FormQueryEndpoints
         }
 
         var response = await RespondAsync(forms, navigator, tenant, state, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}/queries/{state.QueryId:D}", response);
+        return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}/queries/{state.QueryId.Value:D}", response);
     }
 
     internal static Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> AnswerAsync(
         Guid formId, Guid queryId, FormQueryTextRequest request, HttpContext context, [AsParameters] FormQueryCommandServices services, CancellationToken cancellationToken) =>
         StepAsync(formId, queryId, context, services, (tenant, enrollment, key, reason) =>
-            new AnswerFormQuery(tenant, queryId, enrollment, request?.Text ?? string.Empty, key, reason), cancellationToken);
+            new AnswerFormQuery(tenant, FormQueryId.FromGuid(queryId), enrollment, request?.Text ?? string.Empty, key, reason), cancellationToken);
 
     internal static Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> ReopenAsync(
         Guid formId, Guid queryId, FormQueryTextRequest request, HttpContext context, [AsParameters] FormQueryCommandServices services, CancellationToken cancellationToken) =>
         StepAsync(formId, queryId, context, services, (tenant, enrollment, key, reason) =>
-            new ReopenFormQuery(tenant, queryId, enrollment, request?.Text ?? string.Empty, key, reason), cancellationToken);
+            new ReopenFormQuery(tenant, FormQueryId.FromGuid(queryId), enrollment, request?.Text ?? string.Empty, key, reason), cancellationToken);
 
-    internal static Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> CloseAsync(
-        Guid formId, Guid queryId, HttpContext context, [AsParameters] FormQueryCommandServices services, CancellationToken cancellationToken) =>
-        StepAsync(formId, queryId, context, services, (tenant, enrollment, key, reason) =>
-            new CloseFormQuery(tenant, queryId, enrollment, key, reason), cancellationToken);
+    internal static async Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> CloseAsync(
+        Guid formId, Guid queryId, HttpContext context, [AsParameters] FormQueryCommandServices services, CancellationToken cancellationToken)
+    {
+        var note = await ReadOptionalNoteAsync(context, cancellationToken).ConfigureAwait(false);
+        return await StepAsync(formId, queryId, context, services, (tenant, enrollment, key, reason) =>
+            new CloseFormQuery(tenant, FormQueryId.FromGuid(queryId), enrollment, key, reason, note?.Text), cancellationToken).ConfigureAwait(false);
+    }
 
-    internal static Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> CancelAsync(
-        Guid formId, Guid queryId, HttpContext context, [AsParameters] FormQueryCommandServices services, CancellationToken cancellationToken) =>
-        StepAsync(formId, queryId, context, services, (tenant, enrollment, key, reason) =>
-            new CancelFormQuery(tenant, queryId, enrollment, key, reason), cancellationToken);
+    internal static async Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> CancelAsync(
+        Guid formId, Guid queryId, HttpContext context, [AsParameters] FormQueryCommandServices services, CancellationToken cancellationToken)
+    {
+        var note = await ReadOptionalNoteAsync(context, cancellationToken).ConfigureAwait(false);
+        return await StepAsync(formId, queryId, context, services, (tenant, enrollment, key, reason) =>
+            new CancelFormQuery(tenant, FormQueryId.FromGuid(queryId), enrollment, key, reason, note?.Text), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<FormQueryNoteRequest?> ReadOptionalNoteAsync(HttpContext context, CancellationToken cancellationToken)
+    {
+        if (!context.Request.HasJsonContentType() || context.Request.ContentLength == 0)
+        {
+            return null;
+        }
+
+        return await context.Request.ReadFromJsonAsync<FormQueryNoteRequest>(cancellationToken).ConfigureAwait(false);
+    }
 
     private static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListByEnrollmentAsync(
         EnrollmentId enrollment,
-        FormQueryStatus? statusFilter,
+        ParsedQueryFilters parsedFilters,
         FormQueryListFilter filter,
         TenantId tenant,
         ICollectionInstanceRecords forms,
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
         IKernelReadAccess access,
         IKernelNavigator navigator,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         if (!await access.CanSeeAsync(tenant, NodeRef.For(enrollment), cancellationToken).ConfigureAwait(false))
@@ -267,22 +416,24 @@ internal static class FormQueryEndpoints
             return NotVisible($"enrollment {enrollment.Value:D}");
         }
 
-        var queries = statusFilter is { } wanted
+        var queries = !filter.HasTemporalCoordinate && parsedFilters.Status is { } wanted
             ? await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment && q.Status == wanted, cancellationToken).ConfigureAwait(false)
             : await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment, cancellationToken).ConfigureAwait(false);
-        var responses = await ShapeQueriesAsync(queries, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(ApplyPostFilters(responses, filter));
+        var states = ProjectStates(queries, filter.Temporal, clock);
+        var responses = await ShapeQueriesAsync(states, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(ApplyPostFilters(responses, parsedFilters, filter));
     }
 
     private static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListByStudyAsync(
         StudyId study,
-        FormQueryStatus? statusFilter,
+        ParsedQueryFilters parsedFilters,
         FormQueryListFilter filter,
         TenantId tenant,
         ICollectionInstanceRecords forms,
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
         IKernelReadAccess access,
         IKernelNavigator navigator,
+        IClock clock,
         CancellationToken cancellationToken)
     {
         var studyNode = NodeRef.For(study);
@@ -333,15 +484,41 @@ internal static class FormQueryEndpoints
         }
 
         var allowed = visibleEnrollments.Keys.ToList();
-        var queries = statusFilter is { } wanted
+        var queries = !filter.HasTemporalCoordinate && parsedFilters.Status is { } wanted
             ? await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId) && q.Status == wanted, cancellationToken).ConfigureAwait(false)
             : await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), cancellationToken).ConfigureAwait(false);
-        var responses = await ShapeQueriesAsync(queries, visibleEnrollments, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(ApplyPostFilters(responses, filter));
+        var states = ProjectStates(queries, filter.Temporal, clock);
+        var responses = await ShapeQueriesAsync(states, visibleEnrollments, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(ApplyPostFilters(responses, parsedFilters, filter));
+    }
+
+    private static List<FormQueryState> ProjectStates(
+        IReadOnlyList<FormQuery> queries,
+        FormQueryTemporalFilter temporal,
+        IClock clock)
+    {
+        if (!temporal.HasCoordinate)
+        {
+            return [.. queries.Select(q => FormQueryState.Of(q, q.VersionIndex))];
+        }
+
+        var now = clock.UtcNow;
+        var validAt = temporal.ValidAt ?? temporal.AsOf ?? now;
+        var knownAt = temporal.KnownAt ?? temporal.AsOf ?? now;
+        var projected = new List<FormQueryState>(queries.Count);
+        foreach (var query in queries)
+        {
+            if (query.StateAsOf(validAt, knownAt) is { } snapshot)
+            {
+                projected.Add(FormQueryState.OfSnapshot(query, snapshot));
+            }
+        }
+
+        return projected;
     }
 
     private static async Task<List<FormQueryResponse>> ShapeQueriesAsync(
-        IReadOnlyList<FormQuery> queries,
+        IReadOnlyList<FormQueryState> queries,
         IReadOnlyDictionary<EnrollmentId, EnrollmentHeader>? knownHeaders,
         TenantId tenant,
         ICollectionInstanceRecords forms,
@@ -384,9 +561,41 @@ internal static class FormQueryEndpoints
         return [.. queries.Select(q => FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId)))];
     }
 
-    private static IReadOnlyList<FormQueryResponse> ApplyPostFilters(IReadOnlyList<FormQueryResponse> responses, FormQueryListFilter filter)
+    private static IReadOnlyList<FormQueryResponse> ApplyPostFilters(
+        IReadOnlyList<FormQueryResponse> responses,
+        ParsedQueryFilters parsed,
+        FormQueryListFilter filter)
     {
         IEnumerable<FormQueryResponse> filtered = responses;
+        if (parsed.Status is { } status)
+        {
+            var statusWire = status.ToString().ToLowerInvariant();
+            filtered = filtered.Where(q => string.Equals(q.Status, statusWire, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (parsed.OwnerRole is { } ownerRole)
+        {
+            var ownerWire = FormQueryEscalationService.ToSnakeCase(ownerRole);
+            filtered = filtered.Where(q => string.Equals(q.OwnerRole, ownerWire, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (parsed.Origin is { } origin)
+        {
+            var originWire = origin.ToString().ToLowerInvariant();
+            filtered = filtered.Where(q => string.Equals(q.Origin, originWire, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (parsed.Priority is { } priority)
+        {
+            var priorityWire = priority.ToString().ToLowerInvariant();
+            filtered = filtered.Where(q => string.Equals(q.Priority, priorityWire, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (filter.Escalated is { } escalated)
+        {
+            filtered = filtered.Where(q => (q.EscalatedAt is not null) == escalated);
+        }
+
         if (!string.IsNullOrWhiteSpace(filter.Site))
         {
             var site = filter.Site.Trim();
@@ -411,6 +620,90 @@ internal static class FormQueryEndpoints
         return [.. filtered];
     }
 
+    private static bool TryParseFilters(FormQueryListFilter filter, out ParsedQueryFilters parsed, out string? error)
+    {
+        FormQueryStatus? status = null;
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            if (!Enum.TryParse<FormQueryStatus>(filter.Status.Trim(), ignoreCase: true, out var s) || !Enum.IsDefined(s))
+            {
+                parsed = default;
+                error = $"'{filter.Status}' is not a query status: open, answered, closed or cancelled.";
+                return false;
+            }
+
+            status = s;
+        }
+
+        if (!TryParseOwnerRole(filter.Owner, out var ownerRole))
+        {
+            parsed = default;
+            error = $"'{filter.Owner}' is not an owner role: site, monitor or data_manager.";
+            return false;
+        }
+
+        FormQueryOrigin? origin = null;
+        if (!string.IsNullOrWhiteSpace(filter.Origin))
+        {
+            if (!Enum.TryParse<FormQueryOrigin>(filter.Origin.Trim(), ignoreCase: true, out var o) || !Enum.IsDefined(o))
+            {
+                parsed = default;
+                error = $"'{filter.Origin}' is not a query origin: manual or system.";
+                return false;
+            }
+
+            origin = o;
+        }
+
+        if (!TryParsePriority(filter.Priority, out var priority))
+        {
+            parsed = default;
+            error = $"'{filter.Priority}' is not a query priority: low, normal or high.";
+            return false;
+        }
+
+        parsed = new ParsedQueryFilters(status, ownerRole, origin, priority);
+        error = null;
+        return true;
+    }
+
+    private static bool TryParseOwnerRole(string? raw, out FormQueryOwnerRole? role)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            role = null;
+            return true;
+        }
+
+        var normalized = raw.Trim().Replace("_", string.Empty, StringComparison.Ordinal).Replace("-", string.Empty, StringComparison.Ordinal);
+        if (Enum.TryParse<FormQueryOwnerRole>(normalized, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+        {
+            role = parsed;
+            return true;
+        }
+
+        role = null;
+        return false;
+    }
+
+    private static bool TryParsePriority(string? raw, out FormQueryPriority? priority)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            priority = null;
+            return true;
+        }
+
+        if (Enum.TryParse<FormQueryPriority>(raw.Trim(), ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+        {
+            priority = parsed;
+            return true;
+        }
+
+        priority = null;
+        return false;
+    }
+
     private static async Task<FormQueryContext> BuildFormContextAsync(
         IKernelNavigator navigator,
         TenantId tenant,
@@ -428,10 +721,6 @@ internal static class FormQueryEndpoints
             record.PlannedActivityId);
     }
 
-    /// <summary>
-    /// Finds the query on the form to authorize the step against its enrollment, sends the command built by
-    /// <paramref name="command"/>, and answers with the query as it now stands.
-    /// </summary>
     private static async Task<Results<Ok<FormQueryResponse>, ProblemHttpResult>> StepAsync(
         Guid formId,
         Guid queryId,
@@ -442,7 +731,8 @@ internal static class FormQueryEndpoints
     {
         var tenant = KernelRequestTenant.Get(context);
         var form = CollectionInstanceId.FromGuid(formId);
-        var query = (await ReadAsync(services.Contexts, tenant, q => q.Id == queryId && q.FormId == form, cancellationToken).ConfigureAwait(false))
+        var typedQueryId = FormQueryId.FromGuid(queryId);
+        var query = (await ReadAsync(services.Contexts, tenant, q => q.Id == typedQueryId && q.FormId == form, cancellationToken).ConfigureAwait(false))
             .SingleOrDefault();
         if (query is null)
         {
@@ -492,30 +782,46 @@ internal static class FormQueryEndpoints
     private static ProblemHttpResult NotVisible(string what) =>
         TypedResults.Problem(title: "Not visible", detail: $"You may not see {what}.", statusCode: StatusCodes.Status403Forbidden);
 
+    private readonly record struct ParsedQueryFilters(
+        FormQueryStatus? Status,
+        FormQueryOwnerRole? OwnerRole,
+        FormQueryOrigin? Origin,
+        FormQueryPriority? Priority);
+
     private sealed record EnrollmentHeader(Guid StudyId, Guid? StudySiteId, string? SiteCode, string? SubjectCode);
 }
 
+/// <summary>Bitemporal query-string parameters for point-in-time query reads.</summary>
+internal sealed record FormQueryTemporalFilter(
+    [FromQuery(Name = "as_of")] DateTimeOffset? AsOf = null,
+    [FromQuery(Name = "valid_at")] DateTimeOffset? ValidAt = null,
+    [FromQuery(Name = "known_at")] DateTimeOffset? KnownAt = null)
+{
+    public bool HasCoordinate => AsOf.HasValue || ValidAt.HasValue || KnownAt.HasValue;
+}
+
 /// <summary>Query-string parameters for <c>GET /api/v1/execution/forms/queries</c>.</summary>
-/// <param name="EnrollmentId">Lists queries for one enrollment.</param>
-/// <param name="StudyId">Lists queries across visible enrollments of one study.</param>
-/// <param name="Status">Optional status filter (<c>open</c>, <c>answered</c>, <c>closed</c>, <c>cancelled</c>).</param>
-/// <param name="Site">Optional study site code or id filter.</param>
-/// <param name="Participant">Optional participant subject code or enrollment id filter.</param>
-/// <param name="ValueChanged">Optional filter for whether the value changed after the query opened.</param>
 internal sealed record FormQueryListFilter(
     [FromQuery(Name = "enrollment_id")] Guid? EnrollmentId = null,
     [FromQuery(Name = "study_id")] Guid? StudyId = null,
     [FromQuery(Name = "status")] string? Status = null,
+    [FromQuery(Name = "owner")] string? Owner = null,
+    [FromQuery(Name = "origin")] string? Origin = null,
+    [FromQuery(Name = "priority")] string? Priority = null,
+    [FromQuery(Name = "escalated")] bool? Escalated = null,
     [FromQuery(Name = "site")] string? Site = null,
     [FromQuery(Name = "participant")] string? Participant = null,
-    [FromQuery(Name = "value_changed")] bool? ValueChanged = null);
+    [FromQuery(Name = "value_changed")] bool? ValueChanged = null,
+    [FromQuery(Name = "as_of")] DateTimeOffset? AsOf = null,
+    [FromQuery(Name = "valid_at")] DateTimeOffset? ValidAt = null,
+    [FromQuery(Name = "known_at")] DateTimeOffset? KnownAt = null)
+{
+    public FormQueryTemporalFilter Temporal => new(AsOf, ValidAt, KnownAt);
+
+    public bool HasTemporalCoordinate => Temporal.HasCoordinate;
+}
 
 /// <summary>The services a query step needs, bound from DI as one parameter.</summary>
-/// <param name="Forms">The kernel's form records, for the value's current revision.</param>
-/// <param name="Contexts">The module's tenant-scoped reads.</param>
-/// <param name="Sender">The kernel command path.</param>
-/// <param name="ChangeReason">The signed change reason.</param>
-/// <param name="Navigator">Kernel navigation, for site and subject codes.</param>
 internal sealed record FormQueryCommandServices(
     [FromServices] ICollectionInstanceRecords Forms,
     [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext> Contexts,

@@ -129,7 +129,8 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<FormAttestationView> Attestations,
     string? ContentHash,
-    string? CollectionTitle = null);
+    string? CollectionTitle = null,
+    long EnrollmentVersion = 1);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>

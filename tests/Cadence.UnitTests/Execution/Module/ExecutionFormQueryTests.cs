@@ -14,62 +14,95 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Module;
 
 /// <summary>
-/// The query workflow without a database (#5461): which steps each status allows, the kernel assertion each step states,
-/// and how a query read shows that its value changed.
+/// Unit tests for the bitemporal <see cref="FormQuery"/> aggregate (<c>PRD-QRY-001</c>, <c>PRD-QRY-002</c>):
+/// kernel assertion mirroring steps, separation of duties on closure, 14-day SLA due date and escalation,
+/// and point-in-time <see cref="FormQuery.StateAsOf"/> reconstruction.
 /// </summary>
 public sealed class ExecutionFormQueryTests
 {
-    private static readonly DateTimeOffset At = new(2026, 3, 2, 9, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset At = new(2026, 3, 2, 9, 0, 0, TimeSpan.Zero); // deid-ignore: fixed test instant
 
-    /// <summary>
-    /// Raising states a kernel query; answering answers it; reopening an answered query retracts the answer and keeps the
-    /// kernel query; closing retracts the kernel query; reopening a closed one raises a new kernel query.
-    /// </summary>
     [Fact(DisplayName = "FormQuery_Steps_StateTheMatchingKernelAssertions")]
     public void FormQueryStepsStateTheMatchingKernelAssertions()
     {
         var (query, raised) = Raise();
         raised.Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Raise, query.KernelQueryId, null, "Confirm the value"));
+        query.Origin.Should().Be(FormQueryOrigin.Manual);
+        query.OwnerRole.Should().Be(FormQueryOwnerRole.Site);
+        query.DueAt.Should().Be(At.AddDays(14));
         var firstQuery = query.KernelQueryId;
 
         var answerId = AssertionId.New();
-        query.Answer(" Confirmed ", answerId, "crc", At)
+        query.Answer(" Confirmed ", answerId, "crc", At.AddHours(1), "Checked chart")
             .Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Answer, answerId, firstQuery, "Confirmed"));
         query.KernelAnswerId.Should().Be(answerId);
+        query.OwnerRole.Should().Be(FormQueryOwnerRole.Monitor);
+        query.DueAt.Should().BeNull();
+        query.LastAnsweredBy.Should().Be("crc");
 
         var withdrawal = AssertionId.New();
-        query.Reopen("Source reads 128", withdrawal, "cra", At)
+        query.Reopen("Source reads 128", withdrawal, "cra", At.AddHours(2), "Source discrepancy")
             .Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Retract, withdrawal, answerId, null));
-        query.Should().Match<FormQuery>(q => q.Status == FormQueryStatus.Open && q.KernelQueryId == firstQuery && q.KernelAnswerId == null);
+        query.Should().Match<FormQuery>(q =>
+            q.Status == FormQueryStatus.Open
+            && q.OwnerRole == FormQueryOwnerRole.Site
+            && q.DueAt == At.AddHours(2).AddDays(14)
+            && q.KernelQueryId == firstQuery
+            && q.KernelAnswerId == null);
+
+        var secondAnswer = AssertionId.New();
+        query.Answer("Updated to 128", secondAnswer, "crc", At.AddHours(3), "Corrected")
+            .Should().NotBeNull();
 
         var close = AssertionId.New();
-        query.Close("Corrected", close, "cra", At)
-            .Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Retract, close, firstQuery, null));
+        query.Close("Corrected", close, "cra", At.AddHours(4), "Verified against source")
+            .Step.Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Retract, close, firstQuery, null));
 
         var second = AssertionId.New();
-        query.Reopen("Still wrong", second, "cra", At)
+        query.Reopen("Still wrong", second, "cra", At.AddHours(5), "Follow-up audit")
             .Should().Be(new KernelAssertionStep(KernelAssertionStepKind.Raise, second, null, "Still wrong"));
         query.KernelQueryId.Should().Be(second);
         query.Messages.Select(m => m.Kind).Should().Equal(
-            FormQueryMessageKind.Raised, FormQueryMessageKind.Answered, FormQueryMessageKind.Reopened, FormQueryMessageKind.Closed, FormQueryMessageKind.Reopened);
+            FormQueryMessageKind.Raised,
+            FormQueryMessageKind.Answered,
+            FormQueryMessageKind.Reopened,
+            FormQueryMessageKind.Answered,
+            FormQueryMessageKind.Closed,
+            FormQueryMessageKind.Reopened);
     }
 
-    /// <summary>An open query cannot be reopened, a closed one cannot be answered or closed again, and a cancelled one allows nothing.</summary>
-    [Fact(DisplayName = "FormQuery_RefusesStepsItsStatusDoesNotAllow")]
-    public void FormQueryRefusesStepsItsStatusDoesNotAllow()
+    [Fact(DisplayName = "FormQuery_RefusesStepsItsStatusDoesNotAllow_AndEnforcesSeparationOfDuties")]
+    public void FormQueryRefusesStepsItsStatusDoesNotAllowAndEnforcesSeparationOfDuties()
     {
         var (query, _) = Raise();
         query.Reopen("Why", AssertionId.New(), "cra", At).Should().BeNull();
 
-        query.Close("Done", AssertionId.New(), "cra", At).Should().NotBeNull();
-        query.Answer("Late", AssertionId.New(), "crc", At).Should().BeNull();
-        query.Close("Again", AssertionId.New(), "cra", At).Should().BeNull();
-        query.Cancel("Error", AssertionId.New(), "cra", At).Should().BeNull();
+        // Open manual queries cannot be closed directly.
+        var openManualClose = query.Close("Premature close", AssertionId.New(), "cra", At);
+        openManualClose.Step.Should().BeNull();
+        openManualClose.Denial.Should().Be(FormQueryCloseDenial.InvalidTransition);
 
+        // Answered manual queries cannot be closed by the same user who answered them.
+        query.Answer("Answered by site", AssertionId.New(), "crc", At.AddMinutes(5)).Should().NotBeNull();
+        var selfClose = query.Close("Self close", AssertionId.New(), "crc", At.AddMinutes(10));
+        selfClose.Step.Should().BeNull();
+        selfClose.Denial.Should().Be(FormQueryCloseDenial.SeparationOfDuties);
+
+        // A distinct monitor closes successfully; once closed, no further answer/close/cancel is allowed.
+        query.Close("Done", AssertionId.New(), "cra", At.AddMinutes(15)).Step.Should().NotBeNull();
+        query.Answer("Late", AssertionId.New(), "crc", At.AddMinutes(20)).Should().BeNull();
+        query.Close("Again", AssertionId.New(), "cra", At.AddMinutes(25)).Step.Should().BeNull();
+        query.Cancel("Error", AssertionId.New(), "cra", At.AddMinutes(30)).Should().BeNull();
+
+        // Open system queries can be auto-closed directly when resolved.
+        var (systemQuery, _) = Raise(origin: FormQueryOrigin.System);
+        systemQuery.Close("Rule passed", AssertionId.New(), "svc:execution-edit-checks", At.AddMinutes(5)).Step.Should().NotBeNull();
+
+        // Open or answered queries can be cancelled as raised in error.
         var (cancelled, _) = Raise();
-        cancelled.Cancel("Raised on the wrong value", AssertionId.New(), "cra", At).Should().NotBeNull();
-        cancelled.Answer("Late", AssertionId.New(), "crc", At).Should().BeNull();
-        cancelled.Reopen("Late", AssertionId.New(), "cra", At).Should().BeNull();
+        cancelled.Cancel("Raised on the wrong value", AssertionId.New(), "cra", At.AddMinutes(5)).Should().NotBeNull();
+        cancelled.Answer("Late", AssertionId.New(), "crc", At.AddMinutes(10)).Should().BeNull();
+        cancelled.Reopen("Late", AssertionId.New(), "cra", At.AddMinutes(15)).Should().BeNull();
         cancelled.Status.Should().Be(FormQueryStatus.Cancelled);
 
         var empty = () => Raise(text: " ");
@@ -78,28 +111,84 @@ public sealed class ExecutionFormQueryTests
         overlong.Should().Throw<ArgumentException>();
     }
 
-    /// <summary>
-    /// A query read shows the value changed once its current revision passed the queried one, the question as last
-    /// reopened, and no current revision when the form no longer shows the value.
-    /// </summary>
+    [Fact(DisplayName = "FormQuery_EscalationAndStateAsOf_ReconstructsBitemporalHistory")]
+    public void FormQueryEscalationAndStateAsOfReconstructsBitemporalHistory()
+    {
+        var (query, _) = Raise();
+
+        // Before 14 days, escalation is refused.
+        query.Escalate("cra", At.AddDays(13).AddHours(23)).Should().BeFalse();
+
+        // At 14 days, escalation elevates priority to High and sets EscalatedAt.
+        var escalateAt = At.AddDays(14).AddMinutes(1);
+        query.Escalate("cra", escalateAt, "14-day SLA reached").Should().BeTrue();
+        query.Priority.Should().Be(FormQueryPriority.High);
+        query.EscalatedAt.Should().Be(escalateAt);
+
+        // Answering clears EscalatedAt and moves ownership to Monitor.
+        var answerAt = At.AddDays(15);
+        query.Answer("Confirmed", AssertionId.New(), "crc", answerAt, "Answered after escalation").Should().NotBeNull();
+
+        // Point-in-time reconstruction across bitemporal coordinates:
+        query.StateAsOf(At.AddMinutes(-1), answerAt).Should().BeNull("query did not exist before OpenedAt");
+
+        var atDay5 = query.StateAsOf(At.AddDays(5), answerAt)!;
+        atDay5.Status.Should().Be(FormQueryStatus.Open);
+        atDay5.Priority.Should().Be(FormQueryPriority.Normal);
+        atDay5.EscalatedAt.Should().BeNull();
+        atDay5.OwnerRole.Should().Be(FormQueryOwnerRole.Site);
+
+        var atEscalated = query.StateAsOf(escalateAt.AddHours(2), answerAt)!;
+        atEscalated.Status.Should().Be(FormQueryStatus.Open);
+        atEscalated.Priority.Should().Be(FormQueryPriority.High);
+        atEscalated.EscalatedAt.Should().Be(escalateAt);
+
+        var atAnswered = query.StateAsOf(answerAt.AddHours(1), answerAt.AddHours(1))!;
+        atAnswered.Status.Should().Be(FormQueryStatus.Answered);
+        atAnswered.OwnerRole.Should().Be(FormQueryOwnerRole.Monitor);
+        atAnswered.LastAnsweredBy.Should().Be("crc");
+    }
+
     [Fact(DisplayName = "FormQueryResponse_ShowsTheValueChanged_AndTheQuestionAsItStands")]
     public void FormQueryResponseShowsTheValueChangedAndTheQuestionAsItStands()
     {
         var (query, _) = Raise();
-        query.Answer("Confirmed", AssertionId.New(), "crc", At);
-        query.Reopen("Source reads 128", AssertionId.New(), "cra", At);
+        query.Answer("Confirmed", AssertionId.New(), "crc", At.AddMinutes(5));
+        query.Reopen("Source reads 128", AssertionId.New(), "cra", At.AddMinutes(10));
         var state = FormQueryState.Of(query, 3);
 
         var changed = FormQueryResponse.From(state, new Dictionary<ObservationId, int> { [query.ObservationId] = 2 });
         changed.Should().Match<FormQueryResponse>(r =>
-            r.Status == "open" && r.CurrentRevision == 2 && r.ValueChanged && r.Text == "Source reads 128" && r.RaisedBy == "cra" && r.Version == 3);
+            r.Status == "open"
+            && r.Origin == "manual"
+            && r.OwnerRole == "site"
+            && r.Priority == "normal"
+            && r.CurrentRevision == 2
+            && r.ValueChanged
+            && r.Text == "Source reads 128"
+            && r.RaisedBy == "cra"
+            && r.Version == 3);
         changed.Messages.Select(m => m.Kind).Should().Equal("raised", "answered", "reopened");
 
         FormQueryResponse.From(state, new Dictionary<ObservationId, int> { [query.ObservationId] = 1 }).ValueChanged.Should().BeFalse();
         FormQueryResponse.From(state, new Dictionary<ObservationId, int>()).Should().Match<FormQueryResponse>(r => r.CurrentRevision == null && !r.ValueChanged);
     }
 
-    private static (FormQuery Query, KernelAssertionStep Step) Raise(string text = "Confirm the value") =>
+    private static (FormQuery Query, KernelAssertionStep Step) Raise(
+        string text = "Confirm the value",
+        FormQueryOrigin origin = FormQueryOrigin.Manual) =>
         FormQuery.Raise(
-            Guid.CreateVersion7(), TenantId.New(), CollectionInstanceId.New(), EnrollmentId.New(), "item.sbp", ObservationId.New(), 1, text, AssertionId.New(), "cra", At);
+            FormQueryId.New(),
+            TenantId.New(),
+            CollectionInstanceId.New(),
+            EnrollmentId.New(),
+            "item.sbp",
+            ObservationId.New(),
+            1,
+            text,
+            AssertionId.New(),
+            "cra",
+            At,
+            "Source data verification",
+            origin);
 }

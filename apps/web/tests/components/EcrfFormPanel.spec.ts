@@ -462,6 +462,9 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     expect(view.find('[data-testid="ecrf-form-assertions"]').text()).toContain(
       "Verified on observation:"
     );
+    expect(view.find('[data-testid="ecrf-form-assertions"]').text()).toContain(
+      "(reason:"
+    );
     expect(view.find('[data-testid="ecrf-form-signatures"]').text()).toContain(
       "Approved by pi1"
     );
@@ -772,9 +775,14 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
     return wrapper;
   }
 
-  async function raiseOnSysbp(view: VueWrapper, text: string) {
+  async function raiseOnSysbp(
+    view: VueWrapper,
+    text: string,
+    changeReason = "Source chart discrepancy"
+  ) {
     await view.find("#ecrf-raise-SYSBP").trigger("click");
     await view.find("#ecrf-raise-text").setValue(text);
+    await view.find("#ecrf-raise-reason").setValue(changeReason);
     await view.find("#ecrf-raise-confirm").trigger("click");
     await flushPromises();
   }
@@ -812,6 +820,12 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       "Query on SYSBP (revision 3)"
     );
     await view.find("#ecrf-raise-text").setValue(" Please confirm the value ");
+    expect(
+      view.find("#ecrf-raise-confirm").attributes("disabled")
+    ).toBeDefined();
+    await view
+      .find("#ecrf-raise-reason")
+      .setValue(" Monitor source data audit ");
     await view.find("#ecrf-raise-confirm").trigger("click");
     await flushPromises();
 
@@ -820,7 +834,7 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       observationId: OBS_ID,
       revision: 3,
       text: "Please confirm the value",
-      reason: "Please confirm the value",
+      reason: "Monitor source data audit",
     });
     expect(view.find("#ecrf-raise-text").exists()).toBe(false);
     expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
@@ -870,6 +884,9 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
     await view
       .find("#ecrf-raise-text")
       .setValue("Diastolic BP missing on source");
+    await view
+      .find("#ecrf-raise-reason")
+      .setValue("Required baseline field blank");
     await view.find("#ecrf-raise-confirm").trigger("click");
     await flushPromises();
 
@@ -879,6 +896,7 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
       revision: null,
       itemId: "DIABP",
       text: "Diastolic BP missing on source",
+      reason: "Required baseline field blank",
     });
     expect(view.find('[data-testid="ecrf-form-status"]').text()).toContain(
       "Incomplete"
@@ -937,6 +955,7 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
 
     await view.find("#btn-answer-query-a").trigger("click");
     await view.find("#query-text-query-a").setValue("Confirmed against source");
+    await view.find("#query-reason-query-a").setValue("Signed flowsheet check");
     await view.find("#query-query-a form").trigger("submit");
     await flushPromises();
 
@@ -946,6 +965,7 @@ describe("EcrfFormPanel: queries on form values (#5461)", () => {
         formId: FORM_ID,
         queryId: "query-a",
         text: "Confirmed against source",
+        reason: "Signed flowsheet check",
       })
     );
     expect(view.find("#query-query-a").text()).toContain("Answered");

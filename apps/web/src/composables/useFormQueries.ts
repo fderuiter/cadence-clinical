@@ -6,6 +6,8 @@ import {
   QUERY_REVISION_STALE,
   queryErrorCode,
   type FormQueryAction,
+  type FormQueryOwnerRole,
+  type FormQueryPriority,
   type FormQueryResponse,
   type StudyQueryFilters,
 } from "../api/ecrfQueriesApi";
@@ -40,6 +42,13 @@ export interface QueryTarget {
   revision?: number | null;
 }
 
+/** Optional routing metadata when raising a manual query. */
+export interface RaiseQueryOptions {
+  ownerRole?: FormQueryOwnerRole;
+  priority?: FormQueryPriority;
+  assignee?: string | null;
+}
+
 const DONE: Record<FormQueryAction, string> = {
   answer: "Query answered.",
   reopen: "Query reopened.",
@@ -52,22 +61,75 @@ export function isLiveQuery(query: FormQueryResponse): boolean {
   return query.status === "open" || query.status === "answered";
 }
 
+/** Whether a query originated from automated post-commit edit-check evaluation rather than a human reviewer. */
+export function isSystemQuery(query: FormQueryResponse): boolean {
+  return (
+    query.origin === "system" ||
+    (!query.origin && Boolean(query.raised_by?.startsWith("svc:")))
+  );
+}
+
+function normalizeActorKey(actor?: string | null): string {
+  const trimmed = actor?.trim().toLowerCase() ?? "";
+  return trimmed.startsWith("u:") ? trimmed.slice(2) : trimmed;
+}
+
+/** Whether `currentUserId` is barred from closing an answered manual query because they authored its latest answer. */
+export function isBlockedBySeparationOfDuties(
+  query: FormQueryResponse,
+  currentUserId?: string | readonly string[] | null
+): boolean {
+  if (query.status !== "answered" || isSystemQuery(query)) return false;
+  const answerer = normalizeActorKey(query.last_answered_by);
+  if (!answerer || !currentUserId) return false;
+  const candidates = Array.isArray(currentUserId)
+    ? currentUserId
+    : [currentUserId];
+  return candidates.some((candidate) => {
+    const caller = normalizeActorKey(candidate);
+    return Boolean(caller) && caller === answerer;
+  });
+}
+
 /**
- * The transitions to offer on a query, as the Execution module allows them: the site answers an open query; a monitor
- * reopens an answered or closed one, and closes or cancels one that is open or answered. Presentation only: the
- * module checks the caller's capabilities and answers 403 or 409.
+ * The transitions to offer on a query, matching the Execution module's bitemporal aggregate rules (ADR-2625,
+ * PRD-QRY-001):
+ * - Site users (`canAnswer`) answer `open` queries.
+ * - Monitors and data managers (`canManage`) reopen `answered` or `closed` queries and cancel `open` or `answered`
+ *   queries raised in error.
+ * - `open` manual queries cannot be closed directly (only `system` edit-check queries can be closed while `open`).
+ * - `answered` manual queries cannot be closed by `last_answered_by` (`currentUserId`).
  */
 export function queryActions(
   query: FormQueryResponse,
   canManage: boolean,
-  canAnswer: boolean = !canManage
+  canAnswerOrUserId?: boolean | string | readonly string[] | null,
+  currentUserIdArg?: string | readonly string[] | null
 ): FormQueryAction[] {
+  const canAnswer =
+    typeof canAnswerOrUserId === "boolean" ? canAnswerOrUserId : !canManage;
+  const currentUserId =
+    typeof canAnswerOrUserId === "boolean"
+      ? currentUserIdArg
+      : (canAnswerOrUserId ?? currentUserIdArg);
+
   const actions: FormQueryAction[] = [];
+  const system = isSystemQuery(query);
   if (query.status === "open" && canAnswer) actions.push("answer");
   if (!canManage) return actions;
-  if (query.status === "answered" || query.status === "closed")
+
+  if (query.status === "answered" || query.status === "closed") {
     actions.push("reopen");
-  if (isLiveQuery(query)) actions.push("close", "cancel");
+  }
+  if (query.status === "open") {
+    if (system) actions.push("close");
+    actions.push("cancel");
+  } else if (query.status === "answered") {
+    if (!isBlockedBySeparationOfDuties(query, currentUserId)) {
+      actions.push("close");
+    }
+    actions.push("cancel");
+  }
   return actions;
 }
 
@@ -76,9 +138,10 @@ function newKey(): string {
 }
 
 /**
- * The queries of one form, one enrollment, or a study (#5461): read them, raise one on a value or blank item, and
- * answer, reopen, close or cancel one or several. Each write carries its text as the reason for change and an
- * idempotency key; multi-query actions dispatch one independent command per query rather than an atomic batch.
+ * The queries of one form, one enrollment, or a study (#5461, ADR-2625): read them, raise one on a value or blank
+ * item, and answer, reopen, close or cancel one or several. Each write carries an explicit `X-Change-Reason` distinct
+ * from the conversational message text and an idempotency key; multi-query actions dispatch one independent command
+ * per query rather than an atomic batch.
  */
 function scopeIdentity(target: FormQueryScope): string {
   if ("formId" in target) return `form:${target.formId}`;
@@ -208,9 +271,14 @@ export function useFormQueries() {
   }
 
   /** Raises a query on a value at the revision the form read returned, or on an unasked blank item. */
-  function raise(target: QueryTarget, text: string): Promise<boolean> {
+  function raise(
+    target: QueryTarget,
+    text: string,
+    reason: string,
+    options?: RaiseQueryOptions
+  ): Promise<boolean> {
     return write(
-      { raise: target, text },
+      { raise: target, text, reason, options },
       ({ key, queryId }) =>
         ecrfQueriesApi.raise({
           formId: target.formId,
@@ -219,27 +287,31 @@ export function useFormQueries() {
           itemId: target.observationId ? undefined : target.itemId,
           text,
           queryId,
-          reason: text,
+          ...(options?.ownerRole ? { ownerRole: options.ownerRole } : {}),
+          ...(options?.priority ? { priority: options.priority } : {}),
+          ...(options?.assignee ? { assignee: options.assignee } : {}),
+          reason,
           idempotencyKey: key,
         }),
       "Query raised."
     );
   }
 
-  /** Answers, reopens, closes or cancels a query; the text is the answer, the reopening note or the reason. */
+  /** Answers, reopens, closes or cancels a query with a conversational `text` note and explicit `reason` (`X-Change-Reason`). */
   function act(
     query: FormQueryResponse,
     action: FormQueryAction,
-    text: string
+    text: string,
+    reason: string
   ): Promise<boolean> {
     return write(
-      { action, query: query.query_id, version: query.version, text },
+      { action, query: query.query_id, version: query.version, text, reason },
       ({ key }) =>
         ecrfQueriesApi.transition(action, {
           formId: query.form_id,
           queryId: query.query_id,
           text,
-          reason: text,
+          reason,
           idempotencyKey: key,
         }),
       DONE[action]
@@ -247,13 +319,14 @@ export function useFormQueries() {
   }
 
   /**
-   * Dispatches one independent transition command per selected query using a shared reason note, updating each
-   * succeeded query in place and reporting per-query completion or error results.
+   * Dispatches one independent transition command per selected query using a shared note and `X-Change-Reason`,
+   * updating each succeeded query in place and reporting per-query completion or error results.
    */
   async function actMany(
     targets: FormQueryResponse[],
     action: FormQueryAction,
-    text: string
+    text: string,
+    reason: string
   ): Promise<FormQueryBatchItemResult[]> {
     if (busy.value || targets.length === 0) return [];
     busy.value = true;
@@ -266,7 +339,7 @@ export function useFormQueries() {
             formId: target.form_id,
             queryId: target.query_id,
             text,
-            reason: text,
+            reason,
             idempotencyKey: newKey(),
           });
           put(updated);
@@ -299,7 +372,7 @@ export function useFormQueries() {
       } else {
         outcome.value = {
           kind: "failed",
-          message: `Completed ${succeeded} of ${results.length} queries; ${failed} could not be updated.`,
+          message: `Completed ${succeeded} of ${results.length} ${results.length === 1 ? "query" : "queries"}; ${failed} could not be updated.`,
         };
       }
       return results;
