@@ -130,6 +130,8 @@ interface BundledSopSpec {
   sectionAnchor: string;
   heading: string;
   summary: string;
+  steps?: string[];
+  extraHtml?: string;
   reasonForChange?: string;
   updatedAt?: string;
 }
@@ -146,6 +148,20 @@ function buildBundledSop(spec: BundledSopSpec): Record<string, unknown> {
   const versionLabel = spec.versionLabel ?? "1.0";
   const author = spec.authorUserId ?? "qa_director";
   const updatedAt = spec.updatedAt ?? "2026-06-15T10:00:00Z";
+  const anchorId = spec.sectionAnchor.replace(/^#+/, "");
+  const steps =
+    spec.steps && spec.steps.length > 0
+      ? spec.steps
+      : [
+          `Verify assigned study, site, and role permissions prior to executing ${spec.heading.toLowerCase()}.`,
+          "Record contemporaneous 21 CFR Part 11 change reasons for regulated updates and escalate blockers via Contextual Help using pseudonymous subject codes only.",
+        ];
+  const stepsMarkdown = steps
+    .map((step, idx) => `${idx + 1}. ${step}`)
+    .join("\n");
+  const stepsHtml = steps
+    .map((step) => `<li>${escapeHtml(step)}</li>`)
+    .join("");
   return {
     matched_mapping: {
       id: spec.mappingId,
@@ -171,8 +187,8 @@ function buildBundledSop(spec: BundledSopSpec): Record<string, unknown> {
       approved_by: "qa_director",
       created_at: "2026-02-01T09:00:00Z",
       updated_at: updatedAt,
-      body_markdown: `## ${spec.heading}\n${spec.summary}`,
-      body_html: `<h2>${escapeHtml(spec.heading)}</h2><p>${escapeHtml(spec.summary)}</p>`,
+      body_markdown: `## ${spec.heading}\n${spec.summary}\n\n${stepsMarkdown}`,
+      body_html: `<h2 id="${escapeHtml(anchorId)}">${escapeHtml(spec.heading)}</h2><p>${escapeHtml(spec.summary)}</p><ol>${stepsHtml}</ol>${spec.extraHtml || ""}`,
     },
     primary_version: {
       id: spec.versionId,
@@ -392,10 +408,14 @@ function createDefaultContextualSops(): Record<
         approved_by: "qa_director",
         created_at: "2026-02-01T09:00:00Z",
         updated_at: "2026-06-05T10:00:00Z",
-        body_markdown:
-          "## Study Portfolio Governance\nStandardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.",
-        body_html:
-          "<h2>Study Portfolio Governance</h2><p>Standardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.</p>",
+        body_markdown: `## Study Portfolio Governance
+Standardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.
+
+## Operational Steps
+1. Verify protocol code and lifecycle status (\`ACTIVE\`, \`IN_DESIGN\`, or \`LOCKED\`) prior to opening clinical data workspaces.
+2. Confirm assigned study and site scope before initiating enrollment, monitoring, or data management actions.
+3. Escalate missing study assignments to Platform Access Governance via contextual support ticketing.`,
+        body_html: `<h2 id="study-portfolio-governance">Study Portfolio Governance</h2><p>Standardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.</p><h2 id="portfolio-operational-steps">Operational Steps</h2><ol><li>Verify protocol code and lifecycle status (<code>ACTIVE</code>, <code>IN_DESIGN</code>, or <code>LOCKED</code>) prior to opening clinical data workspaces.</li><li>Confirm assigned study and site scope before initiating enrollment, monitoring, or data management actions.</li><li>Escalate missing study assignments to Platform Access Governance via contextual support ticketing.</li></ol>`,
       },
       primary_version: {
         id: "ver-std-101",
@@ -436,10 +456,14 @@ function createDefaultContextualSops(): Record<
         approved_by: "qa_director",
         created_at: "2026-02-05T09:00:00Z",
         updated_at: "2026-06-10T10:00:00Z",
-        body_markdown:
-          "## Clinical Study Canvas Operations\nGoverns study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.",
-        body_html:
-          "<h2>Clinical Study Canvas Operations</h2><p>Governs study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.</p>",
+        body_markdown: `## Clinical Study Canvas Operations
+Governs study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.
+
+## Key Controls
+1. Use pseudonymous subject codes (for example \`SUBJ-1001\`) exclusively; never enter direct participant PII.
+2. Supply a clear 21 CFR Part 11 reason for change whenever recording or amending clinical observations.
+3. Review open form queries and SDV indicators prior to visit sign-off.`,
+        body_html: `<h2 id="clinical-study-canvas-operations">Clinical Study Canvas Operations</h2><p id="active-study-clinical-canvas">Governs study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.</p><h2 id="study-canvas-key-controls">Key Controls</h2><ol><li>Use pseudonymous subject codes (for example <code>SUBJ-1001</code>) exclusively; never enter direct participant PII.</li><li>Supply a clear 21 CFR Part 11 reason for change whenever recording or amending clinical observations.</li><li>Review open form queries and SDV indicators prior to visit sign-off.</li></ol><h3 id="participant-timeline-and-visit-record">Participant Timeline &amp; Visit Record</h3><p>Inspect longitudinal visit completion and open form queries within the participant record.</p>`,
       },
       primary_version: {
         id: "ver-std-102",
@@ -767,8 +791,13 @@ function createDefaultContextualSops(): Record<
         created_at: "2026-02-10T10:00:00Z",
         updated_at: "2026-05-18T14:30:00Z",
         body_markdown: `## Purpose & Scope
-This Standard Operating Procedure (SOP) governs all investigator site personnel executing electronic Case Report Form (eCRF) data capture, subject registration, and visit assessment recording within the Cadence Clinical Research Platform.`,
-        body_html: `<h2>Purpose & Scope</h2><p>This Standard Operating Procedure (SOP) governs investigator site eCRF data capture, subject registration, and visit assessment recording.</p>`,
+This Standard Operating Procedure (SOP) governs all investigator site personnel executing electronic Case Report Form (eCRF) data capture, subject registration, and visit assessment recording within the Cadence Clinical Research Platform.
+
+## Mandatory GxP Controls
+1. Confirm informed consent verification prior to recording baseline assessments.
+2. Record contemporaneous source-verified measurements and document mandatory change justifications for every amendment.
+3. Escalate protocol deviations or locked-form blockers via Contextual Help using pseudonymous subject identifiers only.`,
+        body_html: `<h2 id="subject-enrollment-and-visit-entry">Purpose &amp; Scope</h2><p>This Standard Operating Procedure (SOP) governs investigator site eCRF data capture, subject registration, and visit assessment recording.</p><h2 id="ecrf-mandatory-gxp-controls">Mandatory GxP Controls</h2><ol><li>Confirm informed consent verification prior to recording baseline assessments.</li><li>Record contemporaneous source-verified measurements and document mandatory change justifications for every amendment.</li><li>Escalate protocol deviations or locked-form blockers via Contextual Help using pseudonymous subject identifiers only.</li></ol><h3 id="discrepancy-management-and-coding">Discrepancy Management &amp; Coding</h3><p>Triage open validation queries and reconcile coding terms prior to form lock.</p><h3 id="ecrf-form-capture-and-change-reason">eCRF Form Capture &amp; Change Reason</h3><p>Verify controlled terminology selections and non-PII change reasons when saving forms.</p>`,
       },
       primary_version: {
         id: "ver-ecrf-201",
@@ -801,6 +830,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Clinical Observation Provenance & Discrepancy Review",
       summary:
         "Standardizes item-level observation inspection, audit provenance verification, medical safety review, and query resolution.",
+      steps: [
+        "Inspect source provenance, prior amendments, and open queries before updating or verifying an observation.",
+        "Escalate clinically significant safety abnormalities or medical coding questions with pseudonymous subject codes only.",
+      ],
     }),
     "/mdr": {
       matched_mapping: {
@@ -828,8 +861,8 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         approved_by: "qa_director",
         created_at: "2026-01-20T09:00:00Z",
         updated_at: "2026-06-01T11:15:00Z",
-        body_markdown: `## Protocol Metadata Management & SoA Design`,
-        body_html: `<h2>Protocol Metadata Management & SoA Design</h2>`,
+        body_markdown: `## Protocol Metadata Management & SoA Design\n1. Bind clinical activities to CDISC Biomedical Concepts.\n2. Document protocol amendment rationale prior to publication.`,
+        body_html: `<h2 id="schedule-of-activities-matrix-authoring">Protocol Metadata Management &amp; SoA Design</h2><ol><li>Bind clinical activities to CDISC Biomedical Concepts.</li><li>Document protocol amendment rationale prior to publication.</li></ol><h3 id="amendment-proposal-review">Amendment Proposal Review</h3><p>Review structural Schedule of Activities diffs, version lineage, and governance sign-off prerequisites before approving protocol proposals.</p>`,
       },
       primary_version: {
         id: "ver-mdr-104",
@@ -1033,8 +1066,8 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         approved_by: "qa_director",
         created_at: "2026-01-20T09:00:00Z",
         updated_at: "2026-06-01T11:15:00Z",
-        body_markdown: "## Site Monitoring & SDV Procedures",
-        body_html: "<h2>Site Monitoring & SDV Procedures</h2>",
+        body_markdown: `## Site Monitoring & SDV Procedures\n1. Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.\n2. Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.`,
+        body_html: `<h2 id="site-monitoring-and-sdv">Site Monitoring &amp; SDV Procedures</h2><ol><li>Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.</li><li>Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.</li></ol><h3 id="ctms-portfolio-oversight">CTMS Portfolio Oversight</h3><p>Sponsor operations track site milestone attainment and monitoring cadence compliance.</p><h3 id="site-visit-readiness">Site Visit Readiness &amp; Delegation</h3><p>Site coordinators maintain current delegation logs and source chart availability prior to CRA visits.</p>`,
       },
       primary_version: {
         id: "ver-ctms-302",
@@ -1055,7 +1088,7 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         route_pattern: "/ssu/*",
         persona: "cra_monitor",
         article_id: "art-ssu-sop",
-        section_anchor: "#site-startup-and-greenlight",
+        section_anchor: "#site-greenlight-activation-matrix",
         priority: 15,
         is_active: true,
       },
@@ -1074,10 +1107,8 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         approved_by: "qa_director",
         created_at: "2026-02-12T09:00:00Z",
         updated_at: "2026-06-12T11:15:00Z",
-        body_markdown:
-          "## Site Startup & Greenlight Certification\nDefines IRB/IEC approval verification, DoA log completion, and investigational product release prerequisites.",
-        body_html:
-          "<h2>Site Startup &amp; Greenlight Certification</h2><p>Defines IRB/IEC approval verification, DoA log completion, and investigational product release prerequisites.</p>",
+        body_markdown: `## Site Startup & Greenlight Certification\n1. Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.\n2. Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.`,
+        body_html: `<h2 id="site-greenlight-activation-matrix">Site Startup &amp; Greenlight Certification</h2><p id="site-startup-and-greenlight">Defines IRB/IEC approval verification, DoA log completion, and investigational product release prerequisites.</p><ol><li>Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.</li><li>Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.</li></ol><h3 id="global-country-activation-gates">Global Country Activation Gates</h3><p>Sponsor operations verify competent authority approvals and site roster readiness across participating countries.</p><h3 id="site-initiation-visit-greenlight">Site Initiation Visit &amp; Greenlight</h3><p>Monitors confirm Site Initiation Visit completion and facility readiness prior to greenlight release.</p>`,
       },
       primary_version: {
         id: "ver-ssu-205",
@@ -1089,7 +1120,7 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         reason_for_change: "Added country greenlight matrix checks",
         created_at: "2026-06-12T11:15:00Z",
       },
-      section_anchor: "#site-startup-and-greenlight",
+      section_anchor: "#site-greenlight-activation-matrix",
       related_articles: [],
     },
     "/audit": {
@@ -1118,8 +1149,8 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
         approved_by: "qa_director",
         created_at: "2026-01-20T09:00:00Z",
         updated_at: "2026-06-01T11:15:00Z",
-        body_markdown: "## Audit Trail Inspection Guidelines",
-        body_html: "<h2>Audit Trail Inspection Guidelines</h2>",
+        body_markdown: `## Audit Trail Inspection Guidelines\n1. Filter immutable audit records by study, actor, entity, and UTC date window.\n2. Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.`,
+        body_html: `<h2 id="gxp-audit-trail-inspection">Audit Trail Inspection Guidelines</h2><ol><li>Filter immutable audit records by study, actor, entity, and UTC date window.</li><li>Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.</li></ol>`,
       },
       primary_version: {
         id: "ver-audit-401",
@@ -1446,13 +1477,79 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
   };
 }
 
+function attachCanvasZoomSops(
+  sops: Record<string, Record<string, unknown>>
+): Record<string, Record<string, unknown>> {
+  const buildZoomEntry = (
+    baseKey: string,
+    mappingId: string,
+    routePattern: string,
+    persona: string,
+    sectionAnchor: string,
+    priority: number
+  ): Record<string, unknown> => {
+    const base = sops[baseKey];
+    const primaryArticle = base.primary_article as Record<string, unknown>;
+    return {
+      matched_mapping: {
+        id: mappingId,
+        route_pattern: routePattern,
+        persona,
+        article_id: primaryArticle.id,
+        section_anchor: sectionAnchor,
+        priority,
+        is_active: true,
+      },
+      primary_article: primaryArticle,
+      primary_version: base.primary_version,
+      section_anchor: sectionAnchor,
+      related_articles: [],
+    };
+  };
+
+  sops["/studies/:studyCode?participant=*"] = buildZoomEntry(
+    "/studies/:studyCode",
+    "m-stc-q-participant",
+    "/studies/:studyCode?participant=*",
+    "site_crc",
+    "#participant-timeline-and-visit-record",
+    48
+  );
+  sops["/studies/:studyCode?form=*"] = buildZoomEntry(
+    "/ecrf",
+    "m-stc-q-form",
+    "/studies/:studyCode?form=*",
+    "site_crc",
+    "#ecrf-form-capture-and-change-reason",
+    49
+  );
+  sops["/studies/:studyCode?observation=*"] = buildZoomEntry(
+    "/observations/:observationRef",
+    "m-stc-q-observation",
+    "/studies/:studyCode?observation=*",
+    "site_investigator",
+    "#clinical-observation-provenance-review",
+    50
+  );
+  sops["/studies/:studyCode?proposal=*"] = buildZoomEntry(
+    "/mdr",
+    "m-stc-q-proposal",
+    "/studies/:studyCode?proposal=*",
+    "sponsor_designer",
+    "#amendment-proposal-review",
+    50
+  );
+
+  return sops;
+}
+
 /**
  * Bundled offline help SOPs. Served only by a demo build when the API is unreachable (#4523).
  */
 export const DEFAULT_CONTEXTUAL_SOPS: Record<
   string,
   Record<string, unknown>
-> = /*#__PURE__*/ createDefaultContextualSops();
+> = /*#__PURE__*/ attachCanvasZoomSops(createDefaultContextualSops());
 
 function collectUniqueBundledArticles(
   sops: Record<string, Record<string, unknown>>
@@ -1479,11 +1576,17 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-function parseRouteAndCanvasQuery(rawRoute?: string): {
+interface ParsedCanvasRoute {
   path: string;
   stage: string | null;
   section: string | null;
-} {
+  participant: string | null;
+  form: string | null;
+  observation: string | null;
+  proposal: string | null;
+}
+
+function parseRouteAndCanvasQuery(rawRoute?: string): ParsedCanvasRoute {
   const withoutHash = (rawRoute || "/").trim().split("#")[0] || "/";
   const qIndex = withoutHash.indexOf("?");
   const rawPath = qIndex >= 0 ? withoutHash.slice(0, qIndex) : withoutHash;
@@ -1494,6 +1597,10 @@ function parseRouteAndCanvasQuery(rawRoute?: string): {
 
   let stage: string | null = null;
   let section: string | null = null;
+  let participant: string | null = null;
+  let form: string | null = null;
+  let observation: string | null = null;
+  let proposal: string | null = null;
   if (rawQuery) {
     const params = new URLSearchParams(rawQuery);
     for (const [key, val] of params.entries()) {
@@ -1501,7 +1608,13 @@ function parseRouteAndCanvasQuery(rawRoute?: string): {
       const lowerVal = val.trim().toLowerCase();
       if (!lowerVal) continue;
       if (lowerKey === "stage" && !stage) stage = lowerVal;
-      if (lowerKey === "section" && !section) section = lowerVal;
+      else if (lowerKey === "section" && !section) section = lowerVal;
+      else if (lowerKey === "participant" && !participant) {
+        participant = lowerVal;
+      } else if (lowerKey === "form" && !form) form = lowerVal;
+      else if (lowerKey === "observation" && !observation) {
+        observation = lowerVal;
+      } else if (lowerKey === "proposal" && !proposal) proposal = lowerVal;
     }
   }
 
@@ -1515,15 +1628,33 @@ function parseRouteAndCanvasQuery(rawRoute?: string): {
     }
   }
 
-  return { path, stage, section };
+  return { path, stage, section, participant, form, observation, proposal };
+}
+
+function matchesBundledQueryParam(
+  routeValue: string | null,
+  patternValue: string
+): boolean {
+  if (!routeValue) return false;
+  if (
+    patternValue === "*" ||
+    patternValue.startsWith(":") ||
+    (patternValue.startsWith("{") && patternValue.endsWith("}"))
+  ) {
+    return true;
+  }
+  return routeValue === patternValue;
 }
 
 function scoreBundledPattern(
-  normalizedPath: string,
-  routeStage: string | null,
-  routeSection: string | null,
+  parsedRoute: ParsedCanvasRoute,
   rawPattern: string
 ): number {
+  const {
+    path: normalizedPath,
+    stage: routeStage,
+    section: routeSection,
+  } = parsedRoute;
   const trimmed = (rawPattern || "").trim().split("#")[0] || "";
   if (!trimmed) return 0;
   if (trimmed === "*" || trimmed === "/*") return 100;
@@ -1534,29 +1665,68 @@ function scoreBundledPattern(
 
   let patternStage: string | null = null;
   let patternSection: string | null = null;
+  let patternParticipant: string | null = null;
+  let patternForm: string | null = null;
+  let patternObservation: string | null = null;
+  let patternProposal: string | null = null;
   if (rawPatternQuery) {
     const params = new URLSearchParams(rawPatternQuery);
     for (const [k, v] of params.entries()) {
       const lk = k.trim().toLowerCase();
       const lv = v.trim().toLowerCase();
-      if (lk === "stage" && lv) patternStage = lv;
-      else if (lk === "section" && lv) patternSection = lv;
+      if (!lv) return 0;
+      if (lk === "stage") patternStage = lv;
+      else if (lk === "section") patternSection = lv;
+      else if (lk === "participant") patternParticipant = lv;
+      else if (lk === "form") patternForm = lv;
+      else if (lk === "observation") patternObservation = lv;
+      else if (lk === "proposal") patternProposal = lv;
       else return 0;
     }
   }
 
   let queryBonus = 0;
   if (patternStage && patternSection) {
-    if (routeStage !== patternStage || routeSection !== patternSection) {
+    if (
+      !matchesBundledQueryParam(routeStage, patternStage) ||
+      !matchesBundledQueryParam(routeSection, patternSection)
+    ) {
       return 0;
     }
-    queryBonus = 600;
+    queryBonus += 600;
   } else if (patternSection) {
-    if (routeSection !== patternSection) return 0;
-    queryBonus = 400;
+    if (!matchesBundledQueryParam(routeSection, patternSection)) return 0;
+    queryBonus += 400;
   } else if (patternStage) {
-    if (routeStage !== patternStage) return 0;
-    queryBonus = 200;
+    if (!matchesBundledQueryParam(routeStage, patternStage)) return 0;
+    queryBonus += 200;
+  }
+
+  if (patternProposal) {
+    if (!matchesBundledQueryParam(parsedRoute.proposal, patternProposal)) {
+      return 0;
+    }
+    queryBonus += 850;
+  }
+  if (patternObservation) {
+    if (
+      !matchesBundledQueryParam(parsedRoute.observation, patternObservation)
+    ) {
+      return 0;
+    }
+    queryBonus += 800;
+  }
+  if (patternForm) {
+    if (!matchesBundledQueryParam(parsedRoute.form, patternForm)) return 0;
+    queryBonus += 750;
+  }
+  if (patternParticipant) {
+    if (
+      !matchesBundledQueryParam(parsedRoute.participant, patternParticipant)
+    ) {
+      return 0;
+    }
+    queryBonus += 700;
   }
 
   const normPattern =
@@ -1641,7 +1811,8 @@ function getFallbackArticles(
 }
 
 export function getFallbackContextualHelp(route?: string, persona?: string) {
-  const { path: cleanRoute, stage, section } = parseRouteAndCanvasQuery(route);
+  const parsedRoute = parseRouteAndCanvasQuery(route);
+  const cleanRoute = parsedRoute.path;
 
   const candidates: Array<{
     score: number;
@@ -1653,7 +1824,7 @@ export function getFallbackContextualHelp(route?: string, persona?: string) {
     const mapping = fallback.matched_mapping as
       Record<string, unknown> | undefined;
     const pattern = String(mapping?.route_pattern || key);
-    const score = scoreBundledPattern(cleanRoute, stage, section, pattern);
+    const score = scoreBundledPattern(parsedRoute, pattern);
     if (score > 0) {
       candidates.push({
         score,
