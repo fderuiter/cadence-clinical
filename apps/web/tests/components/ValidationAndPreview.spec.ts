@@ -129,6 +129,8 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
       form_id: formId,
       study_id: "01950000-0000-7000-8000-000000000010",
+      study_site_id: "01950000-0000-7000-8000-000000000015",
+      protocol_version_id: "01950000-0000-7000-8000-000000000016",
       enrollment_id: "01950000-0000-7000-8000-000000000020",
       participant_id: "01950000-0000-7000-8000-000000000030",
       collection_spec_id: "VS",
@@ -157,7 +159,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       locks: [],
       assertions: [],
       signatures: [],
-    });
+    } as unknown as Awaited<ReturnType<typeof ecrfFormsApi.getForm>>);
     vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
     vi.mocked(ecrfFormsApi.previewValues).mockResolvedValue({
       form_id: formId,
@@ -219,7 +221,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
@@ -280,7 +284,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({
@@ -298,6 +304,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
           pinned: true,
           content_hash: "abcd",
           rule_count: 1,
+          authority: "Study",
           rules: [
             {
               id: "VS_SYSBP_MAX",
@@ -494,7 +501,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({
@@ -507,44 +516,44 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       total: 0,
       findings: [],
     });
+    const protocolVersionSummary = {
+      ref: "protocol_version:01950000-0000-7000-8000-000000000090@1",
+      study: `study:${studyUuid}@1`,
+      number: 1,
+      status: "Approved",
+      parent_version: null,
+      content_hash: "sha256:0090",
+      amendment_intent: null,
+      approval_attestation: null,
+      withdrawal_reason: null,
+      mask: null,
+    };
     vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
-      {
-        ref: "protocol_version:01950000-0000-7000-8000-000000000090@1",
-        number: 1,
-        status: "Approved",
-        parent_version: null,
-        mask: null,
-      },
+      protocolVersionSummary,
     ]);
     vi.mocked(kernelApi.getProtocolDesignSummary).mockResolvedValue({
-      version: {
-        ref: "protocol_version:01950000-0000-7000-8000-000000000090@1",
-        number: 1,
-        status: "Approved",
-        parent_version: null,
-        mask: null,
-      },
-      study_title: "Demo study",
-      epoch_count: 1,
-      planned_activity_count: 1,
+      version: protocolVersionSummary,
+      title: "Demo study",
       form_count: 1,
       item_count: 1,
-      notes: [],
+      import_notes: [],
       imported_rule_pack: null,
       forms: [
         {
           id: "VS",
+          display_order: 1,
           name: "Vital Signs",
-          mandatory: true,
-          scheduled_visit_ids: ["V1"],
+          item_count: 1,
+          required_item_count: 1,
           items: [
             {
               id: "SYSBP",
+              display_order: 1,
               prompt: "Systolic BP",
               value_kind: "Quantity",
               unit: "mm[Hg]",
               required: true,
-              concept_ref: "concept:01950000-0000-7000-8000-000000000001@1",
+              concept: "concept:01950000-0000-7000-8000-000000000001@1",
             },
           ],
         },
@@ -630,6 +639,8 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       ref: `validation_finding:${findingUuid}`,
       study_ref: `study:${studyUuid}`,
       stage: "Collection",
+      pack_key: "cadence-101-edit-checks",
+      rule_pack_ref: "library_item:01950000-0000-7000-8000-000000000077@1",
       severity: "Warning",
       status: "Open",
       blocks: false,
@@ -640,11 +651,14 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       record_key: "01950000-0000-7000-8000-000000000001",
       variable: "SYSBP",
       message: "Systolic BP exceeds 220 mm[Hg].",
+      expected: "<= 220",
+      observed: [],
       remediation_guidance: null,
       classification: null,
       decision_text: null,
       first_detected_run_ref: `validation_run:${runUuid}`,
       last_detected_run_ref: `validation_run:${runUuid}`,
+      resolved_by_run_ref: null,
     };
 
     vi.mocked(kernelApi.search).mockResolvedValue([
@@ -653,7 +667,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({

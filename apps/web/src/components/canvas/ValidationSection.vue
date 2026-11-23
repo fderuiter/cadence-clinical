@@ -1284,9 +1284,11 @@ const signerFullName = computed(() => {
       .trim();
     if (full || identity.username) return full || identity.username || "";
   }
-  return (
-    authStore.user?.name || authStore.user?.full_name || signerUsername.value
-  );
+  const user = authStore.user as
+    | (typeof authStore.user & { name?: string; full_name?: string })
+    | null
+    | undefined;
+  return user?.name || user?.full_name || signerUsername.value;
 });
 
 const defaultSignerRole = computed(() => {
@@ -1559,7 +1561,7 @@ async function openReviseRuleComposer(pack: KernelRulePack) {
   composer.key = pack.key;
   composer.title = pack.title;
   composer.authority = normalizedAuthority;
-  composer.revisingVersion = pack.version;
+  composer.revisingVersion = Number(pack.version) || null;
   composer.reason = `Revise rule pack ${pack.key} from v${pack.version}`;
   composer.rules =
     pack.rules.length > 0

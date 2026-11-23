@@ -168,9 +168,7 @@
       v-if="effectiveCanManageParticipants && canRandomize"
       :is-open="randomizeModalOpen"
       :username="authStore.user?.username || ''"
-      :signer-name="
-        authStore.user?.displayName || authStore.user?.username || ''
-      "
+      :signer-name="signerFullName"
       signer-role="Site CRC"
       :reasons="RANDOMIZE_SIGNING_REASONS"
       :action-url="randomizeSubjectAction(participant.id)"
@@ -216,6 +214,15 @@ const RANDOMIZE_SIGNING_REASONS = [
 ];
 
 const authStore = useAuthStore();
+const signerFullName = computed(() => {
+  const identity = authStore.user;
+  if (!identity) return "";
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || identity.username || "";
+});
 const canvas = useStudyCanvasStore();
 const target = ref("");
 const reason = ref("");
