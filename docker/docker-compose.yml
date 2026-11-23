@@ -136,6 +136,40 @@ services:
       gateway:
         condition: service_healthy
 
+  web:
+    image: node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
+    container_name: cadence-web
+    working_dir: /app
+    command:
+      [
+        "sh",
+        "-c",
+        "npm install -g pnpm@10.34.6 && pnpm config set confirmModulesPurge false && CI=true pnpm install --frozen-lockfile --store-dir /var/cache/pnpm-store && pnpm --filter ui exec vite build && pnpm --filter web dev --host 0.0.0.0 --port 3000",
+      ]
+    volumes:
+      - ..:/app
+      - /app/.pnpm-store
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/subject-portal/node_modules
+      - /app/packages/demo-fixtures/node_modules
+      - /app/packages/ui/node_modules
+      - /app/packages/ui/dist
+      - /app/packages/usdm-schemas/node_modules
+    environment:
+      # The web app's dev server proxies /api to the gateway inside the compose network; the browser calls :3000 only
+      # (#5429).
+      CADENCE_GATEWAY_URL: http://front-proxy:8000
+      VITE_API_BASE_URL: http://localhost:3000
+      VITE_KEYCLOAK_URL: http://localhost:8080
+      VITE_KEYCLOAK_REALM: cadence
+      VITE_KEYCLOAK_CLIENT_ID: cadence-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      front-proxy:
+        condition: service_started
+
   subject-portal:
     image: node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
     container_name: cadence-subject-portal
@@ -144,14 +178,25 @@ services:
       [
         "sh",
         "-c",
-        "npm install -g pnpm@10.34.6 && pnpm config set confirmModulesPurge false && CI=true pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174",
+        "npm install -g pnpm@10.34.6 && pnpm config set confirmModulesPurge false && CI=true pnpm install --frozen-lockfile --store-dir /var/cache/pnpm-store && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174",
       ]
     volumes:
       - ..:/app
+      - /app/.pnpm-store
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/subject-portal/node_modules
+      - /app/packages/demo-fixtures/node_modules
+      - /app/packages/ui/node_modules
+      - /app/packages/usdm-schemas/node_modules
     environment:
       # The portal's dev server proxies /api to the gateway inside the compose network; the browser calls :5174 only
       # (#5451).
       CADENCE_GATEWAY_URL: http://front-proxy:8000
+      VITE_API_BASE_URL: http://localhost:5174
+      VITE_KEYCLOAK_URL: http://localhost:8080
+      VITE_KEYCLOAK_REALM: cadence
+      VITE_KEYCLOAK_CLIENT_ID: cadence-web
     ports:
       - "5174:5174"
     depends_on:
@@ -480,6 +525,8 @@ services:
       - "5000:8080"
     volumes:
       - ..:/workspace
+      - dotnet_nuget_cache:/var/cache/cadence/nuget
+      - dotnet_msbuild_cache:/var/cache/cadence/msbuild
     environment: *db-env
     depends_on: *db-depends
 
@@ -487,3 +534,5 @@ volumes:
   postgres_data:
   minio_data:
   etmf_storage:
+  dotnet_nuget_cache:
+  dotnet_msbuild_cache:
