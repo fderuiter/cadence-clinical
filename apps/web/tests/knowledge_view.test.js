@@ -59,12 +59,6 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
           actual.getFallbackContextualHelp(params?.route, params?.persona)
         )
       ),
-      getArticle: vi.fn((id) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find(
-          (a) => a.id === id || a.slug === id
-        );
-        return Promise.resolve(found || actual.DEFAULT_MOCK_ARTICLES[0]);
-      }),
       listArticles: vi.fn(() =>
         Promise.resolve([...actual.DEFAULT_MOCK_ARTICLES])
       ),

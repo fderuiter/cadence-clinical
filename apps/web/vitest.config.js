@@ -29,10 +29,10 @@ export default mergeConfig(
         exclude: ["src/api/generated/**", "src/mocks/**", "src/main.js"],
         thresholds: {
           // A ratchet floor under the whole app: raise it when coverage rises, never lower it.
-          lines: 61,
-          statements: 60,
-          functions: 45,
-          branches: 50,
+          lines: 68,
+          statements: 67,
+          functions: 54,
+          branches: 59,
           // The files ADR-251 put under its 80 percent gate keep it.
           "src/components/{ReasonForChangeModal,ReasonModal}.vue": {
             lines: 80,
