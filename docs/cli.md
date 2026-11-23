@@ -23,6 +23,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 
 | `make` target                            | Runs                                          |
 | ---------------------------------------- | --------------------------------------------- |
+| `make setup`                             | `cadence doctor --auto-fix`                   |
 | `make doctor`                            | `cadence doctor --auto-fix`                   |
 | `make ports`                             | `cadence check-ports`                         |
 | `make dev`                               | `cadence dev`                                 |
@@ -51,20 +52,27 @@ Exit code `0` means success. Any other exit code means failure. Some commands al
 
 ### `cadence doctor`
 
-Checks the local environment. It reports:
+Checks the local environment (read-only unless `--auto-fix` is passed). In full mode it reports:
 
-- the .NET SDK version (from `dotnet --version`)
-- whether `Directory.Packages.props` exists in the current directory
-- whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
+- the .NET 10 SDK version (from `dotnet --version`, satisfying `global.json`)
+- whether `Directory.Packages.props` exists in the repository root
+- whether local `.NET` tools declared in `.config/dotnet-tools.json` (`dotnet-ef` `10.0.15` with `rollForward: false`, ADR-2527) are restored
+- whether the `pnpm` on `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
+- whether `packages/ui/dist` (`index.js` and `index.css`) is built for `apps/web` and `apps/subject-portal`
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
-- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` or `PATH`
-- whether PostgreSQL answers on `127.0.0.1:5432`
+- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` (or `CADENCE_BIN_DIR`) or `PATH`
+- whether Git pre-commit hooks are active (`core.hooksPath` set to `.githooks`)
+- whether PostgreSQL answers on `127.0.0.1:5432` (informational; does not affect the exit code)
 
-It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, `hadolint`, or `shellcheck` is unavailable, and `0` otherwise.
+Without `--auto-fix`, `cadence doctor` performs zero filesystem or Git configuration writes and exits `1` when any required tool or workspace artifact above is missing, and `0` otherwise.
 
-| Option           | Description                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| `-f\|--auto-fix` | Declared as "remediate missing databases and recoverable issues". Currently ignored. |
+With `-f|--auto-fix`, `DoctorProvisioningService` (`packages/tooling_core/src/Services/DoctorProvisioningService.cs`) verifies `dotnet`, `node`, and `pnpm` (running `corepack enable` if needed), runs `dotnet tool restore`, provisions `detect-secrets==1.5.0` in `.cadence/venv`, downloads and SHA-256-verifies `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) into `.cadence/bin` (verifying binary execution such as `hadolint.exe --version` on Windows `arm64`), runs `pnpm install --frozen-lockfile` and `pnpm --filter ui build`, initializes `.env` from `.env.example` when absent, optionally installs Playwright Chromium (skipped with `--minimal`), and enables `.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking steps succeed.
+
+| Option           | Description                                                                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `-f\|--auto-fix` | Provision `.cadence/bin` linters, `.cadence/venv`, local `.NET` tools, `packages/ui/dist`, and `.githooks/pre-commit`.     |
+| `--minimal`      | Skip optional heavy provisioning steps (Playwright Chromium browser download) during `--auto-fix`.                         |
+| `--linters-only` | Scope `--auto-fix` provisioning and read-only diagnostics to `actionlint`, `hadolint`, and `shellcheck` in `.cadence/bin`. |
 
 ### `cadence check`
 
@@ -289,7 +297,7 @@ Where it differs from CI:
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
 - **Required binaries and daemons must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, and ShellCheck (resolved
-  from `.cadence/bin` or `PATH`, provisioned by `./scripts/setup_wizard.sh --minimal` or `pwsh scripts/setup_wizard.ps1 -Minimal`),
+  from `.cadence/bin` or `PATH`, provisioned by `pnpm cadence doctor --auto-fix`),
   `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), `docker` (with a reachable Docker daemon), `trivy`,
   and `bash` are not installed automatically by `cadence ci`: when any required binary or daemon is unavailable, the step fails with setup guidance
   so an incomplete environment cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to record unavailable tool or Docker steps as skipped,

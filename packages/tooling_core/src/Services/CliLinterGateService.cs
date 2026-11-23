@@ -425,7 +425,8 @@ public static class CliLinterGateService
     {
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
         string exeName = OperatingSystem.IsWindows() ? $"{toolName}.exe" : toolName;
-        string cadenceBinCandidate = Path.Combine(repoRoot, ".cadence", "bin", exeName);
+        string cadenceBinDir = DoctorProvisioningService.ResolveCadenceBinDirectory(repoRoot, getEnvironmentVariable);
+        string cadenceBinCandidate = Path.Combine(cadenceBinDir, exeName);
         if (File.Exists(cadenceBinCandidate) && TryProbeVersion(repoRoot, cadenceBinCandidate, versionFlag, out string binVersion))
         {
             return new ResolvedLinterTool(cadenceBinCandidate, ".cadence/bin", binVersion);
@@ -535,9 +536,10 @@ public static class CliLinterGateService
     {
         Console.WriteLine($"[ERROR] '{toolName}' was not found in .cadence/bin or on PATH (refusing to skip {toolName} quality gate).");
         Console.WriteLine($"        Provision pinned CLI linters ({toolName} v{version}) with:");
+        Console.WriteLine("          pnpm cadence doctor --auto-fix --linters-only");
         if (OperatingSystem.IsWindows())
         {
-            Console.WriteLine("          pwsh scripts/setup_wizard.ps1 -Dev -Minimal");
+            Console.WriteLine("          pwsh scripts/setup_wizard.ps1 -NonInteractive -Minimal");
         }
         else
         {

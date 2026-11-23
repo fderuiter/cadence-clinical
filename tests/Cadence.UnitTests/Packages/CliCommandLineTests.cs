@@ -16,6 +16,9 @@ public class CliCommandLineTests
 
     [Theory]
     [InlineData("doctor", "-f")]
+    [InlineData("doctor", "--auto-fix", "--minimal")]
+    [InlineData("doctor", "--linters-only")]
+    [InlineData("doctor", "--auto-fix", "--linters-only")]
     [InlineData("check")]
     [InlineData("check", "--base", "origin/release/1.0")]
     [InlineData("check", "--push-before", "0000000000000000000000000000000000000000")]

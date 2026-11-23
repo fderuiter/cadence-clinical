@@ -32,17 +32,23 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
-make wizard            # or: bash scripts/setup_wizard.sh   (Windows: scripts/setup_wizard.ps1)
+make wizard            # installs/validates .NET 10 SDK, then runs `cadence doctor --auto-fix` (Windows: scripts/setup_wizard.ps1)
+make setup             # when .NET 10, Node.js, and pnpm are already installed (`pnpm cadence doctor --auto-fix`)
 ```
 
-The wizard detects the environment (workstation, Codespaces, devcontainer, Claude Code remote session
-or CI), installs or validates the .NET 10 SDK and dev certificate, installs the pnpm workspace,
-points Git at the repository hooks (`git config core.hooksPath .githooks`), creates `.env` from
-`.env.example`, and runs `cadence doctor`. Use `--dev` (or `-y`) to skip prompts and `--minimal` to
-skip the Playwright browser download.
+`scripts/setup_wizard.sh` (and `scripts/setup_wizard.ps1` on Windows) is a fail-closed bootstrap wrapper:
+it installs or validates the .NET 10 SDK and HTTPS dev certificate via `scripts/setup_dotnet_env.{sh,ps1}`,
+verifies `dotnet`, `node`, and `pnpm` are active, and delegates workspace provisioning to
+`node scripts/run-cli.js doctor --auto-fix`. `cadence doctor --auto-fix` runs `dotnet tool restore`
+(`.config/dotnet-tools.json`), provisions `detect-secrets==1.5.0` in `.cadence/venv` and SHA-256-verified
+`actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) in `.cadence/bin`, installs the
+`pnpm` workspace and builds `packages/ui/dist`, creates `.env` from `.env.example` if absent, and enables
+`.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking checks pass. Pass
+`--dev` / `-NonInteractive` (or `-y`) to skip prompts, `--minimal` / `-Minimal` to skip Playwright browser
+downloads and cert trust prompts, or `--linters-only` / `-LintersOnly` to provision only `.cadence/bin` linters.
 
-With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the workspaces
-with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
+With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the `.NET` solution
+and workspace at any time with `dotnet restore Cadence.sln && pnpm cadence doctor --auto-fix --minimal`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
