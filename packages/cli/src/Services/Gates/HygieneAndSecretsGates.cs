@@ -18,14 +18,14 @@ internal static class HygieneAndSecretsGates
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
-            "Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it",
+            "Verifies `baselines/secrets/config.json` and `baselines/secrets/*.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `.secrets.baseline` JSON without mutating the working tree",
+            PreCommitNote = "validates staged `baselines/secrets/` JSON shards without mutating the working tree",
         },
         new("detect-secrets", ["secrets-scan"],
-            "Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
+            "Scans changed or tracked files against merged `baselines/secrets/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
             ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             TakesFiles = true,

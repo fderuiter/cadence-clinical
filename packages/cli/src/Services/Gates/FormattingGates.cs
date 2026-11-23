@@ -164,6 +164,11 @@ internal static class FormattingGates
             }
         }
 
+        if (string.Equals(subcommand, "whitespace", StringComparison.Ordinal))
+        {
+            return GateExecutionHelpers.RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", ".", "--folder", "--verify-no-changes") == 0;
+        }
+
         return GateExecutionHelpers.RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, solutionFile, "--verify-no-changes", "--no-restore") == 0;
     }
 

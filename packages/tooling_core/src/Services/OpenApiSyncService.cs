@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -138,47 +137,14 @@ public static class OpenApiSyncService
 
     private static bool RunExporter(string repoRoot, string exportDir, IReadOnlyList<string>? targetServices = null)
     {
-        var psi = new ProcessStartInfo("dotnet")
-        {
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        psi.ArgumentList.Add("run");
-        psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(ExporterProject);
-        psi.ArgumentList.Add("--");
-        psi.ArgumentList.Add("--output-dir");
-        psi.ArgumentList.Add(exportDir);
-
+        var exporterArgs = new List<string> { "--output-dir", exportDir };
         if (targetServices != null && targetServices.Count > 0)
         {
-            psi.ArgumentList.Add("--services");
-            psi.ArgumentList.Add(string.Join(",", targetServices));
+            exporterArgs.Add("--services");
+            exporterArgs.Add(string.Join(",", targetServices));
         }
 
-        using var process = Process.Start(psi);
-        if (process == null)
-        {
-            Console.WriteLine("[ERROR] Could not start 'dotnet run' for the OpenAPI exporter.");
-            return false;
-        }
-
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        string stdout = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        string stderr = stderrTask.GetAwaiter().GetResult();
-
-        if (process.ExitCode != 0)
-        {
-            Console.WriteLine($"[ERROR] The OpenAPI exporter failed with exit code {process.ExitCode}:");
-            Console.WriteLine(stdout);
-            Console.WriteLine(stderr);
-            return false;
-        }
-
-        return true;
+        return ExporterBuildFreshness.RunDotnetExporter(repoRoot, ExporterProject, exporterArgs, "OpenAPI exporter");
     }
 
     private static string FindRepoRoot() => RepositoryRoot.Find();

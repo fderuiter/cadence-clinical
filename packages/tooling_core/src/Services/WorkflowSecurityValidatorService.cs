@@ -475,6 +475,12 @@ public static partial class WorkflowSecurityValidatorService
             or "\"push\" == github.event_name"
             or "github.event_name == 'pull_request'"
             or "github.event_name == \"pull_request\""
+            or "'pull_request' == github.event_name"
+            or "\"pull_request\" == github.event_name"
+            or "github.event_name == 'merge_group'"
+            or "github.event_name == \"merge_group\""
+            or "'merge_group' == github.event_name"
+            or "\"merge_group\" == github.event_name"
             or "github.event_name != 'workflow_dispatch'"
             or "github.event_name != \"workflow_dispatch\"";
     }
@@ -488,8 +494,18 @@ public static partial class WorkflowSecurityValidatorService
         }
 
         var orBranches = SplitTopLevelLogical(unwrapped, "||");
-        return orBranches.Count > 0 &&
-               orBranches.All(branch => BranchExcludesWorkflowDispatch(branch) || BranchRequiresProtectedRef(branch));
+        if (orBranches.Count > 1)
+        {
+            return orBranches.All(HasProtectedDispatchRefGuard);
+        }
+
+        var andClauses = SplitTopLevelLogical(unwrapped, "&&");
+        if (andClauses.Count > 1)
+        {
+            return andClauses.Any(HasProtectedDispatchRefGuard);
+        }
+
+        return BranchExcludesWorkflowDispatch(unwrapped) || BranchRequiresProtectedRef(unwrapped);
     }
 
     private static bool BranchRequiresProtectedRef(string branch)

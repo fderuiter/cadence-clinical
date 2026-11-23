@@ -15,8 +15,18 @@ public static partial class DevEnvironmentValidatorService
         string CanonicalName,
         int Port,
         string RelativeFilePath,
-        int LineNumber
+        int LineNumber,
+        string Schema = ""
     );
+
+    private static readonly string[] RequiredExecutionOptionCKeys =
+    [
+        "ConnectionStrings__cadence",
+        "GATEWAY_SECRET",
+        "AUDIT_LOG_SECRET_KEY",
+        "DemographicsEncryption__KeyBase64",
+        "RANDOMIZATION_ALLOCATION_KEY",
+    ];
 
     [GeneratedRegex(@"GetServiceUrl\s*\(\s*""([^""]+)""\s*,\s*(\d+)\s*\)")]
     private static partial Regex GatewayServiceUrlRegex();
@@ -29,6 +39,30 @@ public static partial class DevEnvironmentValidatorService
 
     [GeneratedRegex(@"\.WithHttpEndpoint\s*\(\s*port:\s*(\d+)")]
     private static partial Regex AppHostHttpEndpointRegex();
+
+    [GeneratedRegex(@"AddViteApp\s*\(\s*""([^""]+)""")]
+    private static partial Regex AppHostViteAppRegex();
+
+    [GeneratedRegex(@"endpoint\.Port\s*=\s*(\d+)")]
+    private static partial Regex AppHostEndpointPortAssignmentRegex();
+
+    [GeneratedRegex(@"\bDEV_PORT\s*=\s*(\d+)")]
+    private static partial Regex ViteDevPortConstRegex();
+
+    [GeneratedRegex(@"\bport\s*:\s*(\d+)")]
+    private static partial Regex ViteServerPortLiteralRegex();
+
+    [GeneratedRegex(@"[\s\-]+")]
+    private static partial Regex ServiceSeparatorRegex();
+
+    [GeneratedRegex(@"\b(?:5173|7687|8017|8019)\b")]
+    private static partial Regex RetiredPortRegex();
+
+    private static readonly (string RawServiceName, string RelativeConfigPath)[] ViteApps =
+    [
+        ("web", Path.Combine("apps", "web", "vite.config.js")),
+        ("subject-portal", Path.Combine("apps", "subject-portal", "vite.config.js")),
+    ];
 
     public static int ValidateDevEnvironment(string? repoRoot = null)
     {
@@ -60,15 +94,17 @@ public static partial class DevEnvironmentValidatorService
         var docMappings = ParseDocMappings(docPath, repoRoot);
         var gatewayMappings = ParseGatewayMappings(gatewayPath, repoRoot);
         var appHostMappings = ParseAppHostMappings(apphostPath, repoRoot);
+        var viteMappings = ParseViteMappings(repoRoot);
 
         bool hasError = false;
+        string relativeDocPath = Path.GetRelativePath(repoRoot, docPath);
 
         // Check 1: Mismatches/missing between docs and gateway
         foreach (var (canonical, gatewayInfo) in gatewayMappings)
         {
             if (!docMappings.TryGetValue(canonical, out var docInfo))
             {
-                Console.WriteLine($"[ERROR] Service '{gatewayInfo.RawServiceName}' defined in {gatewayInfo.RelativeFilePath}:{gatewayInfo.LineNumber} (port {gatewayInfo.Port}) is missing from {Path.GetRelativePath(repoRoot, docPath)}.");
+                Console.WriteLine($"[ERROR] Service '{gatewayInfo.RawServiceName}' defined in {gatewayInfo.RelativeFilePath}:{gatewayInfo.LineNumber} (port {gatewayInfo.Port}) is missing from {relativeDocPath}.");
                 hasError = true;
             }
             else if (docInfo.Port != gatewayInfo.Port)
@@ -86,7 +122,7 @@ public static partial class DevEnvironmentValidatorService
         {
             if (!docMappings.TryGetValue(canonical, out var docInfo))
             {
-                Console.WriteLine($"[ERROR] Service '{appHostInfo.RawServiceName}' defined in {appHostInfo.RelativeFilePath}:{appHostInfo.LineNumber} (port {appHostInfo.Port}) is missing from {Path.GetRelativePath(repoRoot, docPath)}.");
+                Console.WriteLine($"[ERROR] Service '{appHostInfo.RawServiceName}' defined in {appHostInfo.RelativeFilePath}:{appHostInfo.LineNumber} (port {appHostInfo.Port}) is missing from {relativeDocPath}.");
                 hasError = true;
             }
             else if (docInfo.Port != appHostInfo.Port)
@@ -97,6 +133,39 @@ public static partial class DevEnvironmentValidatorService
                 Console.WriteLine($"      {appHostInfo.RelativeFilePath}:{appHostInfo.LineNumber} specifies port {appHostInfo.Port} (actual)");
                 hasError = true;
             }
+        }
+
+        // Check 3: Mismatches/missing between docs (and apphost when present) and Vite frontend configs
+        foreach (var (canonical, viteInfo) in viteMappings)
+        {
+            if (!docMappings.TryGetValue(canonical, out var docInfo))
+            {
+                Console.WriteLine($"[ERROR] Frontend app '{viteInfo.RawServiceName}' defined in {viteInfo.RelativeFilePath}:{viteInfo.LineNumber} (port {viteInfo.Port}) is missing from {relativeDocPath}.");
+                hasError = true;
+            }
+            else if (docInfo.Port != viteInfo.Port)
+            {
+                Console.WriteLine($"[ERROR] Dev environment documentation drift detected between {docInfo.RelativeFilePath} and {viteInfo.RelativeFilePath}:");
+                Console.WriteLine($"  - Service '{canonical}':");
+                Console.WriteLine($"      {docInfo.RelativeFilePath}:{docInfo.LineNumber} specifies port {docInfo.Port} (expected)");
+                Console.WriteLine($"      {viteInfo.RelativeFilePath}:{viteInfo.LineNumber} specifies port {viteInfo.Port} (actual)");
+                hasError = true;
+            }
+
+            if (appHostMappings.TryGetValue(canonical, out var appHostInfo) && appHostInfo.Port != viteInfo.Port)
+            {
+                Console.WriteLine($"[ERROR] Vite frontend port drift detected between {appHostInfo.RelativeFilePath} and {viteInfo.RelativeFilePath}:");
+                Console.WriteLine($"  - Service '{canonical}':");
+                Console.WriteLine($"      {appHostInfo.RelativeFilePath}:{appHostInfo.LineNumber} specifies port {appHostInfo.Port}");
+                Console.WriteLine($"      {viteInfo.RelativeFilePath}:{viteInfo.LineNumber} specifies port {viteInfo.Port}");
+                hasError = true;
+            }
+        }
+
+        // Check 4: Full ServiceTopology, schema, profile, and standalone startup validation when ServiceTopology is present
+        if (File.Exists(Path.Combine(repoRoot, "packages", "topology", "src", "ServiceTopology.cs")))
+        {
+            hasError |= !ValidateAgainstTopology(repoRoot, docPath, relativeDocPath, docMappings);
         }
 
         if (hasError)
@@ -114,19 +183,139 @@ public static partial class DevEnvironmentValidatorService
         if (string.IsNullOrWhiteSpace(name)) return string.Empty;
         string lower = name.Trim().ToLowerInvariant();
 
-        if (lower.EndsWith("_service_url"))
+        if (lower.EndsWith("_service_url", StringComparison.Ordinal))
         {
             lower = lower[..^"_service_url".Length];
         }
 
-        if (lower.Contains("gateway")) return "gateway";
-        if (lower.Contains("kernel")) return "kernel";
-        if (lower.Contains("keycloak")) return "keycloak";
+        if (lower.Contains("gateway", StringComparison.Ordinal)) return "gateway";
+        if (lower.Contains("kernel", StringComparison.Ordinal)) return "kernel";
+        if (lower.Contains("keycloak", StringComparison.Ordinal)) return "keycloak";
 
         int paren = lower.IndexOf('(');
         if (paren >= 0) lower = lower[..paren].Trim();
 
-        return lower.Replace('-', '_').Trim();
+        return ServiceSeparatorRegex().Replace(lower, "_").Trim('_');
+    }
+
+    private static bool ValidateAgainstTopology(
+        string repoRoot,
+        string docPath,
+        string relativeDocPath,
+        Dictionary<string, ServicePortMapping> docMappings)
+    {
+        bool ok = true;
+        string docContent = File.ReadAllText(docPath);
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var dbModules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+
+        var retiredMatch = RetiredPortRegex().Match(docContent);
+        if (retiredMatch.Success)
+        {
+            Console.WriteLine($"[ERROR] {relativeDocPath} references retired port '{retiredMatch.Value}'.");
+            ok = false;
+        }
+
+        CheckExpectedPortAndSchema(docMappings, "gateway", topology.GatewayPort, "none", relativeDocPath, ref ok);
+        CheckExpectedPortAndSchema(docMappings, "postgresql", topology.PostgresPort, "`cadence` (database)", relativeDocPath, ref ok);
+        CheckExpectedPortAndSchema(docMappings, "keycloak", topology.KeycloakPort, "(own store)", relativeDocPath, ref ok);
+        CheckExpectedPortAndSchema(docMappings, "web", topology.WebPort, "none", relativeDocPath, ref ok);
+        CheckExpectedPortAndSchema(docMappings, "subject_portal", topology.SubjectPortalPort, "none", relativeDocPath, ref ok);
+
+        string expectedKernelSchemas = ResolveExpectedKernelSchemas(dbModules);
+        foreach (var svc in topology.Services)
+        {
+            string canonical = NormalizeServiceName(svc.Name);
+            string expectedSchema = ResolveExpectedServiceSchema(svc, dbModules, expectedKernelSchemas);
+            CheckExpectedPortAndSchema(docMappings, canonical, svc.Port, expectedSchema, relativeDocPath, ref ok);
+        }
+
+        foreach (string coreHost in topology.CoreBackendHosts)
+        {
+            if (!docContent.Contains($"`{coreHost}`", StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] {relativeDocPath} does not document core AppHost backend host '{coreHost}'.");
+                ok = false;
+            }
+        }
+
+        foreach (string requiredKey in RequiredExecutionOptionCKeys)
+        {
+            if (!docContent.Contains(requiredKey, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] {relativeDocPath} Option C standalone startup instructions omit required key '{requiredKey}'.");
+                ok = false;
+            }
+        }
+
+        return ok;
+    }
+
+    private static void CheckExpectedPortAndSchema(
+        Dictionary<string, ServicePortMapping> docMappings,
+        string canonical,
+        int expectedPort,
+        string expectedSchema,
+        string relativeDocPath,
+        ref bool ok)
+    {
+        if (!docMappings.TryGetValue(canonical, out var docInfo))
+        {
+            Console.WriteLine($"[ERROR] Expected entry '{canonical}' (port {expectedPort}) is missing from {relativeDocPath}.");
+            ok = false;
+            return;
+        }
+
+        if (docInfo.Port != expectedPort)
+        {
+            Console.WriteLine($"[ERROR] {relativeDocPath}:{docInfo.LineNumber} specifies port {docInfo.Port} for '{canonical}', expected {expectedPort}.");
+            ok = false;
+        }
+
+        if (expectedSchema.Length > 0 && !string.Equals(docInfo.Schema, expectedSchema, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[ERROR] {relativeDocPath}:{docInfo.LineNumber} specifies schema '{docInfo.Schema}' for '{canonical}', expected '{expectedSchema}'.");
+            ok = false;
+        }
+    }
+
+    private static string ResolveExpectedKernelSchemas(IReadOnlyList<CodeMetadataCatalog.DatabaseModuleSchema> dbModules)
+    {
+        string[] schemas = dbModules
+            .Where(m => string.Equals(m.Host, "kernel", StringComparison.Ordinal))
+            .Select(m => m.Schema)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s switch
+            {
+                "kernel" => 0,
+                "intelligence" => 1,
+                "execution" => 2,
+                _ => 3,
+            })
+            .ThenBy(s => s, StringComparer.Ordinal)
+            .Select(s => $"`{s}`")
+            .ToArray();
+        return schemas.Length > 0 ? string.Join(", ", schemas) : "`kernel`, `intelligence`, `execution`";
+    }
+
+    private static string ResolveExpectedServiceSchema(
+        CadenceService svc,
+        IReadOnlyList<CodeMetadataCatalog.DatabaseModuleSchema> dbModules,
+        string expectedKernelSchemas)
+    {
+        if (!svc.Database)
+        {
+            return "none";
+        }
+
+        if (string.Equals(svc.Name, "kernel", StringComparison.Ordinal))
+        {
+            return expectedKernelSchemas;
+        }
+
+        var module = dbModules.FirstOrDefault(m => string.Equals(m.Module, svc.Name, StringComparison.Ordinal));
+        string schema = module?.Schema ?? (string.Equals(svc.Name, "execution", StringComparison.Ordinal) ? "edc" : svc.Name);
+        return $"`{schema}`";
     }
 
     private static Dictionary<string, ServicePortMapping> ParseDocMappings(string filePath, string repoRoot)
@@ -141,34 +330,64 @@ public static partial class DevEnvironmentValidatorService
             string line = lines[i].Trim();
             if (!line.StartsWith('|') || !line.EndsWith('|')) continue;
 
-            if (line.Contains("---") || (line.ToLowerInvariant().Contains("service") && line.ToLowerInvariant().Contains("host port")))
+            if (line.Contains("---", StringComparison.Ordinal) ||
+                (line.Contains("service", StringComparison.OrdinalIgnoreCase) && line.Contains("host port", StringComparison.OrdinalIgnoreCase)))
             {
                 continue;
             }
 
             string[] parts = line.Split('|', StringSplitOptions.None);
-            ExtractAndAddDocPair(parts, 1, 2, relativePath, lineNumber, result);
-            ExtractAndAddDocPair(parts, 4, 5, relativePath, lineNumber, result);
+            ExtractAndAddDocPair(parts, 1, 2, 3, relativePath, lineNumber, result);
+            ExtractAndAddDocPair(parts, 4, 5, 6, relativePath, lineNumber, result);
         }
 
         return result;
     }
 
-    private static void ExtractAndAddDocPair(string[] parts, int nameIdx, int portIdx, string relativePath, int lineNumber, Dictionary<string, ServicePortMapping> result)
+    private static void ExtractAndAddDocPair(
+        string[] parts,
+        int nameIdx,
+        int portIdx,
+        int schemaIdx,
+        string relativePath,
+        int lineNumber,
+        Dictionary<string, ServicePortMapping> result)
     {
         if (nameIdx >= parts.Length || portIdx >= parts.Length) return;
 
         string nameCell = parts[nameIdx].Trim();
         string portCell = parts[portIdx].Trim().Trim('`');
+        string schemaCell = schemaIdx < parts.Length ? parts[schemaIdx].Trim() : "";
 
         if (string.IsNullOrWhiteSpace(nameCell) || string.IsNullOrWhiteSpace(portCell)) return;
+
+        if (portCell.Contains('/', StringComparison.Ordinal) && nameCell.Contains('/', StringComparison.Ordinal))
+        {
+            string[] nameParts = nameCell.Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            string[] portParts = portCell.Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (nameParts.Length == portParts.Length)
+            {
+                for (int i = 0; i < nameParts.Length; i++)
+                {
+                    if (int.TryParse(portParts[i].Trim('`'), out int splitPort))
+                    {
+                        string canonical = NormalizeServiceName(nameParts[i]);
+                        if (!string.IsNullOrEmpty(canonical) && !result.ContainsKey(canonical))
+                        {
+                            result[canonical] = new ServicePortMapping(nameParts[i], canonical, splitPort, relativePath, lineNumber, schemaCell);
+                        }
+                    }
+                }
+                return;
+            }
+        }
 
         if (int.TryParse(portCell, out int port))
         {
             string canonical = NormalizeServiceName(nameCell);
             if (!string.IsNullOrEmpty(canonical) && !result.ContainsKey(canonical))
             {
-                result[canonical] = new ServicePortMapping(nameCell, canonical, port, relativePath, lineNumber);
+                result[canonical] = new ServicePortMapping(nameCell, canonical, port, relativePath, lineNumber, schemaCell);
             }
         }
     }
@@ -241,14 +460,34 @@ public static partial class DevEnvironmentValidatorService
                 }
             }
 
-            if (line.Contains("AddProject") && line.Contains("\"gateway\""))
+            var viteMatch = AppHostViteAppRegex().Match(line);
+            if (viteMatch.Success)
+            {
+                string rawName = viteMatch.Groups[1].Value;
+                string canonical = NormalizeServiceName(rawName);
+                if (!string.IsNullOrEmpty(canonical) && !result.ContainsKey(canonical))
+                {
+                    for (int j = i; j < Math.Min(lines.Length, i + 6); j++)
+                    {
+                        var assignMatch = AppHostEndpointPortAssignmentRegex().Match(lines[j]);
+                        var httpMatch = assignMatch.Success ? assignMatch : AppHostHttpEndpointRegex().Match(lines[j]);
+                        if (httpMatch.Success && int.TryParse(httpMatch.Groups[1].Value, out int port))
+                        {
+                            result[canonical] = new ServicePortMapping(rawName, canonical, port, relativePath, j + 1);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (line.Contains("AddProject", StringComparison.Ordinal) && line.Contains("\"gateway\"", StringComparison.Ordinal))
             {
                 for (int j = i; j < Math.Min(lines.Length, i + 3); j++)
                 {
                     var endpointMatch = AppHostHttpEndpointRegex().Match(lines[j]);
                     if (endpointMatch.Success && int.TryParse(endpointMatch.Groups[1].Value, out int port))
                     {
-                        string canonical = "gateway";
+                        const string canonical = "gateway";
                         if (!result.ContainsKey(canonical))
                         {
                             result[canonical] = new ServicePortMapping("gateway", canonical, port, relativePath, j + 1);
@@ -258,18 +497,67 @@ public static partial class DevEnvironmentValidatorService
                 }
             }
 
-            if (line.Contains("AddContainer") && line.Contains("\"keycloak\""))
+            if (line.Contains("AddContainer", StringComparison.Ordinal) && line.Contains("\"keycloak\"", StringComparison.Ordinal))
             {
                 for (int j = i; j < Math.Min(lines.Length, i + 3); j++)
                 {
                     var endpointMatch = AppHostHttpEndpointRegex().Match(lines[j]);
                     if (endpointMatch.Success && int.TryParse(endpointMatch.Groups[1].Value, out int port))
                     {
-                        string canonical = "keycloak";
+                        const string canonical = "keycloak";
                         if (!result.ContainsKey(canonical))
                         {
                             result[canonical] = new ServicePortMapping("keycloak", canonical, port, relativePath, j + 1);
                         }
+                        break;
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, ServicePortMapping> ParseViteMappings(string repoRoot)
+    {
+        var result = new Dictionary<string, ServicePortMapping>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (rawName, relativeConfigPath) in ViteApps)
+        {
+            string fullPath = Path.Combine(repoRoot, relativeConfigPath);
+            if (!File.Exists(fullPath))
+            {
+                continue;
+            }
+
+            string relativePath = Path.GetRelativePath(repoRoot, fullPath);
+            string[] lines = File.ReadAllLines(fullPath);
+            string canonical = NormalizeServiceName(rawName);
+            if (string.IsNullOrEmpty(canonical))
+            {
+                continue;
+            }
+
+            bool matched = false;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var constMatch = ViteDevPortConstRegex().Match(lines[i]);
+                if (constMatch.Success && int.TryParse(constMatch.Groups[1].Value, out int constPort))
+                {
+                    result[canonical] = new ServicePortMapping(rawName, canonical, constPort, relativePath, i + 1);
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched)
+            {
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var portMatch = ViteServerPortLiteralRegex().Match(lines[i]);
+                    if (portMatch.Success && int.TryParse(portMatch.Groups[1].Value, out int literalPort))
+                    {
+                        result[canonical] = new ServicePortMapping(rawName, canonical, literalPort, relativePath, i + 1);
                         break;
                     }
                 }

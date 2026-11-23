@@ -22,7 +22,7 @@ internal static class ReleaseAndTestSuiteGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,

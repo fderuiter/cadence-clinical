@@ -41,19 +41,21 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
             return;
         }
 
-        int zone = int.TryParse(msg.ZoneCode, out var parsedZone) ? parsedZone : 1;
+        int zone = int.TryParse(msg.ZoneCode, out var parsedZone) && parsedZone > 0 ? parsedZone : 1;
         var createdBy = string.IsNullOrWhiteSpace(msg.RequestedBy) ? "svc:etmf-outbox" : msg.RequestedBy;
+        var safeFilename = TmfDocument.SanitizePathSegment(msg.DocumentTitle, "document.pdf");
+        var safeSection = TmfDocument.SanitizePathSegment(msg.SectionCode, "01.01");
 
         var doc = TmfDocument.CreateFiled(
             id: msg.DocumentId,
             studyId: msg.StudyId,
-            filename: msg.DocumentTitle,
+            filename: safeFilename,
             createdBy: createdBy,
             createdAt: msg.RequestedAt.UtcDateTime,
             reasonForChange: "eTMF document filing request outbox sync",
             siteId: msg.SiteId,
             zone: zone,
-            section: msg.SectionCode,
+            section: safeSection,
             artifactCode: msg.ArtifactCode,
             artifactType: msg.ArtifactCode,
             content: msg.StoragePath,

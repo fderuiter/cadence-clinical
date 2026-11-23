@@ -20,7 +20,8 @@ public static class QualityGateOrchestrator
         string[]? excludedGates = null,
         string? repoRoot = null,
         string? baseRef = null,
-        string? pushBefore = null)
+        string? pushBefore = null,
+        bool? failFast = null)
     {
         AnsiConsole.MarkupLine("[bold cyan]Executing Cadence Quality Sentinels & Policy Gates...[/]\n");
 
@@ -67,10 +68,11 @@ public static class QualityGateOrchestrator
             return gate.Run(context) ? 0 : 1;
         }
 
-        return RunAll(context, excluded);
+        bool effectiveFailFast = failFast ?? preCommit;
+        return RunAll(context, excluded, effectiveFailFast);
     }
 
-    private static int RunAll(GateContext context, IReadOnlySet<string> excluded)
+    private static int RunAll(GateContext context, IReadOnlySet<string> excluded, bool failFast)
     {
         int total = QualityGates.All.Count;
         int failed = 0;
@@ -100,6 +102,11 @@ public static class QualityGateOrchestrator
             {
                 AnsiConsole.MarkupLine($"[red]Gate {i + 1} ({Markup.Escape(gate.Name)}) failed![/]");
                 failed++;
+                if (failFast)
+                {
+                    AnsiConsole.MarkupLine($"\n[bold red]Stopping after first failing quality gate ({Markup.Escape(gate.Name)}) due to fail-fast mode.[/]");
+                    return 1;
+                }
             }
         }
 

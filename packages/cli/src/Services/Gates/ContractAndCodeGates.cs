@@ -18,7 +18,7 @@ internal static class ContractAndCodeGates
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
-            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/` and `docs/SDLC/runs/` excluded), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
+            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/`, `docs/SDLC/runs/` and `baselines/` excluded), ratcheted by per-unit `baselines/deid/<unit>.baseline.txt` shards; a line that is not PHI takes a `deid-ignore` comment",
             ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
@@ -30,7 +30,12 @@ internal static class ContractAndCodeGates
         },
         new("api-clients", ["validate-api-clients"],
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
-            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
+            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `generate:api --check` and `tsc --noEmit` when staged files touch `docs/openapi` or frontend inputs; fails closed when `pnpm` or `apps/web/tsconfig.json` is missing",
+        },
         new("schema-doc", ["auto-stage-schema-doc"],
             "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
@@ -48,7 +53,12 @@ internal static class ContractAndCodeGates
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
             "NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
-            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
+            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot, targetFiles: ctx.TargetFiles, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
+        },
         new("dependencies", ["validate-dependencies"],
             "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),

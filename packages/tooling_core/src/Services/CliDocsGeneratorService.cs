@@ -8,8 +8,11 @@ using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
-public static class CliDocsGeneratorService
+public static partial class CliDocsGeneratorService
 {
+    [GeneratedRegex(@"\b(?:5173|7687|8017|8019)\b")]
+    private static partial Regex RetiredCliPortRegex();
+
     public static int GenerateCliDocs(
         bool check = false,
         string? repoRoot = null,
@@ -26,6 +29,7 @@ public static class CliDocsGeneratorService
                 Console.WriteLine($"[ERROR] CLI documentation not found at {cliMdPath}");
                 return 1;
             }
+
             File.WriteAllText(cliMdPath, "# Cadence CLI Documentation\n\nCommand line tool reference.\n");
         }
 
@@ -38,7 +42,7 @@ public static class CliDocsGeneratorService
                 "cadence doctor",
                 "cadence check",
                 "cadence fix",
-                "cadence gxp"
+                "cadence gxp",
             ];
 
             bool passed = true;
@@ -51,6 +55,12 @@ public static class CliDocsGeneratorService
                 }
             }
 
+            if (content.Contains("until 2027", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("[ERROR] docs/cli.md contains stale 'until 2027' GitHub Actions claim.");
+                passed = false;
+            }
+
             if (commandNames is not null)
             {
                 foreach (var command in FindUndocumentedCommands(commandNames, content))
@@ -60,7 +70,24 @@ public static class CliDocsGeneratorService
                 }
             }
 
-            if (!passed) return 1;
+            string expectedPorts = PortCheckerService.FormatPortRanges(PortCheckerService.DefaultPorts);
+            if (!content.Contains(expectedPorts, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] docs/cli.md does not match PortCheckerService.DefaultPorts ('{expectedPorts}').");
+                passed = false;
+            }
+
+            var retiredMatch = RetiredCliPortRegex().Match(content);
+            if (retiredMatch.Success)
+            {
+                Console.WriteLine($"[ERROR] docs/cli.md references retired port '{retiredMatch.Value}'.");
+                passed = false;
+            }
+
+            if (!passed)
+            {
+                return 1;
+            }
 
             Console.WriteLine("✔ CLI documentation parity check passed cleanly.");
             return 0;

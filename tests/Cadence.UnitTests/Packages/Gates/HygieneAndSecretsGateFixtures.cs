@@ -27,8 +27,8 @@ internal static class HygieneAndSecretsGateFixtures
         ["detect-secrets"] = () =>
         {
             ws.Write(
-                ".secrets.baseline",
-                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n");
+                "baselines/secrets/config.json",
+                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": []\n}\n");
             ws.CommitOnMainThenBranch();
             ws.Write("config/leak.txt", $"{QualityGateFixtureWorkspace.PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
             ws.Git("add", "config/leak.txt");

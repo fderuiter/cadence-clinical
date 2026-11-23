@@ -38,7 +38,7 @@ public static TemplateCatalog Catalog { get; } = new(
     typeof(MyEndpoints).Assembly,
     new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        ["confirmation_letter"] = "confirmation_letter.liquid",
+        ["confirmation_letter"] = "confirmation_letter.html.liquid",
     });
 
 if (!Catalog.Contains(templateName)) { /* 400 ProblemDetails */ }

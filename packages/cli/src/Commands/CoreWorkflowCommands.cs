@@ -12,8 +12,8 @@ internal static class CoreWorkflowCommands
         AddCommand(root, "doctor", "Validates system dependencies and local datastores", DoctorCommand.Configure);
         AddCommand(root, "check", "Runs architecture sentinels and quality gates", CheckCommand.Configure);
         AddCommand(root, "test", "Runs fast unit tests or testcontainer integration suites", TestCommand.Configure);
-        AddCommand(root, "ci", "Runs the jobs of .github/workflows/ci.yml on this machine while GitHub Actions is off", LocalCiCommand.Configure);
-        AddCommand(root, "rulesets", "Validates and synchronizes .github/rulesets/*.json to GitHub via gh api", RulesetsCommand.Configure);
+        AddCommand(root, "ci", "Runs the pull-request jobs of .github/workflows/ci.yml locally for pre-push CI parity", LocalCiCommand.Configure);
+        AddCommand(root, "rulesets", "Validates CI Gate coverage and .github/rulesets/*.json (when present) and syncs rulesets via gh api", RulesetsCommand.Configure);
         AddCommand(root, "dev", "Starts the .NET Aspire AppHost with all local services and datastores", DevCommand.Execute);
         AddCommand(root, "fix", "Executes self-healing formatting, index sync, schema and OpenAPI pipeline", ToolCommands.ConfigureFix);
     }

@@ -20,11 +20,11 @@ internal static class ValidationAndSecurityCommands
         AddCommand(root, "validate-workflow-security", "Checks GitHub Actions SHA pinning, checkout credentials and least-privilege permissions", () => WorkflowSecurityValidatorService.ValidateWorkflowSecurity());
         AddCommand(root, "validate-markdown", "Checks Markdown formatting and workspace links", () => MarkdownValidatorService.ValidateMarkdown());
         AddCommand(root, "query-linter", "Lints database and ORM query statements", () => QueryLinterService.LintQueries());
-        AddCommand(root, "extract-env-vars", "Checks that environment variables read in code are documented", ToolCommands.ConfigureExtractEnvVars);
+        AddCommand(root, "extract-env-vars", "Verifies bidirectional parity and file citations between code, .env.example and docs/ENVIRONMENT_VARIABLES.md", ToolCommands.ConfigureExtractEnvVars);
         AddCommand(root, "audit-security", "Scans for hardcoded secrets", () => SecurityAuditorService.AuditSecurity());
         AddCommand(root, "validate-public-bundle", "Verifies built VitePress and demo web bundles with zero comment exemptions", () => PublicBundleValidatorService.ValidatePublicBundles());
         AddCommand(root, "validate-vulnerabilities", "Audits dependency vulnerabilities against the exclusions ledger", () => VulnerabilityAuditorService.AuditVulnerabilities());
         AddCommand(root, "clean-secrets-baseline", "Normalizes or checks the detect-secrets baseline", ToolCommands.ConfigureCleanSecretsBaseline);
-        AddCommand(root, "validate-architecture-drift", "Checks that compose services are described in the architecture docs", () => ArchitectureDriftValidatorService.ValidateArchitectureDrift());
+        AddCommand(root, "validate-architecture-drift", "Verifies compose, topology, database schema, electronic signature and audit-host parity across architecture docs", () => ArchitectureDriftValidatorService.ValidateArchitectureDrift());
     }
 }

@@ -526,22 +526,23 @@ public class LocalCiRunnerTests
         var env = Environment(docker: false);
 
         var strictResults = LocalCiRunner.Run(jobs, Defaults with { RequestedJobs = ["container-security"] }, env);
-        strictResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.Skipped);
+        strictResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
         strictResults[0].Note.Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
         _ran.Should().BeEmpty();
 
         var dbSkipOnlyResults = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true, RequestedJobs = ["container-security"] }, env);
-        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.Skipped);
+        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
 
         var skipResults = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true, RequestedJobs = ["container-security"] }, env);
-        skipResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        skipResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
         skipResults[0].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
         skipResults[1].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults[2].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
         _ran.Should().BeEmpty();
     }
 
     [Fact]
-    public void ContainerSecurity_BuildsAndScansAllFourImages_AndRespectsDiffScopeUnlessExplicitlyRequested()
+    public void ContainerSecurity_ValidatesComposeAndBuildsAndScansAllTwentyImages_AndRespectsDiffScopeUnlessExplicitlyRequested()
     {
         var jobs = CiPlan.Select(["container-security"]);
         var skippedScope = new CiContainerScanScope(false, "no container or dependency changes against origin/main (pass --job container-security to force)");
@@ -551,7 +552,7 @@ public class LocalCiRunnerTests
             containerSecurityScope: skippedScope);
 
         var defaultRunResults = LocalCiRunner.Run(jobs, Defaults, envWhenNoDiffAndMissingTools);
-        defaultRunResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        defaultRunResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
         defaultRunResults[0].Note.Should().Contain("no container or dependency changes");
 
         var capturedCommands = new List<string>();
@@ -575,10 +576,11 @@ public class LocalCiRunnerTests
             jobs,
             Defaults with { RequestedJobs = ["container-security"] },
             readyEnv);
-        forcedResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
-        capturedCommands.Should().HaveCount(8);
-        capturedCommands.Take(4).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
-        capturedCommands.Skip(4).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
+        forcedResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
+        capturedCommands.Should().HaveCount(41);
+        capturedCommands[0].Should().Be("docker compose -f docker/docker-compose.yml config -q");
+        capturedCommands.Skip(1).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
+        capturedCommands.Skip(21).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -600,20 +602,22 @@ public class LocalCiRunnerTests
             // HEAD == origin/main triggers tracked-files fallback -> runs unconditionally.
             LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
 
-            // Docs-only branch commit -> skipped on default run.
-            RunGit(tempRepo, "checkout", "-q", "-b", "feature/docs-only");
+            // Docs and frontend manifest commits -> skipped on default run.
+            RunGit(tempRepo, "checkout", "-q", "-b", "feature/docs-and-frontend");
             File.WriteAllText(Path.Combine(tempRepo, "README.md"), "# updated docs\n");
-            RunGit(tempRepo, "add", "README.md");
-            RunGit(tempRepo, "commit", "-q", "-m", "docs update");
-            var docsOnlyScope = LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main");
-            docsOnlyScope.ShouldRun.Should().BeFalse();
-            docsOnlyScope.Note.Should().Contain("no container or dependency changes");
+            File.WriteAllText(Path.Combine(tempRepo, "package.json"), "{}\n");
+            File.WriteAllText(Path.Combine(tempRepo, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+            RunGit(tempRepo, "add", "README.md", "package.json", "pnpm-lock.yaml");
+            RunGit(tempRepo, "commit", "-q", "-m", "docs and frontend update");
+            var nonContainerScope = LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main");
+            nonContainerScope.ShouldRun.Should().BeFalse();
+            nonContainerScope.Note.Should().Contain("no container or dependency changes");
 
-            // Touching a csproj or Dockerfile on the branch -> runs container-security.
-            Directory.CreateDirectory(Path.Combine(tempRepo, "packages", "sample"));
-            File.WriteAllText(Path.Combine(tempRepo, "packages", "sample", "Sample.csproj"), "<Project />\n");
-            RunGit(tempRepo, "add", "packages/sample/Sample.csproj");
-            RunGit(tempRepo, "commit", "-q", "-m", "touch csproj");
+            // Touching a backend C# file under apps/ or packages/ -> runs container-security.
+            Directory.CreateDirectory(Path.Combine(tempRepo, "apps", "gateway", "src"));
+            File.WriteAllText(Path.Combine(tempRepo, "apps", "gateway", "src", "Endpoint.cs"), "namespace Sample;\n");
+            RunGit(tempRepo, "add", "apps/gateway/src/Endpoint.cs");
+            RunGit(tempRepo, "commit", "-q", "-m", "touch backend cs");
             LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
         }
         finally

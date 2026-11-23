@@ -77,6 +77,13 @@ public readonly struct RuleValue : IEquatable<RuleValue>
         return Kind == RuleValueKind.Text;
     }
 
+    internal bool CanBeNumber => Kind switch
+    {
+        RuleValueKind.Number => true,
+        RuleValueKind.Text => MayBeInvariantDecimal(_text),
+        _ => false,
+    };
+
     /// <summary>
     /// The numeric value: a number, or text that is an invariant-culture decimal (for example a character-typed
     /// result such as <c>"120"</c>). Null, booleans and other text have none.
@@ -89,12 +96,110 @@ public readonly struct RuleValue : IEquatable<RuleValue>
                 value = _number;
                 return true;
             case RuleValueKind.Text:
-                return decimal.TryParse(_text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+                if (MayBeInvariantDecimal(_text))
+                {
+                    return decimal.TryParse(_text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+                }
+
+                value = 0m;
+                return false;
             default:
                 value = 0m;
                 return false;
         }
     }
+
+    internal static bool MayBeInvariantDecimal(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || text[0] > '9')
+        {
+            return false;
+        }
+
+        var span = text.AsSpan();
+        var index = SkipWhitespace(span, 0);
+        return index < span.Length
+            && TryReadMantissa(span, ref index)
+            && TryReadOptionalExponent(span, ref index)
+            && HasOnlyTrailingPadding(span, index);
+    }
+
+    private static bool TryReadMantissa(ReadOnlySpan<char> span, ref int index)
+    {
+        if (span[index] is '+' or '-')
+        {
+            index++;
+        }
+
+        var afterInteger = SkipDigits(span, index);
+        var hasDigits = afterInteger > index;
+        index = afterInteger;
+
+        if (index < span.Length && span[index] == '.')
+        {
+            index++;
+            var afterFraction = SkipDigits(span, index);
+            hasDigits |= afterFraction > index;
+            index = afterFraction;
+        }
+
+        return hasDigits;
+    }
+
+    private static bool TryReadOptionalExponent(ReadOnlySpan<char> span, ref int index)
+    {
+        if (index >= span.Length || span[index] is not ('e' or 'E'))
+        {
+            return true;
+        }
+
+        index++;
+        if (index < span.Length && span[index] is '+' or '-')
+        {
+            index++;
+        }
+
+        var afterDigits = SkipDigits(span, index);
+        if (afterDigits == index)
+        {
+            return false;
+        }
+
+        index = afterDigits;
+        return true;
+    }
+
+    private static int SkipDigits(ReadOnlySpan<char> span, int index)
+    {
+        while (index < span.Length && char.IsAsciiDigit(span[index]))
+        {
+            index++;
+        }
+
+        return index;
+    }
+
+    private static int SkipWhitespace(ReadOnlySpan<char> span, int index)
+    {
+        while (index < span.Length && IsAsciiWhitespace(span[index]))
+        {
+            index++;
+        }
+
+        return index;
+    }
+
+    private static bool HasOnlyTrailingPadding(ReadOnlySpan<char> span, int index)
+    {
+        while (index < span.Length && (IsAsciiWhitespace(span[index]) || span[index] == '\0'))
+        {
+            index++;
+        }
+
+        return index == span.Length;
+    }
+
+    private static bool IsAsciiWhitespace(char c) => c == ' ' || (uint)(c - '\t') <= ('\r' - '\t');
 
     /// <summary>Same kind and same value: numbers by value (<c>1.0</c> equals <c>1</c>), text ordinally.</summary>
     public bool Equals(RuleValue other) => Kind == other.Kind && Kind switch

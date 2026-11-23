@@ -1,12 +1,109 @@
-.git
-.gitignore
-node_modules
+# ==============================================================================
+# Cadence Clinical — Default-Deny BuildKit Context Allowlist
+# ==============================================================================
+# Deny every root file and directory by default so docs/, tests/, scripts/,
+# frontend workspaces, TestResults/, .git/, and workstation secrets never enter
+# container build contexts.
+*
+
+# ------------------------------------------------------------------------------
+# 1. Root MSBuild, NuGet, SDK & Roslyn Analyzer Inputs
+# ------------------------------------------------------------------------------
+!Cadence.slnx
+!Directory.Build.props
+!Directory.Build.targets
+!Directory.Packages.props
+!NuGet.Config
+!global.json
+!.editorconfig
+!BannedSymbols.txt
+
+# ------------------------------------------------------------------------------
+# 2. Backend .NET Services, Modules & Embedded Resources
+# ------------------------------------------------------------------------------
+!apps/
+apps/*
+!apps/*/
+apps/*/*
+!apps/*/src/
+!apps/*/src/**
+!apps/execution/module/
+!apps/execution/module/**
+!apps/*/Templates/
+!apps/*/Templates/**
+!apps/safety/Schemas/
+!apps/safety/Schemas/**
+
+# ------------------------------------------------------------------------------
+# 3. Shared .NET Packages & Embedded Resources
+# ------------------------------------------------------------------------------
+!packages/
+packages/*
+!packages/*/
+packages/*/*
+!packages/*/src/
+!packages/*/src/**
+!packages/kernel/Directory.Build.props
+!packages/topology/ServiceReferences.props
+!packages/ddf/Templates/
+!packages/ddf/Templates/**
+!packages/demo-fixtures/demo-seed.json
+
+# ------------------------------------------------------------------------------
+# 4. Statistical Computing Environment (SCE) Contexts
+# ------------------------------------------------------------------------------
+!docker/
+docker/*
+!docker/sce/
+!docker/sce/**
+
+# ------------------------------------------------------------------------------
+# 5. Exclude Frontend Workspaces Under apps/ and packages/
+# ------------------------------------------------------------------------------
+apps/web/
+apps/web/**
+apps/subject-portal/
+apps/subject-portal/**
+packages/ui/
+packages/ui/**
+packages/usdm-schemas/
+packages/usdm-schemas/**
+packages/demo-fixtures/src/
+packages/demo-fixtures/src/**
+
+# ------------------------------------------------------------------------------
+# 6. Exclude Build Outputs, Caches, Databases, Env Files & Private Keys
+# ------------------------------------------------------------------------------
 **/bin
+**/bin/**
 **/obj
+**/obj/**
 **/node_modules
+**/node_modules/**
 **/dist
-**/.venv
-**/coverage
-**/tmp
-.next
-.nuxt
+**/dist/**
+**/TestResults
+**/TestResults/**
+**/__pycache__
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*$py.class
+**/*.db
+**/*.db-journal
+**/*.sqlite
+**/*.sqlite3
+.env
+.env.*
+**/.env
+**/.env.*
+**/env.local
+**/*.pem
+**/*.key
+**/*.crt
+**/*.pfx
+**/*.p12
+**/secrets
+**/secrets/**
+**/secrets.yaml

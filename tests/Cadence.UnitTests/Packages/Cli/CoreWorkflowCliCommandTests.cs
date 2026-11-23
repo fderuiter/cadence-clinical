@@ -12,6 +12,8 @@ public sealed class CoreWorkflowCliCommandTests
     [InlineData("check", "deid", "--base", "origin/main")]
     [InlineData("check", "detect-secrets", "--push-before", "1111111111111111111111111111111111111111")]
     [InlineData("check", "--exclude", "api-clients", "--exclude", "vulnerabilities")]
+    [InlineData("check", "--fail-fast")]
+    [InlineData("check", "--pre-commit", "--fail-fast", "false")]
     [InlineData("check", "adrs", "--pre-commit")]
     [InlineData("check", "markdown", "docs/cli.md", "README.md")]
     [InlineData("check", "rulesets")]

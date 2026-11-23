@@ -101,13 +101,14 @@ dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
 ```
 
 The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak (with the `cadence` realm
-imported), all 19 .NET services and the web app (`http://localhost:3000/cadence-clinical/`) on the same host ports
-as docker compose: the gateway on 8000 and the services on 8001 to 8018. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so
-telemetry shows in the Aspire dashboard. Run `pnpm install` and set its secret parameters with
-`dotnet user-secrets` first; [apps/apphost](../apps/apphost/README.md) lists them.
+imported), all 18 .NET hosts (the gateway on 8000 and the 17 services on 8001–8016 and 8018), the web app
+(`http://localhost:3000/cadence-clinical/`), and the subject portal (`http://localhost:5174/subject-portal/`) on the
+same host ports as docker compose. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard. Run
+`pnpm install --frozen-lockfile && pnpm --filter ui build` and set its secret parameters with `dotnet user-secrets`
+first; [apps/apphost](../apps/apphost/README.md) lists them.
 
-For kernel and Canvas work, the `core` profile runs only PostgreSQL, Keycloak, the gateway, the kernel API host,
-execution and the web app:
+For kernel and Canvas work, the `core` profile runs PostgreSQL, Keycloak, the 6 core backend hosts (`gateway`,
+`execution`, `etmf`, `ctms`, `knowledge`, `kernel`) and the `web` app:
 
 ```bash
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
@@ -127,11 +128,21 @@ it has none, so reset Keycloak's data once if it imported the realm before the u
 
 ### Option C: one service
 
+Every database-backed service requires an explicit PostgreSQL connection string (`ConnectionStrings__cadence` or
+`POSTGRES_CONNECTION_STRING`), `GATEWAY_SECRET`, and `AUDIT_LOG_SECRET_KEY` — no environment has a built-in database
+fallback (ADR-2260). For `Cadence.Apps.Execution`, also supply two distinct 32-byte Base64 encryption keys
+(`DemographicsEncryption__KeyBase64` and `RANDOMIZATION_ALLOCATION_KEY`):
+
 ```bash
-export GATEWAY_SECRET="<32+ characters>"
-export ASPNETCORE_ENVIRONMENT=Development      # allows the local database fallback
-dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
-curl http://localhost:<port>/healthz/ready
+export ASPNETCORE_ENVIRONMENT=Development
+export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password" # pragma: allowlist secret
+export Database__MigrateOnStartup=true
+export GATEWAY_SECRET="local-dev-only-gateway-secret-not-for-production" # pragma: allowlist secret
+export AUDIT_LOG_SECRET_KEY="dev-audit-secret-key-change-me" # pragma: allowlist secret
+export DemographicsEncryption__KeyBase64="$(openssl rand -base64 32)"
+export RANDOMIZATION_ALLOCATION_KEY="$(openssl rand -base64 32)"
+dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj --urls http://localhost:8002
+curl -fsS http://localhost:8002/healthz/ready
 ```
 
 ### Web clients
@@ -152,20 +163,25 @@ The host ports are the defaults the gateway routes to (`apps/gateway/src/Program
 services started with `dotnet run` and the compose stack alike. Inside compose, every .NET service listens on
 8080 in its own container.
 
-| Service                       | Host port | Database schema | Service                    | Host port   | Database schema          |
-| ----------------------------- | --------- | --------------- | -------------------------- | ----------- | ------------------------ |
-| front proxy (nginx) → gateway | 8000      | none            | eisf                       | 8010        | `eisf`                   |
-| designer                      | 8001      | none            | econsent                   | 8011        | `econsent`               |
-| execution                     | 8002      | `edc`           | org                        | 8012        | `org`                    |
-| etmf                          | 8003      | `etmf`          | fileshare                  | 8013        | `fileshare`              |
-| interop                       | 8004      | `interop`       | imaging                    | 8014        | `imaging`                |
-| quality                       | 8005      | `quality`       | knowledge                  | 8015        | `knowledge`              |
-| notifications                 | 8006      | `notifications` | payments                   | 8016        | `payments`               |
-| ctms                          | 8007      | `ctms`          | kernel (`apps/kernel-api`) | 8018        | `kernel`, `intelligence` |
-| safety                        | 8008      | `safety`        | Keycloak                   | 8080        | (own store)              |
-| tickets                       | 8009      | `tickets`       | web / subject portal       | 3000 / 5174 | none                     |
+<!-- dev-service-ports:begin (generated from packages/topology/src/ServiceTopology.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
+| Service                       | Host port | Database schema      | Service                                | Host port | Database schema                       |
+| ----------------------------- | --------- | -------------------- | -------------------------------------- | --------- | ------------------------------------- |
+| front proxy (nginx) → gateway | 8000      | none                 | eisf                                   | 8010      | `eisf`                                |
+| designer                      | 8001      | none                 | econsent                               | 8011      | `econsent`                            |
+| execution                     | 8002      | `edc`                | org                                    | 8012      | `org`                                 |
+| etmf                          | 8003      | `etmf`               | fileshare                              | 8013      | `fileshare`                           |
+| interop                       | 8004      | `interop`            | imaging                                | 8014      | `imaging`                             |
+| quality                       | 8005      | `quality`            | knowledge                              | 8015      | `knowledge`                           |
+| notifications                 | 8006      | `notifications`      | payments                               | 8016      | `payments`                            |
+| ctms                          | 8007      | `ctms`               | kernel (`apps/kernel-api`)             | 8018      | `kernel`, `intelligence`, `execution` |
+| safety                        | 8008      | `safety`             | Keycloak                               | 8080      | (own store)                           |
+| tickets                       | 8009      | `tickets`            | web (`apps/web`)                       | 3000      | none                                  |
+| PostgreSQL                    | 5432      | `cadence` (database) | subject-portal (`apps/subject-portal`) | 5174      | none                                  |
+
+<!-- dev-service-ports:end -->
+
+What each service does and how mature it is:
 [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today). Check for port clashes with
 `pnpm cadence check-ports`.
 
