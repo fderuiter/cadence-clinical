@@ -218,7 +218,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     knownParticipants: {} as Record<string, CanvasParticipant>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
-    /** Participant subject codes currently being resolved for cold `?participant=<code>` links. */
+    /** Participant subject codes currently being hydrated for cold `?participant=<code>` links or route scope queries. */
     participantCodeLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
@@ -634,6 +634,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const existing = inFlightByCode.get(key);
       if (existing) return existing;
 
+      this.participantCodeLookups[code] = true;
       const run = (async (): Promise<SubjectSummary | null> => {
         this.participantCodeLookups[code] = true;
         try {

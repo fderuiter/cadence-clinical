@@ -61,13 +61,13 @@ Run from the repository root with pnpm (the workspace is defined in `pnpm-worksp
 | `pnpm --filter web test:e2e`           | Playwright accessibility (`127.0.0.1:3001`) and staged subpath (`127.0.0.1:3002/cadence-clinical/demo/`, MSW + Rollup chunking active) suites (`--project=accessibility --project=staged-demo-subpath`).                                                                                                |
 | `pnpm --filter web test:e2e:stack`     | Full Playwright suite across all registered projects (`setup`, `chromium`, `accessibility`, and `staged-demo-subpath`), starting the demo preview (`127.0.0.1:3001`), staged demo (`127.0.0.1:3002`), and `subject-portal` (`127.0.0.1:5174`) servers (plus `localhost:3000` when `E2E_KEYCLOAK=true`). |
 | `pnpm --filter web test:e2e:workflows` | Playwright end-to-end clinical workflow suite (`--project=setup --project=chromium`) against the demo preview (`127.0.0.1:3001`) and `subject-portal` (`127.0.0.1:5174`) servers (`DEMO_MODE=false` in CI; `E2E_KEYCLOAK=true` adds `pnpm --filter web dev` on `localhost:3000` for OIDC).              |
-| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                                                                                                                                                                                                                |
+| `pnpm --filter web lint` / `typecheck` | ESLint / duplicate-identifier check + `vue-tsc --noEmit` (or `pnpm -r typecheck` across the workspace).                                                                                                                                                                                                 |
 | `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                                                                                                                                                                                                                      |
 
 ## Dependencies
 
 - Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
-- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript.
+- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript, `vue-tsc`.
 
 ## Running against the backend
 

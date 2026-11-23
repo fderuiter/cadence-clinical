@@ -1231,10 +1231,12 @@ const linkSandboxSiteOnCreate = ref(true);
 
 const defaultStarterSite = computed<KernelSiteSummary | null>(() => {
   if (workspaceSites.value.length === 0) return null;
-  const assigned = authStore.assignedSiteIds ?? [];
+  const assigned: string[] = authStore.assignedSiteIds ?? [];
   if (assigned.length > 0) {
     const matched = workspaceSites.value.find((site) =>
-      assigned.some((code) => code.toLowerCase() === site.code.toLowerCase())
+      assigned.some(
+        (code: string) => code.toLowerCase() === site.code.toLowerCase()
+      )
     );
     if (matched) return matched;
   }
@@ -1483,25 +1485,23 @@ async function submitCreateStudy() {
       } catch {
         // Non-OIDC test sessions continue with the existing in-memory session.
       }
+      const createdCode = created?.code;
       if (
-        created?.code &&
+        createdCode &&
         !authStore.studyIds.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.studyIds = [...authStore.studyIds, created.code];
+        authStore.studyIds = [...authStore.studyIds, createdCode];
       }
       if (
-        created?.code &&
+        createdCode &&
         Array.isArray(authStore.assignedStudies) &&
         !authStore.assignedStudies.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.assignedStudies = [
-          ...authStore.assignedStudies,
-          created.code,
-        ];
+        authStore.assignedStudies = [...authStore.assignedStudies, createdCode];
       }
       if (
         starterSite?.code &&
@@ -1789,12 +1789,18 @@ async function loadInspectedProtocolVersion(text: string) {
     const version = await kernelApi.getProtocolVersion(text);
     if (request === versionRequest) {
       inspectedVersion.value = version;
-      seedNodeSummary(version.ref, {
-        kind: "protocol_version",
-        code: version.version,
-        title: `Protocol ${version.version}`,
-        status: version.status,
-      });
+      const versionNumber =
+        version.number !== null && version.number !== undefined
+          ? String(version.number)
+          : text;
+      if (version.ref) {
+        seedNodeSummary(version.ref, {
+          kind: "protocol_version",
+          code: versionNumber,
+          title: `Protocol v${versionNumber}`,
+          status: version.status,
+        });
+      }
     }
   } catch (e) {
     if (request === versionRequest) {

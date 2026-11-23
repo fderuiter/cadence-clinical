@@ -374,10 +374,19 @@ watch(
         `enrollment:${enrollmentId}`
       );
       if (seq !== zoomSeq || record.value.enrollmentId !== enrollmentId) return;
+      const readStepRef = (step: {
+        ref?: string | null;
+        node?: string | null;
+      }) => step.ref ?? step.node ?? null;
       const siteStep = (zoomSteps ?? []).find(
-        (step) => step.level === "study_site" && !step.mask && step.node
+        (step) =>
+          step.level === "study_site" &&
+          !step.mask &&
+          Boolean(readStepRef(step))
       );
-      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
+      zoomStudySiteRef.value = stripNodeVersion(
+        siteStep ? readStepRef(siteStep) : null
+      );
     } catch {
       if (seq === zoomSeq) {
         zoomStudySiteRef.value = null;

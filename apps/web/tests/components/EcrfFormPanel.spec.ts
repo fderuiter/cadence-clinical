@@ -1488,7 +1488,11 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     let queryFilterCalls = 0;
     const origFind = Array.prototype.find;
     const origFilter = Array.prototype.filter;
-    Array.prototype.find = function (predicate, thisArg) {
+    Array.prototype.find = function <T>(
+      this: T[],
+      predicate: (value: T, index: number, obj: T[]) => unknown,
+      thisArg?: unknown
+    ) {
       if (
         this.length > 0 &&
         this[0] &&
@@ -1499,8 +1503,12 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
         itemFindCalls += 1;
       }
       return origFind.call(this, predicate, thisArg);
-    };
-    Array.prototype.filter = function (predicate, thisArg) {
+    } as typeof Array.prototype.find;
+    Array.prototype.filter = function <T>(
+      this: T[],
+      predicate: (value: T, index: number, obj: T[]) => unknown,
+      thisArg?: unknown
+    ) {
       if (
         this.length > 0 &&
         this[0] &&
@@ -1510,7 +1518,7 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
         queryFilterCalls += 1;
       }
       return origFilter.call(this, predicate, thisArg);
-    };
+    } as typeof Array.prototype.filter;
 
     try {
       baselineTextReads = 0;

@@ -536,7 +536,7 @@
             v-if="routerLinkComponent"
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
-            :to="formLocation(summary.form_id)!"
+            :to="formLocation(summary.form_id) ?? '#'"
             @click="emit('select-form', summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
