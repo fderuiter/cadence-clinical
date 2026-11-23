@@ -1133,14 +1133,13 @@
           <h3 id="qppv-sign-modal-title">
             Executive QPPV 21 CFR Part 11 Electronic Signature
           </h3>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="close-btn"
-            aria-label="Close QPPV signature dialog"
+            label="Close QPPV electronic signature dialog"
             @click="closeQppvModal"
           >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="alert-info-box">
@@ -1246,14 +1245,13 @@
           <h3 id="physician-sign-modal-title">
             Safety Physician 21 CFR Part 11 Electronic Signature
           </h3>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="close-btn"
-            aria-label="Close Safety Physician signature dialog"
+            label="Close Safety Physician electronic signature dialog"
             @click="closePhysicianSignModal"
           >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="alert-info-box">
@@ -1355,7 +1353,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -1760,9 +1758,12 @@ async function verifySnapshot() {
   isVerifyingSnapshot.value = true;
   try {
     await new Promise((r) => setTimeout(r, 600));
-    alert(
-      `Snapshot Cryptographic Integrity Verified: SHA-256 seal matches 100% of frozen regulatory cases.`
-    );
+    toasts.push({
+      tone: "success",
+      title: "Snapshot Integrity Verified",
+      message:
+        "Snapshot Cryptographic Integrity Verified: SHA-256 seal matches 100% of frozen regulatory cases.",
+    });
   } finally {
     isVerifyingSnapshot.value = false;
   }
@@ -2045,9 +2046,11 @@ async function executePhysicianSignoff() {
     }
     await new Promise((r) => setTimeout(r, 500));
     isPhysicianSignModalOpen.value = false;
-    alert(
-      `21 CFR Part 11 Electronic Signature successfully applied by ${physicianUserId.value} (${physicianRole.value}) for ${selectedClockForSign.value?.case_id}. Manifest sealed.`
-    );
+    toasts.push({
+      tone: "success",
+      title: "Physician Signature Applied",
+      message: `21 CFR Part 11 Electronic Signature successfully applied by ${physicianUserId.value} (${physicianRole.value}) for ${selectedClockForSign.value?.case_id}. Manifest sealed.`,
+    });
   } finally {
     isSigningPhysician.value = false;
   }

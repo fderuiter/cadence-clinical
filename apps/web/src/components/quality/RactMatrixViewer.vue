@@ -317,20 +317,22 @@
                 <span v-else class="text-muted">— Unlinked —</span>
               </td>
               <td class="text-right table-actions">
-                <button
+                <ClinicalIconButton
                   class="action-btn"
                   title="Edit risk factor"
+                  :label="`Edit risk factor ${factor.risk_topic || factor.category || factor.id}`"
                   @click="openEditModal(factor)"
                 >
                   ✏️
-                </button>
-                <button
+                </ClinicalIconButton>
+                <ClinicalIconButton
                   class="action-btn action-btn-danger"
                   title="Delete risk factor"
+                  :label="`Delete risk factor ${factor.risk_topic || factor.category || factor.id}`"
                   @click="deleteFactor(factor.id)"
                 >
                   🗑️
-                </button>
+                </ClinicalIconButton>
               </td>
             </tr>
           </tbody>
@@ -920,7 +922,7 @@
 <script setup lang="ts">
 import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 
 interface RACTFactor {

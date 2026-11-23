@@ -349,6 +349,14 @@ public sealed class TmfDocument : AggregateRoot<string>
         ArtifactCode = artifactCode;
     }
 
+    public void RecordStoredContent(string objectKey, string contentChecksum)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(objectKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentChecksum);
+        ObjectKey = objectKey;
+        ContentChecksum = contentChecksum;
+    }
+
     private static string MapApprovalStatus(string status) => status.ToUpperInvariant() switch
     {
         TmfDocumentLifecycleState.Draft => TmfDocumentLifecycleState.Draft,
@@ -376,7 +384,9 @@ public sealed class TmfDocument : AggregateRoot<string>
         string mimeType = "application/pdf",
         string taxonomyVersion = "v3.2.0-complete",
         string? metadataJson = null,
-        long versionIndex = 1)
+        long versionIndex = 1,
+        string? objectKey = null,
+        string? contentChecksum = null)
     {
         return new TmfDocument(id)
         {
@@ -391,6 +401,8 @@ public sealed class TmfDocument : AggregateRoot<string>
             MimeType = mimeType,
             TaxonomyVersion = taxonomyVersion,
             MetadataJson = metadataJson,
+            ObjectKey = objectKey,
+            ContentChecksum = contentChecksum,
             CreatedAt = createdAt,
             CreatedBy = createdBy,
             ReasonForChange = reasonForChange,
@@ -415,7 +427,9 @@ public sealed class TmfDocument : AggregateRoot<string>
         string mimeType = "application/pdf",
         string taxonomyVersion = "v3.2.0-complete",
         string? metadataJson = null,
-        long versionIndex = 1)
+        long versionIndex = 1,
+        string? objectKey = null,
+        string? contentChecksum = null)
     {
         var doc = new TmfDocument(id)
         {
@@ -430,6 +444,8 @@ public sealed class TmfDocument : AggregateRoot<string>
             MimeType = mimeType,
             TaxonomyVersion = taxonomyVersion,
             MetadataJson = metadataJson,
+            ObjectKey = objectKey,
+            ContentChecksum = contentChecksum,
             CreatedAt = timestamp.UtcDateTime,
             CreatedBy = createdBy,
             ReasonForChange = reasonForChange,

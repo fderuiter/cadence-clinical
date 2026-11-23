@@ -1,4 +1,4 @@
-# ADR-2822: Complete Overlay Focus Retention, Mobile Escape Dismissal, and Dialog Naming Guardrails
+# ADR-2823: Complete Overlay Focus Retention, Mobile Escape Dismissal, and Dialog Naming Guardrails
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
@@ -14,8 +14,8 @@ Following the migration of `apps/web` raw overlays onto `ClinicalModal` and `Cli
 
 1. Advancing `OnboardingTour` from modal Step 1 (`aria-modal="true"`) to anchored non-modal Step 2 (`#nav-studies`) deactivated `useFocusTrap`, which unconditionally restored focus to the external trigger or dropped `document.activeElement` to `document.body`, and lacked a WCAG G59 shortcut to move focus directly to the anchored target.
 2. Opening `#mobile-nav-menu` from `#btn-mobile-menu-toggle` in `AppShell.vue` ignored `Escape` key dismissal and did not restore focus to `#btn-mobile-menu-toggle` (WCAG 2.1.1 / G90 / ARIA14).
-   3.Several migrated `ClinicalModal` forms (`CellGeneTherapyCocConsole`, `QualityCockpitView`, `RactMatrixViewer`, `DataLockView`, `ParticipantWalletView`, `CrcFormRenderer`, `CtmsView`, `CecAdjudicationConsole`, `ClinicalGanttVisualizer`, `KnowledgeView`, `ContextualHelpDrawer`) still relied on `vuejs-accessibility` suppressions or lacked dynamic `:dismissible="!busy"` locks during async Part 11/token/custody mutations (`KnowledgeView`, `StatisticalComputingConsole`, `CellGeneTherapyCocConsole`), and 15 legacy `useFocusTrap` `role="dialog"` containers lacked `aria-labelledby`.
-3. `custom-vue/no-raw-overlays` in `eslint.config.mjs` did not yet enforce accessible names (`aria-labelledby` or `aria-label`) on native `role="dialog"` / `role="alertdialog"` elements.
+3. Several migrated `ClinicalModal` forms (`CellGeneTherapyCocConsole`, `QualityCockpitView`, `RactMatrixViewer`, `DataLockView`, `ParticipantWalletView`, `CrcFormRenderer`, `CtmsView`, `CecAdjudicationConsole`, `ClinicalGanttVisualizer`, `KnowledgeView`, `ContextualHelpDrawer`) still relied on `vuejs-accessibility` suppressions or lacked dynamic `:dismissible="!busy"` locks during async Part 11/token/custody mutations (`KnowledgeView`, `StatisticalComputingConsole`, `CellGeneTherapyCocConsole`), and 15 legacy `useFocusTrap` `role="dialog"` containers lacked `aria-labelledby`.
+4. `custom-vue/no-raw-overlays` in `eslint.config.mjs` did not yet enforce accessible names (`aria-labelledby` or `aria-label`) on native `role="dialog"` / `role="alertdialog"` elements.
 
 ## 2. Decision Drivers & Constraints
 

@@ -37,25 +37,25 @@
             </div>
 
             <div class="header-actions">
-              <button
-                type="button"
+              <ClinicalIconButton
                 class="btn-icon-toggle"
                 :class="{ active: isSearchOpen }"
+                :aria-pressed="isSearchOpen ? 'true' : 'false'"
+                label="Toggle Search SOPs"
                 title="Toggle Search SOPs"
                 aria-label="Toggle Search SOPs"
                 :aria-expanded="isSearchOpen"
                 @click="toggleSearch"
               >
                 🔍
-              </button>
-              <button
-                type="button"
+              </ClinicalIconButton>
+              <ClinicalIconButton
                 class="btn-close"
-                aria-label="Close Help Drawer"
+                label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
                 ✕
-              </button>
+              </ClinicalIconButton>
             </div>
           </div>
 
@@ -70,15 +70,14 @@
               placeholder="Search SOPs, guidelines, or topics..."
               @input="onSearchInput"
             />
-            <button
+            <ClinicalIconButton
               v-if="searchInput"
-              type="button"
               class="btn-clear-search"
-              aria-label="Clear search"
+              label="Clear SOP search"
               @click="clearSearch"
             >
               ✕
-            </button>
+            </ClinicalIconButton>
           </div>
         </div>
       </template>
@@ -367,7 +366,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { ClinicalDrawer, useEscapeClose } from "ui";
+import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";

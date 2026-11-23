@@ -474,14 +474,13 @@
           <h4 id="irc-chair-signoff-modal-title" class="modal-title">
             21 CFR Part 11 Adjudication Chair Sign-off
           </h4>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
-            aria-label="Close adjudication sign-off dialog"
+            label="Close adjudication chair sign-off dialog"
             @click="closeSignoffModal"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="modal-warning-box">
@@ -563,14 +562,13 @@
           <h4 id="irc-edc-binding-modal-title" class="modal-title">
             Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)
           </h4>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
-            aria-label="Close EDC binding preview dialog"
+            label="Close direct EDC eCRF binding dialog"
             @click="isEdcModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="json-preview-container">
@@ -607,14 +605,13 @@
           <h4 id="irc-sdtm-export-modal-title" class="modal-title">
             CDISC SDTM Dataset Package (TU, TR, RS)
           </h4>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
-            aria-label="Close SDTM export preview dialog"
+            label="Close CDISC SDTM dataset export dialog"
             @click="isSdtmModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="json-preview-container">
@@ -639,7 +636,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 const props = defineProps({
   subjectId: {

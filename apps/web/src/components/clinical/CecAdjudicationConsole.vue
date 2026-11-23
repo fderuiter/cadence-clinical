@@ -1419,7 +1419,11 @@ import {
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";
+import { useErrorPresenter } from "../../composables/useErrorPresenter";
+import { useToastStore } from "../../stores/toasts";
 
+const toasts = useToastStore();
+const { presentError } = useErrorPresenter();
 const currentRole = ref("READER_1");
 const selectedStudyId = ref("STUDY-101");
 const phiMaskEnabled = ref(true);
@@ -1931,9 +1935,12 @@ function submitReaderForm() {
 
 async function submitChairAdjudication() {
   if (!chairForm.value.password) {
-    alert(
-      "Please enter your re-authentication password for 21 CFR Part 11 electronic sign-off."
-    );
+    toasts.push({
+      tone: "warning",
+      title: "Re-Authentication Required",
+      message:
+        "Please enter your re-authentication password for 21 CFR Part 11 electronic sign-off.",
+    });
     return;
   }
   const enteredPassword = chairForm.value.password;
@@ -2004,14 +2011,17 @@ async function submitChairAdjudication() {
   } catch (err) {
     const errCode = err?.data?.code || err?.response?.data?.code || err?.code;
     if (errCode === "REAUTHENTICATION_REQUIRED" || err?.status === 401) {
-      alert(
-        "21 CFR Part 11 re-authentication failed: Invalid password or expired token."
-      );
+      toasts.push({
+        tone: "error",
+        title: "Re-Authentication Failed",
+        message:
+          "21 CFR Part 11 re-authentication failed: Invalid password or expired token.",
+      });
     } else {
-      alert(
-        "Chair adjudication submission failed: " +
-          (err?.message || err?.data?.detail || "Unknown error")
-      );
+      presentError(err, {
+        title: "Chair Adjudication Failed",
+        fallback: "Chair adjudication submission failed.",
+      });
     }
   } finally {
     isSubmitting.value = false;
@@ -2021,9 +2031,11 @@ async function submitChairAdjudication() {
 function recordMeetingSession() {
   isSubmitting.value = true;
   setTimeout(() => {
-    alert(
-      `Meeting quorum of ${calculatedQuorumPercentage.value}% successfully verified and signed by Chair.`
-    );
+    toasts.push({
+      tone: "success",
+      title: "Meeting Quorum Verified",
+      message: `Meeting quorum of ${calculatedQuorumPercentage.value}% successfully verified and signed by Chair.`,
+    });
     isSubmitting.value = false;
   }, 300);
 }
@@ -2066,7 +2078,11 @@ function exportSdtmJson() {
 }
 
 function viewAttachment(att) {
-  alert(`Viewing attachment: ${att.title}\n\nSummary: ${att.summary}`);
+  toasts.push({
+    tone: "info",
+    title: `Viewing attachment: ${att.title}`,
+    message: `Summary: ${att.summary}`,
+  });
 }
 
 onMounted(() => {

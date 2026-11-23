@@ -107,6 +107,23 @@ async function expectFocusContainedOnTabCycle(
 }
 
 test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gates", () => {
+  let nativeDialogs: string[] = [];
+
+  test.beforeEach(({ page }) => {
+    nativeDialogs = [];
+    page.on("dialog", async (dialog) => {
+      nativeDialogs.push(`${dialog.type()}: ${dialog.message()}`);
+      await dialog.dismiss();
+    });
+  });
+
+  test.afterEach(() => {
+    expect(
+      nativeDialogs,
+      "Expected zero native blocking browser dialogs (alert/confirm/prompt)"
+    ).toEqual([]);
+  });
+
   test("LoginView passes WCAG 2.2 AA contrast in both authenticated session state and signed-out login prompt", async ({
     page,
   }) => {
@@ -578,5 +595,435 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
     await expect(mobileMenu).not.toHaveClass(/is-open/);
     await expect(mobileToggle).toBeFocused();
+  });
+
+  test("Live /etmf, BatchUploadDrawer, single-document upload modal, /training, and /ssu pass WCAG 2.2 AA and SC 2.5.3 Label in Name", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    // 1. /etmf initial binder & toolbar buttons (Export Zip, Batch Ingestion, Upload Single Document)
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+    await expect(page.locator(".btn-export-full-binder")).toBeVisible();
+    await expect(page.locator(".batch-upload-trigger-btn")).toBeVisible();
+    await expectNoWcagViolations(page, "DocumentManagerView (/etmf)");
+
+    // 2. BatchUploadDrawer dropzone & queued file state
+    await page.locator(".batch-upload-trigger-btn").click();
+    const batchDrawer = page.locator('.batch-drawer[role="dialog"]');
+    await expect(batchDrawer).toBeVisible();
+
+    const batchDropzone = batchDrawer.locator(".clinical-dropzone");
+    await expect(batchDropzone).toBeVisible();
+    await expect(batchDropzone.locator('[role="button"]')).toHaveCount(0);
+    await expect(
+      batchDropzone.locator(
+        "button.clinical-dropzone-browse-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    await batchDropzone.locator('input[type="file"]').setInputFiles({
+      name: "site-101-fda-1572.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\n% Regulatory test document\n"),
+    });
+    await expect(batchDrawer.locator(".queue-section")).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "BatchUploadDrawer with queued file (/etmf)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-batch-dropzone-a11y.png" });
+    }
+
+    await batchDrawer.locator(".btn-close-batch-drawer").click();
+    await expect(batchDrawer).toBeHidden();
+
+    // 3. Single-document upload modal on /etmf with ClinicalDropzone & selected file
+    const zoneWithDocs = page
+      .locator(".zone-header")
+      .filter({ has: page.locator(".zone-badge") })
+      .first();
+    await zoneWithDocs.click();
+
+    const sectionWithDocs = page
+      .locator(".section-header")
+      .filter({ has: page.locator(".section-badge") })
+      .first();
+    await sectionWithDocs.click();
+
+    const artifactNode = page.locator(".artifact-node").first();
+    await expect(artifactNode).toBeVisible();
+    await artifactNode.click();
+
+    const uploadSingleBtn = page.locator(".upload-trigger-btn");
+    await expect(uploadSingleBtn).toBeEnabled();
+    await uploadSingleBtn.click();
+
+    const uploadModal = page.locator(".upload-modal");
+    await expect(
+      page.locator('[role="dialog"][aria-label="Document Ingestion Modal"]')
+    ).toBeVisible();
+    await expect(uploadModal).toBeVisible();
+    const modalDropzone = uploadModal.locator(".clinical-dropzone");
+    await expect(modalDropzone.locator('[role="button"]')).toHaveCount(0);
+    await expect(
+      modalDropzone.locator(
+        "button.clinical-dropzone-browse-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    await modalDropzone.locator('input[type="file"]').setInputFiles({
+      name: "investigator-brochure-v3.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4\n% IB v3\n"),
+    });
+
+    const selectedDetails = uploadModal.locator(".selected-file-details");
+    await expect(selectedDetails).toBeVisible();
+    const isHiddenFromAt = await selectedDetails.evaluate(
+      (el) => el.closest('[aria-hidden="true"]') !== null
+    );
+    expect(isHiddenFromAt).toBe(false);
+    await expect(
+      modalDropzone.locator(
+        "button.clinical-dropzone-remove-btn[type='button']"
+      )
+    ).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "Regulated Document Upload Modal with selected file (/etmf)"
+    );
+
+    await page.keyboard.press("Escape");
+    await expect(uploadModal).toBeHidden();
+
+    // 4. /training default workspace state
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expect(
+      page.locator(
+        "#section-study-training .header-actions > .btn.btn-secondary"
+      )
+    ).toBeEnabled();
+    await expectNoWcagViolations(
+      page,
+      "StudyTrainingView default workspace (/training)"
+    );
+
+    // 5. /ssu dedicated Study Startup route
+    await gotoHashRoute(page, "/ssu");
+    await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "SsuGreenlightConsole dedicated route (/ssu)"
+    );
+  });
+
+  test("ConfirmationDialogHost (confirmation + validated input prompt) and ToastHost on /labs pass WCAG 2.2 AA with zero native dialogs", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await gotoHashRoute(page, "/overview");
+    await page.evaluate(() => {
+      const origFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        if (
+          url.includes("/api/v1/execution/lab-ranges") &&
+          (!init?.method || init.method.toUpperCase() === "GET")
+        ) {
+          return new Response(
+            JSON.stringify([
+              {
+                id: "rng-alt-01",
+                study_id: "STUDY-101",
+                test_code: "ALT",
+                test_name: "Alanine Aminotransferase",
+                loinc_code: "1742-6",
+                source_type: "CENTRAL",
+                sex: "ALL",
+                age_min: 18,
+                age_max: 85,
+                low_normal: 7,
+                high_normal: 56,
+                unit: "U/L",
+                effective_from: "2026-01-01",
+              },
+            ]),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+        if (
+          url.includes("/api/v1/execution/lab-ranges/rng-alt-01") &&
+          init?.method?.toUpperCase() === "DELETE"
+        ) {
+          const headers = new Headers(init.headers);
+          (window as unknown as Record<string, string>).__lastLabDeleteReason =
+            headers.get("X-Change-Reason") ?? "";
+          return new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return origFetch(input, init);
+      };
+    });
+
+    await gotoHashRoute(page, "/labs");
+    const deactivateBtn = page
+      .locator("button.btn-outline-danger", { hasText: "Deactivate" })
+      .first();
+    await expect(deactivateBtn).toBeVisible();
+
+    // 1. Open ConfirmationDialogHost in confirm mode -> Escape restores focus to trigger
+    await deactivateBtn.click();
+    const alertDialog = page.locator('[role="alertdialog"]');
+    await expect(alertDialog).toBeVisible();
+    await expect(alertDialog.locator(".modal-title")).toHaveText(
+      "Deactivate Reference Range"
+    );
+    await expectNoWcagViolations(
+      page,
+      "ConfirmationDialogHost (confirm mode on /labs)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/clinical-confirm-dialog.png" });
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(alertDialog).toBeHidden();
+    await expect(deactivateBtn).toBeFocused();
+
+    // 2. Re-open confirm -> advance directly into prompt mode -> validate empty input -> submit trimmed reason
+    await deactivateBtn.click();
+    await expect(alertDialog).toBeVisible();
+    await alertDialog.locator(".btn-confirm").click();
+
+    await expect(alertDialog).toBeVisible();
+    await expect(alertDialog.locator(".modal-title")).toHaveText(
+      "21 CFR Part 11 Deactivation Reason"
+    );
+    const promptInput = alertDialog.locator("#confirm-dialog-prompt-input");
+    await expect(promptInput).toBeFocused();
+
+    // Clear input and trigger accessible validation error
+    await promptInput.fill("   ");
+    await alertDialog.locator(".btn-confirm").click();
+    const promptError = alertDialog.locator("#confirm-dialog-prompt-error");
+    await expect(promptError).toBeVisible();
+    await expect(promptError).toHaveAttribute("role", "alert");
+    await expectNoWcagViolations(
+      page,
+      "ConfirmationDialogHost (prompt validation error state on /labs)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/clinical-prompt-dialog.png" });
+    }
+
+    // Enter padded reason and submit via Enter -> resolves trimmed value and pushes ToastHost notification
+    await promptInput.fill("  Protocol amendment v2.1 range retirement  ");
+    await promptInput.press("Enter");
+    await expect(alertDialog).toBeHidden();
+
+    const toastItem = page
+      .locator(".toast-host .toast")
+      .filter({ hasText: "Reference Range Deactivated" });
+    await expect(toastItem).toBeVisible();
+
+    const capturedChangeReason = await page.evaluate(
+      () =>
+        (window as unknown as Record<string, string>).__lastLabDeleteReason ??
+        ""
+    );
+    expect(capturedChangeReason).toBe(
+      "Protocol amendment v2.1 range retirement"
+    );
+
+    await expectNoWcagViolations(
+      page,
+      "ToastHost feedback notification (/labs)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/clinical-toast-host.png" });
+    }
+  });
+
+  test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 and card bounds unclipped across Plans, Unavailable, Login, and Forbidden", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+
+    async function expectPageWithin320(label: string) {
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        scrollWidth,
+        `Expected documentElement.scrollWidth <= 320 on ${label}, got ${scrollWidth}`
+      ).toBeLessThanOrEqual(320);
+    }
+
+    async function expectAllCardsWithin320(selector: string, label: string) {
+      const items = page.locator(selector);
+      const count = await items.count();
+      expect(
+        count,
+        `Expected >= 1 card for ${selector} on ${label}`
+      ).toBeGreaterThan(0);
+      for (let i = 0; i < count; i++) {
+        const box = await items.nth(i).boundingBox();
+        expect(box, `Missing boundingBox for ${selector}[${i}]`).not.toBeNull();
+        expect(
+          box!.x,
+          `Left bound clipped for ${selector}[${i}] on ${label}`
+        ).toBeGreaterThanOrEqual(-0.5);
+        expect(
+          box!.x + box!.width,
+          `Right bound overflows 320px for ${selector}[${i}] on ${label}`
+        ).toBeLessThanOrEqual(320.5);
+      }
+    }
+
+    // 1. PlansView.vue (.plans-tiers-grid, .scoping-grid, .guarantees-grid, .families-grid, .benchmark-grid)
+    await gotoHashRoute(page, "/plans");
+    await expect(page.locator(".plans-view")).toBeVisible();
+    await expectPageWithin320("PlansView (/plans)");
+    await expectAllCardsWithin320(".plans-tiers-grid > *", "PlansView tiers");
+    await expectAllCardsWithin320(".scoping-grid > *", "PlansView scoping");
+    await expectAllCardsWithin320(
+      ".guarantees-grid > *",
+      "PlansView guarantees"
+    );
+    await expectAllCardsWithin320(".families-grid > *", "PlansView families");
+    await expectAllCardsWithin320(".benchmark-grid > *", "PlansView benchmark");
+    await expectNoWcagViolations(page, "PlansView at 320x640");
+
+    // 2. UnavailableView.vue
+    await gotoHashRoute(page, "/unavailable?screen=safety");
+    await expect(page.locator("#section-unavailable")).toBeVisible();
+    await expectPageWithin320("UnavailableView (/unavailable?screen=safety)");
+    await expectAllCardsWithin320(
+      ".unavailable-card, .unavailable-info-card",
+      "UnavailableView cards"
+    );
+    await expectNoWcagViolations(page, "UnavailableView at 320x640");
+
+    // 3. ForbiddenView.vue
+    await gotoHashRoute(page, "/forbidden");
+    await expect(page.locator("#section-forbidden")).toBeVisible();
+    await expectPageWithin320("ForbiddenView (/forbidden)");
+    await expectNoWcagViolations(page, "ForbiddenView at 320x640");
+
+    // 4. LoginView.vue (active session + signed-out prompt)
+    await gotoHashRoute(page, "/login");
+    await expect(page.locator("#section-login")).toBeVisible();
+    await expectPageWithin320("LoginView (authenticated)");
+    await expectNoWcagViolations(page, "LoginView (authenticated) at 320x640");
+
+    const logoutBtn = page.locator("#section-login .btn-logout");
+    if (await logoutBtn.isVisible().catch(() => false)) {
+      await logoutBtn.click();
+      await expect(page.locator(".btn-login-demo")).toBeVisible();
+      await expectPageWithin320("LoginView (signed-out)");
+      await expectNoWcagViolations(page, "LoginView (signed-out) at 320x640");
+    }
+  });
+
+  test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 across StudyCanvasView, ParticipantsSection, ParticipantRecord SHA-256, and ProtocolVersionsSection", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+
+    async function expectPageWithin320(label: string) {
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        scrollWidth,
+        `Expected documentElement.scrollWidth <= 320 on ${label}, got ${scrollWidth}`
+      ).toBeLessThanOrEqual(320);
+    }
+
+    // 1. StudyCanvasView.vue (/studies directory + #create-study-file sr-only width <= 1px)
+    await gotoHashRoute(page, "/studies");
+    await expect(page.locator("#study-canvas")).toBeVisible();
+    const createStudyFile = page.locator("#create-study-file");
+    if ((await createStudyFile.count()) > 0) {
+      const fileWidth = await createStudyFile.evaluate(
+        (el) => el.getBoundingClientRect().width
+      );
+      expect(fileWidth).toBeLessThanOrEqual(1.5);
+    }
+    await expectPageWithin320("StudyCanvasView (/studies)");
+    await expectNoWcagViolations(page, "StudyCanvasView (/studies) at 320x640");
+
+    const demoStudyCode = "DEMO-01";
+
+    // 2. ParticipantsSection.vue (#participants-site + .scrollable-table-wrapper)
+    await gotoHashRoute(
+      page,
+      `/studies/${encodeURIComponent(demoStudyCode)}?stage=conduct&section=participants`
+    );
+    await expect(page.locator("#participants-section")).toBeVisible();
+    const siteInput = page.locator("#participants-site");
+    await expect(siteInput).toBeVisible();
+    const siteBox = await siteInput.boundingBox();
+    expect(siteBox).not.toBeNull();
+    expect(siteBox!.x + siteBox!.width).toBeLessThanOrEqual(320.5);
+
+    await expect(
+      page.locator("#participants-section .scrollable-table-wrapper")
+    ).toBeVisible();
+    await expectPageWithin320("ParticipantsSection");
+    await expectNoWcagViolations(page, "ParticipantsSection at 320x640");
+
+    // 3. ParticipantRecord.vue (64-char casebookOutcome.sha256 wrapping)
+    const firstParticipantBtn = page
+      .locator(".participants-table tbody button.row-select")
+      .first();
+    await expect(firstParticipantBtn).toBeVisible();
+    await firstParticipantBtn.click();
+    const openRecordLink = page.locator("#inspector-open-record");
+    await expect(openRecordLink).toBeVisible();
+    await openRecordLink.click();
+
+    await expect(page.locator("#participant-record")).toBeVisible();
+    const exportCasebookBtn = page.locator("#btn-export-casebook");
+    await expect(exportCasebookBtn).toBeVisible();
+    await exportCasebookBtn.click();
+    const shaCode = page.locator('[data-testid="participant-casebook-sha256"]');
+    await expect(shaCode).toBeVisible();
+    const shaBox = await shaCode.boundingBox();
+    expect(shaBox).not.toBeNull();
+    expect(shaBox!.x).toBeGreaterThanOrEqual(-0.5);
+    expect(shaBox!.x + shaBox!.width).toBeLessThanOrEqual(320.5);
+    await expectPageWithin320("ParticipantRecord (with SHA-256 digest)");
+    await expectNoWcagViolations(page, "ParticipantRecord at 320x640");
+
+    // 4. ProtocolVersionsSection.vue (.scrollable-table-wrapper)
+    await gotoHashRoute(
+      page,
+      `/studies/${encodeURIComponent(demoStudyCode)}?stage=design&section=protocol-versions`
+    );
+    await expect(page.locator("#protocol-versions-section")).toBeVisible();
+    await expect(
+      page.locator("#protocol-versions-section .scrollable-table-wrapper")
+    ).toBeVisible();
+    await expectPageWithin320("ProtocolVersionsSection");
+    await expectNoWcagViolations(page, "ProtocolVersionsSection at 320x640");
   });
 });

@@ -1,6 +1,13 @@
-import { defineStore } from "pinia";
+import {
+  createPinia,
+  defineStore,
+  getActivePinia,
+  setActivePinia,
+} from "pinia";
 
-export const useConfirmStore = defineStore("confirm", {
+let nextRequestId = 1;
+
+const rawUseConfirmStore = defineStore("confirm", {
   state: () => ({
     activeRequest: null,
   }),
@@ -15,6 +22,8 @@ export const useConfirmStore = defineStore("confirm", {
         }
 
         const normalizedOptions = {
+          id: nextRequestId++,
+          mode: "confirm",
           title: options.title || "Confirm Action",
           message: options.message || options.text || "",
           confirmLabel:
@@ -30,22 +39,121 @@ export const useConfirmStore = defineStore("confirm", {
         };
       });
     },
-    open(options) {
-      return this.confirm(options);
+    prompt(options = {}, defaultValue = "") {
+      if (typeof options === "string") {
+        options = { message: options, defaultValue };
+      }
+      return new Promise((resolve) => {
+        if (this.activeRequest) {
+          this.cancelConfirm();
+        }
+
+        const inputLabel =
+          options.inputLabel ||
+          options.label ||
+          options.message ||
+          options.title ||
+          "Value";
+        const initialVal =
+          options.defaultValue ?? options.initialValue ?? defaultValue ?? "";
+
+        const normalizedOptions = {
+          id: nextRequestId++,
+          mode: "prompt",
+          title: options.title || "Enter Value",
+          message: options.message || options.text || "",
+          inputLabel,
+          placeholder: options.placeholder || "",
+          inputValue: String(initialVal),
+          confirmLabel: options.confirmLabel || options.confirmText || "Submit",
+          cancelLabel: options.cancelLabel || options.cancelText || "Cancel",
+          variant: options.variant || options.tone || "info",
+          size: options.size || "md",
+          required: options.required !== false,
+          requiredMessage: options.requiredMessage || "",
+          validate:
+            typeof options.validate === "function" ? options.validate : null,
+          validationError: "",
+        };
+
+        this.activeRequest = {
+          ...normalizedOptions,
+          resolve,
+        };
+      });
     },
-    resolveConfirm() {
-      if (this.activeRequest) {
+    setInputValue(value) {
+      if (this.activeRequest && this.activeRequest.mode === "prompt") {
+        this.activeRequest.inputValue = String(value ?? "");
+        if (this.activeRequest.validationError) {
+          this.activeRequest.validationError = "";
+        }
+      }
+    },
+    open(options) {
+      return options?.mode === "prompt"
+        ? this.prompt(options)
+        : this.confirm(options);
+    },
+    resolveConfirm(submittedValue) {
+      if (!this.activeRequest) {
+        return false;
+      }
+
+      if (this.activeRequest.mode === "prompt") {
+        const rawValue =
+          submittedValue !== undefined
+            ? String(submittedValue)
+            : String(this.activeRequest.inputValue ?? "");
+        const trimmed = rawValue.trim();
+
+        if (this.activeRequest.required && !trimmed) {
+          this.activeRequest.validationError =
+            this.activeRequest.requiredMessage ||
+            `${this.activeRequest.inputLabel} is required.`;
+          return false;
+        }
+
+        if (this.activeRequest.validate) {
+          const validationResult = this.activeRequest.validate(trimmed);
+          if (
+            validationResult === false ||
+            (typeof validationResult === "string" &&
+              validationResult.trim().length > 0)
+          ) {
+            this.activeRequest.validationError =
+              typeof validationResult === "string"
+                ? validationResult
+                : "Please enter a valid value.";
+            return false;
+          }
+        }
+
         const resolve = this.activeRequest.resolve;
         this.activeRequest = null;
-        if (resolve) resolve(true);
+        if (resolve) resolve(trimmed);
+        return true;
       }
+
+      const resolve = this.activeRequest.resolve;
+      this.activeRequest = null;
+      if (resolve) resolve(true);
+      return true;
     },
     cancelConfirm() {
       if (this.activeRequest) {
-        const resolve = this.activeRequest.resolve;
+        const { resolve, mode } = this.activeRequest;
         this.activeRequest = null;
-        if (resolve) resolve(false);
+        if (resolve) resolve(mode === "prompt" ? null : false);
       }
     },
   },
 });
+
+/** @type {typeof rawUseConfirmStore} */
+export const useConfirmStore = Object.assign((pinia) => {
+  if (!pinia && !getActivePinia()) {
+    setActivePinia(createPinia());
+  }
+  return rawUseConfirmStore(pinia);
+}, rawUseConfirmStore);

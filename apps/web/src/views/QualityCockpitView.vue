@@ -1190,8 +1190,11 @@ import { ref, computed, onMounted } from "vue";
 import { ClinicalModal } from "ui";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { useToastStore } from "../stores/toasts";
 import RactMatrixViewer from "@/components/quality/RactMatrixViewer.vue";
 import StatisticalForensicsViewer from "@/components/quality/StatisticalForensicsViewer.vue";
+
+const toasts = useToastStore();
 
 // Navigation state
 const activeTab = ref("rbqm");
@@ -1564,15 +1567,21 @@ function onStudyChange() {
 }
 
 function openNewDeviationModal() {
-  alert(
-    "Log New Deviation: Enter Study, Site, Severity (Critical/Major/Minor), and Type."
-  );
+  toasts.push({
+    tone: "info",
+    title: "Log New Deviation",
+    message:
+      "Log New Deviation: Enter Study, Site, Severity (Critical/Major/Minor), and Type.",
+  });
 }
 
 function openIngestModal() {
-  alert(
-    "Simulated Ingestion Triggered: Ingesting automated event from EDC / CTMS."
-  );
+  toasts.push({
+    tone: "info",
+    title: "Simulated Ingestion Triggered",
+    message:
+      "Simulated Ingestion Triggered: Ingesting automated event from EDC / CTMS.",
+  });
 }
 
 function openDossierModal() {
@@ -1598,15 +1607,20 @@ function saveRcaInvestigation() {
 }
 
 function openNewCapaModal() {
-  alert(
-    "Create CAPA Record: Define Action Plan, Preventive Measures, Target Date, and Risk Level."
-  );
+  toasts.push({
+    tone: "info",
+    title: "Create CAPA Record",
+    message:
+      "Create CAPA Record: Define Action Plan, Preventive Measures, Target Date, and Risk Level.",
+  });
 }
 
 function openCapaDetail(capa) {
-  alert(
-    `CAPA Record ${capa.id}: Action items and effectiveness check scheduler.`
-  );
+  toasts.push({
+    tone: "info",
+    title: `CAPA Record ${capa.id}`,
+    message: `CAPA Record ${capa.id}: Action items and effectiveness check scheduler.`,
+  });
 }
 
 function advanceCapaStage(capa) {
@@ -1619,9 +1633,11 @@ function advanceCapaStage(capa) {
       (a) => a.status !== "COMPLETED"
     );
     if (incomplete.length > 0) {
-      alert(
-        `⚠️ Stage-Gate Enforcement: Cannot transition to 'Implementation Verified'. ${incomplete.length} sub-action items remain open.`
-      );
+      toasts.push({
+        tone: "warning",
+        title: "Stage-Gate Enforcement",
+        message: `Cannot transition to 'Implementation Verified'. ${incomplete.length} sub-action items remain open.`,
+      });
       return;
     }
   }
@@ -1630,9 +1646,12 @@ function advanceCapaStage(capa) {
 }
 
 function openNewAuditModal() {
-  alert(
-    "Schedule Audit: Select Audit Type (Site, Vendor, Process, TMF) and Lead Auditor."
-  );
+  toasts.push({
+    tone: "info",
+    title: "Schedule Audit",
+    message:
+      "Schedule Audit: Select Audit Type (Site, Vendor, Process, TMF) and Lead Auditor.",
+  });
 }
 
 function openAuditFindingsModal(audit) {
@@ -1644,7 +1663,11 @@ function openAuditFindingsModal(audit) {
       "Install dual automated alarm logging.";
     isPromoteModalOpen.value = true;
   } else {
-    alert("No findings recorded yet for this audit engagement.");
+    toasts.push({
+      tone: "info",
+      title: "Audit Findings",
+      message: "No findings recorded yet for this audit engagement.",
+    });
   }
 }
 
@@ -1662,52 +1685,79 @@ function executePromoteFinding() {
   });
   isPromoteModalOpen.value = false;
   activeTab.value = "capa";
-  alert(
-    "✅ Finding successfully promoted to formal CAPA Record with bi-directional GxP trace linkage!"
-  );
+  toasts.push({
+    tone: "success",
+    title: "Finding Promoted to CAPA",
+    message:
+      "Finding successfully promoted to formal CAPA Record with bi-directional GxP trace linkage!",
+  });
 }
 
 function openNewBreachModal() {
-  alert(
-    "Report Serious Breach: Record Discovery Date, Health Authorities, and Clinical Safety Impact."
-  );
+  toasts.push({
+    tone: "info",
+    title: "Report Serious Breach",
+    message:
+      "Report Serious Breach: Record Discovery Date, Health Authorities, and Clinical Safety Impact.",
+  });
 }
 
 function confirmBreach(breach) {
   if (!allowUnbackedAction("Confirming a serious breach")) return;
   breach.status = "CONFIRMED_BREACH";
-  alert(
-    "⚠️ Breach status confirmed. Regulatory notification 7-day clock is running."
-  );
+  toasts.push({
+    tone: "warning",
+    title: "Serious Breach Confirmed",
+    message:
+      "Breach status confirmed. Regulatory notification 7-day clock is running.",
+  });
 }
 
 function notifyAuthorities(breach) {
   if (!allowUnbackedAction("Notifying health authorities")) return;
   breach.status = "AUTHORITY_NOTIFIED";
-  alert("🏛️ Regulatory health authority formal notification dispatched.");
+  toasts.push({
+    tone: "success",
+    title: "Health Authority Notified",
+    message: "Regulatory health authority formal notification dispatched.",
+  });
 }
 
 function runKriBatchScoring() {
   if (!allowUnbackedAction("KRI scoring")) return;
-  alert(
-    "⚡ Running KRI batch evaluation across study sites. Statistical Z-scores updated."
-  );
+  toasts.push({
+    tone: "info",
+    title: "KRI Batch Scoring",
+    message:
+      "Running KRI batch evaluation across study sites. Statistical Z-scores updated.",
+  });
 }
 
 function recomputeSiteProfiles() {
   if (!allowUnbackedAction("Recomputing site risk")) return;
-  alert("🔄 Site Risk Index recomputed and ranked.");
+  toasts.push({
+    tone: "success",
+    title: "Site Risk Recomputed",
+    message: "Site Risk Index recomputed and ranked.",
+  });
 }
 
 function triggerTargetedMonitoring(siteId) {
   if (!allowUnbackedAction("Targeted monitoring")) return;
-  alert(
-    `🎯 Targeted Monitoring Plan generated for ${siteId}. Triggering focused SDV sample.`
-  );
+  toasts.push({
+    tone: "info",
+    title: "Targeted Monitoring Triggered",
+    message: `Targeted Monitoring Plan generated for ${siteId}. Triggering focused SDV sample.`,
+  });
 }
 
 function openNewQtlModal() {
-  alert("Add QTL: Define Parameter, Unit, Target Value, and Tolerance Limit.");
+  toasts.push({
+    tone: "info",
+    title: "Add Quality Tolerance Limit",
+    message:
+      "Add QTL: Define Parameter, Unit, Target Value, and Tolerance Limit.",
+  });
 }
 
 function evaluateQtlBreach(qtl) {
@@ -1718,9 +1768,11 @@ function evaluateQtlBreach(qtl) {
     tolerance_limit: qtl.tolerance_limit,
     csr_narrative: `CSR Section 9.6 QTL Summary:\nParameter '${qtl.parameter_name}' observed value of 6.5% exceeded the protocol tolerance limit of ${qtl.tolerance_limit}%.\nClinical root cause analysis conducted; corrective actions implemented with no impact on primary efficacy endpoint integrity.`,
   };
-  alert(
-    `⚡ QTL Evaluation: Observed 6.5% > ${qtl.tolerance_limit}%. Breach recorded and CSR 9.6 text synthesized.`
-  );
+  toasts.push({
+    tone: "warning",
+    title: "QTL Breach Recorded",
+    message: `QTL Evaluation: Observed 6.5% > ${qtl.tolerance_limit}%. Breach recorded and CSR 9.6 text synthesized.`,
+  });
 }
 
 function viewCsrNarrative(breach) {
@@ -1730,7 +1782,11 @@ function viewCsrNarrative(breach) {
 
 function copyCsrText() {
   navigator.clipboard.writeText(activeCsrNarrative.value);
-  alert("📋 CSR Section 9.6 narrative copied to clipboard!");
+  toasts.push({
+    tone: "success",
+    title: "Narrative Copied",
+    message: "CSR Section 9.6 narrative copied to clipboard!",
+  });
   isCsrNarrativeModalOpen.value = false;
 }
 

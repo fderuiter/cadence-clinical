@@ -13,13 +13,15 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 20 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
 | [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
+| `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove  | `button`, `status`                |
+| `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot       | `button`                          |
 | `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
 | [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
 | [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
@@ -37,6 +39,7 @@ All 20 Vue components and interaction helpers are exported directly from the roo
 | `FileUploadModal`                          | Multipart GxP file upload dialog with SHA-256 verification                                                                    | `dialog`, `aria-modal="true"`     |
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
+| `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
 | `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
