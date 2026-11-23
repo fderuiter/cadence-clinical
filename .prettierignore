@@ -53,7 +53,8 @@ docs/DOCUMENTATION_INDEX.md
 # Keep CDASH type definition pristine to prevent ADR gating
 **/cdash.ts
 
-# Checksum-verified standards blocks/seeds and System.Text.Json golden test fixtures compared byte-for-byte by unit tests
+# Checksum-verified standards blocks/seeds, secret baseline shards, and System.Text.Json golden test fixtures compared byte-for-byte
+baselines/secrets/
 packages/kernel/src/Cadence.Standards/Blocks/*.json
 packages/kernel/src/Cadence.Standards/Seed/*.json
 tests/fixtures/soa/*.json

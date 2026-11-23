@@ -1,11 +1,76 @@
 import DefaultTheme from "vitepress/theme";
-import { onMounted, onUnmounted, watch } from "vue";
+import { nextTick, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vitepress";
 import { initSurfaceThemeSync } from "../../../packages/ui/src/composables/useSurfaceTheme.js";
 import BlogLayout from "./BlogLayout.vue";
 import BlogIndex from "./components/BlogIndex.vue";
 import "../../../packages/ui/tokens.css";
 import "./custom.css";
+
+let mermaidPromise = null;
+let mermaidRenderSeq = 0;
+
+function loadMermaidRuntime() {
+  if (!mermaidPromise) {
+    mermaidPromise = import("mermaid").then((mod) => mod.default ?? mod);
+  }
+  return mermaidPromise;
+}
+
+function getCurrentMermaidTheme() {
+  if (typeof document === "undefined") return "default";
+  return document.documentElement.classList.contains("dark")
+    ? "dark"
+    : "default";
+}
+
+function escapeSequenceDiagramSemicolons(source) {
+  if (!/^\s*sequenceDiagram\b/m.test(source)) {
+    return null;
+  }
+  const escaped = source.replace(
+    /^(\s*[^:\r\n]+-[>-]+>?[+-]?\s*[^:\r\n]+:)(.+)$/gm,
+    (_line, prefix, message) => {
+      const safeMessage = message.replace(/(?<!#[a-zA-Z0-9]+);/g, "#59;");
+      return `${prefix}${safeMessage}`;
+    }
+  );
+  return escaped === source ? null : escaped;
+}
+
+function removeMermaidTempNode(renderId) {
+  if (typeof document === "undefined") return;
+  for (const id of [renderId, `d${renderId}`]) {
+    const node = document.getElementById(id);
+    if (node && node.parentNode) {
+      node.parentNode.removeChild(node);
+    }
+  }
+}
+
+async function renderDiagramSvg(mermaid, source) {
+  const renderId = `cadence-mermaid-${++mermaidRenderSeq}`;
+  try {
+    const { svg } = await mermaid.render(renderId, source);
+    return svg;
+  } catch (firstErr) {
+    removeMermaidTempNode(renderId);
+    const fallbackSource = escapeSequenceDiagramSemicolons(source);
+    if (!fallbackSource) {
+      console.error("Failed to render Mermaid diagram:", firstErr);
+      return null;
+    }
+    const retryId = `cadence-mermaid-${++mermaidRenderSeq}`;
+    try {
+      const { svg } = await mermaid.render(retryId, fallbackSource);
+      return svg;
+    } catch (retryErr) {
+      removeMermaidTempNode(retryId);
+      console.error("Failed to render Mermaid diagram:", retryErr);
+      return null;
+    }
+  }
+}
 
 export default {
   extends: DefaultTheme,
@@ -17,6 +82,8 @@ export default {
     const route = useRoute();
     const activeCleanups = new Set();
     let stopThemeSync = () => {};
+    let themeObserver = null;
+    let activeRenderToken = 0;
 
     const clearAllActiveDrags = () => {
       activeCleanups.forEach((cleanup) => {
@@ -32,38 +99,20 @@ export default {
     onUnmounted(() => {
       stopThemeSync();
       clearAllActiveDrags();
+      if (themeObserver) {
+        themeObserver.disconnect();
+        themeObserver = null;
+      }
     });
 
-    const initPanZoom = () => {
-      if (typeof window === "undefined") return;
-
-      const elements = document.querySelectorAll(".mermaid");
-      elements.forEach((el) => {
-        // Check if we already initialized this element
-        if (el.getAttribute("data-enhanced") === "true") {
-          return;
-        }
-        el.setAttribute("data-enhanced", "true");
-
-        // Wait until the SVG is rendered inside the element
-        const checkAndEnhance = () => {
-          const svg = el.querySelector("svg");
-          if (!svg) {
-            // Retry in 100ms if SVG is not yet rendered by Mermaid
-            setTimeout(checkAndEnhance, 100);
-            return;
-          }
-
-          enhanceSvg(el, svg);
-        };
-
-        checkAndEnhance();
-      });
-    };
-
-    const enhanceSvg = (container, svg) => {
+    const enhanceDiagramContainer = (container) => {
+      if (container.getAttribute("data-enhanced") === "true") {
+        return;
+      }
       const parent = container.parentNode;
       if (!parent) return;
+
+      container.setAttribute("data-enhanced", "true");
 
       const outerContainer = document.createElement("div");
       outerContainer.className = "mermaid-container";
@@ -71,23 +120,26 @@ export default {
       const wrapper = document.createElement("div");
       wrapper.className = "mermaid-wrapper";
 
-      // Move the container inside the wrapper, and wrap it
       parent.replaceChild(outerContainer, container);
       outerContainer.appendChild(wrapper);
       wrapper.appendChild(container);
 
-      // Set initial state
       let scale = 1;
       let panX = 0;
       let panY = 0;
       let isDragging = false;
 
-      // Apply transforms to SVG
+      const getSvg = () => container.querySelector("svg");
+
       const updateTransform = () => {
-        svg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        const svg = getSvg();
+        if (svg) {
+          svg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+        }
       };
 
-      // Add toolbar
+      container.__applyMermaidTransform = updateTransform;
+
       const toolbar = document.createElement("div");
       toolbar.className = "mermaid-toolbar";
 
@@ -139,7 +191,6 @@ export default {
       let lastSinglePointerPos = null;
       let isMultiTouch = false;
 
-      // Multi-touch initial metrics
       let D_start = 0;
       let S_start = 1;
       let panX_start = 0;
@@ -203,26 +254,7 @@ export default {
         }
       };
 
-      const handlePointerUp = (e) => {
-        activePointers.delete(e.pointerId);
-        try {
-          wrapper.releasePointerCapture(e.pointerId);
-        } catch {
-          // Pointer capture may already be released.
-        }
-
-        if (activePointers.size === 0) {
-          cleanupDrag();
-        } else if (activePointers.size === 1) {
-          const [p] = Array.from(activePointers.values());
-          lastSinglePointerPos = { x: p.clientX, y: p.clientY };
-          isMultiTouch = false;
-        } else if (activePointers.size === 2) {
-          initMultiTouch();
-        }
-      };
-
-      const handlePointerCancel = (e) => {
+      const releasePointer = (e) => {
         activePointers.delete(e.pointerId);
         try {
           wrapper.releasePointerCapture(e.pointerId);
@@ -247,26 +279,30 @@ export default {
         activePointers.clear();
         lastSinglePointerPos = null;
         wrapper.classList.remove("active");
-        svg.style.transition = ""; // Restore transitions for toolbar buttons
+        const svg = getSvg();
+        if (svg) {
+          svg.style.transition = "";
+        }
         if (listenersAttached) {
           window.removeEventListener("pointermove", handlePointerMove);
-          window.removeEventListener("pointerup", handlePointerUp);
-          window.removeEventListener("pointercancel", handlePointerCancel);
+          window.removeEventListener("pointerup", releasePointer);
+          window.removeEventListener("pointercancel", releasePointer);
           listenersAttached = false;
         }
         activeCleanups.delete(cleanupDrag);
       };
 
-      // Set touch-action programmatically to prevent scrolling and gesture actions
       wrapper.style.touchAction = "none";
 
-      // Unified PointerEvents pipeline for interactions
       wrapper.addEventListener("pointerdown", (e) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
 
         isDragging = true;
         activePointers.set(e.pointerId, e);
-        svg.style.transition = "none"; // Temporarily disable transitions during drag
+        const svg = getSvg();
+        if (svg) {
+          svg.style.transition = "none";
+        }
 
         try {
           wrapper.setPointerCapture(e.pointerId);
@@ -283,25 +319,142 @@ export default {
 
         if (!listenersAttached) {
           window.addEventListener("pointermove", handlePointerMove);
-          window.addEventListener("pointerup", handlePointerUp);
-          window.addEventListener("pointercancel", handlePointerCancel);
+          window.addEventListener("pointerup", releasePointer);
+          window.addEventListener("pointercancel", releasePointer);
           listenersAttached = true;
           activeCleanups.add(cleanupDrag);
         }
+      });
+
+      updateTransform();
+    };
+
+    const enhanceExistingSvgContainers = () => {
+      if (typeof window === "undefined") return;
+      for (const el of document.querySelectorAll(".mermaid")) {
+        if (el.isConnected && el.querySelector("svg")) {
+          enhanceDiagramContainer(el);
+          if (typeof el.__applyMermaidTransform === "function") {
+            el.__applyMermaidTransform();
+          }
+        }
+      }
+    };
+
+    const renderPageDiagrams = async ({ forceThemeRefresh = false } = {}) => {
+      if (typeof window === "undefined") return;
+
+      const elements = Array.from(document.querySelectorAll(".mermaid"));
+      if (elements.length === 0) {
+        return;
+      }
+
+      const themeName = getCurrentMermaidTheme();
+      const pendingElements = [];
+
+      for (const el of elements) {
+        if (!el.isConnected) continue;
+        const encoded = el.getAttribute("data-mermaid-code");
+        const hasSvg = Boolean(el.querySelector("svg"));
+        const source = encoded
+          ? decodeURIComponent(encoded)
+          : hasSvg
+            ? ""
+            : (el.textContent ?? "").trim();
+
+        if (hasSvg && (!forceThemeRefresh || !source)) {
+          enhanceDiagramContainer(el);
+          if (typeof el.__applyMermaidTransform === "function") {
+            el.__applyMermaidTransform();
+          }
+          continue;
+        }
+
+        if (!source) continue;
+        if (!encoded) {
+          el.setAttribute("data-mermaid-code", encodeURIComponent(source));
+        }
+
+        const alreadyRenderedForTheme =
+          !forceThemeRefresh &&
+          el.getAttribute("data-rendered-theme") === themeName &&
+          hasSvg;
+        if (alreadyRenderedForTheme) {
+          enhanceDiagramContainer(el);
+          if (typeof el.__applyMermaidTransform === "function") {
+            el.__applyMermaidTransform();
+          }
+          continue;
+        }
+
+        pendingElements.push({ el, source });
+      }
+
+      if (pendingElements.length === 0) {
+        return;
+      }
+
+      const token = ++activeRenderToken;
+      const mermaid = await loadMermaidRuntime();
+      if (token !== activeRenderToken) return;
+
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: themeName,
+      });
+
+      for (const { el, source } of pendingElements) {
+        if (token !== activeRenderToken || !el.isConnected) return;
+
+        const renderedSvg = await renderDiagramSvg(mermaid, source);
+        if (!renderedSvg) {
+          continue;
+        }
+        if (token !== activeRenderToken || !el.isConnected) return;
+        el.innerHTML = renderedSvg;
+        el.setAttribute("data-rendered-theme", themeName);
+
+        enhanceDiagramContainer(el);
+        if (typeof el.__applyMermaidTransform === "function") {
+          el.__applyMermaidTransform();
+        }
+      }
+
+      if (!themeObserver && typeof MutationObserver !== "undefined") {
+        let lastObservedDark =
+          document.documentElement.classList.contains("dark");
+        themeObserver = new MutationObserver(() => {
+          const nowDark = document.documentElement.classList.contains("dark");
+          if (nowDark !== lastObservedDark) {
+            lastObservedDark = nowDark;
+            void renderPageDiagrams({ forceThemeRefresh: true });
+          }
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
+      }
+    };
+
+    const scheduleDiagramCheck = () => {
+      enhanceExistingSvgContainers();
+      void nextTick(() => {
+        void renderPageDiagrams();
       });
     };
 
     onMounted(() => {
       stopThemeSync = initSurfaceThemeSync({ observeHtmlDarkClass: true });
-      // Delay initialization slightly to let mermaid finish rendering
-      setTimeout(initPanZoom, 200);
+      scheduleDiagramCheck();
     });
 
     watch(
       () => route.path,
       () => {
         clearAllActiveDrags();
-        setTimeout(initPanZoom, 600);
+        scheduleDiagramCheck();
       }
     );
   },

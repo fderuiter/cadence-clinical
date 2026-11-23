@@ -1340,7 +1340,6 @@ export default [
       "apps/web/src/components/imaging/OncologyCalipers.vue",
       "apps/web/src/components/quality/StatisticalForensicsViewer.vue",
       "apps/web/src/components/shared/ReAuthModal.vue",
-      "apps/web/src/components/tickets/TicketCreateModal.vue",
       "apps/web/src/components/tickets/TicketDetailDrawer.vue",
       "apps/web/src/views/AmendmentDiffView.vue",
       "apps/web/src/views/MdrView.vue",

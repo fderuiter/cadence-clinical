@@ -3,7 +3,7 @@
  *
  * Exposes `EPROAnswersSchema`, `EPROSubmissionSchema`, `validateEproPayload`,
  * and `validateEproSubmission` for both `usdm-schemas/epro` and `./index.ts`
- * without pulling the USDM v3/v4 study graph and `zod/v4/classic` runtime into
+ * without pulling the USDM v3/v4 study graph or Zod runtime into
  * participant-facing cold-boot bundles.
  */
 

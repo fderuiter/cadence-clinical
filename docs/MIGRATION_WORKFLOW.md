@@ -229,13 +229,13 @@ Regulatory compliance under 21 CFR Part 11 requires that all architectural evolu
 
 #### 6.1: GxP Traceability Matrix Sync
 
-After adding or modifying tests, parse test execution output and regenerate the Requirements Traceability Matrix:
+After adding or modifying tests, run the GxP traceability sync to validate requirement tags and generate the preview matrix:
 
 ```bash
-python scripts/sync_gxp.py
+pnpm cadence gxp sync
 ```
 
-Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly with zero unmapped requirements.
+Verify that `TestResults/gxp/preview/Requirements_Traceability_Matrix.md` updates cleanly with zero unmapped requirements (never commit generated `docs/SDLC/` snapshot files on a feature branch; see ADR-2532).
 
 #### 6.2: Legacy ADR Supersession & Index Updating
 
@@ -252,7 +252,7 @@ When transcribing a service or pattern that supersedes a prior architectural dec
    > **Superseded Notice (YYYY-MM-DD):** This record documented the legacy Python implementation. As of YYYY-MM-DD, it has been formally superseded for .NET 10 by [ADR-XXXX](path-to-new-adr.md). Refer to `docs/MIGRATION_WORKFLOW.md` for current implementation standards.
    ```
 4. Annotate the listing in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
-5. Validate via `python scripts/validate_adrs.py` to confirm zero broken links or invalid tags.
+5. Validate via `pnpm cadence check adrs` to confirm zero broken links or invalid tags.
 
 #### 6.3: System Architecture & Domain Glossary Sync
 
@@ -316,6 +316,6 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 | **Auto-Format Code**      | `dotnet format Cadence.sln`                                | Automatically fixes whitespace and namespace formatting                             |
 | **Run Fast Unit Tests**   | `dotnet test Cadence.sln --filter "Category!=Integration"` | Runs in-memory unit tests                                                           |
 | **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL tests                                                |
-| **ADR Validation**        | `python scripts/validate_adrs.py`                          | Validates ADR index formatting and requirement tags                                 |
-| **GxP Compliance Sync**   | `python scripts/sync_gxp.py`                               | Parses tests, extracts `@req` tags, and updates SDLC docs                           |
+| **ADR Validation**        | `pnpm cadence check adrs`                                  | Validates ADR index formatting and requirement tags                                 |
+| **GxP Compliance Sync**   | `pnpm cadence gxp sync`                                    | Runs tests, validates `@req` tags, and writes GxP preview reports                   |
 | **Docker Dev Stack**      | `docker compose -f docker/docker-compose.yml up -d`        | Starts unprofiled operational core stack (add `--profile storage` for MinIO/ClamAV) |

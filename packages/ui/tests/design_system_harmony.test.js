@@ -1698,7 +1698,7 @@ const open = () => {};
     });
   });
 
-  describe("Requirement 10: Two-Profile Surface Density, Portal Primitives, Demo Workspaces & VitePress Bridge (ADR-2656)", () => {
+  describe("Requirement 10: Two-Profile Surface Density, Portal Primitives, Demo Workspaces & VitePress Bridge (ADR-2657)", () => {
     it("wires VitePress theme/index.js and custom.css directly to packages/ui/tokens.css and useSurfaceTheme", () => {
       const vpThemeIndex = fs.readFileSync(
         path.join(repoRoot, "docs/.vitepress/theme/index.js"),

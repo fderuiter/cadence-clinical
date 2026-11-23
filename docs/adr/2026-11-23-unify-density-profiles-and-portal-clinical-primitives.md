@@ -1,4 +1,4 @@
-# ADR-2656: Unify Staff and Participant Surface Density Profiles, Portal Clinical Primitives, and Cross-Surface Theme Synchronization
+# ADR-2657: Unify Staff and Participant Surface Density Profiles, Portal Clinical Primitives, and Cross-Surface Theme Synchronization
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

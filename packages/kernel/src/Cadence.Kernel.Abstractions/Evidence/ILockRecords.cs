@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Kernel.Evidence;
 
@@ -36,8 +37,8 @@ public interface ILockRecords
 
     /// <summary>
     /// Evaluates whether <paramref name="scope"/> in <paramref name="study"/> is ready for a <see cref="LockKind.Locked"/>
-    /// assertion, listing open queries and missing required collection items. Returns null when <paramref name="study"/>
-    /// or <paramref name="scope"/> does not exist in <paramref name="study"/>.
+    /// assertion, listing open queries, missing required collection items, and unresolved Error validation findings.
+    /// Returns null when <paramref name="study"/> or <paramref name="scope"/> does not exist in <paramref name="study"/>.
     /// </summary>
     Task<LockReadinessSnapshot?> ReadReadinessAsync(
         TenantId tenant,
@@ -68,6 +69,9 @@ public enum LockBlockerKind
 
     /// <summary>A required <c>CollectionItem</c> on an opened <c>CollectionInstance</c> in scope with no recorded value.</summary>
     MissingRequiredItem,
+
+    /// <summary>An active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> validation finding in scope.</summary>
+    ErrorFinding,
 }
 
 /// <summary>One unresolved blocker preventing a <see cref="LockKind.Locked"/> assertion at a scope.</summary>
@@ -90,7 +94,10 @@ public sealed record LockReadinessBlocker(
     bool Blinded,
     string NextAction,
     string NextCapability,
-    NodeRef NextTarget);
+    NodeRef NextTarget,
+    ValidationFindingId? FindingId = null,
+    string? RuleId = null,
+    string? FindingMessage = null);
 
 /// <summary>Readiness snapshot of a lock scope in a study.</summary>
 public sealed record LockReadinessSnapshot(
@@ -102,7 +109,8 @@ public sealed record LockReadinessSnapshot(
     int OpenQueryCount,
     int MissingRequiredItemCount,
     IReadOnlyList<LockReadinessBlocker> Blockers,
-    Explanation Explanation);
+    Explanation Explanation,
+    int OpenErrorFindingCount = 0);
 
 /// <summary>Pre-check result evaluated before recording an electronic signature for <c>ApplyLock</c>.</summary>
 public sealed record LockApplyPrecheck(
