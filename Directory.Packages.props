@@ -47,7 +47,7 @@
 
     <!-- CLI & Developer Experience -->
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.12" />
+    <PackageVersion Include="System.CommandLine" Version="3.0.0" />
 
     <!-- Validation & Security -->
     <!-- Stay on Fluid.Core 2.41.x (security-patched 2.x) until FluidTemplateRenderer migrates to Fluid 3.x APIs (#5948). -->

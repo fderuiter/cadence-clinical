@@ -83,7 +83,40 @@
         >
           <label for="observation-new-value">Corrected value</label>
           <div class="observation-input-row">
+            <select
+              v-if="observation.expected_codelist_options?.length"
+              id="observation-new-value"
+              v-model="newValue"
+              :disabled="saving"
+              :aria-invalid="parseError !== null"
+              aria-describedby="observation-new-value-hint"
+            >
+              <option value="">Select…</option>
+              <option
+                v-if="
+                  newValue &&
+                  !observation.expected_codelist_options.some(
+                    (option) => option.code === newValue
+                  )
+                "
+                :value="newValue"
+              >
+                {{ newValue }}
+              </option>
+              <option
+                v-for="option in observation.expected_codelist_options"
+                :key="option.code"
+                :value="option.code"
+              >
+                {{
+                  option.display && option.display !== option.code
+                    ? `${option.display} (${option.code})`
+                    : option.code
+                }}
+              </option>
+            </select>
             <input
+              v-else
               id="observation-new-value"
               v-model="newValue"
               type="text"
@@ -474,6 +507,8 @@ const expectedSpec = computed<ExpectedItemSpec | null>(() => {
     valueKind: obs.expected_value_kind ?? null,
     unit: obs.expected_unit ?? null,
     codeSystemVersionId: obs.expected_code_system_version_id ?? null,
+    codelist: obs.expected_codelist ?? null,
+    codelistOptions: obs.expected_codelist_options ?? null,
   };
 });
 
@@ -693,7 +728,8 @@ watch(() => props.observationRef, load);
   flex-wrap: wrap;
   min-width: 0;
 }
-.observation-input-row input {
+.observation-input-row input,
+.observation-input-row select {
   flex: 1 1 200px;
   min-width: 0;
   padding: 8px 10px;
@@ -719,7 +755,8 @@ watch(() => props.observationRef, load);
     font-weight: 600;
     margin-top: 6px;
   }
-  .observation-input-row input {
+  .observation-input-row input,
+  .observation-input-row select {
     flex: 1 1 100%;
     width: 100%;
   }

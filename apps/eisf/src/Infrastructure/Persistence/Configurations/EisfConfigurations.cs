@@ -93,3 +93,33 @@ public class EisfDocumentRecordConfiguration : IEntityTypeConfiguration<EisfDocu
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public sealed class EisfDocumentRevisionConfiguration : IEntityTypeConfiguration<EisfDocumentRevision>
+{
+    public void Configure(EntityTypeBuilder<EisfDocumentRevision> builder)
+    {
+        builder.ToTable("eisf_document_revisions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DocumentId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.RevisionNumber).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SectionCode).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Filename).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.FilePath).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.Sha256Checksum).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.RecordedAt).IsRequired();
+        builder.Property(x => x.RecordedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<EisfDocumentRecord>()
+            .WithMany()
+            .HasForeignKey(x => x.DocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DocumentId);
+        builder.HasIndex(x => new { x.DocumentId, x.RevisionNumber }).IsUnique();
+    }
+}

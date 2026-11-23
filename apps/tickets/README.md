@@ -11,7 +11,7 @@ Support ticket service. It serves authenticated support ticket creation (`POST /
 - `Domain/`: EF Core entity classes (tickets, comments, attachments, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `TicketsDbContext`, a design-time `TicketsDbContextFactory`, and `Configurations/` (Fluent API mappings, including `ConsumedSignatureTokenConfiguration`).
-- `Infrastructure/Persistence/Migrations/`: `20260924145604_InitialCreate`, `20261122164714_AddConsumedSignatureTokens`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145604_InitialCreate`, `20261120192739_EnforceTicketStatusCheckConstraint`, `20261120210113_EnforceTenantRowLevelSecurity`, `20261122164714_AddConsumedSignatureTokens`, `20261122203820_EnforceStandaloneConcurrencyAndTemporalRevisions`.
 
 ## HTTP surface
 
@@ -54,3 +54,8 @@ dotnet run --project apps/tickets/src/Cadence.Apps.Tickets.csproj
 ```
 
 The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service on port 8009, as docker compose does, with a reference to its `cadence` PostgreSQL database; it applies its migrations on start.
+
+## Optimistic Concurrency and Immutable Revisions
+
+- `PATCH /api/v1/tickets/{ticket_id}` updates ticket fields or status transitions under `VersionIndex` / `If-Match` optimistic concurrency (returning HTTP `409` on stale writes) and appends a numbered immutable snapshot to `ticket_revisions` (`KA001`).
+- `GET /api/v1/tickets/{ticket_id}` accepts optional `revision` and `as_of` query parameters to reconstruct prior committed revisions.
