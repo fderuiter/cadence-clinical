@@ -106,6 +106,7 @@ const BASELINE_CAPABILITIES = [
 
 export const ROLE_ALIASES = {
   crc: ["site_investigator", "crc"],
+  trial_coordinator: ["site_investigator", "crc", "trial_coordinator"],
   site_investigator: ["site_investigator", "crc"],
   principal_investigator: [
     "principal_investigator",
@@ -152,7 +153,7 @@ export const PERSONA_PRESETS = [
   {
     key: "site_crc",
     label: "🩺 Site Coordinator / CRC",
-    requires: ["site_investigator", "crc"],
+    requires: ["site_investigator", "crc", "trial_coordinator"],
   },
   {
     key: "site_investigator",
@@ -423,6 +424,7 @@ export const useAuthStore = defineStore("auth", {
     isCrc: (state) =>
       holdsAnyRole(state.rawRoles, [
         "crc",
+        "trial_coordinator",
         "site_investigator",
         "principal_investigator",
       ]),

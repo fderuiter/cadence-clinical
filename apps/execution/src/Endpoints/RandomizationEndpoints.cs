@@ -173,7 +173,7 @@ public static class RandomizationEndpoints
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
         var caller = ClinicalScopeGuard.ResolvePrincipal(http) is { UserId.Length: > 0 } p
-            ? new AuthenticatedCaller(p.UserId, p.Roles)
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
             : null;
         if (SubjectAuthority.AuthorizeParticipantChange(caller) is { } forbidden)
         {

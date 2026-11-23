@@ -624,6 +624,6 @@ public static partial class SubjectEndpoints
 
     private static AuthenticatedCaller? ResolveCaller(HttpContext http) =>
         ClinicalScopeGuard.ResolvePrincipal(http) is { UserId.Length: > 0 } p
-            ? new AuthenticatedCaller(p.UserId, p.Roles)
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
             : null;
 }

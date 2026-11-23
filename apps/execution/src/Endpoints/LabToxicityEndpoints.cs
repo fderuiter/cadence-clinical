@@ -118,7 +118,7 @@ public static class LabToxicityEndpoints
         }
 
         var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is { UserId.Length: > 0 } p
-            ? new AuthenticatedCaller(p.UserId, p.Roles)
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
             : null;
         var result = await svc.ExecuteActionAsync(reviewId, request, caller, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());

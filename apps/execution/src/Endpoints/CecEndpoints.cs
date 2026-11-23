@@ -84,7 +84,7 @@ public static class CecEndpoints
         }
 
         var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is { UserId.Length: > 0 } p
-            ? new AuthenticatedCaller(p.UserId, p.Roles)
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
             : null;
         var result = await cecService.ChairAdjudicateAsync(id, request, caller, cancellationToken);
         return result.IsSuccess

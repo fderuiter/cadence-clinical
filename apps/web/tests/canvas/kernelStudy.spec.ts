@@ -7,7 +7,9 @@ import {
   clearKernelStudyCache,
   findKernelEnrollmentRef,
   findKernelStudyRef,
+  findKernelStudySiteRef,
   findStudySites,
+  invalidateStudySitesCache,
   resetKernelStudySession,
 } from "../../src/canvas/kernelStudy";
 import {
@@ -22,6 +24,7 @@ vi.mock("../../src/api/kernelApi", () => ({
     search: vi.fn(),
     getChildren: vi.fn(),
     lookupEnrollment: vi.fn(),
+    listStudySites: vi.fn(),
   },
 }));
 
@@ -262,6 +265,8 @@ describe("findKernelStudyRef and findStudySites session caching", () => {
     vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.getChildren).mockReset();
     vi.mocked(kernelApi.lookupEnrollment).mockReset();
+    vi.mocked(kernelApi.listStudySites).mockReset();
+    vi.mocked(kernelApi.listStudySites).mockResolvedValue([]);
   });
 
   it("reuses the cached study reference across 9 same-study transitions with 1 search request", async () => {
@@ -515,6 +520,8 @@ describe("kernelStudy session cache", () => {
     vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.getChildren).mockReset();
     vi.mocked(kernelApi.lookupEnrollment).mockReset();
+    vi.mocked(kernelApi.listStudySites).mockReset();
+    vi.mocked(kernelApi.listStudySites).mockResolvedValue([]);
     vi.mocked(kernelApi.search).mockResolvedValue([
       {
         ref: STUDY_REF,
@@ -607,5 +614,117 @@ describe("kernelStudy session cache", () => {
     );
     await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
     expect(kernelApi.search).toHaveBeenCalledTimes(3);
+  });
+
+  it("falls back to listStudySites and refreshes session cache after invalidateStudySitesCache", async () => {
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([]);
+    vi.mocked(kernelApi.listStudySites)
+      .mockResolvedValueOnce([
+        {
+          ref: SITE_A,
+          study_ref: STUDY_REF,
+          study_code: "CAD-101",
+          site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c010@1",
+          site_code: "SITE-01",
+          site_name: "Metro Clinical Site",
+          country: "US",
+          status: "Selected",
+          is_active: true,
+          institution_ref:
+            "organization:0192f3c4-5e6a-7b8c-9d0e-00000000c011@1",
+          institution_code: "METRO-HOSP",
+          institution_name: "Metro Hospital",
+          mask: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          ref: SITE_A,
+          study_ref: STUDY_REF,
+          study_code: "CAD-101",
+          site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c010@1",
+          site_code: "SITE-01",
+          site_name: "Metro Clinical Site",
+          country: "US",
+          status: "Selected",
+          is_active: true,
+          institution_ref:
+            "organization:0192f3c4-5e6a-7b8c-9d0e-00000000c011@1",
+          institution_code: "METRO-HOSP",
+          institution_name: "Metro Hospital",
+          mask: null,
+        },
+        {
+          ref: SITE_B,
+          study_ref: STUDY_REF,
+          study_code: "CAD-101",
+          site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c012@1",
+          site_code: "SITE-02",
+          site_name: "Harbor Clinical Site",
+          country: "US",
+          status: "Selected",
+          is_active: true,
+          institution_ref:
+            "organization:0192f3c4-5e6a-7b8c-9d0e-00000000c013@1",
+          institution_code: "HARBOR-HOSP",
+          institution_name: "Harbor Hospital",
+          mask: null,
+        },
+      ]);
+
+    resetKernelStudySession("CAD-101");
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "SITE-01", label: "SITE-01 — Metro Clinical Site" },
+    ]);
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "SITE-01", label: "SITE-01 — Metro Clinical Site" },
+    ]);
+    expect(kernelApi.listStudySites).toHaveBeenCalledTimes(1);
+
+    invalidateStudySitesCache("CAD-101");
+    await expect(findStudySites("CAD-101")).resolves.toEqual([
+      { code: "SITE-01", label: "SITE-01 — Metro Clinical Site" },
+      { code: "SITE-02", label: "SITE-02 — Harbor Clinical Site" },
+    ]);
+    expect(kernelApi.listStudySites).toHaveBeenCalledTimes(2);
+    // Study ref itself remains warm across site cache invalidation.
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses concurrent findStudySites lookups in findKernelStudySiteRef without duplicate getChildren calls", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValueOnce([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        code: "CAD-101",
+        title: "Cadence 101",
+        exact_code: true,
+      },
+    ]);
+    vi.mocked(kernelApi.getChildren).mockResolvedValueOnce([
+      {
+        node: {
+          ref: SITE_A,
+          kind: "study_site",
+          code: "SITE-01",
+          title: "Metro Clinical Site",
+          status: "PENDING",
+          mask: null,
+        },
+        child_count: 0,
+      },
+    ]);
+
+    resetKernelStudySession("CAD-101");
+    const [sites, siteRef] = await Promise.all([
+      findStudySites("CAD-101"),
+      findKernelStudySiteRef("CAD-101", "site-01"),
+    ]);
+
+    expect(sites).toEqual([
+      { code: "SITE-01", label: "SITE-01 — Metro Clinical Site" },
+    ]);
+    expect(siteRef).toBe("study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002");
+    expect(kernelApi.getChildren).toHaveBeenCalledTimes(1);
   });
 });
