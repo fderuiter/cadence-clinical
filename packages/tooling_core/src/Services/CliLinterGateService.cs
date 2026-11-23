@@ -8,7 +8,8 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Fail-closed <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
+/// Fail-closed <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>,
+/// plus <c>.cadence/bin</c> / <c>PATH</c> binary resolution for <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c>.
 /// </summary>
 public static class CliLinterGateService
 {

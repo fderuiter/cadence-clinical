@@ -270,7 +270,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         var securityJob = CiPlan.Jobs.Single(j => j.Key == "security");
         var step = securityJob.Steps.Single(s => s.Name == "Run detect-secrets against the baseline");
         var onlyStepJob = new CiJob("security", "Security", [step]);
-        var options = new LocalCiOptions(AllowSkip: false, BaseRef: "origin/release/1.0");
+        var options = new LocalCiOptions(AllowMissingTools: false, AllowDbSkip: false, BaseRef: "origin/release/1.0");
 
         var capturedArgs = new List<string>();
         int simulatedExitCode = 0;
@@ -643,10 +643,14 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             .Should().Be(1, "actionlint gate must fail closed when binary is missing");
         CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "hadolint gate must fail closed when binary is missing");
+        CliLinterGateService.ResolveShellcheck(_tempDir, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().BeNull("shellcheck resolution must return null when binary is missing");
         CliLinterGateService.RunShellcheck(_tempDir, [".githooks/pre-commit"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "shellcheck gate must fail closed when binary is missing");
 
         CreateCadenceBinLinterStubs();
+        CliLinterGateService.ResolveShellcheck(_tempDir, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().NotBeNull("shellcheck resolution must prefer .cadence/bin");
         using var reader = GitIndexReader.TryOpen(_tempDir);
         CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "actionlint must validate staged workflow blob even when working tree is clean");
@@ -1061,10 +1065,14 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string zeroSha = new('0', 64);
 
         (int badExit, string badOut) = RunWizardLintersOnly(
-            wizardPath, binOut,
-            $"file://{tarPath}", zeroSha,
-            $"file://{hadolintPayload}", zeroSha,
-            $"file://{scTarXzPath}", zeroSha);
+            wizardPath,
+            binOut,
+            $"file://{tarPath}",
+            zeroSha,
+            $"file://{hadolintPayload}",
+            zeroSha,
+            $"file://{scTarXzPath}",
+            zeroSha);
         badExit.Should().Be(1);
         badOut.Should().Contain("Checksum verification failed for actionlint");
         badOut.Should().Contain("Checksum verification failed for hadolint");
@@ -1074,10 +1082,14 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.Exists(Path.Combine(binOut, "shellcheck")).Should().BeFalse();
 
         (int okExit, string okOut) = RunWizardLintersOnly(
-            wizardPath, binOut,
-            $"file://{tarPath}", alSha,
-            $"file://{hadolintPayload}", hlSha,
-            $"file://{scTarXzPath}", scSha);
+            wizardPath,
+            binOut,
+            $"file://{tarPath}",
+            alSha,
+            $"file://{hadolintPayload}",
+            hlSha,
+            $"file://{scTarXzPath}",
+            scSha);
         okExit.Should().Be(0, okOut);
         okOut.Should().Contain("actionlint 1.7.12 SHA-256 verified");
         okOut.Should().Contain("hadolint 2.15.1 SHA-256 verified");
@@ -1164,6 +1176,162 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         Write("apps/web/src/composables/useBeta.tsx", "export const useBeta = () => 0;\n");
         DuplicationDetectorService.DetectDuplication(repoRoot: _tempDir)
             .Should().Be(1, "stale entries in code-duplication.baseline.txt must fail until shrunk");
+    }
+
+    [Fact]
+    public void SetupWizard_LintersOnly_FailsClosedWhenXzIsMissing()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))
+        {
+            return;
+        }
+
+        string wizardPath = Path.Combine(QualityGateOrchestrator.FindRepoRoot(), "scripts", "setup_wizard.sh");
+        string payloadDir = Path.Combine(_tempDir, "no-xz-payloads");
+        Directory.CreateDirectory(payloadDir);
+
+        string fakeActionlint = Path.Combine(payloadDir, "actionlint");
+        File.WriteAllText(fakeActionlint, "#!/bin/sh\necho '1.7.12'\n");
+        File.SetUnixFileMode(fakeActionlint, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        string tarPath = Path.Combine(payloadDir, "actionlint.tar.gz");
+        var tarPsi = new ProcessStartInfo("tar")
+        {
+            WorkingDirectory = payloadDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        tarPsi.ArgumentList.Add("-czf");
+        tarPsi.ArgumentList.Add(tarPath);
+        tarPsi.ArgumentList.Add("actionlint");
+        using (var tarProc = Process.Start(tarPsi)!)
+        {
+            tarProc.WaitForExit();
+            tarProc.ExitCode.Should().Be(0);
+        }
+
+        string hadolintPayload = Path.Combine(payloadDir, "hadolint-bin");
+        File.WriteAllText(hadolintPayload, "#!/bin/sh\necho 'Haskell Dockerfile Linter 2.15.1'\n");
+        File.SetUnixFileMode(hadolintPayload, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string alSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(tarPath)));
+        string hlSha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(hadolintPayload)));
+
+        string minimalPathDir = Path.Combine(_tempDir, "no-xz-bin");
+        Directory.CreateDirectory(minimalPathDir);
+        foreach (string tool in new[] { "uname", "dirname", "mkdir", "mktemp", "rm", "mv", "cp", "chmod", "curl", "tar", "gzip", "sha256sum", "shasum", "awk", "tr", "head" })
+        {
+            string? resolved = ResolveFromSystemPath(tool);
+            if (resolved is not null)
+            {
+                File.CreateSymbolicLink(Path.Combine(minimalPathDir, tool), resolved);
+            }
+        }
+
+        (int exitCode, string combined) = RunWizardWithCustomPath(
+            wizardPath,
+            minimalPathDir,
+            Path.Combine(_tempDir, "no-xz-cadence-bin"),
+            $"file://{tarPath}",
+            alSha,
+            $"file://{hadolintPayload}",
+            hlSha);
+
+        exitCode.Should().Be(1);
+        combined.Should().Contain("xz is required to extract ShellCheck (.tar.xz)");
+    }
+
+    [Fact]
+    public void DetectSecretsGateService_RunsMultipleBatchesInParallel_WithIsolatedTempBaselines_WithoutMutatingCommittedBaseline()
+    {
+        InitGitRepo();
+        const string baselineJson =
+            """
+            {
+              "version": "1.5.0",
+              "plugins_used": [{ "name": "PrivateKeyDetector" }],
+              "filters_used": [],
+              "results": {}
+            }
+            """;
+        string baselinePath = Write(".secrets.baseline", baselineJson);
+        SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: false).Should().Be(0);
+        string committedBaseline = File.ReadAllText(baselinePath);
+
+        string[] files = new string[215];
+        for (int i = 0; i < files.Length; i++)
+        {
+            string rel = $"src/batch_item_{i:D3}.txt";
+            Write(rel, $"safe content {i}\n");
+            files[i] = rel;
+        }
+
+        string stubBinDir = CreateDetectSecretsHookStub();
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? stubBinDir : $"{stubBinDir}{Path.PathSeparator}{systemPath}",
+            [DetectSecretsGateService.DisableUvxFallbackEnvVar] = "1",
+        };
+
+        DetectSecretsGateService.Scan(_tempDir, files, preCommit: false, key => stubEnv.GetValueOrDefault(key))
+            .Should().Be(0, "215 clean files across parallel 200-file batches must exit 0 even when detect-secrets-hook mutates its temp baseline and exits 3");
+        File.ReadAllText(baselinePath).Should().Be(committedBaseline, "committed .secrets.baseline must never be mutated");
+
+        Write("src/batch_item_205.txt", $"{PrivateKeyHeader}\nMIIB\n");
+        DetectSecretsGateService.Scan(_tempDir, files, preCommit: false, key => stubEnv.GetValueOrDefault(key))
+            .Should().Be(1, "an unbaselined secret in any parallel batch must fail closed");
+        File.ReadAllText(baselinePath).Should().Be(committedBaseline);
+    }
+
+    private static (int ExitCode, string CombinedOutput) RunWizardWithCustomPath(
+        string wizardPath,
+        string pathEnv,
+        string cadenceBinDir,
+        string actionlintUrl,
+        string actionlintSha,
+        string hadolintUrl,
+        string hadolintSha,
+        string shellcheckUrl = "",
+        string shellcheckSha = "")
+    {
+        var psi = new ProcessStartInfo("/bin/bash")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add(wizardPath);
+        psi.ArgumentList.Add("--linters-only");
+        psi.Environment["PATH"] = pathEnv;
+        psi.Environment["CADENCE_BIN_DIR"] = cadenceBinDir;
+        psi.Environment["ACTIONLINT_DOWNLOAD_URL"] = actionlintUrl;
+        psi.Environment["ACTIONLINT_SHA256"] = actionlintSha;
+        psi.Environment["HADOLINT_DOWNLOAD_URL"] = hadolintUrl;
+        psi.Environment["HADOLINT_SHA256"] = hadolintSha;
+        psi.Environment["SHELLCHECK_DOWNLOAD_URL"] = shellcheckUrl;
+        psi.Environment["SHELLCHECK_SHA256"] = shellcheckSha;
+
+        using var proc = Process.Start(psi)!;
+        string stdout = proc.StandardOutput.ReadToEnd();
+        string stderr = proc.StandardError.ReadToEnd();
+        proc.WaitForExit();
+        return (proc.ExitCode, stdout + stderr);
+    }
+
+    private static string? ResolveFromSystemPath(string binaryName)
+    {
+        string pathEnv = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        foreach (string entry in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string candidate = Path.Combine(entry, binaryName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private static (int ExitCode, string CombinedOutput) RunWizardLintersOnly(

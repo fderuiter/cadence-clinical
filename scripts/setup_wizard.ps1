@@ -241,7 +241,7 @@ if (-not $HadolintReady) {
 
 $ShellcheckExe = Join-Path $CadenceBin "shellcheck.exe"
 $ShellcheckReady = $false
-if ((Test-Path $ShellcheckExe) -and -not $env:SHELLCHECK_SHA256) {
+if ((Test-Path $ShellcheckExe) -and -not $env:SHELLCHECK_SHA256 -and -not $env:SHELLCHECK_DOWNLOAD_URL) {
     $scVer = & $ShellcheckExe --version 2>$null
     if ($LASTEXITCODE -eq 0 -and ($scVer -join "`n") -match "0\.11\.0") {
         Write-Ok "shellcheck 0.11.0 already provisioned in .cadence\bin."
@@ -263,8 +263,17 @@ if (-not $ShellcheckReady) {
         }
         else {
             Expand-Archive -Path $TmpShellcheckZip -DestinationPath $TmpShellcheckDir -Force
-            Copy-Item -Path (Join-Path $TmpShellcheckDir "shellcheck.exe") -Destination $ShellcheckExe -Force
-            Write-Ok "shellcheck 0.11.0 SHA-256 verified and installed in .cadence\bin."
+            $ExtractedShellcheck = Join-Path $TmpShellcheckDir "shellcheck.exe"
+            if (-not (Test-Path $ExtractedShellcheck)) {
+                $ExtractedShellcheck = Join-Path $TmpShellcheckDir "shellcheck-v0.11.0\shellcheck.exe"
+            }
+            if (-not (Test-Path $ExtractedShellcheck)) {
+                Write-Blocking "Failed to locate shellcheck.exe inside ${ShellcheckAsset}."
+            }
+            else {
+                Copy-Item -Path $ExtractedShellcheck -Destination $ShellcheckExe -Force
+                Write-Ok "shellcheck 0.11.0 SHA-256 verified and installed in .cadence\bin."
+            }
         }
     }
     catch {

@@ -41,7 +41,7 @@ for arg in "$@"; do
       printf "Usage: %s [--dev] [--minimal] [--linters-only] [--help]\n" "$0"
       printf "  --dev, --non-interactive, -y  Skip prompts and accept all defaults\n"
       printf "  --minimal                     Skip heavy/optional steps (Playwright browsers, cert trust)\n"
-      printf "  --linters-only                Provision only SHA-256 verified actionlint and hadolint in .cadence/bin\n"
+      printf "  --linters-only                Provision only SHA-256 verified actionlint, hadolint, and shellcheck in .cadence/bin\n"
       exit 0
       ;;
   esac
@@ -226,6 +226,8 @@ provision_cli_linters() {
   if [[ -x "$shellcheck_bin" ]] && "$shellcheck_bin" --version 2>/dev/null | grep -Fq "$shellcheck_version" \
      && [[ -z "${SHELLCHECK_SHA256:-}" ]] && [[ -z "${SHELLCHECK_DOWNLOAD_URL:-}" ]]; then
     ok "shellcheck ${shellcheck_version} already provisioned in .cadence/bin."
+  elif ! command -v xz >/dev/null 2>&1; then
+    fail_blocking "xz is required to extract ShellCheck (.tar.xz). Install xz-utils (for example 'sudo apt-get install -y xz-utils' on Debian/Ubuntu or 'brew install xz' on macOS) and re-run setup_wizard.sh."
   else
     local shellcheck_asset="shellcheck-v${shellcheck_version}.${os_lower}.${shellcheck_arch}.tar.xz"
     local shellcheck_url="${SHELLCHECK_DOWNLOAD_URL:-https://github.com/koalaman/shellcheck/releases/download/v${shellcheck_version}/${shellcheck_asset}}"
@@ -233,21 +235,32 @@ provision_cli_linters() {
     local tmp_shellcheck_dir
     tmp_shellcheck_dir="$(mktemp -d /tmp/cadence-shellcheck.XXXXXX)"
     local tmp_shellcheck_archive="$tmp_shellcheck_dir/$shellcheck_asset"
-    local extracted_shellcheck="$tmp_shellcheck_dir/shellcheck-v${shellcheck_version}/shellcheck"
 
     if ! curl -fsSL --connect-timeout 15 --retry 3 "$shellcheck_url" -o "$tmp_shellcheck_archive"; then
       rm -rf "$tmp_shellcheck_dir"
       fail_blocking "Failed to download shellcheck v${shellcheck_version} from ${shellcheck_url}."
     elif ! verify_sha256 "shellcheck (${shellcheck_asset})" "$tmp_shellcheck_archive" "$expected_shellcheck_sha"; then
       rm -rf "$tmp_shellcheck_dir"
-    elif ! tar -xf "$tmp_shellcheck_archive" -C "$tmp_shellcheck_dir" "shellcheck-v${shellcheck_version}/shellcheck" || [[ ! -f "$extracted_shellcheck" ]]; then
+    elif ! tar -xJf "$tmp_shellcheck_archive" -C "$tmp_shellcheck_dir"; then
       rm -rf "$tmp_shellcheck_dir"
-      fail_blocking "Failed to extract shellcheck binary from ${shellcheck_asset}."
+      fail_blocking "Failed to extract shellcheck archive ${shellcheck_asset}."
     else
-      mv "$extracted_shellcheck" "$shellcheck_bin"
-      chmod +x "$shellcheck_bin"
-      rm -rf "$tmp_shellcheck_dir"
-      ok "shellcheck ${shellcheck_version} SHA-256 verified and installed in .cadence/bin."
+      local extracted_shellcheck=""
+      if [[ -f "$tmp_shellcheck_dir/shellcheck-v${shellcheck_version}/shellcheck" ]]; then
+        extracted_shellcheck="$tmp_shellcheck_dir/shellcheck-v${shellcheck_version}/shellcheck"
+      elif [[ -f "$tmp_shellcheck_dir/shellcheck" ]]; then
+        extracted_shellcheck="$tmp_shellcheck_dir/shellcheck"
+      fi
+
+      if [[ -z "$extracted_shellcheck" ]]; then
+        rm -rf "$tmp_shellcheck_dir"
+        fail_blocking "Failed to locate shellcheck binary inside ${shellcheck_asset}."
+      else
+        mv "$extracted_shellcheck" "$shellcheck_bin"
+        chmod +x "$shellcheck_bin"
+        rm -rf "$tmp_shellcheck_dir"
+        ok "shellcheck ${shellcheck_version} SHA-256 verified and installed in .cadence/bin."
+      fi
     fi
   fi
 }
