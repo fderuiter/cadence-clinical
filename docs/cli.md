@@ -113,7 +113,7 @@ must make it fail.
 | `yaml`                | `check-yaml`, `validate-yaml`                                          | yes             | Runs on the staged files                                                                                                                                                         |
 | `trailing-whitespace` | `check-trailing-whitespace`                                            | yes             | Runs on the staged files                                                                                                                                                         |
 | `end-of-file`         | `end-of-file-fixer`, `eof-newline`                                     | yes             | Runs on the staged files                                                                                                                                                         |
-| `clean-secrets`       | `clean-secrets-baseline`                                               |                 | Quick: validates staged `.secrets.baseline` JSON without mutating the working tree                                                                                               |
+| `clean-secrets`       | `clean-secrets-baseline`                                               |                 | Quick: validates staged `baselines/secrets/` JSON shards without mutating the working tree                                                                                       |
 | `detect-secrets`      | `secrets-scan`                                                         | yes             | Quick: scans materialized staged blobs instead of the working tree                                                                                                               |
 | `duplication`         | `detect-code-duplication`                                              | yes             | Runs on the staged files                                                                                                                                                         |
 | `cli-docs`            | `validate-cli-docs`                                                    |                 | Runs                                                                                                                                                                             |
@@ -157,14 +157,14 @@ on pushes to `main` or `release/*`, and otherwise everything the branch changed 
 pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy with
 `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
 
-The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gained an entry: every tracked
-`*.baseline.txt` or `*-baseline.txt` file (comment lines ignored) and the `results` of `.secrets.baseline`, compared as
-multisets, so a reorder or a shrink passes. With `--pre-commit` it compares the staged index copies against `HEAD` and
-admits staged growth only when `CADENCE_BASELINE_GROWTH="<reason>"` is set. Outside `--pre-commit` it rejects any
-uncommitted working-tree growth and inspects every commit in `compareBase..HEAD` (`--push-before <sha>` or the merge
-base with `--base <ref>`), requiring each commit that grows a baseline file to carry a matching
-`Baseline-Growth: <path> - <reason>` trailer for each grown file. Missing `<ref>` (default `origin/main`) fails closed
-both locally and in CI.
+The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gate gained an entry: every tracked
+`*.baseline.txt` or `*-baseline.txt` shard (comment lines ignored) and the `results` of `baselines/secrets/*.secrets.baseline.json`
+shards, aggregated per gate as multisets, so a reorder, shard split, or shrink passes. With `--pre-commit` it compares the staged
+index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<reason>"` is set. Outside `--pre-commit`
+it rejects any uncommitted working-tree growth and inspects every commit in `compareBase..HEAD` (`--push-before <sha>` or the merge
+base with `--base <ref>`, falling back from default `origin/main` to `refs/heads/main` when `origin/main` is absent), requiring each
+commit that grows a baseline gate to carry a matching `Baseline-Growth: <path> - <reason>` trailer covering the gate. When neither
+`origin/main` nor `refs/heads/main` (or an explicit `--base <ref>`) exists, it fails closed both locally and in CI.
 
 The `merge-readiness` gate (also `check-merge-readiness`) verifies that `--base <ref>` (`origin/main` by default) exists
 locally and merges cleanly into `HEAD` in-memory via `git merge-tree --write-tree` without modifying the working tree or
@@ -179,12 +179,13 @@ and `.svg`), `AlwaysScannedNames` (`Dockerfile`, `Makefile`, `LICENSE`, `Pipfile
 `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `uv.lock`) and extensionless UTF-8 text files (such as `.gitignore` and
 `.editorconfig`), spanning application code, authored `docs/`, root portal docs (`README.md`, `ARCHITECTURE.md`,
 `AGENTS.md`, `CONTEXT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `LICENSE`), `.vue` templates, and `stores/`.
-Tests, `scripts/`, vendored standards (`docs/CDISC/`, `docs/NCI/`), generated OpenAPI/schema folders, and GxP
+Tests, `baselines/`, `scripts/`, vendored standards (`docs/CDISC/`, `docs/NCI/`), generated OpenAPI/schema folders, and GxP
 qualification snapshots (`docs/SDLC/runs/`, `Requirements_Traceability_Matrix.md`, `IQ_OQ_PQ_Execution_Report.md`) are
 skipped. A source line containing `deid-ignore` is skipped by `deid` (never by `public-bundle`). Findings print as
 `path:line:column` and category, never the matched value. Findings that predate the full detector are listed in
-`.deid-baseline.txt` (`path|category|line hash`), which may only shrink: a new finding or a stale entry fails the gate.
-Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
+`baselines/deid/<unit>.baseline.txt` shards (`path|category|matched-token hash`), which may only shrink (empty shards are deleted):
+a new finding or a stale entry fails the gate. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]` to subtract stale
+entries from touched shards without adding new findings.
 
 The `public-bundle` gate (also `validate-public-bundle`, ADR-2497) scans every generated text file in
 `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` after compilation with zero comment or pragma
@@ -332,7 +333,7 @@ Resolves the repository root from any working directory (`Cadence.sln`) and runs
 
 1. `dotnet format whitespace` and `dotnet format style` in the repository root (scoped to changed C# files by default; full `Cadence.sln` with `--full`).
 2. Synthesized documentation marker regions (`GateDocs.Write`) across `docs/cli.md`, `docs/CI.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`, followed by root-wide Prettier auto-formatting across tracked JS, TS, Vue, CSS, JSON, Markdown and YAML files respecting `.prettierignore`.
-3. `.secrets.baseline` normalization (`SecretsBaselineCleanerService.CleanSecretsBaseline`) and upper-case `@req:PRD-...` tag sanitization in `docs/**/*.md` (excluding `docs/SDLC/runs/`).
+3. `baselines/secrets/` shard normalization (`SecretsBaselineCleanerService.CleanSecretsBaseline`) and upper-case `@req:PRD-...` tag sanitization in `docs/**/*.md` (excluding `docs/SDLC/runs/`).
 4. ADR index synchronization (`docs/adr/index.md`) and schema validation (`AdrValidatorService.ValidateAdrs` without git diff), documentation index sync (`docs/DOCUMENTATION_INDEX.md`), and demo study manifest sync (`packages/demo-fixtures`).
 5. Diff-based EF Core schema documentation (`docs/schema/`): runs `generate-schema-doc` when EF Core entities, configurations, or migrations changed (or with `--full`), skipping otherwise.
 6. Diff-based OpenAPI specifications, API Markdown pages, and web TypeScript client types: exports `docs/openapi/` and regenerates `docs/api/` when backend C# contracts changed (or with `--openapi` / `--full`), and runs `pnpm --filter web run generate:api` whenever OpenAPI specs are exported or `apps/web/src/api/generated/` is stale so `check api-clients` passes.
@@ -367,7 +368,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `audit-security`              | Scans source files, `.vue` templates and `scripts/` for secret patterns (private keys, cloud credentials, API tokens, hardcoded compliance secrets).                                                                                                                                                                                                                                                                                                                              | `SecurityAuditorService.AuditSecurity`                                                    |
 | `validate-public-bundle`      | Verifies built `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` text artifacts with zero comment or pragma exemptions, rejecting national IDs, unapproved emails, secrets, external assets, executable localhost URLs, and missing/permissive CSP headers. This is the `public-bundle` gate.                                                                                                                                                               | `PublicBundleValidatorService.ValidatePublicBundles`                                      |
 | `validate-vulnerabilities`    | Audits direct and transitive NuGet and pnpm workspace dependencies against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails closed when any scanner is missing, unrestored, times out or emits invalid JSON, or when unapproved vulnerabilities exist.                                                                                                                                                                                                | `VulnerabilityAuditorService.AuditVulnerabilities`                                        |
-| `clean-secrets-baseline`      | Normalizes `.secrets.baseline` and its canonical file exclusion filter. Skips if the file is missing. Option: `--check` (verify normalization without modifying `.secrets.baseline`; exits `1` when unnormalized).                                                                                                                                                                                                                                                                | `SecretsBaselineCleanerService.CleanSecretsBaseline`                                      |
+| `clean-secrets-baseline`      | Splits/normalizes `baselines/secrets/config.json` and `baselines/secrets/<unit>.secrets.baseline.json` shards (deleting empty shards and legacy `.secrets.baseline`). Skips if absent. Option: `--check` (verify shard normalization without modifying files; exits `1` when unnormalized).                                                                                                                                                                                       | `SecretsBaselineCleanerService.CleanSecretsBaseline`                                      |
 | `validate-architecture-drift` | Validates fail-closed parity of `docker/docker-compose.yml`, `ServiceTopology`, Vite ports, `core` hosts, EF Core module schemas, `RequireElectronicSignature` endpoints, durable signature token stores, and `GxPAuditInterceptor` hosts across `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`. Exits `1` on drift.                                                                                                | `ArchitectureDriftValidatorService.ValidateArchitectureDrift`                             |
 | `sync-openapi-spec`           | Runs `Cadence.OpenApiExporter`, which boots every .NET service in memory and exports its OpenAPI document, then writes the specs and the `cdisc_openapi.json` aggregate to `docs/openapi/` and deletes top-level specs no service serves. `docs/openapi/legacy/` is left alone. Option: `--validate` (compare only; exits `1` on drift).                                                                                                                                          | `OpenApiSyncService.SyncOpenApiSpec`                                                      |
 | `validate-openapi-drift`      | Runs `sync-openapi-spec --validate` and `generate-api-docs --validate`. Exits `1` if either finds drift.                                                                                                                                                                                                                                                                                                                                                                          | `OpenApiDriftValidatorService.ValidateDrift`                                              |
