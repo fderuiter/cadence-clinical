@@ -435,6 +435,31 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
                 .ProjectAsync(tenant.TenantId, ct);
         }
 
+        if (table == "biostat_export_audit_logs")
+        {
+            var scenario = new KernelProtocolScenario(fixture);
+            var (studyTenant, study) = await scenario.NewStudyAsync(ct);
+            var cut = KernelTimestamps.ToStoredPrecision(fixture.Clock.UtcNow);
+            var artifactId = ArtifactId.New(cut);
+            var versionId = ArtifactVersionId.New(cut);
+            var exportContent = new ArtifactContent(ContentHash.OfBytes([1, 2, 3]), 3, "text/csv", $"export://studies/{study}/{versionId}");
+            var export = new ExportStudySnapshot(
+                studyTenant,
+                study,
+                artifactId,
+                versionId,
+                "Study snapshot export",
+                exportContent,
+                "csv",
+                "locked_only",
+                cut,
+                cut,
+                false,
+                $"key-{Guid.CreateVersion7():N}",
+                Reason);
+            (await fixture.Sender.SendAsync(export, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        }
+
         foreach (var statement in new[]
         {
             $"UPDATE kernel.{table} SET tenant_id = tenant_id",
