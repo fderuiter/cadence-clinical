@@ -206,9 +206,9 @@ public class DerivedVariableEngineTests
     public void ComputeChecksum_MatchesPythonReference()
     {
         (Formula(DerivedFormulaType.Bmi, BodyInputs) with { OutputUnit = "kg/m2", VersionIndex = 2 }).ComputeChecksum()
-            .Should().Be("1a3cebd76723bdc3e7590157beef273117c5f49bc69657a5f955b0a7b8b08162");
+            .Should().Be("1a3cebd76723bdc3e7590157beef273117c5f49bc69657a5f955b0a7b8b08162"); // pragma: allowlist secret
         Formula(DerivedFormulaType.Map).ComputeChecksum()
-            .Should().Be("aa621c68a2a47177a6031deec7ab680e4cf6f794dac469865e19a1efa2827e8c");
+            .Should().Be("aa621c68a2a47177a6031deec7ab680e4cf6f794dac469865e19a1efa2827e8c"); // pragma: allowlist secret
         new DerivedFormulaDefinition
         {
             FormulaId = "F-Ü",
@@ -216,7 +216,7 @@ public class DerivedVariableEngineTests
             FormulaType = DerivedFormulaType.QtcBazett,
             OutputVariable = "qtc",
             Inputs = [new FormulaInputRequirement("qt", Required: false, DefaultValue: 1e-05)],
-        }.ComputeChecksum().Should().Be("a463d90bcaa42306e00aa74001f94ddad49ab521e3b175371b93583d9e25522f");
+        }.ComputeChecksum().Should().Be("a463d90bcaa42306e00aa74001f94ddad49ab521e3b175371b93583d9e25522f"); // pragma: allowlist secret
     }
 
     /// <summary>The result names the formula version and checksum, for a derived Observation's provenance.</summary>
