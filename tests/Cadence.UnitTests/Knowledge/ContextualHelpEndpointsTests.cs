@@ -40,50 +40,31 @@ namespace Cadence.UnitTests.Knowledge;
 /// Verifies Hierarchical Specificity Scoring, published SOP resolution across all 6 staff personas and core routes
 /// (/studies, /studies/:studyCode, /ecrf, /ctms, /ssu), article keyword search, category visibility, and RBAC gates.
 /// </summary>
-public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
+public sealed class ContextualHelpEndpointsTests : IClassFixture<ContextualHelpEndpointsTests.HostFixture>, IAsyncDisposable
 {
+    private readonly HostFixture _fixture;
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
-    private readonly FakeClock _clock = new(new DateTimeOffset(2026, 11, 20, 10, 0, 0, TimeSpan.Zero));
+    private readonly FakeClock _clock;
     private readonly WebApplicationFactory<Cadence.Apps.Knowledge.Program> _factory;
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public ContextualHelpEndpointsTests()
+    public ContextualHelpEndpointsTests(HostFixture fixture)
     {
+        _fixture = fixture;
+        _clock = fixture.Clock;
+        _clock.Set(HostFixture.BaselineTime);
+        _factory = fixture.Factory;
         _connection.Open();
-        _factory = new WebApplicationFactory<Cadence.Apps.Knowledge.Program>().WithWebHostBuilder(host =>
-        {
-            host.UseTestGatewaySecret().UseTestPostgresConnectionString();
-            host.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<IClock>();
-                services.AddSingleton<IClock>(_clock);
-                services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
-                services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
-                services.AddDbContext<KnowledgeDbContext>((sp, options) =>
-                {
-                    options.UseSqlite(_connection);
-                    options.AddInterceptors(new GxPAuditInterceptor(
-                        () => KnowledgeAuditActorScope.CurrentUserId
-                              ?? sp.GetService<IHttpContextAccessor>()?.HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
-                              ?? "svc:knowledge-sop-catalog",
-                        sp.GetRequiredService<IClock>()));
-                });
-            });
-        });
+        _fixture.CurrentConnection = _connection;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await _factory.DisposeAsync();
-        await _connection.DisposeAsync();
-    }
+    public ValueTask DisposeAsync() => _connection.DisposeAsync();
 
-    private async Task EnsureDbCreatedAsync()
+    private Task EnsureDbCreatedAsync()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
-        await db.Database.EnsureCreatedAsync(Ct);
+        _fixture.SeedInto(_connection);
+        return Task.CompletedTask;
     }
 
     private HttpClient CreateStaffClient(string userId = "usr-crc-01", string role = "CRC")
@@ -714,6 +695,63 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
                     hashes.Should().Contain(entry.PredecessorHash);
                 }
             }
+        }
+    }
+
+    public sealed class HostFixture : IAsyncLifetime
+    {
+        public static readonly DateTimeOffset BaselineTime = new(2026, 11, 20, 10, 0, 0, TimeSpan.Zero);
+
+        private readonly SqliteConnection _templateConnection = new("DataSource=:memory:");
+
+        public FakeClock Clock { get; } = new(BaselineTime);
+
+        public SqliteConnection CurrentConnection { get; set; }
+
+        public WebApplicationFactory<Cadence.Apps.Knowledge.Program> Factory { get; }
+
+        public HostFixture()
+        {
+            CurrentConnection = _templateConnection;
+            Factory = new WebApplicationFactory<Cadence.Apps.Knowledge.Program>().WithWebHostBuilder(host =>
+            {
+                host.UseTestGatewaySecret().UseTestPostgresConnectionString();
+                host.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IClock>();
+                    services.AddSingleton<IClock>(Clock);
+                    services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
+                    services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
+                    services.AddDbContext<KnowledgeDbContext>((sp, options) =>
+                    {
+                        options.UseSqlite(CurrentConnection);
+                        options.AddInterceptors(new GxPAuditInterceptor(
+                            () => KnowledgeAuditActorScope.CurrentUserId
+                                  ?? sp.GetService<IHttpContextAccessor>()?.HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
+                                  ?? "svc:knowledge-sop-catalog",
+                            sp.GetRequiredService<IClock>()));
+                    });
+                });
+            });
+        }
+
+        public async ValueTask InitializeAsync()
+        {
+            await _templateConnection.OpenAsync();
+            CurrentConnection = _templateConnection;
+            using var scope = Factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            await db.Database.EnsureCreatedAsync();
+            await KnowledgeCatalogSeeder.EnsureSeededAsync(db, Clock, CancellationToken.None);
+        }
+
+        public void SeedInto(SqliteConnection destination) =>
+            _templateConnection.BackupDatabase(destination);
+
+        public async ValueTask DisposeAsync()
+        {
+            await Factory.DisposeAsync();
+            await _templateConnection.DisposeAsync();
         }
     }
 }

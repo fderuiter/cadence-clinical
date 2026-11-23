@@ -35,9 +35,17 @@ namespace Cadence.UnitTests.Security;
 /// and enforces <c>ProductFamilies</c> and <c>SubscriptionScoping</c> across all 20 backend surfaces.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class ExpiredSubscriptionStandaloneServicesTests
+public sealed class ExpiredSubscriptionStandaloneServicesTests : IClassFixture<ExpiredSubscriptionStandaloneServicesTests.HostFixture>
 {
     private const string ProbeHeader = "X-Expiry-Guard-Probe";
+
+    private readonly HostFixture _hosts;
+
+    public ExpiredSubscriptionStandaloneServicesTests(HostFixture hosts)
+    {
+        _hosts = hosts;
+        _hosts.ResetCounters();
+    }
 
     public static TheoryData<string> StandaloneClinicalHosts => new(
         "execution",
@@ -53,19 +61,7 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
     public async Task StandaloneClinicalServiceBlocksMutationsWhenTenantReadOnlyAndExemptsReadsAndExports(string host)
     {
         var ct = TestContext.Current.CancellationToken;
-        var tenantResolver = new DeterministicTenantCodeResolver();
-
-        await using var booted = ServiceHosts.All[host](services =>
-        {
-            CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
-            foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
-            {
-                services.Remove(existing);
-            }
-
-            services.AddSingleton<ISigTokenUseStore, ProbeSigTokenUseStore>();
-            services.AddSingleton<IAuthorizationMiddlewareResultHandler, ExpiryProbeResultHandler>();
-        });
+        var (booted, _) = _hosts.Get(host);
 
         var endpoints = booted.Endpoints
             .Where(e => e.Metadata.GetMetadata<IAllowAnonymous>() is null)
@@ -166,19 +162,7 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
     public async Task StandaloneStepUpSignatureEndpointRefusesExpiredTenantBeforeConsumingSigToken()
     {
         var ct = TestContext.Current.CancellationToken;
-        var tenantResolver = new DeterministicTenantCodeResolver();
-        var sigTokenStore = new CountingSigTokenUseStore();
-
-        await using var booted = ServiceHosts.All["econsent"](services =>
-        {
-            CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
-            foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
-            {
-                services.Remove(existing);
-            }
-
-            services.AddSingleton<ISigTokenUseStore>(sigTokenStore);
-        });
+        var (booted, sigTokenStore) = _hosts.Get("econsent");
 
         var signEndpoint = booted.Endpoints.First(e =>
             e.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null
@@ -228,11 +212,7 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
     public async Task StandaloneServiceRejectsClientTamperedTenantReadOnlyHeaderWith401()
     {
         var ct = TestContext.Current.CancellationToken;
-        var tenantResolver = new DeterministicTenantCodeResolver();
-        await using var booted = ServiceHosts.All["ctms"](services =>
-        {
-            CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
-        });
+        var (booted, _) = _hosts.Get("ctms");
 
         var postEndpoint = booted.Endpoints.First(e =>
             ExtractFirstPermission(e) is not null
@@ -278,21 +258,9 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         int kernelSignatureRoutesVerified = 0;
         int closeoutSignatureRoutesFound = 0;
 
-        foreach (var (host, boot) in ServiceHosts.All)
+        foreach (var host in ServiceHosts.All.Keys)
         {
-            var tenantResolver = new DeterministicTenantCodeResolver();
-            var sigTokenStore = new CountingSigTokenUseStore();
-
-            await using var booted = boot(services =>
-            {
-                CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
-                foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
-                {
-                    services.Remove(existing);
-                }
-
-                services.AddSingleton<ISigTokenUseStore>(sigTokenStore);
-            });
+            var (booted, sigTokenStore) = _hosts.Get(host);
 
             var sigEndpoints = booted.Endpoints
                 .Where(e => e.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null)
@@ -394,14 +362,9 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         var productFamilySurfacesVerified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var scopingSurfacesVerified = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (host, boot) in ServiceHosts.All)
+        foreach (var host in ServiceHosts.All.Keys)
         {
-            var tenantResolver = new DeterministicTenantCodeResolver();
-            await using var booted = boot(services =>
-            {
-                CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
-                services.AddSingleton<IAuthorizationMiddlewareResultHandler, ExpiryProbeResultHandler>();
-            });
+            var (booted, _) = _hosts.Get(host);
 
             using var client = booted.CreateUnsignedClient();
             var candidates = booted.Endpoints
@@ -512,10 +475,7 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         })
         {
             ServiceHosts.All.Should().ContainKey(hostKey);
-            await using var booted = ServiceHosts.All[hostKey](services =>
-            {
-                CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, new DeterministicTenantCodeResolver());
-            });
+            var (booted, _) = _hosts.Get(hostKey);
 
             var familyGuard = booted.Services.GetRequiredService<ProductFamilyGuardMiddleware>();
             var scopingGuard = booted.Services.GetRequiredService<SubscriptionScopingGuardMiddleware>();
@@ -630,13 +590,57 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         return isInt ? "1" : "SITE-101";
     }
 
-    private sealed class ProbeSigTokenUseStore : ReplayCache, IDurableSigTokenUseStore;
-
-    private sealed class CountingSigTokenUseStore : IDurableSigTokenUseStore
+    public sealed class HostFixture : IAsyncDisposable
     {
-        private readonly ReplayCache _inner = new();
+        private readonly ServiceHostCache _cache = new();
+        private readonly Dictionary<string, CountingSigTokenUseStore> _stores = new(StringComparer.Ordinal);
+
+        internal (BootedHost Host, CountingSigTokenUseStore SigTokenStore) Get(string service)
+        {
+            if (!_stores.TryGetValue(service, out var store))
+            {
+                store = new CountingSigTokenUseStore();
+                _stores[service] = store;
+            }
+
+            var capturedStore = store;
+            var booted = _cache.Get(service, "expiry-probe", services =>
+            {
+                CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, new DeterministicTenantCodeResolver());
+                foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
+                {
+                    services.Remove(existing);
+                }
+
+                services.AddSingleton<ISigTokenUseStore>(capturedStore);
+                services.AddSingleton<IAuthorizationMiddlewareResultHandler, ExpiryProbeResultHandler>();
+            });
+
+            return (booted, store);
+        }
+
+        internal void ResetCounters()
+        {
+            foreach (var store in _stores.Values)
+            {
+                store.Reset();
+            }
+        }
+
+        public ValueTask DisposeAsync() => _cache.DisposeAsync();
+    }
+
+    internal sealed class CountingSigTokenUseStore : IDurableSigTokenUseStore
+    {
+        private ReplayCache _inner = new();
 
         public int ConsumeCalls { get; private set; }
+
+        public void Reset()
+        {
+            ConsumeCalls = 0;
+            _inner = new ReplayCache();
+        }
 
         public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, System.Threading.CancellationToken cancellationToken)
         {

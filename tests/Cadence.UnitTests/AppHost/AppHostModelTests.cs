@@ -24,7 +24,7 @@ namespace Cadence.UnitTests.AppHost;
 /// database it refuses to start without, and the gateway is told where each service is. The core profile and the
 /// existing-PostgreSQL and existing-OIDC switches (#4991) are checked the same way.
 /// </summary>
-public sealed class AppHostModelTests
+public sealed class AppHostModelTests(AppHostModelTests.ModelFixture fixture) : IClassFixture<AppHostModelTests.ModelFixture>
 {
     // From the topology manifest; ServiceTopologyTests pins the manifest to docker compose and the docs.
     private static readonly Dictionary<string, int> ServicePorts = ServiceTopology.Services
@@ -204,20 +204,57 @@ public sealed class AppHostModelTests
     [InlineData("--AppHost:OidcAuthority=not a url/realms/cadence")]
     public async Task InvalidSettings_StopTheAppHostWithAMessage(string setting)
     {
-        var build = () => ResourcesAsync(setting);
+        var build = () => BuildUncachedResourcesAsync(setting);
 
         await build.Should().ThrowAsync<InvalidOperationException>();
     }
 
-    private static async Task<Dictionary<string, ProjectResource>> ProjectsAsync() =>
+    private async Task<Dictionary<string, ProjectResource>> ProjectsAsync() =>
         (await ResourcesAsync()).Values.OfType<ProjectResource>().ToDictionary(p => p.Name, StringComparer.Ordinal);
 
-    private static async Task<Dictionary<string, IResource>> ResourcesAsync(params string[] args)
+    private Task<IReadOnlyDictionary<string, IResource>> ResourcesAsync(params string[] args) =>
+        fixture.GetResourcesAsync(args);
+
+    private static async Task<Dictionary<string, IResource>> BuildUncachedResourcesAsync(params string[] args)
     {
         var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Cadence_AppHost>(args, TestContext.Current.CancellationToken);
         await using var app = await builder.BuildAsync(TestContext.Current.CancellationToken);
         var model = app.Services.GetRequiredService<DistributedApplicationModel>();
         return model.Resources.ToDictionary(r => r.Name, StringComparer.Ordinal);
+    }
+
+    public sealed class ModelFixture : IAsyncDisposable
+    {
+        private readonly Dictionary<string, (DistributedApplication App, IReadOnlyDictionary<string, IResource> Resources)> _profiles =
+            new(StringComparer.Ordinal);
+
+        public async Task<IReadOnlyDictionary<string, IResource>> GetResourcesAsync(string[] args)
+        {
+            string key = string.Join('\u001f', args);
+            if (!_profiles.TryGetValue(key, out var cached))
+            {
+                var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Cadence_AppHost>(
+                    args,
+                    TestContext.Current.CancellationToken);
+                var app = await builder.BuildAsync(TestContext.Current.CancellationToken);
+                var model = app.Services.GetRequiredService<DistributedApplicationModel>();
+                var resources = model.Resources.ToDictionary(r => r.Name, StringComparer.Ordinal);
+                cached = (app, resources);
+                _profiles[key] = cached;
+            }
+
+            return cached.Resources;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            foreach (var (app, _) in _profiles.Values)
+            {
+                await app.DisposeAsync();
+            }
+
+            _profiles.Clear();
+        }
     }
 
     private static async Task<IReadOnlyCollection<string>> EnvironmentNamesAsync(IResource resource) =>

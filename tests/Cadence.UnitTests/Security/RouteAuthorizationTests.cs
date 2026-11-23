@@ -32,7 +32,7 @@ namespace Cadence.UnitTests.Security;
 /// Requests here never reach a handler: <see cref="ProbeResultHandler"/> answers in place of the endpoint once
 /// authorization has decided.
 /// </summary>
-public sealed class RouteAuthorizationTests
+public sealed class RouteAuthorizationTests(ServiceHostCache hosts) : IClassFixture<ServiceHostCache>
 {
     /// <summary>The only anonymous routes: liveness and readiness, the service status probe, and development API documents.</summary>
     private static readonly string[] AnonymousRoutes =
@@ -84,9 +84,9 @@ public sealed class RouteAuthorizationTests
     [MemberData(nameof(Hosts))]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-192")]
-    public async Task EveryRoute_DeclaresWhoMayCallIt(string host)
+    public void EveryRoute_DeclaresWhoMayCallIt(string host)
     {
-        await using var booted = ServiceHosts.All[host](null);
+        var booted = hosts.GetDefault(host);
 
         var problems = booted.Endpoints.Select(endpoint => Problem(host, endpoint)).OfType<string>().ToList();
 
@@ -100,7 +100,7 @@ public sealed class RouteAuthorizationTests
     [GxPRequirement("PRD-SYS-192")]
     public async Task ACallerWithoutTheRoutePermission_IsRefusedBeforeTheHandlerRuns(string host)
     {
-        await using var booted = ServiceHosts.All[host](ProbeResultHandler.Register);
+        var booted = hosts.Get(host, "probe", ProbeResultHandler.Register);
         var routes = PermissionRoutes(booted);
 
         var problems = new List<string>();
@@ -133,7 +133,7 @@ public sealed class RouteAuthorizationTests
     [GxPRequirement("PRD-SYS-192")]
     public async Task ACallerHoldingTheRoutePermission_IsAdmitted(string host)
     {
-        await using var booted = ServiceHosts.All[host](ProbeResultHandler.Register);
+        var booted = hosts.Get(host, "probe", ProbeResultHandler.Register);
 
         var problems = new List<string>();
         foreach (var route in PermissionRoutes(booted))
@@ -152,12 +152,12 @@ public sealed class RouteAuthorizationTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-192")]
-    public async Task EveryListedSignedInCallerRoute_StillExists()
+    public void EveryListedSignedInCallerRoute_StillExists()
     {
         var stale = new List<string>();
         foreach (var group in SignedInCallerRoutes.GroupBy(r => r.Host))
         {
-            await using var booted = ServiceHosts.All[group.Key](null);
+            var booted = hosts.GetDefault(group.Key);
             var routes = booted.Endpoints.Select(Describe).ToList();
             stale.AddRange(group.Where(listed => !routes.Any(route => Matches(listed.Route, route))).Select(listed => $"{listed.Host} {listed.Route}"));
         }
@@ -369,7 +369,7 @@ public sealed class RouteAuthorizationTests
     [GxPRequirement("PRD-SYS-192")]
     public async Task StandaloneRoutes_DeclareExplicitScopeMetadata_AndEnforceTenantStudyAndSiteAdmission(string host)
     {
-        await using var booted = ServiceHosts.All[host](ProbeResultHandler.Register);
+        var booted = hosts.Get(host, "probe", ProbeResultHandler.Register);
 
         var missingScopeMetadata = booted.Endpoints
             .Where(e => e.Metadata.GetMetadata<IAllowAnonymous>() is null)
@@ -592,11 +592,10 @@ public sealed class RouteAuthorizationTests
 
         foreach (var probe in handlerProbes)
         {
-            var tenantResolver = new Cadence.Database.Tenancy.DeterministicTenantCodeResolver();
-            tenantResolver.DeactivateTenant("deactivated-probe-tenant");
-
-            await using var booted = ServiceHosts.All[probe.Host](services =>
+            var booted = hosts.Get(probe.Host, "handler-probe", static services =>
             {
+                var tenantResolver = new Cadence.Database.Tenancy.DeterministicTenantCodeResolver();
+                tenantResolver.DeactivateTenant("deactivated-probe-tenant");
                 Cadence.Database.CadenceDatabaseExtensions.AddCadenceInMemoryTenancy(services, tenantResolver);
                 foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
                 {

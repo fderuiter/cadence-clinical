@@ -89,6 +89,42 @@ internal static class ServiceHosts
     }
 }
 
+/// <summary>
+/// Per-test-class cache of booted service hosts keyed by service name and configuration profile, disposed once xUnit
+/// finishes the test class.
+/// </summary>
+public sealed class ServiceHostCache : IAsyncDisposable
+{
+    private readonly Dictionary<(string Service, string Profile), BootedHost> _hosts = new();
+
+    internal BootedHost GetDefault(string service) => Get(service, "default", configure: null);
+
+    internal BootedHost Get(string service, string profile, Action<IServiceCollection>? configure)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(service);
+        ArgumentException.ThrowIfNullOrWhiteSpace(profile);
+
+        var key = (service, profile);
+        if (!_hosts.TryGetValue(key, out var booted))
+        {
+            booted = ServiceHosts.All[service](configure);
+            _hosts[key] = booted;
+        }
+
+        return booted;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var host in _hosts.Values)
+        {
+            await host.DisposeAsync();
+        }
+
+        _hosts.Clear();
+    }
+}
+
 /// <summary>One booted host: its services, and clients that sign as a given identity or not at all.</summary>
 internal sealed class BootedHost(
     IAsyncDisposable owner,

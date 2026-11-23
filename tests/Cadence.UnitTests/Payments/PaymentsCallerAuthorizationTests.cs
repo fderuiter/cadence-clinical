@@ -32,34 +32,67 @@ namespace Cadence.UnitTests.Payments;
 /// permission is refused with 403 and nothing is written, and what is written records the signed caller, not a literal
 /// or a name from the request body.
 /// </summary>
-public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
+public sealed class PaymentsCallerAuthorizationTests : IClassFixture<PaymentsCallerAuthorizationTests.HostFixture>, IAsyncDisposable
 {
     private const string WalletId = "W-1";
     private const string InvoiceId = "INV-1";
     private const string ClaimId = "CLM-1";
 
+    private readonly HostFixture _host;
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
-    private readonly WebApplicationFactory<Cadence.Apps.Payments.Program> _factory;
 
-    public PaymentsCallerAuthorizationTests()
+    public PaymentsCallerAuthorizationTests(HostFixture host)
     {
+        _host = host;
         _connection.Open();
-        _factory = new WebApplicationFactory<Cadence.Apps.Payments.Program>().WithWebHostBuilder(host =>
-        {
-            host.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys();
-            host.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<DbContextOptions<PaymentsDbContext>>();
-                services.RemoveAll<IDbContextOptionsConfiguration<PaymentsDbContext>>();
-                services.AddDbContext<PaymentsDbContext>(options => options.UseSqlite(_connection));
-            });
-        });
+        _host.CloneEmptySchemaInto(_connection);
+        _host.AttachConnection(_connection);
     }
 
-    public async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync() => await _connection.DisposeAsync();
+
+    public sealed class HostFixture : IAsyncLifetime
     {
-        await _factory.DisposeAsync();
-        await _connection.DisposeAsync();
+        private readonly SqliteConnection _templateConnection = new("DataSource=:memory:");
+        private SqliteConnection? _currentConnection;
+
+        internal WebApplicationFactory<Cadence.Apps.Payments.Program> Factory { get; }
+
+        public HostFixture()
+        {
+            Factory = new WebApplicationFactory<Cadence.Apps.Payments.Program>().WithWebHostBuilder(host =>
+            {
+                host.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys();
+                host.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<DbContextOptions<PaymentsDbContext>>();
+                    services.RemoveAll<IDbContextOptionsConfiguration<PaymentsDbContext>>();
+                    services.AddDbContext<PaymentsDbContext>(options => options.UseSqlite(CurrentConnection));
+                });
+            });
+        }
+
+        private SqliteConnection CurrentConnection =>
+            _currentConnection ?? throw new InvalidOperationException("No test SQLite connection attached.");
+
+        internal void AttachConnection(SqliteConnection connection) => _currentConnection = connection;
+
+        internal void CloneEmptySchemaInto(SqliteConnection destination) => _templateConnection.BackupDatabase(destination);
+
+        public async ValueTask InitializeAsync()
+        {
+            await _templateConnection.OpenAsync();
+            AttachConnection(_templateConnection);
+            await using var scope = Factory.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
+            await db.Database.EnsureCreatedAsync();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Factory.DisposeAsync();
+            await _templateConnection.DisposeAsync();
+        }
     }
 
     /// <summary>
@@ -255,18 +288,17 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     }
 
     private HttpClient Client(string userId, params string[] roles) =>
-        _factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles));
+        _host.Factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles));
 
     private HttpClient SiteClient(string userId, string site, params string[] roles) =>
-        _factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles) with { SiteIds = [site] });
+        _host.Factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles) with { SiteIds = [site] });
 
     private PaymentsDbContext OpenDb() =>
-        _factory.Services.CreateScope().ServiceProvider.GetRequiredService<PaymentsDbContext>();
+        _host.Factory.Services.CreateScope().ServiceProvider.GetRequiredService<PaymentsDbContext>();
 
     private async Task SeedAsync()
     {
         await using var db = OpenDb();
-        await db.Database.EnsureCreatedAsync(Ct);
         DateTimeOffset now = SystemClock.Instance.UtcNow;
 
         db.ParticipantWallets.Add(new ParticipantWallet

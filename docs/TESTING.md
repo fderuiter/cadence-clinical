@@ -6,21 +6,22 @@ requirement as qualified.
 
 ## Test projects
 
-| Project                                                            | What it holds                                                                                                                                    | Run it with                                                                    |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.             | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                           | `pnpm cadence test --integration`                                              |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
-| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                        |
-| `packages/usdm-schemas/tests/`                                     | Vitest suite for the shared CDISC USDM Zod schemas and graph validators.                                                                         | `pnpm --filter usdm-schemas test`                                              |
-| `apps/subject-portal/tests/`                                       | Vitest suite for the participant portal stores, sync queue and views (jsdom). Playwright specs under `tests/e2e/` are excluded.                  | `pnpm --filter subject-portal test`                                            |
-| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
-| `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                              |
+| Project                                                            | What it holds                                                                                                                                                       | Run it with                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.                                | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                                              | `pnpm cadence test --integration`                                              |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.                                 | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`.                    | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
+| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers (`test:coverage` enforces coverage floors).                                                           | `pnpm --filter ui test`                                                        |
+| `packages/usdm-schemas/tests/`                                     | Vitest suite for the shared CDISC USDM Zod schemas and graph validators.                                                                                            | `pnpm --filter usdm-schemas test`                                              |
+| `apps/subject-portal/tests/`                                       | Vitest suite for the participant portal stores, sync queue and views (jsdom; Playwright specs under `tests/e2e/` excluded).                                         | `pnpm --filter subject-portal test`                                            |
+| `apps/web/tests/`                                                  | Vitest suite split into `node` (pure contracts/configs) and `jsdom` (stores/views) projects; Playwright specs under `tests/e2e/` and `tests/browser/` are excluded. | `pnpm --filter web test`                                                       |
+| `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).                                 | `pnpm exec vitest run --config vitest.config.mjs`                              |
 
-`dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` applies
-`Category!=Integration` across the solution. `make verify` runs the quality gates and the .NET suites.
-Use `pnpm test` (`pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [CI and local verification](CI.md#workflows) for the full workflow.
+`dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` runs `Cadence.UnitTests` and
+`Cadence.ArchitectureTests` directly without building `Cadence.IntegrationTests` or running `Cadence.E2ETests`, and
+`pnpm cadence test` also accepts `--project <path>`, `--filter <expr>`, and `--no-build` ([cli.md](cli.md#cadence-test)). `make verify` runs the quality gates and the .NET suites.
+Use `pnpm test` (`pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for fast inner-loop frontend and VitePress unit runs, `pnpm test:coverage` (`pnpm -r test:coverage` in CI) to enforce coverage thresholds, and see [CI and local verification](CI.md#workflows) for the full workflow.
 
 Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
 Fakes and fixtures that both the unit and integration projects need live in `tests/Cadence.TestSupport`, a class
@@ -159,7 +160,7 @@ These tests currently use it:
 
 ## Web app tests (`apps/web`)
 
-`pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm -r typecheck` (strict `vue-tsc --noEmit` across
+`pnpm --filter web test` runs Vitest without coverage thresholds (using the `node` project for pure non-DOM contract/config tests and `jsdom` for component/DOM suites) so single-file runs (`pnpm --filter web test tests/notifications.test.js`) exit cleanly, while `pnpm --filter web test:coverage` runs full whole-app coverage verification. `pnpm -r typecheck` (strict `vue-tsc --noEmit` across
 `apps/web` and `packages/ui`, and `tsc --noEmit` across `packages/usdm-schemas`) and `pnpm -r lint` are the other two
 checks to run before pushing a frontend or shared-package change.
 

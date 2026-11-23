@@ -206,14 +206,28 @@ See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
 ### `cadence test`
 
-Runs `dotnet test Cadence.sln` from the repository root.
+Runs `.NET` test projects from the repository root (`Cadence.sln` by default, or specific `.csproj` targets when `--fast`, `--integration`, or `--project` is supplied).
 
-| Option              | Description                                                                                     |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| `-f\|--fast`        | Adds `--filter "Category!=Integration"`: every test project except the integration tests.       |
-| `-i\|--integration` | Runs `tests/Cadence.IntegrationTests` only. It needs PostgreSQL (see [TESTING.md](TESTING.md)). |
+```bash
+pnpm cadence test                                                   # every .NET test project in Cadence.sln
+pnpm cadence test --fast                                            # Cadence.UnitTests + Cadence.ArchitectureTests only
+pnpm cadence test --project tests/Cadence.UnitTests --no-build      # one project without rebuilding
+pnpm cadence test --fast --filter "FullyQualifiedName~RouteAuth"    # filtered fast inner loop
+```
 
-With no option, all tests run. If both options are given, `--fast` wins.
+<!-- test-options:begin (generated from packages/cli/src/Commands/TestCommand.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Option                    | Description                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| `-f\|--fast`              | Run unit and architecture tests only (tests/Cadence.UnitTests and tests/Cadence.ArchitectureTests). |
+| `-i\|--integration`       | Run only the PostgreSQL integration tests (tests/Cadence.IntegrationTests).                         |
+| `-p\|--project <project>` | Run specific test project or directory path (repeatable; overrides --fast and --integration).       |
+| `--filter <expression>`   | Forward a VSTest/xUnit filter expression to dotnet test.                                            |
+| `--no-build`              | Skip building the target project(s) before running dotnet test.                                     |
+
+<!-- test-options:end -->
+
+With no option, all `.NET` test projects in `Cadence.sln` run. `--project` overrides `--fast` and `--integration`; if both `--fast` and `--integration` are given without `--project`, `--fast` wins. See [TESTING.md](TESTING.md) for PostgreSQL and browser prerequisites when running integration or E2E suites.
 
 ### `cadence ci`
 

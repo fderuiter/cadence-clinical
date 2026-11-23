@@ -3,6 +3,7 @@ using System.CommandLine;
 using System.Linq;
 
 using Cadence.Cli;
+using Cadence.Cli.Commands;
 
 using FluentAssertions;
 
@@ -33,6 +34,10 @@ public class CliCommandLineTests
     [InlineData("clean-secrets-baseline")]
     [InlineData("clean-secrets-baseline", "--check")]
     [InlineData("test", "--fast")]
+    [InlineData("test", "--integration")]
+    [InlineData("test", "--project", "tests/Cadence.UnitTests/Cadence.UnitTests.csproj")]
+    [InlineData("test", "-p", "tests/Cadence.UnitTests", "--filter", "FullyQualifiedName~RouteAuth", "--no-build")]
+    [InlineData("test", "--fast", "--filter", "Category=Unit", "--no-build")]
     [InlineData("ci")]
     [InlineData("ci", "--offline")]
     [InlineData("ci", "--include-uncommitted")]
@@ -95,6 +100,11 @@ public class CliCommandLineTests
     [InlineData("check", "--pre-commit", "--base", "origin/main")]
     [InlineData("check", "--pre-commit", "--push-before", "0000000000000000000000000000000000000000")]
     [InlineData("ci", "--base", "--list")]
+    [InlineData("test", "--project")]
+    [InlineData("test", "--project", "--fast")]
+    [InlineData("test", "--filter")]
+    [InlineData("test", "--filter", "--no-build")]
+    [InlineData("test", "--no-such-option")]
     [InlineData("check", "adrs", "--pre-comit")]
     [InlineData("doctor", "--no-such-option")]
     [InlineData("rulesets", "--no-such-option")]
@@ -124,6 +134,43 @@ public class CliCommandLineTests
 
         leaves.Should().HaveCountGreaterThan(40);
         leaves.Should().OnlyContain(c => c.Action != null && !string.IsNullOrWhiteSpace(c.Description));
+    }
+
+    [Fact]
+    public void TestCommand_ResolvesFastIntegrationExplicitProjectAndDotnetArguments()
+    {
+        TestCommand.ResolveTargets(fast: false, integration: false)
+            .Should().Equal("Cadence.sln");
+
+        TestCommand.ResolveTargets(fast: true, integration: false)
+            .Should().Equal(
+                "tests/Cadence.UnitTests/Cadence.UnitTests.csproj",
+                "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+
+        TestCommand.ResolveTargets(fast: true, integration: true)
+            .Should().Equal(
+                "tests/Cadence.UnitTests/Cadence.UnitTests.csproj",
+                "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+
+        TestCommand.ResolveTargets(fast: false, integration: true)
+            .Should().Equal("tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj");
+
+        TestCommand.ResolveTargets(fast: true, integration: false, ["tests/Cadence.UnitTests/Cadence.UnitTests.csproj"])
+            .Should().Equal("tests/Cadence.UnitTests/Cadence.UnitTests.csproj");
+
+        TestCommand.BuildDotnetTestArguments("/repo/tests/Cadence.UnitTests/Cadence.UnitTests.csproj", filter: null, noBuild: false)
+            .Should().Equal("test", "/repo/tests/Cadence.UnitTests/Cadence.UnitTests.csproj");
+
+        TestCommand.BuildDotnetTestArguments(
+                "/repo/tests/Cadence.UnitTests/Cadence.UnitTests.csproj",
+                filter: "FullyQualifiedName~KernelApiHostTests",
+                noBuild: true)
+            .Should().Equal(
+                "test",
+                "/repo/tests/Cadence.UnitTests/Cadence.UnitTests.csproj",
+                "--no-build",
+                "--filter",
+                "FullyQualifiedName~KernelApiHostTests");
     }
 
     private static IEnumerable<Command> Descendants(Command command) =>

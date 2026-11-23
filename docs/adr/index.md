@@ -34,6 +34,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
+| 2660–2669 | Testing and evidence (continued)                                                  |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -627,6 +628,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](2026-11-21-kernel-site-setup-and-execution-tenancy.md) (2026-11-21)
 - [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)
 - [ADR-2592: Dual Ecosystem Vulnerability Auditor and CEC Chair Adjudications Persistence](2026-09-30-dual-ecosystem-vulnerability-auditor-and-cec-chair-adjudications-persistence.md) (2026-09-30)
+- [ADR-2660: Cache Test Hosts and Split Coverage Gates](2026-11-23-cache-test-hosts-and-split-coverage-gates.md) (2026-11-23)
 - [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) (2026-10-01)
 - [ADR-2803: Cell and Gene Therapy (CGT) Domain Module Integration](2026-10-02-cell-and-gene-therapy-cgt-domain-module.md) (2026-10-02)
 - [ADR-2804: Soft Delete and Invalidation of eCRF Form Observations](2026-10-02-soft-delete-and-invalidation-of-ecrf-form-observations.md) (2026-10-02)

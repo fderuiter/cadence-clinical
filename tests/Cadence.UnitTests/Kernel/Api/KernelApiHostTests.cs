@@ -38,6 +38,7 @@ using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +56,7 @@ namespace Cadence.UnitTests.Kernel.Api;
 /// <see cref="AuthorityEvaluator"/>.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class KernelApiHostTests : IDisposable
+public sealed class KernelApiHostTests : IClassFixture<KernelApiHostTests.HostFixture>
 {
     private static readonly TenantId Tenant = TenantId.New();
     private static readonly Actor Reader = Actor.Person(TestSecurityContext.DefaultIdentity.UserId);
@@ -106,25 +107,32 @@ public sealed class KernelApiHostTests : IDisposable
 
     private static readonly SoaAmendmentDiff ScheduleDiff = ScheduleOfActivitiesDiff.Compare(SoaSamples.Cardio(), AmendedDesign);
 
-    private readonly FakeNavigator _navigator = new();
-    private readonly FakeSearch _search = new();
-    private readonly HideSome _visibility = new();
-    private readonly FakeTenantDirectory _directory = new();
-    private readonly FakeProtocolVersions _protocol = new();
-    private readonly FakeProposals _proposals = new();
-    private readonly FakeAuthorityStore _authority = new();
-    private readonly FakeLineage _lineage = new();
-    private readonly FakeActivityStore _activity = new();
-    private readonly FakeEnrollmentDirectory _enrollments = new();
-    private readonly FakeSimulationInputs _simulationInputs = new();
-    private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
+    private readonly HostFixture _host;
+    private readonly FakeNavigator _navigator;
+    private readonly FakeSearch _search;
+    private readonly HideSome _visibility;
+    private readonly FakeTenantDirectory _directory;
+    private readonly FakeProtocolVersions _protocol;
+    private readonly FakeProposals _proposals;
+    private readonly FakeAuthorityStore _authority;
+    private readonly FakeLineage _lineage;
+    private readonly FakeActivityStore _activity;
+    private readonly FakeEnrollmentDirectory _enrollments;
 
-    public void Dispose()
+    public KernelApiHostTests(HostFixture host)
     {
-        foreach (var factory in _factories)
-        {
-            factory.Dispose();
-        }
+        _host = host;
+        _host.Reset();
+        _navigator = _host.Navigator;
+        _search = _host.Search;
+        _visibility = _host.Visibility;
+        _directory = _host.Directory;
+        _protocol = _host.Protocol;
+        _proposals = _host.Proposals;
+        _authority = _host.Authority;
+        _lineage = _host.Lineage;
+        _activity = _host.Activity;
+        _enrollments = _host.Enrollments;
     }
 
     /// <summary>
@@ -1141,53 +1149,119 @@ public sealed class KernelApiHostTests : IDisposable
         {
             _directory.Tenants[TestSecurityContext.TenantCode] = Tenant;
         }
-
-        var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+        else
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
-            builder.ConfigureServices(services =>
+            _directory.Tenants.Remove(TestSecurityContext.TenantCode);
+        }
+
+        _host.ClaimDropper.ClaimType = dropClaim;
+        _host.NodeVisibility.UseHostVisibility = hostVisibility;
+        return _host.Factory;
+    }
+
+    public sealed class HostFixture : IAsyncDisposable
+    {
+        internal FakeNavigator Navigator { get; } = new();
+
+        internal FakeSearch Search { get; } = new();
+
+        internal HideSome Visibility { get; } = new();
+
+        internal FakeTenantDirectory Directory { get; } = new();
+
+        internal FakeProtocolVersions Protocol { get; } = new();
+
+        internal FakeProposals Proposals { get; } = new();
+
+        internal FakeAuthorityStore Authority { get; } = new();
+
+        internal FakeLineage Lineage { get; } = new();
+
+        internal FakeActivityStore Activity { get; } = new();
+
+        internal FakeEnrollmentDirectory Enrollments { get; } = new();
+
+        internal FakeSimulationInputs SimulationInputs { get; } = new();
+
+        internal SwitchableClaimDropper ClaimDropper { get; } = new();
+
+        internal SwitchableNodeVisibility NodeVisibility { get; }
+
+        internal WebApplicationFactory<Cadence.Kernel.Host.Program> Factory { get; }
+
+        public HostFixture()
+        {
+            SwitchableNodeVisibility? switchableVisibility = null;
+            Factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
             {
-                services.RemoveAll<IKernelNavigator>();
-                services.AddSingleton<IKernelNavigator>(_navigator);
-                services.RemoveAll<IKernelSearch>();
-                services.AddSingleton<IKernelSearch>(_search);
-                services.RemoveAll<ITenantDirectory>();
-                services.AddSingleton<ITenantDirectory>(_directory);
-                services.RemoveAll<IProtocolVersionReader>();
-                services.AddSingleton<IProtocolVersionReader>(_protocol);
-                services.RemoveAll<IProposalReader>();
-                services.AddSingleton<IProposalReader>(_proposals);
-                services.RemoveAll<IAuthorityStore>();
-                services.AddSingleton<IAuthorityStore>(_authority);
-                services.RemoveAll<IKernelLineage>();
-                services.AddSingleton<IKernelLineage>(_lineage);
-                services.RemoveAll<IAmendmentImpact>();
-                services.AddSingleton<IAmendmentImpact>(_lineage);
-                services.RemoveAll<IActivityStore>();
-                services.AddSingleton<IActivityStore>(_activity);
-                services.RemoveAll<IEnrollmentDirectory>();
-                services.AddSingleton<IEnrollmentDirectory>(_enrollments);
-                services.RemoveAll<ISimulationInputs>();
-                services.AddSingleton<ISimulationInputs>(_simulationInputs);
-
-                // The activity projector reads the database the host is configured with, which these tests never open.
-                var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
-                services.Remove(projector);
-
-                if (!hostVisibility)
+                builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+                builder.ConfigureServices(services =>
                 {
+                    services.RemoveAll<IKernelNavigator>();
+                    services.AddSingleton<IKernelNavigator>(Navigator);
+                    services.RemoveAll<IKernelSearch>();
+                    services.AddSingleton<IKernelSearch>(Search);
+                    services.RemoveAll<ITenantDirectory>();
+                    services.AddSingleton<ITenantDirectory>(Directory);
+                    services.RemoveAll<IProtocolVersionReader>();
+                    services.AddSingleton<IProtocolVersionReader>(Protocol);
+                    services.RemoveAll<IProposalReader>();
+                    services.AddSingleton<IProposalReader>(Proposals);
+                    services.RemoveAll<IAuthorityStore>();
+                    services.AddSingleton<IAuthorityStore>(Authority);
+                    services.RemoveAll<IKernelLineage>();
+                    services.AddSingleton<IKernelLineage>(Lineage);
+                    services.RemoveAll<IAmendmentImpact>();
+                    services.AddSingleton<IAmendmentImpact>(Lineage);
+                    services.RemoveAll<IActivityStore>();
+                    services.AddSingleton<IActivityStore>(Activity);
+                    services.RemoveAll<IEnrollmentDirectory>();
+                    services.AddSingleton<IEnrollmentDirectory>(Enrollments);
+                    services.RemoveAll<ISimulationInputs>();
+                    services.AddSingleton<ISimulationInputs>(SimulationInputs);
+
+                    // The activity projector reads the database the host is configured with, which these tests never open.
+                    var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
+                    services.Remove(projector);
+
                     services.RemoveAll<INodeVisibility>();
-                    services.AddSingleton<INodeVisibility>(_visibility);
-                }
+                    services.AddSingleton<GrantNodeVisibility>();
+                    services.AddSingleton<INodeVisibility>(sp =>
+                    {
+                        switchableVisibility = new SwitchableNodeVisibility(Visibility, sp.GetRequiredService<GrantNodeVisibility>());
+                        return switchableVisibility;
+                    });
 
-                if (dropClaim is not null)
-                {
-                    services.AddSingleton<Microsoft.AspNetCore.Authentication.IClaimsTransformation>(new DropClaim(dropClaim));
-                }
+                    services.AddSingleton<IClaimsTransformation>(ClaimDropper);
+                });
             });
-        });
-        _factories.Add(factory);
-        return factory;
+
+            _ = Factory.Services.GetRequiredService<INodeVisibility>();
+            NodeVisibility = switchableVisibility!;
+        }
+
+        internal void Reset()
+        {
+            Navigator.Reset();
+            Search.Requests.Clear();
+            Visibility.Hidden.Clear();
+            Visibility.Readers.Clear();
+            Directory.Tenants.Clear();
+            Directory.Codes.Clear();
+            Protocol.Tenants.Clear();
+            Proposals.Lists.Clear();
+            Authority.Grants.Clear();
+            Authority.Readers.Clear();
+            Lineage.Traces.Clear();
+            Lineage.Dependents.Clear();
+            Lineage.Impacts.Clear();
+            Activity.Queries.Clear();
+            Enrollments.Lookups.Clear();
+            ClaimDropper.ClaimType = null;
+            NodeVisibility.UseHostVisibility = false;
+        }
+
+        public async ValueTask DisposeAsync() => await Factory.DisposeAsync();
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpClient client, string path, CancellationToken ct)
@@ -1197,7 +1271,7 @@ public sealed class KernelApiHostTests : IDisposable
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
     }
 
-    private sealed class FakeTenantDirectory : ITenantDirectory
+    internal sealed class FakeTenantDirectory : ITenantDirectory
     {
         public Dictionary<string, TenantId> Tenants { get; } = [];
 
@@ -1211,7 +1285,7 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>The grants a test issues; every resource sits at tenant scope, which only tenant-wide grants cover.</summary>
-    private sealed class FakeAuthorityStore : IAuthorityStore
+    internal sealed class FakeAuthorityStore : IAuthorityStore
     {
         public List<Grant> Grants { get; } = [];
 
@@ -1244,7 +1318,7 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>A lineage with one visible start and one blinded participant downstream of it.</summary>
-    private sealed class FakeLineage : IKernelLineage, IAmendmentImpact
+    internal sealed class FakeLineage : IKernelLineage, IAmendmentImpact
     {
         private static readonly DateTimeOffset Now = new(2026, 9, 30, 0, 0, 0, TimeSpan.Zero);
         private static readonly NodeRef Visible = NodeRef.For(ParticipantId.New(), 1);
@@ -1304,17 +1378,35 @@ public sealed class KernelApiHostTests : IDisposable
                 Truncated: false);
     }
 
-    private sealed class DropClaim(string type) : Microsoft.AspNetCore.Authentication.IClaimsTransformation
+    internal sealed class SwitchableClaimDropper : IClaimsTransformation
     {
+        public string? ClaimType { get; set; }
+
         public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
-            var identity = new ClaimsIdentity(principal.Claims.Where(c => c.Type != type), principal.Identity?.AuthenticationType);
+            if (ClaimType is not { } claimType)
+            {
+                return Task.FromResult(principal);
+            }
+
+            var identity = new ClaimsIdentity(principal.Claims.Where(c => c.Type != claimType), principal.Identity?.AuthenticationType);
             return Task.FromResult(new ClaimsPrincipal(identity));
         }
     }
 
+    internal sealed class SwitchableNodeVisibility(INodeVisibility testVisibility, INodeVisibility hostVisibility) : INodeVisibility
+    {
+        public bool UseHostVisibility { get; set; }
+
+        public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+            TenantId tenant, Actor reader, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken) =>
+            UseHostVisibility
+                ? hostVisibility.MaskAsync(tenant, reader, nodes, cancellationToken)
+                : testVisibility.MaskAsync(tenant, reader, nodes, cancellationToken);
+    }
+
     /// <summary>Two protocol versions of <see cref="Study"/>: an approved first version and a draft amendment of it.</summary>
-    private sealed class FakeProtocolVersions : IProtocolVersionReader
+    internal sealed class FakeProtocolVersions : IProtocolVersionReader
     {
         public List<TenantId> Tenants { get; } = [];
 
@@ -1339,7 +1431,7 @@ public sealed class KernelApiHostTests : IDisposable
         }
     }
 
-    private sealed class FakeProposals : IProposalReader
+    internal sealed class FakeProposals : IProposalReader
     {
         public List<(TenantId Tenant, ProposalStatus? Status, int Limit)> Lists { get; } = [];
 
@@ -1356,7 +1448,7 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>Three entries newest first: a visible screening, a status change a test may hide, and an older one.</summary>
-    private sealed class FakeActivityStore : IActivityStore
+    internal sealed class FakeActivityStore : IActivityStore
     {
         public static readonly NodeRef VisibleSubject = NodeRef.For(EnrollmentId.New(), 1);
         public static readonly NodeRef HiddenSubject = NodeRef.For(EnrollmentId.New(), 2);
@@ -1381,7 +1473,7 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>Every object is visible except the ones a test hides.</summary>
-    private sealed class HideSome : INodeVisibility
+    internal sealed class HideSome : INodeVisibility
     {
         public Dictionary<NodeRef, MaskReason> Hidden { get; } = [];
 
@@ -1397,7 +1489,7 @@ public sealed class KernelApiHostTests : IDisposable
         }
     }
 
-    private sealed class FakeNavigator : IKernelNavigator
+    internal sealed class FakeNavigator : IKernelNavigator
     {
         private static readonly NodeSummary StudySummary = new(Study.AtVersion(3), "Cadence 101", "CAD-101", "Active");
         private static readonly NodeSummary SiteSummary = new(StudySite.AtVersion(1), "Hamburg Clinic", "017", "Active");
@@ -1454,6 +1546,12 @@ public sealed class KernelApiHostTests : IDisposable
 
         public int ChildReads { get; private set; }
 
+        public void Reset()
+        {
+            Tenants.Clear();
+            ChildReads = 0;
+        }
+
         public Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             Tenants.Add(tenant);
@@ -1494,7 +1592,7 @@ public sealed class KernelApiHostTests : IDisposable
         }
     }
 
-    private sealed class FakeSearch : IKernelSearch
+    internal sealed class FakeSearch : IKernelSearch
     {
         public List<(TenantId Tenant, SearchRequest Request)> Requests { get; } = [];
 
@@ -1506,7 +1604,7 @@ public sealed class KernelApiHostTests : IDisposable
         }
     }
 
-    private sealed class FakeEnrollmentDirectory : IEnrollmentDirectory
+    internal sealed class FakeEnrollmentDirectory : IEnrollmentDirectory
     {
         public static readonly NodeRef LookupEnrollment = NodeRef.For(EnrollmentId.New());
 
@@ -1560,7 +1658,7 @@ public sealed class KernelApiHostTests : IDisposable
             throw new NotSupportedException();
     }
 
-    private sealed class FakeSimulationInputs : ISimulationInputs
+    internal sealed class FakeSimulationInputs : ISimulationInputs
     {
         private static readonly string BaseContent = ProtocolDesignDocument.Write(SoaSamples.Cardio());
         private static readonly string AmendedContent = ProtocolDesignDocument.Write(AmendedDesign);

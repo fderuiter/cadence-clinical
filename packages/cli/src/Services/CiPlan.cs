@@ -532,7 +532,7 @@ public static class CiPlan
                 Always = true,
                 Commands =
                 [
-                    Pnpm("-r", "test"),
+                    Pnpm("-r", "test:coverage"),
                     Pnpm("exec", "vitest", "run", "--config", "vitest.config.mjs"),
                 ],
             },

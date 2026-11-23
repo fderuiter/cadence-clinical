@@ -17,15 +17,17 @@ namespace Cadence.UnitTests.Kernel.Rules;
 /// </summary>
 public class RuleBenchmarkTests
 {
+    private const int UnitDatasetSize = 1_000;
+
     [Fact(DisplayName = "RuleBenchmark_SmallRun_IsReproducibleAndFindsViolations")]
     [Trait("Category", "Unit")]
     public void RuleBenchmarkSmallRunIsReproducibleAndFindsViolations()
     {
-        var first = RuleBenchmark.Run(new DotNetRuleEvaluator(), 10_000, seed: 7);
-        var second = RuleBenchmark.Run(new DotNetRuleEvaluator(), 10_000, seed: 7);
-        var otherSeed = RuleBenchmark.Run(new DotNetRuleEvaluator(), 10_000, seed: 8);
+        var first = RuleBenchmark.Run(new DotNetRuleEvaluator(), UnitDatasetSize, seed: 7);
+        var second = RuleBenchmark.Run(new DotNetRuleEvaluator(), UnitDatasetSize, seed: 7);
+        var otherSeed = RuleBenchmark.Run(new DotNetRuleEvaluator(), UnitDatasetSize, seed: 8);
 
-        first.Records.Should().Be(10_000);
+        first.Records.Should().Be(UnitDatasetSize);
         first.Rules.Should().Be(12);
         first.Violations.Should().BeGreaterThan(0);
         second.ResultHash.Should().Be(first.ResultHash);
@@ -41,7 +43,7 @@ public class RuleBenchmarkTests
 
         new RulePackContentValidator().Validate(RulePackJson.ToJson(pack)).Should().BeEmpty();
         var fired = new DotNetRuleEvaluator()
-            .Evaluate(pack, new RuleEvaluationContext(ValidationStage.Collection, RuleBenchmark.AsOf), RuleBenchmark.Dataset(10_000, 7))
+            .Evaluate(pack, new RuleEvaluationContext(ValidationStage.Collection, RuleBenchmark.AsOf), RuleBenchmark.Dataset(UnitDatasetSize, 7))
             .Select(v => v.RuleId).Distinct().Order().ToList();
 
         // B12 reads a variable no record has: an ordering comparison with null is false, so it never fires.

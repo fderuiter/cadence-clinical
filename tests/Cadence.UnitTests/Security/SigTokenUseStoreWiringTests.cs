@@ -27,7 +27,7 @@ namespace Cadence.UnitTests.Security;
 /// to start outside Development, so a token cannot be replayed after a restart or on a second instance (#5434,
 /// ADR-2515).
 /// </summary>
-public sealed class SigTokenUseStoreWiringTests
+public sealed class SigTokenUseStoreWiringTests(ServiceHostCache hosts) : IClassFixture<ServiceHostCache>
 {
     /// <summary>
     /// Each host's composition root registers the durable store when it maps a signed route. Execution's shared test
@@ -36,9 +36,9 @@ public sealed class SigTokenUseStoreWiringTests
     [Theory]
     [MemberData(nameof(ServiceHosts.Names), MemberType = typeof(ServiceHosts))]
     [GxPRequirement("SRS-SYS-005")]
-    public async Task EveryHostWithASignedRoute_RegistersADurableTokenUseStore(string service)
+    public void EveryHostWithASignedRoute_RegistersADurableTokenUseStore(string service)
     {
-        await using var host = ServiceHosts.All[service](null);
+        var host = hosts.GetDefault(service);
         bool mapsSignedRoute = host.Endpoints.Any(e => e.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null);
         if (service is "econsent" or "knowledge" or "execution" or "tickets")
         {

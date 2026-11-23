@@ -1118,7 +1118,7 @@ public partial class LocalCiPlanTests
         var unitTestsStep = CiPlan.Jobs.Single(j => j.Key == "unit-tests")
             .Steps.Single(s => s.Name == "Run frontend unit tests");
         unitTestsStep.Commands.Select(c => c.MatchText).Should().Equal(
-            "pnpm -r test",
+            "pnpm -r test:coverage",
             "pnpm exec vitest run --config vitest.config.mjs");
     }
 

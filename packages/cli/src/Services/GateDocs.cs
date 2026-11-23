@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -34,6 +35,9 @@ public static class GateDocs
 
     public const string CheckPortsBeginMarker = "<!-- check-ports:begin (generated from packages/tooling_core/src/Services/PortCheckerService.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string CheckPortsEndMarker = "<!-- check-ports:end -->";
+
+    public const string TestOptionsBeginMarker = "<!-- test-options:begin (generated from packages/cli/src/Commands/TestCommand.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string TestOptionsEndMarker = "<!-- test-options:end -->";
 
     public const string DevServicePortsBeginMarker = "<!-- dev-service-ports:begin (generated from packages/topology/src/ServiceTopology.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string DevServicePortsEndMarker = "<!-- dev-service-ports:end -->";
@@ -103,6 +107,7 @@ public static class GateDocs
     public static IReadOnlyList<GeneratedRegion> AllRegions { get; } =
     [
         new("docs/cli.md", "quality-gates", BeginMarker, EndMarker, _ => RenderCliTable()),
+        new("docs/cli.md", "test-options", TestOptionsBeginMarker, TestOptionsEndMarker, _ => RenderCliTestOptionsTable()),
         new("docs/cli.md", "check-ports", CheckPortsBeginMarker, CheckPortsEndMarker, RenderCliCheckPortsRegion),
         new("docs/CI.md", "quality-gates", BeginMarker, EndMarker, _ => RenderCiTable()),
         new("docs/LOCAL_DEV_ENVIRONMENT.md", "dev-service-ports", DevServicePortsBeginMarker, DevServicePortsEndMarker, RenderLocalDevPortsTable),
@@ -136,6 +141,31 @@ public static class GateDocs
     public static string RenderCiTable() =>
         $"`pnpm cadence check` runs these {QualityGates.All.Count} gates in this order:\n\n" +
         RenderTable(["Gate", "What it checks"], QualityGates.All.Select(g => new[] { $"`{g.Name}`", g.Checks }));
+
+    /// <summary>The <c>docs/cli.md</c> option table derived from <see cref="Commands.TestCommand.Configure"/>.</summary>
+    public static string RenderCliTestOptionsTable()
+    {
+        var testCommand = Program.BuildRootCommand().Subcommands.Single(c => string.Equals(c.Name, "test", StringComparison.Ordinal));
+        var rows = testCommand.Options
+            .Where(o => o.Name is not "--help" and not "-h" and not "-?")
+            .Select(o =>
+            {
+                string[] names = new[] { o.Name }
+                    .Concat(o.Aliases)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(n => n.StartsWith("--", StringComparison.Ordinal) ? 1 : 0)
+                    .ThenBy(n => n, StringComparer.Ordinal)
+                    .ToArray();
+                string placeholder = o.Name switch
+                {
+                    "--project" => " <project>",
+                    "--filter" => " <expression>",
+                    _ => string.Empty,
+                };
+                return new[] { $"`{string.Join('|', names)}{placeholder}`", o.Description ?? string.Empty };
+            });
+        return RenderTable(["Option", "Description"], rows);
+    }
 
     /// <summary>The <c>docs/cli.md</c> port summary derived from <see cref="PortCheckerService.DefaultPorts"/>.</summary>
     public static string RenderCliCheckPortsRegion(string repoRoot)

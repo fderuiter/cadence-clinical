@@ -57,24 +57,24 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// internal to the handler body, independent of route/filter registration).
 /// </para>
 /// </summary>
-public sealed class SubjectEndpointsRoutingTests : IDisposable
+public sealed class SubjectEndpointsRoutingTests : IClassFixture<SubjectEndpointsRoutingTests.SubjectEndpointsTestFactory>, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
-    private readonly SubjectEndpointsTestFactory _factory = new();
+    private readonly SubjectEndpointsTestFactory _factory;
     private readonly HttpClient _client;
 
     // Every request is signed as a site coordinator, the role that may change a participant's record, so both the
     // route permission (ADR-2516) and the handlers' role checks (#4943) pass; role coverage lives in
     // SubjectRouteAuthorityTests.
-    public SubjectEndpointsRoutingTests() =>
-        _client = _factory.CreateSignedClient(TestSecurityContext.Identity("crc-001", "crc") with { SiteIds = ["SITE-001"] });
-
-    public void Dispose()
+    public SubjectEndpointsRoutingTests(SubjectEndpointsTestFactory factory)
     {
-        _client.Dispose();
-        _factory.Dispose();
+        _factory = factory;
+        _factory.Reset();
+        _client = _factory.CreateSignedClient(TestSecurityContext.Identity("crc-001", "crc") with { SiteIds = ["SITE-001"] });
     }
+
+    public void Dispose() => _client.Dispose();
 
     // ================================================================================================
     // POST /api/v1/execution/subjects (CreateSubject)
@@ -774,7 +774,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     /// <see cref="SubjectEndpoints"/> ever stopped threading <c>ct</c> through to the application-service
     /// call, those tests would start failing (no exception thrown) rather than silently passing.
     /// </summary>
-    private sealed class FakeSubjectApplicationService : ISubjectApplicationService
+    internal sealed class FakeSubjectApplicationService : ISubjectApplicationService
     {
         public int CreateAsyncCalls { get; private set; }
 
@@ -899,7 +899,35 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         public int GetCountsAsyncCalls { get; private set; }
         public IReadOnlyCollection<string>? LastAllowedSiteIds { get; private set; }
-        public Result<SubjectCountsResponse> CountsResult { get; set; } =
+        public Result<SubjectCountsResponse> CountsResult { get; set; } = DefaultCountsResult();
+
+        public void Reset()
+        {
+            CreateAsyncCalls = 0;
+            RecordConsentAsyncCalls = 0;
+            AssignSiteAsyncCalls = 0;
+            AdvanceStateAsyncCalls = 0;
+            UpdateDemographicsAsyncCalls = 0;
+            DeleteDemographicsAsyncCalls = 0;
+            GetDetailAsyncCalls = 0;
+            GetCountsAsyncCalls = 0;
+            LastChangeReasonSeenByAdvanceState = null;
+            LastChangeReasonSeenByAssignSite = null;
+            LastChangeReasonSeenByUpdateDemographics = null;
+            LastChangeReasonSeenByDeleteDemographics = null;
+            LastListArguments = null;
+            LastAllowedSiteIds = null;
+            CreateResult = null;
+            RecordConsentResult = null;
+            AssignSiteResult = null;
+            AdvanceStateResult = null;
+            UpdateDemographicsResult = null;
+            DeleteDemographicsResult = null;
+            GetDetailResult = null;
+            CountsResult = DefaultCountsResult();
+        }
+
+        private static Result<SubjectCountsResponse> DefaultCountsResult() =>
             Result<SubjectCountsResponse>.Success(
                 new SubjectCountsResponse(1, new Dictionary<string, int> { ["ENROLLED"] = 1 }));
 
@@ -927,9 +955,11 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     /// <summary>Reveals a fixed allocation and counts how often the endpoint asks; the scheme routes are not exercised here.</summary>
-    private sealed class FakeRandomizationService : IRandomizationApplicationService
+    internal sealed class FakeRandomizationService : IRandomizationApplicationService
     {
         public int RevealCalls { get; private set; }
+
+        public void Reset() => RevealCalls = 0;
 
         public Task<RevealedAllocation?> RevealAsync(string subjectIdOrCode, CancellationToken ct)
         {
@@ -978,9 +1008,17 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     /// registrations.
     /// </para>
     /// </summary>
-    private sealed class SubjectEndpointsTestFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>
+    public sealed class SubjectEndpointsTestFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>
     {
-        public FakeSubjectApplicationService Service { get; } = new();
+        internal FakeSubjectApplicationService Service { get; } = new();
+
+        internal FakeRandomizationService Randomization { get; } = new();
+
+        internal void Reset()
+        {
+            Service.Reset();
+            Randomization.Reset();
+        }
 
         protected override IHostBuilder CreateHostBuilder() =>
             Host.CreateDefaultBuilder()
@@ -994,7 +1032,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                         services.AddCadenceSecurity();
                         services.ConfigureHttpJsonOptions(ApplyExecutionJsonConventions);
                         services.AddSingleton<ISubjectApplicationService>(Service);
-                        services.AddSingleton<IRandomizationApplicationService>(new FakeRandomizationService());
+                        services.AddSingleton<IRandomizationApplicationService>(Randomization);
                         services.AddSingleton<IValidator<SubjectCreateRequest>, SubjectCreateRequestValidator>();
                         services.AddSingleton<IValidator<SubjectConsentRequest>, SubjectConsentRequestValidator>();
                         services.AddSingleton<IValidator<SubjectStateUpdateRequest>, SubjectStateUpdateRequestValidator>();

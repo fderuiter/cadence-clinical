@@ -26,6 +26,17 @@ using Xunit;
 
 namespace Cadence.UnitTests.Imaging;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ProcessWideMemoryCollection
+{
+    public const string Name = "ProcessWideMemory";
+
+    private ProcessWideMemoryCollection()
+    {
+    }
+}
+
+[Collection(ProcessWideMemoryCollection.Name)]
 public sealed class DicomIngestionServiceTests
 {
     private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
