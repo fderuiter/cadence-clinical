@@ -250,14 +250,30 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }, HttpStatusCode.OK, ct);
         answered.Status.Should().Be("answered");
 
-        // Switch from Frozen to Locked: Locked refuses query transitions AND new queries with 423 K.Assertion.Locked!
+        // Switch from Frozen to Locked: while Diastolic is still missing, Locked is refused with ScopeNotReady (#5466).
         await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        var prematureLock = await fixture.Sender.SendAsync(
+            await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked),
+            cancellationToken: ct);
+        prematureLock.Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
+
+        // Record required Diastolic and close the answered query, relay to kernel, then apply Locked.
+        await SendAsync<JsonElement>(crc, HttpMethod.Put, $"/{form:D}/values", SaveReason, new
+        {
+            values = new[] { new { item_id = Diastolic, value = new { type = "missing", reason = "NotDone" }, expected_revision = 1 } },
+        }, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Resolved missing diastolic", null, HttpStatusCode.OK, ct);
+        (await fixture.OutboxRelay.RelayBatchAsync(10_000, ct)).Failed.Should().Be(0);
+
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 
-        using (var lockedClose = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Attempted close under lock", null), ct))
+        using (var lockedReopen = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/reopen", "Attempted reopen under lock", new
         {
-            lockedClose.StatusCode.Should().Be((HttpStatusCode)423);
-            (await ProblemCodeAsync(lockedClose, ct)).Should().Be(AssertionErrors.Locked.Code);
+            text = "Attempted reopen after lock",
+        }), ct))
+        {
+            lockedReopen.StatusCode.Should().Be((HttpStatusCode)423);
+            (await ProblemCodeAsync(lockedReopen, ct)).Should().Be(AssertionErrors.Locked.Code);
         }
 
         using (var lockedRaise = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries", "Attempted raise under lock", new

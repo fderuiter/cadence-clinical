@@ -381,6 +381,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
 - [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
 - [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
+- [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
 
 ### 5. Compliance, Audit & Governance
 
@@ -602,7 +603,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2533: Tests, CI and Compose Run One Pinned PostgreSQL Major](2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md) (2026-10-19)
 - [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) (2026-10-20)
 - [ADR-2535: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots](2026-11-20-forward-verified-ci-gxp-evidence-and-sync-service-migrations.md) (2026-11-20)
-- [ADR-2536: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories](2026-11-22-share-demo-runtime-and-msw-worker-factories.md) (2026-11-22)
+- [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) (2026-11-22)
+- [ADR-2537: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories](2026-11-22-share-demo-runtime-and-msw-worker-factories.md) (2026-11-22)
 - [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) (2026-11-20)
 - [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) (2026-11-20)
 - [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)

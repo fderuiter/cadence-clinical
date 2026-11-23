@@ -1,4 +1,4 @@
-# ADR-2536: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories
+# ADR-2537: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
