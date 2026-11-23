@@ -306,7 +306,7 @@ function parseReceiptContent(body, issueToken = true) {
     receiptSha256,
     warning:
       confidenceScore < 0.9
-        ? "Receipt scan confidence is below 90%; please review extracted fields before submitting."
+        ? "We could not read every detail on the receipt photo clearly. Please check the merchant, date, and amount before submitting."
         : null,
   };
 }
@@ -462,7 +462,7 @@ function evaluateExpenseSubmission(body, wallet = null) {
   }
   if (!isConfidenceHigh) {
     reasons.push(
-      `OCR confidence score ${confidence.toFixed(2)} is below 0.90 threshold.`
+      "We could not read every detail on the receipt photo clearly, so your study coordinator will check it for you."
     );
   }
   const reviewNotes = `${reasons.join(" ")} Routed to site coordinator review queue.`;
