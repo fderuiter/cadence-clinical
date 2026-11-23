@@ -783,6 +783,79 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void FrontendEslintGate_ValidatesDuplicateIdentifiersInStagedClinicalEcrfSlice()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
+        Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
+        string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
+        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
+
+        string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
+        Directory.CreateDirectory(stubBin);
+        string pnpmStub = Path.Combine(stubBin, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\ncase \" $* \" in\n  *\" --stdin \"*) cat >/dev/null || true ;;\nesac\nexit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        InitGitRepo();
+        const string slicePath = "apps/web/src/stores/demo/clinicalEcrf.ts";
+        const string cleanSlice =
+            """
+            export function createClinicalEcrfState() {
+              return {
+                ecrfFields: [
+                  { id: "vssbp", label: "Systolic BP", type: "number" },
+                  { id: "vsdbp", label: "Diastolic BP", type: "number" },
+                ],
+              };
+            }
+            """;
+        const string duplicateSlice =
+            """
+            export function createClinicalEcrfState() {
+              return {
+                ecrfFields: [
+                  { id: "vssbp", label: "Systolic BP", type: "number" },
+                  { id: "vssbp", label: "Duplicate Systolic BP", type: "number" },
+                ],
+              };
+            }
+            """;
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{stubBin}{Path.PathSeparator}/tmp/bin{Path.PathSeparator}{originalPath}");
+
+            Write(slicePath, cleanSlice);
+            RunGit("add", slicePath);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(0);
+
+            Write(slicePath, duplicateSlice);
+            RunGit("add", slicePath);
+            // Even when the working tree looks clean, the staged git index duplicate must fail closed.
+            Write(slicePath, cleanSlice);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+            if (Directory.Exists(symlinkNodeModules))
+            {
+                Directory.Delete(symlinkNodeModules, recursive: false);
+            }
+        }
+    }
+
+    [Fact]
     public void FindRepoRoot_ResolvesRepositoryFromNestedSubdirectory()
     {
         Write("Cadence.sln", "\n");

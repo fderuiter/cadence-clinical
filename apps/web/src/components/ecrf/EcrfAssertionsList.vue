@@ -1,0 +1,178 @@
+<template>
+  <section
+    id="ecrf-form-queries"
+    aria-labelledby="ecrf-form-queries-title"
+    :aria-busy="queriesLoading"
+  >
+    <h3 id="ecrf-form-queries-title">Queries</h3>
+    <p v-if="queriesLoading" role="status">Loading queries…</p>
+    <p v-else-if="queriesLoadError" class="ecrf-form-error" role="alert">
+      The queries could not be loaded: {{ queriesLoadError }}
+      <button
+        id="ecrf-queries-retry"
+        class="btn btn-secondary"
+        type="button"
+        :disabled="queriesLoading"
+        @click="emit('retry-queries')"
+      >
+        Try again
+      </button>
+    </p>
+    <p v-else-if="queries.length === 0" data-testid="ecrf-no-queries">
+      No queries on this form.
+    </p>
+    <FormQueryList
+      v-else
+      :queries="queries"
+      :can-manage="!!canManageQueries"
+      :can-answer="canAnswerQueries"
+      :busy="queriesBusy"
+      :assertions-locked="assertionsLocked"
+      :act="actQuery"
+      :act-many="actManyQueries"
+      :form-to="queryFormLink"
+      :observation-to="queryObservationLink"
+    />
+    <div
+      data-testid="ecrf-query-outcome"
+      :class="[
+        'ecrf-form-outcome',
+        queryOutcome
+          ? `ecrf-form-outcome--${queryOutcome.kind === 'done' ? 'saved' : 'failed'}`
+          : '',
+      ]"
+      aria-live="polite"
+      role="status"
+    >
+      <template v-if="queryOutcome">
+        {{ queryOutcome.message }}
+        <button
+          v-if="queryOutcome.kind === 'stale'"
+          id="ecrf-query-reload"
+          class="btn btn-secondary"
+          type="button"
+          @click="emit('reload-stale')"
+        >
+          Reload form
+        </button>
+      </template>
+    </div>
+  </section>
+
+  <h3>Verifications, queries and answers</h3>
+  <p v-if="assertions.length === 0" data-testid="ecrf-no-assertions">
+    None recorded.
+  </p>
+  <ul v-else data-testid="ecrf-form-assertions">
+    <li v-for="assertion in assertions" :key="assertion.assertion_id">
+      {{ assertion.kind }} on
+      <component
+        :is="routerLinkTag"
+        v-if="assertionLink(assertion.target)"
+        class="ecrf-observation-link"
+        :to="assertionLink(assertion.target)!"
+      >
+        {{ assertion.target }}
+      </component>
+      <template v-else>
+        {{ assertion.target }}
+      </template>
+      <template v-if="assertion.revision !== null">
+        (revision {{ assertion.revision }})
+      </template>
+      by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
+      <template v-if="assertion.text"> : “{{ assertion.text }}” </template>
+      <em v-if="assertion.retracted_at">
+        (retracted {{ assertion.retracted_at }})</em
+      >
+    </li>
+  </ul>
+</template>
+
+<script setup lang="ts">
+import { getCurrentInstance } from "vue";
+import type { RouteLocationRaw } from "vue-router";
+import type { EcrfFormAssertion } from "../../api/ecrfFormsApi";
+import type {
+  FormQueryAction,
+  FormQueryResponse,
+} from "../../api/ecrfQueriesApi";
+import type {
+  FormQueryBatchItemResult,
+  FormQueryOutcome,
+} from "../../composables/useFormQueries";
+import { observationNodeRef } from "../../canvas/nodeRef";
+import FormQueryList from "./FormQueryList.vue";
+
+const props = defineProps<{
+  queries: FormQueryResponse[];
+  queriesLoading: boolean;
+  queriesLoadError: string | null;
+  queriesBusy: boolean;
+  queryOutcome: FormQueryOutcome | null;
+  canManageQueries?: boolean;
+  canAnswerQueries: boolean;
+  assertionsLocked: boolean;
+  actQuery: (
+    query: FormQueryResponse,
+    action: FormQueryAction,
+    text: string
+  ) => Promise<boolean>;
+  actManyQueries: (
+    targets: FormQueryResponse[],
+    action: FormQueryAction,
+    text: string
+  ) => Promise<FormQueryBatchItemResult[]>;
+  queryFormLink?: (query: FormQueryResponse) => RouteLocationRaw | null;
+  queryObservationLink: (query: FormQueryResponse) => RouteLocationRaw | null;
+  assertions: EcrfFormAssertion[];
+  itemObservationLink: (
+    observationId: string | null | undefined
+  ) => RouteLocationRaw | null;
+}>();
+
+const emit = defineEmits<{
+  (e: "retry-queries"): void;
+  (e: "reload-stale"): void;
+}>();
+
+const instance = getCurrentInstance();
+const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
+
+function assertionLink(target: string): RouteLocationRaw | null {
+  if (!target.startsWith("observation:")) return null;
+  const ref = observationNodeRef(target);
+  if (!ref) return null;
+  const id = ref.slice("observation:".length);
+  return props.itemObservationLink(id);
+}
+</script>
+
+<style scoped>
+.ecrf-form-error {
+  color: var(--semantic-color-error);
+  font-size: 0.8rem;
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ecrf-form-outcome {
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ecrf-form-outcome--saved {
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+}
+.ecrf-form-outcome--failed {
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
+}
+</style>

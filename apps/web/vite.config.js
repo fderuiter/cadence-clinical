@@ -182,6 +182,9 @@ export default defineConfig({
           }
         : {
             manualChunks(id) {
+              if (id.startsWith("\0virtual:demo-")) {
+                return "vendor-vue";
+              }
               // Workspace library dependencies
               if (id.includes("/packages/ui/") || id.includes("packages/ui/")) {
                 return "workspace-ui";
@@ -198,6 +201,12 @@ export default defineConfig({
 
               // Core application stores
               if (id.includes("/src/stores/") || id.includes("src/stores/")) {
+                if (
+                  id.includes("/stores/demo/") ||
+                  id.includes("stores/demo/")
+                ) {
+                  return "store-demo";
+                }
                 if (
                   id.includes("stores/clinical") ||
                   id.includes("/clinical.")
