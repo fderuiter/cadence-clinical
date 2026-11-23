@@ -322,6 +322,69 @@ public sealed class RulesetServiceTests : IDisposable
         brokenCiWriter.ToString().Should().Contain("compliance");
     }
 
+    [Fact]
+    public void Validate_FailsWhenConflictCheckWorkflowIsMissingMisnamedConditionalOrIgnoresConflicts()
+    {
+        File.Delete(Path.Combine(_root, ".github", "workflows", "conflict-check.yml"));
+        using var missingWriter = new StringWriter();
+        RulesetService.Validate(_root, missingWriter).Should().Be(1);
+        missingWriter.ToString().Should().Contain("conflict-check.yml");
+
+        Write(".github/workflows/conflict-check.yml", """
+            name: Conflict Check
+            on:
+              push:
+                branches: [main]
+            jobs:
+              conflict-check:
+                name: Wrong Check Name
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo ok
+            """);
+        using var misnamedWriter = new StringWriter();
+        RulesetService.Validate(_root, misnamedWriter).Should().Be(1);
+        misnamedWriter.ToString().Should().Contain("Check for Merge Conflicts")
+            .And.Contain("unconditionally on 'pull_request'");
+
+        Write(".github/workflows/conflict-check.yml", """
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened]
+            jobs:
+              conflict-check:
+                name: Check for Merge Conflicts
+                runs-on: ubuntu-latest
+                steps:
+                  - name: Soft check
+                    run: |
+                      STATUS=$(gh pr view --json mergeable -q .mergeable)
+                      echo "$STATUS"
+            """);
+        using var softConflictWriter = new StringWriter();
+        RulesetService.Validate(_root, softConflictWriter).Should().Be(1);
+        softConflictWriter.ToString().Should().Contain("CONFLICTING");
+    }
+
+    [Fact]
+    public void Validate_FailsWhenClassifyJobOmitsManifestScanTriggersOrAdmitsManifestIntoSafeProse()
+    {
+        string liveCi = File.ReadAllText(Path.Combine(FindRepositoryRoot(), ".github", "workflows", "ci.yml"));
+        Write(".github/workflows/ci.yml", liveCi.Replace("|pnpm-workspace.yaml", "", StringComparison.Ordinal));
+        using var missingTriggerWriter = new StringWriter();
+        RulesetService.Validate(_root, missingTriggerWriter).Should().Be(1);
+        missingTriggerWriter.ToString().Should().Contain("pnpm-workspace.yaml");
+
+        Write(".github/workflows/ci.yml", liveCi.Replace(
+            "elif [[ \"$file\" =~ ^(README|",
+            "elif [[ \"$file\" =~ ^(package\\.json|README|",
+            StringComparison.Ordinal));
+        using var unsafeAllowlistWriter = new StringWriter();
+        RulesetService.Validate(_root, unsafeAllowlistWriter).Should().Be(1);
+        unsafeAllowlistWriter.ToString().Should().Contain("package.json");
+    }
+
     private void SeedValidFixture()
     {
         WriteMainRuleset(strict: true, integrationId: RulesetService.GitHubActionsIntegrationId, firstCheck: "CI Gate");

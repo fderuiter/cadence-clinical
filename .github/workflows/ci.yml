@@ -917,7 +917,7 @@ jobs:
             fi
 
             case "$file" in
-              docker/*|Dockerfile*|*/Dockerfile*|.dockerignore|.github/dependabot.yml|.github/workflows/ci.yml|global.json|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|NuGet.Config|*.csproj|package.json|*/package.json|pnpm-lock.yaml)
+              docker/*|Dockerfile*|*/Dockerfile*|.dockerignore|.github/dependabot.yml|.github/workflows/ci.yml|global.json|.config/dotnet-tools.json|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|NuGet.Config|*.csproj|package.json|*/package.json|pnpm-workspace.yaml|pnpm-lock.yaml)
                 echo "Container/dependency trigger file: $file"
                 CONTAINER_SCAN=true
                 ;;

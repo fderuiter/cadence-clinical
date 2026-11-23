@@ -1,12 +1,12 @@
 version: 2
 updates:
-  # .NET dependencies (Central Package Management: Directory.Build.props + Directory.Packages.props)
+  # .NET dependencies (Central Package Management: Directory.Build.props + Directory.Packages.props + .config/dotnet-tools.json)
   - package-ecosystem: "nuget"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
     groups:
@@ -38,6 +38,26 @@ updates:
       fluentvalidation:
         patterns:
           - "FluentValidation*"
+      ai-providers:
+        patterns:
+          - "Anthropic*"
+          - "ModelContextProtocol*"
+      code-analyzers:
+        patterns:
+          - "Microsoft.CodeAnalysis.*"
+          - "SonarAnalyzer*"
+      dotnet-testing:
+        patterns:
+          - "xunit*"
+          - "Microsoft.NET.Test.Sdk"
+          - "FluentAssertions*"
+          - "NSubstitute*"
+          - "Testcontainers*"
+          - "coverlet*"
+          - "TngTech.ArchUnitNET*"
+      nuget-dependencies:
+        patterns:
+          - "*"
     ignore:
       # MassTransit 9 is commercial and needs a license key; 8.x stays under Apache 2.0 (#5520, ADR-2524).
       - dependency-name: "MassTransit*"
@@ -61,41 +81,28 @@ updates:
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
 
-  # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
+  # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog; single active lockfile PR)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 10
+      day: "wednesday"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "nodejs"
     groups:
-      typescript-eslint:
+      npm-workspace:
         patterns:
-          - "@typescript-eslint/*"
-          - "typescript-eslint"
-          - "eslint*"
-          - "@eslint/*"
-      vitest:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      npm-workspace-major:
         patterns:
-          - "vitest"
-          - "@vitest/*"
-      playwright:
-        patterns:
-          - "@playwright/*"
-          - "playwright*"
-          - "@axe-core/playwright"
-      vue-vite:
-        patterns:
-          - "vue"
-          - "vue-*"
-          - "@vue/*"
-          - "pinia"
-          - "vite"
-          - "@vitejs/*"
-          - "vitepress*"
+          - "*"
+        update-types:
+          - "major"
     ignore:
       # Node runtime baseline is pinned via package.json engines (ADR-2508).
       - dependency-name: "@types/node"
@@ -106,8 +113,8 @@ updates:
     directory: "/docker"
     schedule:
       interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      day: "tuesday"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
     groups:
@@ -127,10 +134,14 @@ updates:
     directory: "/docker/sce/python"
     schedule:
       interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      day: "thursday"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
+    groups:
+      sce-python:
+        patterns:
+          - "*"
     ignore:
       # GxP SCE Python baseline is locked to Python 3.14 (ADR-2327, interop_openapi.json); allow 3.14 digest updates only.
       - dependency-name: "python"
@@ -141,10 +152,14 @@ updates:
     directory: "/docker/sce/r"
     schedule:
       interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      day: "thursday"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
+    groups:
+      sce-r:
+        patterns:
+          - "*"
     ignore:
       # GxP SCE R baseline is locked to R 4.4.2 (interop_openapi.json); allow 4.4.2 digest updates only.
       - dependency-name: "r-base"
@@ -160,18 +175,26 @@ updates:
     directory: "/docker"
     schedule:
       interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 5
+      day: "tuesday"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
+    groups:
+      local-stack:
+        patterns:
+          - "*"
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
-    open-pull-requests-limit: 10
+      day: "friday"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "actions"
+    groups:
+      workflow-actions:
+        patterns:
+          - "*"

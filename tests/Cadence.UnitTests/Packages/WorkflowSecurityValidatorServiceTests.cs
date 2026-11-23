@@ -378,6 +378,10 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
     [InlineData(".agents/skills/tdd/SKILL.md", false)]
     [InlineData(".github/pull_request_template.md", false)]
     [InlineData(".github/workflows/ci.yml", false)]
+    [InlineData(".github/dependabot.yml", false)]
+    [InlineData(".config/dotnet-tools.json", false)]
+    [InlineData("Directory.Packages.props", false)]
+    [InlineData("pnpm-workspace.yaml", false)]
     [InlineData("scripts/setup_wizard.sh", false)]
     [InlineData("docs/migration/phase0/04_scaffold_solution.sh", false)]
     [InlineData("README.md", true)]
@@ -393,6 +397,34 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
             return;
         }
 
+        string output = RunLiveClassifyScript(changedFile);
+        output.Should().Contain($"is_safe={(expectedSafe ? "true" : "false")}",
+            $"'{changedFile}' must classify as is_safe={expectedSafe}");
+    }
+
+    [Theory]
+    [InlineData(".github/dependabot.yml")]
+    [InlineData(".config/dotnet-tools.json")]
+    [InlineData("Directory.Build.props")]
+    [InlineData("Directory.Packages.props")]
+    [InlineData("package.json")]
+    [InlineData("apps/web/package.json")]
+    [InlineData("pnpm-workspace.yaml")]
+    [InlineData("pnpm-lock.yaml")]
+    public void CiWorkflowClassifyJob_TriggersContainerScanForDependencyManifests(string changedFile)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string output = RunLiveClassifyScript(changedFile);
+        output.Should().Contain("is_safe=false")
+            .And.Contain("container_scan=true", $"'{changedFile}' must trigger container_scan in classify");
+    }
+
+    private string RunLiveClassifyScript(string changedFile)
+    {
         string ciPath = Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml");
         string classifyLoop = ExtractClassifyLoopFromCiWorkflow(File.ReadAllLines(ciPath));
 
@@ -421,9 +453,7 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         proc.WaitForExit();
 
         proc.ExitCode.Should().Be(0, $"classify script failed on '{changedFile}': {stderr}");
-        string output = File.ReadAllText(githubOutputPath);
-        output.Should().Contain($"is_safe={(expectedSafe ? "true" : "false")}",
-            $"'{changedFile}' must classify as is_safe={expectedSafe}");
+        return File.ReadAllText(githubOutputPath);
     }
 
     [Fact]

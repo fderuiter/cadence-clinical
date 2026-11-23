@@ -367,24 +367,35 @@ public sealed partial class ContainerImagePinTests
     [Fact]
     public void Dependabot_CoversAllDockerDirectoriesAndEnforcesGroupsAndRuntimeIgnores()
     {
-        string dependabot = File.ReadAllText(Path.Combine(Root, ".github", "dependabot.yml"));
+        string dependabotPath = Path.Combine(Root, ".github", "dependabot.yml");
+        string dependabot = File.ReadAllText(dependabotPath);
 
         dependabot.Should().Contain("package-ecosystem: \"nuget\"")
             .And.Contain("dotnet-10-servicing:")
             .And.Contain("dotnet-ai:")
             .And.Contain("aspire:")
             .And.Contain("identitymodel:")
+            .And.Contain("opentelemetry:")
+            .And.Contain("masstransit:")
+            .And.Contain("fluentvalidation:")
+            .And.Contain("ai-providers:")
+            .And.Contain("code-analyzers:")
+            .And.Contain("dotnet-testing:")
+            .And.Contain("nuget-dependencies:")
             .And.Contain("package-ecosystem: \"npm\"")
-            .And.Contain("typescript-eslint:")
-            .And.Contain("vitest:")
-            .And.Contain("playwright:")
-            .And.Contain("vue-vite:")
+            .And.Contain("npm-workspace:")
+            .And.Contain("npm-workspace-major:")
             .And.Contain("package-ecosystem: \"docker\"")
             .And.Contain("dotnet-containers:")
+            .And.Contain("sce-python:")
+            .And.Contain("sce-r:")
             .And.Contain("directory: \"/docker\"")
             .And.Contain("directory: \"/docker/sce/python\"")
             .And.Contain("directory: \"/docker/sce/r\"")
-            .And.Contain("package-ecosystem: \"docker-compose\"");
+            .And.Contain("package-ecosystem: \"docker-compose\"")
+            .And.Contain("local-stack:")
+            .And.Contain("package-ecosystem: \"github-actions\"")
+            .And.Contain("workflow-actions:");
 
         DotnetMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for mcr.microsoft.com/dotnet/*");
@@ -394,17 +405,95 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore version-update:semver-major for Microsoft.EntityFrameworkCore*");
         NugetDotnetEfMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for dotnet-ef");
+        NpmTypesNodeMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for @types/node");
         ScePythonIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+
+        var parseErrors = new List<string>();
+        var blocks = DependencyValidatorService.ParseDependabotUpdates(dependabotPath, parseErrors);
+        parseErrors.Should().BeEmpty();
+        blocks.Should().HaveCount(7);
+        blocks.Select(b => b.ScheduleDay).Distinct(StringComparer.Ordinal)
+            .Should().BeEquivalentTo("monday", "tuesday", "wednesday", "thursday", "friday");
+        blocks.Sum(b => b.OpenPullRequestsLimit ?? 0).Should().Be(DependencyValidatorService.MaxTotalOpenPullRequestsLimit);
+
+        var npmBlock = blocks.Single(b => b.PackageEcosystem == "npm" && b.Directory == "/");
+        npmBlock.ScheduleDay.Should().Be("wednesday");
+        npmBlock.OpenPullRequestsLimit.Should().Be(DependencyValidatorService.MaxNpmOpenPullRequestsLimit);
+    }
+
+    [Fact]
+    public void Dependabot_EnforcesFullGroupCoverageAcrossAllRepositoryDependencies()
+    {
+        var parseErrors = new List<string>();
+        var blocks = DependencyValidatorService.ParseDependabotUpdates(
+            Path.Combine(Root, ".github", "dependabot.yml"),
+            parseErrors);
+        parseErrors.Should().BeEmpty();
+
+        var nugetBlock = blocks.Single(b => b.PackageEcosystem == "nuget" && b.Directory == "/");
+        var nugetPins = XDocument.Load(Path.Combine(Root, "Directory.Packages.props"))
+            .Descendants("PackageVersion")
+            .Select(e => e.Attribute("Include")!.Value)
+            .ToList();
+        nugetPins.Should().HaveCount(64);
+
+        foreach (string pin in nugetPins.Append("dotnet-ef"))
+        {
+            DependencyValidatorService.FindMatchingGroup(pin, nugetBlock)
+                .Should().NotBeNullOrWhiteSpace($"NuGet dependency '{pin}' must belong to a Dependabot group");
+        }
+
+        DependencyValidatorService.FindMatchingGroup("Microsoft.EntityFrameworkCore.Design", nugetBlock).Should().Be("dotnet-10-servicing");
+        DependencyValidatorService.FindMatchingGroup("Anthropic", nugetBlock).Should().Be("ai-providers");
+        DependencyValidatorService.FindMatchingGroup("ModelContextProtocol", nugetBlock).Should().Be("ai-providers");
+        DependencyValidatorService.FindMatchingGroup("Microsoft.CodeAnalysis.NetAnalyzers", nugetBlock).Should().Be("code-analyzers");
+        DependencyValidatorService.FindMatchingGroup("SonarAnalyzer.CSharp", nugetBlock).Should().Be("code-analyzers");
+        DependencyValidatorService.FindMatchingGroup("xunit.v3", nugetBlock).Should().Be("dotnet-testing");
+        DependencyValidatorService.FindMatchingGroup("Polly", nugetBlock).Should().Be("nuget-dependencies");
+        DependencyValidatorService.FindMatchingGroup("dotnet-ef", nugetBlock).Should().Be("nuget-dependencies");
+
+        var npmBlock = blocks.Single(b => b.PackageEcosystem == "npm" && b.Directory == "/");
+        var npmPackages = CollectAllWorkspaceNpmPackages();
+        npmPackages.Should().HaveCount(37);
+        foreach (string pkg in npmPackages)
+        {
+            DependencyValidatorService.FindMatchingGroup(pkg, npmBlock, "minor").Should().Be("npm-workspace");
+            DependencyValidatorService.FindMatchingGroup(pkg, npmBlock, "patch").Should().Be("npm-workspace");
+            if (!string.Equals(pkg, "@types/node", StringComparison.Ordinal))
+            {
+                DependencyValidatorService.FindMatchingGroup(pkg, npmBlock, "major").Should().Be("npm-workspace-major");
+            }
+        }
+
+        var composeBlock = blocks.Single(b => b.PackageEcosystem == "docker-compose" && b.Directory == "/docker");
+        var composeImages = ComposeImageLine().Matches(File.ReadAllText(Path.Combine(Root, "docker", "docker-compose.yml")))
+            .Select(m => m.Groups["image"].Value.Split(':')[0])
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        composeImages.Should().HaveCount(6);
+        foreach (string image in composeImages)
+        {
+            DependencyValidatorService.FindMatchingGroup(image, composeBlock).Should().Be("local-stack");
+        }
+
+        var actionsBlock = blocks.Single(b => b.PackageEcosystem == "github-actions" && b.Directory == "/");
+        var workflowActions = CollectAllExternalWorkflowActions();
+        workflowActions.Should().HaveCount(14);
+        foreach (string action in workflowActions)
+        {
+            DependencyValidatorService.FindMatchingGroup(action, actionsBlock).Should().Be("workflow-actions");
+        }
     }
 
     [Fact]
     public void DependencyValidatorService_FailsClosedOnMalformedJsonAndPassesOnCleanWorkspace()
     {
         DependencyValidatorService.ValidateDependencies(Root).Should().Be(0,
-            "HEAD manifests must pass JSON validation and client crypto checks");
+            "HEAD manifests must pass JSON validation, Dependabot batching coverage, and client crypto checks");
 
         string emptyTemp = CreateTempDir();
         try
@@ -423,6 +512,218 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+    }
+
+    [Fact]
+    public void DependencyValidatorService_RejectsUngroupedDependenciesSplitNpmAndScheduleViolations()
+    {
+        // 1. Ungrouped NuGet dependency fails closed when catch-all group is absent.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            ["Directory.Packages.props"] = """
+                <Project>
+                  <ItemGroup>
+                    <PackageVersion Include="Polly" Version="8.6.5" />
+                  </ItemGroup>
+                </Project>
+                """,
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml("nuget", "/", "monday", 1, "dotnet-ai:\n        patterns:\n          - \"Microsoft.Extensions.AI*\""),
+        });
+
+        // 2. Ungrouped npm package in pnpm-workspace.yaml catalog fails closed.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            ["package.json"] = """{ "name": "fixture", "private": true }""",
+            ["pnpm-workspace.yaml"] = "packages:\n  - packages/*\ncatalog:\n  zod: ^3.24.2\n",
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml("npm", "/", "wednesday", 1, "vitest:\n        patterns:\n          - \"vitest*\""),
+        });
+
+        // 3. Splitting npm minor/patch updates across multiple groups fails closed.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            ["package.json"] = """{ "devDependencies": { "vitest": "^4.0.0", "vue": "^3.5.0" } }""",
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml(
+                "npm",
+                "/",
+                "wednesday",
+                1,
+                "vitest:\n        patterns:\n          - \"vitest*\"\n      vue:\n        patterns:\n          - \"*\""),
+        });
+
+        // 4. npm open-pull-requests-limit > 1 fails closed.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            ["package.json"] = """{ "devDependencies": { "vitest": "^4.0.0" } }""",
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml("npm", "/", "wednesday", 2, "npm-workspace:\n        patterns:\n          - \"*\""),
+        });
+
+        // 5. Unstaggered multi-block schedules on the same weekday fail closed.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            [".github/dependabot.yml"] = """
+                version: 2
+                updates:
+                  - package-ecosystem: "nuget"
+                    directory: "/"
+                    schedule:
+                      interval: "weekly"
+                      day: "monday"
+                    open-pull-requests-limit: 1
+                    groups:
+                      all-nuget:
+                        patterns:
+                          - "*"
+                  - package-ecosystem: "github-actions"
+                    directory: "/"
+                    schedule:
+                      interval: "weekly"
+                      day: "monday"
+                    open-pull-requests-limit: 1
+                    groups:
+                      workflow-actions:
+                        patterns:
+                          - "*"
+                """,
+        });
+
+        // 6. NuGet open-pull-requests-limit > 3 or total open-pull-requests-limit > 9 fails closed.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml("nuget", "/", "monday", 4, "all-nuget:\n        patterns:\n          - \"*\""),
+        });
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            [".github/dependabot.yml"] = string.Join(
+                "\n",
+                "version: 2",
+                "updates:",
+                BuildUpdateEntry("nuget", "/", "monday", 3, "g1"),
+                BuildUpdateEntry("npm", "/", "wednesday", 1, "g2"),
+                BuildUpdateEntry("docker", "/docker", "tuesday", 1, "g3"),
+                BuildUpdateEntry("docker", "/docker/a", "tuesday", 1, "g4"),
+                BuildUpdateEntry("docker", "/docker/b", "thursday", 1, "g5"),
+                BuildUpdateEntry("docker", "/docker/c", "thursday", 1, "g6"),
+                BuildUpdateEntry("docker-compose", "/docker", "friday", 1, "g7"),
+                BuildUpdateEntry("github-actions", "/", "friday", 1, "g8")),
+        });
+
+        // 7. Ungrouped docker-compose image or workflow action fails closed.
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            ["docker/docker-compose.yml"] = "services:\n  db:\n    image: postgres:17-alpine@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", // pragma: allowlist secret
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml("docker-compose", "/docker", "tuesday", 1, "only-nginx:\n        patterns:\n          - \"nginx*\""),
+        });
+        AssertDependabotFixtureFails(new Dictionary<string, string>
+        {
+            [".github/workflows/ci.yml"] = "name: CI\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6\n", // pragma: allowlist secret
+            [".github/dependabot.yml"] = BuildMinimalDependabotYaml("github-actions", "/", "friday", 1, "only-node:\n        patterns:\n          - \"actions/setup-node*\""),
+        });
+    }
+
+    private static string BuildMinimalDependabotYaml(string ecosystem, string directory, string day, int prLimit, string groupsBody) =>
+        $$"""
+        version: 2
+        updates:
+          - package-ecosystem: "{{ecosystem}}"
+            directory: "{{directory}}"
+            schedule:
+              interval: "weekly"
+              day: "{{day}}"
+            open-pull-requests-limit: {{prLimit}}
+            groups:
+              {{groupsBody}}
+        """;
+
+    private static string BuildUpdateEntry(string ecosystem, string directory, string day, int prLimit, string groupName) =>
+        $$"""
+          - package-ecosystem: "{{ecosystem}}"
+            directory: "{{directory}}"
+            schedule:
+              interval: "weekly"
+              day: "{{day}}"
+            open-pull-requests-limit: {{prLimit}}
+            groups:
+              {{groupName}}:
+                patterns:
+                  - "*"
+        """;
+
+    private static void AssertDependabotFixtureFails(IReadOnlyDictionary<string, string> files)
+    {
+        string tempDir = CreateTempDir();
+        try
+        {
+            foreach (var (relativePath, content) in files)
+            {
+                string fullPath = Path.Combine(tempDir, relativePath);
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                File.WriteAllText(fullPath, content);
+            }
+
+            DependencyValidatorService.ValidateDependencies(tempDir).Should().Be(1);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private static SortedSet<string> CollectAllWorkspaceNpmPackages()
+    {
+        var packages = new SortedSet<string>(
+            ReadPnpmCatalog(Path.Combine(Root, "pnpm-workspace.yaml")).Keys,
+            StringComparer.Ordinal);
+
+        foreach (string manifestPath in DiscoverWorkspacePackageJsonPaths())
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(manifestPath));
+            foreach (string section in PackageDependencySections)
+            {
+                if (!doc.RootElement.TryGetProperty(section, out var deps) || deps.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                foreach (var dep in deps.EnumerateObject())
+                {
+                    string spec = dep.Value.GetString()!;
+                    if (!spec.StartsWith("workspace:", StringComparison.Ordinal))
+                    {
+                        packages.Add(dep.Name);
+                    }
+                }
+            }
+        }
+
+        return packages;
+    }
+
+    private static SortedSet<string> CollectAllExternalWorkflowActions()
+    {
+        var actions = new SortedSet<string>(StringComparer.Ordinal);
+        string workflowsDir = Path.Combine(Root, ".github", "workflows");
+        foreach (string file in Directory.GetFiles(workflowsDir, "*.yml", SearchOption.TopDirectoryOnly))
+        {
+            foreach (string rawLine in File.ReadAllLines(file))
+            {
+                string line = rawLine.Split('#')[0];
+                var match = WorkflowUsesLine().Match(line);
+                if (!match.Success)
+                {
+                    continue;
+                }
+
+                string reference = match.Groups["uses"].Value.Trim('"', '\'');
+                if (reference.StartsWith("./", StringComparison.Ordinal) || reference.StartsWith("docker://", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                actions.Add(reference.Split('@')[0]);
+            }
+        }
+
+        return actions;
     }
 
     private static void AssertMalformedManifestFails(string relativePath, string content)
@@ -622,6 +923,12 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""dotnet-ef""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
     private static partial Regex NugetDotnetEfMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""@types/node""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NpmTypesNodeMajorIgnoreRule();
+
+    [GeneratedRegex(@"^\s*(?:-\s*)?uses:\s*(?<uses>\S+)")]
+    private static partial Regex WorkflowUsesLine();
 
     [GeneratedRegex(@"dependency-name:\s*""python""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major"",\s*""version-update:semver-minor""\]")]
     private static partial Regex ScePythonIgnoreRule();

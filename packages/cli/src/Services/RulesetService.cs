@@ -25,6 +25,9 @@ public static partial class RulesetService
     /// <summary>The status check display name emitted by <see cref="CiGateJobKey"/>.</summary>
     public const string CiGateCheckName = "CI Gate";
 
+    /// <summary>The merge-conflict workflow job key in <c>.github/workflows/conflict-check.yml</c>.</summary>
+    public const string ConflictCheckJobKey = "conflict-check";
+
     /// <summary>The merge-conflict status check display name emitted by <c>.github/workflows/conflict-check.yml</c>.</summary>
     public const string ConflictCheckName = "Check for Merge Conflicts";
 
@@ -100,6 +103,7 @@ public static partial class RulesetService
             }
 
             ValidateCiGateCoverage(workflowJobs, errors);
+            ValidateConflictCheckWorkflow(repoRoot, workflowJobs, errors);
         }
 
         if (errors.Count > 0)
@@ -118,7 +122,7 @@ public static partial class RulesetService
         }
         else
         {
-            output.WriteLine($"{Tag} ✔ Validated CI Gate workflow coverage (no declarative .github/rulesets directory present).");
+            output.WriteLine($"{Tag} ✔ Validated CI Gate workflow coverage and merge-conflict check parity (no declarative .github/rulesets directory present).");
         }
 
         return 0;
@@ -152,6 +156,7 @@ public static partial class RulesetService
             }
 
             ValidateCiGateCoverage(workflowJobs, errors);
+            ValidateConflictCheckWorkflow(repoRoot, workflowJobs, errors);
         }
 
         if (errors.Count > 0)
@@ -722,6 +727,12 @@ public static partial class RulesetService
             errors.Add("Required workflow '.github/workflows/ci.yml' is missing.");
         }
 
+        string conflictPath = Path.Combine(workflowsDir, "conflict-check.yml");
+        if (!File.Exists(conflictPath))
+        {
+            errors.Add("Required workflow '.github/workflows/conflict-check.yml' is missing.");
+        }
+
         string[] workflowFiles = Directory.GetFiles(workflowsDir, "*.yml", SearchOption.TopDirectoryOnly)
             .Concat(Directory.GetFiles(workflowsDir, "*.yaml", SearchOption.TopDirectoryOnly))
             .Order(StringComparer.Ordinal)
@@ -824,6 +835,115 @@ public static partial class RulesetService
 
         ValidateCiGateResultEvaluations(ciGate, expectedValidationJobs, errors);
         ValidateAutomergeWaitsOnCiGate(ciJobs, errors);
+        ValidateClassifyGuardrails(ciJobs, errors);
+    }
+
+    private static void ValidateConflictCheckWorkflow(
+        string repoRoot,
+        IReadOnlyList<WorkflowJobInfo> workflowJobs,
+        List<string> errors)
+    {
+        string conflictPath = Path.Combine(repoRoot, ".github", "workflows", "conflict-check.yml");
+        if (!File.Exists(conflictPath))
+        {
+            return;
+        }
+
+        var conflictJob = workflowJobs.FirstOrDefault(
+            j => j.WorkflowFile == "conflict-check.yml" && j.Key == ConflictCheckJobKey);
+        if (conflictJob is null)
+        {
+            errors.Add($".github/workflows/conflict-check.yml: missing '{ConflictCheckJobKey}' job ('name: {ConflictCheckName}').");
+            return;
+        }
+
+        if (conflictJob.Name != ConflictCheckName)
+        {
+            errors.Add($".github/workflows/conflict-check.yml: job '{ConflictCheckJobKey}' must have 'name: {ConflictCheckName}' (found '{conflictJob.Name}').");
+        }
+
+        if (!IsEligibleBranchStatusCheckJob(conflictJob))
+        {
+            errors.Add($".github/workflows/conflict-check.yml: job '{ConflictCheckJobKey}' ('{ConflictCheckName}') must run unconditionally on 'pull_request'.");
+        }
+
+        if (string.IsNullOrWhiteSpace(conflictJob.StepRun))
+        {
+            errors.Add($".github/workflows/conflict-check.yml: job '{ConflictCheckJobKey}' must define a conflict-evaluation 'run:' step.");
+            return;
+        }
+
+        bool inspectsMergeability = conflictJob.StepRun.Contains("mergeable", StringComparison.Ordinal) ||
+                                    conflictJob.StepEnv.ContainsKey("STATUS");
+        if (inspectsMergeability &&
+            (!conflictJob.StepRun.Contains("CONFLICTING", StringComparison.Ordinal) ||
+             !conflictJob.StepRun.Contains("exit 1", StringComparison.Ordinal)))
+        {
+            errors.Add($".github/workflows/conflict-check.yml: '{ConflictCheckJobKey}' must fail ('exit 1') when mergeable status is 'CONFLICTING'.");
+        }
+    }
+
+    private static void ValidateClassifyGuardrails(IReadOnlyList<WorkflowJobInfo> ciJobs, List<string> errors)
+    {
+        var classify = ciJobs.FirstOrDefault(j => j.Key == "classify");
+        if (classify is null ||
+            (!classify.StepRun.Contains("SAFE=true", StringComparison.Ordinal) &&
+             !classify.StepRun.Contains("is_safe=", StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        if (!classify.StepRun.Contains("SAFE=false", StringComparison.Ordinal))
+        {
+            errors.Add(".github/workflows/ci.yml: 'classify' must fail closed ('SAFE=false') for non-prose changes.");
+        }
+
+        string[] disallowedSafeTokens =
+        [
+            "dependabot.yml",
+            "Directory.Build.props",
+            "Directory.Packages.props",
+            "dotnet-tools.json",
+            "package.json",
+            "pnpm-workspace.yaml",
+            "pnpm-lock.yaml",
+            "docker-compose.yml",
+        ];
+
+        int safeProseMarker = classify.StepRun.IndexOf("Safe prose Markdown file", StringComparison.Ordinal);
+        int elifMarker = safeProseMarker > 0
+            ? classify.StepRun.LastIndexOf("elif ", safeProseMarker, StringComparison.Ordinal)
+            : -1;
+        if (elifMarker >= 0)
+        {
+            string safeAllowlistSlice = classify.StepRun[elifMarker..safeProseMarker]
+                .Replace("\\.", ".", StringComparison.Ordinal);
+            foreach (string token in disallowedSafeTokens.Where(t => safeAllowlistSlice.Contains(t, StringComparison.Ordinal)))
+            {
+                errors.Add($".github/workflows/ci.yml: 'classify' must never admit dependency manifest '{token}' into 'is_safe' automerge.");
+            }
+        }
+
+        if (!classify.StepRun.Contains("CONTAINER_SCAN=true", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        string[] requiredContainerScanTriggers =
+        [
+            ".github/dependabot.yml",
+            ".config/dotnet-tools.json",
+            "Directory.Build.props",
+            "Directory.Packages.props",
+            "package.json",
+            "pnpm-workspace.yaml",
+            "pnpm-lock.yaml",
+        ];
+
+        foreach (string trigger in requiredContainerScanTriggers.Where(t => !classify.StepRun.Contains(t, StringComparison.Ordinal)))
+        {
+            errors.Add($".github/workflows/ci.yml: 'classify' container_scan trigger list is missing '{trigger}'.");
+        }
     }
 
     private static void ValidateCiGateResultEvaluations(
@@ -1418,7 +1538,7 @@ public static partial class RulesetService
     [GeneratedRegex(@"^          ([A-Za-z0-9_]+):\s*(.+)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex StepEnvEntryRegex();
 
-    [GeneratedRegex(@"^        run:\s*(.*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^(?:        |      -\s+)run:\s*(.*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex StepRunRegex();
 
     [GeneratedRegex(@"\bpull_request\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]

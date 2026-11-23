@@ -181,7 +181,7 @@ public static class QualityGates
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` and `Check for Merge Conflicts` workflow coverage, and `classify` manifest guardrails",
             ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
@@ -220,7 +220,7 @@ public static class QualityGates
             "NuGet, pnpm and Python dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
         new("dependencies", ["validate-dependencies"],
-            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
+            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, complete `.github/dependabot.yml` group coverage, staggered weekday schedules and PR-limit caps, and no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
