@@ -94,10 +94,10 @@
             ended on <strong>{{ authStore.trialEndsAtFormatted }}</strong>
           </template>
           <template v-else>has ended</template>. Clinical record viewing,
-          regulated exports, and 21 CFR Part 11 electronic signatures remain
+          regulated exports, study lock closeout, and form signing remain
           available while workspace mutations are paused. Direct tier switching
-          is disabled; submit the structured study scoping intake below to
-          activate full write access.
+          is disabled; submit the structured study scoping intake below with a
+          signed commercial quote token to activate full write access.
         </p>
       </div>
       <a
@@ -227,10 +227,10 @@
       <h2 id="heading-scoped-upgrade">Scoped Study Subscription Activation</h2>
       <p class="plans-section-intro">
         Transitioning a workspace from Trial or Expired status to an Active
-        commercial subscription requires structured study scoping and a purchase
-        order or signed quote reference. Live payment card processing is not
-        used; Clinical Kernel visibility, study grants, blinding, and consent
-        remain governed separately from commercial tiers.
+        commercial subscription requires structured study scoping and a
+        cryptographically signed commercial quote token. Live payment card
+        processing is not used; Clinical Kernel visibility, study grants,
+        blinding, and consent remain governed separately from commercial tiers.
       </p>
 
       <form
@@ -399,13 +399,13 @@
 
           <div class="scoping-field">
             <label for="input-billing-confirmation">
-              Purchase order or signed quote reference
+              Signed commercial quote token
             </label>
             <input
               id="input-billing-confirmation"
               v-model="scopingForm.billingConfirmation"
               type="text"
-              placeholder="e.g. PO-2026-0419 or QUOTE-CAD-882"
+              placeholder="e.g. qtk1.eyJ0ZW5hbnRfaWQiOi..."
               :disabled="isBusy"
             />
             <p

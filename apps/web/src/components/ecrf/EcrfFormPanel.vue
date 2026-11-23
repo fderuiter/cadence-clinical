@@ -1157,7 +1157,6 @@ import {
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
-import { useClinicalStore } from "../../stores/clinical.js";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
 import ScopeLockControls, {
   type DirectScopeLockItem,
@@ -1233,6 +1232,7 @@ const {
   openError,
   saving,
   outcome,
+  lastHydratedSave,
   signing,
   signOutcome,
   canSign,
@@ -1261,7 +1261,33 @@ const plannedActivityId = ref(props.plannedActivityId ?? "");
 const collectedAt = ref("");
 const reason = ref("");
 
-const clinicalStore = getActivePinia() ? useClinicalStore() : null;
+function getActiveWorkspaceContext(): {
+  studyCode: string | null;
+  subjectCode: string | null;
+} {
+  try {
+    const stores = (
+      getActivePinia() as unknown as {
+        _s?: Map<string, Record<string, unknown>>;
+      } | null
+    )?._s;
+    const canvas = stores?.get("studyCanvas");
+    const clinical = stores?.get("clinical");
+    const studyCode =
+      (typeof canvas?.studyCode === "string" && canvas.studyCode) ||
+      (typeof clinical?.activeStudyId === "string" && clinical.activeStudyId) ||
+      null;
+    const subjectCode =
+      (typeof canvas?.subjectCode === "string" && canvas.subjectCode) ||
+      (typeof clinical?.activeSubjectId === "string" &&
+        clinical.activeSubjectId) ||
+      null;
+    return { studyCode, subjectCode };
+  } catch {
+    return { studyCode: null, subjectCode: null };
+  }
+}
+
 const selectedExistingFormId = ref("");
 const availableEnrollmentForms = ref<EcrfFormSummary[]>([]);
 const existingFormsLoading = ref(false);
@@ -1302,7 +1328,7 @@ const standaloneEnrollmentOptions = computed(() => {
   const currentId = enrollmentId.value.trim();
   if (currentId && !opts.some((o) => o.id === currentId)) {
     const subjectLabel =
-      clinicalStore?.activeSubjectId ||
+      getActiveWorkspaceContext().subjectCode ||
       getNodeDisplay(`enrollment:${currentId}`).label;
     opts.unshift({
       id: currentId,
@@ -1367,7 +1393,7 @@ async function ensureStandaloneSitesLoaded() {
   standaloneSitesLoading.value = true;
   try {
     const studies = await kernelApi.listStudies();
-    const activeCode = clinicalStore?.activeStudyId;
+    const activeCode = getActiveWorkspaceContext().studyCode;
     const matchedStudy =
       studies.find((s) => !s.mask && activeCode && s.code === activeCode) ??
       studies.find((s) => !s.mask);
@@ -1737,6 +1763,8 @@ async function confirmSdv() {
   }
 }
 
+const BULK_SDV_CONCURRENCY = 4;
+
 async function submitBulkSdv() {
   const text = bulkSdvReason.value.trim();
   if (
@@ -1747,37 +1775,48 @@ async function submitBulkSdv() {
   )
     return;
   const selected = new Set(selectedSdvItems.value);
-  const targets = unverifiedItems.value.filter((i) => selected.has(i.item_id));
+  const targets = unverifiedItems.value.filter(
+    (i) => selected.has(i.item_id) && Boolean(i.observation_id)
+  );
   if (targets.length === 0) return;
 
   sdvBusy.value = true;
   sdvOutcome.value = null;
-  const results: Array<{ itemId: string; ok: boolean; message: string }> = [];
+  const results = new Array<{ itemId: string; ok: boolean; message: string }>(
+    targets.length
+  );
   const enrollmentRef = `enrollment:${form.value.enrollment_id}`;
   try {
-    for (const target of targets) {
-      if (!target.observation_id) continue;
-      try {
-        await kernelApi.verifyObservation({
-          observationRef: `observation:${target.observation_id}`,
-          enrollmentRef,
-          revision: Number(target.revision),
-          reason: text,
-          idempotencyKey: globalThis.crypto.randomUUID(),
-        });
-        results.push({
-          itemId: target.item_id,
-          ok: true,
-          message: `Verified revision ${target.revision}.`,
-        });
-      } catch (error) {
-        results.push({
-          itemId: target.item_id,
-          ok: false,
-          message: describeAssertionError(error),
-        });
-      }
-    }
+    let nextIndex = 0;
+    const workerCount = Math.min(BULK_SDV_CONCURRENCY, targets.length);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < targets.length) {
+          const index = nextIndex++;
+          const target = targets[index];
+          try {
+            await kernelApi.verifyObservation({
+              observationRef: `observation:${target.observation_id}`,
+              enrollmentRef,
+              revision: Number(target.revision),
+              reason: text,
+              idempotencyKey: globalThis.crypto.randomUUID(),
+            });
+            results[index] = {
+              itemId: target.item_id,
+              ok: true,
+              message: `Verified revision ${target.revision}.`,
+            };
+          } catch (error) {
+            results[index] = {
+              itemId: target.item_id,
+              ok: false,
+              message: describeAssertionError(error),
+            };
+          }
+        }
+      })
+    );
     bulkSdvResults.value = results;
     const failed = new Set(results.filter((r) => !r.ok).map((r) => r.itemId));
     selectedSdvItems.value = selectedSdvItems.value.filter((id) =>
@@ -1799,7 +1838,17 @@ watch(
     pendingSdv.value = null;
     if (loaded && form.value) {
       emit("form-loaded", form.value);
-      void queries.load({ formId: form.value.form_id });
+      const hydrated = lastHydratedSave.value;
+      if (
+        hydrated &&
+        hydrated.formId === form.value.form_id &&
+        hydrated.version === Number(form.value.version)
+      ) {
+        lastHydratedSave.value = null;
+        queries.applySavedValues(form.value.form_id, hydrated.values);
+      } else {
+        void queries.load({ formId: form.value.form_id });
+      }
     } else {
       queries.clear();
     }

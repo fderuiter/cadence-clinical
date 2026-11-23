@@ -151,7 +151,7 @@ import ScopeLockControls, {
  * One participant's data inside Clinical Canvas: opened case report forms, locks, casebooks, and queries on the
  * participant's enrollment (ADR-2622), linking directly to forms and observations in the zoom path.
  */
-defineProps<{
+const props = defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
   formLocation: (formId: string) => RouteLocationRaw;
@@ -225,25 +225,43 @@ async function refreshEnrollmentLocks() {
 let lookupSeq = 0;
 
 watch(
-  [() => canvas.studyCode, () => record.value.enrollmentId],
-  async ([code, enrollmentId]) => {
+  () => record.value.enrollmentId,
+  () => {
+    casebookOutcome.value = null;
+  }
+);
+
+watch(
+  [() => canvas.studyCode, () => Boolean(props.newFormCellLocation)],
+  async ([code, needsSchedule]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
-    if (!code || !enrollmentId) {
+    if (!code) {
       studyRef.value = null;
       activeStudyLocks.value = [];
       return;
     }
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== lookupSeq) return;
-      studyRef.value = resolved;
-      if (resolved) {
-        await refreshEnrollmentLocks();
+    const scheduleTask = needsSchedule
+      ? canvas.loadScheduleOptions(code).catch(() => null)
+      : Promise.resolve(null);
+    const locksTask = (async () => {
+      try {
+        const resolved = await findKernelStudyRef(code);
+        if (seq !== lookupSeq) return;
+        studyRef.value = resolved;
+        if (resolved) {
+          await refreshEnrollmentLocks();
+        } else {
+          activeStudyLocks.value = [];
+        }
+      } catch {
+        if (seq === lookupSeq) {
+          studyRef.value = null;
+          activeStudyLocks.value = [];
+        }
       }
-    } catch {
-      if (seq === lookupSeq) studyRef.value = null;
-    }
+    })();
+    await Promise.all([locksTask, scheduleTask]);
   },
   { immediate: true }
 );

@@ -15,6 +15,7 @@ vi.mock("../../src/api/executionApi", () => ({
       limit: 50,
       offset: 0,
     })),
+    getSubjectCounts: vi.fn(async () => ({ total: 0, counts: {} })),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },

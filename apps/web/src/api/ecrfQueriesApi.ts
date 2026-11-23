@@ -59,6 +59,13 @@ export interface StudyQueryFilters {
   site?: string;
   participant?: string;
   valueChanged?: boolean | null;
+  limit?: number;
+  offset?: number;
+}
+
+/** Optional per-request options for cancellable query reads. */
+export interface QueryReadOptions {
+  signal?: AbortSignal;
 }
 
 /** The kernel and module error codes a query call answers with. */
@@ -114,6 +121,8 @@ interface QueryPaths {
           site?: string;
           participant?: string;
           value_changed?: boolean;
+          limit?: number;
+          offset?: number;
         };
       };
       responses: { 200: JsonContent<FormQueryResponse[]> };
@@ -234,19 +243,27 @@ export const ecrfQueriesApi = {
   },
 
   /** A form's queries, oldest first (GET /api/v1/execution/forms/{formId}/queries). */
-  listForForm(formId: string): Promise<FormQueryResponse[]> {
+  listForForm(
+    formId: string,
+    options?: QueryReadOptions
+  ): Promise<FormQueryResponse[]> {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/{formId}/queries", {
         params: { path: { formId } },
+        ...(options?.signal ? { signal: options.signal } : {}),
       })
     );
   },
 
   /** Every query on an enrollment's forms (GET /api/v1/execution/forms/queries?enrollment_id=). */
-  listForEnrollment(enrollmentId: string): Promise<FormQueryResponse[]> {
+  listForEnrollment(
+    enrollmentId: string,
+    options?: QueryReadOptions
+  ): Promise<FormQueryResponse[]> {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/queries", {
         params: { query: { enrollment_id: enrollmentId } },
+        ...(options?.signal ? { signal: options.signal } : {}),
       })
     );
   },
@@ -254,7 +271,8 @@ export const ecrfQueriesApi = {
   /** Queries across visible enrollments in a study, with optional server-side filters (GET /api/v1/execution/forms/queries?study_id=). */
   listForStudy(
     studyId: string,
-    filters: StudyQueryFilters = {}
+    filters: StudyQueryFilters = {},
+    options?: QueryReadOptions
   ): Promise<FormQueryResponse[]> {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/queries", {
@@ -268,8 +286,11 @@ export const ecrfQueriesApi = {
               typeof filters.valueChanged === "boolean"
                 ? filters.valueChanged
                 : undefined,
+            limit: filters.limit,
+            offset: filters.offset,
           },
         },
+        ...(options?.signal ? { signal: options.signal } : {}),
       })
     );
   },
