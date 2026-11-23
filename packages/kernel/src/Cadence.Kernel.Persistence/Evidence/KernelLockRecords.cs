@@ -325,89 +325,23 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
 /// </summary>
 internal static class BlindedObservationClassifier
 {
-    private static readonly string[] TreatmentMarkers =
-    [
-        "treatment_assignment",
-        "treatment assignment",
-        "treatment_group",
-        "treatment group",
-        "treatment_allocation",
-        "treatment allocation",
-        "randomization",
-        "randomisation",
-        "randomized_to",
-        "assigned_intervention",
-        "investigational_product",
-        "investigational product",
-        "kit_number",
-        "kit number",
-        "dispensation",
-        "unblind",
-        "blinded_treatment",
-        "blinded treatment",
-        "study_drug",
-        "study drug",
-    ];
-
     public static bool IsBlindedTreatment(
         ConceptId conceptId,
         ObservationValue valueAtCut,
         Concept? concept,
         string? collectionSpecId,
         string? itemId,
-        IReadOnlyList<ProtocolDesign> designs)
-    {
-        if (valueAtCut is MissingValue { Reason: NullFlavor.Masked })
-        {
-            return true;
-        }
+        IReadOnlyList<ProtocolDesign> designs) =>
+        BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+            conceptId,
+            valueAtCut,
+            ToMetadata(concept),
+            collectionSpecId,
+            itemId,
+            designs);
 
-        foreach (var design in designs)
-        {
-            if (design.Interventions.Any(i => i.Product?.ConceptId == conceptId))
-            {
-                return true;
-            }
-
-            foreach (var spec in design.CollectionSpecs)
-            {
-                if (collectionSpecId is not null && !string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if ((MatchesMarkers(spec.Id) || MatchesMarkers(spec.Name) || MatchesMarkers(spec.Purpose?.OperationalNeed))
-                    && (collectionSpecId is not null || spec.Items.Any(i => i.Concept.ConceptId == conceptId)))
-                {
-                    return true;
-                }
-
-                foreach (var item in spec.Items)
-                {
-                    bool sameItem = itemId is not null
-                        ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
-                        : item.Concept.ConceptId == conceptId;
-                    if (sameItem && (MatchesMarkers(item.Id) || MatchesMarkers(item.Purpose?.OperationalNeed)))
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return concept is not null
-            && (MatchesMarkers(concept.ExternalCode)
-                || MatchesMarkers(concept.PreferredLabel)
-                || MatchesMarkers(concept.Definition));
-    }
-
-    private static bool MatchesMarkers(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        return Array.Exists(TreatmentMarkers, marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase));
-    }
+    public static BlindedConceptMetadata? ToMetadata(Concept? concept) =>
+        concept is null
+            ? null
+            : new BlindedConceptMetadata(concept.ExternalCode, concept.PreferredLabel, concept.Definition);
 }

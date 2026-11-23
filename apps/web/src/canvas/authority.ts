@@ -346,7 +346,27 @@ const RANDOMIZATION_SCHEME_READ_ROLES = new Set([
   "sponsor_dm",
   "auditor",
 ]);
+const ETMF_READ_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "investigator",
+  "principal_investigator",
+  "authorized_er_physician",
+  "lead_investigator",
+  "crc",
+  "cra",
+  "monitor",
+  "auditor",
+  "external_monitor",
+]);
 const ETMF_STAGE_QC_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "cra",
+  "monitor",
+  "crc",
+]);
+const ETMF_TAG_ROLES = new Set([
   "sysadmin",
   "sponsor_dm",
   "cra",
@@ -359,6 +379,7 @@ const ETMF_REVIEW_QC_ROLES = new Set([
   "cra",
   "monitor",
 ]);
+const ETMF_EXPORT_ROLES = new Set(["sponsor_dm", "cra", "monitor", "auditor"]);
 const TRAINING_CURRICULUM_ASSIGN_ROLES = new Set(["sysadmin", "sponsor_dm"]);
 const TRAINING_DELEGATION_SIGN_ROLES = new Set([
   "principal_investigator",
@@ -382,8 +403,16 @@ export const MONITORING_VISIT_SIGNOFF_ROLE_REASON =
   "Requires Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:sign_off). CRAs schedule/complete visits and compile letters; Monitors sign off.";
 export const DOA_SIGNOFF_ROLE_REASON =
   "Requires Investigator or System Administrator role (ctms_doa:sign_off).";
+export const ETMF_READ_ROLE_REASON =
+  "Requires Clinical Research Coordinator, Investigator, CRA, Monitor, Sponsor Data Manager, Auditor, External Monitor, or System Administrator role (etmf_document:read).";
+export const ETMF_STAGE_ROLE_REASON =
+  "Requires Clinical Research Coordinator, CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:create).";
+export const ETMF_TAG_ROLE_REASON =
+  "Requires Clinical Research Coordinator, CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:tag).";
 export const ETMF_QC_REVIEW_ROLE_REASON =
   "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:transition_clinical_qc).";
+export const ETMF_EXPORT_ROLE_REASON =
+  "Requires Sponsor Data Manager, CRA, Monitor, or Auditor role (etmf_document:export).";
 export const TRAINING_ASSIGN_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (training_curriculum:assign).";
 export const TRAINING_DELEGATION_SIGN_ROLE_REASON =
@@ -464,14 +493,29 @@ export function canReadRandomizationSchemes(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, RANDOMIZATION_SCHEME_READ_ROLES);
 }
 
+/** Read eTMF documents, taxonomy, QC queues, and binder metadata (etmf_document:read). */
+export function canReadEtmf(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_READ_ROLES);
+}
+
 /** Stage site startup / study documents into eTMF intelligence QC (etmf_document:create). */
 export function canStageEtmfQc(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, ETMF_STAGE_QC_ROLES);
 }
 
+/** Update eTMF document taxonomy classifications (etmf_document:tag). */
+export function canTagEtmf(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_TAG_ROLES);
+}
+
 /** Transition staged eTMF documents through clinical QC review (etmf_document:transition_clinical_qc). */
 export function canReviewEtmfQc(auth: AuthorityAuth): boolean {
   return holdsBackendRole(auth, ETMF_REVIEW_QC_ROLES);
+}
+
+/** Export study binder documents or archives (etmf_document:export). */
+export function canExportEtmf(auth: AuthorityAuth): boolean {
+  return holdsBackendRole(auth, ETMF_EXPORT_ROLES);
 }
 
 /** Assign protocol training curricula to personnel (training_curriculum:assign). */

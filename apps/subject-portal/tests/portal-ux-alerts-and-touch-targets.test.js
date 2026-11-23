@@ -112,7 +112,9 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
 
     expect(startBtn.disabled).toBe(true);
     expect(startBtn.getAttribute("aria-busy")).toBe("true");
-    expect(startBtn.textContent).toBe("Loading Survey...");
+    expect(startBtn.textContent).toBe(
+      "Loading Survey...: Slow Daily Pain Survey"
+    );
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     // Resolve with 503 failure -> surfaces inline role="alert" banner + toast, zero window.alert

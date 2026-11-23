@@ -249,6 +249,39 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     }
 
     [Fact]
+    public void Merge_AllowsBaselineEntriesFromMergeHead_WhileRejectingExtraMergeAdditions()
+    {
+        Write("src/Feature.cs", "class Feature {}\n");
+        Commit("feat: branch change");
+
+        Git("checkout", "-q", "main");
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|Upstream\n");
+        Commit("fix: upstream squash commit on main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Git("merge", "--no-commit", "--no-ff", "origin/main");
+        File.Exists(Path.Combine(_dir, ".git", "MERGE_HEAD")).Should().BeTrue();
+
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        Check().Should().Be(0);
+
+        // Sneaking an extra entry into the merge index that exists in neither HEAD nor MERGE_HEAD must still fail.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|Upstream\nK-XS-1|App|Sneaked\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(1);
+        Check().Should().Be(1);
+
+        // Restore upstream's exact baseline, complete the merge commit, and verify branch check passes.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|Upstream\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        Git("commit", "-q", "-m", "Merge remote-tracking branch 'origin/main' into feature");
+
+        Check().Should().Be(0);
+    }
+
+    [Fact]
     public void MissingBaseRef_SkipsLocally_AndFailsInCi()
     {
         Git("update-ref", "-d", "refs/remotes/origin/main");
