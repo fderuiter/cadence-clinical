@@ -409,9 +409,10 @@ public class CadenceSecurityUnitTests
 
         // 3. Baseline kernel/signature routes (/api/v1/kernel/entitlements, /api/v1/kernel/locks, /api/v1/kernel/studies/.../exports, /api/v1/signatures) always pass regardless of module entitlements.
         var zeroFamilyPrincipal = individualPrincipal with { ProductFamilies = [] };
-        foreach (string baselinePath in new[] { "/api/v1/kernel/entitlements", "/api/v1/kernel/locks", "/api/v1/kernel/studies/study:1/exports", "/api/v1/signatures" })
+        foreach (string baselinePath in new[] { "/api/v1/kernel/entitlements", "/api/v1/kernel/locks", "/api/v1/kernel/enrollments/lookup", "/api/v1/kernel/studies/study:1/exports", "/api/v1/signatures" })
         {
             var baselineContext = new DefaultHttpContext();
+            baselineContext.Request.Method = HttpMethods.Get;
             baselineContext.Request.Path = baselinePath;
             baselineContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = zeroFamilyPrincipal;
             bool baselineRan = false;
