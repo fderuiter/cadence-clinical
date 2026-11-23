@@ -7,10 +7,15 @@ using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -74,11 +79,147 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         var opened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), collectedAt), ct);
 
         opened.Should().BeEquivalentTo(new CollectionInstanceState(opened.CollectionInstanceId, subject.Enrollment, version, SpecId, VisitId, collectedAt, 1));
+        opened.VisitTimingAssessment.Should().BeNull("a screening enrollment without an Enrolled period has no reference start");
         await using var db = fixture.CreateContext(tenant);
         (await db.LineageEdges.AsNoTracking().CountAsync(
             e => e.Kind == LineageEdgeKind.GovernedBy && e.FromId == version.Value && e.ToId == opened.CollectionInstanceId.Value, ct))
             .Should().Be(1);
         (await SendAsync(Open(subject, opened.CollectionInstanceId, Tick()), ct)).Error.Should().Be(KernelErrors.AlreadyExists);
+    }
+
+    /// <summary>
+    /// Opening a timed visit for an enrolled participant returns an optional <see cref="VisitTimingAssessment"/> derived
+    /// purely from <c>CollectedAt</c> and the <c>Enrolled</c> period start (ADR-2487, ADR-2507, K-TIME-3, K-TIME-7),
+    /// normalizing legacy Day 0 timings to StudyDay 1, preserving the assessment on idempotent replay, never blocking
+    /// early or late capture, and returning <c>null</c> for unscheduled forms, untimed activities and screening subjects.
+    /// </summary>
+    [Fact(DisplayName = "Open_EvaluatesVisitTimingForEnrolledParticipants_WithoutBlockingOrPersistingSchedule")]
+    [KernelRule("K-TIME-3")]
+    [KernelRule("K-TIME-7")]
+    public async Task OpenEvaluatesVisitTimingForEnrolledParticipantsWithoutBlockingOrPersistingSchedule()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _forms.Protocol.NewStudyAsync(ct);
+        var systolic = await _forms.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Test concept"),
+            ct);
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.baseline", "Day 0 Baseline", "ep.treatment", [ActivityLocation.Site], [SpecId], new ActivityTiming(0, 0, 1)),
+                new PlannedActivity(VisitId, "Week 12 visit", "ep.treatment", [ActivityLocation.Site], [SpecId], new ActivityTiming(84, 3, 3)),
+                new PlannedActivity("act.ae", "Adverse event follow-up", "ep.treatment", [ActivityLocation.Site], [SpecId], Timing: null),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(SpecId, "Vital signs", [new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true)]),
+            ],
+        };
+        var version = ProtocolVersionId.New();
+        (await _forms.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
+        var inReview = await _forms.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var signature = await _forms.Protocol.OkAsync(_forms.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        await _forms.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        var effectivity = EffectivityId.New();
+        await _forms.Protocol.OkAsync(new DeclareEffectivity(tenant, effectivity, version, EffectivityScope.Study(), Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
+        var ethicsBytes = System.Text.Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
+        var ethicsVersion = ArtifactVersionId.New();
+        await _forms.Protocol.OkAsync(
+            new RegisterArtifact(
+                tenant,
+                ArtifactId.New(),
+                ethicsVersion,
+                ArtifactKind.EthicsApproval,
+                study,
+                "Ethics approval",
+                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://ethics/timing"),
+                KernelProtocolScenario.Key(),
+                "Filed"),
+            ct);
+        await _forms.Protocol.OkAsync(
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"),
+            ct);
+
+        var studySite = await _forms.Observations.AddStudySiteAsync(tenant, study, ct);
+        var screeningSubject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
+        var subject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
+
+        var enrolledAt = new DateTimeOffset(DateOnly.FromDateTime(Tick().UtcDateTime).AddDays(1), new TimeOnly(9, 30), TimeSpan.Zero);
+        fixture.Clock.Set(enrolledAt.AddHours(3));
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Enrolled, enrolledAt, KernelProtocolScenario.Key(), "Eligible and enrolled"),
+            ct);
+        Tick();
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Randomized, enrolledAt.AddHours(1), KernelProtocolScenario.Key(), "Randomized"),
+            ct);
+        Tick();
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Active, enrolledAt.AddHours(2), KernelProtocolScenario.Key(), "First dose"),
+            ct);
+
+        var day1 = DateOnly.FromDateTime(enrolledAt.UtcDateTime);
+        fixture.Clock.Advance(TimeSpan.FromDays(95));
+
+        // Legacy raw Day 0 baseline visit normalizes to SDTM StudyDay 1 (target == day1).
+        var baselineOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), enrolledAt, visit: "act.baseline"), ct);
+        baselineOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(
+                new PlannedVisit("act.baseline", "Day 0 Baseline", "ep.treatment", 1, 1, 0, 1),
+                day1,
+                day1,
+                day1.AddDays(1),
+                VisitWindowStatus.Open),
+            day1,
+            0,
+            VisitTiming.InWindow,
+            0));
+
+        // Timed Week 12 visit (StudyDay 84 -> offset 83 days, window ±3): Early, InWindow (with replay), and Late all succeed without blocking capture.
+        var targetWeek12 = day1.AddDays(83);
+        var expectedWeek12 = new PlannedVisit(VisitId, "Week 12 visit", "ep.treatment", 1, 84, 3, 3);
+
+        var earlyAt = new DateTimeOffset(targetWeek12.AddDays(-5), new TimeOnly(10, 0), TimeSpan.Zero);
+        var earlyOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), earlyAt), ct);
+        earlyOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.NotYetOpen),
+            targetWeek12.AddDays(-5),
+            -5,
+            VisitTiming.Early,
+            2));
+
+        var inWindowAt = new DateTimeOffset(targetWeek12.AddDays(2), new TimeOnly(14, 15), TimeSpan.Zero);
+        var replayCommand = Open(subject, CollectionInstanceId.New(), inWindowAt);
+        var inWindowOpened = await _forms.Protocol.OkAsync(replayCommand, ct);
+        var replayed = await SendAsync(replayCommand, ct);
+        inWindowOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.Open),
+            targetWeek12.AddDays(2),
+            2,
+            VisitTiming.InWindow,
+            0));
+        replayed.Replayed.Should().BeTrue();
+        replayed.Value.Should().BeEquivalentTo(inWindowOpened);
+
+        var lateAt = new DateTimeOffset(targetWeek12.AddDays(7), new TimeOnly(16, 45), TimeSpan.Zero);
+        var lateOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), lateAt), ct);
+        lateOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.Closed),
+            targetWeek12.AddDays(7),
+            7,
+            VisitTiming.Late,
+            4));
+
+        // Unscheduled forms, untimed event-driven activities, and screening enrollments return null VisitTimingAssessment.
+        (await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), inWindowAt, visit: null), ct))
+            .VisitTimingAssessment.Should().BeNull();
+        (await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), inWindowAt, visit: "act.ae"), ct))
+            .VisitTimingAssessment.Should().BeNull();
+        (await _forms.Protocol.OkAsync(Open(screeningSubject, CollectionInstanceId.New(), inWindowAt), ct))
+            .VisitTimingAssessment.Should().BeNull();
     }
 
     /// <summary>
