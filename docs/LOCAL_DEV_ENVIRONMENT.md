@@ -184,12 +184,13 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 | --------------------------------------- | ------------------------------------------------------------------------- |
 | Add a migration (offline-capable)       | `pnpm cadence db add <module> <MigrationName>`                            |
 | Idempotent SQL script for review        | `pnpm cadence db script [<module\|all>]`                                  |
+| Verify migrations & snapshots offline   | `pnpm cadence migrations verify [<module\|all>]`                          |
 | Reset all 18 local PostgreSQL schemas   | `pnpm cadence db reset` (`--allow-offline` tolerates an offline database) |
 | Apply pending migrations across schemas | `pnpm cadence db migrate [<module\|all>]`                                 |
 | List applied and pending migrations     | `pnpm cadence db list [<module\|all>]`                                    |
 | Seed local development data             | `pnpm cadence db seed [<module\|all>]`                                    |
 
-`scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers that forward directly to `cadence db`. Run `dotnet tool restore` (or `pnpm cadence doctor --auto-fix`) once so local `dotnet-ef` (`10.0.15` in `.config/dotnet-tools.json`) is available, and set `ConnectionStrings__cadence` (or `POSTGRES_CONNECTION_STRING`) before running online `reset`, `migrate`, `list`, or `seed` commands; offline `add`, `script`, `bundle`, and `optimize` commands need no database credentials ([ADR-2498](adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md)).
+`scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin wrappers that forward directly to `cadence db` and `cadence migrations verify`. Run `dotnet tool restore` (or `pnpm cadence doctor --auto-fix`) once so local `dotnet-ef` (`10.0.15` in `.config/dotnet-tools.json`) is available, and set `ConnectionStrings__cadence` (or `POSTGRES_CONNECTION_STRING`) before running online `reset`, `migrate`, `db list`, or `seed` commands; offline `add`, `script` (writing `TestResults/migrations/<module>.sql`), `bundle`, `optimize`, and `migrations verify` commands need no database credentials ([ADR-2498](adr/2026-11-22-unify-cli-database-workflows-and-design-time-fallback.md), [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)).
 
 ## 6. Quality gates and GxP sync
 

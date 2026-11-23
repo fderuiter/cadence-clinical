@@ -115,6 +115,26 @@ public interface IAuthorityStore
         ArgumentNullException.ThrowIfNull(nodes);
         return Task.FromResult<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>>(new Dictionary<NodeRef, EvidenceNodeClassification>());
     }
+
+    /// <summary>
+    /// Resolves scope paths for <paramref name="resources"/> together with treatment-blinding classifications (<c>K-AUTH-4</c>)
+    /// for any <c>observation</c> and <c>validation_finding</c> nodes in the same batch.
+    /// </summary>
+    async Task<(IReadOnlyDictionary<NodeRef, ScopePath> Paths, IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> Evidence)> ResolveVisibilityBatchAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resources);
+        var paths = await PathsOfAsync(tenant, resources, cancellationToken).ConfigureAwait(false);
+        var evidenceCandidates = resources
+            .Select(r => r.Unversioned())
+            .Where(r => r.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding)
+            .Distinct()
+            .ToList();
+        var evidence = evidenceCandidates.Count == 0
+            ? new Dictionary<NodeRef, EvidenceNodeClassification>()
+            : await InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
+        return (paths, evidence);
+    }
 }
 
 /// <summary>

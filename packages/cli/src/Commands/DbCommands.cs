@@ -45,7 +45,7 @@ public static partial class DbCommands
         {
             Description = $"Single persistence module ({string.Join(", ", PersistenceModuleRegistry.AllNames)})",
         };
-        moduleArg.Validators.Add(RejectOptionLikeTokens);
+        moduleArg.Validators.Add(CheckCommand.RejectOptionLikeTokens);
         moduleArg.Validators.Add(argResult =>
         {
             if (argResult.Tokens.Any(static token => string.Equals(token.Value, "all", StringComparison.OrdinalIgnoreCase)))
@@ -58,7 +58,7 @@ public static partial class DbCommands
         {
             Description = "PascalCase EF Core migration name (for example AddVisitWindowIndex)",
         };
-        nameArg.Validators.Add(RejectOptionLikeTokens);
+        nameArg.Validators.Add(CheckCommand.RejectOptionLikeTokens);
 
         command.Arguments.Add(moduleArg);
         command.Arguments.Add(nameArg);
@@ -68,8 +68,14 @@ public static partial class DbCommands
     public static void ConfigureScript(Command command)
     {
         var target = CreateOptionalModuleArgument("Target persistence module name or 'all' (defaults to 'all')");
+        var outputOption = new Option<string?>("--output-dir", "-o")
+        {
+            Description = $"Output directory for generated idempotent SQL files (default: {MigrationToolingService.DefaultScriptRelativeDir})",
+        };
+        outputOption.Validators.Add(CheckCommand.RejectOptionLikeTokens);
         command.Arguments.Add(target);
-        command.SetAction(result => Script(result.GetValue(target) ?? "all"));
+        command.Options.Add(outputOption);
+        command.SetAction(result => Script(result.GetValue(target) ?? "all", result.GetValue(outputOption)));
     }
 
     public static void ConfigureBundle(Command command)
@@ -215,7 +221,7 @@ public static partial class DbCommands
         return 0;
     }
 
-    internal static int Script(string target = "all")
+    internal static int Script(string target = "all", string? outputDir = null)
     {
         if (!PersistenceModuleRegistry.TryResolveTargets(target, out var modules, out string? error))
         {
@@ -229,10 +235,12 @@ public static partial class DbCommands
             return buildExit;
         }
 
+        string resolvedOutputDir = MigrationToolingService.ResolveOutputDirectory(repoRoot, outputDir);
+        Directory.CreateDirectory(resolvedOutputDir);
+
         foreach (var module in modules)
         {
-            string projectDir = Path.GetDirectoryName(Path.Combine(repoRoot, module.ProjectPath))!;
-            string outputFile = Path.Combine(projectDir, module.MigrationsDir, "idempotent_migration.sql");
+            string outputFile = Path.Combine(resolvedOutputDir, $"{module.Name}.sql");
             AnsiConsole.MarkupLine($"[cyan]==> [[{Markup.Escape(module.Name)}]] Writing idempotent SQL script...[/]");
 
             List<string> efArgs = ["migrations", "script", "--idempotent", "--project", module.ProjectPath, "--context", module.DbContextName, "--output", outputFile];
@@ -262,10 +270,12 @@ public static partial class DbCommands
         }
 
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string outputDir = Path.Combine(repoRoot, MigrationToolingService.DefaultScriptRelativeDir);
+        Directory.CreateDirectory(outputDir);
+
         foreach (var module in modules)
         {
-            string projectDir = Path.GetDirectoryName(Path.Combine(repoRoot, module.ProjectPath))!;
-            string outputFile = Path.Combine(projectDir, "migration_bundle");
+            string outputFile = Path.Combine(outputDir, $"{module.Name}_migration_bundle");
             AnsiConsole.MarkupLine($"[cyan]==> [[{Markup.Escape(module.Name)}]] Building self-contained migration bundle...[/]");
 
             int exitCode = RunDotnetEf(
@@ -460,7 +470,7 @@ public static partial class DbCommands
 
     private static bool TryEnsureTargetSchema(
         string connectionString,
-        PersistenceModule module,
+        PersistenceModuleDescriptor module,
         [NotNullWhen(false)] out string? error)
     {
         if (!SafeSchemaIdentifierRegex().IsMatch(module.Schema))
@@ -575,15 +585,7 @@ public static partial class DbCommands
             Arity = ArgumentArity.ZeroOrOne,
             Description = description,
         };
-        arg.Validators.Add(RejectOptionLikeTokens);
+        arg.Validators.Add(CheckCommand.RejectOptionLikeTokens);
         return arg;
-    }
-
-    private static void RejectOptionLikeTokens(ArgumentResult result)
-    {
-        foreach (var token in result.Tokens.Where(static t => t.Value.StartsWith('-')))
-        {
-            result.AddError($"Unrecognized option '{token.Value}'.");
-        }
     }
 }

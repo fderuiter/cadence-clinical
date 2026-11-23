@@ -60,11 +60,16 @@ public class CliDatabaseWorkflowTests
         var doc = XDocument.Load(exporterCsproj);
         var referencedCsprojs = doc.Descendants("ProjectReference")
             .Select(static el => Path.GetFileNameWithoutExtension(((string?)el.Attribute("Include") ?? string.Empty).Replace('\\', '/')))
-            .Where(static name => !string.Equals(name, "Cadence.Database", StringComparison.Ordinal))
+            .Where(static name => !string.Equals(name, "Cadence.Database", StringComparison.Ordinal) &&
+                                  !string.Equals(name, "Cadence.ToolingCore", StringComparison.Ordinal))
             .ToArray();
 
         PersistenceModuleRegistry.All.Select(static m => m.AssemblyName)
             .Should().BeEquivalentTo(referencedCsprojs);
+        PersistenceModuleRegistry.All.Select(static m => m.AssemblyName)
+            .Should().BeEquivalentTo(PersistenceModuleCatalog.All.Select(static m => m.AssemblyName));
+        PersistenceModuleRegistry.AllSchemas
+            .Should().BeEquivalentTo(PersistenceModuleCatalog.All.Select(static m => m.Schema));
     }
 
     [Fact]
@@ -78,6 +83,10 @@ public class CliDatabaseWorkflowTests
         PersistenceModuleRegistry.TryResolveTargets("execution-module", out var single, out string? errSingle).Should().BeTrue();
         errSingle.Should().BeNull();
         single.Should().ContainSingle().Which.Schema.Should().Be("execution");
+
+        PersistenceModuleRegistry.TryResolveTargets("executionmodule", out var aliasMatch, out string? errAlias).Should().BeTrue();
+        errAlias.Should().BeNull();
+        aliasMatch.Should().ContainSingle().Which.Name.Should().Be("execution-module");
 
         PersistenceModuleRegistry.TryResolveTargets("nonexistent", out var none, out string? errUnknown).Should().BeFalse();
         none.Should().BeEmpty();

@@ -18,7 +18,7 @@ namespace Cadence.ToolingCore.Services;
 /// <param name="MigrationsDir">Project-relative path to the EF Core migrations directory.</param>
 /// <param name="CompiledModelsNamespace">Target C# namespace for <c>dotnet ef dbcontext optimize</c> output.</param>
 /// <param name="SupportsSeed">Whether the module project exposes a standalone <c>--seed</c> CLI entrypoint.</param>
-public sealed record PersistenceModule(
+public sealed record PersistenceModuleDescriptor(
     string Name,
     string AssemblyName,
     string DbContextName,
@@ -39,7 +39,7 @@ public static class PersistenceModuleRegistry
     /// All 18 persistence modules in canonical migration order (<c>kernel</c> first, followed by composition-host modules
     /// and standalone clinical services).
     /// </summary>
-    public static IReadOnlyList<PersistenceModule> All { get; } =
+    public static IReadOnlyList<PersistenceModuleDescriptor> All { get; } =
     [
         new(
             "kernel",
@@ -96,12 +96,23 @@ public static class PersistenceModuleRegistry
     /// <summary>All 18 CLI module names in canonical order.</summary>
     public static IReadOnlyList<string> AllNames { get; } = All.Select(static m => m.Name).ToArray();
 
-    /// <summary>Looks up a single persistence module by its CLI name (case-insensitive).</summary>
-    public static bool TryGet(string name, [NotNullWhen(true)] out PersistenceModule? module)
+    /// <summary>Looks up a single persistence module by its CLI name or alias (case-insensitive).</summary>
+    public static bool TryGet(string name, [NotNullWhen(true)] out PersistenceModuleDescriptor? module)
     {
-        module = string.IsNullOrWhiteSpace(name)
-            ? null
-            : All.FirstOrDefault(candidate => string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            module = null;
+            return false;
+        }
+
+        string normalized = name.Trim();
+        if (string.Equals(normalized, "executionmodule", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "execution_module", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = "execution-module";
+        }
+
+        module = All.FirstOrDefault(candidate => string.Equals(candidate.Name, normalized, StringComparison.OrdinalIgnoreCase));
         return module is not null;
     }
 
@@ -110,7 +121,7 @@ public static class PersistenceModuleRegistry
     /// </summary>
     public static bool TryResolveTargets(
         string? target,
-        out IReadOnlyList<PersistenceModule> modules,
+        out IReadOnlyList<PersistenceModuleDescriptor> modules,
         [NotNullWhen(false)] out string? error)
     {
         string normalized = string.IsNullOrWhiteSpace(target) ? "all" : target.Trim();
@@ -133,7 +144,7 @@ public static class PersistenceModuleRegistry
         return false;
     }
 
-    private static PersistenceModule CreateStandaloneService(string name, string pascalName) =>
+    private static PersistenceModuleDescriptor CreateStandaloneService(string name, string pascalName) =>
         new(
             name,
             $"Cadence.Apps.{pascalName}",

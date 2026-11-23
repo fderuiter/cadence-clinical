@@ -101,6 +101,12 @@ public static class Program
         AddCommand(db, "optimize", "Generates pre-compiled EF Core models for a persistence module or all 18 modules", DbCommands.ConfigureOptimize);
         AddCommand(db, "seed", "Runs deterministic development seeders where supported and prints bootstrap guidance", DbCommands.ConfigureSeed);
 
+        var migrations = AddBranch(root, "migrations", "Unified EF Core migration tooling across all 18 persistence modules");
+        AddCommand(migrations, "add", "Scaffolds a new EF Core migration for a persistence module", MigrationCommands.ConfigureAdd);
+        AddCommand(migrations, "script", "Generates idempotent SQL review scripts in TestResults/migrations/", MigrationCommands.ConfigureScript);
+        AddCommand(migrations, "list", "Lists migrations across one or all 18 persistence modules", MigrationCommands.ConfigureList);
+        AddCommand(migrations, "verify", "Verifies snapshots, .Designer.cs companions, attributes and DDL uniqueness across modules", MigrationCommands.ConfigureVerify);
+
         var settings = AddBranch(root, "settings", "Manage microservice configuration settings models and template exports");
         AddCommand(settings, "export", "Checks that environment variables read in code are listed in .env.example and docs", ToolCommands.ConfigureExtractEnvVars);
 
