@@ -104,3 +104,9 @@ import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
 </script>
+
+<style scoped>
+.history-card {
+  min-width: 0;
+}
+</style>
