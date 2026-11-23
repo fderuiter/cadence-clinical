@@ -33,6 +33,7 @@ const mockStreamEnrollmentCasebook = vi.fn();
 const mockTriggerDownload = vi.fn();
 const mockSearch = vi.fn();
 const mockGetChildren = vi.fn();
+const mockGetNode = vi.fn();
 const mockGetObservation = vi.fn();
 const mockGetZoomPath = vi.fn();
 
@@ -58,6 +59,7 @@ vi.mock("../../src/api/kernelApi", async () => {
         mockStreamEnrollmentCasebook(...args),
       search: (...args: unknown[]) => mockSearch(...args),
       getChildren: (...args: unknown[]) => mockGetChildren(...args),
+      getNode: (...args: unknown[]) => mockGetNode(...args),
       getObservation: (...args: unknown[]) => mockGetObservation(...args),
       getZoomPath: (...args: unknown[]) => mockGetZoomPath(...args),
     },
@@ -153,6 +155,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       },
     ]);
     mockGetChildren.mockResolvedValue([]);
+    mockGetNode.mockRejectedValue(new Error("unmocked getNode"));
     mockGetStudyLockReadiness.mockResolvedValue({
       study_ref: STUDY_REF,
       scope_ref: STUDY_REF,
@@ -1303,5 +1306,128 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(frozenWrapper.find("#participant-lock-freeze").exists()).toBe(false);
     expect(frozenWrapper.find("#participant-lock-lock").exists()).toBe(true);
     frozenWrapper.unmount();
+  });
+
+  it("resolves person locked_by references to human labels, offers cascading scope pickers without raw kind:uuid inputs, and collapses load diagnostics", async () => {
+    const siteRef = "study_site:01960000-0000-7000-8000-000000000017";
+    const dmPersonRef = "person:01960000-0000-7000-8000-000000000099";
+    mockGetChildren.mockImplementation(async (parentRef: string) => {
+      if (parentRef === STUDY_REF) {
+        return [
+          {
+            node: {
+              ref: siteRef,
+              kind: "study_site",
+              code: "017",
+              title: "Boston General",
+              status: "Active",
+              mask: null,
+            },
+            edge_kind: "Contains",
+          },
+        ];
+      }
+      if (parentRef === siteRef) {
+        return [
+          {
+            node: {
+              ref: ENROLLMENT_REF,
+              kind: "enrollment",
+              code: "SUBJ-017-01",
+              title: "SUBJ-017-01",
+              status: "Enrolled",
+              mask: null,
+            },
+            edge_kind: "Contains",
+          },
+        ];
+      }
+      return [];
+    });
+    mockGetNode.mockImplementation(async (ref: string) => {
+      if (ref === dmPersonRef) {
+        return {
+          ref,
+          kind: "person",
+          code: "DM-01",
+          title: "Dr. Morgan Vance",
+          status: "Active",
+          mask: null,
+        };
+      }
+      return {
+        ref,
+        kind: "study",
+        code: "CAD-101",
+        title: "CAD-101",
+        status: "Active",
+        mask: null,
+      };
+    });
+    mockListStudyLocks
+      .mockRejectedValueOnce(new Error("Upstream lock projection timeout"))
+      .mockResolvedValueOnce({
+        study_ref: STUDY_REF,
+        as_of: null,
+        locks: [
+          {
+            ref: `assertion:${LOCK_ID}`,
+            study_ref: STUDY_REF,
+            scope_ref: ENROLLMENT_REF,
+            scope_kind: "enrollment",
+            subject_code: "SUBJ-017-01",
+            kind: "Frozen",
+            masked: false,
+            mask: null,
+            locked_by: dmPersonRef,
+            locked_at: "2026-10-15T10:00:00Z",
+            reason_for_change: "Interim review cut",
+            attestation_meaning: "Approved",
+            released: false,
+            released_at: null,
+          },
+        ],
+      });
+
+    const failedWrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    const errorDisclosure = failedWrapper.find(
+      "#study-locks-load-error details.support-details"
+    );
+    expect(errorDisclosure.exists()).toBe(true);
+    expect(errorDisclosure.attributes("open")).toBeUndefined();
+    expect(errorDisclosure.text()).toContain(
+      "Upstream lock projection timeout"
+    );
+    failedWrapper.unmount();
+
+    const wrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
+    expect(wrapper.html()).not.toContain('placeholder="kind:uuid"');
+    expect(wrapper.find('[data-testid="study-locks-table"]').text()).toContain(
+      "DM-01 · Dr. Morgan Vance"
+    );
+
+    await wrapper.find("#lock-apply-scope-kind").setValue("enrollment");
+    await flushPromises();
+
+    const siteSelect = wrapper.find("#lock-picker-site");
+    expect(siteSelect.exists()).toBe(true);
+    expect(siteSelect.text()).toContain("017 — Boston General");
+
+    const enrollmentSelect = wrapper.find("#lock-picker-enrollment");
+    expect(enrollmentSelect.exists()).toBe(true);
+    expect(enrollmentSelect.text()).toContain("SUBJ-017-01");
+
+    await expectNoAxeViolations(wrapper.element);
+    wrapper.unmount();
   });
 });

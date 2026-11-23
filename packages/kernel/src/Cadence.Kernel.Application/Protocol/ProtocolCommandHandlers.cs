@@ -262,7 +262,8 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
                         compiled.FormHash,
                         compiled.OpenRosaXml,
                         compiled.DdfIrJson,
-                        compiled.OdmXml);
+                        compiled.OdmXml,
+                        context.RecordedAt);
 
                     context.Work.Add(snapshot);
 

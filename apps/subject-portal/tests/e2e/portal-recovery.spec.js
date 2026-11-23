@@ -4,6 +4,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const AUDIT_OUTPUT_PATH = "/tmp/artifacts/epro-sync-recovery-audit.json";
+const DEMO_PORTAL_URL = "http://127.0.0.1:5175/subject-portal/";
 
 const auditChecks = {
   manual_sync_clears_suspension_and_reloads_instruments: {
@@ -84,7 +85,7 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/assignments/subject/*", async (route) => {
+  await page.route("**/api/v1/**/assignments/subject/*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -120,7 +121,7 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/instruments**", async (route) => {
+  await page.route("**/api/v1/**/instruments**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -162,7 +163,7 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/compliance", async (route) => {
+  await page.route("**/api/v1/**/compliance", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -177,7 +178,7 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
     });
   });
 
-  await page.route("**/notifications", async (route) => {
+  await page.route("**/api/v1/**/notifications", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -275,7 +276,7 @@ test.describe
       });
     });
 
-    await page.goto("");
+    await page.goto(DEMO_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     // Queue an offline submission and suspend automatic sync after server form update to v2
@@ -382,7 +383,7 @@ test.describe
       });
     });
 
-    await page.goto("");
+    await page.goto(DEMO_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     // Queue 2 valid surveys + 1 server-rejected survey (vssbp: 265 passes local <300 check, triggers server 422)
@@ -479,7 +480,7 @@ test.describe
       });
     });
 
-    await page.goto("");
+    await page.goto(DEMO_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     await page.click("#btn-global-sync-drawer");
@@ -522,7 +523,7 @@ test.describe
     page,
   }) => {
     await setupAuthenticatedPortalRoutes(page);
-    await page.goto("");
+    await page.goto(DEMO_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     await page.click("#task-card-assign_01 .btn-start-task");
@@ -687,7 +688,7 @@ test.describe
     context,
   }) => {
     await setupAuthenticatedPortalRoutes(page);
-    await page.goto("");
+    await page.goto(DEMO_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     async function assertPhoneAndEmail(containerSelector) {
@@ -731,6 +732,14 @@ test.describe
     await page.click("#btn-global-sync-drawer");
     await assertPhoneAndEmail("#sync-drawer-site-contacts");
     await page.click("#btn-close-sync-drawer");
+
+    await context.setOffline(false);
+
+    // Verify PinUnlockModal offline coordinator links on production build (where local PIN master key is active)
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
 
     // Open PinUnlockModal while offline and verify coordinator phone and email links render
     await page.evaluate(async () => {

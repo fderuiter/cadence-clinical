@@ -75,6 +75,15 @@ public interface IAuthorityStore
     }
 
     /// <summary>
+    /// Resolves scope paths for <paramref name="resources"/> together with the subset of unversioned evidence nodes that
+    /// may classify as blinded treatment data (<c>null</c> when the store has not pre-filtered evidence nodes, in which
+    /// case callers inspect all scope-visible evidence candidates via <see cref="InspectEvidenceNodesAsync"/>).
+    /// </summary>
+    async Task<(IReadOnlyDictionary<NodeRef, ScopePath> Paths, IReadOnlySet<NodeRef>? PotentiallyBlindedEvidence)> ResolveVisibilityPathsAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken) =>
+        (await PathsOfAsync(tenant, resources, cancellationToken).ConfigureAwait(false), null);
+
+    /// <summary>
     /// The scope paths of the study sites reached by an object that belongs to no study itself: the study sites where a
     /// participant has an enrollment, or where a site takes part in a study. Empty for any other object.
     /// </summary>
@@ -105,9 +114,9 @@ public interface IAuthorityStore
     Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Resolves the scope path and treatment-blinding classification (<c>K-AUTH-4</c>) of existing <c>observation</c>
-    /// and <c>validation_finding</c> nodes in <paramref name="nodes"/>. Nodes that do not exist in <paramref name="tenant"/>
-    /// or are of other kinds are omitted from the returned dictionary.
+    /// Resolves the scope path and treatment-blinding classification (<c>K-AUTH-4</c>) of existing <c>observation</c>,
+    /// <c>validation_finding</c>, <c>assertion</c>, and <c>form_query</c> nodes in <paramref name="nodes"/>. Nodes that
+    /// do not exist in <paramref name="tenant"/> or are of other kinds are omitted from the returned dictionary.
     /// </summary>
     Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
         TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
@@ -118,7 +127,7 @@ public interface IAuthorityStore
 
     /// <summary>
     /// Resolves scope paths for <paramref name="resources"/> together with treatment-blinding classifications (<c>K-AUTH-4</c>)
-    /// for any <c>observation</c> and <c>validation_finding</c> nodes in the same batch.
+    /// for any <c>observation</c>, <c>validation_finding</c>, <c>assertion</c>, and <c>form_query</c> nodes in the same batch.
     /// </summary>
     async Task<(IReadOnlyDictionary<NodeRef, ScopePath> Paths, IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> Evidence)> ResolveVisibilityBatchAsync(
         TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken)
@@ -127,7 +136,7 @@ public interface IAuthorityStore
         var paths = await PathsOfAsync(tenant, resources, cancellationToken).ConfigureAwait(false);
         var evidenceCandidates = resources
             .Select(r => r.Unversioned())
-            .Where(r => r.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding)
+            .Where(r => r.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery)
             .Distinct()
             .ToList();
         var evidence = evidenceCandidates.Count == 0
@@ -138,7 +147,8 @@ public interface IAuthorityStore
 }
 
 /// <summary>
-/// Resolved scope path and treatment-blinding status of an <c>observation</c> or <c>validation_finding</c> node (K-AUTH-4).
+/// Resolved scope path and treatment-blinding status of an <c>observation</c>, <c>validation_finding</c>,
+/// <c>assertion</c>, or <c>form_query</c> node (K-AUTH-4).
 /// </summary>
 /// <param name="Scope">Where the governing enrollment or study sits on the scope path.</param>
 /// <param name="IsBlinded">True when reading the node reveals blinded treatment allocation or dispensation.</param>
@@ -312,14 +322,23 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         {
             if (await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
             {
-                EvaluatedCondition[] conditions =
-                [
-                    EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
-                    .. qualified ? await QualificationConditionsAsync(request, path, cancellationToken).ConfigureAwait(false) : [],
-                ];
-                return conditions.FirstOrDefault(c => !c.Met) is { } missing
-                    ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
-                    : AuthorizationDecision.Permit(conditions: conditions);
+                return await PermitIfQualifiedAsync(request, token, grant, path, qualified, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (token is "study.export" or "enrollment.export" && path.Study is not null && carrying.Count > 0)
+        {
+            var grantPaths = await store.PathsOfAsync(
+                request.Tenant,
+                [.. carrying.Select(g => NodeRef.For(g.Id))],
+                cancellationToken).ConfigureAwait(false);
+            foreach (var grant in carrying)
+            {
+                var grantPath = grantPaths.GetValueOrDefault(NodeRef.For(grant.Id), ScopePath.TenantWide);
+                if (grantPath.Study == path.Study && await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
+                {
+                    return await PermitIfQualifiedAsync(request, token, grant, grantPath, qualified, cancellationToken).ConfigureAwait(false);
+                }
             }
         }
 
@@ -332,6 +351,24 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
                 GrantCondition,
                 $"Obtain a grant or delegation of {token} covering this {request.Resource.Kind}",
                 [request.Resource, .. carrying.Select(g => NodeRef.For(g.Id))]));
+    }
+
+    private async ValueTask<AuthorizationDecision> PermitIfQualifiedAsync(
+        AuthorizationRequest request,
+        string token,
+        Grant grant,
+        ScopePath qualificationPath,
+        bool qualified,
+        CancellationToken cancellationToken)
+    {
+        EvaluatedCondition[] conditions =
+        [
+            EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
+            .. qualified ? await QualificationConditionsAsync(request, qualificationPath, cancellationToken).ConfigureAwait(false) : [],
+        ];
+        return conditions.FirstOrDefault(c => !c.Met) is { } missing
+            ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
+            : AuthorizationDecision.Permit(conditions: conditions);
     }
 
     private async Task<AuthorizationDecision?> DecideOnGrantAsync(AuthorizationRequest request, CancellationToken cancellationToken)

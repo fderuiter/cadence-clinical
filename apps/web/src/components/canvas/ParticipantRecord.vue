@@ -118,13 +118,16 @@
             :role="casebookOutcome.kind === 'ok' ? 'status' : 'alert'"
             aria-live="polite"
           >
-            {{ casebookOutcome.message }}
-            <code
+            <span>{{ casebookOutcome.message }}</span>
+            <details
               v-if="casebookOutcome.sha256"
-              data-testid="participant-casebook-sha256"
+              class="casebook-digest-disclosure"
             >
-              SHA-256: {{ casebookOutcome.sha256 }}
-            </code>
+              <summary>Verification digest</summary>
+              <code data-testid="participant-casebook-sha256">
+                SHA-256: {{ casebookOutcome.sha256 }}
+              </code>
+            </details>
           </span>
         </div>
       </div>

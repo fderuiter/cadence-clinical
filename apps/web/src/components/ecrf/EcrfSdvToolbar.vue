@@ -39,8 +39,19 @@
     </span>
     <ul>
       <li v-for="held in form.locks" :key="held.lock_id">
-        {{ held.kind }} on {{ held.scope }} by {{ held.locked_by }} at
-        {{ held.locked_at }}: {{ held.reason }}
+        {{ held.kind }} on
+        <NodeRefChip
+          v-if="normalizeLookupNodeRef(String(held.scope))"
+          :node-ref="normalizeLookupNodeRef(String(held.scope))!"
+        />
+        <template v-else>{{ held.scope }}</template>
+        by
+        <NodeRefChip
+          v-if="normalizeLookupNodeRef(String(held.locked_by))"
+          :node-ref="normalizeLookupNodeRef(String(held.locked_by))!"
+        />
+        <template v-else>{{ held.locked_by }}</template>
+        at {{ held.locked_at }}: {{ held.reason }}
       </li>
     </ul>
   </div>
@@ -172,7 +183,9 @@ import {
   toCoveringScopeLocks,
   toDirectScopeLocks,
 } from "../../canvas/kernelLocks";
+import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
 import type { useEcrfSdv } from "../../composables/useEcrfSdv";
+import NodeRefChip from "../canvas/NodeRefChip.vue";
 import ScopeLockControls, {
   type CoveringScopeLockItem,
   type DirectScopeLockItem,
