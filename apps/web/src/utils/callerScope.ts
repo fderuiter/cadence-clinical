@@ -1,7 +1,7 @@
 /**
  * Caller study and site scope helpers for Keycloak OIDC token claims and 403 FORBIDDEN_SCOPE responses.
  *
- * Backend scope guards (ExecutionScopeGuard.cs and CtmsScopeGuard.cs) return RFC 7807 ProblemDetails with
+ * Backend scope guards (ClinicalScopeGuard.cs and CtmsScopeGuard.cs) return RFC 7807 ProblemDetails with
  * HTTP 403 and `code: "FORBIDDEN_SCOPE"` whenever a caller queries or mutates a study or site outside their
  * assigned token scope. Surfacing clear scope-assignment guidance (UX-9) avoids misleading users into thinking
  * eTMF, CTMS, or RTSM services failed.

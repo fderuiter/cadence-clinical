@@ -1,4 +1,4 @@
-# ADR-2650: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security
+# ADR-2660: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
@@ -10,7 +10,7 @@
 
 ## 1. Context & Problem Statement
 
-Following `ADR-2516` and `ADR-2548`, standalone clinical services still maintained four local caller/scope helper classes (`ExecutionScopeGuard`, `CallerIdentity`, `SafetyCaller`, and `PaymentsCaller`), 12 standalone endpoint files that read `HttpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey]` directly or defined private `CallerId` / `ResolveCaller` / `ResolveActor` wrappers, and eight private `OutsideStudy()` helpers building untyped `Results.Problem` responses. This duplication introduced concrete authorization inconsistencies:
+Following `ADR-2516`, `ADR-2548`, and `ADR-2552`, standalone clinical services still maintained four local caller/scope helper classes (`ExecutionScopeGuard`, `CallerIdentity`, `SafetyCaller`, and `PaymentsCaller`), 12 standalone endpoint files that read `HttpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey]` directly or defined private `CallerId` / `ResolveCaller` / `ResolveActor` wrappers, and eight private `OutsideStudy()` helpers building untyped `Results.Problem` responses. This duplication introduced concrete authorization inconsistencies:
 
 1. **Case-Sensitive Site Set Drift:** `SiteAccessEvaluator.CanAccessSite` compares site codes with `StringComparison.OrdinalIgnoreCase`, whereas `ClinicalScopeGuard.ResolveSiteFilter` and `ExecutionScopeGuard.ResolveSiteFilter` constructed `HashSet<string>` instances with `StringComparer.Ordinal` and `ApplyFilters` did not trim selector values, causing mixed-case site assignments (for example `"Site-101"` vs `"site-101"`) to pass single-site admission while dropping records from list endpoints.
 2. **Direct Handler Test Claim Fallback Gaps:** `CallerScope.Principal(HttpContext)` inspected only `GatewayAuthenticationHandler.PrincipalItemKey`, forcing standalone handlers to maintain parallel `ClaimsPrincipal` parsers (`CallerIdentity`, `SafetyCaller`, `PaymentsCaller`) for direct unit tests that bypass the gateway authentication handler.
@@ -18,7 +18,7 @@ Following `ADR-2516` and `ADR-2548`, standalone clinical services still maintain
 
 ## 2. Decision Drivers & Constraints
 
-- **Single Canonical Security Surface (`PRD-SYS-053`, `PRD-SYS-192`, `ADR-2516`, `ADR-2548`):** Standalone clinical services must resolve verified caller identity, audit actor attribution, and study/site narrowing exclusively through `Cadence.Security.Rbac.CallerScope` and `Cadence.Security.Rbac.ClinicalScopeGuard`, with zero standalone endpoint reads of `GatewayAuthenticationHandler.PrincipalItemKey`.
+- **Single Canonical Security Surface (`PRD-SYS-053`, `PRD-SYS-192`, `ADR-2516`, `ADR-2548`, `ADR-2552`):** Standalone clinical services must resolve verified caller identity, workspace tenant scope, audit actor attribution, and study/site narrowing exclusively through `Cadence.Security.Rbac.CallerScope` and `Cadence.Security.Rbac.ClinicalScopeGuard`, with zero standalone endpoint reads of `GatewayAuthenticationHandler.PrincipalItemKey`.
 - **Case-Insensitive Site Parity:** `ClinicalScopeGuard.ResolveSiteFilter`, `ApplyFilters`, and `NarrowToScope<T>` must treat site codes case-insensitively (`StringComparer.OrdinalIgnoreCase` in memory and trimmed uppercase comparison in EF Core expression trees) to match `SiteAccessEvaluator.CanAccessSite`.
 - **Exact HTTP Status & Payload Parity:** Consolidating onto shared helpers must preserve every existing HTTP `401`, `403`, and `404` status code, `ProblemDetails.Title`, `ProblemDetails.Detail`, `extensions["code"]` (`FORBIDDEN_SCOPE`), SCE `OUTSIDE_STUDY_SCOPE` JSON bodies, 255-character `PaymentAuditLog.UserRoles` truncation, and system actor constants (`SeedSystemUser`, `AutoApprovalSystemUser`).
 - **Typed Minimal API Testability:** All `ProblemDetails`-backed 403 paths on `ClinicalScopeGuard` (`Forbidden`, `OutsideStudy`, `Require*`, and `Resolve*`) must return `ProblemHttpResult` so unit and integration tests can inspect `StatusCode` and `ProblemDetails` without executing an `HttpContext` response pipeline.
@@ -35,7 +35,7 @@ Following `ADR-2516` and `ADR-2548`, standalone clinical services still maintain
 
 ### Option 2: Consolidate Caller Attribution and Study/Site Scope Helpers into `CallerScope` and `ClinicalScopeGuard` (Selected)
 
-- **Overview:** Extend `CallerScope.Principal(HttpContext)` to check `GatewayAuthenticationHandler.PrincipalItemKey` first and fall back to authenticated `ClaimsPrincipal` `CadenceClaimTypes.Subject` claims; add `VerifiedUserId`, `RequiredPrincipal`, `RequiredUserId`, `Roles(HttpContext, int maxLength)`, and `ResolveActor` on `CallerScope`; update `ClinicalScopeGuard` to use `StringComparer.OrdinalIgnoreCase` in `ResolveSiteFilter`, trim selectors in `ApplyFilters`, return `ProblemHttpResult` from `Forbidden` and `OutsideStudy`, expose single-site pushdown `ResolveSiteFilter` overloads, and provide `IsUnrestricted`, `NarrowToStudyScope<T>`, and case-insensitive `NarrowToScope<T>` over `IQueryable<T>`; and delete `ExecutionScopeGuard`, `CallerIdentity`, `SafetyCaller`, and `PaymentsCaller`.
+- **Overview:** Extend `CallerScope.Principal(HttpContext)` to check `GatewayAuthenticationHandler.PrincipalItemKey` first and fall back to authenticated `ClaimsPrincipal` `CadenceClaimTypes.Subject` claims; add `VerifiedUserId`, `RequiredPrincipal`, `RequiredUserId`, `Roles(HttpContext, int maxLength)`, and `ResolveActor` on `CallerScope`; update `ClinicalScopeGuard` to use `StringComparer.OrdinalIgnoreCase` in `ResolveSiteFilter`, trim selectors in `ApplyFilters`, enforce gateway-verified workspace tenant scope via `RequireVerifiedTenant` / `requireVerifiedTenant: true` (`ADR-2552`), return `ProblemHttpResult` from `Forbidden` and `OutsideStudy`, expose single-site pushdown `ResolveSiteFilter` overloads, and provide `IsUnrestricted`, `NarrowToStudyScope<T>`, and case-insensitive `NarrowToScope<T>` over `IQueryable<T>`; and delete `ExecutionScopeGuard`, `CallerIdentity`, `SafetyCaller`, and `PaymentsCaller`.
 - **Pros:**
   - Eliminates all standalone caller/scope helper duplication and direct `PrincipalItemKey` coupling across standalone services.
   - Aligns in-memory and EF Core site filtering with `SiteAccessEvaluator.CanAccessSite` (`OrdinalIgnoreCase`).

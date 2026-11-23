@@ -68,7 +68,7 @@ public static class SynonymEndpoints
                 code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -131,7 +131,7 @@ public static class SynonymEndpoints
                 code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -209,8 +209,8 @@ public static class SynonymEndpoints
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
         IResult? scopeDenied = !string.IsNullOrWhiteSpace(effectiveStudyId)
-            ? ClinicalScopeGuard.RequireStudy(httpContext, effectiveStudyId, ClinicalScopeGuard.ForbiddenCode)
-            : ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode);
+            ? ClinicalScopeGuard.RequireStudy(httpContext, effectiveStudyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -229,8 +229,8 @@ public static class SynonymEndpoints
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
         IResult? scopeDenied = !string.IsNullOrWhiteSpace(effectiveStudyId)
-            ? ClinicalScopeGuard.RequireStudy(httpContext, effectiveStudyId, ClinicalScopeGuard.ForbiddenCode)
-            : ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode);
+            ? ClinicalScopeGuard.RequireStudy(httpContext, effectiveStudyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -254,10 +254,15 @@ public static class SynonymEndpoints
                 code: ClinicalScopeGuard.ForbiddenCode);
         }
 
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var existing = await synonymService.GetRuleByIdAsync(id, cancellationToken).ConfigureAwait(false);
         IResult? scopeDenied = existing is not null
             ? RequireSynonymScope(httpContext, existing.Scope, existing.StudyId)
-            : ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode);
+            : ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -287,8 +292,8 @@ public static class SynonymEndpoints
 
     private static IResult? RequireSynonymScope(HttpContext? httpContext, string? scope, string? studyId) =>
         IsGlobalScope(scope)
-            ? ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode)
-            : ClinicalScopeGuard.RequireStudy(httpContext, studyId, ClinicalScopeGuard.ForbiddenCode);
+            ? ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireStudy(httpContext, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
 
     private static bool IsGlobalScope(string? scope) =>
         string.Equals(scope?.Trim(), "ENTERPRISE", StringComparison.OrdinalIgnoreCase)

@@ -94,7 +94,7 @@ public static class SiteComplianceEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyId, payload.SiteId, code: ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyId, payload.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -121,7 +121,7 @@ public static class SiteComplianceEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ClinicalScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -153,7 +153,7 @@ public static class SiteComplianceEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ClinicalScopeGuard.RequireStudyAndSite(http, studyId, siteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(http, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }

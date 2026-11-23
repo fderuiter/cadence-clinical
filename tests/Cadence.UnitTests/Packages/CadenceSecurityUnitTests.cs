@@ -1117,4 +1117,62 @@ public class CadenceSecurityUnitTests
         ClinicalScopeGuard.NarrowToScope(source, anonymousContext, r => r.StudyId, r => r.SiteId)
             .Should().BeEmpty();
     }
+
+    [Fact]
+    public void ClinicalScopeGuard_RequireVerifiedTenant_RejectsGatewayPrincipalWithoutTenant_AndAllowsClaimsFallback()
+    {
+        var tenantlessGatewayContext = new DefaultHttpContext();
+        tenantlessGatewayContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "crc-no-tenant",
+            TenantId = null,
+            Roles = ["crc"],
+            AssignedStudies = ["STUDY-01"],
+            AssignedSites = ["SITE-101"]
+        };
+
+        var denied = ClinicalScopeGuard.RequireVerifiedTenant(tenantlessGatewayContext, ClinicalScopeGuard.ForbiddenCode);
+        denied.Should().NotBeNull();
+        denied!.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        denied.ProblemDetails.Detail.Should().Be(ClinicalScopeGuard.TenantAccessDeniedDetail);
+        denied.ProblemDetails.Extensions["code"].Should().Be(ClinicalScopeGuard.ForbiddenCode);
+
+        ClinicalScopeGuard.RequireStudy(tenantlessGatewayContext, "STUDY-01", ClinicalScopeGuard.ForbiddenCode)
+            .Should().BeNull();
+        ClinicalScopeGuard.RequireStudy(tenantlessGatewayContext, "STUDY-01", ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            .Should().NotBeNull();
+        ClinicalScopeGuard.ResolveStudyFilter(tenantlessGatewayContext, "STUDY-01", out _, out var studyErr, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            .Should().BeFalse();
+        studyErr.Should().NotBeNull();
+        ClinicalScopeGuard.ResolveSiteFilter(tenantlessGatewayContext, "SITE-101", out _, out var siteErr, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            .Should().BeFalse();
+        siteErr.Should().NotBeNull();
+
+        var verifiedGatewayContext = new DefaultHttpContext();
+        verifiedGatewayContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "crc-tenant",
+            TenantId = "tenant_alpha",
+            Roles = ["crc"],
+            AssignedStudies = ["STUDY-01"],
+            AssignedSites = ["SITE-101"]
+        };
+
+        ClinicalScopeGuard.RequireVerifiedTenant(verifiedGatewayContext, ClinicalScopeGuard.ForbiddenCode).Should().BeNull();
+        ClinicalScopeGuard.RequireStudyAndSite(verifiedGatewayContext, "STUDY-01", "SITE-101", ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            .Should().BeNull();
+
+        var claimsOnlyContext = new DefaultHttpContext();
+        claimsOnlyContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(CadenceClaimTypes.Subject, "crc-claims-only"),
+            new Claim(ClaimTypes.Role, "crc"),
+            new Claim(CadenceClaimTypes.StudyIds, "STUDY-01"),
+            new Claim(CadenceClaimTypes.SiteId, "SITE-101")
+        ], authenticationType: "TestAuth"));
+
+        ClinicalScopeGuard.RequireVerifiedTenant(claimsOnlyContext, ClinicalScopeGuard.ForbiddenCode).Should().BeNull();
+        ClinicalScopeGuard.RequireStudyAndSite(claimsOnlyContext, "STUDY-01", "SITE-101", ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            .Should().BeNull();
+    }
 }

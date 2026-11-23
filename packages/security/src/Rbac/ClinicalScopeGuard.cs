@@ -15,7 +15,7 @@ namespace Cadence.Security.Rbac;
 /// <summary>
 /// Shared fail-closed tenant, study, and site scope guard for standalone clinical service handlers.
 /// Enforces identical fail-closed tenant, study, and site boundaries across standalone services
-/// (PRD-CRF-013, PRD-SYS-053, PRD-SYS-192, ADR-2514, ADR-2516, ADR-2548).
+/// (PRD-CRF-013, PRD-SYS-053, PRD-SYS-192, ADR-2514, ADR-2516, ADR-2548, ADR-2552, ADR-2660).
 /// </summary>
 public static class ClinicalScopeGuard
 {
@@ -108,6 +108,23 @@ public static class ClinicalScopeGuard
         return Forbidden(TenantAccessDeniedDetail, code: code);
     }
 
+    /// <summary>
+    /// Rejects gateway-authenticated callers that lack a verified workspace tenant (<see cref="Principal.TenantId"/>),
+    /// while leaving synthetic <see cref="ClaimsPrincipal"/>-only direct unit test contexts unaffected (ADR-2552).
+    /// </summary>
+    public static ProblemHttpResult? RequireVerifiedTenant(
+        HttpContext? httpContext,
+        string? code = null)
+    {
+        if (httpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] is Principal gatewayPrincipal
+            && !HasTenant(gatewayPrincipal))
+        {
+            return Forbidden(TenantAccessDeniedDetail, code: code);
+        }
+
+        return null;
+    }
+
     public static bool CanAccessStudy(HttpContext? httpContext, string? studyId) =>
         StudyAccessEvaluator.CanAccessStudy(ResolvePrincipal(httpContext), studyId);
 
@@ -167,8 +184,16 @@ public static class ClinicalScopeGuard
             string.Equals(s.Trim(), StudyAccessEvaluator.AllStudies, StringComparison.Ordinal))
         && !IsSiteBound(principal);
 
-    public static ProblemHttpResult? RequireAnyStudyScope(HttpContext? httpContext, string? code = null)
+    public static ProblemHttpResult? RequireAnyStudyScope(
+        HttpContext? httpContext,
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (!HasAnyStudyAssignment(principal))
         {
@@ -178,8 +203,16 @@ public static class ClinicalScopeGuard
         return null;
     }
 
-    public static ProblemHttpResult? RequireAnyStudyAndSiteScope(HttpContext? httpContext, string? code = null)
+    public static ProblemHttpResult? RequireAnyStudyAndSiteScope(
+        HttpContext? httpContext,
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (!HasAnyStudyAssignment(principal))
         {
@@ -194,8 +227,16 @@ public static class ClinicalScopeGuard
         return null;
     }
 
-    public static ProblemHttpResult? RequireAllStudies(HttpContext? httpContext, string? code = null)
+    public static ProblemHttpResult? RequireAllStudies(
+        HttpContext? httpContext,
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (principal is null
             || !principal.AssignedStudies.Any(s =>
@@ -210,8 +251,14 @@ public static class ClinicalScopeGuard
     public static ProblemHttpResult? RequireStudy(
         HttpContext? httpContext,
         string? studyId,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (!StudyAccessEvaluator.CanAccessStudy(principal, studyId))
         {
@@ -224,8 +271,14 @@ public static class ClinicalScopeGuard
     public static ProblemHttpResult? RequireSite(
         HttpContext? httpContext,
         string? siteId,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (!SiteAccessEvaluator.CanAccessSite(principal, siteId))
         {
@@ -239,14 +292,15 @@ public static class ClinicalScopeGuard
         HttpContext? httpContext,
         string? studyId,
         string? siteId,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
-        if (RequireStudy(httpContext, studyId, code) is { } studyDenied)
+        if (RequireStudy(httpContext, studyId, code, requireVerifiedTenant) is { } studyDenied)
         {
             return studyDenied;
         }
 
-        return RequireSite(httpContext, siteId, code);
+        return RequireSite(httpContext, siteId, code, requireVerifiedTenant);
     }
 
     public static ProblemHttpResult? RequireStudyAndOptionalSite(
@@ -254,8 +308,14 @@ public static class ClinicalScopeGuard
         string? studyId,
         string? siteId,
         bool allowUnassignedSiteForScopedCaller = false,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (!StudyAccessEvaluator.CanAccessStudy(principal, studyId))
         {
@@ -283,8 +343,16 @@ public static class ClinicalScopeGuard
         string? requestedStudyId,
         out HashSet<string>? allowedStudies,
         out ProblemHttpResult? errorResult,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            allowedStudies = [];
+            errorResult = tenantDenied;
+            return false;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (principal is null)
         {
@@ -337,8 +405,16 @@ public static class ClinicalScopeGuard
         string? requestedSiteId,
         out HashSet<string>? allowedSites,
         out ProblemHttpResult? errorResult,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
+        if (requireVerifiedTenant && RequireVerifiedTenant(httpContext, code) is { } tenantDenied)
+        {
+            allowedSites = [];
+            errorResult = tenantDenied;
+            return false;
+        }
+
         var principal = ResolvePrincipal(httpContext);
         if (principal is null)
         {
@@ -397,16 +473,17 @@ public static class ClinicalScopeGuard
         string? requestedSiteId,
         out HashSet<string>? allowedSites,
         out string? effectiveSingleSiteId,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
         if (!string.IsNullOrWhiteSpace(requestedSiteId))
         {
             allowedSites = null;
             effectiveSingleSiteId = requestedSiteId;
-            return RequireSite(httpContext, requestedSiteId, code);
+            return RequireSite(httpContext, requestedSiteId, code, requireVerifiedTenant);
         }
 
-        if (ResolveSiteFilter(httpContext, null, out allowedSites, out var errorResult, code))
+        if (ResolveSiteFilter(httpContext, null, out allowedSites, out var errorResult, code, requireVerifiedTenant))
         {
             effectiveSingleSiteId = allowedSites is { Count: 1 } ? allowedSites.First() : null;
             return null;
@@ -423,16 +500,17 @@ public static class ClinicalScopeGuard
         string? requestedSiteId,
         out HashSet<string>? allowedSites,
         out ProblemHttpResult? errorResult,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
-        if (RequireStudy(httpContext, studyId, code) is { } studyDenied)
+        if (RequireStudy(httpContext, studyId, code, requireVerifiedTenant) is { } studyDenied)
         {
             allowedSites = [];
             errorResult = studyDenied;
             return false;
         }
 
-        return ResolveSiteFilter(httpContext, requestedSiteId, out allowedSites, out errorResult, code);
+        return ResolveSiteFilter(httpContext, requestedSiteId, out allowedSites, out errorResult, code, requireVerifiedTenant);
     }
 
     public static ProblemHttpResult? RequireStudyAndResolveSingleSiteFilter(
@@ -441,17 +519,18 @@ public static class ClinicalScopeGuard
         string? requestedSiteId,
         out HashSet<string>? allowedSites,
         out string? effectiveSingleSiteId,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
         allowedSites = null;
         effectiveSingleSiteId = requestedSiteId;
 
-        if (RequireStudy(httpContext, studyId, code) is { } studyDenied)
+        if (RequireStudy(httpContext, studyId, code, requireVerifiedTenant) is { } studyDenied)
         {
             return studyDenied;
         }
 
-        return ResolveSingleSiteFilter(httpContext, requestedSiteId, out allowedSites, out effectiveSingleSiteId, code);
+        return ResolveSingleSiteFilter(httpContext, requestedSiteId, out allowedSites, out effectiveSingleSiteId, code, requireVerifiedTenant);
     }
 
     public static bool ResolveStudyAndSiteFilters(
@@ -461,15 +540,16 @@ public static class ClinicalScopeGuard
         out HashSet<string>? allowedStudies,
         out HashSet<string>? allowedSites,
         out ProblemHttpResult? errorResult,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
-        if (!ResolveStudyFilter(httpContext, requestedStudyId, out allowedStudies, out errorResult, code))
+        if (!ResolveStudyFilter(httpContext, requestedStudyId, out allowedStudies, out errorResult, code, requireVerifiedTenant))
         {
             allowedSites = [];
             return false;
         }
 
-        return ResolveSiteFilter(httpContext, requestedSiteId, out allowedSites, out errorResult, code);
+        return ResolveSiteFilter(httpContext, requestedSiteId, out allowedSites, out errorResult, code, requireVerifiedTenant);
     }
 
     public static ProblemHttpResult? ResolveStudyAndSingleSiteFilters(
@@ -479,7 +559,8 @@ public static class ClinicalScopeGuard
         out HashSet<string>? allowedStudies,
         out HashSet<string>? allowedSites,
         out string? effectiveSingleSiteId,
-        string? code = null)
+        string? code = null,
+        bool requireVerifiedTenant = false)
     {
         allowedSites = null;
         effectiveSingleSiteId = requestedSiteId;
@@ -487,18 +568,18 @@ public static class ClinicalScopeGuard
         if (!string.IsNullOrWhiteSpace(requestedStudyId))
         {
             allowedStudies = null;
-            if (RequireStudy(httpContext, requestedStudyId, code) is { } studyDenied)
+            if (RequireStudy(httpContext, requestedStudyId, code, requireVerifiedTenant) is { } studyDenied)
             {
                 return studyDenied;
             }
         }
-        else if (!ResolveStudyFilter(httpContext, null, out allowedStudies, out var studyError, code))
+        else if (!ResolveStudyFilter(httpContext, null, out allowedStudies, out var studyError, code, requireVerifiedTenant))
         {
             allowedStudies = null;
             return studyError;
         }
 
-        return ResolveSingleSiteFilter(httpContext, requestedSiteId, out allowedSites, out effectiveSingleSiteId, code);
+        return ResolveSingleSiteFilter(httpContext, requestedSiteId, out allowedSites, out effectiveSingleSiteId, code, requireVerifiedTenant);
     }
 
     public static IEnumerable<T> ApplyFilters<T>(

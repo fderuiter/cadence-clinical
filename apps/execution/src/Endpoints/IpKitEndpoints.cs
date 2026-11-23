@@ -69,7 +69,7 @@ public static class IpKitEndpoints
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } callerDenied)
+            if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
             {
                 return callerDenied;
             }
@@ -80,7 +80,7 @@ public static class IpKitEndpoints
                 return Results.NotFound(new { detail = $"Certificate '{certificateId}' not found." });
             }
 
-            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId, ClinicalScopeGuard.ForbiddenCode) is { } recordDenied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
             {
                 return recordDenied;
             }
@@ -96,7 +96,7 @@ public static class IpKitEndpoints
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
             {
                 return denied;
             }
@@ -136,14 +136,14 @@ public static class IpKitEndpoints
         string siteId,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode) is { } requestDenied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
         {
             return requestDenied;
         }
 
         foreach (string existingSite in await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false))
         {
-            if (ClinicalScopeGuard.RequireSite(httpContext, existingSite, ClinicalScopeGuard.ForbiddenCode) is { } existingDenied)
+            if (ClinicalScopeGuard.RequireSite(httpContext, existingSite, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } existingDenied)
             {
                 return existingDenied;
             }

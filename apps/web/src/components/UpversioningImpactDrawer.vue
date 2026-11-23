@@ -622,11 +622,9 @@ useFocusTrap(drawerRef, {
   transition: border-color 0.15s ease-in-out;
 }
 
-.drawer-select-input:focus,
-.drawer-text-input:focus {
-  outline: none;
+.drawer-select-input:focus-visible,
+.drawer-text-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.15);
 }
 
 .badge {

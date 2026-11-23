@@ -68,6 +68,10 @@ updates:
       # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0.
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
+      # SonarAnalyzer.CSharp minor upgrades enable new rules solution-wide under TreatWarningsAsErrors (#6030, ADR-2525).
+      - dependency-name: "SonarAnalyzer.CSharp"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"
@@ -172,6 +176,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # PostgreSQL major version is locked across PostgresTestImage, CI, and compose (ADR-2533).
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

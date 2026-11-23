@@ -76,12 +76,22 @@ public sealed record FormQueryResponse(
     DateTimeOffset? EscalatedAt = null,
     string? LastAnsweredBy = null)
 {
+    private const string MaskedLiteral = "masked";
+
     /// <summary>A stored query, with the current revisions of its form's values.</summary>
-    internal static FormQueryResponse From(FormQuery query, IReadOnlyDictionary<ObservationId, int> revisions, FormQueryContext? context = null) =>
-        From(FormQueryState.Of(query, query.VersionIndex), revisions, context);
+    internal static FormQueryResponse From(
+        FormQuery query,
+        IReadOnlyDictionary<ObservationId, int> revisions,
+        FormQueryContext? context = null,
+        bool maskBlinded = false) =>
+        From(FormQueryState.Of(query, query.VersionIndex), revisions, context, maskBlinded);
 
     /// <summary>A query after a command (or reconstructed snapshot), with the current revisions of its form's values.</summary>
-    internal static FormQueryResponse From(FormQueryState state, IReadOnlyDictionary<ObservationId, int> revisions, FormQueryContext? context = null)
+    internal static FormQueryResponse From(
+        FormQueryState state,
+        IReadOnlyDictionary<ObservationId, int> revisions,
+        FormQueryContext? context = null,
+        bool maskBlinded = false)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(revisions);
@@ -98,9 +108,14 @@ public sealed record FormQueryResponse(
             current,
             current > state.Revision,
             Lower(state.Status),
-            question.Text,
-            [.. state.Messages.Select(m => new FormQueryMessageResponse(Lower(m.Kind), m.Text, m.By, m.At, m.ReasonForChange))],
-            raised.By,
+            maskBlinded ? MaskedLiteral : question.Text,
+            [.. state.Messages.Select(m => new FormQueryMessageResponse(
+                Lower(m.Kind),
+                maskBlinded ? MaskedLiteral : m.Text,
+                maskBlinded ? MaskedLiteral : m.By,
+                m.At,
+                maskBlinded ? MaskedLiteral : m.ReasonForChange))],
+            maskBlinded ? MaskedLiteral : raised.By,
             raised.At,
             state.Version,
             context?.StudyId,
@@ -111,13 +126,13 @@ public sealed record FormQueryResponse(
             context?.PlannedActivityId,
             Lower(state.Origin),
             FormQueryEscalationService.ToSnakeCase(state.OwnerRole),
-            state.Assignee,
+            maskBlinded && state.Assignee is not null ? MaskedLiteral : state.Assignee,
             Lower(state.Priority),
             state.OpenedAt,
             state.StatusSince,
             state.DueAt,
             state.EscalatedAt,
-            state.LastAnsweredBy);
+            maskBlinded && state.LastAnsweredBy is not null ? MaskedLiteral : state.LastAnsweredBy);
     }
 
     private static string Lower<T>(T value)

@@ -78,7 +78,7 @@ public static class LabToxicityEndpoints
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.ResolveStudyAndSingleSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.ResolveStudyAndSingleSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -97,6 +97,11 @@ public static class LabToxicityEndpoints
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var existing = await svc.GetReviewByIdAsync(reviewId, ct).ConfigureAwait(false);
         IResult? scopeDenied = existing is not null
             ? ClinicalScopeGuard.RequireStudyAndOptionalSite(
@@ -104,8 +109,9 @@ public static class LabToxicityEndpoints
                 existing.StudyId,
                 existing.SiteId,
                 allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode)
-            : ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode);
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -124,7 +130,7 @@ public static class LabToxicityEndpoints
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }

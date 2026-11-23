@@ -27,20 +27,32 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasConversion(id => id.Value, v => new SubjectId(v));
 
+        builder.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uuid")
+            .IsRequired();
+
         builder.Property(x => x.SubjectCode)
             .HasConversion(c => c.Value, v => new SubjectCode(v))
             .HasMaxLength(255)
             .IsRequired();
-        builder.HasIndex(x => x.SubjectCode).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.SubjectCode })
+            .IsUnique()
+            .HasDatabaseName("IX_clinical_subjects_tenant_id_SubjectCode");
 
         builder.Property(x => x.StudyCode)
             .HasConversion(c => c.Value, v => new StudyCode(v))
             .HasMaxLength(255)
             .IsRequired();
 
-        // Rule 5: sequential enrollment-index invariant, enforced here as a DB-level backstop to the
-        // application-level advisory lock in MIG-SUBJ-013's EnrollNextIndexAsync. See §4.2.
-        builder.HasIndex(x => new { x.StudyCode, x.EnrollmentIndex }).IsUnique();
+        // Rule 5: sequential enrollment-index invariant per workspace tenant and study, enforced here as a DB-level
+        // backstop to the application-level advisory lock in MIG-SUBJ-013's EnrollNextIndexAsync. See §4.2.
+        builder.HasIndex(x => new { x.TenantId, x.StudyCode, x.EnrollmentIndex })
+            .IsUnique()
+            .HasDatabaseName("IX_clinical_subjects_tenant_id_StudyCode_EnrollmentIndex");
+
+        builder.HasIndex(x => new { x.TenantId, x.StudyCode, x.SiteCode, x.Status, x.EnrollmentIndex })
+            .HasDatabaseName("IX_clinical_subjects_tenant_id_StudyCode_SiteCode_Status_EnrollmentIndex");
 
         builder.HasIndex(x => new { x.StudyCode, x.SiteCode, x.Status, x.EnrollmentIndex })
             .HasDatabaseName("IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex");

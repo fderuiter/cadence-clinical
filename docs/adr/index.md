@@ -33,7 +33,8 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2620–2629 | The eCRF on the kernel observation path                                           |
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
-| 2650–2659 | Security (continued)                                                              |
+| 2650–2659 | Web and design system (continued)                                                 |
+| 2660–2669 | Security (continued)                                                              |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -423,7 +424,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-140: Clinical Code Lookup Input Helper in Shared UI Package](2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md) (2026-07-31)
 - [ADR-2298: Resolve Vitest Peer Dependency Conflict in Shared UI Package](2026-07-31-resolve-vitest-peer-dependency-conflict-in-shared-ui-package.md) (2026-07-31)
 - [ADR-2300: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md) (2026-07-31)
-- [ADR-251: Centralized Accessibility Matcher and 80 Percent Coverage Gate](2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md) (2026-08-02) _(Amended by [ADR-2530](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md))_
+- [ADR-251: Centralized Accessibility Matcher and 80 Percent Coverage Gate](2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md) (2026-08-02) _(Amended by [ADR-2530](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) and [ADR-2537](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md))_
 - [ADR-2309: Implement WCAG compliance in shared clinical UI primitives](2026-08-02-implement-wcag-compliance-in-shared-clinical-ui-primitives.md) (2026-08-02)
 - [ADR-254: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md) (2026-08-03)
 - [ADR-2320: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md) (2026-08-03)
@@ -447,6 +448,9 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19)
 - [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 - [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](2026-11-20-share-session-logout-and-signature-primitives.md) (2026-11-20)
+- [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) (2026-11-22)
+- [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) (2026-11-22)
+- [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) (2026-11-22)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -590,7 +594,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) (2026-10-19)
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
 - [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
-- [ADR-2650: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) (2026-11-22)
+- [ADR-2660: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) (2026-11-22)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)
@@ -606,8 +610,10 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) (2026-10-20)
 - [ADR-2535: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots](2026-11-20-forward-verified-ci-gxp-evidence-and-sync-service-migrations.md) (2026-11-20)
 - [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) (2026-11-22)
+- [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) (2026-11-22)
 - [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) (2026-11-20)
 - [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) (2026-11-20)
+- [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](2026-11-21-kernel-site-setup-and-execution-tenancy.md) (2026-11-21)
 - [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)
 - [ADR-2592: Dual Ecosystem Vulnerability Auditor and CEC Chair Adjudications Persistence](2026-09-30-dual-ecosystem-vulnerability-auditor-and-cec-chair-adjudications-persistence.md) (2026-09-30)
 - [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) (2026-10-01)

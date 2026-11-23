@@ -206,7 +206,8 @@ public static partial class SubjectEndpoints
                 request.StudyId,
                 request.SiteId,
                 allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode) is { } scopeDenied)
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -244,7 +245,7 @@ public static partial class SubjectEndpoints
         }
 
         if (!string.IsNullOrWhiteSpace(request.ProtocolVersion?.StudyId)
-            && ClinicalScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId, ClinicalScopeGuard.ForbiddenCode) is { } requestStudyDenied)
+            && ClinicalScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestStudyDenied)
         {
             return requestStudyDenied;
         }
@@ -319,14 +320,14 @@ public static partial class SubjectEndpoints
         ct.ThrowIfCancellationRequested();
 
         IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode)
-            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode);
+            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (studyDenied is not null)
         {
             return studyDenied;
         }
 
-        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode) is { } siteDenied)
+        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } siteDenied)
         {
             return siteDenied;
         }
@@ -358,14 +359,14 @@ public static partial class SubjectEndpoints
         ct.ThrowIfCancellationRequested();
 
         IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode)
-            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode);
+            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (studyDenied is not null)
         {
             return studyDenied;
         }
 
-        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode) is { } siteDenied)
+        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } siteDenied)
         {
             return siteDenied;
         }
@@ -391,6 +392,11 @@ public static partial class SubjectEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
+        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         bool isBlindedCaller = ClinicalScopeGuard.ResolvePrincipal(http)?.UnblindedAccess != true;
 
         if (logger != null)
@@ -410,7 +416,8 @@ public static partial class SubjectEndpoints
                 detail.StudyId.Value,
                 detail.SiteId?.Value,
                 allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode) is { } scopeDenied)
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -494,6 +501,11 @@ public static partial class SubjectEndpoints
     private static async Task<IResult?> GuardSubjectScopeAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
     {
+        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
         return scope is { } s
             ? ClinicalScopeGuard.RequireStudyAndOptionalSite(
@@ -501,12 +513,13 @@ public static partial class SubjectEndpoints
                 s.StudyId.Value,
                 s.SiteId?.Value,
                 allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode)
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true)
             : GuardMissingRecordScope(http);
     }
 
     private static IResult? GuardMissingRecordScope(HttpContext http) =>
-        ClinicalScopeGuard.RequireAnyStudyAndSiteScope(http, ClinicalScopeGuard.ForbiddenCode);
+        ClinicalScopeGuard.RequireAnyStudyAndSiteScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
 
     private static AuthenticatedCaller? ResolveCaller(HttpContext http) =>
         ClinicalScopeGuard.ResolvePrincipal(http) is { UserId.Length: > 0 } p

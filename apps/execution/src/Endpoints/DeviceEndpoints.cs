@@ -126,7 +126,7 @@ public static class DeviceEndpoints
         HttpContext httpContext,
         IDeviceApplicationService deviceService)
     {
-        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -141,7 +141,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -161,7 +161,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -219,7 +219,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -234,7 +234,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -250,7 +250,7 @@ public static class DeviceEndpoints
             return TypedResults.NotFound(new { code = "DEFICIENCY_NOT_FOUND", detail = $"Deficiency '{deficiency_id}' not found." });
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId, ClinicalScopeGuard.ForbiddenCode) is { } recordDenied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }
@@ -281,7 +281,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -296,14 +296,14 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
 
         if (Guid.TryParse(request.QuarantineId, out var qGuid)
             && await deviceService.GetQuarantineByIdAsync(qGuid, ct).ConfigureAwait(false) is { } quarantine
-            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId, ClinicalScopeGuard.ForbiddenCode) is { } recordDenied)
+            && ClinicalScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }
@@ -325,7 +325,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, null, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, null, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -346,14 +346,14 @@ public static class DeviceEndpoints
         string? scannedBarcode,
         CancellationToken ct)
     {
-        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode) is { } requestDenied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
         {
             return requestDenied;
         }
 
         var storedScope = await deviceService.GetInventoryScopeAsync(studyId, deviceInventoryId, scannedBarcode, ct).ConfigureAwait(false);
         return storedScope is { } s
-            ? ClinicalScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId, ClinicalScopeGuard.ForbiddenCode)
+            ? ClinicalScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
             : null;
     }
 }

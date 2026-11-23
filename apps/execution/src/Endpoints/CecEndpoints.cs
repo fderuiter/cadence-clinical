@@ -67,12 +67,18 @@ public static class CecEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var existing = await repository.GetDossierByIdAsync(id, cancellationToken).ConfigureAwait(false);
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
                 httpContext,
                 existing?.StudyId ?? "STUDY-001",
                 existing?.SiteId,
-                code: ClinicalScopeGuard.ForbiddenCode) is { } scopeDenied)
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -92,7 +98,7 @@ public static class CecEndpoints
         ICecRepository repository,
         CancellationToken cancellationToken)
     {
-        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -107,7 +113,8 @@ public static class CecEndpoints
                 httpContext,
                 dossier.StudyId,
                 dossier.SiteId,
-                code: ClinicalScopeGuard.ForbiddenCode) is { } recordDenied)
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }

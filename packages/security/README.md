@@ -50,14 +50,15 @@ signatures and audit digests shared by every Cadence service.
   `RequireCallerStudyAndSiteScope()`, `RequireStudyScope(routeParameter)` and `RequireSiteScope(routeParameter)`; study assignments
   arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim. Handlers check scope and caller attribution that the route path
   cannot name (query/body parameters, stored records, filtered in-memory lists, or EF Core `IQueryable<T>` queries) through
-  `ClinicalScopeGuard` (`RequireTenant`, `RequireStudy`, `RequireSite`, `RequireStudyAndSite`, `RequireStudyAndOptionalSite`,
+  `ClinicalScopeGuard` (`RequireTenant`, `RequireVerifiedTenant`, `RequireStudy`, `RequireSite`, `RequireStudyAndSite`, `RequireStudyAndOptionalSite`,
   `ResolveStudyFilter`, `ResolveSiteFilter` and `ResolveSingleSiteFilter` with `StringComparer.OrdinalIgnoreCase`, `ApplyFilters`, `NarrowToStudyScope`,
   `NarrowToScope`, `IsUnrestricted`, `Forbidden`, `OutsideStudy`) and `CallerScope` (`Principal` with authenticated `ClaimsPrincipal`
   `sub` fallback, `UserId`, `VerifiedUserId`, `RequiredPrincipal`, `RequiredUserId`, `Roles`, `ResolveActor`), failing closed with
   `ProblemHttpResult` HTTP 403
   ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md),
   [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md),
-  [ADR-2650](../../docs/adr/2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md)).
+  [ADR-2552](../../docs/adr/2026-11-21-kernel-site-setup-and-execution-tenancy.md),
+  [ADR-2660](../../docs/adr/2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md)).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.

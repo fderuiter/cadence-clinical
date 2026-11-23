@@ -194,8 +194,7 @@ const calculateSum = (columnId) => {
   background-color: var(--semantic-color-surface);
 }
 
-.cell-input:focus {
-  outline: none;
+.cell-input:focus-visible {
   border-color: var(--primary);
 }
 
@@ -227,11 +226,5 @@ const calculateSum = (columnId) => {
 
 .aggregate-value {
   color: var(--semantic-color-primary-dark);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>
