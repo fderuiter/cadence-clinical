@@ -806,11 +806,16 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
       {
         form_id: FORM_ID,
         study_id: STUDY_ID,
+        study_site_id: "01960000-0000-7000-8000-000000000110",
+        protocol_version_id: "01960000-0000-7000-8000-000000000120",
         enrollment_id: ENROLLMENT_ID,
+        participant_id: "01960000-0000-7000-8000-000000000190",
         collection_spec_id: "VS",
         collection_title: "Vital signs",
         planned_activity_id: "V1",
         collected_at: "2026-06-01T10:00:00Z",
+        opened_by: "crc@cadence.test",
+        opened_at: "2026-06-01T09:55:00Z",
         version: 1,
         complete: false,
         item_count: 2,
@@ -823,8 +828,10 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
         unverified_count: 2,
         signed: false,
         signature_superseded: false,
+        signature_count: 0,
         frozen: false,
         locked: false,
+        lock_count: 0,
       },
     ]);
 

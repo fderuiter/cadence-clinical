@@ -83,8 +83,8 @@ describe("proposal review rules (ADR-2635)", () => {
     const own = proposal({
       proposed_by: "reviewer-1",
       proposed_by_kind: "Person",
-      affected: [{ ref: null, mask: "NotPermitted" }],
-    } as Partial<KernelProposal>);
+      affected: [{ ref: "", mask: "NotPermitted" }],
+    });
     expect(ids(own, [], false)).toEqual([
       "own-proposal",
       "hidden-sources",

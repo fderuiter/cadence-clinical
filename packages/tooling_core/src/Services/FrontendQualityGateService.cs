@@ -151,7 +151,8 @@ public static class FrontendQualityGateService
         string? repoRoot = null,
         string[]? targetFiles = null,
         bool preCommit = false,
-        GitIndexReader? indexReader = null)
+        GitIndexReader? indexReader = null,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
         if (targetFiles is { Length: 0 })
         {
@@ -160,7 +161,7 @@ public static class FrontendQualityGateService
 
         repoRoot ??= FindRepoRoot();
 
-        string? pnpm = ResolveUsablePnpm(repoRoot);
+        string? pnpm = ResolveUsablePnpm(repoRoot, getEnvironmentVariable);
         if (pnpm is null)
         {
             return 1;
@@ -171,97 +172,105 @@ public static class FrontendQualityGateService
             return 1;
         }
 
-        if (preCommit || targetFiles is not null)
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
         {
-            var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
-            using (ownedReader)
+            IEnumerable<string> rawFiles;
+            if (preCommit)
             {
-                var rawFiles = preCommit && targetFiles is null
-                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
-                    : (IReadOnlyList<string>)targetFiles!;
+                rawFiles = targetFiles is not null
+                    ? targetFiles
+                    : PreCommitOpenApiService.GetStagedFiles(repoRoot);
+            }
+            else if (targetFiles is not null)
+            {
+                rawFiles = targetFiles;
+            }
+            else
+            {
+                rawFiles = PreCommitOpenApiService.TryGetTrackedFiles(repoRoot)
+                    ?? EnumerateRepositoryFiles(repoRoot);
+            }
 
-                var matching = SelectExistingFiles(repoRoot, rawFiles, EslintExtensions, reader);
-                if (matching.Count == 0)
-                {
-                    return 0;
-                }
+            var matching = SelectExistingFiles(repoRoot, rawFiles, EslintExtensions, reader);
+            if (matching.Count == 0)
+            {
+                return 0;
+            }
 
-                const string EcrfStoreRelPath = "apps/web/src/stores/demo/clinicalEcrf.ts";
-                string duplicateCheckScript = Path.Combine(repoRoot, "scripts", "check_duplicate_identifiers.js");
-                if (File.Exists(duplicateCheckScript) &&
-                    matching.Any(f => f.Equals(EcrfStoreRelPath, StringComparison.OrdinalIgnoreCase)))
-                {
-                    if (reader is { HasAuthoritativeIndex: true })
-                    {
-                        using var storeWorkspace = reader.Materialize([EcrfStoreRelPath]);
-                        string tempStorePath = Path.Combine(storeWorkspace.RootPath, "apps", "web", "src", "stores", "demo", "clinicalEcrf.ts");
-                        if (File.Exists(tempStorePath) &&
-                            RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, tempStorePath]) != 0)
-                        {
-                            return 1;
-                        }
-                    }
-                    else
-                    {
-                        string diskStorePath = Path.Combine(repoRoot, "apps", "web", "src", "stores", "demo", "clinicalEcrf.ts");
-                        if (RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, diskStorePath]) != 0)
-                        {
-                            return 1;
-                        }
-                    }
-                }
-
+            const string EcrfStoreRelPath = "apps/web/src/stores/demo/clinicalEcrf.ts";
+            string duplicateCheckScript = Path.Combine(repoRoot, "scripts", "check_duplicate_identifiers.js");
+            if (File.Exists(duplicateCheckScript) &&
+                matching.Any(f => f.Equals(EcrfStoreRelPath, StringComparison.OrdinalIgnoreCase)))
+            {
                 if (reader is { HasAuthoritativeIndex: true })
                 {
-                    foreach (string rel in matching)
+                    using var storeWorkspace = reader.Materialize([EcrfStoreRelPath]);
+                    string tempStorePath = Path.Combine(storeWorkspace.RootPath, "apps", "web", "src", "stores", "demo", "clinicalEcrf.ts");
+                    if (File.Exists(tempStorePath) &&
+                        RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, tempStorePath], getEnvironmentVariable: getEnvironmentVariable) != 0)
                     {
-                        if (!reader.TryReadBytes(rel, out byte[] blobBytes))
-                        {
-                            continue;
-                        }
+                        return 1;
+                    }
+                }
+                else
+                {
+                    string diskStorePath = Path.Combine(repoRoot, "apps", "web", "src", "stores", "demo", "clinicalEcrf.ts");
+                    if (RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, diskStorePath], getEnvironmentVariable: getEnvironmentVariable) != 0)
+                    {
+                        return 1;
+                    }
+                }
+            }
 
-                        var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", rel]);
-
-                        if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false) != 0)
-                        {
-                            Console.WriteLine($"[ERROR] ESLint violations detected in staged '{rel}'. Fix the findings above or run 'pnpm -r lint -- --max-warnings 0'.");
-                            return 1;
-                        }
+            if (reader is { HasAuthoritativeIndex: true })
+            {
+                foreach (string rel in matching)
+                {
+                    if (!reader.TryReadBytes(rel, out byte[] blobBytes))
+                    {
+                        continue;
                     }
 
-                    return 0;
-                }
+                    var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", rel]);
 
-                foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
-                {
-                    var args = BuildEslintArgs(["--", .. batch]);
-                    if (RunProcess(repoRoot, pnpm, args) != 0)
+                    if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false, getEnvironmentVariable) != 0)
                     {
-                        Console.WriteLine("[ERROR] ESLint violations detected in staged files. Fix the findings above or run 'pnpm -r lint -- --max-warnings 0'.");
+                        Console.WriteLine($"[ERROR] ESLint violations detected in staged '{rel}'. Fix the findings above or run 'pnpm lint'.");
                         return 1;
                     }
                 }
 
                 return 0;
             }
-        }
 
-        if (RunProcess(repoRoot, pnpm, ["-r", "lint"]) != 0 ||
-            RunProcess(repoRoot, pnpm, BuildEslintArgs(["."])) != 0)
-        {
-            Console.WriteLine("[ERROR] Workspace ESLint check ('pnpm -r lint && pnpm exec eslint --max-warnings 0 .') failed.");
-            return 1;
-        }
+            foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
+            {
+                var args = BuildEslintArgs(["--", .. batch]);
+                if (RunProcess(repoRoot, pnpm, args, getEnvironmentVariable: getEnvironmentVariable) != 0)
+                {
+                    Console.WriteLine(preCommit
+                        ? "[ERROR] ESLint violations detected in staged files. Fix the findings above or run 'pnpm lint'."
+                        : "[ERROR] Workspace ESLint check failed. Fix the findings above or run 'pnpm lint'.");
+                    return 1;
+                }
+            }
 
-        return 0;
+            return 0;
+        }
     }
 
     public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
         ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
 
-    private static string? ResolveUsablePnpm(string repoRoot)
+    private static string? ResolveUsablePnpm(string repoRoot, Func<string, string?>? getEnvironmentVariable = null)
     {
-        string? resolved = PosixProcessLauncher.ResolveExecutablePath("pnpm", repoRoot);
+        string? pathOverride = getEnvironmentVariable?.Invoke("PATH");
+        IReadOnlyDictionary<string, string?>? envOverride = pathOverride is not null
+            ? new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = pathOverride }
+            : null;
+
+        string? resolved = PosixProcessLauncher.ResolveExecutablePath("pnpm", repoRoot, envOverride);
         if (resolved is null)
         {
             Console.WriteLine("[ERROR] 'pnpm' is required for frontend quality gates but was not found on PATH. Install Node.js and run 'corepack enable'.");
@@ -275,6 +284,10 @@ public static class FrontendQualityGateService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        if (pathOverride is not null)
+        {
+            psi.Environment["PATH"] = pathOverride;
+        }
         psi.ArgumentList.Add("--version");
 
         try
@@ -405,7 +418,8 @@ public static class FrontendQualityGateService
         string fileName,
         IReadOnlyList<string> arguments,
         byte[] stdinBytes,
-        bool suppressStdoutOnSuccess)
+        bool suppressStdoutOnSuccess,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -415,6 +429,10 @@ public static class FrontendQualityGateService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
+        {
+            psi.Environment["PATH"] = pathOverride;
+        }
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);
@@ -467,7 +485,12 @@ public static class FrontendQualityGateService
         }
     }
 
-    internal static int RunProcess(string workingDirectory, string fileName, IReadOnlyList<string> arguments, bool suppressOutput = false)
+    internal static int RunProcess(
+        string workingDirectory,
+        string fileName,
+        IReadOnlyList<string> arguments,
+        bool suppressOutput = false,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -476,6 +499,10 @@ public static class FrontendQualityGateService
             RedirectStandardOutput = suppressOutput,
             RedirectStandardError = suppressOutput,
         };
+        if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
+        {
+            psi.Environment["PATH"] = pathOverride;
+        }
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);

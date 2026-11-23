@@ -183,7 +183,7 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
 
       const runAnalysisSpy = vi
         .spyOn(codingStore, "runImpactAnalysis")
-        .mockResolvedValue();
+        .mockResolvedValue({});
 
       const wrapper = mount(UpversioningImpactDrawer);
 

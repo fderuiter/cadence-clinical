@@ -396,14 +396,13 @@ const standaloneEnrollmentOptions = computed(() => {
         child.node.ref!.startsWith("enrollment:")
     )
     .map((child) => {
-      const parsed = parseNodeRef(child.node.ref!);
-      const id = parsed?.id ?? child.node.ref!;
+      const nodeRef = child.node.ref!;
+      const parsed = parseNodeRef(nodeRef);
+      const id = parsed?.id ?? nodeRef;
       return {
         id,
         label:
-          child.node.code ||
-          child.node.title ||
-          getNodeDisplay(child.node.ref).label,
+          child.node.code || child.node.title || getNodeDisplay(nodeRef).label,
       };
     });
 
@@ -477,8 +476,8 @@ async function ensureStandaloneSitesLoaded() {
     const studies = await kernelApi.listStudies();
     const activeCode = getActiveWorkspaceContext().studyCode;
     const matchedStudy =
-      studies.find((s) => !s.mask && activeCode && s.code === activeCode) ??
-      studies.find((s) => !s.mask);
+      (activeCode ? studies.find((s) => s.code === activeCode) : undefined) ??
+      studies[0];
     if (!matchedStudy?.ref) return;
     const children = await kernelApi.getChildren(matchedStudy.ref);
     standaloneSites.value = (children ?? [])
@@ -489,16 +488,16 @@ async function ensureStandaloneSitesLoaded() {
           c.node.ref!.startsWith("study_site:")
       )
       .map((c) => {
-        seedNodeSummary(c.node.ref!, {
+        const nodeRef = c.node.ref!;
+        seedNodeSummary(nodeRef, {
           kind: c.node.kind,
           code: c.node.code,
           title: c.node.title,
           status: c.node.status,
         });
         return {
-          ref: c.node.ref as string,
-          label:
-            c.node.code || c.node.title || getNodeDisplay(c.node.ref).label,
+          ref: nodeRef,
+          label: c.node.code || c.node.title || getNodeDisplay(nodeRef).label,
         };
       });
     standaloneSitesLoaded.value = true;

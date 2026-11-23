@@ -872,6 +872,7 @@ export const useOnboardingStore = defineStore("onboarding", {
     };
   },
   getters: {
+    /** @returns {typeof DEFAULT_SETUP_TASKS} */
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
       return (state.tasks || [])

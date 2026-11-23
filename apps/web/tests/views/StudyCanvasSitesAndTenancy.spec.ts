@@ -3,7 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
-import { kernelApi } from "../../src/api/kernelApi";
+import { kernelApi, type KernelStudySummary } from "../../src/api/kernelApi";
 import {
   authorizedParticipantSiteCodes,
   canManageParticipants,
@@ -236,6 +236,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     const studySites = [
       {
         ref: "study_site:01960000-0000-7000-8000-000000000101",
+        study_site_id: "01960000-0000-7000-8000-000000000101",
+        study_site_ref: "study_site:01960000-0000-7000-8000-000000000101",
         id: "01960000-0000-7000-8000-000000000101",
         study_ref: "study:01960000-0000-7000-8000-000000000001",
         study_code: "CADENCE-101",
@@ -247,6 +249,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
         status: "Active",
+        is_active: true,
+        effective_versions: [],
       },
     ];
     const workspaceSites = [
@@ -259,6 +263,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_ref: "organization:01960000-0000-7000-8000-000000000021",
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
+        is_active: true,
+        linked_study_count: 1,
       },
       {
         ref: "site:01960000-0000-7000-8000-000000000012",
@@ -269,6 +275,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_ref: "organization:01960000-0000-7000-8000-000000000021",
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
+        is_active: true,
+        linked_study_count: 0,
       },
     ];
     const institutions = [
@@ -297,6 +305,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         const matched = workspaceSites.find((s) => s.ref === siteRef)!;
         const linked = {
           ref: `study_site:${matched.id}`,
+          study_site_id: matched.id,
+          study_site_ref: `study_site:${matched.id}`,
           id: matched.id,
           study_ref: "study:01960000-0000-7000-8000-000000000001",
           study_code: "CADENCE-101",
@@ -308,6 +318,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           institution_code: matched.institution_code,
           institution_name: matched.institution_name,
           status: "Active",
+          is_active: true,
+          effective_versions: [],
         };
         studySites.push(linked);
         return linked;
@@ -330,17 +342,19 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     const createSiteSpy = vi
       .spyOn(kernelApi, "createSite")
       .mockImplementation(
-        async ({ siteCode, name, country, institutionRef }) => {
+        async ({ siteCode, code, name, country, institutionRef }) => {
           const inst = institutions.find((i) => i.ref === institutionRef)!;
           const created = {
             ref: "site:01960000-0000-7000-8000-000000000019",
             id: "01960000-0000-7000-8000-000000000019",
-            code: siteCode.toUpperCase(),
+            code: (siteCode ?? code ?? "").toUpperCase(),
             name,
             country: country.toUpperCase(),
             institution_ref: inst.ref,
             institution_code: inst.code,
             institution_name: inst.name,
+            is_active: true,
+            linked_study_count: 0,
           };
           workspaceSites.push(created);
           return created;
@@ -426,14 +440,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     auth.studyIds = [];
     auth.currentPersona = "super_admin";
 
-    const studies: Array<{
-      ref: string;
-      id: string;
-      code: string;
-      title: string;
-      phase: string;
-      sponsor_ref: string;
-    }> = [];
+    const studies: KernelStudySummary[] = [];
 
     const starterSite = {
       ref: "site:01960000-0000-7000-8000-000000000011",
@@ -444,6 +451,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
       institution_ref: "organization:01960000-0000-7000-8000-000000000021",
       institution_code: "INST-4E9999991111",
       institution_name: "Meridian Clinical Research Center",
+      is_active: true,
+      linked_study_count: 1,
     };
 
     vi.spyOn(kernelApi, "listStudies").mockImplementation(async () => [
@@ -475,7 +484,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     vi.spyOn(kernelApi, "listStudySites").mockResolvedValue([
       {
         ref: "study_site:01960000-0000-7000-8000-000000000101",
-        id: "01960000-0000-7000-8000-000000000101",
+        study_site_id: "01960000-0000-7000-8000-000000000101",
+        study_site_ref: "study_site:01960000-0000-7000-8000-000000000101",
         study_ref: "study:01960000-0000-7000-8000-000000000099",
         study_code: "CADENCE-101",
         site_ref: starterSite.ref,
@@ -486,6 +496,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_code: starterSite.institution_code,
         institution_name: starterSite.institution_name,
         status: "Active",
+        is_active: true,
+        effective_versions: [],
       },
     ]);
     vi.spyOn(kernelApi, "search").mockImplementation(async ({ text }) =>
@@ -496,7 +508,9 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
               kind: "Study",
               code: "CADENCE-101",
               title: "Meridian Outcomes Trial",
-              matched_on: "Code",
+              detail: null,
+              exact_code: true,
+              rank: 1,
             },
           ]
         : []
@@ -504,20 +518,23 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([]);
     vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
     vi.spyOn(kernelApi, "activity").mockResolvedValue({
-      items: [],
+      entries: [],
       next: null,
     });
 
     const createStudySpy = vi
       .spyOn(kernelApi, "createStudy")
       .mockImplementation(async ({ code, title, phase, sponsorRef }) => {
-        const created = {
+        const created: KernelStudySummary = {
           ref: "study:01960000-0000-7000-8000-000000000099",
-          id: "01960000-0000-7000-8000-000000000099",
           code,
           title,
           phase,
-          sponsor_ref: sponsorRef || "",
+          sponsor_ref:
+            sponsorRef || "organization:01960000-0000-7000-8000-000000000002",
+          sponsor_code: "ORG-4E9999991111",
+          sponsor_name: "Meridian Vascular Research",
+          site_count: 1,
         };
         studies.push(created);
         return created;
@@ -553,7 +570,15 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           enrollment_index: 1,
         };
         tenantParticipants.push(created);
-        return { id: created.id };
+        return {
+          id: created.id,
+          subject_id: created.subject_id,
+          study_id: created.study_id,
+          site_id: created.site_id,
+          status: created.status,
+          active_protocol_version: created.active_protocol_version,
+          encrypted_demographics: null,
+        };
       });
 
     await router.push("/studies");

@@ -356,7 +356,7 @@ const props = defineProps({
     required: true,
   },
   selectedFieldId: {
-    type: String,
+    type: /** @type {import("vue").PropType<string | null>} */ (String),
     default: null,
   },
   hasWarning: {

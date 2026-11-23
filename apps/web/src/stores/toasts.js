@@ -19,11 +19,24 @@ function clearToastTimer(id) {
 }
 
 /**
+ * @typedef {Object} ToastItem
+ * @property {number} id
+ * @property {string} tone
+ * @property {string} [title]
+ * @property {string} [message]
+ * @property {{ label: string, to: string } | null} [action]
+ * @property {number} [timeoutMs]
+ */
+
+/**
  * Transient and persistent user-facing alerts. API and validation errors persist until
  * explicitly dismissed; non-error status messages auto-dismiss and pause on hover/focus.
  */
 const rawUseToastStore = defineStore("toasts", {
-  state: () => ({ toasts: [] }),
+  state: () => ({
+    /** @type {ToastItem[]} */
+    toasts: [],
+  }),
   actions: {
     /**
      * @param {{

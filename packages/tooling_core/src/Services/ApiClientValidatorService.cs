@@ -9,7 +9,7 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Checks that the types generated from <c>docs/openapi</c> into <c>apps/web/src/api/generated</c> are current,
-/// then typechecks the web app, which compiles every <c>apps/web/src/api</c> client against its OpenAPI types.
+/// then runs workspace typechecking (<c>pnpm run typecheck</c>) across shared frontend packages and Vue single-file components.
 /// </summary>
 public static class ApiClientValidatorService
 {
@@ -28,9 +28,15 @@ public static class ApiClientValidatorService
     ];
 
     public static int ValidateApiClients(
+        string? repoRoot,
+        Func<string, string?>? getEnvironmentVariable) =>
+        ValidateApiClients(repoRoot, targetFiles: null, preCommit: false, getEnvironmentVariable: getEnvironmentVariable);
+
+    public static int ValidateApiClients(
         string? repoRoot = null,
         IEnumerable<string>? targetFiles = null,
-        bool preCommit = false)
+        bool preCommit = false,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
         var explicitFiles = targetFiles?.ToList();
         if (explicitFiles is { Count: 0 })
@@ -45,12 +51,12 @@ public static class ApiClientValidatorService
             IReadOnlyList<string> candidateFiles = explicitFiles ?? PreCommitOpenApiService.GetStagedFiles(repoRoot);
             if (!candidateFiles.Any(f => AffectsApiClients(repoRoot, f)))
             {
-                Console.WriteLine("Staged changes do not touch docs/openapi or frontend API client inputs. Skipping web API client typecheck...");
+                Console.WriteLine("Staged changes do not touch docs/openapi or frontend API client inputs. Skipping web OpenAPI and frontend workspace typecheck...");
                 return 0;
             }
         }
 
-        Console.WriteLine("Typechecking the web API clients against their OpenAPI types...");
+        Console.WriteLine("Typechecking web OpenAPI types and the frontend workspace...");
 
         string webDir = Path.Combine(repoRoot, "apps", "web");
         if (!File.Exists(Path.Combine(webDir, "tsconfig.json")))
@@ -62,17 +68,17 @@ public static class ApiClientValidatorService
         const string pnpmCommand = "pnpm";
 
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types", getEnvironmentVariable) != 0)
         {
             return 1;
         }
 
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["run", "typecheck"], "the frontend workspace TypeScript and Vue types", getEnvironmentVariable) != 0)
         {
             return 1;
         }
 
-        Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
+        Console.WriteLine("✔ Web OpenAPI types and frontend workspace typecheck passed.");
         return 0;
     }
 
@@ -93,6 +99,7 @@ public static class ApiClientValidatorService
         if (rel.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
             rel.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
             rel.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase) ||
+            rel.StartsWith("packages/usdm-schemas/", StringComparison.OrdinalIgnoreCase) ||
             rel.StartsWith("packages/demo-fixtures/", StringComparison.OrdinalIgnoreCase))
         {
             return true;
@@ -111,7 +118,12 @@ public static class ApiClientValidatorService
         return CanvasContractSourcePaths.Any(p => string.Equals(rel, p, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)
+    private static int RunCommand(
+        string workingDir,
+        string fileName,
+        string[] arguments,
+        string subject,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -120,6 +132,10 @@ public static class ApiClientValidatorService
             RedirectStandardError = true,
             UseShellExecute = false
         };
+        if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
+        {
+            psi.Environment["PATH"] = pathOverride;
+        }
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);

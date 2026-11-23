@@ -17,7 +17,7 @@
   "devDependencies": {
     "@axe-core/playwright": "catalog:",
     "@playwright/test": "catalog:",
-    "@types/node": "^26.6.6",
+    "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "@vue/test-utils": "^2.6.0",
@@ -27,7 +27,8 @@
     "msw": "catalog:",
     "openapi-typescript": "^7.13.0",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vue-tsc": "catalog:"
   },
   "keywords": [],
   "license": "UNLICENSED",
@@ -44,7 +45,7 @@
     "test:e2e": "playwright test --project=accessibility --project=staged-demo-subpath",
     "test:e2e:stack": "playwright test",
     "test:e2e:workflows": "playwright test --project=setup --project=chromium",
-    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"
+    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && node --max-old-space-size=4096 ./node_modules/vue-tsc/bin/vue-tsc.js --build"
   },
   "type": "module",
   "version": "1.0.0"

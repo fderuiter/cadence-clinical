@@ -678,7 +678,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const wrapper = mount(ParticipantRecord, {
       props: {
@@ -1135,17 +1135,17 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
   it("renders parent covering lock banner in ParticipantRecord and hides covered Freeze and Lock buttons while keeping direct Unlock enabled", async () => {
     mockGetZoomPath.mockResolvedValue([
-      { level: "study", label: "CAD-101", node: `${STUDY_REF}@1`, mask: null },
+      { level: "study", label: "CAD-101", ref: `${STUDY_REF}@1`, mask: null },
       {
         level: "study_site",
         label: "SITE-101",
-        node: `${SITE_A_REF}@1`,
+        ref: `${SITE_A_REF}@1`,
         mask: null,
       },
       {
         level: "enrollment",
         label: "SUBJ-A",
-        node: `${ENROLLMENT_REF}@1`,
+        ref: `${ENROLLMENT_REF}@1`,
         mask: null,
       },
     ]);
@@ -1198,7 +1198,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const wrapper = mount(ParticipantRecord, {
       props: {

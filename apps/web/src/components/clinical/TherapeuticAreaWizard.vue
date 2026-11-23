@@ -507,16 +507,24 @@ const isStorageAvailable = ref<boolean>(true);
 
 const templateList = computed(() => Object.values(THERAPEUTIC_AREA_TEMPLATES));
 
+export interface ActiveWizardConfig extends TherapeuticAreaTemplate {
+  randomizationRatio?: string;
+  phase?: string;
+}
+
 const selectedTemplateId = ref<string>("oncology");
 const configTab = ref<"arms" | "epochs" | "visits">("arms");
 
 // Helper to deep clone a template
-function cloneTemplate(template: TherapeuticAreaTemplate) {
-  return JSON.parse(JSON.stringify(template));
+function cloneTemplate(template: TherapeuticAreaTemplate): ActiveWizardConfig {
+  return JSON.parse(JSON.stringify(template)) as ActiveWizardConfig;
 }
 
 // Load initial configuration state from localStorage if available
-function loadSavedState(): { templateId: string; config: any } | null {
+function loadSavedState(): {
+  templateId: string;
+  config: ActiveWizardConfig;
+} | null {
   if (typeof window === "undefined") {
     isStorageAvailable.value = false;
     return null;
@@ -556,7 +564,7 @@ if (saved) {
   selectedTemplateId.value = saved.templateId;
 }
 
-const activeConfig = ref<any>(
+const activeConfig = ref<ActiveWizardConfig>(
   saved
     ? saved.config
     : cloneTemplate(THERAPEUTIC_AREA_TEMPLATES[selectedTemplateId.value])
@@ -728,6 +736,17 @@ function synthesizeProtocol() {
 
   emit("synthesize", synthesizedUSDM);
 }
+
+defineExpose({
+  selectedTemplateId,
+  activeConfig,
+  totalSampleSize,
+  addArm,
+  removeArm,
+  configTab,
+  storageError,
+  isStorageAvailable,
+});
 </script>
 
 <style scoped>

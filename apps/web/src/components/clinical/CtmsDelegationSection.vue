@@ -84,14 +84,17 @@
               <td>
                 <span
                   class="status-pill"
-                  :class="`doa-${rec.status.toLowerCase()}`"
+                  :class="`doa-${getDelegationStatus(rec).toLowerCase()}`"
                 >
-                  {{ formatClinicalStatus(rec.status) }}
+                  {{ formatClinicalStatus(getDelegationStatus(rec)) }}
                 </span>
               </td>
               <td class="action-cell">
                 <button
-                  v-if="canSignOff && rec.status === 'PENDING_PI_SIGNATURE'"
+                  v-if="
+                    canSignOff &&
+                    getDelegationStatus(rec) === 'PENDING_PI_SIGNATURE'
+                  "
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
@@ -101,7 +104,7 @@
                   >
                 </button>
                 <button
-                  v-if="canManage && rec.status !== 'REVOKED'"
+                  v-if="canManage && getDelegationStatus(rec) !== 'REVOKED'"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="prepareRevoke(rec)"
@@ -121,7 +124,7 @@
         v-if="
           !canSignOff &&
           doaLog.delegated_staff.some(
-            (r) => r.status === 'PENDING_PI_SIGNATURE'
+            (r) => getDelegationStatus(r) === 'PENDING_PI_SIGNATURE'
           )
         "
         id="doa-pi-separation-note"
@@ -313,6 +316,12 @@ const signOffReason = ref("");
 
 const activeRevokeRecord = ref<DelegationRecord | null>(null);
 const revokeReason = ref("");
+
+function getDelegationStatus(rec: DelegationRecord): string {
+  if (rec.status) return rec.status;
+  if (!rec.is_active) return "REVOKED";
+  return rec.signed_off ? "ACTIVE" : "PENDING_PI_SIGNATURE";
+}
 
 async function loadDoaLog() {
   const site = siteInput.value.trim();

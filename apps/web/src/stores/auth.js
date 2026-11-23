@@ -375,6 +375,7 @@ function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
  * @property {string} lastName
  * @property {string} id - `sub` claim
  * @property {string} tenantId - `tenant_id` claim; blank when the token has none
+ * @property {string} [siteId] - assigned site code in demo persona sessions
  */
 
 /** Milliseconds per UTC calendar day for trial countdown calculation. */

@@ -1,4 +1,31 @@
-import { DefineComponent } from "vue";
+import {
+  ComponentOptionsMixin,
+  DefineComponent,
+  EmitsOptions,
+  PublicProps,
+  ResolveProps,
+  SlotsType,
+} from "vue";
+
+type UiComponentWithSlots<
+  Props extends Record<string, unknown>,
+  Slots extends Record<string, unknown>,
+  Emits extends EmitsOptions = Record<string, never>,
+> = DefineComponent<
+  Props,
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  Emits,
+  string,
+  PublicProps,
+  ResolveProps<Props, Emits>,
+  Record<string, never>,
+  SlotsType<Slots>
+>;
 
 // Export generated CDASH types
 export * from "./src/types/cdash.js";
@@ -34,22 +61,31 @@ export const ConfidenceBadge: DefineComponent<
   any
 >;
 
-export const ClinicalContextBar: DefineComponent<
+export const ClinicalContextBar: UiComponentWithSlots<
   {
     studiesLabel?: string;
-    studiesTo?: string | Record<string, any>;
+    studiesTo?: string | Record<string, unknown>;
     studyCode?: string;
-    studyTo?: string | Record<string, any>;
+    studyTo?: string | Record<string, unknown>;
     siteCode?: string;
     siteLabelPrefix?: string;
-    siteTo?: string | Record<string, any>;
+    siteTo?: string | Record<string, unknown>;
     participantCode?: string;
-    participantTo?: string | Record<string, any>;
+    participantTo?: string | Record<string, unknown>;
     currentLabel?: string;
     ariaLabel?: string;
   },
-  {},
-  any
+  Record<string, never>,
+  {
+    navigate: (step: {
+      key: string;
+      id: string;
+      label: string;
+      code: string;
+      prefix: string;
+      to: string | Record<string, unknown>;
+    }) => true;
+  }
 >;
 
 export const AiSuggestionDrawer: DefineComponent<
@@ -82,6 +118,8 @@ export const ClinicalFormField: DefineComponent<
       status: "none" | "loading" | "valid" | "invalid" | "degraded";
       message?: string;
     } | null;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -95,7 +133,9 @@ export const ClinicalInput: DefineComponent<
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -110,6 +150,9 @@ export const ClinicalRadioGroup: DefineComponent<
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
+    attributes?: Record<string, unknown>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -125,7 +168,9 @@ export const ClinicalLookupInput: DefineComponent<
     gridSpan?: number | string;
     error?: string | null;
     query?: any;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -149,12 +194,12 @@ export interface ClinicalTabItem {
   disabled?: boolean;
   buttonId?: string;
   panelId?: string;
-  buttonClass?: string | any[] | Record<string, boolean>;
+  buttonClass?: string | unknown[] | Record<string, boolean>;
   title?: string;
   dataTestid?: string;
 }
 
-export const ClinicalTabs: DefineComponent<
+export const ClinicalTabs: UiComponentWithSlots<
   {
     modelValue: string | number;
     tabs: ClinicalTabItem[];
@@ -163,17 +208,28 @@ export const ClinicalTabs: DefineComponent<
     orientation?: "horizontal" | "vertical";
     id?: string;
     idPrefix?: string;
-    listClass?: string | any[] | Record<string, boolean>;
-    tabClass?: string | any[] | Record<string, boolean>;
+    listClass?: string | unknown[] | Record<string, boolean>;
+    tabClass?: string | unknown[] | Record<string, boolean>;
     activeTabClass?: string;
     manual?: boolean;
     keepAlivePanels?: boolean;
   },
-  {},
-  any
+  {
+    tab?: (props: {
+      tab: ClinicalTabItem;
+      active: boolean;
+      index: number;
+    }) => unknown;
+    [key: `panel-${string}`]:
+      ((props: { tab: ClinicalTabItem }) => unknown) | undefined;
+  },
+  {
+    "update:modelValue": (value: string | number) => true;
+    change: (value: string | number) => true;
+  }
 >;
 
-export const ClinicalIconButton: DefineComponent<
+export const ClinicalIconButton: UiComponentWithSlots<
   {
     label: string;
     icon?: string;
@@ -183,11 +239,15 @@ export const ClinicalIconButton: DefineComponent<
     disabled?: boolean;
     title?: string;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+  },
+  {
+    click: (event: MouseEvent) => true;
+  }
 >;
 
-export const ClinicalDropzone: DefineComponent<
+export const ClinicalDropzone: UiComponentWithSlots<
   {
     inputId?: string;
     accept?: string;
@@ -207,8 +267,21 @@ export const ClinicalDropzone: DefineComponent<
     removeContext?: string;
     removeButtonClass?: string;
   },
-  {},
-  any
+  {
+    prompt?: () => unknown;
+    hint?: () => unknown;
+    selected?: () => unknown;
+    actions?: (props: {
+      openFilePicker: () => void;
+      resetInput: () => void;
+    }) => unknown;
+  },
+  {
+    "files-selected": (files: File[]) => true;
+    "file-selected": (file: File) => true;
+    change: (event: Event) => true;
+    remove: () => true;
+  }
 >;
 
 export function createSrOnlyActionButton(options?: {
@@ -226,7 +299,9 @@ export const ClinicalQueryPanel: DefineComponent<
   {
     id: string;
     query?: any;
-    label: string;
+    label?: string;
+    canManageQueries?: boolean;
+    queryLabel?: string;
   },
   {},
   any
@@ -263,18 +338,24 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
-export const EmptyState: DefineComponent<
+export const EmptyState: UiComponentWithSlots<
   {
     icon?: string;
     title?: string;
     message?: string;
     actionText?: string;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+    icon?: () => unknown;
+    action?: () => unknown;
+  },
+  {
+    action: () => true;
+  }
 >;
 
-export const ClinicalModal: DefineComponent<
+export const ClinicalModal: UiComponentWithSlots<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -305,33 +386,44 @@ export const ClinicalModal: DefineComponent<
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
-    dialogClass?: string | any[] | Record<string, boolean>;
-    backdropClass?: string | any[] | Record<string, boolean>;
-    headerClass?: string | any[] | Record<string, boolean>;
-    bodyClass?: string | any[] | Record<string, boolean>;
-    footerClass?: string | any[] | Record<string, boolean>;
+    dialogClass?: string | unknown[] | Record<string, boolean>;
+    backdropClass?: string | unknown[] | Record<string, boolean>;
+    headerClass?: string | unknown[] | Record<string, boolean>;
+    bodyClass?: string | unknown[] | Record<string, boolean>;
+    footerClass?: string | unknown[] | Record<string, boolean>;
     closeLabel?: string;
     showHeader?: boolean;
     showClose?: boolean;
     showFooter?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+    header?: (props: { titleId: string; close: () => void }) => unknown;
+    footer?: (props: { close: () => void }) => unknown;
+  },
+  {
+    "update:modelValue": (value: boolean) => true;
+    "update:isOpen": (value: boolean) => true;
+    "update:open": (value: boolean) => true;
+    close: () => true;
+    confirm: () => true;
+  }
 >;
 
-export const ClinicalDrawer: DefineComponent<
+export const ClinicalDrawer: UiComponentWithSlots<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
     id?: string;
     overlayId?: string;
-    overlayClass?: string | any[] | Record<string, boolean>;
-    panelClass?: string | any[] | Record<string, boolean>;
-    bodyClass?: string | any[] | Record<string, boolean>;
+    overlayClass?: string | unknown[] | Record<string, boolean>;
+    panelClass?: string | unknown[] | Record<string, boolean>;
+    bodyClass?: string | unknown[] | Record<string, boolean>;
     position?: "right" | "left" | "bottom" | string;
     mobileBottomSheet?: boolean;
     size?: "sm" | "md" | "lg" | "xl" | string;
@@ -357,8 +449,18 @@ export const ClinicalDrawer: DefineComponent<
     closeLabel?: string;
     showHeader?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+    header?: (props: { close: () => void; titleId: string }) => unknown;
+    subheader?: () => unknown;
+    footer?: (props: { close: () => void }) => unknown;
+    "after-panel"?: () => unknown;
+  },
+  {
+    "update:modelValue": (value: boolean) => true;
+    "update:isOpen": (value: boolean) => true;
+    close: () => true;
+  }
 >;
 
 export const AuditLogViewer: DefineComponent<
@@ -399,21 +501,34 @@ export const ClinicalDataTable: DefineComponent<
   any
 >;
 
-export const ClinicalFieldLayout: DefineComponent<
+export const ClinicalFieldLayout: UiComponentWithSlots<
   {
     id: string;
     label: string;
-    query?: any;
+    query?: unknown;
     gridSpan?: number | string;
     error?: string | null;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, unknown>;
     tag?: string;
     extraClass?: string;
     canManageQueries?: boolean;
     queryLabel?: string;
   },
-  {},
-  any
+  {
+    default?: (props: {
+      id: string;
+      error: string | null;
+      errorId: string;
+      hasError: boolean;
+    }) => unknown;
+    "after-input"?: () => unknown;
+  },
+  {
+    "create-query": (message: string) => true;
+    "respond-query": (message: string) => true;
+    "close-query": () => true;
+    "reopen-query": () => true;
+  }
 >;
 
 export const MediaPlayer: DefineComponent<
@@ -472,20 +587,21 @@ export interface ClinicalToastItem {
   duration?: number;
 }
 
-export const ClinicalToastHost: DefineComponent<
+export const ClinicalToastHost: UiComponentWithSlots<
   {
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
     dismissLabel?: string;
     latestToastId?: string;
     manageTimers?: boolean;
-    onDismiss?: (id: string | number) => void;
-    onAction?: (toast: ClinicalToastItem) => void;
-    onPause?: (id: string | number) => void;
-    onResume?: (id: string | number) => void;
   },
-  {},
-  any
+  Record<string, never>,
+  {
+    dismiss: (id: string | number) => true;
+    action: (toast: ClinicalToastItem) => true;
+    pause: (id: string | number) => true;
+    resume: (id: string | number) => true;
+  }
 >;
 
 export interface FocusTrapOptions {
@@ -941,13 +1057,19 @@ export interface ClinicalBreadcrumbItem {
   onSelect?: (item: ClinicalBreadcrumbItem, event: MouseEvent) => void;
 }
 
-export const ClinicalBreadcrumbs: DefineComponent<
+export const ClinicalBreadcrumbs: UiComponentWithSlots<
   {
     items?: ClinicalBreadcrumbItem[];
     ariaLabel?: string;
   },
-  {},
-  any
+  Record<string, never>,
+  {
+    navigate: (payload: {
+      item: ClinicalBreadcrumbItem & { isCurrent: boolean };
+      index: number;
+      event: MouseEvent;
+    }) => true;
+  }
 >;
 
 export interface EntityLinkNodeRef {
@@ -958,7 +1080,7 @@ export interface EntityLinkNodeRef {
   siteId?: string | null;
 }
 
-export const EntityLink: DefineComponent<
+export const EntityLink: UiComponentWithSlots<
   {
     nodeRef?: EntityLinkNodeRef | null;
     entityType?: string;
@@ -969,15 +1091,39 @@ export const EntityLink: DefineComponent<
     preventNavigation?: boolean;
     tabular?: boolean;
   },
-  {},
-  any
+  {
+    default?: () => unknown;
+  },
+  {
+    peek: (payload: {
+      nodeRef: {
+        type: string;
+        id: string;
+        label: string;
+        studyId: string | null;
+        siteId: string | null;
+      };
+      triggerEl: HTMLElement | EventTarget | null;
+      event: MouseEvent;
+    }) => true;
+    select: (payload: {
+      nodeRef: {
+        type: string;
+        id: string;
+        label: string;
+        studyId: string | null;
+        siteId: string | null;
+      };
+      triggerEl: HTMLElement | EventTarget | null;
+      event: MouseEvent;
+    }) => true;
+  }
 >;
 
-export const ClinicalIcon: DefineComponent<
+export const ClinicalIcon: UiComponentWithSlots<
   {
     name?: string;
     size?: number | string;
   },
-  {},
-  any
+  Record<string, never>
 >;

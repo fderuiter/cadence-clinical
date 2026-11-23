@@ -32,7 +32,10 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
       manufacturing_facility_id: "CMO-BETA",
       cryo_temp_excursion_count: 0,
       lowest_temp_celsius: -196.0,
+      highest_temp_celsius: null,
       infusion_unlocked: false,
+      infused_at: null,
+      reconciled_at: null,
     };
     await wrapper.vm.$nextTick();
 

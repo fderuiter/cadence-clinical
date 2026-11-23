@@ -168,9 +168,7 @@
       v-if="effectiveCanManageParticipants && canRandomize"
       :is-open="randomizeModalOpen"
       :username="authStore.user?.username || ''"
-      :signer-name="
-        authStore.user?.displayName || authStore.user?.username || ''
-      "
+      :signer-name="signerFullName"
       signer-role="Site CRC"
       :reasons="RANDOMIZE_SIGNING_REASONS"
       :action-url="randomizeSubjectAction(participant.id)"
@@ -238,6 +236,15 @@ const canRandomize = computed(() =>
   canRandomizeParticipant(props.participant.status)
 );
 const canUnblind = computed(() => canUnblindParticipant(authStore));
+const signerFullName = computed(() => {
+  const identity = authStore.user;
+  if (!identity) return "";
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || identity.username || "";
+});
 const unblindReasonLength = computed(() => unblindReason.value.trim().length);
 
 const finalNote = computed(

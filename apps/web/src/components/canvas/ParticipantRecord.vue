@@ -374,10 +374,16 @@ watch(
         `enrollment:${enrollmentId}`
       );
       if (seq !== zoomSeq || record.value.enrollmentId !== enrollmentId) return;
-      const siteStep = (zoomSteps ?? []).find(
-        (step) => step.level === "study_site" && !step.mask && step.node
-      );
-      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
+      const siteStep = (zoomSteps ?? []).find((step) => {
+        const stepRef =
+          step.ref ?? (step as { node?: string | null }).node ?? null;
+        return step.level === "study_site" && !step.mask && Boolean(stepRef);
+      });
+      const rawSiteRef =
+        siteStep?.ref ??
+        (siteStep as { node?: string | null } | undefined)?.node ??
+        null;
+      zoomStudySiteRef.value = stripNodeVersion(rawSiteRef);
     } catch {
       if (seq === zoomSeq) {
         zoomStudySiteRef.value = null;

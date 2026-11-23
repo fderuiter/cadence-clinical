@@ -240,11 +240,49 @@ function buildLocalIntelligenceReport(
   };
 }
 
+/**
+ * @typedef {Record<string, unknown> & {
+ *   id: string,
+ *   study_id?: string,
+ *   site_id?: string | null,
+ *   zone?: number | string,
+ *   section?: string,
+ *   artifact_code?: string,
+ *   artifact_type?: string,
+ *   filename?: string,
+ *   mime_type?: string,
+ *   status?: string,
+ *   version_index?: number,
+ *   created_by?: string,
+ *   created_at?: string,
+ *   content?: string,
+ *   content_checksum?: string | null,
+ *   contentChecksum?: string | null
+ * }} EtmfStoreDocument
+ *
+ * @typedef {Record<string, unknown> & {
+ *   job_id: string,
+ *   study_id: string,
+ *   status: string,
+ *   progress_percentage?: number,
+ *   total_documents?: number,
+ *   processed_documents?: number,
+ *   download_url?: string,
+ *   expires_at?: string,
+ *   requested_by?: string,
+ *   created_at?: string
+ * }} EtmfStoreExportJob
+ */
+
 export const useEtmfStore = defineStore("etmf", {
   state: () => ({
+    /** @type {Array<Record<string, unknown>>} */
     binderTree: [],
+    /** @type {string | null} */
     selectedArtifactId: null,
+    /** @type {EtmfStoreDocument[]} */
     documentsList: [],
+    /** @type {EtmfStoreDocument | null} */
     activeDocument: null,
     isUploading: false,
     currentStudyId:
@@ -253,13 +291,18 @@ export const useEtmfStore = defineStore("etmf", {
     currentSiteId: "",
     scopeForbiddenGuidance: "",
     documentsError: "",
+    /** @type {Array<Record<string, unknown>>} */
     batchQueue: [],
+    /** @type {Array<Record<string, unknown>>} */
     qcQueue: [],
     isBatchUploading: false,
     batchProgress: 0,
+    /** @type {EtmfStoreExportJob | null} */
     activeExportJob: null,
+    /** @type {EtmfStoreExportJob[]} */
     exportJobs: [],
     isExportDrawerOpen: false,
+    /** @type {string[]} */
     selectedDocumentIds: [],
   }),
 

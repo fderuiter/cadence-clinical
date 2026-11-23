@@ -200,49 +200,45 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
 
   const pending = bucket.studyInFlight.get(key);
   if (pending) return pending;
-
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<string | null> | undefined;
-  lookup = (async () => {
-    try {
-      const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
-      if (inFlightEnrollmentStudy) {
-        const hinted = await inFlightEnrollmentStudy;
-        if (hinted) {
-          if (
-            bucket.epoch === epochAtStart &&
-            getKernelStudyCallerScopeKey() === scope
-          ) {
-            bucket.studyRefs.set(key, hinted);
-          }
-          return hinted;
+  const lookup: Promise<string | null> = (async () => {
+    const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
+    if (inFlightEnrollmentStudy) {
+      const hinted = await inFlightEnrollmentStudy;
+      if (hinted) {
+        if (
+          bucket.epoch === epochAtStart &&
+          getKernelStudyCallerScopeKey() === scope
+        ) {
+          bucket.studyRefs.set(key, hinted);
         }
-        const cachedAfterHint = bucket.studyRefs.get(key);
-        if (cachedAfterHint) {
-          return cachedAfterHint;
-        }
+        return hinted;
       }
-
-      const hits = await kernelApi.search({
-        text: trimmed,
-        kinds: ["study"],
-        limit: 5,
-      });
-      const resolved = hits.find((hit) => hit.exact_code)?.ref ?? null;
-      if (
-        resolved &&
-        bucket.epoch === epochAtStart &&
-        getKernelStudyCallerScopeKey() === scope
-      ) {
-        bucket.studyRefs.set(key, resolved);
-      }
-      return resolved;
-    } finally {
-      if (bucket.studyInFlight.get(key) === lookup) {
-        bucket.studyInFlight.delete(key);
+      const cachedAfterHint = bucket.studyRefs.get(key);
+      if (cachedAfterHint) {
+        return cachedAfterHint;
       }
     }
-  })();
+
+    const hits = await kernelApi.search({
+      text: trimmed,
+      kinds: ["study"],
+      limit: 5,
+    });
+    const resolved = hits.find((hit) => hit.exact_code)?.ref ?? null;
+    if (
+      resolved &&
+      bucket.epoch === epochAtStart &&
+      getKernelStudyCallerScopeKey() === scope
+    ) {
+      bucket.studyRefs.set(key, resolved);
+    }
+    return resolved;
+  })().finally(() => {
+    if (bucket.studyInFlight.get(key) === lookup) {
+      bucket.studyInFlight.delete(key);
+    }
+  });
   bucket.studyInFlight.set(key, lookup);
   return lookup;
 }
@@ -298,69 +294,70 @@ export function findKernelEnrollmentRef(
   }
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<NodeRef | null> | undefined;
-  lookup = (async (): Promise<NodeRef | null> => {
-    try {
-      const found = await kernelApi.lookupEnrollment({
-        studyCode: trimmedStudy,
-        subjectCode: trimmedSubject,
-        siteCode: trimmedSite,
-      });
-      const parsed = parseNodeRef(found.enrollment_ref);
-      const resolved = parsed?.kind === "enrollment" ? parsed : null;
-      const resolvedStudyRef = found.study_ref?.trim() || null;
-      const resolvedSiteRef = found.study_site_ref?.trim() || null;
-      if (
-        resolved &&
-        bucket.epoch === epochAtStart &&
-        getKernelStudyCallerScopeKey() === scope
-      ) {
-        bucket.enrollments.set(key, resolved);
-        if (resolvedSiteRef) {
-          const siteParsed = parseNodeRef(resolvedSiteRef);
-          const unversionedSiteRef =
-            siteParsed?.kind === "study_site"
-              ? `${siteParsed.kind}:${siteParsed.id}`
-              : resolvedSiteRef;
-          bucket.enrollmentStudySites.set(
-            enrollmentSiteKey(scope, resolved.id),
-            unversionedSiteRef
-          );
-        }
-        bucket.enrollments.set(
-          enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
-          resolved
-        );
-        if (found.site_code?.trim()) {
-          bucket.enrollments.set(
-            enrollmentKey(
-              scope,
-              normalizedStudy,
-              found.site_code.trim(),
-              trimmedSubject
-            ),
-            resolved
-          );
-        }
-        if (resolvedStudyRef) {
-          bucket.studyRefs.set(sKey, resolvedStudyRef);
-          if (found.study_code?.trim()) {
-            bucket.studyRefs.set(
-              studyKey(scope, normalizeStudyCode(found.study_code)),
-              resolvedStudyRef
+  const lookup: Promise<NodeRef | null> =
+    (async (): Promise<NodeRef | null> => {
+      try {
+        const found = await kernelApi.lookupEnrollment({
+          studyCode: trimmedStudy,
+          subjectCode: trimmedSubject,
+          siteCode: trimmedSite,
+        });
+        const parsed = parseNodeRef(found.enrollment_ref);
+        const resolved = parsed?.kind === "enrollment" ? parsed : null;
+        const resolvedStudyRef = found.study_ref?.trim() || null;
+        const resolvedSiteRef = found.study_site_ref?.trim() || null;
+        if (
+          resolved &&
+          bucket.epoch === epochAtStart &&
+          getKernelStudyCallerScopeKey() === scope
+        ) {
+          bucket.enrollments.set(key, resolved);
+          if (resolvedSiteRef) {
+            const siteParsed = parseNodeRef(resolvedSiteRef);
+            const unversionedSiteRef =
+              siteParsed?.kind === "study_site"
+                ? `${siteParsed.kind}:${siteParsed.id}`
+                : resolvedSiteRef;
+            bucket.enrollmentStudySites.set(
+              enrollmentSiteKey(scope, resolved.id),
+              unversionedSiteRef
             );
           }
+          bucket.enrollments.set(
+            enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
+            resolved
+          );
+          if (found.site_code?.trim()) {
+            bucket.enrollments.set(
+              enrollmentKey(
+                scope,
+                normalizedStudy,
+                found.site_code.trim(),
+                trimmedSubject
+              ),
+              resolved
+            );
+          }
+          if (resolvedStudyRef) {
+            bucket.studyRefs.set(sKey, resolvedStudyRef);
+            if (found.study_code?.trim()) {
+              bucket.studyRefs.set(
+                studyKey(scope, normalizeStudyCode(found.study_code)),
+                resolvedStudyRef
+              );
+            }
+          }
         }
+        resolveStudyHint(resolved ? resolvedStudyRef : null);
+        return resolved ? { ...resolved } : null;
+      } catch (err) {
+        resolveStudyHint(null);
+        if ((err as { status?: number | null } | null)?.status === 404) {
+          return null;
+        }
+        throw err;
       }
-      resolveStudyHint(resolved ? resolvedStudyRef : null);
-      return resolved ? { ...resolved } : null;
-    } catch (err) {
-      resolveStudyHint(null);
-      if ((err as { status?: number | null } | null)?.status === 404) {
-        return null;
-      }
-      throw err;
-    } finally {
+    })().finally(() => {
       resolveStudyHint(null);
       if (
         studyHintPromise &&
@@ -371,8 +368,7 @@ export function findKernelEnrollmentRef(
       if (bucket.enrollmentInFlight.get(key) === lookup) {
         bucket.enrollmentInFlight.delete(key);
       }
-    }
-  })();
+    });
   bucket.enrollmentInFlight.set(key, lookup);
   return lookup;
 }
@@ -471,9 +467,8 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<StudySiteOption[]> | undefined;
-  lookup = (async (): Promise<StudySiteOption[]> => {
-    try {
+  const lookup: Promise<StudySiteOption[]> = Promise.resolve()
+    .then(async (): Promise<StudySiteOption[]> => {
       const byCode = new Map<string, StudySiteOption>();
       const refsByCode = new Map<string, string>();
       const recordStudySiteRef = (
@@ -554,12 +549,12 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
         bucket.studySiteRefs.set(key, refsByCode);
       }
       return options.map((item) => ({ ...item }));
-    } finally {
+    })
+    .finally(() => {
       if (bucket.studySitesInFlight.get(key) === lookup) {
         bucket.studySitesInFlight.delete(key);
       }
-    }
-  })();
+    });
   bucket.studySitesInFlight.set(key, lookup);
   return lookup;
 }
@@ -755,85 +750,82 @@ export function findStudyScheduleOptions(
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<StudyScheduleOptions | null> | undefined;
-  lookup = (async () => {
-    try {
-      const studyRef = await findKernelStudyRef(trimmed);
-      if (!studyRef) return null;
-      const versions = await kernelApi.listProtocolVersions(studyRef);
-      const chosen =
-        versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
-        versions.find((v) => v.ref && !v.mask);
-      if (!chosen?.ref) return null;
-      const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
-      const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
-      const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
-      const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
-        activityId: col.activity_id,
-        name: col.name,
-        epochId: col.epoch_id ?? "",
-        studyDay:
-          col.study_day !== null && col.study_day !== undefined
-            ? Number(col.study_day)
-            : null,
-        windowBefore: Number(col.window_before) || 0,
-        windowAfter: Number(col.window_after) || 0,
-        locations: Array.isArray(col.locations) ? col.locations : [],
-      }));
-      const epochs = buildScheduleEpochs(
-        Array.isArray(soa.epochs) ? soa.epochs : [],
-        columns
-      );
-      const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
-        const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
-          .map((idx) => Number(idx))
-          .filter(
-            (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
-          );
-        return {
-          collectionSpecId: row.collection_spec_id,
-          name: row.name,
-          itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
-          columnIndices,
-          plannedActivityIds: columnIndices
-            .map((idx) => columns[idx]?.activityId)
-            .filter((id): id is string => Boolean(id)),
-        };
-      });
-
-      const resolved: StudyScheduleOptions = {
-        versionRef: soa.version,
-        title: soa.title ?? "",
-        epochs,
-        columns,
-        scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
-        unscheduledRows: mappedRows.filter(
-          (row) => row.columnIndices.length === 0
-        ),
-        collectionSpecs: mappedRows.map((row) => ({
-          id: row.collectionSpecId,
-          name: row.name,
-          plannedActivityIds: row.plannedActivityIds,
-        })),
-        plannedActivities: columns.map((col) => ({
-          id: col.activityId,
-          name: col.name,
-          studyDay: col.studyDay,
-        })),
+  const lookup: Promise<StudyScheduleOptions | null> = (async () => {
+    const studyRef = await findKernelStudyRef(trimmed);
+    if (!studyRef) return null;
+    const versions = await kernelApi.listProtocolVersions(studyRef);
+    const chosen =
+      versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
+      versions.find((v) => v.ref && !v.mask);
+    if (!chosen?.ref) return null;
+    const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+    const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
+    const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
+    const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
+      activityId: col.activity_id,
+      name: col.name,
+      epochId: col.epoch_id ?? "",
+      studyDay:
+        col.study_day !== null && col.study_day !== undefined
+          ? Number(col.study_day)
+          : null,
+      windowBefore: Number(col.window_before) || 0,
+      windowAfter: Number(col.window_after) || 0,
+      locations: Array.isArray(col.locations) ? col.locations : [],
+    }));
+    const epochs = buildScheduleEpochs(
+      Array.isArray(soa.epochs) ? soa.epochs : [],
+      columns
+    );
+    const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
+      const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
+        .map((idx) => Number(idx))
+        .filter(
+          (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
+        );
+      return {
+        collectionSpecId: row.collection_spec_id,
+        name: row.name,
+        itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
+        columnIndices,
+        plannedActivityIds: columnIndices
+          .map((idx) => columns[idx]?.activityId)
+          .filter((id): id is string => Boolean(id)),
       };
-      if (
-        bucket.epoch === epochAtStart &&
-        getKernelStudyCallerScopeKey() === scope
-      ) {
-        bucket.scheduleOptions.set(key, resolved);
-      }
-      return resolved;
-    } finally {
-      if (bucket.scheduleOptionsInFlight.get(key) === lookup) {
-        bucket.scheduleOptionsInFlight.delete(key);
-      }
+    });
+
+    const resolved: StudyScheduleOptions = {
+      versionRef: soa.version,
+      title: soa.title ?? "",
+      epochs,
+      columns,
+      scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
+      unscheduledRows: mappedRows.filter(
+        (row) => row.columnIndices.length === 0
+      ),
+      collectionSpecs: mappedRows.map((row) => ({
+        id: row.collectionSpecId,
+        name: row.name,
+        plannedActivityIds: row.plannedActivityIds,
+      })),
+      plannedActivities: columns.map((col) => ({
+        id: col.activityId,
+        name: col.name,
+        studyDay: col.studyDay,
+      })),
+    };
+    if (
+      bucket.epoch === epochAtStart &&
+      getKernelStudyCallerScopeKey() === scope
+    ) {
+      bucket.scheduleOptions.set(key, resolved);
     }
-  })();
+    return resolved;
+  })().finally(() => {
+    if (bucket.scheduleOptionsInFlight.get(key) === lookup) {
+      bucket.scheduleOptionsInFlight.delete(key);
+    }
+  });
   bucket.scheduleOptionsInFlight.set(key, lookup);
   return lookup;
 }

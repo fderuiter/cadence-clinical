@@ -1354,6 +1354,125 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void CiPlan_FrontendStyleAndLintStep_DelegatesEslintToCadenceCli()
+    {
+        var lintJob = CiPlan.Jobs.Single(j => j.Key == "lint-and-static");
+        var step = lintJob.Steps.Single(s => s.Name == "Run frontend style and lint");
+
+        step.EnvironmentIfPassed.Should().Contain(
+            new CiEnvironmentIfPassed(
+                "native-aot-build/Publish the CLI as Native AOT",
+                "CADENCE_CLI_CACHE_HIT",
+                "true"));
+        step.Commands.Should().HaveCount(2);
+        var eslintCmd = step.Commands[1];
+        eslintCmd.FileName.Should().Be("node");
+        eslintCmd.Arguments.Should().Equal("scripts/run-cli.js", "check", "eslint");
+        eslintCmd.ForwardsBaseRef.Should().BeFalse("ci.yml runs check eslint unscoped across all tracked files");
+    }
+
+    [Fact]
+    public void CheckEslint_UnscopedRun_LintsAllTrackedJsTsVueAndMjsFilesViaRootConfig_AndRunsDuplicateIdentifierCheck()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        InitGitRepo();
+        Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
+        Write("eslint.config.mjs", "export default [];\n");
+        Write(".claude/skills/run-cadence/driver.mjs", "export const ok = true;\n");
+        Write("packages/usdm-schemas/src/index.ts", "export const version = 4;\n");
+        Write("apps/web/src/stores/demo/clinicalEcrf.ts", "export const store = 1;\n");
+        string dupLog = Path.Combine(_tempDir, "dup-check.log");
+        Write("scripts/check_duplicate_identifiers.js", $"require('node:fs').writeFileSync({System.Text.Json.JsonSerializer.Serialize(dupLog)}, 'checked');\n");
+        Write("docs/README.md", "# Ignored by EslintExtensions\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "seed tracked files");
+
+        // Untracked scratch JS file should not be swept when git ls-files succeeds.
+        Write("untracked-scratch.js", "BROKEN_ESLINT_MARKER\n");
+
+        string binDir = Path.Combine(_tempDir, "pnpm-stub-bin");
+        Directory.CreateDirectory(binDir);
+        string argsCapture = Path.Combine(_tempDir, "pnpm-eslint-args.txt");
+        string pnpmStub = Path.Combine(binDir, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then echo '10.28.2'; exit 0; fi\n" +
+            $"printf '%s\\n' \"$*\" >> '{argsCapture}'\n" +
+            "for arg in \"$@\"; do\n" +
+            "  if [ -f \"$arg\" ] && grep -q 'BROKEN_ESLINT_MARKER' \"$arg\" 2>/dev/null; then exit 1; fi\n" +
+            "done\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? binDir : $"{binDir}{Path.PathSeparator}{systemPath}",
+        };
+
+        FrontendQualityGateService.CheckEslint(_tempDir, getEnvironmentVariable: k => stubEnv.GetValueOrDefault(k))
+            .Should().Be(0);
+
+        File.Exists(dupLog).Should().BeTrue("unscoped CheckEslint must run check_duplicate_identifiers.js when clinicalEcrf.ts is tracked");
+        string captured = File.ReadAllText(argsCapture);
+        captured.Should().StartWith("exec eslint --no-warn-ignored --max-warnings 0 -- ");
+        captured.Should().NotContain("-r lint");
+        captured.Should().Contain(".claude/skills/run-cadence/driver.mjs");
+        captured.Should().Contain("eslint.config.mjs");
+        captured.Should().Contain("packages/usdm-schemas/src/index.ts");
+        captured.Should().Contain("apps/web/src/stores/demo/clinicalEcrf.ts");
+        captured.Should().NotContain("untracked-scratch.js");
+        captured.Should().NotContain("docs/README.md");
+
+        Write(".claude/skills/run-cadence/driver.mjs", "BROKEN_ESLINT_MARKER\n");
+        FrontendQualityGateService.CheckEslint(_tempDir, getEnvironmentVariable: k => stubEnv.GetValueOrDefault(k))
+            .Should().Be(1, "unscoped CheckEslint must fail when a tracked root/skill .mjs file has an ESLint error");
+    }
+
+    [Fact]
+    public void ApiClientValidator_RunsGeneratedApiCheckThenWorkspaceTypecheck_AndPropagatesFailures()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Write("apps/web/tsconfig.json", "{}\n");
+        string binDir = Path.Combine(_tempDir, "api-pnpm-stub");
+        Directory.CreateDirectory(binDir);
+        string argsCapture = Path.Combine(_tempDir, "api-pnpm-args.txt");
+        string failMarker = Path.Combine(_tempDir, "fail-typecheck");
+        string pnpmStub = Path.Combine(binDir, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\n" +
+            $"printf '%s\\n' \"$*\" >> '{argsCapture}'\n" +
+            $"if [ \"$1 $2\" = \"run typecheck\" ] && [ -f '{failMarker}' ]; then exit 1; fi\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? binDir : $"{binDir}{Path.PathSeparator}{systemPath}",
+        };
+
+        ApiClientValidatorService.ValidateApiClients(_tempDir, k => stubEnv.GetValueOrDefault(k)).Should().Be(0);
+        File.ReadAllLines(argsCapture).Should().Equal(
+            "--filter web run generate:api -- --check",
+            "run typecheck");
+
+        File.WriteAllText(failMarker, "1");
+        ApiClientValidatorService.ValidateApiClients(_tempDir, k => stubEnv.GetValueOrDefault(k))
+            .Should().Be(1, "workspace vue-tsc/tsc typecheck failure must fail api-clients gate");
+    }
+
+    [Fact]
     public void FrontendEslintGate_ValidatesDuplicateIdentifiersInStagedClinicalEcrfSlice()
     {
         if (OperatingSystem.IsWindows())

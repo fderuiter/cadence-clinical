@@ -89,17 +89,24 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
       form_id: formId,
       study_id: "01950000-0000-7000-8000-000000000010",
+      study_site_id: "01950000-0000-7000-8000-000000000011",
+      protocol_version_id: "01950000-0000-7000-8000-000000000012",
       enrollment_id: "01950000-0000-7000-8000-000000000020",
       participant_id: "01950000-0000-7000-8000-000000000030",
       collection_spec_id: "VS",
       collection_title: "Vital signs",
       planned_activity_id: "V1",
       collected_at: "2026-03-01T10:00:00Z",
+      opened_by: "crc.user",
+      opened_at: "2026-03-01T09:55:00Z",
       version: 1,
       content_hash: "abcd1234",
       can_sign: false,
       complete: false,
       missing_required: ["SYSBP"],
+      open_query_count: 0,
+      answered_query_count: 0,
+      open_error_finding_count: 0,
       items: [
         {
           item_id: "SYSBP",
@@ -179,7 +186,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
@@ -240,7 +249,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({

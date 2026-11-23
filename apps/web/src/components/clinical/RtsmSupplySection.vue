@@ -411,9 +411,7 @@
       v-if="canManageSchemes"
       :is-open="Boolean(approvingScheme)"
       :username="authStore.user?.username || ''"
-      :signer-name="
-        authStore.user?.displayName || authStore.user?.username || ''
-      "
+      :signer-name="signerFullName"
       signer-role="Unblinded Statistician"
       :reasons="SCHEME_APPROVAL_REASONS"
       :action-url="
@@ -498,6 +496,15 @@ const canReadSchemes = computed(() => canReadRandomizationSchemes(authStore));
 const canManageSchemes = computed(() =>
   canManageRandomizationSchemes(authStore)
 );
+const signerFullName = computed(() => {
+  const identity = authStore.user;
+  if (!identity) return "";
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || identity.username || "";
+});
 
 const SCHEME_APPROVAL_REASONS = [
   "Independent second-person verification and approval of randomization scheme",

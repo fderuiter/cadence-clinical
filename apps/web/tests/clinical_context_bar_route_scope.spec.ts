@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryHistory, createRouter } from "vue-router";
@@ -68,8 +68,8 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     setActivePinia(createPinia());
     signInAs(useAuthStore(), ["Data Manager", "CRA", "Site Investigator"], {
       username: "clinical_lead",
-      assignedStudies: ["CADENCE-101", "STUDY-ONC-202"],
-      assignedSites: ["SITE-101", "SITE-102"],
+      studyIds: ["CADENCE-101", "STUDY-ONC-202"],
+      siteIds: ["SITE-101", "SITE-102"],
     });
   });
 
@@ -196,11 +196,21 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     vi.spyOn(kernelApi, "listStudies").mockResolvedValue([]);
     vi.spyOn(kernelApi, "listStudySites").mockResolvedValue([
       {
-        ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
-        code: "SITE-101",
-        name: "Boston General",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-000000000101",
+        study_code: "CADENCE-101",
+        site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        site_code: "SITE-101",
+        site_name: "Boston General",
         country: "US",
+        institution_ref: "organization:0192f3c4-5e6a-7b8c-9d0e-000000000301",
+        institution_code: "BOS-GEN",
+        institution_name: "Boston General Hospital",
         status: "ACTIVE",
+        is_active: true,
+        effective_versions: [],
       },
     ]);
     vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([]);
@@ -216,6 +226,8 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       study_id: "CADENCE-101",
       site_id: "SITE-101",
       status: "ENROLLED",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
     };
 
     const router = buildTestRouter();
@@ -311,6 +323,8 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       study_id: "CADENCE-101",
       site_id: "SITE-101",
       status: "ENROLLED",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
     };
 
     const router = buildTestRouter();
@@ -353,7 +367,9 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     // 1. /ctms
     await router.push("/ctms?studyId=CADENCE-101");
     await router.isReady();
-    let wrapper = mount(CtmsView, { global: { plugins: [router, i18n] } });
+    let wrapper: VueWrapper = mount(CtmsView, {
+      global: { plugins: [router, i18n] },
+    });
     await flushPromises();
     scopeStore.activeSiteId = "SITE-101";
     scopeStore.activeSubjectId = "017-0001";

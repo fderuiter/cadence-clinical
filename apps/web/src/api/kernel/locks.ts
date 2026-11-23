@@ -92,6 +92,37 @@ export interface KernelCasebookExportQuery {
   knownAt?: string;
 }
 
+/** Concise summary of a visible `KernelLockBlocker` (`detail`, `query_text`, `rule_id`, or the missing required item label). */
+export function formatLockBlockerDetail(
+  blocker: KernelLockBlocker
+): string | null {
+  const detail = blocker.detail?.trim();
+  if (detail) {
+    return detail;
+  }
+  const queryText = blocker.query_text?.trim();
+  if (queryText) {
+    return queryText;
+  }
+  const ruleId = blocker.rule_id?.trim();
+  if (ruleId) {
+    const item = (blocker.item_label ?? blocker.item_id)?.trim();
+    return item
+      ? `Error finding [${ruleId}] on ${item}`
+      : `Error finding [${ruleId}]`;
+  }
+  const item = (blocker.item_label ?? blocker.item_id)?.trim();
+  if (item) {
+    const form = (
+      blocker.collection_title ?? blocker.collection_spec_id
+    )?.trim();
+    return form
+      ? `Missing required item ${item} (${form})`
+      : `Missing required item ${item}`;
+  }
+  return null;
+}
+
 /** Actionable user-facing explanation when a lock apply or release call fails. */
 export function describeLockError(error: unknown): string {
   const code = assertionErrorCode(error);

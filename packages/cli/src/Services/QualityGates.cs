@@ -213,12 +213,12 @@ public static class QualityGates
             PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`",
         },
         new("api-clients", ["validate-api-clients"],
-            "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
+            "The web API types are generated from the current `docs/openapi`, and the frontend workspace (`tsc` and `vue-tsc`) typechecks against them",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "runs `generate:api --check` and `tsc --noEmit` when staged files touch `docs/openapi` or frontend inputs; fails closed when `pnpm` or `apps/web/tsconfig.json` is missing",
+            PreCommitNote = "runs `generate:api --check` and workspace `tsc`/`vue-tsc` typechecking when staged files touch `docs/openapi` or frontend inputs; fails closed when `pnpm` or `apps/web/tsconfig.json` is missing",
         },
         new("schema-doc", ["auto-stage-schema-doc"],
             "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",

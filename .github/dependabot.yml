@@ -101,6 +101,7 @@ updates:
       vue-vite:
         patterns:
           - "vue"
+          - "vue-tsc"
           - "vue-*"
           - "@vue/*"
           - "pinia"

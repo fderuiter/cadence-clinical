@@ -247,6 +247,7 @@ const catalog = QUIZ_TEMPLATE_CATALOG;
 
 const selectedDomain = ref("All");
 const searchQuery = ref("");
+/** @type {import("vue").Ref<string[]>} */
 const selectedTemplateIds = ref([]);
 
 const getDomainCount = (domain) => {

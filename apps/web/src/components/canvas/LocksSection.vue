@@ -326,11 +326,11 @@
                     ? "item"
                     : "items"
                 }}<template
-                  v-if="(readiness.open_error_finding_count ?? 0) > 0"
+                  v-if="Number(readiness.open_error_finding_count ?? 0) > 0"
                 >
                   · {{ readiness.open_error_finding_count }} error
                   {{
-                    readiness.open_error_finding_count === 1
+                    Number(readiness.open_error_finding_count) === 1
                       ? "finding"
                       : "findings"
                   }}
@@ -365,8 +365,11 @@
                     :node-ref="blocker.target_ref"
                     include-kind
                   />
-                  <span v-if="blocker.detail" class="blocker-detail">
-                    {{ blocker.detail }}
+                  <span
+                    v-if="formatLockBlockerDetail(blocker)"
+                    class="blocker-detail"
+                  >
+                    {{ formatLockBlockerDetail(blocker) }}
                   </span>
                   <span v-if="blocker.next_action" class="blocker-action">
                     — {{ blocker.next_action }}
@@ -641,6 +644,7 @@
 import { computed, ref, watch } from "vue";
 import { ClinicalModal } from "ui";
 import {
+  formatLockBlockerDetail,
   kernelApi,
   type KernelChild,
   type KernelLock,

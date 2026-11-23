@@ -73,10 +73,12 @@
           {{ readiness.open_query_count === 1 ? "query" : "queries" }},
           {{ readiness.missing_required_item_count }} missing required
           {{ readiness.missing_required_item_count === 1 ? "item" : "items"
-          }}<template v-if="(readiness.open_error_finding_count ?? 0) > 0"
+          }}<template v-if="Number(readiness.open_error_finding_count ?? 0) > 0"
             >, {{ readiness.open_error_finding_count }} error
             {{
-              readiness.open_error_finding_count === 1 ? "finding" : "findings"
+              Number(readiness.open_error_finding_count) === 1
+                ? "finding"
+                : "findings"
             }}</template
           >
           (Freeze {{ scopeLabel }} remains available).
@@ -102,7 +104,9 @@
               :node-ref="blocker.target_ref"
               include-kind
             />
-            <span v-if="blocker.detail">{{ blocker.detail }}</span>
+            <span v-if="formatLockBlockerDetail(blocker)">{{
+              formatLockBlockerDetail(blocker)
+            }}</span>
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
         </li>
@@ -135,7 +139,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
+import {
+  formatLockBlockerDetail,
+  type KernelLock,
+  type KernelLockKind,
+} from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,
   DirectScopeLockItem,
