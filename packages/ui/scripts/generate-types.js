@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import ts from "typescript";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const UI_ROOT = path.resolve(__dirname, "..");
 
 const MODEL_PATH = path.resolve(
   __dirname,
@@ -12,8 +14,11 @@ const IG_PATH = path.resolve(
   __dirname,
   "../../../docs/CDISC/Library/Data_Collection/CDASHIG_v2.3.json"
 );
-const OUTPUT_DIR = path.resolve(__dirname, "../src/types");
+const OUTPUT_DIR = path.resolve(UI_ROOT, "src/types");
 const OUTPUT_FILE = path.resolve(OUTPUT_DIR, "cdash.ts");
+const DIST_DIR = path.resolve(UI_ROOT, "dist");
+const DIST_DTS_FILE = path.resolve(DIST_DIR, "index.d.ts");
+const COMPONENTS_DIR = path.resolve(UI_ROOT, "src/components");
 
 function sanitizeJson(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");
@@ -21,7 +26,279 @@ function sanitizeJson(filePath) {
   return JSON.parse(sanitized);
 }
 
-function generate() {
+function walkVueComponents(dir) {
+  const found = [];
+  if (!fs.existsSync(dir)) return found;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...walkVueComponents(fullPath));
+    } else if (entry.name.endsWith(".vue")) {
+      found.push({
+        name: path.basename(entry.name, ".vue"),
+        fullPath,
+      });
+    }
+  }
+  return found.sort((a, b) =>
+    a.name === b.name
+      ? a.fullPath.localeCompare(b.fullPath)
+      : a.name < b.name
+        ? -1
+        : 1
+  );
+}
+
+function mapConstructorExprToTs(expr, sourceFile) {
+  if (!expr) return "any";
+  if (ts.isAsExpression(expr) && expr.type) {
+    if (
+      ts.isTypeReferenceNode(expr.type) &&
+      expr.type.typeArguments &&
+      expr.type.typeArguments.length > 0
+    ) {
+      return expr.type.typeArguments[0].getText(sourceFile);
+    }
+    return expr.type.getText(sourceFile);
+  }
+  if (ts.isIdentifier(expr)) {
+    switch (expr.text) {
+      case "String":
+        return "string";
+      case "Number":
+        return "number";
+      case "Boolean":
+        return "boolean";
+      case "Array":
+        return "any[]";
+      case "Object":
+        return "Record<string, any>";
+      case "Function":
+        return "(...args: any[]) => any";
+      default:
+        return "any";
+    }
+  }
+  if (ts.isArrayLiteralExpression(expr)) {
+    const mapped = Array.from(
+      new Set(expr.elements.map((el) => mapConstructorExprToTs(el, sourceFile)))
+    );
+    if (mapped.includes("any") || mapped.length === 0) return "any";
+    return mapped.join(" | ");
+  }
+  return "any";
+}
+
+function getPropertyKeyText(nameNode, sourceFile) {
+  if (ts.isIdentifier(nameNode)) return nameNode.text;
+  if (ts.isStringLiteral(nameNode)) {
+    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(nameNode.text)
+      ? nameNode.text
+      : JSON.stringify(nameNode.text);
+  }
+  return nameNode.getText(sourceFile);
+}
+
+function extractPropsFromRuntimeObject(objNode, sourceFile) {
+  const fields = [];
+  for (const prop of objNode.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue;
+    const key = getPropertyKeyText(prop.name, sourceFile);
+    const init = prop.initializer;
+    let propType = "any";
+    let isRequired = false;
+
+    if (ts.isObjectLiteralExpression(init)) {
+      let hasDefault = false;
+      for (const sub of init.properties) {
+        if (ts.isPropertyAssignment(sub)) {
+          const subKey = getPropertyKeyText(sub.name, sourceFile);
+          if (subKey === "type") {
+            propType = mapConstructorExprToTs(sub.initializer, sourceFile);
+          } else if (subKey === "required") {
+            isRequired = sub.initializer.kind === ts.SyntaxKind.TrueKeyword;
+          } else if (subKey === "default") {
+            hasDefault = true;
+          }
+        } else if (ts.isMethodDeclaration(sub)) {
+          const subKey = getPropertyKeyText(sub.name, sourceFile);
+          if (subKey === "default") {
+            hasDefault = true;
+          }
+        }
+      }
+      if (hasDefault) {
+        isRequired = false;
+      }
+    } else {
+      propType = mapConstructorExprToTs(init, sourceFile);
+    }
+
+    fields.push(`    ${key}${isRequired ? "" : "?"}: ${propType};`);
+  }
+  if (fields.length === 0) {
+    return "Record<string, any>";
+  }
+  return `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`;
+}
+
+function extractPropsFromTypeMembers(members, defaultKeys, sourceFile) {
+  const fields = [];
+  for (const member of members) {
+    if (!ts.isPropertySignature(member) || !member.name) continue;
+    const rawKey = ts.isIdentifier(member.name)
+      ? member.name.text
+      : ts.isStringLiteral(member.name)
+        ? member.name.text
+        : member.name.getText(sourceFile);
+    const formattedKey = getPropertyKeyText(member.name, sourceFile);
+    const optional = Boolean(member.questionToken) || defaultKeys.has(rawKey);
+    const typeText = member.type ? member.type.getText(sourceFile) : "any";
+    fields.push(`    ${formattedKey}${optional ? "?" : ""}: ${typeText};`);
+  }
+  if (fields.length === 0) {
+    return "Record<string, any>";
+  }
+  return `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`;
+}
+
+function extractVueComponentPropsType(vueFilePath) {
+  const raw = fs.readFileSync(vueFilePath, "utf8");
+  const scriptBlocks = Array.from(
+    raw.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
+    (m) => m[1]
+  );
+  if (scriptBlocks.length === 0) {
+    return "Record<string, any>";
+  }
+  const scriptContent = scriptBlocks.join("\n");
+  const sourceFile = ts.createSourceFile(
+    path.basename(vueFilePath) + ".ts",
+    scriptContent,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+
+  const localTypeDecls = new Map();
+  for (const stmt of sourceFile.statements) {
+    if (ts.isInterfaceDeclaration(stmt)) {
+      localTypeDecls.set(stmt.name.text, stmt.members);
+    } else if (
+      ts.isTypeAliasDeclaration(stmt) &&
+      ts.isTypeLiteralNode(stmt.type)
+    ) {
+      localTypeDecls.set(stmt.name.text, stmt.type.members);
+    }
+  }
+
+  let extracted = null;
+
+  function visit(node) {
+    if (extracted) return;
+    if (ts.isCallExpression(node)) {
+      if (
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "withDefaults" &&
+        node.arguments.length >= 1 &&
+        ts.isCallExpression(node.arguments[0]) &&
+        ts.isIdentifier(node.arguments[0].expression) &&
+        node.arguments[0].expression.text === "defineProps"
+      ) {
+        const defineCall = node.arguments[0];
+        const defaultKeys = new Set();
+        if (
+          node.arguments.length >= 2 &&
+          ts.isObjectLiteralExpression(node.arguments[1])
+        ) {
+          for (const p of node.arguments[1].properties) {
+            if (
+              (ts.isPropertyAssignment(p) ||
+                ts.isShorthandPropertyAssignment(p) ||
+                ts.isMethodDeclaration(p)) &&
+              p.name
+            ) {
+              const k = ts.isIdentifier(p.name)
+                ? p.name.text
+                : ts.isStringLiteral(p.name)
+                  ? p.name.text
+                  : p.name.getText(sourceFile);
+              defaultKeys.add(k);
+            }
+          }
+        }
+        extracted = resolveDefinePropsCall(
+          defineCall,
+          defaultKeys,
+          localTypeDecls,
+          sourceFile
+        );
+        return;
+      }
+
+      if (
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "defineProps"
+      ) {
+        extracted = resolveDefinePropsCall(
+          node,
+          new Set(),
+          localTypeDecls,
+          sourceFile
+        );
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return extracted || "Record<string, any>";
+}
+
+function resolveDefinePropsCall(
+  defineCall,
+  defaultKeys,
+  localTypeDecls,
+  sourceFile
+) {
+  if (defineCall.typeArguments && defineCall.typeArguments.length > 0) {
+    const typeArg = defineCall.typeArguments[0];
+    if (ts.isTypeLiteralNode(typeArg)) {
+      return extractPropsFromTypeMembers(
+        typeArg.members,
+        defaultKeys,
+        sourceFile
+      );
+    }
+    if (ts.isTypeReferenceNode(typeArg) && ts.isIdentifier(typeArg.typeName)) {
+      const members = localTypeDecls.get(typeArg.typeName.text);
+      if (members) {
+        return extractPropsFromTypeMembers(members, defaultKeys, sourceFile);
+      }
+    }
+    return "Record<string, any>";
+  }
+
+  if (defineCall.arguments.length > 0) {
+    const arg = defineCall.arguments[0];
+    if (ts.isObjectLiteralExpression(arg)) {
+      return extractPropsFromRuntimeObject(arg, sourceFile);
+    }
+    if (ts.isArrayLiteralExpression(arg)) {
+      const fields = arg.elements
+        .filter((el) => ts.isStringLiteral(el))
+        .map((el) => `    ${getPropertyKeyText(el, sourceFile)}?: any;`);
+      return fields.length > 0
+        ? `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`
+        : "Record<string, any>";
+    }
+  }
+
+  return "Record<string, any>";
+}
+
+function generateCdashTypes() {
   console.log("Generating CDASH TypeScript definitions...");
 
   if (!fs.existsSync(OUTPUT_DIR)) {
@@ -34,7 +311,6 @@ function generate() {
   const modelVars = modelData.Variables || [];
   const igVars = igData.Variables || [];
 
-  // Collect unique variable codes
   const variableCodesSet = new Set();
   modelVars.forEach((v) => {
     if (v["CDASH Variable"]) {
@@ -49,7 +325,6 @@ function generate() {
 
   const variableCodes = Array.from(variableCodesSet).sort();
 
-  // Create typescript code
   const tsCode = `// Auto-generated CDASH and CDASHIG TypeScript interfaces
 // Generated directly from CDISC CDASH v1.3 and CDASHIG v2.3 schemas.
 // DO NOT EDIT THIS FILE MANUALLY.
@@ -123,6 +398,467 @@ export interface CdashField {
 
   fs.writeFileSync(OUTPUT_FILE, tsCode, "utf8");
   console.log("Successfully generated " + OUTPUT_FILE);
+}
+
+function generateIndexDts() {
+  console.log("Generating packages/ui/dist/index.d.ts declarations...");
+
+  if (!fs.existsSync(DIST_DIR)) {
+    fs.mkdirSync(DIST_DIR, { recursive: true });
+  }
+
+  const components = walkVueComponents(COMPONENTS_DIR);
+  const componentDeclarations = components
+    .map(({ name, fullPath }) => {
+      const propsType = extractVueComponentPropsType(fullPath);
+      return `export const ${name}: DefineComponent<\n  ${propsType},\n  {},\n  any\n>;`;
+    })
+    .join("\n\n");
+
+  const dtsCode = `// Auto-generated TypeScript declarations for packages/ui
+// Generated by packages/ui/scripts/generate-types.js during build and test.
+// DO NOT EDIT THIS FILE MANUALLY.
+
+import type { DefineComponent } from "vue";
+import type { CdashField } from "../src/types/cdash.js";
+
+export * from "../src/types/cdash.js";
+
+export interface ClinicalTabItem {
+  id: string | number;
+  label: string;
+  badge?: string | number | null;
+  disabled?: boolean;
+  buttonId?: string;
+  panelId?: string;
+  buttonClass?: string | any[] | Record<string, boolean>;
+  title?: string;
+  dataTestid?: string;
+}
+
+export const UI_COMPONENTS: Readonly<
+  Record<string, DefineComponent<Record<string, any>, {}, any>>
+>;
+
+// Auto-discovered shared Vue components
+${componentDeclarations}
+
+// Shared focus, retry, and draft-guard composables
+export interface FocusTrapOptions {
+  isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  onEscape?: (event: KeyboardEvent) => void;
+  escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  initialFocus?:
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string;
+  restoreFocus?:
+    | boolean
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string;
+  fallbackFocus?:
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string
+    | null;
+}
+
+export function useFocusTrap(
+  targetRef: import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null),
+  optionsOrIsOpen?:
+    | FocusTrapOptions
+    | import("vue").Ref<boolean>
+    | (() => boolean)
+    | boolean,
+  options?: Omit<FocusTrapOptions, "isOpen">
+): {
+  activate: () => void;
+  deactivate: () => void;
+};
+
+export function getFocusableElements(
+  container: HTMLElement | null | undefined
+): HTMLElement[];
+
+export function trapTabFocus(
+  event: KeyboardEvent,
+  container: HTMLElement | null | undefined
+): boolean;
+
+export type InlineFocusCandidate =
+  | HTMLElement
+  | string
+  | import("vue").Ref<HTMLElement | null | undefined>
+  | (() =>
+      | HTMLElement
+      | string
+      | Array<HTMLElement | string | null | undefined>
+      | null
+      | undefined)
+  | null
+  | undefined;
+
+export interface HandoffFocusOptions {
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  scrollIfOffscreen?: boolean;
+  preventScroll?: boolean;
+  awaitNextTick?: boolean;
+  includeDefaultFallbacks?: boolean;
+  keepTrigger?: boolean;
+}
+
+export function handoffFocus(
+  targets: InlineFocusCandidate | InlineFocusCandidate[],
+  options?: HandoffFocusOptions
+): Promise<HTMLElement | null>;
+
+export interface InlineFocusHandoffOptions {
+  isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  openTarget?: InlineFocusCandidate | InlineFocusCandidate[];
+  closeFallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  scrollIfOffscreen?: boolean;
+}
+
+export interface InlineFocusHandoffControls {
+  rememberTrigger: (
+    explicitTrigger?: InlineFocusCandidate
+  ) => HTMLElement | null;
+  restoreTrigger: (
+    fallbackTargets?: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+  clearTrigger: () => void;
+  handoff: (
+    targets: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+}
+
+export function useInlineFocusHandoff(
+  options?: InlineFocusHandoffOptions
+): InlineFocusHandoffControls;
+
+export function useEscapeClose(
+  onCloseCallback: (event: KeyboardEvent) => void,
+  options?: {
+    isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+    target?: EventTarget | null;
+  }
+): {
+  stop: () => void;
+};
+
+export function useAsyncRetry<T extends (...args: any[]) => any>(
+  asyncFn?: T
+): {
+  isLoading: import("vue").Ref<boolean>;
+  error: import("vue").Ref<any>;
+  execute: (...args: any[]) => Promise<any>;
+  retry: (...args: any[]) => Promise<any>;
+  clearError: () => void;
+};
+
+export function registerDraftSource(source: {
+  flush?: () => void | Promise<void>;
+  hasDrafts?: () => boolean;
+}): () => void;
+export function flushRegisteredDraftSources(): Promise<void>;
+export function flushRegisteredDraftSourcesSync(): void;
+export function hasRegisteredUnsavedDrafts(): boolean;
+export function resetDraftSourcesForTests(): void;
+export function useSignOutGuard(options?: {
+  onConfirmSignOut?: () => void | Promise<void>;
+  flushExternalDrafts?: () => void | Promise<void>;
+  hasExternalDrafts?: () => boolean;
+}): {
+  isConfirmOpen: import("vue").Ref<boolean>;
+  isFlushing: import("vue").Ref<boolean>;
+  requestSignOut: () => Promise<{ prompted: boolean; signedOut: boolean }>;
+  confirmSignOut: () => Promise<void>;
+  cancelSignOut: () => void;
+};
+
+// Legacy HTML builders and utility functions
+export type DebouncedFunction<T extends (...args: any[]) => any> = ((
+  ...args: Parameters<T>
+) => void) & {
+  flush: () => ReturnType<T> | undefined;
+  cancel: () => void;
+  pending: () => boolean;
+};
+
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): DebouncedFunction<T>;
+
+export function createSrOnlyActionButton(options?: {
+  label: string;
+  srContext?: string;
+  className?: string;
+  dataId?: string | number;
+  disabled?: boolean;
+  ariaBusy?: boolean;
+  type?: string;
+  id?: string;
+}): string;
+
+export function createClinicalLookupInput(
+  id: string,
+  label: string,
+  value?: string,
+  status?: "none" | "loading" | "valid" | "invalid" | "degraded",
+  statusMessage?: string
+): string;
+export function createConditionRowHTML(
+  index: number,
+  forms?: any[],
+  fields?: any[],
+  initialData?: any
+): string;
+export function createRuleEditorHTML(
+  forms?: any[],
+  fields?: any[],
+  options?: any
+): string;
+export function serializeConditionsTree(
+  conditions?: any[],
+  matchOperator?: string
+): any;
+export function deserializeConditionsTree(tree: any): {
+  conditions: any[];
+  matchOperator: string;
+};
+export function createSoaBuilderMatrix(soaData: any): string;
+export function createClinicalVisitMatrix(
+  visitsOrSoa: any,
+  forms?: any[]
+): string;
+export function initHoverDetection(): void;
+
+// eConsent, signing, and OIDC session helpers
+export function normalizeApprovedConsent(approved: any): any;
+export function shapeComprehensionAnswers(answers: any): any;
+export function interpretComprehensionResult(result: any): any;
+
+export function canonicalSerialize(obj: any): string;
+export function generateCanonicalSignature(
+  obj: any,
+  key: string | Uint8Array
+): Promise<string>;
+export function verifyCanonicalSignature(
+  obj: any,
+  sig: string,
+  key: string | Uint8Array
+): Promise<boolean>;
+export function generateGatewaySignature(
+  userId: string,
+  roles: string,
+  timestamp: string,
+  version: string | undefined,
+  changeReason: string | null | undefined,
+  secret: string | Uint8Array
+): Promise<string>;
+export function verifyGatewaySignature(
+  signature: string,
+  userId: string,
+  roles: string,
+  timestamp: string,
+  version: string | undefined,
+  changeReason: string | null | undefined,
+  secret: string | Uint8Array
+): Promise<boolean>;
+export function generateJwtHS256(
+  payload: any,
+  secret: string | Uint8Array
+): Promise<string>;
+export function sha256(message: string): Promise<string>;
+export function validateField(value: any, rules: any): any;
+export function buildLedgerBlock(
+  index: number,
+  timestamp: string,
+  action: string,
+  details: any,
+  reason: string,
+  prevHash: string
+): Promise<any>;
+export function encryptAESGCM(
+  plaintext: string,
+  key: Uint8Array
+): Promise<{ ciphertext: string; iv: string; tag: string }>;
+export function decryptAESGCM(
+  ciphertext: string,
+  iv: string,
+  tag: string,
+  key: Uint8Array
+): Promise<string>;
+export function deriveSessionKey(
+  pin: string,
+  salt: string
+): Promise<Uint8Array>;
+export function deriveKeyFromPIN(
+  pin: string,
+  salt: string | Uint8Array,
+  iterations?: number
+): Promise<Uint8Array>;
+
+export const SEMANTIC_ACTION_PATTERN: RegExp;
+export const STEP_UP_ACTION_MAX_LENGTH: number;
+export const SEMANTIC_ACTIONS: Readonly<{
+  CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off";
+  ECONSENT_CAPTURE: "econsent.consent.capture";
+  ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign";
+  CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate";
+  ETMF_DOCUMENT_SIGN_OFF: "etmf.document.sign_off";
+  COLLECTION_SIGN: "collection.sign";
+  SOA_APPROVE: "designer.soa.approve";
+}>;
+export function isValidStepUpAction(action: string | null | undefined): boolean;
+export function isValidSemanticAction(
+  semanticAction: string | null | undefined
+): boolean;
+export interface StepUpVerificationPayloadInput {
+  username?: string | null;
+  password: string;
+  totp?: string | null;
+  action: string;
+  semanticAction?: string;
+  semantic_action?: string;
+  batchId?: string | null;
+  batch_id?: string | null;
+}
+export interface StepUpVerificationPayload {
+  username?: string;
+  password: string;
+  totp?: string;
+  action: string;
+  semantic_action: string;
+  batch_id?: string;
+}
+export function buildStepUpVerificationPayload(
+  input: StepUpVerificationPayloadInput
+): StepUpVerificationPayload;
+
+export const SIGNATURE_OTHER_REASON: "Other";
+export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{
+  type: "password";
+  inputmode: "text";
+  autocomplete: "current-password";
+  autocapitalize: "off";
+  autocorrect: "off";
+  spellcheck: "false";
+}>;
+export function requiresCustomSignatureReason(
+  selectedReason: string | null | undefined
+): boolean;
+export function resolveSignatureReason(
+  selectedReason: string | null | undefined,
+  customReason?: string | null
+): { valid: boolean; reason: string; error: string | null };
+export function deriveSignerRoleFromClaims(
+  claimsOrRoles: string[] | string | Record<string, any> | null | undefined,
+  fallback?: string
+): string;
+
+export const DEFAULT_AUTH_RETURN_URL_KEY: string;
+export function sanitizeReturnUrl(
+  rawUrl: string | null | undefined,
+  options?: { baseOrigin?: string }
+): string | null;
+export function saveAuthReturnUrl(
+  url: string | null | undefined,
+  options?: { storage?: Storage | null; key?: string; baseOrigin?: string }
+): string | null;
+export function peekAuthReturnUrl(options?: {
+  storage?: Storage | null;
+  key?: string;
+  baseOrigin?: string;
+}): string | null;
+export function consumeAuthReturnUrl(options?: {
+  storage?: Storage | null;
+  key?: string;
+  baseOrigin?: string;
+}): string | null;
+export function clearAuthReturnUrl(options?: {
+  storage?: Storage | null;
+  key?: string;
+}): void;
+export function resolveOidcRedirectUri(
+  targetPathOrUrl?: string | null,
+  options?: { origin?: string; basePath?: string }
+): string;
+export function isStepUpAuthFailure(
+  url: string | URL | null | undefined,
+  status: number,
+  errorBody?: any
+): boolean;
+
+export interface OidcTokenRefreshResult {
+  ok: boolean;
+  refreshed: boolean;
+  token: string | null;
+  error?: any;
+}
+
+export interface OidcSessionCoordinator {
+  attachKeycloak: (keycloakInstance: any) => any;
+  resolveKeycloak: () => any;
+  ensureFreshToken: (minValidity?: number) => Promise<OidcTokenRefreshResult>;
+  refreshOnUnauthorized: (options?: {
+    returnUrl?: string | null;
+  }) => Promise<OidcTokenRefreshResult>;
+  markSessionExpired: (options?: {
+    reason?: string;
+    error?: any;
+    returnUrl?: string | null;
+  }) => string | null;
+  markAuthenticated: (token?: string | null) => void;
+  beginVoluntaryLogout: () => void;
+  reset: () => void;
+  isSessionExpired: () => boolean;
+  isRefreshing: () => boolean;
+  saveReturnUrl: (url: string | null | undefined) => string | null;
+  peekReturnUrl: () => string | null;
+  consumeReturnUrl: () => string | null;
+}
+
+export function createOidcSessionCoordinator(options?: {
+  getKeycloak?: () => any;
+  minValiditySeconds?: number;
+  forceRefreshMinValiditySeconds?: number;
+  onTokenRefreshed?: (token: string | null, keycloak: any) => void;
+  onSessionExpired?: (context: {
+    reason: string;
+    error?: any;
+    returnUrl: string | null;
+  }) => void;
+  onAuthLogout?: () => void;
+  getCurrentReturnUrl?: () => string | null;
+  storage?: Storage | null;
+  returnUrlKey?: string;
+}): OidcSessionCoordinator;
+`;
+
+  fs.writeFileSync(DIST_DTS_FILE, dtsCode, "utf8");
+  console.log("Successfully generated " + DIST_DTS_FILE);
+}
+
+function generate() {
+  generateCdashTypes();
+  generateIndexDts();
 }
 
 generate();

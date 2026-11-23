@@ -6,6 +6,7 @@ import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock
 import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
+  createUiAutoBarrelPlugin,
   createUiWorkspaceAliases,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
@@ -39,6 +40,7 @@ export default defineConfig(({ mode }) => ({
     ],
   },
   plugins: [
+    createUiAutoBarrelPlugin(),
     vue(),
     {
       // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be

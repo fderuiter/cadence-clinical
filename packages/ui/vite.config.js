@@ -2,11 +2,12 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
 import { fileURLToPath } from "url";
+import { createUiAutoBarrelPlugin } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [createUiAutoBarrelPlugin(resolve(__dirname, "src")), vue()],
   build: {
     lib: {
       entry: resolve(__dirname, "index.js"),

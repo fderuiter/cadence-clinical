@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import ts from "typescript";
 
 const VIRTUAL_DEMO_FIXTURES_ID = "\0virtual:demo-fixtures-prod-stub";
 const VIRTUAL_DEMO_RUNTIME_ID = "\0virtual:demo-fixtures-runtime-prod-stub";
@@ -486,4 +487,188 @@ export function createUiWorkspaceAliases(
       replacement: path.resolve(uiRoot, uiEntry),
     },
   ];
+}
+
+function walkUiVueComponents(dir) {
+  const entries = [];
+  if (!fs.existsSync(dir)) return entries;
+  for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      entries.push(...walkUiVueComponents(fullPath));
+    } else if (item.name.endsWith(".vue")) {
+      entries.push({
+        name: path.basename(item.name, ".vue"),
+        fullPath,
+      });
+    }
+  }
+  return entries.sort((a, b) =>
+    a.name === b.name
+      ? a.fullPath.localeCompare(b.fullPath)
+      : a.name < b.name
+        ? -1
+        : 1
+  );
+}
+
+/**
+ * Expands `packages/ui/src/index.js` with static named ESM re-exports for every `.vue`
+ * component under `packages/ui/src/components/` so adding a shared component requires
+ * zero edits to tracked barrel files while preserving Rollup tree-shaking.
+ *
+ * @param {string} [uiSrcDir] - Absolute path to `packages/ui/src`.
+ * @returns {import("vite").Plugin}
+ */
+export function createUiAutoBarrelPlugin(uiSrcDir) {
+  const resolvedUiSrcDir = toPosixPath(
+    uiSrcDir
+      ? path.resolve(uiSrcDir)
+      : path.resolve(
+          path.dirname(new URL(import.meta.url).pathname),
+          "../packages/ui/src"
+        )
+  );
+  const targetEntry = `${resolvedUiSrcDir}/index.js`;
+  const componentsRoot = path.join(resolvedUiSrcDir, "components");
+
+  return {
+    name: "cadence-ui-auto-barrel",
+    enforce: "pre",
+    transform(code, id) {
+      const cleanId = toPosixPath(id.split("?")[0]);
+      if (cleanId !== targetEntry) {
+        return null;
+      }
+      const discovered = walkUiVueComponents(componentsRoot);
+      if (typeof this?.addWatchFile === "function") {
+        for (const item of discovered) {
+          this.addWatchFile(item.fullPath);
+        }
+      }
+      const exportLines = discovered.map((item) => {
+        const rel = `./${toPosixPath(path.relative(resolvedUiSrcDir, item.fullPath))}`;
+        return `export { default as ${item.name} } from ${JSON.stringify(rel)};`;
+      });
+      return {
+        code: `${code}\n${exportLines.join("\n")}\n`,
+        map: null,
+      };
+    },
+  };
+}
+
+function parseCanvasSectionMetaFile(filePath) {
+  const sourceText = fs.readFileSync(filePath, "utf8");
+  const sf = ts.createSourceFile(
+    path.basename(filePath),
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  );
+  const fields = { order: 9999 };
+
+  function visit(node) {
+    if (ts.isObjectLiteralExpression(node)) {
+      let hasId = false;
+      let hasStageId = false;
+      for (const prop of node.properties) {
+        if (!ts.isPropertyAssignment(prop) || !prop.name) continue;
+        const name = ts.isIdentifier(prop.name)
+          ? prop.name.text
+          : ts.isStringLiteral(prop.name)
+            ? prop.name.text
+            : "";
+        if (name === "id" && ts.isStringLiteralLike(prop.initializer)) {
+          fields.id = prop.initializer.text;
+          hasId = true;
+        } else if (
+          name === "stageId" &&
+          ts.isStringLiteralLike(prop.initializer)
+        ) {
+          fields.stageId = prop.initializer.text;
+          hasStageId = true;
+        } else if (name === "order" && ts.isNumericLiteral(prop.initializer)) {
+          fields.order = Number(prop.initializer.text);
+        } else if (
+          name === "label" &&
+          ts.isStringLiteralLike(prop.initializer)
+        ) {
+          fields.label = prop.initializer.text;
+        } else if (
+          name === "description" &&
+          ts.isStringLiteralLike(prop.initializer)
+        ) {
+          fields.description = prop.initializer.text;
+        }
+      }
+      if (hasId && hasStageId) {
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sf);
+  return fields.id && fields.stageId ? fields : null;
+}
+
+/**
+ * Populates `apps/web/src/canvas/sections/meta.ts` from `*.section.ts` descriptors
+ * at Vite transform time so cold-boot stage and palette navigation never pulls
+ * section `.vue` components or route-only API modules into `index.html`, while
+ * keeping `StudyCanvasView` section mounting synchronous.
+ *
+ * @param {string} appDir - Absolute directory of `apps/web`.
+ * @returns {import("vite").Plugin}
+ */
+export function createCanvasSectionMetaPlugin(appDir) {
+  const sectionsDir = path.resolve(appDir, "src/canvas/sections");
+  const targetMetaFile = toPosixPath(path.join(sectionsDir, "meta.ts"));
+
+  return {
+    name: "cadence-canvas-section-meta",
+    enforce: "pre",
+    transform(_code, id) {
+      const cleanId = toPosixPath(id.split("?")[0]);
+      if (cleanId !== targetMetaFile || !fs.existsSync(sectionsDir)) {
+        return null;
+      }
+
+      const items = [];
+      for (const entry of fs.readdirSync(sectionsDir, {
+        withFileTypes: true,
+      })) {
+        if (!entry.isFile() || !entry.name.endsWith(".section.ts")) {
+          continue;
+        }
+        const fullPath = path.join(sectionsDir, entry.name);
+        if (typeof this?.addWatchFile === "function") {
+          this.addWatchFile(fullPath);
+        }
+        const parsed = parseCanvasSectionMetaFile(fullPath);
+        if (parsed) {
+          items.push(parsed);
+        }
+      }
+
+      items.sort((a, b) =>
+        a.order !== b.order ? a.order - b.order : a.id.localeCompare(b.id)
+      );
+
+      return {
+        code: `export const SECTION_METADATA = Object.freeze(${JSON.stringify(items)});
+export function sectionsForStage(stageId) {
+  return SECTION_METADATA.filter((item) => item.stageId === stageId).map((item) => ({
+    id: item.id,
+    label: item.label,
+    description: item.description,
+  }));
+}
+`,
+        map: null,
+      };
+    },
+  };
 }
