@@ -22,6 +22,13 @@ export type KernelLockReadiness =
   KernelSchemas["Kernel_KernelLockReadinessResponse"];
 export type KernelLockBlocker =
   KernelSchemas["Kernel_KernelLockBlockerResponse"];
+export type KernelLockBlockerKind =
+  | "OpenQuery"
+  | "MissingRequiredItem"
+  | "UnverifiedValue"
+  | "UnsignedForm"
+  | "UnopenedVisit"
+  | "ErrorFinding";
 export type KernelLockKind = KernelSchemas["Kernel_LockKind"];
 export type KernelLockMeaning = "Approved" | "Responsibility";
 export type StudyExportFormat =
@@ -137,7 +144,7 @@ export function describeLockError(error: unknown): string {
     if (parts.length > 0) {
       return parts.join(" ");
     }
-    return "This scope has open queries, missing required items, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
+    return "This scope has open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -199,7 +206,7 @@ export const kernelLocksApi = {
     );
   },
 
-  /** Evaluates lock readiness (open queries, missing required items, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  /** Evaluates all six lock readiness gates (open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
   getStudyLockReadiness(
     studyRef: string,
     scopeRef?: string

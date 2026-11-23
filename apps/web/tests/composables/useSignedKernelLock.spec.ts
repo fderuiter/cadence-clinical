@@ -13,7 +13,13 @@ import {
   type KernelLock,
   type KernelLockReadiness,
 } from "../../src/api/kernelApi";
-import { useSignedKernelLock } from "../../src/composables/useSignedKernelLock";
+import {
+  buildLockReadinessGates,
+  formatLockBlockerDetail,
+  formatLockBlockerKindLabel,
+  normalizeLockBlockerKind,
+  useSignedKernelLock,
+} from "../../src/composables/useSignedKernelLock";
 import { useAuthStore } from "../../src/stores/auth.js";
 
 const mockCanI = vi.fn();
@@ -361,7 +367,96 @@ describe("useSignedKernelLock", () => {
     expect(mockGetStudyLockReadiness).toHaveBeenCalledTimes(2);
     expect(lock.readiness.value).toEqual(clearReadiness);
     expect(lock.isLockBlockedByReadiness.value).toBe(false);
+    expect(lock.canFreezeByReadiness.value).toBe(true);
 
     scope.stop();
+  });
+
+  it("maps all six lock readiness gate counts, category labels, and blocker detail descriptions", () => {
+    const fullReadiness: KernelLockReadiness = {
+      study_ref: STUDY_A,
+      scope_ref: SCOPE_REF,
+      scope_kind: "study",
+      ready_for_lock: false,
+      can_freeze: true,
+      open_query_count: 1,
+      missing_required_item_count: 2,
+      unverified_value_count: 3,
+      unsigned_form_count: 4,
+      unopened_visit_count: 5,
+      open_error_finding_count: 6,
+      masked_blocker_count: 1,
+      blockers: [],
+      valid_at: "2026-06-01T10:00:00Z",
+      known_at: "2026-06-01T10:00:00Z",
+    };
+
+    const gates = buildLockReadinessGates(fullReadiness);
+    expect(gates.map((g) => [g.kind, g.count])).toEqual([
+      ["OpenQuery", 1],
+      ["MissingRequiredItem", 2],
+      ["UnverifiedValue", 3],
+      ["UnsignedForm", 4],
+      ["UnopenedVisit", 5],
+      ["ErrorFinding", 6],
+    ]);
+
+    expect(normalizeLockBlockerKind("unverified_value")).toBe(
+      "UnverifiedValue"
+    );
+    expect(normalizeLockBlockerKind("unsigned_form")).toBe("UnsignedForm");
+    expect(normalizeLockBlockerKind("unopened_visit")).toBe("UnopenedVisit");
+    expect(normalizeLockBlockerKind("error_finding")).toBe("ErrorFinding");
+    expect(formatLockBlockerKindLabel("UnverifiedValue")).toBe(
+      "Unverified value"
+    );
+    expect(formatLockBlockerKindLabel("UnsignedForm", true)).toBe(
+      "Signature superseded"
+    );
+    expect(formatLockBlockerKindLabel("ErrorFinding")).toBe("Error finding");
+
+    expect(
+      formatLockBlockerDetail({
+        kind: "UnverifiedValue",
+        masked: false,
+        owner: "Clinical Research Associate",
+        item_label: "Systolic BP",
+        current_revision: 2,
+      })
+    ).toContain("Revision 2");
+    expect(
+      formatLockBlockerDetail({
+        kind: "UnsignedForm",
+        masked: false,
+        owner: "Principal Investigator",
+        collection_title: "Vital Signs",
+        signature_superseded: true,
+      })
+    ).toContain("superseded");
+    expect(
+      formatLockBlockerDetail({
+        kind: "UnopenedVisit",
+        masked: false,
+        owner: "Clinical Research Coordinator",
+        planned_activity_name: "Week 4 Visit",
+        planned_date: "2026-05-15",
+      })
+    ).toContain("Week 4 Visit");
+    expect(
+      formatLockBlockerDetail({
+        kind: "ErrorFinding",
+        masked: false,
+        owner: "Data Manager",
+        rule_id: "DM-AGE-001",
+      })
+    ).toContain("DM-AGE-001");
+    expect(
+      formatLockBlockerDetail({
+        kind: "OpenQuery",
+        masked: true,
+        owner: "Restricted",
+        detail: "Blinded blocker",
+      })
+    ).toContain("Blinded");
   });
 });

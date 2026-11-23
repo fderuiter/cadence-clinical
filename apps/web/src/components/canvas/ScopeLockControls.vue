@@ -64,21 +64,18 @@
           : 'scope-lock-readiness--blocked',
       ]"
     >
-      <span :data-testid="`${prefix}-readiness-summary`">
+      <span
+        class="scope-lock-readiness-summary"
+        :data-testid="`${prefix}-readiness-summary`"
+      >
         <template v-if="readiness.ready_for_lock">
-          Ready for Locked (0 open queries · 0 missing required items).
+          Ready for Locked ({{
+            readinessGates.map((gate) => gate.label).join(" · ")
+          }}).
         </template>
         <template v-else>
-          Locked blocked: {{ readiness.open_query_count }} open
-          {{ readiness.open_query_count === 1 ? "query" : "queries" }},
-          {{ readiness.missing_required_item_count }} missing required
-          {{ readiness.missing_required_item_count === 1 ? "item" : "items"
-          }}<template v-if="(readiness.open_error_finding_count ?? 0) > 0"
-            >, {{ readiness.open_error_finding_count }} error
-            {{
-              readiness.open_error_finding_count === 1 ? "finding" : "findings"
-            }}</template
-          >
+          Locked blocked:
+          {{ readinessGates.map((gate) => gate.label).join(", ") }}
           (Freeze {{ scopeLabel }} remains available).
         </template>
       </span>
@@ -89,10 +86,23 @@
       >
         <li
           v-for="(blocker, idx) in readiness.blockers"
-          :key="`${blocker.kind}-${blocker.target_ref ?? idx}`"
+          :key="`${blocker.kind}-${blocker.target_ref ?? blocker.finding_ref ?? blocker.query_ref ?? idx}`"
+          class="scope-lock-blocker-item"
+          :data-blocker-kind="normalizeLockBlockerKind(blocker.kind)"
         >
+          <span class="scope-lock-blocker-kind">
+            {{
+              formatLockBlockerKindLabel(
+                blocker.kind,
+                Boolean(blocker.signature_superseded)
+              )
+            }}
+          </span>
           <template v-if="blocker.masked">
-            Masked ({{ blocker.mask ?? "Restricted" }})
+            <span>Masked ({{ blocker.mask ?? "Restricted" }})</span>
+            <strong v-if="formatMaskedBlockerOwner(blocker)"
+              >{{ formatMaskedBlockerOwner(blocker) }}:</strong
+            >
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
           <template v-else>
@@ -100,9 +110,28 @@
             <NodeRefChip
               v-if="blocker.target_ref"
               :node-ref="blocker.target_ref"
+              :fallback-title="formatLockBlockerFallbackTitle(blocker)"
               include-kind
             />
-            <span v-if="blocker.detail">{{ blocker.detail }}</span>
+            <NodeRefChip
+              v-if="
+                blocker.query_ref && blocker.query_ref !== blocker.target_ref
+              "
+              :node-ref="blocker.query_ref"
+              include-kind
+            />
+            <NodeRefChip
+              v-if="
+                blocker.finding_ref &&
+                blocker.finding_ref !== blocker.target_ref
+              "
+              :node-ref="blocker.finding_ref"
+              :fallback-title="blocker.rule_id ?? undefined"
+              include-kind
+            />
+            <span v-if="formatLockBlockerDetail(blocker)">{{
+              formatLockBlockerDetail(blocker)
+            }}</span>
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
         </li>
@@ -140,7 +169,14 @@ import type {
   CoveringScopeLockItem,
   DirectScopeLockItem,
 } from "../../canvas/kernelLocks";
-import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import {
+  formatLockBlockerDetail,
+  formatLockBlockerFallbackTitle,
+  formatLockBlockerKindLabel,
+  formatMaskedBlockerOwner,
+  normalizeLockBlockerKind,
+  useSignedKernelLock,
+} from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 
@@ -181,6 +217,7 @@ const {
   canApply,
   canRelease,
   readiness,
+  readinessGates,
   isLockBlockedByReadiness,
   busy,
   outcome,
@@ -312,6 +349,35 @@ function openRelease(lockRef: string, lockKind: string) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.scope-lock-readiness-summary {
+  font-variant-numeric: tabular-nums;
+}
+
+.scope-lock-blocker-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.scope-lock-blocker-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
+  .scope-lock-input {
+    font-size: 1rem;
+  }
 }
 
 .scope-lock-outcome {

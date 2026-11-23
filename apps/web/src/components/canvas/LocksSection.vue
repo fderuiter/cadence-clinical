@@ -318,23 +318,19 @@
                 class="readiness-counts"
                 data-testid="study-locks-readiness-counts"
               >
-                {{ readiness.open_query_count }} open
-                {{ readiness.open_query_count === 1 ? "query" : "queries" }} ·
-                {{ readiness.missing_required_item_count }} missing required
-                {{
-                  readiness.missing_required_item_count === 1
-                    ? "item"
-                    : "items"
-                }}<template
-                  v-if="(readiness.open_error_finding_count ?? 0) > 0"
+                <span
+                  v-for="(gate, gIdx) in readinessGates"
+                  :key="gate.key"
+                  :data-testid="`readiness-gate-${gate.key}`"
+                  :class="[
+                    'readiness-gate-chip',
+                    gate.count > 0
+                      ? 'readiness-gate-chip--active'
+                      : 'readiness-gate-chip--clear',
+                  ]"
                 >
-                  · {{ readiness.open_error_finding_count }} error
-                  {{
-                    readiness.open_error_finding_count === 1
-                      ? "finding"
-                      : "findings"
-                  }}
-                </template>
+                  <template v-if="gIdx > 0"> · </template>{{ gate.label }}
+                </span>
               </span>
             </div>
 
@@ -345,13 +341,31 @@
             >
               <li
                 v-for="(blocker, bIdx) in readiness.blockers"
-                :key="`${blocker.kind}-${blocker.target_ref ?? bIdx}`"
+                :key="`${blocker.kind}-${blocker.target_ref ?? blocker.finding_ref ?? blocker.query_ref ?? bIdx}`"
                 class="readiness-blocker-item"
+                :data-blocker-kind="normalizeLockBlockerKind(blocker.kind)"
               >
+                <span
+                  class="clinical-badge blocker-kind-badge"
+                  :data-testid="`blocker-kind-${normalizeLockBlockerKind(blocker.kind)}`"
+                >
+                  {{
+                    formatLockBlockerKindLabel(
+                      blocker.kind,
+                      Boolean(blocker.signature_superseded)
+                    )
+                  }}
+                </span>
                 <template v-if="blocker.masked">
                   <span class="masked-pill">
                     Masked ({{ blocker.mask ?? "Restricted" }})
                   </span>
+                  <strong
+                    v-if="formatMaskedBlockerOwner(blocker)"
+                    class="blocker-owner"
+                  >
+                    {{ formatMaskedBlockerOwner(blocker) }}:
+                  </strong>
                   <span v-if="blocker.next_action" class="blocker-action">
                     {{ blocker.next_action }}
                   </span>
@@ -363,10 +377,31 @@
                   <NodeRefChip
                     v-if="blocker.target_ref"
                     :node-ref="blocker.target_ref"
+                    :fallback-title="formatLockBlockerFallbackTitle(blocker)"
                     include-kind
                   />
-                  <span v-if="blocker.detail" class="blocker-detail">
-                    {{ blocker.detail }}
+                  <NodeRefChip
+                    v-if="
+                      blocker.query_ref &&
+                      blocker.query_ref !== blocker.target_ref
+                    "
+                    :node-ref="blocker.query_ref"
+                    include-kind
+                  />
+                  <NodeRefChip
+                    v-if="
+                      blocker.finding_ref &&
+                      blocker.finding_ref !== blocker.target_ref
+                    "
+                    :node-ref="blocker.finding_ref"
+                    :fallback-title="blocker.rule_id ?? undefined"
+                    include-kind
+                  />
+                  <span
+                    v-if="formatLockBlockerDetail(blocker)"
+                    class="blocker-detail"
+                  >
+                    {{ formatLockBlockerDetail(blocker) }}
                   </span>
                   <span v-if="blocker.next_action" class="blocker-action">
                     — {{ blocker.next_action }}
@@ -389,7 +424,7 @@
           <button
             type="button"
             class="btn btn-secondary btn-mini-freeze"
-            :disabled="busy || !applyScopeRef.trim()"
+            :disabled="busy || !applyScopeRef.trim() || !canFreezeByReadiness"
             @click="openQuickApplyDialog('Frozen')"
           >
             Quick Freeze…
@@ -398,9 +433,7 @@
             type="button"
             class="btn btn-secondary btn-mini-lock"
             :disabled="
-              busy ||
-              !applyScopeRef.trim() ||
-              (readiness !== null && !readiness.ready_for_lock)
+              busy || !applyScopeRef.trim() || isLockBlockedByReadiness
             "
             @click="openQuickApplyDialog('Locked')"
           >
@@ -654,7 +687,14 @@ import {
   seedNodeSummary,
 } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
-import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import {
+  formatLockBlockerDetail,
+  formatLockBlockerFallbackTitle,
+  formatLockBlockerKindLabel,
+  formatMaskedBlockerOwner,
+  normalizeLockBlockerKind,
+  useSignedKernelLock,
+} from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
@@ -774,6 +814,8 @@ const {
   canRelease,
   readiness,
   readinessLoading,
+  readinessGates,
+  canFreezeByReadiness,
   isLockBlockedByReadiness,
   busy,
   outcome,
@@ -975,12 +1017,17 @@ const isLockedBlockedByReadiness = computed(
   () => applyKind.value === "Locked" && isLockBlockedByReadiness.value
 );
 
+const isFreezeBlockedByReadiness = computed(
+  () => applyKind.value === "Frozen" && !canFreezeByReadiness.value
+);
+
 const isApplyDisabled = computed(
   () =>
     busy.value ||
     !applyScopeRef.value.trim() ||
     !applyReason.value.trim() ||
-    isLockedBlockedByReadiness.value
+    isLockedBlockedByReadiness.value ||
+    isFreezeBlockedByReadiness.value
 );
 
 watch([studyRef, applyScopeRef, canApply], () => {
@@ -1337,8 +1384,39 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 }
 
 .readiness-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
   color: var(--semantic-color-text-body);
   font-variant-numeric: tabular-nums;
+}
+
+.readiness-gate-chip--active {
+  font-weight: 600;
+  color: var(--semantic-color-error-dark);
+}
+
+.blocker-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
+  .field-group input,
+  .field-group select,
+  .release-reason-bar input,
+  .study-locks-filters input[type="text"],
+  .quick-dialog-textarea {
+    font-size: 1rem;
+  }
 }
 
 .readiness-blockers {

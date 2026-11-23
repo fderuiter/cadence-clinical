@@ -369,6 +369,13 @@ public sealed class RandomizationApplicationService(
         return subject is null ? null : (subject.StudyCode, subject.SiteCode);
     }
 
+    /// <inheritdoc />
+    public async Task<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?> GetSubjectLockScopeAsync(string subjectIdOrCode, CancellationToken ct = default)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        return subject is null ? null : (subject.StudyCode, subject.SiteCode, subject.SubjectCode);
+    }
+
     /// <summary>
     /// The scheme's permuted-block list: <see cref="RandomizationScheme.SlotsPerStratum"/> slots per stratum from
     /// blocks of the scheme's sizes, each block's size and shuffle drawn from <see cref="RandomNumberGenerator"/>, each

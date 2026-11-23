@@ -595,13 +595,39 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         var cleanEnrollmentForms = await GetJsonAsync<FormSummaryResponse[]>(pi, $"{FormEndpoints.RoutePrefix}?enrollment_id={seed.EnrollmentA.Value:D}", ct);
         cleanEnrollmentForms.Single(f => f.FormId == seed.FormA).Complete.Should().BeTrue();
 
-        var readinessClean = await GetJsonAsync<KernelLockReadinessResponse>(
+        // Before SDV and investigator sign-off, lock readiness still blocks Locked on unverified revisions and unsigned forms!
+        var readinessBeforeSignOff = await GetJsonAsync<KernelLockReadinessResponse>(
             dm,
             $"/api/v1/kernel/studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}",
             ct);
-        readinessClean.ReadyForLock.Should().BeTrue();
-        readinessClean.OpenErrorFindingCount.Should().Be(0);
-        readinessClean.Blockers.Should().BeEmpty();
+        readinessBeforeSignOff.ReadyForLock.Should().BeFalse();
+        readinessBeforeSignOff.OpenQueryCount.Should().Be(0);
+        readinessBeforeSignOff.MissingRequiredItemCount.Should().Be(0);
+        readinessBeforeSignOff.OpenErrorFindingCount.Should().Be(0);
+        readinessBeforeSignOff.UnverifiedValueCount.Should().Be(4);
+        readinessBeforeSignOff.UnsignedFormCount.Should().Be(2);
+
+        // Verify all recorded observations across FormA and FormB, and sign both populated forms.
+        var cleanFormB = await GetJsonAsync<FormResponse>(monitor, $"{FormEndpoints.RoutePrefix}/{seed.FormB:D}", ct);
+        foreach (var (enrollmentRef, formResp) in new[]
+        {
+            (NodeRef.For(seed.EnrollmentA).ToString(), cleanForm),
+            (NodeRef.For(seed.EnrollmentB).ToString(), cleanFormB),
+        })
+        {
+            foreach (var item in formResp.Items.Where(i => i.ObservationId is not null && i.Revision > 0))
+            {
+                await SendJsonAsync<KernelAssertionStateResponse>(
+                    monitor,
+                    HttpMethod.Post,
+                    $"/api/v1/kernel/observations/observation:{item.ObservationId:D}/verifications",
+                    "Source data verified",
+                    token: null,
+                    new { enrollment_ref = enrollmentRef, revision = item.Revision },
+                    HttpStatusCode.Created,
+                    ct);
+            }
+        }
 
         var signature = await SendJsonAsync<FormSignatureResponse>(
             pi,
@@ -613,6 +639,36 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
             HttpStatusCode.Created,
             ct);
         signature.Meaning.Should().Be("Approved");
+
+        const string siteBPi = "pi.site-b@readiness.test";
+        foreach (var cap in new[] { "collection.sign", "attestation.sign" })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(seed.Tenant, GrantId.New(), Actor.Person(siteBPi), cap, null, AuthorityScope.StudySite(seed.SiteB), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Site B PI grant"),
+                ct);
+        }
+
+        using var piB = CreateClient(seed.TenantCode, siteBPi);
+        await SendJsonAsync<FormSignatureResponse>(
+            piB,
+            HttpMethod.Post,
+            $"{FormEndpoints.RoutePrefix}/{seed.FormB:D}/signatures",
+            "Site B investigator sign-off on clean form",
+            TestSecurityContext.CreateSigToken(siteBPi, FormSignatureEndpoints.SignAction(seed.FormB), FormSignatureEndpoints.SignSemanticAction),
+            new { meaning = "approved", content_hash = cleanFormB.ContentHash },
+            HttpStatusCode.Created,
+            ct);
+
+        var readinessClean = await GetJsonAsync<KernelLockReadinessResponse>(
+            dm,
+            $"/api/v1/kernel/studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}",
+            ct);
+        readinessClean.ReadyForLock.Should().BeTrue();
+        readinessClean.UnverifiedValueCount.Should().Be(0);
+        readinessClean.UnsignedFormCount.Should().Be(0);
+        readinessClean.UnopenedVisitCount.Should().Be(0);
+        readinessClean.OpenErrorFindingCount.Should().Be(0);
+        readinessClean.Blockers.Should().BeEmpty();
 
         var appliedLock = await SendJsonAsync<KernelLockResponse>(
             dm,

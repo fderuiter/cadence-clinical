@@ -43,6 +43,7 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         var ct = TestContext.Current.CancellationToken;
         var subject = await _observations.NewEnrollmentAsync(ct);
         var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+        await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
 
         var locked = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct), ct);
 
@@ -63,7 +64,10 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
         (await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct))!.Locks.Should().BeEmpty();
         await using var db = fixture.CreateContext(subject.Tenant);
-        var stored = await db.Assertions.AsNoTracking().Where(a => a.StudyId == subject.Study).OrderBy(a => a.AssertedAt).ToListAsync(ct);
+        var stored = await db.Assertions.AsNoTracking()
+            .Where(a => a.StudyId == subject.Study && a.Kind == AssertionKind.Locked)
+            .OrderBy(a => a.AssertedAt)
+            .ToListAsync(ct);
         stored.Select(a => (a.Kind, a.RetractsId)).Should().Equal((AssertionKind.Locked, (AssertionId?)null), (AssertionKind.Locked, locked.LockId));
         var events = await db.DomainEvents.AsNoTracking().Where(e => e.Type == "LockApplied" || e.Type == "LockReleased").Select(e => e.Type).ToListAsync(ct);
         events.Should().BeEquivalentTo("LockApplied", "LockReleased");
@@ -88,7 +92,10 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         (await fixture.Sender.SendAsync(KernelObservationScenario.Correct(subject.Tenant, first, Mmhg(128)), cancellationToken: ct)).Error!.Code
             .Should().Be(ObservationErrors.Locked.Code);
         await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, second, Mmhg(130)), ct);
-        await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
+        var third = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
+        await _observations.Protocol.OkAsync(Verify(subject, first.ObservationId, 1), ct);
+        await _observations.Protocol.OkAsync(Verify(subject, second.ObservationId, 2), ct);
+        await _observations.Protocol.OkAsync(Verify(subject, third.ObservationId, 1), ct);
 
         await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Enrollment), ct), ct);
 

@@ -59,7 +59,8 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidatio
                 command.StudyId,
                 command.Scope,
                 findings,
-                cancellationToken).ConfigureAwait(false) is { } notReady)
+                cancellationToken,
+                context.RecordedAt).ConfigureAwait(false) is { } notReady)
         {
             return notReady;
         }
