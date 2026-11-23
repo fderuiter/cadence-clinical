@@ -343,7 +343,7 @@
                     class="btn btn-secondary"
                     type="button"
                     :disabled="sdv.sdvBusy"
-                    @click="sdv.cancelPendingSdv()"
+                    @click="sdv.cancelPendingSdv(true)"
                   >
                     Back
                   </button>
@@ -395,9 +395,10 @@
                     Raise query
                   </button>
                   <button
+                    id="ecrf-raise-cancel"
                     class="btn btn-secondary"
                     type="button"
-                    @click="raising = null"
+                    @click="cancelRaise"
                   >
                     Back
                   </button>
@@ -525,6 +526,7 @@ import {
   watch,
   type UnwrapNestedRefs,
 } from "vue";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
@@ -618,6 +620,20 @@ function beginRaise(item: EcrfFormItem) {
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
+}
+
+function cancelRaise() {
+  const itemId = raising.value?.item_id ?? null;
+  raising.value = null;
+  raiseText.value = "";
+  raiseReason.value = "";
+  void handoffFocus([
+    itemId ? `#ecrf-raise-${itemId}` : null,
+    itemId ? `#ecrf-item-${itemId}` : null,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function confirmRaise() {
@@ -648,6 +664,13 @@ async function confirmRaise() {
   if (raised) {
     raising.value = null;
     if (wasUnasked) await props.formState.reload();
+    void handoffFocus([
+      `#ecrf-raise-${target.item_id}`,
+      `#ecrf-item-${target.item_id}`,
+      "#ecrf-form-queries-title",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
   }
 }
 

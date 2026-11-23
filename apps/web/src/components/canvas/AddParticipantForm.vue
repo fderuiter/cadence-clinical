@@ -74,7 +74,12 @@
       >
         Add participant
       </button>
-      <button type="button" class="btn btn-secondary" @click="emit('close')">
+      <button
+        id="btn-cancel-add-participant"
+        type="button"
+        class="btn btn-secondary"
+        @click="emit('close')"
+      >
         Cancel
       </button>
     </div>
@@ -82,7 +87,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import type { StudySiteOption } from "../../canvas/kernelStudy";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
@@ -118,6 +124,10 @@ const siteId = ref(
 );
 const reason = ref("");
 const busy = ref(false);
+
+onMounted(() => {
+  void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
+});
 
 watch(
   () =>

@@ -51,6 +51,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth";
@@ -139,6 +140,11 @@ async function submit() {
     );
     if (ok) {
       reason.value = "";
+      void handoffFocus([
+        "#record-open-form",
+        "#record-forms-title",
+        "#participant-record-title",
+      ]);
     }
   } finally {
     saving.value = false;
