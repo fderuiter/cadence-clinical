@@ -368,16 +368,6 @@ export const etmfService = {
       : data;
   },
 
-  async getDocument(documentId: string, options: Record<string, unknown> = {}) {
-    const data = await unwrapResponse(
-      etmfClient.GET("/api/v1/etmf/documents/{document_id}", {
-        params: { path: { document_id: documentId } },
-        ...options,
-      })
-    );
-    return normalizeTmfDocument(data);
-  },
-
   async downloadDocumentContent(
     documentId: string
   ): Promise<{ blob: Blob; mimeType: string; sha256: string }> {
@@ -710,14 +700,5 @@ export const etmfService = {
       })
     );
     return normalizeTmfDocument(data);
-  },
-
-  getTaxonomy(version?: string, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      etmfClient.GET("/api/v1/etmf/taxonomy", {
-        params: version ? { query: { version } } : {},
-        ...options,
-      })
-    );
   },
 };

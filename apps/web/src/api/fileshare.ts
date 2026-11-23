@@ -1,5 +1,5 @@
 import { encodeChangeReason } from "./changeReason";
-import { openApiClient, unwrapResponse, getBaseUrl } from "./client";
+import { openApiClient, unwrapResponse } from "./client";
 import type { paths } from "./types";
 
 export interface ListFilesParams {
@@ -38,46 +38,6 @@ export const fileshareService = {
           },
         },
         ...options,
-      })
-    );
-  },
-
-  /**
-   * Retrieve file record metadata.
-   */
-  getFileRecord(fileId: string, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/fileshare/files/{file_id}", {
-        params: { path: { file_id: fileId } },
-        ...options,
-      })
-    );
-  },
-
-  /**
-   * Retrieve presigned short-lived download URL.
-   */
-  getDownloadUrl(fileId: string, options: { original?: boolean } = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/fileshare/files/{file_id}/download-url", {
-        params: {
-          path: { file_id: fileId },
-          query: { original: options.original },
-        },
-      })
-    );
-  },
-
-  /**
-   * Retrieve presigned short-lived preview URL (PDF rendition if available).
-   */
-  getPreviewUrl(fileId: string, options: { original?: boolean } = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/fileshare/files/{file_id}/preview-url", {
-        params: {
-          path: { file_id: fileId },
-          query: { original: options.original },
-        },
       })
     );
   },
@@ -184,26 +144,6 @@ export const fileshareService = {
   },
 
   /**
-   * List active guest links for a file record.
-   */
-  listGuestLinks(fileId: string, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/fileshare/files/{file_id}/guest-links", {
-        params: { path: { file_id: fileId } },
-        ...options,
-      })
-    );
-  },
-
-  /**
-   * Get full guest access URL for sharing.
-   */
-  getGuestShareUrl(token: string): string {
-    const baseUrl = getBaseUrl();
-    return `${baseUrl}/share/${token}`;
-  },
-
-  /**
    * Place a file under retention/legal hold.
    */
   setHold(
@@ -257,18 +197,6 @@ export const fileshareService = {
   },
 
   /**
-   * List audit log entries for a file record.
-   */
-  listAuditLogs(fileId: string, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/fileshare/files/{file_id}/audit-logs", {
-        params: { path: { file_id: fileId } },
-        ...options,
-      })
-    );
-  },
-
-  /**
    * Retrieve short-lived presigned HLS master manifest stream URL.
    */
   getStreamUrl(fileId: string, options: Record<string, unknown> = {}) {
@@ -311,69 +239,6 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/approve", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/approve"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-        ...options,
-      })
-    );
-  },
-
-  /**
-   * Reject a document for approval.
-   */
-  rejectFile(
-    fileId: string,
-    payload: unknown,
-    options: Record<string, unknown> = {}
-  ) {
-    const reason =
-      (payload as Record<string, string>)?.reason_for_change ||
-      "Reject document for approval";
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/fileshare/files/{file_id}/reject", {
-        params: { path: { file_id: fileId } },
-        body: payload as paths["/api/v1/fileshare/files/{file_id}/reject"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-        ...options,
-      })
-    );
-  },
-
-  /**
-   * Rescind a previous document approval.
-   */
-  rescindApproval(
-    fileId: string,
-    payload: unknown,
-    options: Record<string, unknown> = {}
-  ) {
-    const reason =
-      (payload as Record<string, string>)?.reason_for_change ||
-      "Rescinding document approval";
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/fileshare/files/{file_id}/rescind-approval", {
-        params: { path: { file_id: fileId } },
-        body: payload as paths["/api/v1/fileshare/files/{file_id}/rescind-approval"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
-        ...options,
-      })
-    );
-  },
-
-  /**
-   * Initiate upload of a new version/revision for a file record.
-   */
-  uploadRevision(
-    fileId: string,
-    payload: unknown,
-    options: Record<string, unknown> = {}
-  ) {
-    const reason =
-      (payload as Record<string, string>)?.reason_for_change ||
-      "Uploading document revision";
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/fileshare/files/{file_id}/upload-revision", {
-        params: { path: { file_id: fileId } },
-        body: payload as paths["/api/v1/fileshare/files/{file_id}/upload-revision"]["post"]["requestBody"]["content"]["application/json"],
         headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
