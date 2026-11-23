@@ -536,6 +536,8 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
             {
                 services.RemoveAll<ITenantDirectory>();
                 services.AddSingleton<ITenantDirectory>(world);
+                services.RemoveAll<ITenantEntitlementReader>();
+                services.AddSingleton<ITenantEntitlementReader>(world);
                 services.RemoveAll<IAuthorityStore>();
                 services.AddSingleton<IAuthorityStore>(world);
                 services.RemoveAll<IStudyDirectory>();
@@ -649,6 +651,7 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
 
     private sealed class InMemoryValidationWorld :
         ITenantDirectory,
+        ITenantEntitlementReader,
         IAuthorityStore,
         IStudyDirectory,
         IProtocolVersionReader,
@@ -770,6 +773,30 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
         public Dictionary<NodeRef, (string Code, StudySiteId? SiteId)> NodeCodes { get; } = [];
 
         public Dictionary<string, object> IdempotentResults { get; } = new(StringComparer.Ordinal);
+
+        public Task<TenantEntitlementSnapshot> GetEntitlementsAsync(
+            TenantId tenantId,
+            DateTimeOffset asOf,
+            CancellationToken cancellationToken,
+            DateTimeOffset? knownAt = null) =>
+            Task.FromResult(new TenantEntitlementSnapshot(
+                tenantId,
+                SubscriptionId.New(),
+                CommercialTier.Complete,
+                SubscriptionStatus.Active,
+                Epoch,
+                null,
+                IsReadOnly: false,
+                [
+                    ProductFamily.Blueprint,
+                    ProductFamily.Capture,
+                    ProductFamily.Orbit,
+                    ProductFamily.Engage,
+                    ProductFamily.Allocate,
+                    ProductFamily.Vigil,
+                    ProductFamily.Lens,
+                    ProductFamily.Assure,
+                ]));
 
         public void GrantRole(Actor grantee, string code, string[] capabilities, AuthorityScope scope)
         {

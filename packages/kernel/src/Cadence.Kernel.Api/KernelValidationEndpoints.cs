@@ -23,6 +23,7 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -358,6 +359,21 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is { } entitlementReader)
+        {
+            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+            var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            if (entitlements.IsReadOnly)
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+            }
+
+            if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
+            {
+                return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+            }
+        }
+
         var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -816,6 +832,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await EnsureWorkspaceWritableForFindingDecisionAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -902,6 +923,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await EnsureWorkspaceWritableForFindingDecisionAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -1013,6 +1039,31 @@ public static class KernelValidationEndpoints
         }
 
         return (key, reason, null);
+    }
+
+    private static async Task<ProblemHttpResult?> EnsureWorkspaceWritableForFindingDecisionAsync(
+        HttpContext context,
+        TenantId tenant,
+        CancellationToken cancellationToken)
+    {
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is not { } entitlementReader)
+        {
+            return null;
+        }
+
+        var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+        var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (entitlements.IsReadOnly)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+        }
+
+        if (entitlements.ProductFamilies.Count == 0)
+        {
+            return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+        }
+
+        return null;
     }
 
     private static async Task<(ValidationAccessProjector Access, CollectionInstanceRecord? Form, ProblemHttpResult? Problem)> CheckFindingVisibilityAsync(
