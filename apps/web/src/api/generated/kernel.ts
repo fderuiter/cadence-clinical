@@ -1235,9 +1235,29 @@ export interface paths {
     };
     /**
      * The caller's tenant commercial subscription tier, trial state, and enabled product families.
-     * @description Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent. Audit trails, electronic signatures, authorization checks, and regulated record exports remain active regardless of tier or trial expiry.
+     * @description Requires an enrolled TenantMembership and an active Grant visible via GrantNodeVisibility. BillingConfirmation is masked unless the caller holds billing permission. Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent.
      */
     get: operations["KernelGetEntitlements"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/entitlements/posture": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Minimal internal tenant commercial posture for the API gateway.
+     * @description Restricted to svc:gateway-entitlements. Returns read-only state, enabled product families, and quantitative scoping caps while omitting BillingConfirmation.
+     */
+    get: operations["KernelGetEntitlementPosture"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1257,7 +1277,7 @@ export interface paths {
     put?: never;
     /**
      * Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records.
-     * @description Updates enabled product families on an active Trialing or Active subscription without activating billing or extending the original 30-day trial window. Refused with K.Subscription.Expired when the trial has expired.
+     * @description Requires caller Idempotency-Key and signed X-Change-Reason headers. Updates enabled product families on an active Trialing or Active subscription in one atomic transaction without activating billing or extending the original 30-day trial window.
      */
     post: operations["KernelUpgradeSubscriptionTier"];
     delete?: never;
@@ -1276,8 +1296,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation.
-     * @description Requires study phase, study duration, participating countries, site count, participant count, active study count, and a purchase order or quote reference before transitioning a Trialing or Expired workspace to Active and clearing read-only restrictions.
+     * Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token.
+     * @description Requires caller Idempotency-Key and signed X-Change-Reason headers, study scoping parameters, and a verified cryptographic commercial quote token (or CommercialOperators.BillingOperator) before transitioning a Trialing or Expired workspace to Active in one atomic transaction.
      */
     post: operations["KernelActivateSubscription"];
     delete?: never;
@@ -1296,8 +1316,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Provisions an isolated self-service trial workspace for an authenticated OIDC caller.
-     * @description Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim. Idempotently provisions Tenant, sponsor Organization, pseudonymous Person, TenantMembership, Sponsor Admin and Sponsor Designer Roles/Grants, and a Trialing Subscription with Blueprint + Capture entitlements, then writes tenant_id and initial roles back to Keycloak.
+     * Provisions an isolated self-service trial workspace for an unbound authenticated OIDC caller.
+     * @description Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim, study/site scope, or clinical realm roles. Requires caller Idempotency-Key and signed X-Change-Reason headers.
      */
     post: operations["KernelBootstrapTrialWorkspace"];
     delete?: never;
@@ -2057,6 +2077,7 @@ export interface components {
       /** Format: int64 */
       version: number | string;
       values: components["schemas"]["Kernel_FormSavedValueResponse"][];
+      form?: null | components["schemas"]["Kernel_FormResponse"];
     };
     Kernel_FormSavedValueResponse: {
       item_id: string;
@@ -2491,6 +2512,12 @@ export interface components {
       enrollment_number: null | number | string;
       content_hash: string;
     };
+    Kernel_KernelEntitlementPostureResponse: {
+      is_read_only: boolean;
+      product_families: string[];
+      scoping?:
+        null | components["schemas"]["Kernel_KernelPostureScopingResponse"];
+    };
     Kernel_KernelEntitlementsResponse: {
       tenant_ref: string;
       /** Format: uuid */
@@ -2685,6 +2712,18 @@ export interface components {
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelPostureScopingResponse: {
+      study_phase: string;
+      /** Format: int32 */
+      study_duration_months: number | string;
+      countries: string[];
+      /** Format: int32 */
+      site_count: number | string;
+      /** Format: int32 */
+      participant_count: number | string;
+      /** Format: int32 */
+      active_study_count: number | string;
     };
     Kernel_KernelProposalAffectedResponse: {
       ref: string;
@@ -3136,7 +3175,7 @@ export interface components {
       participant_count: number | string;
       /** Format: int32 */
       active_study_count: number | string;
-      billing_confirmation: string;
+      billing_confirmation?: null | string;
     };
     Kernel_KernelTrialOnboardingRequest: {
       organization_name: string;
@@ -4017,7 +4056,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -4682,7 +4721,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -4890,7 +4929,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -4981,7 +5020,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5057,7 +5096,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5133,7 +5172,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5215,7 +5254,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5297,7 +5336,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5379,7 +5418,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5487,7 +5526,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5617,7 +5656,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5745,7 +5784,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5827,7 +5866,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -5956,7 +5995,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6038,7 +6077,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6114,7 +6153,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6194,7 +6233,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6321,7 +6360,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6410,7 +6449,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6499,7 +6538,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6588,7 +6627,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6684,7 +6723,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6762,7 +6801,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -6843,7 +6882,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7074,7 +7113,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7183,7 +7222,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7256,7 +7295,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7338,7 +7377,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7467,7 +7506,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7549,7 +7588,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7631,7 +7670,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Standards.AttestationRejected`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -7762,7 +7801,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8057,7 +8096,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8133,7 +8172,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8214,7 +8253,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8295,7 +8334,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`, `K.Validation.AttestationRejected`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`, `K.Validation.AttestationRejected`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8376,7 +8415,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`, `K.Validation.AttestationRejected`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`, `K.Validation.AttestationRejected`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8452,7 +8491,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8528,6 +8567,44 @@ export interface operations {
       };
     };
   };
+  KernelGetEntitlementPosture: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEntitlementPostureResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   KernelUpgradeSubscriptionTier: {
     parameters: {
       query?: never;
@@ -8568,7 +8645,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8646,7 +8723,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.QuoteInvalid`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8725,7 +8802,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.OnboardingCallerInvalid`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.OnboardingCallerInvalid`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -8927,7 +9004,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9055,7 +9132,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9123,7 +9200,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9214,7 +9291,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9365,7 +9442,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9494,7 +9571,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9613,6 +9690,8 @@ export interface operations {
         site?: string;
         participant?: string;
         value_changed?: boolean;
+        limit?: number | string;
+        offset?: number | string;
       };
       header?: never;
       path?: never;
@@ -9740,7 +9819,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9821,7 +9900,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9902,7 +9981,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -9979,7 +10058,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -10056,7 +10135,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -10145,7 +10224,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Commercial.ProductFamilyNotEntitled`, `K.Commercial.ScopingCapExceeded`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
       403: {
         headers: {
           [name: string]: unknown;

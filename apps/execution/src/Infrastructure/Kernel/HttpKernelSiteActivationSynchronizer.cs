@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -6,6 +7,8 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
@@ -53,12 +56,41 @@ public sealed class HttpKernelSiteActivationSynchronizer(
         }
 
         var principal = context.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        if (principal is { TenantReadOnly: true })
+        {
+            return DomainError.Forbidden(KernelErrors.SubscriptionExpired.Code, KernelErrors.SubscriptionExpired.Message);
+        }
+
+        if (principal?.TenantId is not null
+            && !principal.HasProductFamily(ProductFamily.Orbit)
+            && !principal.HasProductFamily(ProductFamily.Blueprint)
+            && !principal.HasProductFamily(ProductFamily.Capture))
+        {
+            return DomainError.Forbidden(
+                CommercialErrors.ProductFamilyNotEntitled.Code,
+                CommercialErrors.ProductFamilyNotEntitled.Message);
+        }
+
         string userId = principal?.UserId
             ?? context.User.FindFirst(CadenceClaimTypes.Subject)?.Value
             ?? string.Empty;
         if (string.IsNullOrWhiteSpace(userId))
         {
             return DomainError.Forbidden("KERNEL_ACTOR_MISSING", "Authenticated caller identity is required to synchronize kernel site activation.");
+        }
+
+        IReadOnlyList<string> forwardedFamilies;
+        if (principal?.TenantId is not null)
+        {
+            forwardedFamilies = principal.ProductFamilies;
+        }
+        else if (principal?.ProductFamilies is { Count: > 0 } explicitFamilies)
+        {
+            forwardedFamilies = explicitFamilies;
+        }
+        else
+        {
+            forwardedFamilies = [nameof(ProductFamily.Orbit)];
         }
 
         var identity = new GatewayIdentity(
@@ -69,7 +101,10 @@ public sealed class HttpKernelSiteActivationSynchronizer(
             UnblindedAccess: principal?.UnblindedAccess ?? false,
             TenantId: tenantId,
             ChangeReason: changeReason,
-            StudyIds: principal?.AssignedStudies);
+            StudyIds: principal?.AssignedStudies,
+            TenantReadOnly: principal?.TenantReadOnly ?? false,
+            ProductFamilies: forwardedFamilies,
+            TenantScoping: principal?.TenantScoping);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/study-sites/activate-by-code")
         {

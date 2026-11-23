@@ -137,6 +137,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             HttpStatusCode.OK,
             ct);
         saved.Values.Should().HaveCount(2);
+        saved.Form.Should().NotBeNull();
+        saved.Form!.FormId.Should().Be(form);
+        saved.Form.Version.Should().Be(saved.Version);
+        saved.Form.Complete.Should().BeTrue();
+        saved.Form.CanSign.Should().BeFalse();
         var sbpObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
 
         // Outbox consumer evaluates study collections and opens one automated FormQuery.
@@ -671,7 +676,17 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                var relayWorker = services.SingleOrDefault(
+                    d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+                        && d.ImplementationType?.Name == "KernelOutboxRelayService");
+                if (relayWorker is not null)
+                {
+                    services.Remove(relayWorker);
+                }
+            }));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 

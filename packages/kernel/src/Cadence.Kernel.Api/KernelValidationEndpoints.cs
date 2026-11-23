@@ -15,6 +15,7 @@ using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -400,6 +401,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckTenantEntitlementAsync(tenant, context, ProductFamily.Blueprint, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await registry.FindStandardVersionAsync(tenant, standardId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -472,6 +478,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckTenantEntitlementAsync(tenant, context, ProductFamily.Blueprint, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await registry.FindStandardVersionAsync(tenant, standardId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -707,6 +718,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckTenantEntitlementAsync(tenant, context, ProductFamily.Blueprint, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -923,6 +939,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckTenantEntitlementAsync(tenant, context, ProductFamily.Blueprint, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -1413,6 +1434,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckTenantEntitlementAsync(tenant, context, requiredFamily: null, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -1495,6 +1521,11 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckTenantEntitlementAsync(tenant, context, requiredFamily: null, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -1961,6 +1992,32 @@ public static class KernelValidationEndpoints
                 reason,
                 cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static async Task<ProblemHttpResult?> CheckTenantEntitlementAsync(
+        TenantId tenant,
+        HttpContext context,
+        ProductFamily? requiredFamily,
+        CancellationToken cancellationToken)
+    {
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is not { } entitlementReader)
+        {
+            return null;
+        }
+
+        var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+        var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (entitlements.IsReadOnly)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+        }
+
+        bool isEntitled = requiredFamily is { } family
+            ? entitlements.ProductFamilies.Contains(family)
+            : entitlements.ProductFamilies.Count > 0;
+        return isEntitled
+            ? null
+            : KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
     }
 
     internal static KernelError[] DistinctErrors(params IEnumerable<KernelError>[] groups) =>

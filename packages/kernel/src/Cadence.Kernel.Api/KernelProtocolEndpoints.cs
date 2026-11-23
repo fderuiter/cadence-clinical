@@ -14,6 +14,8 @@ using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
+using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
 
@@ -293,6 +295,11 @@ public static class KernelProtocolEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckBlueprintEntitlementAsync(tenant, context, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await reader.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -366,6 +373,11 @@ public static class KernelProtocolEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckBlueprintEntitlementAsync(tenant, context, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
         var existing = await reader.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
         if (existing is null)
         {
@@ -532,6 +544,31 @@ public static class KernelProtocolEndpoints
                 null,
                 null,
                 null);
+    }
+
+    private static async Task<ProblemHttpResult?> CheckBlueprintEntitlementAsync(
+        TenantId tenant,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is not { } entitlementReader)
+        {
+            return null;
+        }
+
+        var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+        var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (entitlements.IsReadOnly)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+        }
+
+        if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
+        {
+            return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+        }
+
+        return null;
     }
 
     private static bool TryParseProtocolVersion(string text, out ProtocolVersionId versionId)

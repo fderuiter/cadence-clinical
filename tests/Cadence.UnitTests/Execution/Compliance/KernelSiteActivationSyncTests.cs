@@ -75,6 +75,7 @@ public sealed class KernelSiteActivationSyncTests
         captured!.RequestUri!.PathAndQuery.Should().Be("/api/v1/kernel/study-sites/activate-by-code");
         captured.Headers.GetValues(GatewayHeaders.UserId).Single().Should().Be("manager@cadence.example");
         captured.Headers.GetValues(GatewayHeaders.TenantId).Single().Should().Be("tenant-201");
+        captured.Headers.GetValues(GatewayHeaders.TenantProductFamilies).Single().Should().Be("Blueprint,Capture,Orbit");
         captured.Headers.Contains(GatewayHeaders.Signature).Should().BeTrue();
         captured.Headers.Contains(GatewayHeaders.ChangeReason).Should().BeTrue();
         captured.Headers.GetValues("Idempotency-Key").Single().Should().Be("execution-site-activate:STUDY-201:SITE-201");
@@ -135,6 +136,56 @@ public sealed class KernelSiteActivationSyncTests
         result.IsFailure.Should().BeTrue();
         result.Error!.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("KERNEL_SYNC_UNAVAILABLE");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task SynchronizeSiteActivationAsync_WhenTenantReadOnlyOrUnentitled_RefusesWithoutCallingKernel()
+    {
+        int httpCalls = 0;
+        using var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            httpCalls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.test") };
+        var options = new StaticOptionsMonitor<GatewayAuthenticationOptions>(
+            new GatewayAuthenticationOptions { GatewaySecret = TestSecret });
+        var clock = new FakeClock(FixedNow);
+
+        var readOnlySync = new HttpKernelSiteActivationSynchronizer(
+            httpClient,
+            CreateHttpContextAccessor(tenantId: "tenant-201", userId: "manager@cadence.example", tenantReadOnly: true),
+            options,
+            clock);
+        var readOnlyResult = await readOnlySync.SynchronizeSiteActivationAsync(
+            "STUDY-201",
+            "SITE-201",
+            "Attempt activation while expired",
+            TestContext.Current.CancellationToken);
+
+        readOnlyResult.IsFailure.Should().BeTrue();
+        readOnlyResult.Error!.Type.Should().Be(ErrorType.Forbidden);
+        readOnlyResult.Error.Code.Should().Be("K.Subscription.Expired");
+
+        var unentitledSync = new HttpKernelSiteActivationSynchronizer(
+            httpClient,
+            CreateHttpContextAccessor(
+                tenantId: "tenant-201",
+                userId: "manager@cadence.example",
+                productFamilies: ["Engage"]),
+            options,
+            clock);
+        var unentitledResult = await unentitledSync.SynchronizeSiteActivationAsync(
+            "STUDY-201",
+            "SITE-201",
+            "Attempt activation without study-setup family",
+            TestContext.Current.CancellationToken);
+
+        unentitledResult.IsFailure.Should().BeTrue();
+        unentitledResult.Error!.Type.Should().Be(ErrorType.Forbidden);
+        unentitledResult.Error.Code.Should().Be("K.Commercial.ProductFamilyNotEntitled");
+        httpCalls.Should().Be(0);
     }
 
     [Fact]
@@ -242,7 +293,11 @@ public sealed class KernelSiteActivationSyncTests
             .AddInterceptors(new GxPAuditInterceptor(() => "manager@cadence.example", clock))
             .Options);
 
-    private static IHttpContextAccessor CreateHttpContextAccessor(string tenantId, string userId)
+    private static IHttpContextAccessor CreateHttpContextAccessor(
+        string tenantId,
+        string userId,
+        bool tenantReadOnly = false,
+        IReadOnlyList<string>? productFamilies = null)
     {
         var claims = new[]
         {
@@ -257,6 +312,8 @@ public sealed class KernelSiteActivationSyncTests
         {
             UserId = userId,
             TenantId = tenantId,
+            TenantReadOnly = tenantReadOnly,
+            ProductFamilies = productFamilies ?? new[] { "Blueprint", "Capture", "Orbit" },
             Roles = new[] { "data_manager" },
             AssignedSites = new[] { "SITE-201" },
             AssignedStudies = new[] { "STUDY-201" },

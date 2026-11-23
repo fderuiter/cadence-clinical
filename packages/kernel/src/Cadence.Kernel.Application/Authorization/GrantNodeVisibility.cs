@@ -186,6 +186,27 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             .ToDictionary(node => node, _ => MaskReason.NotPermitted);
     }
 
+    /// <summary>
+    /// Evaluates <paramref name="nodes"/> in one visibility pass and returns the unmasked subset <paramref name="reader"/> may see.
+    /// </summary>
+    public async ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(
+        TenantId tenant,
+        Actor reader,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return FrozenSet<NodeRef>.Empty;
+        }
+
+        var masked = await MaskAsync(tenant, reader, distinct, cancellationToken).ConfigureAwait(false);
+        return distinct.Where(node => !masked.ContainsKey(node)).ToHashSet();
+    }
+
     /// <summary>True when <paramref name="path"/> is on the way from the tenant down to <paramref name="below"/>, or is it.</summary>
     public static bool IsAtOrAbove(ScopePath path, ScopePath below)
     {

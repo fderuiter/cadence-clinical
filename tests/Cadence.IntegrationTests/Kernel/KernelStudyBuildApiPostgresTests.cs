@@ -131,22 +131,34 @@ public sealed class KernelStudyBuildApiPostgresTests(ExecutionFormModulePostgres
 
         // 1. Provision non-demo founder workspace via POST /api/v1/kernel/onboarding/trial (zero synthetic records).
         using var unprovisioned = host.CreateSignedClient(new GatewayIdentity(founderSub, [], [], TenantId: null));
-        using var onboardResp = await unprovisioned.PostAsJsonAsync(
-            "/api/v1/kernel/onboarding/trial",
-            new { organization_name = "Helios Clinical Research", residency = "US", tier = "Individual" },
+        using var onboardResp = await unprovisioned.SendAsync(
+            BuildKernelRequest(
+                HttpMethod.Post,
+                "onboarding/trial",
+                "Bootstrap Helios Clinical Research trial workspace",
+                null,
+                Key(),
+                new { organization_name = "Helios Clinical Research", residency = "US", tier = "Individual" }),
             ct);
         string onboardText = await onboardResp.Content.ReadAsStringAsync(ct);
         onboardResp.StatusCode.Should().Be(HttpStatusCode.OK, onboardText);
         using var onboardDoc = JsonDocument.Parse(onboardText);
         string tenantCode = onboardDoc.RootElement.GetProperty("tenant_code").GetString()!;
         string sponsorRef = onboardDoc.RootElement.GetProperty("organization_ref").GetString()!;
+        string[] productFamilies = onboardDoc.RootElement
+            .GetProperty("entitlements")
+            .GetProperty("product_families")
+            .EnumerateArray()
+            .Select(e => e.GetString()!)
+            .ToArray();
 
         using var founder = host.CreateSignedClient(new GatewayIdentity(
             founderSub,
             ["Sponsor Admin", "Sponsor Designer", "Data Manager"],
             ["*"],
             TenantId: tenantCode,
-            StudyIds: ["*"]));
+            StudyIds: ["*"],
+            ProductFamilies: productFamilies));
 
         // 2. Verify AddCadenceStandards() rejects invalid CollectionSpecification and accepts/approves/deprecates valid items & standards.
         var badCollectionContent = ParseJson("""{"name":"Invalid VS","items":[{"id":"SYSBP","concept":"NOT_A_CCODE","required":true}]}""");
