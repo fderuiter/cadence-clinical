@@ -157,6 +157,14 @@ public sealed record Dose(decimal Amount, string Unit);
 /// Something the protocol plans to happen to a participant: when (<paramref name="Timing"/>), in which epoch, where it
 /// may happen (<paramref name="Locations"/>; not only at a site, ICH E6(R3) Annex 2), what it collects, and why.
 /// </summary>
+/// <param name="Id">The planned activity's element id, stable across versions (K-PROT-1).</param>
+/// <param name="Name">Its display name.</param>
+/// <param name="EpochId">The epoch it belongs to.</param>
+/// <param name="Locations">Where it may take place.</param>
+/// <param name="CollectionSpecIds">The collection specifications collected during this activity.</param>
+/// <param name="Timing">Planned study day and window, or null when event-driven.</param>
+/// <param name="Purpose">Why this activity occurs, when stated.</param>
+/// <param name="Repeating">Whether multiple instances of this planned activity may occur for one enrollment.</param>
 public sealed record PlannedActivity(
     string Id,
     string Name,
@@ -164,7 +172,8 @@ public sealed record PlannedActivity(
     IReadOnlyList<ActivityLocation> Locations,
     IReadOnlyList<string> CollectionSpecIds,
     ActivityTiming? Timing = null,
-    DataPurpose? Purpose = null) : IProtocolElement;
+    DataPurpose? Purpose = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Repeating = false) : IProtocolElement;
 
 /// <summary>A planned study day with the window allowed before and after it, in days.</summary>
 public sealed record ActivityTiming(int Day, int WindowBefore = 0, int WindowAfter = 0);
@@ -187,7 +196,17 @@ public sealed record DataPurpose
 }
 
 /// <summary>What to collect: a set of items, each bound to a concept (K-SEM-1).</summary>
-public sealed record CollectionSpec(string Id, string Name, IReadOnlyList<CollectionItem> Items, DataPurpose? Purpose = null) : IProtocolElement;
+/// <param name="Id">The collection specification's element id, stable across versions (K-PROT-1).</param>
+/// <param name="Name">Its display name.</param>
+/// <param name="Items">Ordered items collected by the specification.</param>
+/// <param name="Purpose">Why the specification is collected, when stated.</param>
+/// <param name="Repeating">Whether multiple instances of this specification may be opened per planned activity or as a repeating log.</param>
+public sealed record CollectionSpec(
+    string Id,
+    string Name,
+    IReadOnlyList<CollectionItem> Items,
+    DataPurpose? Purpose = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Repeating = false) : IProtocolElement;
 
 /// <summary>
 /// One item to collect: the concept it records, its UCUM unit when it is a quantity, the pinned terminology its values

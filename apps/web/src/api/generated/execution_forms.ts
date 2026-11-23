@@ -458,6 +458,18 @@ export interface components {
        */
       open_error_finding_count: number | string;
       readiness_blockers?: null | string[];
+      visit_timing?: null | string;
+      /** Format: int32 */
+      days_from_target?: null | number | string;
+      /** Format: int32 */
+      days_outside_window?: null | number | string;
+      /** Format: date */
+      target_date?: null | string;
+      /** Format: date */
+      window_start?: null | string;
+      /** Format: date */
+      window_end?: null | string;
+      deviation_category?: null | string;
     };
     ExecutionForms_FormSavedResponse: {
       /** Format: uuid */
@@ -511,6 +523,18 @@ export interface components {
       collected_at: string;
       /** Format: int64 */
       version: number | string;
+      visit_timing?: null | string;
+      /** Format: int32 */
+      days_from_target?: null | number | string;
+      /** Format: int32 */
+      days_outside_window?: null | number | string;
+      /** Format: date */
+      target_date?: null | string;
+      /** Format: date */
+      window_start?: null | string;
+      /** Format: date */
+      window_end?: null | string;
+      deviation_category?: null | string;
     };
     ExecutionForms_FormSummaryResponse: {
       /** Format: uuid */
@@ -589,6 +613,18 @@ export interface components {
        */
       open_error_finding_count: number | string;
       readiness_blockers?: null | string[];
+      visit_timing?: null | string;
+      /** Format: int32 */
+      days_from_target?: null | number | string;
+      /** Format: int32 */
+      days_outside_window?: null | number | string;
+      /** Format: date */
+      target_date?: null | string;
+      /** Format: date */
+      window_start?: null | string;
+      /** Format: date */
+      window_end?: null | string;
+      deviation_category?: null | string;
     };
     ExecutionForms_FormValueRequest: {
       item_id: string;
@@ -849,7 +885,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Collection.NoGoverningVersion`, `K.Command.IdempotencyConflict`, `K.Observation.ParticipantWithdrawn`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Collection.DuplicateSingletonInstance`, `K.Collection.NoGoverningVersion`, `K.Command.IdempotencyConflict`, `K.Observation.ParticipantWithdrawn`. */
       409: {
         headers: {
           [name: string]: unknown;

@@ -28,7 +28,8 @@ namespace Cadence.Kernel.Commands;
     nameof(CollectionErrors.EnrollmentUnknown),
     nameof(CollectionErrors.CollectedAtInvalid),
     nameof(CollectionErrors.NoGoverningVersion),
-    nameof(CollectionErrors.SpecUnknown))]
+    nameof(CollectionErrors.SpecUnknown),
+    nameof(CollectionErrors.DuplicateSingletonInstance))]
 [RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked), nameof(ObservationErrors.ParticipantWithdrawn))]
 public sealed record OpenCollectionInstance(
     TenantId TenantId,
@@ -189,6 +190,9 @@ public static class CollectionErrors
     public static readonly KernelError SpecUnknown =
         new("K.Collection.SpecUnknown", 422, "The governing protocol version has no such CollectionSpec, or the planned activity does not collect it.");
 
+    public static readonly KernelError DuplicateSingletonInstance =
+        new("K.Collection.DuplicateSingletonInstance", 409, "A non-repeating form is opened at most once for a non-repeating planned activity.");
+
     public static readonly KernelError ValuesInvalid =
         new("K.Collection.ValuesInvalid", 422, "One or more values do not fit the form's CollectionSpec.");
 
@@ -203,5 +207,5 @@ public static class CollectionErrors
 
     /// <summary>Every form instance error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid, NotReadyToSign];
+        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, DuplicateSingletonInstance, ValuesInvalid, RevisionStale, SignatureMeaningInvalid, NotReadyToSign];
 }

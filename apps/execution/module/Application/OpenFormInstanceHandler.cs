@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Modules.Execution.Domain;
 
 using FluentValidation;
@@ -16,7 +18,9 @@ namespace Cadence.Modules.Execution.Application;
 /// study, governing protocol version and the specification's item order become the form's own. The kernel record is
 /// committed before <c>CollectionInstanceOpened</c> is delivered, so it is read outside the command's transaction.
 /// </summary>
-internal sealed class OpenFormInstanceHandler(ICollectionInstanceRecords records) : ICommandHandler<OpenFormInstance, FormInstanceState>
+internal sealed class OpenFormInstanceHandler(
+    ICollectionInstanceRecords records,
+    IProtocolVersionReader? versions = null) : ICommandHandler<OpenFormInstance, FormInstanceState>
 {
     public async Task<CommandResult<FormInstanceState>> HandleAsync(
         OpenFormInstance command, ICommandContext context, CancellationToken cancellationToken)
@@ -44,6 +48,42 @@ internal sealed class OpenFormInstanceHandler(ICollectionInstanceRecords records
             record.CollectedAt,
             [.. record.Items.Select(i => i.Id)]);
         context.Work.Add(form);
+
+        if (record.PlannedActivityId is { Length: > 0 } activityId)
+        {
+            var assessment = await VisitTimingEvaluator.AssessAsync(
+                context.TenantId,
+                record.ProtocolVersionId,
+                activityId,
+                record.CollectedAt,
+                record.EnrollmentReferenceAt,
+                versions,
+                cancellationToken).ConfigureAwait(false);
+            if (assessment is { Timing: VisitTiming.Early or VisitTiming.Late })
+            {
+                context.Work.Raise(
+                    new VisitWindowDeviationDetected(
+                        context.TenantId,
+                        record.CollectionInstanceId,
+                        record.EnrollmentId,
+                        record.StudyId,
+                        record.StudySiteId,
+                        record.ProtocolVersionId,
+                        record.CollectionSpecId,
+                        activityId,
+                        VisitTimingEvaluator.VisitWindowCategory,
+                        assessment.Timing.ToString(),
+                        assessment.Expected.Target,
+                        assessment.Expected.WindowStart,
+                        assessment.Expected.WindowEnd,
+                        assessment.Actual,
+                        assessment.DaysFromTarget,
+                        assessment.DaysOutsideWindow,
+                        record.CollectedAt),
+                    record.CollectedAt);
+            }
+        }
+
         return CommandResult<FormInstanceState>.Success(
             new FormInstanceState(form.CollectionInstanceId, form.EnrollmentId, form.CollectionSpecId, form.ItemOrder, 1));
     }

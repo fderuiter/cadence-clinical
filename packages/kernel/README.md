@@ -891,6 +891,13 @@ clock and stores nothing.
 - `Assess(expectedVisit, actualDate)` measures a visit that happened: calendar days from the target, `Early`,
   `InWindow` or `Late`, and days outside the window (ADR-2507). It has no severity; the study's Quality rules decide
   how important an out-of-window visit is.
+- `GET /api/v1/kernel/enrollments/{enrollmentRef}/schedule` (`KernelReadEndpoints`) resolves the governing
+  `ProtocolVersion` in force at the participant's `StudySite` (returning `200` with `governance_status = "NoEffectiveVersion"`
+  and status-specific guidance when no version is effective yet, and non-confirming `404` when `INodeVisibility` masks
+  the enrollment, study, site, or governing version), compiles `ScheduleOfActivities` (exposing default-omitted
+  `Repeating` flags on `PlannedActivity`/`SoaColumn` and `CollectionSpec`/`SoaRow`), and projects `ExpectedSchedule.Compute`
+  over enrollment `StatusSince` in site local time. `OpenCollectionInstanceHandler` refuses duplicate scheduled cells
+  with `409 K.Collection.DuplicateSingletonInstance` when neither the `CollectionSpec` nor the `PlannedActivity` is repeating.
 
 ## Indicators and the study Pulse (ADR-2488)
 

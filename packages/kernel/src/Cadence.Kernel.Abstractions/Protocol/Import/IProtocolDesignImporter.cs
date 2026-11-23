@@ -28,13 +28,22 @@ public enum ProtocolImportFormat
 /// <param name="FormName">Human-readable form title preserved on import.</param>
 /// <param name="FileName">Source file name in the bundled template library.</param>
 /// <param name="ItemCount">Number of data collection items on the template form.</param>
+/// <param name="Repeating">True when the template form declares <c>Repeating="Yes"</c> (such as an event or log form).</param>
 public sealed record BundledProtocolTemplate(
     string Id,
     string Category,
     string FormOid,
     string FormName,
     string FileName,
-    int ItemCount);
+    int ItemCount,
+    bool Repeating = false);
+
+/// <summary>Explicit planned-activity assignment chosen for a bundled protocol template during draft assembly.</summary>
+/// <param name="TemplateId">Identifier of the bundled template being scheduled.</param>
+/// <param name="ActivityIds">Ordered planned activity identifiers that should collect the template; empty keeps the form unscheduled.</param>
+public sealed record TemplateActivityAssignment(
+    string TemplateId,
+    IReadOnlyList<string> ActivityIds);
 
 /// <summary>
 /// Candidate concept requested by an external protocol document during synchronous import so the host can resolve an
@@ -73,13 +82,15 @@ public delegate ValueTask<ProtocolConceptResolution> ProtocolConceptResolver(
 /// <param name="TemplateIds">Selected bundled template identifiers to import, when assembling from library templates.</param>
 /// <param name="BaseDesign">Existing draft design to merge forms into when revising or appending forms, or null for a fresh draft.</param>
 /// <param name="FallbackTitle">Study title used when the imported forms do not carry a protocol title.</param>
+/// <param name="TemplateAssignments">Optional designer-specified planned activity assignments per selected template.</param>
 public sealed record ProtocolDesignImportRequest(
     byte[]? RawBytes = null,
     string? FileName = null,
     ProtocolImportFormat Format = ProtocolImportFormat.Auto,
     IReadOnlyList<string>? TemplateIds = null,
     ProtocolDesign? BaseDesign = null,
-    string? FallbackTitle = null);
+    string? FallbackTitle = null,
+    IReadOnlyList<TemplateActivityAssignment>? TemplateAssignments = null);
 
 /// <summary>Compiled <c>RulePack</c> library item payload produced during ODM v1.3.2 protocol import.</summary>
 /// <param name="Key">Stable library item key derived from the protocol metadata.</param>

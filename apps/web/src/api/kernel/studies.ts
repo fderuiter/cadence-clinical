@@ -44,6 +44,19 @@ export type KernelProtocolImportNote =
   KernelSchemas["Kernel_KernelProtocolImportNoteResponse"];
 export type KernelImportedRulePackSummary =
   KernelSchemas["Kernel_KernelImportedRulePackSummaryResponse"];
+export type KernelEffectiveVersion =
+  KernelSchemas["Kernel_KernelEffectiveVersionResponse"];
+export type KernelExpectedVisit =
+  KernelSchemas["Kernel_KernelExpectedVisitResponse"];
+export type KernelEnrollmentSchedule =
+  KernelSchemas["Kernel_KernelEnrollmentScheduleResponse"];
+export type KernelTemplateActivityAssignment =
+  KernelSchemas["Kernel_KernelTemplateActivityAssignmentRequest"];
+
+export interface KernelTemplateAssignmentInput {
+  templateId: string;
+  activityIds: string[];
+}
 
 export interface KernelCreateStudyRequest {
   code: string;
@@ -93,6 +106,7 @@ export interface KernelProtocolImportRequest {
   fileName?: string | null;
   format?: string | null;
   templateIds?: string[];
+  templateAssignments?: KernelTemplateAssignmentInput[];
   replaceForms?: boolean;
   reason: string;
   idempotencyKey: string;
@@ -257,10 +271,18 @@ export const kernelStudiesApi = {
     fileName,
     format,
     templateIds,
+    templateAssignments,
     replaceForms = false,
     reason,
     idempotencyKey,
   }: KernelProtocolImportRequest): Promise<KernelProtocolDraftSummary> {
+    const serializedAssignments =
+      templateAssignments && templateAssignments.length > 0
+        ? templateAssignments.map((assignment) => ({
+            template_id: assignment.templateId,
+            activity_ids: assignment.activityIds,
+          }))
+        : null;
     if (file) {
       const baseUrl = getBaseUrl().replace(/\/+$/, "");
       const url = `${baseUrl}/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/protocol-imports`;
@@ -270,6 +292,12 @@ export const kernelStudiesApi = {
         for (const tplId of templateIds) {
           formData.append("template_ids", tplId);
         }
+      }
+      if (serializedAssignments) {
+        formData.append(
+          "template_assignments",
+          JSON.stringify(serializedAssignments)
+        );
       }
       if (replaceForms) {
         formData.append("replace_forms", "true");
@@ -317,8 +345,30 @@ export const kernelStudiesApi = {
           template_ids:
             templateIds && templateIds.length > 0 ? templateIds : null,
           replace_forms: replaceForms,
+          template_assignments: serializedAssignments,
         },
         headers: mutationHeaders(reason, idempotencyKey),
+      })
+    );
+  },
+
+  /**
+   * Resolves the governing protocol version at the enrollment's site and computes expected visit target dates and
+   * window statuses in site calendar time (GET /api/v1/kernel/enrollments/{enrollmentRef}/schedule).
+   */
+  getEnrollmentSchedule(
+    enrollmentRef: string,
+    options: { asOf?: string | null; timeZone?: string | null } = {}
+  ): Promise<KernelEnrollmentSchedule> {
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/enrollments/{enrollmentRef}/schedule", {
+        params: {
+          path: { enrollmentRef },
+          query: {
+            as_of: options.asOf || undefined,
+            time_zone: options.timeZone || undefined,
+          },
+        },
       })
     );
   },

@@ -10,6 +10,7 @@ import {
 } from "vue";
 import { ApiError } from "../api/client";
 import {
+  DUPLICATE_SINGLETON_INSTANCE,
   ecrfFormsApi,
   formErrorCode,
   formFieldErrors,
@@ -715,7 +716,18 @@ export function useEcrfForm(
       // A request that never reached the kernel is retried with the same form id and key.
       if (error instanceof ApiError && error.status !== null)
         pendingOpen = null;
-      openError.value = messageOf(error);
+      if (formErrorCode(error) === DUPLICATE_SINGLETON_INSTANCE) {
+        const detail =
+          error instanceof ApiError
+            ? (error.data as { detail?: unknown } | null)?.detail
+            : null;
+        openError.value =
+          typeof detail === "string" && detail.trim().length > 0
+            ? detail
+            : "An instance of this non-repeating form is already open for this visit. Open the existing form instead.";
+      } else {
+        openError.value = messageOf(error);
+      }
     } finally {
       opening.value = false;
     }

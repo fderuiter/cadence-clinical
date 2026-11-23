@@ -20,6 +20,21 @@ namespace Cadence.Ddf;
 /// </summary>
 public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
 {
+    private static readonly Epoch[] DefaultTemplateEpochs =
+    [
+        new("EP.SCREENING", "Screening", 1),
+        new("EP.TREATMENT", "Treatment", 2),
+        new("EP.FOLLOWUP", "Follow-Up", 3),
+    ];
+
+    private static readonly PlannedActivity[] DefaultTemplateActivities =
+    [
+        new("V.SCREENING", "Screening", "EP.SCREENING", [ActivityLocation.Site], [], new ActivityTiming(-7, 7, 6)),
+        new("V.BASELINE", "Baseline (Day 1)", "EP.TREATMENT", [ActivityLocation.Site], [], new ActivityTiming(1, 0, 2)),
+        new("V.WEEK4", "Week 4", "EP.TREATMENT", [ActivityLocation.Site], [], new ActivityTiming(28, 3, 3)),
+        new("V.EOS", "End of Study", "EP.FOLLOWUP", [ActivityLocation.Site], [], new ActivityTiming(84, 7, 7)),
+    ];
+
     private readonly CdiscLibraryTemplateCatalog _catalog;
 
     /// <summary>Initializes a new instance of <see cref="ProtocolDesignImporterService"/>.</summary>
@@ -86,16 +101,22 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         var notes = new List<ProtocolImportNote>();
         var importedSpecs = new List<CollectionSpec>();
         var importedRules = new List<Rule>();
-        var batchUsedIds = NonCollectionElementIds(request.BaseDesign);
+        var specsByTemplate = new List<(string TemplateId, BundledProtocolTemplate? Metadata, IReadOnlyList<CollectionSpec> Specs)>();
+        var batchUsedIds = ReservedNonFormScheduleElementIds(request.BaseDesign);
         string? firstTemplateTitle = null;
         string? firstStudyOid = null;
 
+        var catalogById = _catalog.ListTemplates()
+            .ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
+        var assignmentsByTemplate = BuildTemplateAssignmentLookup(request.TemplateAssignments);
+
         foreach (var rawId in request.TemplateIds!.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var templateBytes = _catalog.ReadTemplateBytes(rawId);
+            var trimmedId = rawId.Trim();
+            var templateBytes = _catalog.ReadTemplateBytes(trimmedId);
             if (templateBytes is null)
             {
-                problems.Add($"Bundled CDISC Library template '{rawId}' was not found.");
+                problems.Add($"Bundled CDISC Library template '{trimmedId}' was not found.");
                 continue;
             }
 
@@ -105,16 +126,24 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             notes.AddRange(odm.Notes);
             if (!odm.IsSuccess)
             {
-                problems.AddRange(odm.Problems.Select(p => $"Template '{rawId}': {p}"));
+                problems.AddRange(odm.Problems.Select(p => $"Template '{trimmedId}': {p}"));
                 continue;
             }
 
+            catalogById.TryGetValue(trimmedId, out var metadata);
+            specsByTemplate.Add((trimmedId, metadata, odm.CollectionSpecs));
             importedSpecs.AddRange(odm.CollectionSpecs);
             if (odm.Rules is { Count: > 0 })
             {
                 importedRules.AddRange(odm.Rules);
             }
         }
+
+        var (templateEpochs, templateActivities) = BuildTemplateSchedule(
+            request.BaseDesign,
+            specsByTemplate,
+            assignmentsByTemplate,
+            problems);
 
         if (problems.Count > 0)
         {
@@ -127,7 +156,9 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             notes,
             request.FallbackTitle ?? firstTemplateTitle ?? "Protocol Draft",
             importedRules,
-            firstStudyOid);
+            firstStudyOid,
+            templateEpochs,
+            templateActivities);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportOdmPayloadAsync(
@@ -135,7 +166,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         ProtocolConceptResolver resolveConcept,
         CancellationToken cancellationToken)
     {
-        var reservedIds = NonCollectionElementIds(request.BaseDesign);
+        var reservedIds = ReservedNonFormScheduleElementIds(request.BaseDesign);
         var odm = await OdmDesignImporter.ImportAsync(request.RawBytes!, resolveConcept, reservedIds, cancellationToken).ConfigureAwait(false);
         if (odm.PayloadTooLarge)
         {
@@ -148,7 +179,15 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         }
 
         var fallbackTitle = FirstNonBlank(request.BaseDesign?.Title, odm.Title, request.FallbackTitle, "Imported ODM Protocol")!;
-        return FinalizeMergedFormsDesign(request.BaseDesign, odm.CollectionSpecs, odm.Notes, fallbackTitle, odm.Rules, odm.StudyOid);
+        return FinalizeMergedFormsDesign(
+            request.BaseDesign,
+            odm.CollectionSpecs,
+            odm.Notes,
+            fallbackTitle,
+            odm.Rules,
+            odm.StudyOid,
+            odm.Epochs,
+            odm.PlannedActivities);
     }
 
     private static async Task<ProtocolDesignImportResult> ImportUsdmPayloadAsync(
@@ -241,20 +280,34 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         IReadOnlyList<ProtocolImportNote> incomingNotes,
         string fallbackTitle,
         IReadOnlyList<Rule>? incomingRules = null,
-        string? studyOid = null)
+        string? studyOid = null,
+        IReadOnlyList<Epoch>? incomingEpochs = null,
+        IReadOnlyList<PlannedActivity>? incomingActivities = null)
     {
         var mergedSpecs = new List<CollectionSpec>();
-        var usedIds = NonCollectionElementIds(baseDesign);
+        var usedIds = ReservedNonFormScheduleElementIds(baseDesign);
         var idRenameMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        var replacedSpecIds = new Dictionary<string, (string Id, string Name)>(StringComparer.Ordinal);
 
         if (baseDesign is not null)
         {
+            foreach (var epoch in baseDesign.Epochs)
+            {
+                usedIds.Add(epoch.Id);
+            }
+
+            foreach (var activity in baseDesign.PlannedActivities)
+            {
+                usedIds.Add(activity.Id);
+            }
+
             var incomingKeys = incomingSpecs.Select(s => (s.Id, s.Name)).ToHashSet();
             foreach (var existing in baseDesign.CollectionSpecs)
             {
                 if (incomingKeys.Contains((existing.Id, existing.Name)))
                 {
                     // Replaced in-place below so idempotent retries produce byte-for-byte identical ProtocolDesign JSON.
+                    replacedSpecIds[existing.Id] = (existing.Id, existing.Name);
                     continue;
                 }
 
@@ -283,11 +336,34 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             mergedSpecs.Add(spec with { Id = specId, Items = adjustedItems });
         }
 
+        foreach (var (oldId, key) in replacedSpecIds)
+        {
+            if (mergedSpecs.FirstOrDefault(s => s.Name == key.Name && s.Id == key.Id) is { } exact)
+            {
+                idRenameMap.TryAdd(oldId, exact.Id);
+            }
+            else if (mergedSpecs.FirstOrDefault(s => s.Name == key.Name) is { } byName)
+            {
+                idRenameMap.TryAdd(oldId, byName.Id);
+            }
+        }
+
+        var validSpecIds = mergedSpecs.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
+        var (mergedEpochs, mergedActivities) = MergeSchedule(
+            baseDesign,
+            incomingEpochs ?? [],
+            incomingActivities ?? [],
+            idRenameMap,
+            validSpecIds,
+            usedIds);
+
         var mergedNotes = DeduplicateNotes((baseDesign?.ImportNotes ?? []).Concat(incomingNotes));
         var title = FirstNonBlank(baseDesign?.Title, fallbackTitle, "Protocol Draft")!;
         var candidateDesign = (baseDesign ?? new ProtocolDesign()) with
         {
             Title = title,
+            Epochs = mergedEpochs,
+            PlannedActivities = mergedActivities,
             CollectionSpecs = mergedSpecs,
             ImportNotes = mergedNotes.Count > 0 ? mergedNotes : null,
         };
@@ -367,7 +443,320 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         return $"{slug}-edit-checks";
     }
 
-    private static HashSet<string> NonCollectionElementIds(ProtocolDesign? design)
+    private static Dictionary<string, IReadOnlyList<string>> BuildTemplateAssignmentLookup(
+        IReadOnlyList<TemplateActivityAssignment>? assignments)
+    {
+        var map = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        if (assignments is null)
+        {
+            return map;
+        }
+
+        foreach (var assignment in assignments)
+        {
+            if (string.IsNullOrWhiteSpace(assignment.TemplateId))
+            {
+                continue;
+            }
+
+            var cleanedIds = (assignment.ActivityIds ?? [])
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            map[assignment.TemplateId.Trim()] = cleanedIds;
+        }
+
+        return map;
+    }
+
+    private static (List<Epoch> Epochs, List<PlannedActivity> Activities) BuildTemplateSchedule(
+        ProtocolDesign? baseDesign,
+        IReadOnlyList<(string TemplateId, BundledProtocolTemplate? Metadata, IReadOnlyList<CollectionSpec> Specs)> specsByTemplate,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> assignmentsByTemplate,
+        List<string> problems)
+    {
+        if (specsByTemplate.Count == 0)
+        {
+            return ([], []);
+        }
+
+        var baseActivitiesById = (baseDesign?.PlannedActivities ?? [])
+            .ToDictionary(a => a.Id, StringComparer.Ordinal);
+        var starterActivitiesById = DefaultTemplateActivities
+            .ToDictionary(a => a.Id, StringComparer.Ordinal);
+        var starterEpochsById = DefaultTemplateEpochs
+            .ToDictionary(e => e.Id, StringComparer.Ordinal);
+
+        var assignedSpecsByActivity = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        void AddSpecToActivity(string activityId, string specId)
+        {
+            if (!assignedSpecsByActivity.TryGetValue(activityId, out var list))
+            {
+                list = [];
+                assignedSpecsByActivity[activityId] = list;
+            }
+
+            if (!list.Contains(specId, StringComparer.Ordinal))
+            {
+                list.Add(specId);
+            }
+        }
+
+        foreach (var (templateId, metadata, specs) in specsByTemplate)
+        {
+            if (assignmentsByTemplate.TryGetValue(templateId, out var explicitActivityIds))
+            {
+                foreach (var activityId in explicitActivityIds)
+                {
+                    if (!baseActivitiesById.ContainsKey(activityId) && !starterActivitiesById.ContainsKey(activityId))
+                    {
+                        problems.Add($"Template '{templateId}' assignment references unknown planned activity '{activityId}'.");
+                        continue;
+                    }
+
+                    foreach (var spec in specs)
+                    {
+                        AddSpecToActivity(activityId, spec.Id);
+                    }
+                }
+
+                continue;
+            }
+
+            foreach (var spec in specs)
+            {
+                if (spec.Repeating || metadata is { Repeating: true })
+                {
+                    // Repeating / log templates remain unscheduled unless explicitly assigned to visits.
+                    continue;
+                }
+
+                var defaultTargetIds = SelectDefaultActivitiesForTemplate(baseDesign, metadata, spec);
+                foreach (var activityId in defaultTargetIds)
+                {
+                    AddSpecToActivity(activityId, spec.Id);
+                }
+            }
+        }
+
+        if (assignedSpecsByActivity.Count == 0)
+        {
+            return ([], []);
+        }
+
+        var epochs = new List<Epoch>();
+        var seenEpochIds = new HashSet<string>(StringComparer.Ordinal);
+        var activities = new List<PlannedActivity>();
+
+        // Preserve base activity order first, then starter activity order.
+        foreach (var baseAct in baseDesign?.PlannedActivities ?? [])
+        {
+            if (assignedSpecsByActivity.TryGetValue(baseAct.Id, out var specIds) && specIds.Count > 0)
+            {
+                activities.Add(baseAct with { CollectionSpecIds = specIds });
+            }
+        }
+
+        foreach (var starterAct in DefaultTemplateActivities)
+        {
+            if (baseActivitiesById.ContainsKey(starterAct.Id))
+            {
+                continue;
+            }
+
+            if (assignedSpecsByActivity.TryGetValue(starterAct.Id, out var specIds) && specIds.Count > 0)
+            {
+                if (starterEpochsById.TryGetValue(starterAct.EpochId, out var starterEpoch) && seenEpochIds.Add(starterEpoch.Id))
+                {
+                    epochs.Add(starterEpoch);
+                }
+
+                activities.Add(starterAct with { CollectionSpecIds = specIds });
+            }
+        }
+
+        return (epochs, activities);
+    }
+
+    private static IReadOnlyList<string> SelectDefaultActivitiesForTemplate(
+        ProtocolDesign? baseDesign,
+        BundledProtocolTemplate? metadata,
+        CollectionSpec spec)
+    {
+        var label = $"{metadata?.Category} {metadata?.FormName} {spec.Name}".ToLowerInvariant();
+        bool isScreeningOnly = label.Contains("inclusion", StringComparison.Ordinal)
+            || label.Contains("exclusion", StringComparison.Ordinal)
+            || label.Contains("eligibility", StringComparison.Ordinal)
+            || label.Contains("medical history", StringComparison.Ordinal)
+            || label.Contains("informed consent", StringComparison.Ordinal);
+        bool isBaselineOnly = label.Contains("demographics", StringComparison.Ordinal)
+            || label.Contains("subject characteristics", StringComparison.Ordinal)
+            || label.Contains("substance use", StringComparison.Ordinal);
+        bool isEndOfStudyOnly = label.Contains("disposition", StringComparison.Ordinal)
+            || label.Contains("subject status", StringComparison.Ordinal)
+            || label.Contains("death", StringComparison.Ordinal)
+            || label.Contains("end of study", StringComparison.Ordinal);
+
+        if (baseDesign is { PlannedActivities.Count: > 0 })
+        {
+            var scheduled = baseDesign.PlannedActivities
+                .Where(a => !a.Repeating && a.Timing is not null)
+                .ToList();
+            if (scheduled.Count == 0)
+            {
+                scheduled = [.. baseDesign.PlannedActivities];
+            }
+
+            if (isScreeningOnly)
+            {
+                var scr = scheduled.FirstOrDefault(a => a.Name.Contains("screen", StringComparison.OrdinalIgnoreCase) || (a.Timing?.Day ?? 1) < 0)
+                    ?? scheduled[0];
+                return [scr.Id];
+            }
+
+            if (isBaselineOnly)
+            {
+                var bl = scheduled.FirstOrDefault(a => a.Name.Contains("baseline", StringComparison.OrdinalIgnoreCase) || a.Timing?.Day == 1)
+                    ?? scheduled[0];
+                return [bl.Id];
+            }
+
+            if (isEndOfStudyOnly)
+            {
+                return [scheduled[^1].Id];
+            }
+
+            return [.. scheduled.Select(a => a.Id)];
+        }
+
+        if (isScreeningOnly)
+        {
+            return ["V.SCREENING"];
+        }
+
+        if (isBaselineOnly)
+        {
+            return ["V.BASELINE"];
+        }
+
+        if (isEndOfStudyOnly)
+        {
+            return ["V.EOS"];
+        }
+
+        return ["V.SCREENING", "V.BASELINE", "V.WEEK4", "V.EOS"];
+    }
+
+    private static (List<Epoch> Epochs, List<PlannedActivity> Activities) MergeSchedule(
+        ProtocolDesign? baseDesign,
+        IReadOnlyList<Epoch> incomingEpochs,
+        IReadOnlyList<PlannedActivity> incomingActivities,
+        IReadOnlyDictionary<string, string> idRenameMap,
+        IReadOnlySet<string> validSpecIds,
+        HashSet<string> usedIds)
+    {
+        var mergedEpochs = new List<Epoch>();
+        var epochIdMap = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (baseDesign is not null)
+        {
+            foreach (var existingEpoch in baseDesign.Epochs)
+            {
+                mergedEpochs.Add(existingEpoch);
+                epochIdMap[existingEpoch.Id] = existingEpoch.Id;
+            }
+        }
+
+        int nextOrder = mergedEpochs.Count == 0 ? 1 : mergedEpochs.Max(e => e.Order) + 1;
+        foreach (var incomingEpoch in incomingEpochs)
+        {
+            var matchingExisting = mergedEpochs.FirstOrDefault(e =>
+                string.Equals(e.Id, incomingEpoch.Id, StringComparison.Ordinal)
+                || string.Equals(e.Name, incomingEpoch.Name, StringComparison.OrdinalIgnoreCase));
+            if (matchingExisting is not null)
+            {
+                epochIdMap[incomingEpoch.Id] = matchingExisting.Id;
+                continue;
+            }
+
+            var epochId = OdmDesignImporter.AllocateUniqueElementId(incomingEpoch.Id, "Epoch", usedIds);
+            epochIdMap[incomingEpoch.Id] = epochId;
+            mergedEpochs.Add(incomingEpoch with { Id = epochId, Order = nextOrder++ });
+        }
+
+        List<string> RemapSpecIds(IEnumerable<string> specIds) =>
+            [.. specIds
+                .Select(id => idRenameMap.TryGetValue(id, out var mapped) ? mapped : id)
+                .Where(validSpecIds.Contains)
+                .Distinct(StringComparer.Ordinal)];
+
+        var mergedActivities = new List<PlannedActivity>();
+        var activityIndexById = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        if (baseDesign is not null)
+        {
+            foreach (var existingActivity in baseDesign.PlannedActivities)
+            {
+                var remappedExisting = existingActivity with
+                {
+                    CollectionSpecIds = RemapSpecIds(existingActivity.CollectionSpecIds),
+                };
+                activityIndexById[remappedExisting.Id] = mergedActivities.Count;
+                mergedActivities.Add(remappedExisting);
+            }
+        }
+
+        foreach (var incomingActivity in incomingActivities)
+        {
+            var mappedEpochId = epochIdMap.GetValueOrDefault(incomingActivity.EpochId)
+                ?? EnsureFallbackEpoch(incomingActivity.EpochId, mergedEpochs, epochIdMap, usedIds, ref nextOrder);
+            var remappedSpecIds = RemapSpecIds(incomingActivity.CollectionSpecIds);
+
+            if (activityIndexById.TryGetValue(incomingActivity.Id, out var existingIdx))
+            {
+                var existing = mergedActivities[existingIdx];
+                var combinedSpecs = existing.CollectionSpecIds
+                    .Concat(remappedSpecIds)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+                mergedActivities[existingIdx] = existing with
+                {
+                    CollectionSpecIds = combinedSpecs,
+                    Timing = incomingActivity.Timing ?? existing.Timing,
+                    Repeating = incomingActivity.Repeating || existing.Repeating,
+                };
+                continue;
+            }
+
+            var activityId = OdmDesignImporter.AllocateUniqueElementId(incomingActivity.Id, "Activity", usedIds);
+            var added = incomingActivity with
+            {
+                Id = activityId,
+                EpochId = mappedEpochId,
+                CollectionSpecIds = remappedSpecIds,
+            };
+            activityIndexById[activityId] = mergedActivities.Count;
+            mergedActivities.Add(added);
+        }
+
+        return (mergedEpochs, mergedActivities);
+    }
+
+    private static string EnsureFallbackEpoch(
+        string requestedEpochId,
+        List<Epoch> mergedEpochs,
+        Dictionary<string, string> epochIdMap,
+        HashSet<string> usedIds,
+        ref int nextOrder)
+    {
+        var epochId = OdmDesignImporter.AllocateUniqueElementId(requestedEpochId, "Epoch", usedIds);
+        epochIdMap[requestedEpochId] = epochId;
+        mergedEpochs.Add(new Epoch(epochId, requestedEpochId, nextOrder++));
+        return epochId;
+    }
+
+    private static HashSet<string> ReservedNonFormScheduleElementIds(ProtocolDesign? design)
     {
         var ids = new HashSet<string>(StringComparer.Ordinal);
         if (design is null)
@@ -375,7 +764,11 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return ids;
         }
 
-        foreach (var entry in design.Elements().Where(e => e.Kind is not (ProtocolElementKind.CollectionSpec or ProtocolElementKind.CollectionItem)))
+        foreach (var entry in design.Elements().Where(e => e.Kind is not (
+            ProtocolElementKind.CollectionSpec
+            or ProtocolElementKind.CollectionItem
+            or ProtocolElementKind.Epoch
+            or ProtocolElementKind.PlannedActivity)))
         {
             ids.Add(entry.Id);
         }

@@ -12,14 +12,17 @@ using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Api;
 
@@ -95,6 +98,15 @@ public static class KernelReadEndpoints
             .WithName("KernelLookupEnrollment")
             .WithSummary("Resolves a study code, subject code, and optional site code to pinned study and enrollment references.")
             .WithDescription("Reads over the tenant's unique study and subject indexes without listing sites. Returns a non-confirming 404 when the study, site, or enrollment does not exist, mismatches, or is masked for the caller (ADR-2471).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        reads.MapGet("/enrollments/{enrollmentRef}/schedule", GetEnrollmentScheduleAsync)
+            .WithName("KernelGetEnrollmentSchedule")
+            .WithSummary("Computes the governing Schedule of Activities and expected calendar visit windows for an enrollment.")
+            .WithDescription("Resolves the governing protocol version effective at the enrollment's study site (K-TIME-8) and evaluates ExpectedSchedule.Compute over StatusSince in site calendar time (ADR-2487, K-TIME-7). Returns non-confirming 404 when absent or masked.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -318,6 +330,211 @@ public static class KernelReadEndpoints
 
         return TypedResults.Ok(KernelEnrollmentLookupResponse.From(match));
     }
+
+    internal static async Task<Results<Ok<KernelEnrollmentScheduleResponse>, ProblemHttpResult>> GetEnrollmentScheduleAsync(
+        string enrollmentRef,
+        HttpContext context,
+        IEnrollmentDirectory enrollments,
+        IProtocolVersionReader versionReader,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken,
+        [FromQuery(Name = "as_of")] DateOnly? asOf = null,
+        [FromQuery(Name = "time_zone")] string? timeZone = null)
+    {
+        var trimmed = (enrollmentRef ?? string.Empty).Trim();
+        NodeRef node;
+        if (trimmed.Contains(':', StringComparison.Ordinal))
+        {
+            if (!NodeRef.TryParse(trimmed, out var parsedNode) || parsedNode is null)
+            {
+                return KernelProblems.InvalidNodeRef(trimmed);
+            }
+
+            node = parsedNode;
+            if (node.Kind != NodeKinds.Enrollment)
+            {
+                return KernelProblems.WrongKind(node, NodeKinds.Enrollment);
+            }
+        }
+        else if (Guid.TryParse(trimmed, out var rawGuid) && rawGuid != Guid.Empty)
+        {
+            node = NodeRef.For(EnrollmentId.FromGuid(rawGuid));
+        }
+        else
+        {
+            return KernelProblems.InvalidNodeRef(trimmed);
+        }
+
+        TimeZoneInfo? explicitTimeZone = null;
+        if (!string.IsNullOrWhiteSpace(timeZone) && !TimeZoneInfo.TryFindSystemTimeZoneById(timeZone.Trim(), out explicitTimeZone))
+        {
+            return KernelProblems.BadRequest("Invalid time_zone", $"Time zone '{timeZone}' is not recognized.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var enrollmentId = EnrollmentId.FromGuid(node.Id);
+        if (await enrollments.FindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
+        {
+            return KernelProblems.NotFound(NodeRef.For(enrollmentId));
+        }
+
+        var studyNode = NodeRef.For(enrollment.StudyId);
+        var studySiteNode = NodeRef.For(enrollment.StudySiteId);
+        var enrollmentNode = NodeRef.For(enrollment.EnrollmentId);
+        var scopeMasks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            [studyNode, studySiteNode, enrollmentNode],
+            cancellationToken).ConfigureAwait(false);
+        if (scopeMasks.For(studyNode) is not null
+            || scopeMasks.For(studySiteNode) is not null
+            || scopeMasks.For(enrollmentNode) is not null)
+        {
+            // Non-confirming 404 when the study, study site, or enrollment is hidden or blinded for the caller (ADR-2471).
+            return KernelProblems.NotFound(enrollmentNode);
+        }
+
+        var clock = context.RequestServices?.GetService<IClock>() ?? SystemClock.Instance;
+        var now = clock.UtcNow;
+        var referenceDate = ToSiteLocalDate(enrollment.StatusSince, explicitTimeZone);
+        var effectiveAsOf = asOf ?? ToSiteLocalNowDate(now, enrollment.StatusSince.Offset, explicitTimeZone);
+
+        StudySiteGovernanceSummary? siteGovernance = null;
+        if (context.RequestServices?.GetService<IStudyGovernanceReader>() is { } governanceReader)
+        {
+            siteGovernance = await governanceReader.FindStudySiteAsync(
+                tenant,
+                enrollment.StudySiteId,
+                now,
+                now,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        IReadOnlyList<EffectiveVersion> effectiveVersions = siteGovernance?.EffectiveVersions ?? [];
+        if (siteGovernance is null && context.RequestServices?.GetService<IEffectivityReader>() is { } effectivityReader)
+        {
+            effectiveVersions = await effectivityReader.EffectiveAtAsync(
+                tenant,
+                enrollment.StudySiteId,
+                now,
+                now,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        string? siteCode = siteGovernance?.SiteCode;
+        string? country = siteGovernance?.Country;
+        if ((siteCode is null || country is null) && context.RequestServices?.GetService<IStudyDirectory>() is { } studyDirectory)
+        {
+            var siteEntry = await studyDirectory.FindStudySiteAsync(tenant, enrollment.StudySiteId, cancellationToken).ConfigureAwait(false);
+            siteCode ??= siteEntry?.SiteCode;
+            country ??= siteEntry?.Country;
+        }
+
+        var studyVersions = await versionReader.ListForStudyAsync(tenant, enrollment.StudyId, cancellationToken).ConfigureAwait(false);
+        var studyVersionMasks = studyVersions.Count == 0
+            ? new Dictionary<NodeRef, MaskReason>()
+            : await KernelReadMasking.MaskAsync(
+                visibility,
+                actor,
+                tenant,
+                studyVersions.Select(v => NodeRef.For(v.Id)),
+                cancellationToken).ConfigureAwait(false);
+        var latestVisibleVersion = studyVersions
+            .FirstOrDefault(v => studyVersionMasks.For(NodeRef.For(v.Id)) is null);
+        var latestStatus = latestVisibleVersion?.Status.ToString();
+
+        if (effectiveVersions.Count == 0)
+        {
+            var guidance = BuildNoEffectiveVersionGuidance(latestVisibleVersion?.Status);
+            return TypedResults.Ok(new KernelEnrollmentScheduleResponse(
+                enrollmentNode.ToString(),
+                studyNode.ToString(),
+                studySiteNode.ToString(),
+                siteCode,
+                country,
+                enrollment.Status.ToString(),
+                enrollment.StatusSince,
+                referenceDate,
+                effectiveAsOf,
+                GovernanceStatus: "NoEffectiveVersion",
+                LatestStudyVersionStatus: latestStatus,
+                Guidance: guidance,
+                GoverningVersion: null,
+                EffectiveVersions: [],
+                Schedule: null,
+                ExpectedVisits: []));
+        }
+
+        var governing = effectiveVersions
+            .OrderByDescending(v => v.Number)
+            .First();
+        var governingVersionNode = NodeRef.For(governing.ProtocolVersionId);
+        var versionMasks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            [governingVersionNode],
+            cancellationToken).ConfigureAwait(false);
+        if (versionMasks.For(governingVersionNode) is not null)
+        {
+            return KernelProblems.NotFound(enrollmentNode);
+        }
+
+        var versionSummary = studyVersions.FirstOrDefault(v => v.Id == governing.ProtocolVersionId)
+            ?? await versionReader.GetAsync(tenant, governing.ProtocolVersionId, cancellationToken).ConfigureAwait(false);
+        var design = await versionReader.GetDesignAsync(tenant, governing.ProtocolVersionId, cancellationToken).ConfigureAwait(false);
+        KernelScheduleOfActivitiesResponse? scheduleResponse = null;
+        IReadOnlyList<KernelExpectedVisitResponse> expectedVisitResponses = [];
+
+        if (design is not null && versionSummary is not null)
+        {
+            var matrix = ScheduleOfActivities.Compile(design);
+            scheduleResponse = KernelScheduleOfActivitiesResponse.From(versionSummary, matrix);
+            var expected = ExpectedSchedule.Compute(design, referenceDate, effectiveAsOf);
+            expectedVisitResponses = [.. expected.Select(KernelExpectedVisitResponse.From)];
+        }
+
+        return TypedResults.Ok(new KernelEnrollmentScheduleResponse(
+            enrollmentNode.ToString(),
+            studyNode.ToString(),
+            studySiteNode.ToString(),
+            siteCode,
+            country,
+            enrollment.Status.ToString(),
+            enrollment.StatusSince,
+            referenceDate,
+            effectiveAsOf,
+            GovernanceStatus: "Effective",
+            LatestStudyVersionStatus: latestStatus ?? versionSummary?.Status.ToString(),
+            Guidance: null,
+            GoverningVersion: KernelEffectiveVersionResponse.From(governing),
+            EffectiveVersions: [.. effectiveVersions.OrderByDescending(v => v.Number).Select(KernelEffectiveVersionResponse.From)],
+            Schedule: scheduleResponse,
+            ExpectedVisits: expectedVisitResponses));
+    }
+
+    private static DateOnly ToSiteLocalDate(DateTimeOffset instant, TimeZoneInfo? explicitTimeZone) =>
+        explicitTimeZone is not null
+            ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, explicitTimeZone).DateTime)
+            : DateOnly.FromDateTime(instant.DateTime);
+
+    private static DateOnly ToSiteLocalNowDate(DateTimeOffset utcNow, TimeSpan siteOffset, TimeZoneInfo? explicitTimeZone) =>
+        explicitTimeZone is not null
+            ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(utcNow, explicitTimeZone).DateTime)
+            : DateOnly.FromDateTime(utcNow.ToOffset(siteOffset).DateTime);
+
+    private static string BuildNoEffectiveVersionGuidance(ProtocolVersionStatus? latestStatus) =>
+        latestStatus switch
+        {
+            ProtocolVersionStatus.Draft or ProtocolVersionStatus.InReview =>
+                "No protocol version is effective at this study site yet. Submit and approve the protocol draft, then declare and activate site effectivity before capturing scheduled forms.",
+            ProtocolVersionStatus.Approved =>
+                "An approved protocol version exists for this study, but no effectivity is active at this study site yet. Declare and activate site effectivity in Governance to unlock casebook schedule columns.",
+            _ =>
+                "No protocol version is effective at this study site yet. Import and approve a protocol version, then activate site effectivity before capturing scheduled forms.",
+        };
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelProtocolVersionResponse>>, ProblemHttpResult>> ListProtocolVersionsAsync(
         string studyRef,

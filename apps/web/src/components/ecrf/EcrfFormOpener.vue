@@ -94,6 +94,21 @@
       </button>
     </div>
 
+    <div
+      v-else-if="effectiveGovernanceStatus === 'NoEffectiveVersion'"
+      id="ecrf-governance-guidance"
+      data-testid="ecrf-governance-guidance"
+      class="ecrf-governance-banner"
+      role="status"
+    >
+      <strong class="ecrf-governance-title">
+        No effective protocol version at this site
+      </strong>
+      <p class="ecrf-governance-detail">
+        {{ effectiveGovernanceGuidance }}
+      </p>
+    </div>
+
     <form
       v-else
       id="ecrf-form-new"
@@ -180,7 +195,8 @@
           {{ localCollectionSpecId }}
         </option>
         <option v-for="spec in structuredSpecs" :key="spec.id" :value="spec.id">
-          {{ spec.name ? `${spec.name} (${spec.id})` : spec.id }}
+          {{ spec.name ? `${spec.name} (${spec.id})` : spec.id
+          }}{{ spec.repeating ? " · Repeating" : "" }}
         </option>
       </select>
       <input
@@ -213,12 +229,62 @@
         autocomplete="off"
         placeholder="None for an unscheduled form"
       />
+      <div
+        v-if="
+          selectedActivity &&
+          (selectedActivity.targetDate || selectedActivity.windowStatus)
+        "
+        id="ecrf-selected-visit-window"
+        data-testid="ecrf-selected-visit-window"
+        class="ecrf-visit-window-hint ecrf-grid-span"
+      >
+        <span
+          v-if="selectedActivity.targetDate"
+          class="ecrf-visit-window-target"
+        >
+          Target {{ selectedActivity.targetDate }}
+        </span>
+        <span
+          v-if="selectedActivity.windowStart && selectedActivity.windowEnd"
+          class="ecrf-visit-window-range"
+        >
+          Window {{ selectedActivity.windowStart }} to
+          {{ selectedActivity.windowEnd }}
+        </span>
+        <span
+          v-if="selectedActivity.windowStatus"
+          class="clinical-badge"
+          :class="visitWindowBadgeClass(selectedActivity.windowStatus)"
+          :data-testid="`ecrf-visit-window-status-${selectedActivity.windowStatus}`"
+        >
+          {{ selectedActivity.windowStatus }}
+        </span>
+      </div>
       <label for="ecrf-collected-at">Collected at</label>
       <input
         id="ecrf-collected-at"
         v-model="collectedAt"
         type="datetime-local"
       />
+      <div
+        v-if="duplicateSingletonForm"
+        id="ecrf-singleton-duplicate-notice"
+        data-testid="ecrf-singleton-duplicate-notice"
+        class="ecrf-singleton-notice ecrf-grid-span"
+        role="status"
+      >
+        <span>
+          This non-repeating form is already opened for this scheduled visit.
+        </span>
+        <button
+          id="ecrf-open-existing-singleton"
+          class="btn btn-secondary"
+          type="button"
+          @click="emit('load-form', duplicateSingletonForm.form_id)"
+        >
+          Open existing form
+        </button>
+      </div>
       <button
         id="ecrf-form-open"
         class="btn btn-primary"
@@ -250,11 +316,15 @@
 
 <script lang="ts">
 import type {
+  ExpectedVisitWindowStatus,
   StudyCollectionSpecOption,
   StudyPlannedActivityOption,
 } from "../../canvas/kernelStudy";
+import type { EcrfFormSummary } from "../../api/ecrfFormsApi";
 
 export interface CanvasFormScheduleOptions {
+  governanceStatus?: "Effective" | "NoEffectiveVersion";
+  guidance?: string | null;
   collectionSpecs?: StudyCollectionSpecOption[];
   plannedActivities?: StudyPlannedActivityOption[];
 }
@@ -264,13 +334,14 @@ export interface CanvasFormEnrollmentContext extends CanvasFormScheduleOptions {
   subjectCode?: string;
   scheduleLoading?: boolean;
   scheduleError?: string | null;
+  existingForms?: EcrfFormSummary[];
 }
 </script>
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
-import { ecrfFormsApi, type EcrfFormSummary } from "../../api/ecrfFormsApi";
+import { ecrfFormsApi } from "../../api/ecrfFormsApi";
 import { kernelApi, type KernelChild } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
@@ -623,27 +694,96 @@ const resolvedPlannedActivities = computed<StudyPlannedActivityOption[]>(() => {
 const hasProtocolSchedule = computed(
   () => resolvedPlannedActivities.value.length > 0
 );
+const effectiveGovernanceStatus = computed(() => {
+  if (props.formId) return null;
+  return (
+    props.enrollmentContext?.governanceStatus ??
+    props.scheduleOptions?.governanceStatus ??
+    getStoreScheduleOptions()?.governanceStatus ??
+    null
+  );
+});
+
+const effectiveGovernanceGuidance = computed(() => {
+  if (props.formId) return null;
+  return (
+    props.enrollmentContext?.guidance ??
+    props.scheduleOptions?.guidance ??
+    getStoreScheduleOptions()?.guidance ??
+    "No effective protocol version is assigned to this site yet. Approve a protocol version and activate it on the site before opening participant forms."
+  );
+});
+
+const selectedSpec = computed(
+  () =>
+    structuredSpecs.value.find((s) => s.id === localCollectionSpecId.value) ??
+    null
+);
+
 const structuredActivities = computed(() => {
   const all = resolvedPlannedActivities.value;
   if (!all.length) return [];
-  const selectedSpec = structuredSpecs.value.find(
-    (s) => s.id === localCollectionSpecId.value
-  );
-  if (!selectedSpec || !Array.isArray(selectedSpec.plannedActivityIds)) {
+  const spec = selectedSpec.value;
+  if (!spec || !Array.isArray(spec.plannedActivityIds)) {
     return all;
   }
-  if (selectedSpec.plannedActivityIds.length === 0) return [];
-  const scheduled = new Set(selectedSpec.plannedActivityIds);
+  if (spec.plannedActivityIds.length === 0) return [];
+  const scheduled = new Set(spec.plannedActivityIds);
   return all.filter((a) => scheduled.has(a.id));
 });
+
+const selectedActivity = computed(
+  () =>
+    structuredActivities.value.find(
+      (a) => a.id === localPlannedActivityId.value
+    ) ?? null
+);
+
+const knownEnrollmentForms = computed<EcrfFormSummary[]>(() => {
+  const merged = new Map<string, EcrfFormSummary>();
+  for (const existing of props.enrollmentContext?.existingForms ?? []) {
+    if (existing?.form_id) merged.set(existing.form_id, existing);
+  }
+  for (const existing of availableEnrollmentForms.value) {
+    if (existing?.form_id) merged.set(existing.form_id, existing);
+  }
+  return Array.from(merged.values());
+});
+
+const duplicateSingletonForm = computed<EcrfFormSummary | null>(() => {
+  const specId = localCollectionSpecId.value.trim();
+  const visitId = localPlannedActivityId.value.trim();
+  if (!specId || !visitId) return null;
+  if (selectedSpec.value?.repeating || selectedActivity.value?.repeating) {
+    return null;
+  }
+  return (
+    knownEnrollmentForms.value.find(
+      (f) =>
+        f.collection_spec_id === specId && f.planned_activity_id === visitId
+    ) ?? null
+  );
+});
+
+function visitWindowBadgeClass(status: ExpectedVisitWindowStatus): string {
+  switch (status) {
+    case "Open":
+      return "clinical-badge--verified";
+    case "Closed":
+      return "clinical-badge--warning";
+    case "NotYetOpen":
+    default:
+      return "clinical-badge--draft";
+  }
+}
 
 function activityLabel(activity: StudyPlannedActivityOption): string {
   const base = activity.name
     ? `${activity.name} (${activity.id})`
     : activity.id;
-  return activity.studyDay !== null
-    ? `${base} · Day ${activity.studyDay}`
-    : base;
+  const withDay =
+    activity.studyDay !== null ? `${base} · Day ${activity.studyDay}` : base;
+  return activity.targetDate ? `${withDay} (${activity.targetDate})` : withDay;
 }
 
 watch(
@@ -688,7 +828,8 @@ const canOpen = computed(
   () =>
     localEnrollmentId.value.length > 0 &&
     localCollectionSpecId.value.length > 0 &&
-    collectedAt.value.length > 0
+    collectedAt.value.length > 0 &&
+    !duplicateSingletonForm.value
 );
 
 function submitReuse() {
@@ -736,6 +877,52 @@ function submitOpenNew() {
 }
 .ecrf-grid-span {
   grid-column: 1 / -1;
+}
+.ecrf-governance-banner {
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background-color: var(--semantic-color-surface-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ecrf-governance-title {
+  font-size: 0.86rem;
+  color: var(--semantic-color-text);
+}
+.ecrf-governance-detail {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-secondary);
+}
+.ecrf-visit-window-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.ecrf-visit-window-target,
+.ecrf-visit-window-range {
+  font-variant-numeric: tabular-nums;
+}
+.ecrf-singleton-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  background-color: var(--semantic-color-surface-muted);
+}
+.ecrf-singleton-notice button {
+  grid-column: auto;
 }
 .ecrf-direct-id-disclosure {
   font-size: 0.82rem;

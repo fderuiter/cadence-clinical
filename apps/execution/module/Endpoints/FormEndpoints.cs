@@ -115,9 +115,29 @@ internal static class FormEndpoints
         }
 
         var summaries = await forms.ListForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
-        if (summaries.Count == 0 || contexts is null)
+        if (summaries.Count == 0)
         {
-            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(s => FormSummaryResponse.From(s))]);
+            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([]);
+        }
+
+        var versionReader = context.RequestServices?.GetService<IProtocolVersionReader>();
+        var designsByVersion = await VisitTimingEvaluator.LoadDesignsAsync(
+            tenant,
+            summaries.Where(s => !string.IsNullOrWhiteSpace(s.PlannedActivityId)).Select(s => s.ProtocolVersionId),
+            versionReader,
+            cancellationToken).ConfigureAwait(false);
+
+        VisitTimingAssessment? AssessSummary(CollectionInstanceSummary s) =>
+            VisitTimingEvaluator.Assess(
+                designsByVersion.GetValueOrDefault(s.ProtocolVersionId),
+                s.PlannedActivityId,
+                s.CollectedAt,
+                s.EnrollmentReferenceAt);
+
+        if (contexts is null)
+        {
+            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>(
+                [.. summaries.Select(s => FormSummaryResponse.From(s, assessment: AssessSummary(s)))]);
         }
 
         var records = await forms.ListRecordsForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
@@ -139,16 +159,17 @@ internal static class FormEndpoints
         return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([
             .. summaries.Select(s =>
             {
+                var assessment = AssessSummary(s);
                 var execQueries = queriesByForm.GetValueOrDefault(s.CollectionInstanceId) ?? [];
                 if (assertionsByForm.TryGetValue(s.CollectionInstanceId, out var kernelAssertions))
                 {
                     var (openCount, answeredCount) = ExecutionQueryMerger.Merge(kernelAssertions, execQueries);
-                    return FormSummaryResponse.From(s, openCount, answeredCount);
+                    return FormSummaryResponse.From(s, openCount, answeredCount, assessment);
                 }
 
                 var fallbackOpen = Math.Max(s.OpenQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Open));
                 var fallbackAnswered = Math.Max(s.AnsweredQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Answered));
-                return FormSummaryResponse.From(s, fallbackOpen, fallbackAnswered);
+                return FormSummaryResponse.From(s, fallbackOpen, fallbackAnswered, assessment);
             }),
         ]);
     }
@@ -165,10 +186,11 @@ internal static class FormEndpoints
             return BadRequest("Invalid form", "Name the enrollment and the CollectionSpec the form collects.");
         }
 
+        var tenant = KernelRequestTenant.Get(context);
         var form = request.FormId is { } given && given != Guid.Empty ? CollectionInstanceId.FromGuid(given) : CollectionInstanceId.New();
         var result = await sender.SendAsync(
             new OpenCollectionInstance(
-                KernelRequestTenant.Get(context),
+                tenant,
                 form,
                 EnrollmentId.FromGuid(request.EnrollmentId),
                 request.CollectionSpecId,
@@ -177,9 +199,60 @@ internal static class FormEndpoints
                 IdempotencyKey(context),
                 changeReason.Read(context) ?? string.Empty),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return result.Value is { } state
-            ? TypedResults.Created($"{RoutePrefix}/{state.CollectionInstanceId.Value:D}", FormStateResponse.From(state))
-            : KernelErrorEndpoints.Problem(result.Error!);
+        if (result.Value is not { } state)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        var assessment = state.VisitTimingAssessment;
+        CollectionInstanceRecord? openedRecord = null;
+        if (state.PlannedActivityId is { Length: > 0 } activityId)
+        {
+            var formRecords = context.RequestServices?.GetService<ICollectionInstanceRecords>();
+            if (formRecords is not null)
+            {
+                openedRecord = await formRecords.FindAsync(tenant, state.CollectionInstanceId, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (assessment is null && openedRecord is not null)
+            {
+                assessment = await VisitTimingEvaluator.AssessAsync(
+                    tenant,
+                    state.ProtocolVersionId,
+                    activityId,
+                    state.CollectedAt,
+                    openedRecord.EnrollmentReferenceAt,
+                    context.RequestServices?.GetService<IProtocolVersionReader>(),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (assessment is { Timing: VisitTiming.Early or VisitTiming.Late }
+                && context.RequestServices?.GetService<IVisitWindowDeviationSink>() is { } deviationSink)
+            {
+                await deviationSink.NotifyAsync(
+                    new VisitWindowDeviationDetected(
+                        tenant,
+                        state.CollectionInstanceId,
+                        state.EnrollmentId,
+                        openedRecord?.StudyId ?? default,
+                        openedRecord?.StudySiteId ?? default,
+                        state.ProtocolVersionId,
+                        state.CollectionSpecId,
+                        activityId,
+                        VisitTimingEvaluator.VisitWindowCategory,
+                        assessment.Timing.ToString(),
+                        assessment.Expected.Target,
+                        assessment.Expected.WindowStart,
+                        assessment.Expected.WindowEnd,
+                        assessment.Actual,
+                        assessment.DaysFromTarget,
+                        assessment.DaysOutsideWindow,
+                        state.CollectedAt),
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return TypedResults.Created($"{RoutePrefix}/{state.CollectionInstanceId.Value:D}", FormStateResponse.From(state, assessment));
     }
 
     internal static async Task<Results<Ok<FormResponse>, ProblemHttpResult>> GetAsync(
@@ -244,7 +317,24 @@ internal static class FormEndpoints
             context.RequestServices,
             cancellationToken).ConfigureAwait(false);
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount));
+        var assessment = await VisitTimingEvaluator.AssessAsync(
+            tenant,
+            record.ProtocolVersionId,
+            record.PlannedActivityId,
+            record.CollectedAt,
+            record.EnrollmentReferenceAt,
+            context.RequestServices?.GetService<IProtocolVersionReader>(),
+            cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Ok(FormResponse.From(
+            record,
+            layout,
+            canSign,
+            blindedItemIds,
+            blindedObservationIds,
+            openQueryCount,
+            answeredQueryCount,
+            assessment));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(

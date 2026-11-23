@@ -183,6 +183,175 @@ public sealed class OdmDesignImporterTests
     }
 
     [Fact]
+    public async Task OdmStudyEventDefsAndProtocolRefs_CompileEpochsPlannedActivitiesAndRepeatingFlags_WhileOmittingFalseRepeatingInJson()
+    {
+        const string odm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3"
+                 FileOID="ODM.SCHEDULE.1"
+                 FileType="Snapshot"
+                 ODMVersion="1.3.2"
+                 CreationDateTime="2026-03-01T00:00:00Z">
+              <Study OID="S.SCHED">
+                <GlobalVariables>
+                  <StudyName>ODM Scheduled Visits Trial</StudyName>
+                  <StudyDescription>Tests StudyEventDef compilation</StudyDescription>
+                  <ProtocolName>ODM-SOA-1</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.1" Name="v1">
+                  <Protocol>
+                    <StudyEventRef StudyEventOID="SE.W4" OrderNumber="2" Mandatory="Yes"/>
+                    <StudyEventRef StudyEventOID="SE.SCR" OrderNumber="1" Mandatory="Yes"/>
+                    <StudyEventRef StudyEventOID="SE.CYCLE" OrderNumber="3" Mandatory="No"/>
+                  </Protocol>
+                  <StudyEventDef OID="SE.SCR" Name="Screening Visit" Repeating="No" Type="Scheduled">
+                    <FormRef FormOID="F.VS" OrderNumber="2" Mandatory="Yes"/>
+                    <FormRef FormOID="F.DM" OrderNumber="1" Mandatory="Yes"/>
+                  </StudyEventDef>
+                  <StudyEventDef OID="SE.W4" Name="Week 4 Visit" Repeating="No" Type="Scheduled">
+                    <FormRef FormOID="F.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </StudyEventDef>
+                  <StudyEventDef OID="SE.CYCLE" Name="Infusion Cycle" Repeating="Yes" Type="Scheduled">
+                    <FormRef FormOID="F.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </StudyEventDef>
+                  <StudyEventDef OID="SE.COMMON" Name="Common Adverse Events" Repeating="Yes" Type="Common">
+                    <FormRef FormOID="F.AE" OrderNumber="1" Mandatory="No"/>
+                  </StudyEventDef>
+                  <FormDef OID="F.DM" Name="Demographics" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.DM" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <FormDef OID="F.AE" Name="Adverse Events" Repeating="Yes">
+                    <ItemGroupRef ItemGroupOID="IG.AE" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.DM" Name="Demographics" Repeating="No">
+                    <ItemRef ItemOID="IT.AGE" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vital Signs" Repeating="No">
+                    <ItemRef ItemOID="IT.SBP" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemGroupDef OID="IG.AE" Name="Adverse Events" Repeating="Yes">
+                    <ItemRef ItemOID="IT.AETERM" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.AGE" Name="AGE" DataType="integer">
+                    <Question><TranslatedText>Age</TranslatedText></Question>
+                  </ItemDef>
+                  <ItemDef OID="IT.SBP" Name="SYSBP" DataType="integer">
+                    <Question><TranslatedText>Systolic Blood Pressure</TranslatedText></Question>
+                  </ItemDef>
+                  <ItemDef OID="IT.AETERM" Name="AETERM" DataType="text">
+                    <Question><TranslatedText>Reported Term for the Adverse Event</TranslatedText></Question>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var service = new ProtocolDesignImporterService();
+        var result = await service.ImportAsync(
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(odm), FileName: "schedule.xml"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
+        var design = result.Design!;
+
+        design.Epochs.Should().NotBeEmpty();
+        design.PlannedActivities.Select(a => a.Id).Should().Equal("SE.SCR", "SE.W4", "SE.CYCLE");
+        design.PlannedActivities.Single(a => a.Id == "SE.SCR").CollectionSpecIds.Should().Equal("F.DM", "F.VS");
+        design.PlannedActivities.Single(a => a.Id == "SE.SCR").Repeating.Should().BeFalse();
+        design.PlannedActivities.Single(a => a.Id == "SE.W4").Timing!.Day.Should().Be(28);
+        design.PlannedActivities.Single(a => a.Id == "SE.CYCLE").Repeating.Should().BeTrue();
+
+        design.CollectionSpecs.Single(s => s.Id == "F.DM").Repeating.Should().BeFalse();
+        design.CollectionSpecs.Single(s => s.Id == "F.VS").Repeating.Should().BeFalse();
+        design.CollectionSpecs.Single(s => s.Id == "F.AE").Repeating.Should().BeTrue();
+
+        var canonical = ProtocolDesignDocument.Write(design);
+        canonical.Should().NotContain("\"repeating\":false");
+        canonical.Should().Contain("\"repeating\":true");
+
+        var roundTrip = ProtocolDesignDocument.Read(canonical);
+        roundTrip.IsValid.Should().BeTrue(string.Join("; ", roundTrip.Problems));
+        roundTrip.Design!.CollectionSpecs.Single(s => s.Id == "F.AE").Repeating.Should().BeTrue();
+        roundTrip.Design.PlannedActivities.Single(a => a.Id == "SE.CYCLE").Repeating.Should().BeTrue();
+
+        var soa = ScheduleOfActivities.Compile(roundTrip.Design);
+        soa.Columns.Single(c => c.ActivityId == "SE.CYCLE").Repeating.Should().BeTrue();
+        soa.Columns.Single(c => c.ActivityId == "SE.SCR").Repeating.Should().BeFalse();
+        soa.Rows.Single(r => r.CollectionSpecId == "F.AE").Repeating.Should().BeTrue();
+        soa.Rows.Single(r => r.CollectionSpecId == "F.AE").Columns.Should().BeEmpty();
+        soa.Rows.Single(r => r.CollectionSpecId == "F.VS").Repeating.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task BundledTemplates_BuildDefaultStarterScheduleKeepRepeatingLogUnscheduledApplyAssignmentsAndMergeDraftSchedules()
+    {
+        var catalog = new CdiscLibraryTemplateCatalog();
+        var templates = catalog.ListTemplates();
+        var dmTemplate = templates.Single(t => t.FileName == "DM_XML.xml");
+        var vsTemplate = templates.Single(t => t.FileName == "TIG_Vital_Signs_XML.xml");
+        var repeatingTobacco = templates.Single(t => t.FileName == "TIG_Tobacco_Product_Events_or_Malfunctions_XML.xml");
+
+        dmTemplate.Repeating.Should().BeFalse();
+        repeatingTobacco.Repeating.Should().BeTrue();
+
+        var service = new ProtocolDesignImporterService(catalog);
+
+        // 1. Default template import schedules Vital Signs across all 4 starter visits, Demographics at Baseline, and leaves repeating logs unscheduled.
+        var defaultImport = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                TemplateIds: [vsTemplate.Id, dmTemplate.Id, repeatingTobacco.Id],
+                FallbackTitle: "Starter Schedule Suite"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        defaultImport.IsSuccess.Should().BeTrue(string.Join("; ", defaultImport.Problems));
+        var initialDesign = defaultImport.Design!;
+        initialDesign.Epochs.Select(e => e.Id).Should().Equal("EP.SCREENING", "EP.TREATMENT", "EP.FOLLOWUP");
+        initialDesign.PlannedActivities.Select(a => a.Id).Should().Equal("V.SCREENING", "V.BASELINE", "V.WEEK4", "V.EOS");
+
+        var vsSpec = initialDesign.CollectionSpecs.Single(s => s.Name == vsTemplate.FormName);
+        var dmSpec = initialDesign.CollectionSpecs.Single(s => s.Name == dmTemplate.FormName);
+        var tobaccoSpec = initialDesign.CollectionSpecs.Single(s => s.Name == repeatingTobacco.FormName);
+        vsSpec.Repeating.Should().BeFalse();
+        dmSpec.Repeating.Should().BeFalse();
+        tobaccoSpec.Repeating.Should().BeTrue();
+        initialDesign.PlannedActivities.Should().AllSatisfy(a =>
+        {
+            a.CollectionSpecIds.Should().Contain(vsSpec.Id);
+            a.CollectionSpecIds.Should().NotContain(tobaccoSpec.Id);
+        });
+        initialDesign.PlannedActivities.Single(a => a.Id == "V.BASELINE").CollectionSpecIds.Should().Contain(dmSpec.Id);
+        initialDesign.PlannedActivities.Single(a => a.Id == "V.WEEK4").CollectionSpecIds.Should().NotContain(dmSpec.Id);
+
+        // 2. Merging a designer-assigned template onto BaseDesign preserves existing epochs/visits and wires custom visits.
+        var ecgTemplate = templates.Single(t => t.FileName == "TIG_Electrocardiogram_XML.xml");
+        var mergedImport = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                TemplateIds: [ecgTemplate.Id],
+                BaseDesign: initialDesign,
+                TemplateAssignments:
+                [
+                    new TemplateActivityAssignment(
+                        ecgTemplate.Id,
+                        ["V.SCREENING", "V.WEEK4"]),
+                ]),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        mergedImport.IsSuccess.Should().BeTrue(string.Join("; ", mergedImport.Problems));
+        var merged = mergedImport.Design!;
+        var ecgSpec = merged.CollectionSpecs.Single(s => s.Name == ecgTemplate.FormName);
+        merged.PlannedActivities.Single(a => a.Id == "V.SCREENING").CollectionSpecIds.Should().Contain([vsSpec.Id, ecgSpec.Id]);
+        merged.PlannedActivities.Single(a => a.Id == "V.WEEK4").CollectionSpecIds.Should().Contain([vsSpec.Id, ecgSpec.Id]);
+        merged.PlannedActivities.Single(a => a.Id == "V.BASELINE").CollectionSpecIds.Should().Contain([vsSpec.Id, dmSpec.Id]).And.NotContain(ecgSpec.Id);
+        ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(merged)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task UsdmV4WithUnmappedConceptAndVendorExtension_CreatesDesignWithNotes()
     {
         const string usdm = """

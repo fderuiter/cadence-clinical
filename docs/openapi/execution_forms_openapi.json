@@ -131,7 +131,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Collection.DuplicateSingletonInstance\u0060, \u0060K.Collection.NoGoverningVersion\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Observation.ParticipantWithdrawn\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -184,6 +184,10 @@
           },
           {
             "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Collection.DuplicateSingletonInstance",
             "status": 409
           },
           {
@@ -2887,6 +2891,57 @@
             "items": {
               "type": "string"
             }
+          },
+          "visit_timing": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "days_from_target": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "days_outside_window": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_start": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "deviation_category": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3081,6 +3136,57 @@
               "string"
             ],
             "format": "int64"
+          },
+          "visit_timing": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "days_from_target": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "days_outside_window": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_start": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "deviation_category": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -3277,6 +3383,57 @@
             "items": {
               "type": "string"
             }
+          },
+          "visit_timing": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "days_from_target": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "days_outside_window": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_start": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "deviation_category": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

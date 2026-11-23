@@ -110,11 +110,11 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .ConfigureAwait(false);
         var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
             EvaluateFormReadiness(items, values, assertions, found.Id.Value, memberGuids, activeErrorTargets);
-        var enrollmentVersion = await db.Enrollments.AsNoTracking()
-            .Where(e => e.Id == found.EnrollmentId)
-            .Select(e => (long?)e.VersionIndex)
-            .SingleOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false) ?? 1L;
+        var enrollmentEntity = await db.Enrollments.AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Id == found.EnrollmentId, cancellationToken)
+            .ConfigureAwait(false);
+        var enrollmentVersion = enrollmentEntity?.VersionIndex ?? 1L;
+        var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(enrollmentEntity);
 
         return new CollectionInstanceRecord(
             found.Id,
@@ -145,7 +145,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             blockers,
             blindedItemIds,
             blindedObservationIds,
-            itemCodelists);
+            itemCodelists,
+            enrollmentReferenceAt);
     }
 
     public async Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
@@ -211,6 +212,10 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId, a => a.TargetContentHash);
         var activeErrorTargets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, first.StudyId, cancellationToken)
             .ConfigureAwait(false);
+        var enrollmentEntity = await db.Enrollments.AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Id == enrollment, cancellationToken)
+            .ConfigureAwait(false);
+        var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(enrollmentEntity);
 
         return
         [
@@ -222,7 +227,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 allMemberAssertions,
                 verifiedRevisions,
                 signaturesByInstance[instance.Id.Value],
-                activeErrorTargets)),
+                activeErrorTargets,
+                enrollmentReferenceAt)),
         ];
     }
 
@@ -382,10 +388,9 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var codelistGroups = await LoadCodelistGroupsAsync(db, allItems, cancellationToken).ConfigureAwait(false);
 
         var enrollmentIds = instances.Select(i => i.EnrollmentId).Distinct().ToList();
-        var enrollmentVersions = await db.Enrollments.AsNoTracking()
+        var enrollmentEntities = await db.Enrollments.AsNoTracking()
             .Where(e => enrollmentIds.Contains(e.Id))
-            .Select(e => new { e.Id, e.VersionIndex })
-            .ToDictionaryAsync(e => e.Id, e => e.VersionIndex, cancellationToken)
+            .ToDictionaryAsync(e => e.Id, cancellationToken)
             .ConfigureAwait(false);
 
         var records = new List<CollectionInstanceRecord>(instances.Count);
@@ -434,6 +439,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
                 EvaluateFormReadiness(items, values, assertions, instance.Id.Value, memberGuids, activeErrorTargets);
 
+            var matchedEnrollment = enrollmentEntities.GetValueOrDefault(instance.EnrollmentId);
             records.Add(new CollectionInstanceRecord(
                 instance.Id,
                 instance.EnrollmentId,
@@ -454,7 +460,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 attestations,
                 contentHash,
                 collectionTitle,
-                enrollmentVersions.GetValueOrDefault(instance.EnrollmentId, 1L),
+                matchedEnrollment?.VersionIndex ?? 1L,
                 complete,
                 missingRequired,
                 openQueries,
@@ -463,7 +469,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 blockers,
                 blindedItemIds,
                 blindedObservationIds,
-                itemCodelists));
+                itemCodelists,
+                ResolveEnrollmentReferenceAt(matchedEnrollment)));
         }
 
         return records;
@@ -531,7 +538,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         IReadOnlyList<AssertionView> allMemberAssertions,
         IReadOnlySet<(Guid ObservationId, int Revision)> verifiedRevisions,
         IEnumerable<string> signatureHashes,
-        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets)
+        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets,
+        DateTimeOffset? enrollmentReferenceAt = null)
     {
         var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
         var specItems = spec?.Items ?? [];
@@ -621,7 +629,22 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             openQueryCount,
             answeredQueryCount,
             openErrorFindingCount,
-            blockers);
+            blockers,
+            enrollmentReferenceAt);
+    }
+
+    private static DateTimeOffset? ResolveEnrollmentReferenceAt(Enrollment? enrollment)
+    {
+        if (enrollment is null)
+        {
+            return null;
+        }
+
+        var enrolledPeriod = enrollment.Periods
+            .Where(p => p.Status == Cadence.Kernel.Execution.EnrollmentStatus.Enrolled && p.Period.Recorded.End is null)
+            .OrderBy(p => p.Period.Valid.Start)
+            .FirstOrDefault();
+        return enrolledPeriod?.Period.Valid.Start ?? enrollment.StatusSince;
     }
 
     internal static List<AssertionView> FilterFormAssertions(

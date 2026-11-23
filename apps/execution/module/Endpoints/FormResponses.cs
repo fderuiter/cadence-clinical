@@ -5,6 +5,7 @@ using System.Linq;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
@@ -39,12 +40,48 @@ public sealed record FormValueRequest(string ItemId, ObservationValue? Value, in
 /// <param name="PlannedActivityId">Its visit, if any.</param>
 /// <param name="CollectedAt">When its values were collected.</param>
 /// <param name="Version">1 when opened, one more per save that changed a value.</param>
+/// <param name="VisitTiming">Assessed visit timing (<c>Early</c>, <c>InWindow</c>, or <c>Late</c>) when scheduled on a timed activity.</param>
+/// <param name="DaysFromTarget">Calendar days from the planned target date (negative when early, positive when late).</param>
+/// <param name="DaysOutsideWindow">Calendar days outside the allowed visit window (0 when in window).</param>
+/// <param name="TargetDate">Planned target date in site calendar time, when timed.</param>
+/// <param name="WindowStart">First allowed date of the visit window, when timed.</param>
+/// <param name="WindowEnd">Last allowed date of the visit window, when timed.</param>
+/// <param name="DeviationCategory">Emitted deviation category (<c>VISIT_WINDOW</c>) when out of window, otherwise null.</param>
 public sealed record FormStateResponse(
-    Guid FormId, Guid EnrollmentId, Guid ProtocolVersionId, string CollectionSpecId, string? PlannedActivityId, DateTimeOffset CollectedAt, long Version)
+    Guid FormId,
+    Guid EnrollmentId,
+    Guid ProtocolVersionId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    DateTimeOffset CollectedAt,
+    long Version,
+    string? VisitTiming = null,
+    int? DaysFromTarget = null,
+    int? DaysOutsideWindow = null,
+    DateOnly? TargetDate = null,
+    DateOnly? WindowStart = null,
+    DateOnly? WindowEnd = null,
+    string? DeviationCategory = null)
 {
-    internal static FormStateResponse From(CollectionInstanceState state) =>
-        new(state.CollectionInstanceId.Value, state.EnrollmentId.Value, state.ProtocolVersionId.Value, state.CollectionSpecId,
-            state.PlannedActivityId, state.CollectedAt, state.Version);
+    internal static FormStateResponse From(CollectionInstanceState state, VisitTimingAssessment? assessment = null)
+    {
+        var effective = assessment ?? state.VisitTimingAssessment;
+        return new(
+            state.CollectionInstanceId.Value,
+            state.EnrollmentId.Value,
+            state.ProtocolVersionId.Value,
+            state.CollectionSpecId,
+            state.PlannedActivityId,
+            state.CollectedAt,
+            state.Version,
+            effective?.Timing.ToString(),
+            effective?.DaysFromTarget,
+            effective?.DaysOutsideWindow,
+            effective?.Expected.Target,
+            effective?.Expected.WindowStart,
+            effective?.Expected.WindowEnd,
+            VisitTimingEvaluator.DeviationCategoryOf(effective));
+    }
 }
 
 /// <summary>Summary of an opened form for an enrollment's form list.</summary>
@@ -77,6 +114,13 @@ public sealed record FormStateResponse(
 /// <param name="SignatureCount">Total attestations recorded over this form.</param>
 /// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting this form.</param>
 /// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
+/// <param name="VisitTiming">Assessed visit timing (<c>Early</c>, <c>InWindow</c>, or <c>Late</c>) when scheduled on a timed activity.</param>
+/// <param name="DaysFromTarget">Calendar days from the planned target date (negative when early, positive when late).</param>
+/// <param name="DaysOutsideWindow">Calendar days outside the allowed visit window (0 when in window).</param>
+/// <param name="TargetDate">Planned target date in site calendar time, when timed.</param>
+/// <param name="WindowStart">First allowed date of the visit window, when timed.</param>
+/// <param name="WindowEnd">Last allowed date of the visit window, when timed.</param>
+/// <param name="DeviationCategory">Emitted deviation category (<c>VISIT_WINDOW</c>) when out of window, otherwise null.</param>
 public sealed record FormSummaryResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -106,9 +150,20 @@ public sealed record FormSummaryResponse(
     bool SignatureSuperseded = false,
     int SignatureCount = 0,
     int OpenErrorFindingCount = 0,
-    IReadOnlyList<string>? ReadinessBlockers = null)
+    IReadOnlyList<string>? ReadinessBlockers = null,
+    string? VisitTiming = null,
+    int? DaysFromTarget = null,
+    int? DaysOutsideWindow = null,
+    DateOnly? TargetDate = null,
+    DateOnly? WindowStart = null,
+    DateOnly? WindowEnd = null,
+    string? DeviationCategory = null)
 {
-    internal static FormSummaryResponse From(CollectionInstanceSummary summary, int? openQueryCount = null, int? answeredQueryCount = null)
+    internal static FormSummaryResponse From(
+        CollectionInstanceSummary summary,
+        int? openQueryCount = null,
+        int? answeredQueryCount = null,
+        VisitTimingAssessment? assessment = null)
     {
         var effectiveOpen = openQueryCount ?? summary.OpenQueryCount;
         var effectiveAnswered = answeredQueryCount ?? summary.AnsweredQueryCount;
@@ -152,7 +207,14 @@ public sealed record FormSummaryResponse(
             summary.SignatureSuperseded,
             summary.SignatureCount,
             summary.OpenErrorFindingCount,
-            blockers);
+            blockers,
+            assessment?.Timing.ToString(),
+            assessment?.DaysFromTarget,
+            assessment?.DaysOutsideWindow,
+            assessment?.Expected.Target,
+            assessment?.Expected.WindowStart,
+            assessment?.Expected.WindowEnd,
+            VisitTimingEvaluator.DeviationCategoryOf(assessment));
     }
 }
 
@@ -183,6 +245,13 @@ public sealed record FormSummaryResponse(
 /// <param name="AnsweredQueryCount">Un-retracted clinical queries on this form answered by the site and awaiting monitor closure.</param>
 /// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting this form.</param>
 /// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
+/// <param name="VisitTiming">Assessed visit timing (<c>Early</c>, <c>InWindow</c>, or <c>Late</c>) when scheduled on a timed activity.</param>
+/// <param name="DaysFromTarget">Calendar days from the planned target date (negative when early, positive when late).</param>
+/// <param name="DaysOutsideWindow">Calendar days outside the allowed visit window (0 when in window).</param>
+/// <param name="TargetDate">Planned target date in site calendar time, when timed.</param>
+/// <param name="WindowStart">First allowed date of the visit window, when timed.</param>
+/// <param name="WindowEnd">Last allowed date of the visit window, when timed.</param>
+/// <param name="DeviationCategory">Emitted deviation category (<c>VISIT_WINDOW</c>) when out of window, otherwise null.</param>
 public sealed record FormResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -208,7 +277,14 @@ public sealed record FormResponse(
     int OpenQueryCount = 0,
     int AnsweredQueryCount = 0,
     int OpenErrorFindingCount = 0,
-    IReadOnlyList<string>? ReadinessBlockers = null)
+    IReadOnlyList<string>? ReadinessBlockers = null,
+    string? VisitTiming = null,
+    int? DaysFromTarget = null,
+    int? DaysOutsideWindow = null,
+    DateOnly? TargetDate = null,
+    DateOnly? WindowStart = null,
+    DateOnly? WindowEnd = null,
+    string? DeviationCategory = null)
 {
     /// <summary>
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
@@ -222,7 +298,8 @@ public sealed record FormResponse(
         IReadOnlySet<string>? blindedItemIds = null,
         IReadOnlySet<ObservationId>? blindedObservationIds = null,
         int? openQueryCount = null,
-        int? answeredQueryCount = null)
+        int? answeredQueryCount = null,
+        VisitTimingAssessment? assessment = null)
     {
         var specification = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
         var values = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
@@ -340,7 +417,14 @@ public sealed record FormResponse(
             effectiveOpen,
             effectiveAnswered,
             record.OpenErrorFindingCount,
-            blockers);
+            blockers,
+            assessment?.Timing.ToString(),
+            assessment?.DaysFromTarget,
+            assessment?.DaysOutsideWindow,
+            assessment?.Expected.Target,
+            assessment?.Expected.WindowStart,
+            assessment?.Expected.WindowEnd,
+            VisitTimingEvaluator.DeviationCategoryOf(assessment));
     }
 }
 

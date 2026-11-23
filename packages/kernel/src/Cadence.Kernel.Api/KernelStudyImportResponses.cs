@@ -216,17 +216,26 @@ public sealed record KernelCreateStudyRequest(
 /// <param name="FormName">Form display title.</param>
 /// <param name="FileName">Template file name.</param>
 /// <param name="ItemCount">Number of items on the form.</param>
+/// <param name="Repeating">True when the template form declares <c>Repeating="Yes"</c>.</param>
 public sealed record KernelProtocolTemplateResponse(
     string Id,
     string Category,
     string FormOid,
     string FormName,
     string FileName,
-    int ItemCount)
+    int ItemCount,
+    bool Repeating = false)
 {
     internal static KernelProtocolTemplateResponse From(BundledProtocolTemplate template) =>
-        new(template.Id, template.Category, template.FormOid, template.FormName, template.FileName, template.ItemCount);
+        new(template.Id, template.Category, template.FormOid, template.FormName, template.FileName, template.ItemCount, template.Repeating);
 }
+
+/// <summary>Explicit planned-activity assignment for a bundled template in a protocol import request.</summary>
+/// <param name="TemplateId">Bundled template identifier.</param>
+/// <param name="ActivityIds">Planned activity identifiers that collect the template; empty keeps the form unscheduled.</param>
+public sealed record KernelTemplateActivityAssignmentRequest(
+    string TemplateId,
+    IReadOnlyList<string> ActivityIds);
 
 /// <summary>JSON request body option for <c>POST /api/v1/kernel/studies/{studyRef}/protocol-imports</c>.</summary>
 /// <param name="Format">Optional format hint (<c>auto</c>, <c>odm_xml</c>, <c>usdm_json</c>).</param>
@@ -234,12 +243,14 @@ public sealed record KernelProtocolTemplateResponse(
 /// <param name="Content">Raw ODM v1.3.2 XML or USDM v4 JSON text, when sending JSON instead of multipart upload.</param>
 /// <param name="TemplateIds">Selected bundled CDISC Library template identifiers.</param>
 /// <param name="ReplaceForms">True to replace existing draft forms instead of merging into an existing draft.</param>
+/// <param name="TemplateAssignments">Optional designer-specified planned activity assignments per selected template.</param>
 public sealed record KernelImportProtocolJsonRequest(
     string? Format = null,
     string? FileName = null,
     string? Content = null,
     IReadOnlyList<string>? TemplateIds = null,
-    bool ReplaceForms = false);
+    bool ReplaceForms = false,
+    IReadOnlyList<KernelTemplateActivityAssignmentRequest>? TemplateAssignments = null);
 
 /// <summary>Readable import note attached to a protocol draft summary.</summary>
 /// <param name="Source">Source element, OID, or path in the imported file.</param>
@@ -293,13 +304,15 @@ public sealed record KernelProtocolFormItemResponse(
 /// <param name="ItemCount">Number of items on the form.</param>
 /// <param name="RequiredItemCount">Number of mandatory items on the form.</param>
 /// <param name="Items">Items in preserved display order.</param>
+/// <param name="Repeating">True when multiple instances of the form may be opened per planned activity or as a repeating log.</param>
 public sealed record KernelProtocolFormSummaryResponse(
     string Id,
     int DisplayOrder,
     string Name,
     int ItemCount,
     int RequiredItemCount,
-    IReadOnlyList<KernelProtocolFormItemResponse> Items)
+    IReadOnlyList<KernelProtocolFormItemResponse> Items,
+    bool Repeating = false)
 {
     internal static KernelProtocolFormSummaryResponse From(
         CollectionSpec spec,
@@ -315,7 +328,8 @@ public sealed record KernelProtocolFormSummaryResponse(
             spec.Name,
             items.Count,
             items.Count(i => i.Required),
-            items);
+            items,
+            spec.Repeating);
     }
 }
 

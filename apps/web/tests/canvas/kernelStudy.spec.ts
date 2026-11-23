@@ -6,7 +6,9 @@ import { kernelApi } from "../../src/api/kernelApi";
 import {
   clearKernelStudyCache,
   findKernelEnrollmentRef,
+  findEnrollmentScheduleOptions,
   findKernelStudyRef,
+  findStudyScheduleOptions,
   findStudySites,
   resetKernelStudySession,
 } from "../../src/canvas/kernelStudy";
@@ -22,6 +24,10 @@ vi.mock("../../src/api/kernelApi", () => ({
     search: vi.fn(),
     getChildren: vi.fn(),
     lookupEnrollment: vi.fn(),
+    listStudySites: vi.fn(),
+    listProtocolVersions: vi.fn(),
+    getScheduleOfActivities: vi.fn(),
+    getEnrollmentSchedule: vi.fn(),
   },
 }));
 
@@ -607,5 +613,263 @@ describe("kernelStudy session cache", () => {
     );
     await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
     expect(kernelApi.search).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("site-scoped schedule governance and enrollment schedule windows", () => {
+  const V1_REF = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b001";
+  const V2_REF = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-00000000b002";
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    clearKernelStudyCache();
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.listStudySites).mockReset();
+    vi.mocked(kernelApi.listProtocolVersions).mockReset();
+    vi.mocked(kernelApi.getScheduleOfActivities).mockReset();
+    vi.mocked(kernelApi.getEnrollmentSchedule).mockReset();
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Study",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+  });
+
+  it("selects Site A's governing Version 1 from site.effective_versions even when Version 2 is Approved", async () => {
+    vi.mocked(kernelApi.listStudySites).mockResolvedValue([
+      {
+        study_site_ref: SITE_A,
+        study_ref: STUDY_REF,
+        site_ref: "site:1",
+        site_code: "SITE-A",
+        site_name: "Tokyo Site",
+        country: "JP",
+        status: "Active",
+        effective_versions: [
+          {
+            protocol_version_ref: V1_REF,
+            number: 1,
+            effectivity_ref: "effectivity:1",
+            level: "StudySite",
+          },
+        ],
+      },
+    ]);
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
+      {
+        ref: V2_REF,
+        study: STUDY_REF,
+        number: 2,
+        parent_version: V1_REF,
+        status: "Approved",
+        content_hash: "sha256:v2",
+        amendment_intent: "Amendment",
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
+      {
+        ref: V1_REF,
+        study: STUDY_REF,
+        number: 1,
+        parent_version: null,
+        status: "Approved",
+        content_hash: "sha256:v1",
+        amendment_intent: null,
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
+    ]);
+    vi.mocked(kernelApi.getScheduleOfActivities).mockResolvedValue({
+      version: V1_REF,
+      content_hash: "sha256:v1",
+      title: "CAD-101 v1",
+      epochs: [
+        {
+          epoch_id: "ep.1",
+          name: "Treatment",
+          order: 1,
+          first_column: 0,
+          column_count: 1,
+        },
+      ],
+      columns: [
+        {
+          activity_id: "v.day1",
+          name: "Baseline",
+          epoch_id: "ep.1",
+          study_day: 1,
+          window_before: 0,
+          window_after: 1,
+          locations: [],
+          footnotes: [],
+        },
+      ],
+      rows: [
+        {
+          collection_spec_id: "cs.vs",
+          name: "Vital Signs",
+          item_ids: ["sbp"],
+          concepts: ["concept:sbp@1"],
+          columns: [0],
+          frequency: 1,
+          footnotes: [],
+        },
+      ],
+      footnotes: [],
+    });
+
+    const resolved = await findStudyScheduleOptions("CAD-101", "SITE-A");
+    expect(resolved?.governanceStatus).toBe("Effective");
+    expect(resolved?.versionRef).toBe(V1_REF);
+    expect(resolved?.versionNumber).toBe(1);
+    expect(kernelApi.getScheduleOfActivities).toHaveBeenCalledWith(V1_REF);
+  });
+
+  it("returns NoEffectiveVersion guidance instead of falling back to Draft when a site has zero effective versions", async () => {
+    vi.mocked(kernelApi.listStudySites).mockResolvedValue([
+      {
+        study_site_ref: SITE_A,
+        study_ref: STUDY_REF,
+        site_ref: "site:1",
+        site_code: "SITE-DRAFT",
+        site_name: "Draft Site",
+        country: "US",
+        status: "Selected",
+        effective_versions: [],
+      },
+    ]);
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
+      {
+        ref: V1_REF,
+        study: STUDY_REF,
+        number: 1,
+        parent_version: null,
+        status: "Draft",
+        content_hash: null,
+        amendment_intent: null,
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
+    ]);
+
+    const resolved = await findStudyScheduleOptions("CAD-101", "SITE-DRAFT");
+    expect(resolved?.governanceStatus).toBe("NoEffectiveVersion");
+    expect(resolved?.columns).toEqual([]);
+    expect(resolved?.scheduledRows).toEqual([]);
+    expect(resolved?.guidance).toContain("Draft");
+    expect(kernelApi.getScheduleOfActivities).not.toHaveBeenCalled();
+  });
+
+  it("maps server-computed targetDate, windowStatus, and repeating metadata from getEnrollmentSchedule", async () => {
+    vi.mocked(kernelApi.getEnrollmentSchedule).mockResolvedValue({
+      enrollment: `enrollment:${ENROLLMENT_ID}@1`,
+      study: STUDY_REF,
+      study_site: SITE_A,
+      governance_status: "Effective",
+      governing_version: V1_REF,
+      governing_version_number: 1,
+      latest_study_version_status: "Approved",
+      guidance: null,
+      reference_date: "2026-03-01",
+      as_of_date: "2026-03-15",
+      time_zone: "Asia/Tokyo",
+      schedule: {
+        version: V1_REF,
+        content_hash: "sha256:v1",
+        title: "CAD-101 v1",
+        epochs: [
+          {
+            epoch_id: "ep.1",
+            name: "Treatment",
+            order: 1,
+            first_column: 0,
+            column_count: 2,
+          },
+        ],
+        columns: [
+          {
+            activity_id: "v.day1",
+            name: "Baseline",
+            epoch_id: "ep.1",
+            study_day: 1,
+            window_before: 0,
+            window_after: 1,
+            locations: [],
+            footnotes: [],
+          },
+          {
+            activity_id: "v.day15",
+            name: "Day 15",
+            epoch_id: "ep.1",
+            study_day: 15,
+            window_before: 2,
+            window_after: 2,
+            repeating: true,
+            locations: [],
+            footnotes: [],
+          },
+        ],
+        rows: [
+          {
+            collection_spec_id: "cs.vs",
+            name: "Vital Signs",
+            item_ids: ["sbp"],
+            concepts: ["concept:sbp@1"],
+            columns: [0, 1],
+            frequency: 2,
+            footnotes: [],
+          },
+        ],
+        footnotes: [],
+      },
+      expected_visits: [
+        {
+          activity_id: "v.day1",
+          activity_name: "Baseline",
+          epoch_id: "ep.1",
+          study_day: 1,
+          target_date: "2026-03-01",
+          window_open: "2026-03-01",
+          window_close: "2026-03-02",
+          window_status: "Closed",
+          collection_spec_ids: ["cs.vs"],
+        },
+        {
+          activity_id: "v.day15",
+          activity_name: "Day 15",
+          epoch_id: "ep.1",
+          study_day: 15,
+          target_date: "2026-03-15",
+          window_open: "2026-03-13",
+          window_close: "2026-03-17",
+          window_status: "Open",
+          repeating: true,
+          collection_spec_ids: ["cs.vs"],
+        },
+      ],
+    });
+
+    const mapped = await findEnrollmentScheduleOptions(ENROLLMENT_ID);
+    expect(mapped?.governanceStatus).toBe("Effective");
+    expect(
+      mapped?.columns.map((c) => [
+        c.activityId,
+        c.targetDate,
+        c.windowStatus,
+        c.repeating,
+      ])
+    ).toEqual([
+      ["v.day1", "2026-03-01", "Closed", false],
+      ["v.day15", "2026-03-15", "Open", true],
+    ]);
   });
 });

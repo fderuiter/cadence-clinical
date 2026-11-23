@@ -115,6 +115,7 @@ function makeSoaResponse() {
         concepts: ["concept:systolic_bp@1", "concept:diastolic_bp@1"],
         columns: [0, 1, 2],
         frequency: 3,
+        repeating: true,
         footnotes: [],
       },
       {
@@ -877,5 +878,303 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  it("renders server-computed target dates, window badges, form timing badges, and singleton guards", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-crc-2",
+      tokenParsed: {
+        sub: "crc-2",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["crc"] },
+      },
+    });
+
+    mockKernelProtocolAndStudy();
+    vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    } as never);
+    vi.spyOn(kernelApi, "getEnrollmentSchedule").mockResolvedValue({
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}@1`,
+      study_ref: STUDY_REF,
+      study_site_ref: SITE_REF,
+      site_code: "SITE-101",
+      country: "US",
+      enrollment_status: "Enrolled",
+      status_since: "2026-03-01T09:00:00Z",
+      reference_date: "2026-03-01",
+      as_of_date: "2026-03-01",
+      governance_status: "Effective",
+      latest_study_version_status: "Approved",
+      guidance: null,
+      governing_version: {
+        protocol_version_ref: VERSION_REF,
+        number: 1,
+        effectivity_ref: "effectivity:1",
+        level: "StudySite",
+      },
+      effective_versions: [
+        {
+          protocol_version_ref: VERSION_REF,
+          number: 1,
+          effectivity_ref: "effectivity:1",
+          level: "StudySite",
+        },
+      ],
+      schedule: makeSoaResponse(),
+      expected_visits: [
+        {
+          activity_id: "pa.screening",
+          name: "Screening",
+          epoch_id: "epoch.screening",
+          epoch_order: 0,
+          study_day: -14,
+          window_before: 7,
+          window_after: 0,
+          target_date: "2026-02-15",
+          window_start: "2026-02-08",
+          window_end: "2026-02-15",
+          window_status: "Closed",
+        },
+        {
+          activity_id: "pa.baseline",
+          name: "Baseline",
+          epoch_id: "epoch.treatment",
+          epoch_order: 1,
+          study_day: 1,
+          window_before: 0,
+          window_after: 1,
+          target_date: "2026-03-01",
+          window_start: "2026-03-01",
+          window_end: "2026-03-02",
+          window_status: "Open",
+        },
+        {
+          activity_id: "pa.week4",
+          name: "Week 4",
+          epoch_id: "epoch.treatment",
+          epoch_order: 1,
+          study_day: 28,
+          window_before: 3,
+          window_after: 3,
+          target_date: "2026-03-28",
+          window_start: "2026-03-25",
+          window_end: "2026-03-31",
+          window_status: "NotYetOpen",
+        },
+      ],
+    } as never);
+
+    vi.spyOn(ecrfFormsApi, "listForEnrollment").mockResolvedValue([
+      makeFormSummary({
+        form_id: FORM_COMPLETE_ID,
+        collection_spec_id: "cs.physical_exam",
+        collection_title: "Physical Examination",
+        planned_activity_id: "pa.screening",
+        visit_timing: "Late",
+        days_outside_window: 3,
+        deviation_category: "VISIT_WINDOW",
+      }),
+      makeFormSummary({
+        form_id: FORM_REPEAT_1_ID,
+        collection_spec_id: "cs.vitals",
+        collection_title: "Vital Signs",
+        planned_activity_id: "pa.baseline",
+        locked: false,
+        visit_timing: "InWindow",
+        days_outside_window: 0,
+      }),
+    ] as never);
+    vi.spyOn(ecrfQueriesApi, "listForEnrollment").mockResolvedValue([]);
+    vi.spyOn(ecrfQueriesApi, "listForForm").mockResolvedValue([]);
+    vi.spyOn(ecrfFormsApi, "getForm").mockResolvedValue(
+      makeFormDetail({
+        form_id: FORM_COMPLETE_ID,
+        collection_spec_id: "cs.physical_exam",
+        collection_title: "Physical Examination",
+        planned_activity_id: "pa.screening",
+        visit_timing: "Late",
+        days_outside_window: 3,
+        deviation_category: "VISIT_WINDOW",
+      }) as never
+    );
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: StudyCanvasView,
+        },
+      ],
+    });
+
+    await router.push("/studies/CADENCE-101?section=participants");
+    await router.isReady();
+    const wrapper = mount(
+      {
+        components: { ConfirmationDialogHost },
+        template: "<router-view /><ConfirmationDialogHost />",
+      },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+    await wrapper.find("#participant-SUBJ-101").trigger("click");
+    await flushPromises();
+    await wrapper.find("#inspector-open-record").trigger("click");
+    await flushPromises();
+
+    // Server-derived target calendar dates and window status badges
+    const matrix = wrapper.find("#casebook-matrix");
+    expect(matrix.exists()).toBe(true);
+    expect(matrix.text()).toContain("2026-02-15");
+    expect(matrix.text()).toContain("2026-03-01");
+    expect(matrix.text()).toContain("2026-03-28");
+    expect(matrix.text()).toContain("Closed");
+    expect(matrix.text()).toContain("Open");
+    expect(matrix.text()).toContain("NotYetOpen");
+
+    // Singleton cell hides + Add repeat and renders Late (+3d) timing badge
+    const peScreeningCell = wrapper.find(
+      '[data-cell="cs.physical_exam:pa.screening"]'
+    );
+    expect(peScreeningCell.text()).toContain("Late (+3d)");
+    expect(
+      peScreeningCell
+        .find('[id="matrix-repeat-cs.physical_exam-pa.screening"]')
+        .exists()
+    ).toBe(false);
+
+    // Baseline vitals shows InWindow timing badge and allows + Add repeat (repeating spec)
+    const vitalsBaselineCell = wrapper.find(
+      '[data-cell="cs.vitals:pa.baseline"]'
+    );
+    expect(vitalsBaselineCell.text()).toContain("InWindow");
+    expect(
+      vitalsBaselineCell
+        .find('[id="matrix-repeat-cs.vitals-pa.baseline"]')
+        .exists()
+    ).toBe(true);
+
+    // Opening existing out-of-window form shows VISIT_WINDOW badge in SDV toolbar
+    await router.push({
+      name: "study",
+      params: { studyCode: "CADENCE-101" },
+      query: {
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: `collection_instance:${FORM_COMPLETE_ID}`,
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find("#ecrf-visit-deviation-badge").text()).toContain(
+      "VISIT_WINDOW"
+    );
+
+    // Navigating to form=new on an already-opened singleton cell blocks duplicate creation
+    await router.push({
+      name: "study",
+      params: { studyCode: "CADENCE-101" },
+      query: {
+        stage: "conduct",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: "new",
+        spec: "cs.physical_exam",
+        visit: "pa.screening",
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find("#ecrf-singleton-duplicate-notice").exists()).toBe(
+      true
+    );
+    expect(
+      (wrapper.find("#ecrf-form-open").element as HTMLButtonElement).disabled
+    ).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("shows governance guidance instead of failing with 422 when a site has only a Draft version and zero effective versions", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const auth = useAuthStore();
+    auth.setAuth({
+      authenticated: true,
+      token: "token-crc-3",
+      tokenParsed: {
+        sub: "crc-3",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["crc"] },
+      },
+    });
+
+    mockKernelProtocolAndStudy();
+    vi.spyOn(kernelApi, "listProposals").mockResolvedValue([]);
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [PARTICIPANT],
+      total: 1,
+      limit: 50,
+      offset: 0,
+    } as never);
+    vi.spyOn(kernelApi, "getEnrollmentSchedule").mockResolvedValue({
+      enrollment_ref: `enrollment:${ENROLLMENT_ID}@1`,
+      study_ref: STUDY_REF,
+      study_site_ref: SITE_REF,
+      site_code: "SITE-101",
+      country: "US",
+      enrollment_status: "Screened",
+      status_since: "2026-03-01T09:00:00Z",
+      reference_date: "2026-03-01",
+      as_of_date: "2026-03-01",
+      governance_status: "NoEffectiveVersion",
+      latest_study_version_status: "Draft",
+      guidance:
+        "Protocol version 1 is still in Draft. Approve a protocol version and activate site effectivity before opening scheduled casebook forms.",
+      governing_version: null,
+      effective_versions: [],
+      schedule: null,
+      expected_visits: [],
+    } as never);
+    vi.spyOn(ecrfFormsApi, "listForEnrollment").mockResolvedValue([] as never);
+    vi.spyOn(ecrfQueriesApi, "listForEnrollment").mockResolvedValue([]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: StudyCanvasView,
+        },
+      ],
+    });
+
+    await router.push("/studies/CADENCE-101?section=participants");
+    await router.isReady();
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+    await wrapper.find("#participant-SUBJ-101").trigger("click");
+    await flushPromises();
+    await wrapper.find("#inspector-open-record").trigger("click");
+    await flushPromises();
+
+    const banner = wrapper.find("#casebook-governance-guidance");
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain("Draft");
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(false);
+
+    wrapper.unmount();
   });
 });

@@ -132,12 +132,14 @@
           v-if="!hasOpenForm && resolvedEnrollmentId"
           style="margin-bottom: 16px"
           :study-code="scopeStore.activeStudyId.trim() || undefined"
+          :site-code="activeSiteCode"
           :subject-code="selectedSubjectId || 'participant'"
           :enrollment-id="resolvedEnrollmentId"
-          :schedule="scheduleForActiveStudy"
+          :schedule="effectiveScheduleForActiveParticipant"
           :form-location="ecrfFormLocation"
           :new-form-location="null"
           :new-form-cell-location="ecrfNewFormCellLocation"
+          @forms-loaded="onCasebookFormsLoaded"
           @select-form="onCasebookSelectForm"
           @select-new-cell="onCasebookSelectNewCell"
         />
@@ -147,7 +149,7 @@
           :form-id="effectiveFormId"
           :enrollment-id="resolvedEnrollmentId || null"
           :enrollment-context="ecrfEnrollmentContext"
-          :schedule-options="scheduleForActiveStudy"
+          :schedule-options="effectiveScheduleForActiveParticipant"
           :schedule-loading="!effectiveFormId && canvasStore.scheduleLoading"
           :schedule-error="!effectiveFormId ? canvasStore.scheduleError : null"
           :collection-spec-id="effectiveCollectionSpecId"
@@ -294,9 +296,26 @@ const selectedSubject = computed(
     scopeStore.subjects.find((s) => s.id === selectedSubjectId.value) ?? null
 );
 
+const activeSiteCode = computed(
+  () =>
+    selectedSubject.value?.siteId ||
+    scopeStore.activeSiteId.trim() ||
+    routeQuery("siteId") ||
+    null
+);
+
+const loadedCasebookForms = ref([]);
+
+function onCasebookFormsLoaded(forms) {
+  loadedCasebookForms.value = Array.isArray(forms) ? forms : [];
+}
+
 const scheduleForActiveStudy = computed(() => {
   const code = scopeStore.activeStudyId.trim();
   if (!code) return null;
+  if (typeof canvasStore.getScheduleFor === "function") {
+    return canvasStore.getScheduleFor(code, activeSiteCode.value);
+  }
   return Object.prototype.hasOwnProperty.call(
     canvasStore.scheduleOptionsByStudy,
     code
@@ -307,30 +326,73 @@ const scheduleForActiveStudy = computed(() => {
       : null;
 });
 
+const enrollmentScheduleForActiveParticipant = computed(() => {
+  const id = resolvedEnrollmentId.value;
+  if (!id || !canvasStore.enrollmentSchedulesById) return null;
+  return canvasStore.enrollmentSchedulesById[id] ?? null;
+});
+
+const effectiveScheduleForActiveParticipant = computed(
+  () =>
+    enrollmentScheduleForActiveParticipant.value ?? scheduleForActiveStudy.value
+);
+
 const ecrfEnrollmentContext = computed(() => {
   if (!resolvedEnrollmentId.value) return null;
+  const active = effectiveScheduleForActiveParticipant.value;
   return {
     enrollmentId: resolvedEnrollmentId.value,
     subjectCode: selectedSubjectId.value.trim() || undefined,
-    collectionSpecs: scheduleForActiveStudy.value?.collectionSpecs ?? [],
-    plannedActivities: scheduleForActiveStudy.value?.plannedActivities ?? [],
+    governanceStatus: active?.governanceStatus,
+    guidance: active?.guidance ?? null,
+    collectionSpecs: active?.collectionSpecs ?? [],
+    plannedActivities: active?.plannedActivities ?? [],
     scheduleLoading: !effectiveFormId.value && canvasStore.scheduleLoading,
     scheduleError: !effectiveFormId.value ? canvasStore.scheduleError : null,
+    existingForms: loadedCasebookForms.value,
   };
 });
 
 function onRetryScheduleOptions() {
   const code = scopeStore.activeStudyId.trim();
   if (code) {
-    void canvasStore.retryScheduleOptions(code);
+    void canvasStore.retryScheduleOptions(
+      code,
+      activeSiteCode.value ? { siteCode: activeSiteCode.value } : undefined
+    );
+  }
+  if (
+    resolvedEnrollmentId.value &&
+    typeof canvasStore.loadEnrollmentSchedule === "function"
+  ) {
+    void canvasStore.loadEnrollmentSchedule(resolvedEnrollmentId.value, {
+      force: true,
+    });
   }
 }
 
 watch(
-  [() => scopeStore.activeStudyId.trim(), effectiveFormId],
-  ([code, activeFormId]) => {
+  [() => scopeStore.activeStudyId.trim(), activeSiteCode, effectiveFormId],
+  ([code, siteCode, activeFormId]) => {
     if (code && !activeFormId) {
-      void canvasStore.loadScheduleOptions(code);
+      void canvasStore.loadScheduleOptions(
+        code,
+        siteCode ? { siteCode } : undefined
+      );
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [resolvedEnrollmentId, effectiveFormId],
+  ([enrollmentId, activeFormId]) => {
+    if (
+      enrollmentId &&
+      !activeFormId &&
+      typeof canvasStore.loadEnrollmentSchedule === "function"
+    ) {
+      void canvasStore.loadEnrollmentSchedule(enrollmentId);
     }
   },
   { immediate: true }

@@ -951,7 +951,8 @@ public static class KernelStudyImportEndpoints
                 Format: parsedPayload.Format,
                 TemplateIds: parsedPayload.TemplateIds,
                 BaseDesign: plan.BaseDesign,
-                FallbackTitle: study.Title),
+                FallbackTitle: study.Title,
+                TemplateAssignments: parsedPayload.TemplateAssignments),
             ResolveOrDefineConceptAsync,
             cancellationToken).ConfigureAwait(false);
 
@@ -1477,9 +1478,16 @@ public static class KernelStudyImportEndpoints
                     "Supported format values are 'auto', 'odm_xml', and 'usdm_json'."));
             }
 
+            var jsonOptionsForForm = context.RequestServices.GetService<IOptions<JsonOptions>>()?.Value.SerializerOptions;
             var templateIds = ParseTemplateIds(form["template_ids"]);
+            var templateAssignments = ParseTemplateAssignments(form["template_assignments"], jsonOptionsForForm, out var assignmentError);
+            if (assignmentError is not null)
+            {
+                return ParsedImportInput.Fail(KernelProblems.BadRequest("Invalid template_assignments", assignmentError));
+            }
+
             var replaceForms = bool.TryParse(form["replace_forms"].ToString(), out var parsedReplace) && parsedReplace;
-            return new ParsedImportInput(rawBytes, fileName, format, templateIds, replaceForms, null);
+            return new ParsedImportInput(rawBytes, fileName, format, templateIds, replaceForms, templateAssignments, null);
         }
 
         var (bodyBytes, bodyExceeded) = await ReadBoundedBytesAsync(
@@ -1531,12 +1539,18 @@ public static class KernelStudyImportEndpoints
             }
         }
 
+        var mappedAssignments = jsonRequest.TemplateAssignments?
+            .Where(a => !string.IsNullOrWhiteSpace(a.TemplateId))
+            .Select(a => new TemplateActivityAssignment(a.TemplateId.Trim(), a.ActivityIds ?? []))
+            .ToList();
+
         return new ParsedImportInput(
             contentBytes,
             jsonRequest.FileName,
             jsonFormat,
             jsonRequest.TemplateIds,
             jsonRequest.ReplaceForms,
+            mappedAssignments,
             null);
     }
 
@@ -1859,6 +1873,45 @@ public static class KernelStudyImportEndpoints
         return list.Count > 0 ? list : null;
     }
 
+    private static List<TemplateActivityAssignment>? ParseTemplateAssignments(
+        Microsoft.Extensions.Primitives.StringValues values,
+        JsonSerializerOptions? jsonOptions,
+        out string? error)
+    {
+        error = null;
+        if (values.Count == 0)
+        {
+            return null;
+        }
+
+        var list = new List<TemplateActivityAssignment>();
+        foreach (var entry in values)
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+            {
+                continue;
+            }
+
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<KernelTemplateActivityAssignmentRequest>>(entry.Trim(), jsonOptions);
+                if (parsed is not null)
+                {
+                    list.AddRange(parsed
+                        .Where(a => !string.IsNullOrWhiteSpace(a.TemplateId))
+                        .Select(a => new TemplateActivityAssignment(a.TemplateId.Trim(), a.ActivityIds ?? [])));
+                }
+            }
+            catch (JsonException ex)
+            {
+                error = ex.Message;
+                return null;
+            }
+        }
+
+        return list.Count > 0 ? list : null;
+    }
+
     private static string NormalizeOrganizationCode(string input)
     {
         var sb = new StringBuilder(input.Length);
@@ -1930,10 +1983,11 @@ public static class KernelStudyImportEndpoints
         ProtocolImportFormat Format,
         IReadOnlyList<string>? TemplateIds,
         bool ReplaceForms,
+        IReadOnlyList<TemplateActivityAssignment>? TemplateAssignments,
         ProblemHttpResult? Problem)
     {
         public static ParsedImportInput Fail(ProblemHttpResult problem) =>
-            new(null, null, ProtocolImportFormat.Auto, null, false, problem);
+            new(null, null, ProtocolImportFormat.Auto, null, false, null, problem);
     }
 
     private sealed record DraftMutationPlan(

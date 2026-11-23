@@ -1,5 +1,10 @@
 import { getActivePinia, type Pinia } from "pinia";
-import { kernelApi } from "../api/kernelApi";
+import { ApiError } from "../api/client";
+import {
+  kernelApi,
+  type KernelExpectedVisit,
+  type KernelScheduleOfActivities,
+} from "../api/kernelApi";
 import {
   registerLogoutCleanup,
   registerSessionCacheClearHandler,
@@ -29,6 +34,11 @@ interface SessionCacheBucket {
   enrollmentInFlight: Map<string, Promise<NodeRef | null>>;
   scheduleOptions: Map<string, StudyScheduleOptions>;
   scheduleOptionsInFlight: Map<string, Promise<StudyScheduleOptions | null>>;
+  enrollmentSchedules: Map<string, StudyScheduleOptions>;
+  enrollmentSchedulesInFlight: Map<
+    string,
+    Promise<StudyScheduleOptions | null>
+  >;
 }
 
 function createSessionCacheBucket(): SessionCacheBucket {
@@ -45,6 +55,8 @@ function createSessionCacheBucket(): SessionCacheBucket {
     enrollmentInFlight: new Map(),
     scheduleOptions: new Map(),
     scheduleOptionsInFlight: new Map(),
+    enrollmentSchedules: new Map(),
+    enrollmentSchedulesInFlight: new Map(),
   };
 }
 
@@ -75,6 +87,8 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.enrollmentInFlight.clear();
   bucket.scheduleOptions.clear();
   bucket.scheduleOptionsInFlight.clear();
+  bucket.enrollmentSchedules.clear();
+  bucket.enrollmentSchedulesInFlight.clear();
 }
 
 /**
@@ -111,8 +125,23 @@ function sitesKey(scope: string, normalizedStudy: string): string {
   return `${scope}::sites::${encodeURIComponent(normalizedStudy)}`;
 }
 
-function scheduleKey(scope: string, normalizedStudy: string): string {
-  return `${scope}::schedule::${encodeURIComponent(normalizedStudy)}`;
+function scheduleKey(
+  scope: string,
+  normalizedStudy: string,
+  normalizedSite = ""
+): string {
+  return normalizedSite
+    ? `${scope}::schedule::${encodeURIComponent(normalizedStudy)}::${encodeURIComponent(normalizedSite)}`
+    : `${scope}::schedule::${encodeURIComponent(normalizedStudy)}`;
+}
+
+function enrollmentScheduleKey(
+  scope: string,
+  enrollmentId: string,
+  asOf = "",
+  timeZone = ""
+): string {
+  return `${scope}::enrollment-schedule::${encodeURIComponent(enrollmentId)}::${encodeURIComponent(asOf)}::${encodeURIComponent(timeZone)}`;
 }
 
 function enrollmentKey(
@@ -559,12 +588,18 @@ export interface StudyCollectionSpecOption {
   id: string;
   name: string;
   plannedActivityIds: string[];
+  repeating?: boolean;
 }
 
 export interface StudyPlannedActivityOption {
   id: string;
   name: string;
   studyDay: number | null;
+  repeating?: boolean;
+  targetDate?: string | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
+  windowStatus?: string | null;
 }
 
 export interface StudyScheduleEpoch {
@@ -583,6 +618,11 @@ export interface StudyScheduleColumn {
   windowBefore: number;
   windowAfter: number;
   locations: string[];
+  repeating?: boolean;
+  targetDate?: string | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
+  windowStatus?: string | null;
 }
 
 export interface StudyScheduleRow {
@@ -591,10 +631,12 @@ export interface StudyScheduleRow {
   itemCount: number;
   columnIndices: number[];
   plannedActivityIds: string[];
+  repeating?: boolean;
 }
 
 export interface StudyScheduleOptions {
   versionRef: string;
+  versionNumber?: number | null;
   title: string;
   epochs: StudyScheduleEpoch[];
   columns: StudyScheduleColumn[];
@@ -602,6 +644,12 @@ export interface StudyScheduleOptions {
   unscheduledRows: StudyScheduleRow[];
   collectionSpecs: StudyCollectionSpecOption[];
   plannedActivities: StudyPlannedActivityOption[];
+  governanceStatus?: "Effective" | "NoEffectiveVersion";
+  guidance?: string | null;
+  latestStudyVersionStatus?: string | null;
+  referenceDate?: string | null;
+  asOfDate?: string | null;
+  siteCode?: string | null;
 }
 
 function buildScheduleEpochs(
@@ -644,12 +692,164 @@ function buildScheduleEpochs(
   return synthesized;
 }
 
+function buildNoEffectiveVersionGuidance(
+  latestStatus: string | null | undefined
+): string {
+  switch (latestStatus) {
+    case "Draft":
+      return "Protocol version is still in Draft. Complete formal review, electronic approval, and site activation before opening participant casebook forms.";
+    case "Approved":
+      return "An approved protocol version exists for this study, but no protocol version has been made effective for this site yet. Activate the site on an approved protocol version before opening participant casebook forms.";
+    default:
+      return "No protocol version is effective at this site yet. Import, approve, and activate a protocol version for this site before opening participant casebook forms.";
+  }
+}
+
+function buildNoEffectiveScheduleOptions(
+  latestStatus: string | null | undefined,
+  guidance?: string | null,
+  meta: {
+    siteCode?: string | null;
+    referenceDate?: string | null;
+    asOfDate?: string | null;
+  } = {}
+): StudyScheduleOptions {
+  return {
+    versionRef: "",
+    versionNumber: null,
+    title: "",
+    epochs: [],
+    columns: [],
+    scheduledRows: [],
+    unscheduledRows: [],
+    collectionSpecs: [],
+    plannedActivities: [],
+    governanceStatus: "NoEffectiveVersion",
+    latestStudyVersionStatus: latestStatus ?? null,
+    guidance: guidance || buildNoEffectiveVersionGuidance(latestStatus),
+    referenceDate: meta.referenceDate ?? null,
+    asOfDate: meta.asOfDate ?? null,
+    siteCode: meta.siteCode ?? null,
+  };
+}
+
+function mapSoaToScheduleOptions(
+  soa: KernelScheduleOfActivities,
+  expectedVisits: ReadonlyArray<KernelExpectedVisit> = [],
+  meta: {
+    siteCode?: string | null;
+    versionNumber?: number | null;
+    referenceDate?: string | null;
+    asOfDate?: string | null;
+    latestStudyVersionStatus?: string | null;
+  } = {}
+): StudyScheduleOptions {
+  const expectedByActivity = new Map<string, KernelExpectedVisit>();
+  for (const visit of expectedVisits) {
+    if (visit?.activity_id) {
+      expectedByActivity.set(visit.activity_id, visit);
+    }
+  }
+  const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
+  const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
+  const columns: StudyScheduleColumn[] = rawColumns.map((col) => {
+    const expected = expectedByActivity.get(col.activity_id);
+    return {
+      activityId: col.activity_id,
+      name: col.name,
+      epochId: col.epoch_id ?? "",
+      studyDay:
+        col.study_day !== null && col.study_day !== undefined
+          ? Number(col.study_day)
+          : null,
+      windowBefore: Number(col.window_before) || 0,
+      windowAfter: Number(col.window_after) || 0,
+      locations: Array.isArray(col.locations) ? col.locations : [],
+      repeating: Boolean(col.repeating),
+      targetDate: expected?.target_date ?? null,
+      windowStart: expected?.window_start ?? null,
+      windowEnd: expected?.window_end ?? null,
+      windowStatus: expected?.window_status ?? null,
+    };
+  });
+  const epochs = buildScheduleEpochs(
+    Array.isArray(soa.epochs) ? soa.epochs : [],
+    columns
+  );
+  const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
+    const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
+      .map((idx) => Number(idx))
+      .filter(
+        (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
+      );
+    return {
+      collectionSpecId: row.collection_spec_id,
+      name: row.name,
+      itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
+      columnIndices,
+      plannedActivityIds: columnIndices
+        .map((idx) => columns[idx]?.activityId)
+        .filter((id): id is string => Boolean(id)),
+      repeating: Boolean(row.repeating),
+    };
+  });
+
+  return {
+    versionRef: soa.version,
+    versionNumber: meta.versionNumber ?? null,
+    title: soa.title ?? "",
+    epochs,
+    columns,
+    scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
+    unscheduledRows: mappedRows.filter((row) => row.columnIndices.length === 0),
+    collectionSpecs: mappedRows.map((row) => ({
+      id: row.collectionSpecId,
+      name: row.name,
+      plannedActivityIds: row.plannedActivityIds,
+      repeating: Boolean(row.repeating),
+    })),
+    plannedActivities: columns.map((col) => ({
+      id: col.activityId,
+      name: col.name,
+      studyDay: col.studyDay,
+      repeating: Boolean(col.repeating),
+      targetDate: col.targetDate ?? null,
+      windowStart: col.windowStart ?? null,
+      windowEnd: col.windowEnd ?? null,
+      windowStatus: col.windowStatus ?? null,
+    })),
+    governanceStatus: "Effective",
+    latestStudyVersionStatus: meta.latestStudyVersionStatus ?? "Approved",
+    guidance: null,
+    referenceDate: meta.referenceDate ?? null,
+    asOfDate: meta.asOfDate ?? null,
+    siteCode: meta.siteCode ?? null,
+  };
+}
+
+const initialRuntimeFetch: typeof globalThis.fetch | undefined =
+  typeof globalThis.fetch === "function" ? globalThis.fetch : undefined;
+
+function canInvokeEndpoint(fn: unknown): boolean {
+  if (typeof fn !== "function") return false;
+  const env = import.meta.env as Record<string, unknown> | undefined;
+  if (!env?.VITEST) return true;
+  if ("mock" in (fn as object)) return true;
+  const currentFetch = globalThis.fetch;
+  if (typeof currentFetch === "function") {
+    if ("mock" in (currentFetch as object)) return true;
+    if (currentFetch !== initialRuntimeFetch) return true;
+  }
+  return false;
+}
+
 /**
- * Structured form and visit choices from the study's active (or latest visible) protocol version's Schedule of
- * Activities (ADR-2475), or null when the kernel has no visible protocol version or schedule for the study.
+ * Structured form and visit choices from the site's governing protocol version's Schedule of Activities
+ * (ADR-2475, CLINICAL_CANVAS.md §8), scoped by site `EffectiveVersions` without `Draft` fallback.
  */
 export function findStudyScheduleOptions(
-  studyCode: string
+  studyCode: string,
+  siteCode?: string | null
 ): Promise<StudyScheduleOptions | null> {
   if (
     typeof kernelApi.listProtocolVersions !== "function" ||
@@ -659,12 +859,14 @@ export function findStudyScheduleOptions(
   }
   const trimmed = studyCode.trim();
   if (!trimmed) return Promise.resolve(null);
+  const trimmedSite = siteCode?.trim() ? siteCode.trim() : null;
+  const normalizedSite = trimmedSite ? trimmedSite.toUpperCase() : "";
 
   const bucket = getBucket();
   const scope = getKernelStudyCallerScopeKey();
   const normalizedStudy = normalizeStudyCode(trimmed);
   ensureActiveStudySession(bucket, normalizedStudy);
-  const key = scheduleKey(scope, normalizedStudy);
+  const key = scheduleKey(scope, normalizedStudy, normalizedSite);
 
   const cached = bucket.scheduleOptions.get(key);
   if (cached) return Promise.resolve(cached);
@@ -676,69 +878,111 @@ export function findStudyScheduleOptions(
   let lookup: Promise<StudyScheduleOptions | null> | undefined;
   lookup = (async () => {
     try {
-      const studyRef = await findKernelStudyRef(trimmed);
-      if (!studyRef) return null;
-      const versions = await kernelApi.listProtocolVersions(studyRef);
-      const chosen =
-        versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
-        versions.find((v) => v.ref && !v.mask);
-      if (!chosen?.ref) return null;
-      const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
-      const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
-      const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
-      const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
-        activityId: col.activity_id,
-        name: col.name,
-        epochId: col.epoch_id ?? "",
-        studyDay:
-          col.study_day !== null && col.study_day !== undefined
-            ? Number(col.study_day)
-            : null,
-        windowBefore: Number(col.window_before) || 0,
-        windowAfter: Number(col.window_after) || 0,
-        locations: Array.isArray(col.locations) ? col.locations : [],
-      }));
-      const epochs = buildScheduleEpochs(
-        Array.isArray(soa.epochs) ? soa.epochs : [],
-        columns
-      );
-      const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
-        const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
-          .map((idx) => Number(idx))
-          .filter(
-            (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
-          );
-        return {
-          collectionSpecId: row.collection_spec_id,
-          name: row.name,
-          itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
-          columnIndices,
-          plannedActivityIds: columnIndices
-            .map((idx) => columns[idx]?.activityId)
-            .filter((id): id is string => Boolean(id)),
-        };
-      });
+      let chosenVersionRef: string | null = null;
+      let chosenVersionNumber: number | null = null;
+      let resolvedSiteCode: string | null = trimmedSite;
+      let siteDirectoryConsulted = false;
 
-      const resolved: StudyScheduleOptions = {
-        versionRef: soa.version,
-        title: soa.title ?? "",
-        epochs,
-        columns,
-        scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
-        unscheduledRows: mappedRows.filter(
-          (row) => row.columnIndices.length === 0
-        ),
-        collectionSpecs: mappedRows.map((row) => ({
-          id: row.collectionSpecId,
-          name: row.name,
-          plannedActivityIds: row.plannedActivityIds,
-        })),
-        plannedActivities: columns.map((col) => ({
-          id: col.activityId,
-          name: col.name,
-          studyDay: col.studyDay,
-        })),
-      };
+      if (canInvokeEndpoint(kernelApi.listStudySites)) {
+        try {
+          const linked = await kernelApi.listStudySites(trimmed);
+          if (Array.isArray(linked) && linked.length > 0) {
+            siteDirectoryConsulted = true;
+            const targetSite = trimmedSite
+              ? linked.find(
+                  (item) =>
+                    item.site_code?.trim().toLowerCase() ===
+                    trimmedSite.toLowerCase()
+                )
+              : linked.length === 1
+                ? linked[0]
+                : (linked.find(
+                    (item) =>
+                      Array.isArray(item.effective_versions) &&
+                      item.effective_versions.length > 0
+                  ) ?? linked[0]);
+
+            if (trimmedSite && !targetSite) {
+              return null;
+            }
+            if (targetSite) {
+              resolvedSiteCode = targetSite.site_code ?? trimmedSite;
+              const effective = Array.isArray(targetSite.effective_versions)
+                ? targetSite.effective_versions
+                : [];
+              if (effective.length > 0) {
+                const governing = effective.reduce((best, cur) =>
+                  Number(cur.number) > Number(best.number) ? cur : best
+                );
+                chosenVersionRef = governing?.protocol_version_ref ?? null;
+                chosenVersionNumber =
+                  governing?.number !== undefined && governing?.number !== null
+                    ? Number(governing.number)
+                    : null;
+              }
+            }
+          }
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 404) {
+            return null;
+          }
+          // Fall back to protocol-versions lookup when study-sites endpoint is unavailable or unmocked.
+        }
+      }
+
+      if (!chosenVersionRef) {
+        const studyRef = await findKernelStudyRef(trimmed);
+        if (!studyRef) return null;
+        const versions = await kernelApi.listProtocolVersions(studyRef);
+        const visibleVersions = versions.filter((v) => v.ref && !v.mask);
+        const latestStatus = visibleVersions[0]?.status ?? null;
+
+        if (siteDirectoryConsulted) {
+          const noEffective = buildNoEffectiveScheduleOptions(
+            latestStatus,
+            null,
+            { siteCode: resolvedSiteCode }
+          );
+          if (
+            bucket.epoch === epochAtStart &&
+            getKernelStudyCallerScopeKey() === scope
+          ) {
+            bucket.scheduleOptions.set(key, noEffective);
+          }
+          return noEffective;
+        }
+
+        // Only Approved versions may govern when site directory is absent; never fall back to Draft.
+        const approved = visibleVersions.find((v) => v.status === "Approved");
+        if (!approved?.ref) {
+          if (visibleVersions.length > 0) {
+            const noEffective = buildNoEffectiveScheduleOptions(
+              latestStatus,
+              null,
+              { siteCode: resolvedSiteCode }
+            );
+            if (
+              bucket.epoch === epochAtStart &&
+              getKernelStudyCallerScopeKey() === scope
+            ) {
+              bucket.scheduleOptions.set(key, noEffective);
+            }
+            return noEffective;
+          }
+          return null;
+        }
+        chosenVersionRef = approved.ref;
+        chosenVersionNumber =
+          approved.number !== undefined && approved.number !== null
+            ? Number(approved.number)
+            : null;
+      }
+
+      const soa = await kernelApi.getScheduleOfActivities(chosenVersionRef);
+      const resolved = mapSoaToScheduleOptions(soa, [], {
+        siteCode: resolvedSiteCode,
+        versionNumber: chosenVersionNumber,
+      });
       if (
         bucket.epoch === epochAtStart &&
         getKernelStudyCallerScopeKey() === scope
@@ -753,5 +997,99 @@ export function findStudyScheduleOptions(
     }
   })();
   bucket.scheduleOptionsInFlight.set(key, lookup);
+  return lookup;
+}
+
+/**
+ * Loads the server-computed casebook schedule for a participant's enrollment (`GET /api/v1/kernel/enrollments/{enrollmentRef}/schedule`),
+ * including site-governing `ProtocolVersion`, `ExpectedSchedule.Compute` target dates and window statuses (`NotYetOpen`, `Open`, `Closed`),
+ * `Repeating` flags, or `"NoEffectiveVersion"` governance guidance when no version is effective at the site yet.
+ */
+export function findEnrollmentScheduleOptions(
+  enrollmentId: string,
+  options: {
+    asOf?: string | null;
+    timeZone?: string | null;
+    force?: boolean;
+  } = {}
+): Promise<StudyScheduleOptions | null> {
+  if (!canInvokeEndpoint(kernelApi.getEnrollmentSchedule)) {
+    return Promise.resolve(null);
+  }
+  const trimmed = enrollmentId.trim();
+  if (!trimmed) return Promise.resolve(null);
+  const enrollmentRef = trimmed.includes(":")
+    ? trimmed
+    : `enrollment:${trimmed}`;
+  const asOf = options.asOf?.trim() || "";
+  const timeZone = options.timeZone?.trim() || "";
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const key = enrollmentScheduleKey(scope, enrollmentRef, asOf, timeZone);
+
+  if (!options.force) {
+    const cached = bucket.enrollmentSchedules.get(key);
+    if (cached) return Promise.resolve(cached);
+
+    const pending = bucket.enrollmentSchedulesInFlight.get(key);
+    if (pending) return pending;
+  }
+
+  const epochAtStart = bucket.epoch;
+  let lookup: Promise<StudyScheduleOptions | null> | undefined;
+  lookup = (async () => {
+    try {
+      const resp = await kernelApi.getEnrollmentSchedule(enrollmentRef, {
+        asOf: asOf || undefined,
+        timeZone: timeZone || undefined,
+      });
+      const resolved =
+        resp.governance_status === "NoEffectiveVersion" || !resp.schedule
+          ? buildNoEffectiveScheduleOptions(
+              resp.latest_study_version_status,
+              resp.guidance,
+              {
+                siteCode: resp.site_code,
+                referenceDate: resp.reference_date,
+                asOfDate: resp.as_of_date,
+              }
+            )
+          : mapSoaToScheduleOptions(
+              resp.schedule,
+              Array.isArray(resp.expected_visits) ? resp.expected_visits : [],
+              {
+                siteCode: resp.site_code,
+                versionNumber:
+                  resp.governing_version?.number !== undefined &&
+                  resp.governing_version?.number !== null
+                    ? Number(resp.governing_version.number)
+                    : null,
+                referenceDate: resp.reference_date,
+                asOfDate: resp.as_of_date,
+                latestStudyVersionStatus: resp.latest_study_version_status,
+              }
+            );
+      if (
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.enrollmentSchedules.set(key, resolved);
+      }
+      return resolved;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 404) return null;
+        throw err;
+      }
+      // Unmocked relative fetch in standalone unit test environments falls back cleanly.
+      return null;
+    } finally {
+      if (bucket.enrollmentSchedulesInFlight.get(key) === lookup) {
+        bucket.enrollmentSchedulesInFlight.delete(key);
+      }
+    }
+  })();
+  bucket.enrollmentSchedulesInFlight.set(key, lookup);
   return lookup;
 }

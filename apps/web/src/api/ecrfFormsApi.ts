@@ -37,7 +37,21 @@ export function toFormSummaryCount(
   return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
 }
 
-/** The kernel error codes a page save answers with (CollectionErrors). */
+/** Normalizes a nullable OpenAPI signed integer (e.g. days_from_target, days_outside_window) to a finite integer or null. */
+export function toSignedFormDayOffset(
+  value: number | string | null | undefined
+): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+/** Server-assessed timing of an opened scheduled form against its planned visit window (ADR-2487, ADR-2507). */
+export type EcrfVisitTiming = "Early" | "InWindow" | "Late";
+
+/** The kernel error codes a form open or page save answers with (CollectionErrors). */
+export const DUPLICATE_SINGLETON_INSTANCE =
+  "K.Collection.DuplicateSingletonInstance";
 export const REVISION_STALE = "K.Collection.RevisionStale";
 export const VALUES_INVALID = "K.Collection.ValuesInvalid";
 

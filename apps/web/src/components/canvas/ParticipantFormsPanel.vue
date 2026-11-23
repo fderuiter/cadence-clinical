@@ -12,7 +12,7 @@
       <div class="forms-head-actions">
         <component
           :is="routerLinkComponent || 'a'"
-          v-if="enrollmentId && newFormLocation"
+          v-if="enrollmentId && newFormLocation && !noEffectiveVersionActive"
           id="record-open-form"
           class="btn btn-secondary forms-open-btn"
           v-bind="linkAttrs(newFormLocation)"
@@ -63,6 +63,24 @@
         </button>
       </p>
       <SupportDetails :detail="loadError" />
+    </div>
+
+    <div
+      v-else-if="noEffectiveVersionActive"
+      id="casebook-governance-guidance"
+      data-testid="casebook-governance-guidance"
+      class="casebook-governance-banner"
+      role="status"
+    >
+      <strong class="casebook-governance-heading">
+        No governing protocol version is effective at this site yet.
+      </strong>
+      <p class="casebook-governance-body">
+        {{
+          activeSchedule?.guidance ||
+          "Complete protocol review, electronic approval, and site activation before opening participant casebook forms."
+        }}
+      </p>
     </div>
 
     <template v-else-if="matrixActive && activeSchedule">
@@ -119,6 +137,14 @@
             class="clinical-badge clinical-badge--locked cb-badge cb-badge--locked"
           >
             {{ lockedFormsCount }} locked/frozen
+          </span>
+          <span
+            v-if="windowDeviationFormsCount > 0"
+            class="clinical-badge clinical-badge--warning cb-badge cb-badge--window-deviation"
+            data-testid="casebook-window-deviations"
+          >
+            {{ windowDeviationFormsCount }} visit window
+            {{ windowDeviationFormsCount === 1 ? "deviation" : "deviations" }}
           </span>
         </div>
       </div>
@@ -180,6 +206,34 @@
                     (-{{ col.windowBefore }}/+{{ col.windowAfter }}d)</template
                   >
                 </span>
+                <span
+                  v-if="col.targetDate"
+                  class="visit-target-date"
+                  :data-testid="`visit-target-${col.activityId}`"
+                >
+                  {{ col.targetDate }}
+                </span>
+                <div
+                  v-if="col.windowStatus || col.repeating"
+                  class="visit-header-badges"
+                >
+                  <span
+                    v-if="col.windowStatus"
+                    class="clinical-badge cb-badge visit-window-badge"
+                    :class="visitWindowBadgeClass(col.windowStatus)"
+                    :data-testid="`visit-window-${col.activityId}`"
+                    :data-window-status="col.windowStatus"
+                  >
+                    {{ col.windowStatus }}
+                  </span>
+                  <span
+                    v-if="col.repeating"
+                    class="clinical-badge clinical-badge--draft cb-badge"
+                    :data-testid="`visit-repeating-${col.activityId}`"
+                  >
+                    Repeating
+                  </span>
+                </div>
               </th>
             </tr>
           </thead>
@@ -196,7 +250,7 @@
                   }}<template v-if="row.itemCount > 0">
                     · {{ row.itemCount }}
                     {{ row.itemCount === 1 ? "item" : "items" }}</template
-                  >
+                  ><template v-if="row.repeating"> · Repeating</template>
                 </span>
               </th>
               <td
@@ -329,6 +383,8 @@
                     v-if="
                       cellNewLocation(row.collectionSpecId, col.activityId) &&
                       canAddRepeat(
+                        row,
+                        col,
                         cellForms(row.collectionSpecId, col.activityId)
                       )
                     "
@@ -595,9 +651,11 @@ import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfFormsApi,
   toFormSummaryCount,
+  toSignedFormDayOffset,
   type EcrfFormSummary,
 } from "../../api/ecrfFormsApi";
 import {
+  type StudyScheduleColumn,
   type StudyScheduleOptions,
   type StudyScheduleRow,
 } from "../../canvas/kernelStudy";
@@ -619,7 +677,9 @@ interface LifecycleBadge {
     | "locked"
     | "frozen"
     | "signed"
-    | "sig-superseded";
+    | "sig-superseded"
+    | "timing-in-window"
+    | "timing-out-of-window";
   testId: string;
 }
 
@@ -630,6 +690,7 @@ interface LifecycleBadge {
  */
 const props = defineProps<{
   studyCode?: string;
+  siteCode?: string | null;
   subjectCode: string;
   enrollmentId: string | null;
   enrollmentLoading?: boolean;
@@ -720,6 +781,7 @@ function onCellLinkClick(
 
 const canvas = useStudyCanvasStore();
 const forms = ref<EcrfFormSummary[]>([]);
+const enrollmentSchedule = ref<StudyScheduleOptions | null>(null);
 const loading = ref(false);
 const loadError = ref("");
 let requestSeq = 0;
@@ -732,11 +794,19 @@ function formDisplayTitle(summary: EcrfFormSummary): string {
 }
 
 const activeSchedule = computed<StudyScheduleOptions | null>(() => {
+  if (enrollmentSchedule.value) return enrollmentSchedule.value;
   if (props.schedule !== undefined) return props.schedule;
   const code = props.studyCode?.trim() ?? "";
   if (!code) return null;
-  return canvas.scheduleOptionsByStudy[code] ?? null;
+  return canvas.getScheduleFor(code, props.siteCode);
 });
+
+const noEffectiveVersionActive = computed(() =>
+  Boolean(
+    props.enrollmentId &&
+    activeSchedule.value?.governanceStatus === "NoEffectiveVersion"
+  )
+);
 
 const matrixActive = computed(() => {
   const sched = activeSchedule.value;
@@ -782,8 +852,27 @@ function cellNewLocation(
   return props.newFormLocation ?? null;
 }
 
-function canAddRepeat(instances: EcrfFormSummary[]): boolean {
+function canAddRepeat(
+  row: StudyScheduleRow,
+  col: StudyScheduleColumn,
+  instances: EcrfFormSummary[]
+): boolean {
+  if (!row.repeating && !col.repeating) {
+    return false;
+  }
   return !instances.some((inst) => Boolean(inst.locked || inst.frozen));
+}
+
+function visitWindowBadgeClass(windowStatus: string): string {
+  switch (windowStatus) {
+    case "Open":
+      return "clinical-badge--verified";
+    case "Closed":
+      return "clinical-badge--warning";
+    case "NotYetOpen":
+    default:
+      return "clinical-badge--draft";
+  }
 }
 
 function isFormSummaryComplete(summary: EcrfFormSummary): boolean {
@@ -861,6 +950,32 @@ function lifecycleBadges(summary: EcrfFormSummary): LifecycleBadge[] {
   const errorFindings = toFormSummaryCount(summary.open_error_finding_count);
   const verified = toFormSummaryCount(summary.verified_count);
   const unverified = toFormSummaryCount(summary.unverified_count);
+
+  if (summary.visit_timing) {
+    const daysOut = toSignedFormDayOffset(summary.days_outside_window);
+    if (summary.visit_timing === "InWindow") {
+      badges.push({
+        key: "visit-timing",
+        label: "InWindow",
+        tone: "timing-in-window",
+        testId: "badge-visit-timing",
+      });
+    } else if (summary.visit_timing === "Early") {
+      badges.push({
+        key: "visit-timing",
+        label: daysOut && daysOut > 0 ? `Early (-${daysOut}d)` : "Early",
+        tone: "timing-out-of-window",
+        testId: "badge-visit-timing",
+      });
+    } else if (summary.visit_timing === "Late") {
+      badges.push({
+        key: "visit-timing",
+        label: daysOut && daysOut > 0 ? `Late (+${daysOut}d)` : "Late",
+        tone: "timing-out-of-window",
+        testId: "badge-visit-timing",
+      });
+    }
+  }
 
   if (errorFindings > 0) {
     badges.push({
@@ -952,6 +1067,7 @@ function lifecycleBadges(summary: EcrfFormSummary): LifecycleBadge[] {
 function clinicalBadgeModifier(tone: LifecycleBadge["tone"]): string {
   switch (tone) {
     case "verified":
+    case "timing-in-window":
       return "clinical-badge--verified";
     case "signed":
       return "clinical-badge--signed";
@@ -966,6 +1082,7 @@ function clinicalBadgeModifier(tone: LifecycleBadge["tone"]): string {
       return "clinical-badge--error";
     case "partial-sdv":
     case "sig-superseded":
+    case "timing-out-of-window":
       return "clinical-badge--warning";
     case "unverified":
     default:
@@ -1082,28 +1199,54 @@ const signedFormsCount = computed(
 const lockedFormsCount = computed(
   () => forms.value.filter((f) => Boolean(f.locked || f.frozen)).length
 );
+const windowDeviationFormsCount = computed(
+  () =>
+    forms.value.filter(
+      (f) => f.visit_timing === "Early" || f.visit_timing === "Late"
+    ).length
+);
 
 async function loadFormsAndSchedule() {
   const scheduleTask =
     props.schedule === undefined && props.studyCode && props.newFormCellLocation
-      ? canvas.loadScheduleOptions(props.studyCode).catch(() => null)
+      ? canvas
+          .loadScheduleOptions(
+            props.studyCode,
+            props.siteCode ? { siteCode: props.siteCode } : undefined
+          )
+          .catch(() => null)
       : Promise.resolve(null);
   const enrollmentId = props.enrollmentId;
   if (!enrollmentId) {
     forms.value = [];
+    enrollmentSchedule.value = null;
     loading.value = false;
     loadError.value = "";
     emit("forms-loaded", []);
     void scheduleTask;
     return;
   }
+  const seq = ++requestSeq;
+  const enrollmentScheduleTask =
+    props.schedule === undefined &&
+    typeof canvas.loadEnrollmentSchedule === "function"
+      ? canvas
+          .loadEnrollmentSchedule(enrollmentId)
+          .then((loaded) => {
+            if (seq === requestSeq) {
+              enrollmentSchedule.value = loaded;
+            }
+            return loaded;
+          })
+          .catch(() => null)
+      : Promise.resolve(null);
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
+    await enrollmentScheduleTask;
     emit("forms-loaded", []);
     void scheduleTask;
     return;
   }
-  const seq = ++requestSeq;
   loading.value = true;
   loadError.value = "";
   const formsTask = (async () => {
@@ -1129,11 +1272,11 @@ async function loadFormsAndSchedule() {
       if (seq === requestSeq) loading.value = false;
     }
   })();
-  await Promise.all([formsTask, scheduleTask]);
+  await Promise.all([formsTask, scheduleTask, enrollmentScheduleTask]);
 }
 
 watch(
-  [() => props.enrollmentId, () => props.studyCode],
+  [() => props.enrollmentId, () => props.studyCode, () => props.siteCode],
   () => {
     void loadFormsAndSchedule();
   },
@@ -1279,6 +1422,47 @@ watch(
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.visit-target-date {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.visit-header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.cb-badge {
+  font-variant-numeric: tabular-nums;
+}
+
+.casebook-governance-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--semantic-color-warning-border);
+  border-radius: 8px;
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-text-dark);
+  font-size: 0.85rem;
+}
+
+.casebook-governance-heading {
+  font-size: 0.88rem;
+}
+
+.casebook-governance-body {
+  margin: 0;
 }
 
 .matrix-row-header {

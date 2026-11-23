@@ -120,6 +120,7 @@ public interface ICollectionInstanceRecords
 /// <param name="AnsweredQueryCount">Un-retracted clinical queries on the form that have been answered and await closure.</param>
 /// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting the form or its values.</param>
 /// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
+/// <param name="EnrollmentReferenceAt">Enrollment reference timestamp (enrolled period start when enrolled, otherwise current status start) in site offset time.</param>
 public sealed record CollectionInstanceSummary(
     CollectionInstanceId CollectionInstanceId,
     EnrollmentId EnrollmentId,
@@ -149,7 +150,8 @@ public sealed record CollectionInstanceSummary(
     int OpenQueryCount = 0,
     int AnsweredQueryCount = 0,
     int OpenErrorFindingCount = 0,
-    IReadOnlyList<string>? ReadinessBlockers = null);
+    IReadOnlyList<string>? ReadinessBlockers = null,
+    DateTimeOffset? EnrollmentReferenceAt = null);
 
 /// <summary>A form instance and everything a form screen shows about it.</summary>
 /// <remarks>
@@ -200,7 +202,8 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<string>? ReadinessBlockers = null,
     IReadOnlySet<string>? BlindedItemIds = null,
     IReadOnlySet<ObservationId>? BlindedObservationIds = null,
-    IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null)
+    IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null,
+    DateTimeOffset? EnrollmentReferenceAt = null)
 {
     private const string MaskedLiteral = "masked";
 
