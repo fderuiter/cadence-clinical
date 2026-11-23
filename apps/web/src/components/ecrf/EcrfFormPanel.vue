@@ -1,7 +1,9 @@
 <template>
   <section id="ecrf-form-instance" class="card ecrf-form-panel">
     <div class="ecrf-panel-header">
-      <div class="card-title">Case report form</div>
+      <div id="ecrf-form-title" class="card-title" tabindex="-1">
+        Case report form
+      </div>
       <button
         v-if="form && !formState.locked"
         id="ecrf-form-close"
@@ -28,8 +30,8 @@
       :load-error="formState.loadError"
       :opening="formState.opening"
       :open-error="formState.openError"
-      @load-form="void formState.load($event)"
-      @open-form="void formState.open($event)"
+      @load-form="onLoadForm"
+      @open-form="onOpenForm"
       @retry-load="formState.retryLoad"
       @retry-schedule="emit('retry-schedule')"
       @enrollment-change="formState.openError = null"
@@ -150,7 +152,7 @@
               class="btn btn-secondary"
               type="button"
               :disabled="sdv.sdvBusy"
-              @click="sdv.cancelPendingSdv()"
+              @click="sdv.cancelPendingSdv(true)"
             >
               Back
             </button>
@@ -217,7 +219,7 @@
               id="ecrf-raise-cancel"
               class="btn btn-secondary"
               type="button"
-              @click="raising = null"
+              @click="cancelRaise"
             >
               Back
             </button>
@@ -250,7 +252,7 @@
                 class="btn btn-secondary"
                 type="button"
                 :disabled="sdv.sdvBusy"
-                @click="sdv.clearSdvSelection()"
+                @click="onClearSdvSelection"
               >
                 Clear selection
               </button>
@@ -260,7 +262,7 @@
                 "
                 class="btn btn-secondary"
                 type="button"
-                @click="activeTray = null"
+                @click="closeVerifyTray"
               >
                 Close
               </button>
@@ -415,7 +417,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-vue-next";
-import { ClinicalFormActionBar } from "ui";
+import { ClinicalFormActionBar, handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm, EcrfFormItem } from "../../api/ecrfFormsApi";
 import type {
@@ -579,6 +581,8 @@ function setEntryMissing(itemId: string, missing: string) {
   if (formState.entries[itemId]) formState.entries[itemId].missing = missing;
 }
 
+const raiseTriggerSelector = ref<string | null>(null);
+
 function buildRaiseTarget(item: EcrfFormItem): RaisingQueryTarget {
   return {
     item_id: item.item_id,
@@ -588,14 +592,33 @@ function buildRaiseTarget(item: EcrfFormItem): RaisingQueryTarget {
   };
 }
 
-function beginRaise(item: EcrfFormItem) {
+function beginRaise(item: EcrfFormItem, triggerSelector?: string) {
   sdv.cancelPendingSdv();
   activeTray.value = null;
+  raiseTriggerSelector.value = triggerSelector ?? `#ecrf-raise-${item.item_id}`;
   raising.value = buildRaiseTarget(item);
   raiseText.value = "";
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
+}
+
+function cancelRaise() {
+  const itemId = raising.value?.item_id ?? null;
+  const trigger = raiseTriggerSelector.value;
+  raiseTriggerSelector.value = null;
+  raising.value = null;
+  raiseText.value = "";
+  raiseReason.value = "";
+  void handoffFocus([
+    trigger,
+    itemId ? `#ecrf-raise-${itemId}` : null,
+    "#ecrf-action-open-query",
+    itemId ? `#ecrf-item-${itemId}` : null,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 function onRaiseItemChange(nextItemId: string) {
@@ -607,13 +630,28 @@ function onRaiseItemChange(nextItemId: string) {
 
 function toggleVerifyTray() {
   raising.value = null;
+  raiseTriggerSelector.value = null;
   sdv.cancelPendingSdv();
   activeTray.value = activeTray.value === "verify" ? null : "verify";
 }
 
+function closeVerifyTray() {
+  activeTray.value = null;
+  void handoffFocus([
+    "#ecrf-action-verify",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+function onClearSdvSelection() {
+  activeTray.value = "verify";
+  sdv.clearSdvSelection();
+}
+
 function toggleOpenQueryTray() {
   if (raising.value !== null) {
-    raising.value = null;
+    cancelRaise();
     return;
   }
   const preferred =
@@ -621,7 +659,7 @@ function toggleOpenQueryTray() {
       ? formState.items.find((it) => it.item_id === props.highlightItemId)
       : undefined) ?? formState.items[0];
   if (preferred) {
-    beginRaise(preferred);
+    beginRaise(preferred, "#ecrf-action-open-query");
   }
 }
 
@@ -651,8 +689,18 @@ async function confirmRaise() {
     Object.keys(options).length > 0 ? options : undefined
   );
   if (raised) {
+    const trigger = raiseTriggerSelector.value;
+    raiseTriggerSelector.value = null;
     raising.value = null;
     if (wasUnasked) await formState.reload();
+    void handoffFocus([
+      trigger,
+      `#ecrf-raise-${target.item_id}`,
+      `#ecrf-item-${target.item_id}`,
+      "#ecrf-form-queries-title",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
   }
 }
 
@@ -661,6 +709,32 @@ async function submitSavePage() {
   if (formState.outcome?.kind === "saved") {
     saveReason.value = "";
   }
+}
+
+function handoffAfterFormOpen() {
+  if (!form.value || props.highlightItemId) return;
+  void handoffFocus([
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled]), #ecrf-form-page textarea:not([disabled])"
+      ),
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+      ),
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+async function onLoadForm(id: string) {
+  await formState.load(id);
+  handoffAfterFormOpen();
+}
+
+async function onOpenForm(payload: Parameters<typeof formState.open>[0]) {
+  await formState.open(payload);
+  handoffAfterFormOpen();
 }
 
 function itemObservationLink(
@@ -734,6 +808,12 @@ async function closeForm() {
   formState.clearDraft();
   formState.close();
   emit("closed");
+  void handoffFocus([
+    "#ecrf-form-id",
+    "#ecrf-collection-spec",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function focusHighlightedItem(itemId: string) {
@@ -743,7 +823,11 @@ async function focusHighlightedItem(itemId: string) {
     ?.scrollIntoView?.({ block: "center" });
   const input = document.getElementById(`ecrf-item-${itemId}`) as
     HTMLInputElement | HTMLSelectElement | null;
-  if (input && !input.disabled) input.focus?.();
+  if (input && !input.disabled) {
+    input.focus?.();
+  } else {
+    void handoffFocus(["#canvas-form-workspace-title", "#ecrf-form-title"]);
+  }
 }
 
 function onQueryListClick(event: MouseEvent) {
@@ -785,9 +869,12 @@ watch(
 );
 
 watch(
-  () => sdv.selectedSdvItems.length,
-  (count) => {
-    if (count === 0 && activeTray.value === "verify") {
+  [() => Boolean(sdv.pendingSdv), () => sdv.unverifiedItems.length] as const,
+  ([hasPendingSdv, unverifiedCount]) => {
+    if (
+      (hasPendingSdv || unverifiedCount === 0) &&
+      activeTray.value === "verify"
+    ) {
       activeTray.value = null;
     }
   }

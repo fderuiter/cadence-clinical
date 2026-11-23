@@ -10,18 +10,23 @@
       Back to {{ studyCode }} home
     </router-link>
 
-    <div v-if="error" id="proposal-review-status" role="alert">
+    <div v-if="error" id="proposal-review-status" role="alert" tabindex="-1">
       <p>This proposal couldn't be loaded right now.</p>
       <SupportDetails :detail="error" />
     </div>
-    <p v-else-if="statusLine" id="proposal-review-status" role="status">
+    <p
+      v-else-if="statusLine"
+      id="proposal-review-status"
+      role="status"
+      tabindex="-1"
+    >
       {{ statusLine }}
     </p>
 
     <template v-if="proposal && proposal.ref">
       <header class="review-header">
         <span class="review-kind">Proposal</span>
-        <h2 id="proposal-review-title">{{ proposal.intent }}</h2>
+        <h2 id="proposal-review-title" tabindex="-1">{{ proposal.intent }}</h2>
         <div class="review-tags">
           <AiLabel
             v-if="agent"
@@ -262,7 +267,7 @@
       </section>
 
       <section v-else class="block" aria-labelledby="proposal-review-decided">
-        <h3 id="proposal-review-decided">Decision</h3>
+        <h3 id="proposal-review-decided" tabindex="-1">Decision</h3>
         <p id="proposal-review-decision-text">
           <template
             v-if="
@@ -283,6 +288,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { handoffFocus } from "ui";
 import {
   kernelApi,
   type KernelNode,
@@ -507,6 +513,17 @@ async function load(refText: string) {
   } finally {
     loading.value = false;
   }
+  if (typeof document !== "undefined") {
+    const active = document.activeElement;
+    const lostFocus =
+      !active ||
+      active === document.body ||
+      active.id === "proposal-review-status" ||
+      active.id === "canvas-workspace";
+    if (lostFocus) {
+      void handoffFocus(["#proposal-review-title", "#proposal-review-status"]);
+    }
+  }
 }
 
 async function reject() {
@@ -523,6 +540,9 @@ async function reject() {
     });
     proposal.value = await kernelApi.getProposal(proposal.value.ref);
     emit("decided", state.status);
+    if (proposal.value?.status !== "Open") {
+      void handoffFocus(["#proposal-review-decided", "#proposal-review-title"]);
+    }
   } catch (e) {
     decisionError.value = e instanceof Error ? e.message : String(e);
   } finally {

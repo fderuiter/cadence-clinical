@@ -11,7 +11,9 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Informed Consent Review</h2>
+      <h2 id="consent-view-heading" tabindex="-1">
+        My Informed Consent Review
+      </h2>
       <p>
         Please read the study details below, complete the comprehension check,
         and submit your digital signature.
@@ -281,6 +283,38 @@
             <FileSignature :size="16" aria-hidden="true" />
           </button>
         </ClinicalFormActionBar>
+      </div>
+
+      <!-- Signed Confirmation Card -->
+      <div
+        id="consent-signed-card"
+        class="card"
+        style="
+          display: none;
+          margin-bottom: 24px;
+          background: var(--semantic-color-success-bg);
+          border: 1px solid var(--semantic-color-success);
+        "
+      >
+        <h3
+          id="consent-signed-heading"
+          tabindex="-1"
+          style="
+            margin-top: 0;
+            color: var(--semantic-color-success);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span>✅</span> Informed Consent Signed &amp; Archived
+        </h3>
+        <p
+          style="margin: 0; font-size: 14px; color: var(--semantic-color-text)"
+        >
+          Your electronic signature has been verified and recorded for this
+          study consent version.
+        </p>
       </div>
     </div>
   </section>
