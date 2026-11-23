@@ -44,6 +44,7 @@ export const VALUES_INVALID = "K.Collection.ValuesInvalid";
 /** The kernel error codes a form signature answers with (CollectionErrors, TrustErrors). */
 export const TARGET_CONTENT_CHANGED = "K.Trust.TargetContentChanged";
 export const TARGET_NOT_SIGNABLE = "K.Trust.TargetNotSignable";
+export const NOT_READY_TO_SIGN = "K.Collection.NotReadyToSign";
 export const SIGNATURE_MEANING_INVALID = "K.Collection.SignatureMeaningInvalid";
 
 /** What a form signature means (21 CFR 11.50): the signer approves the values, or takes responsibility for them. */

@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach } from "vitest";
-import { deriveKeyFromPIN } from "ui";
+import { decryptAESGCM, deriveKeyFromPIN, encryptAESGCM } from "ui";
 import {
   state,
   handlePINSetupSubmit,
@@ -95,10 +95,15 @@ describe("Persistent Local PIN Wrapper Cryptographic & Flow Tests", () => {
     expect(state.pinSetup.error).toBe("");
     expect(state.pinSetup.isOpen).toBe(false);
 
-    // Verify key in active memory
+    // Verify non-extractable AES-GCM CryptoKey in active memory
     const activeKey = getInMemorySessionKey();
-    expect(activeKey).toBeInstanceOf(Uint8Array);
-    expect(activeKey.length).toBe(32);
+    expect(activeKey).not.toBeNull();
+    expect(activeKey.type).toBe("secret");
+    expect(activeKey.extractable).toBe(false);
+    expect(activeKey.algorithm?.name).toBe("AES-GCM");
+    expect(activeKey.usages).toEqual(
+      expect.arrayContaining(["encrypt", "decrypt"])
+    );
 
     // Verify UI / Reactivity credential hygiene
     expect(state.pinSetup.pin).toBe("");
@@ -120,6 +125,12 @@ describe("Persistent Local PIN Wrapper Cryptographic & Flow Tests", () => {
 
     const originalKey = getInMemorySessionKey();
     expect(originalKey).not.toBeNull();
+    expect(originalKey.extractable).toBe(false);
+    expect(originalKey.algorithm?.name).toBe("AES-GCM");
+    const sampleCiphertext = await encryptAESGCM(
+      "pin-unlock-probe",
+      originalKey
+    );
 
     // Reset memory
     clearInMemoryKey();
@@ -134,7 +145,12 @@ describe("Persistent Local PIN Wrapper Cryptographic & Flow Tests", () => {
 
     const unlockedKey = getInMemorySessionKey();
     expect(unlockedKey).not.toBeNull();
-    expect(Array.from(unlockedKey)).toEqual(Array.from(originalKey));
+    expect(unlockedKey.type).toBe("secret");
+    expect(unlockedKey.extractable).toBe(false);
+    expect(unlockedKey.algorithm?.name).toBe("AES-GCM");
+    expect(await decryptAESGCM(sampleCiphertext, unlockedKey)).toBe(
+      "pin-unlock-probe"
+    );
 
     // Verify credential hygiene (wiped PIN from state)
     expect(state.pinUnlock.pin).toBe("");

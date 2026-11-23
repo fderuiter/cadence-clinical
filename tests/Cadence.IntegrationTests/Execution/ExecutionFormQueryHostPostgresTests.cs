@@ -231,7 +231,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
                 .Should().Be(1, "raising a blank-item query must not synthesize a NotAsked observation");
         }
 
-        // Coordinator records a reasoned missing status (NotDone) at expected_revision = 0 -> form becomes complete and value_changed = true!
+        // Coordinator records a reasoned missing status (NotDone) at expected_revision = 0 -> missing_required clears and value_changed = true, while open query keeps Complete false until closed!
         await SendAsync<JsonElement>(crc, HttpMethod.Put, $"/{form:D}/values", "Confirmed not measured at visit", new
         {
             values = new[]
@@ -241,12 +241,19 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }, HttpStatusCode.OK, ct);
 
         var formAfterMissing = await SendAsync<FormResponse>(monitor, HttpMethod.Get, $"/{form:D}", null, null, HttpStatusCode.OK, ct);
-        formAfterMissing.Complete.Should().BeTrue();
         formAfterMissing.MissingRequired.Should().BeEmpty();
+        formAfterMissing.Complete.Should().BeFalse("the open query blocks completeness until answered and closed");
 
         var queriesAfterMissing = await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/{form:D}/queries", null, null, HttpStatusCode.OK, ct);
         queriesAfterMissing.Should().ContainSingle().Which.Should().Match<FormQueryResponse>(q =>
             q.QueryId == raised.QueryId && q.ObservationId == null && q.Revision == 0 && q.CurrentRevision == 1 && q.ValueChanged);
+
+        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{form:D}/queries/{raised.QueryId:D}/answer", "Confirmed not measured", new
+        {
+            text = "Cuff not available; marked NotDone",
+        }, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{raised.QueryId:D}/close", "Missingness documented", null, HttpStatusCode.OK, ct);
+        (await SendAsync<FormResponse>(monitor, HttpMethod.Get, $"/{form:D}", null, null, HttpStatusCode.OK, ct)).Complete.Should().BeTrue();
     }
 
     /// <summary>
@@ -297,7 +304,19 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             frozenSave.StatusCode.Should().Be((HttpStatusCode)423);
         }
 
-        // ... while allowing blank-item query raise and answer without mutating ContentHash or superseding the signature!
+        // ... while allowing blank-item query raise, answer, and closure without mutating ContentHash or superseding the signature!
+        var commentQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Optional note check", new
+        {
+            item_id = Comment,
+            text = "Please confirm whether a positional note applies",
+        }, HttpStatusCode.Created, ct);
+        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{form:D}/queries/{commentQuery.QueryId:D}/answer", "Answering comment under freeze", new
+        {
+            text = "No positional note recorded on worksheet",
+        }, HttpStatusCode.OK, ct);
+        var closedUnderFreeze = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{commentQuery.QueryId:D}/close", "Closing under freeze", null, HttpStatusCode.OK, ct);
+        closedUnderFreeze.Status.Should().Be("closed");
+
         var blankQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Interim freeze review", new
         {
             item_id = Comment,
@@ -316,8 +335,28 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         afterFrozenBlankQuery.ContentHash.Should().Be(beforeSign.ContentHash);
         afterFrozenBlankQuery.Signatures.Should().ContainSingle().Which.Superseded.Should().BeFalse();
 
+        async Task RelayHostOutboxAsync()
+        {
+            var savedClock = fixture.Clock.UtcNow;
+            try
+            {
+                if (Cadence.Kernel.Time.SystemClock.Instance.UtcNow > savedClock)
+                {
+                    fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
+                }
+
+                var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
+                relayed.Failed.Should().Be(0);
+            }
+            finally
+            {
+                fixture.Clock.Set(savedClock);
+            }
+        }
+
         // Release Frozen, record a value on Comment at expected_revision = 0, and place an Observation-level Locked lock on it:
         // FormQueryScopes.StepAsync resolves the current observation by ItemId and refuses transitions with 423 K.Assertion.Locked!
+        await RelayHostOutboxAsync();
         await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
         var savedComment = await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{form:D}/values", SaveReason, new
         {
@@ -355,7 +394,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             },
         }, HttpStatusCode.OK, ct);
         await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Resolved blank cuff comment", null, HttpStatusCode.OK, ct);
-        (await fixture.OutboxRelay.RelayBatchAsync(10_000, ct)).Failed.Should().Be(0);
+        await RelayHostOutboxAsync();
 
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 

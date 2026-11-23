@@ -1293,6 +1293,232 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
       false
     );
   });
+
+  it("performs zero query/signature linear scans or baseline re-formatting per keystroke and preserves signature diffs for unchanged, duplicate, and removed items", async () => {
+    let baselineTextReads = 0;
+    const noteValue = { type: "text" as const, value: "Stable vitals" };
+    Object.defineProperty(noteValue, "value", {
+      enumerable: true,
+      configurable: true,
+      get() {
+        baselineTextReads += 1;
+        return "Stable vitals";
+      },
+    });
+
+    const loadedForm = form({
+      items: [
+        form().items[0],
+        item({
+          item_id: "DIABP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a002",
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "COMMENT",
+          value_kind: "Text",
+          value: noteValue,
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a003",
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "DUP_ITEM",
+          unit: "/min",
+          value_kind: "Quantity",
+          value: { type: "quantity", value: 72, unit: "/min" },
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a004",
+          revision: 2,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "DUP_ITEM",
+          unit: "/min",
+          value_kind: "Quantity",
+          value: { type: "quantity", value: 99, unit: "/min" },
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a005",
+          revision: 5,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+      ],
+      signatures: [
+        signature({
+          attestation_id: "sig-old",
+          content_hash: "sha256:form-v1",
+          superseded: true,
+          signed_values: [
+            {
+              item_id: "SYSBP",
+              observation_id: OBS_ID,
+              revision: 2,
+              value: { type: "quantity", value: 118, unit: "mm[Hg]" },
+            },
+            {
+              item_id: "DIABP",
+              observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a002",
+              revision: 1,
+              value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+            },
+            {
+              item_id: "DUP_ITEM",
+              observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a004",
+              revision: 2,
+              value: { type: "quantity", value: 72, unit: "/min" },
+            },
+            {
+              item_id: "REMOVED_TEMP",
+              observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a009",
+              revision: 1,
+              value: { type: "quantity", value: 36.8, unit: "Cel" },
+            },
+          ],
+        }),
+      ],
+    });
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(loadedForm as never);
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      formQuery({
+        query_id: "query-open",
+        item_id: "SYSBP",
+        status: "open",
+        value_changed: true,
+      }),
+      formQuery({
+        query_id: "query-closed",
+        item_id: "DIABP",
+        status: "closed",
+      }),
+    ] as never);
+
+    const view = await mountWith();
+    await nextTick();
+
+    // Superseded signature table reflects changed, unchanged, first-match duplicate, and removed items.
+    const oldSig = view.find('[data-signature="sig-old"]');
+    const sysRow = oldSig.find('[data-signed-item="SYSBP"]');
+    expect(sysRow.classes()).toContain("ecrf-signed-changed");
+    expect(sysRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "SYSBP",
+      "118 mm[Hg]",
+      "2",
+      "120 mm[Hg]",
+      "3",
+    ]);
+
+    const diaRow = oldSig.find('[data-signed-item="DIABP"]');
+    expect(diaRow.classes()).not.toContain("ecrf-signed-changed");
+    expect(diaRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "DIABP",
+      "80 mm[Hg]",
+      "1",
+      "80 mm[Hg]",
+      "1",
+    ]);
+
+    const dupRow = oldSig.find('[data-signed-item="DUP_ITEM"]');
+    expect(dupRow.classes()).not.toContain("ecrf-signed-changed");
+    expect(dupRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "DUP_ITEM",
+      "72 /min",
+      "2",
+      "72 /min",
+      "2",
+    ]);
+
+    const removedRow = oldSig.find('[data-signed-item="REMOVED_TEMP"]');
+    expect(removedRow.classes()).toContain("ecrf-signed-changed");
+    expect(removedRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "REMOVED_TEMP",
+      "36.8 Cel",
+      "1",
+      "No value",
+      "None",
+    ]);
+
+    expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
+      "1 unresolved query"
+    );
+    expect(view.find('[data-testid="ecrf-query-changed-SYSBP"]').exists()).toBe(
+      true
+    );
+    expect(view.find('[data-testid="ecrf-query-badge-DIABP"]').exists()).toBe(
+      false
+    );
+
+    // Measure linear scans across keystrokes (clean -> dirty -> multi-char edits -> clean).
+    let itemFindCalls = 0;
+    let queryFilterCalls = 0;
+    const origFind = Array.prototype.find;
+    const origFilter = Array.prototype.filter;
+    Array.prototype.find = function (predicate, thisArg) {
+      if (
+        this.length > 0 &&
+        this[0] &&
+        typeof this[0] === "object" &&
+        "item_id" in this[0] &&
+        "value_kind" in this[0]
+      ) {
+        itemFindCalls += 1;
+      }
+      return origFind.call(this, predicate, thisArg);
+    };
+    Array.prototype.filter = function (predicate, thisArg) {
+      if (
+        this.length > 0 &&
+        this[0] &&
+        typeof this[0] === "object" &&
+        "query_id" in this[0]
+      ) {
+        queryFilterCalls += 1;
+      }
+      return origFilter.call(this, predicate, thisArg);
+    };
+
+    try {
+      baselineTextReads = 0;
+      const sysInput = view.find("#ecrf-item-SYSBP");
+      for (const typed of ["1", "12", "125", "120", "130", "120"]) {
+        await sysInput.setValue(typed);
+        await nextTick();
+      }
+
+      expect(itemFindCalls).toBe(0);
+      expect(queryFilterCalls).toBe(0);
+      expect(baselineTextReads).toBe(0);
+    } finally {
+      Array.prototype.find = origFind;
+      Array.prototype.filter = origFilter;
+    }
+
+    // Query transition via put (splice) still updates live query badges reactively.
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValueOnce(
+      formQuery({
+        query_id: "query-open",
+        item_id: "SYSBP",
+        status: "answered",
+        value_changed: true,
+        version: 2,
+      }) as never
+    );
+    await view.find("#btn-answer-query-open").trigger("click");
+    await view.find("#query-text-query-open").setValue("Confirmed 120 mm[Hg]");
+    await view.find("#query-reason-query-open").setValue("Source chart match");
+    await view.find("#query-query-open form").trigger("submit");
+    await flushPromises();
+    expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
+      "1 unresolved query"
+    );
+  });
 });
 
 describe("EcrfFormPanel: account-scoped browser drafts", () => {
@@ -2583,5 +2809,62 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     } finally {
       getNodeSpy.mockRestore();
     }
+  });
+
+  it("renders Collection spec and Visit dropdowns when scheduleOptions exist even without enrollmentContext while still allowing direct form reference loading", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({ form_id: FORM_ID }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        scheduleOptions: {
+          collectionSpecs: [
+            {
+              id: "VS",
+              name: "Vital Signs",
+              plannedActivityIds: ["SCR", "W4"],
+            },
+            { id: "AE", name: "Adverse Events", plannedActivityIds: [] },
+          ],
+          plannedActivities: [
+            { id: "SCR", name: "Screening", studyDay: -7 },
+            { id: "W4", name: "Week 4", studyDay: 28 },
+          ],
+        },
+      },
+    });
+    await flushPromises();
+
+    // Raw Form id and Enrollment id are collapsed behind disclosure by default
+    const disclosures = wrapper.findAll("details.ecrf-direct-id-disclosure");
+    expect(disclosures.length).toBeGreaterThanOrEqual(2);
+    for (const disclosure of disclosures) {
+      expect(disclosure.attributes("open")).toBeUndefined();
+    }
+
+    // Collection spec and Visit render as structured <select> dropdowns
+    const specSelect = wrapper.find("#ecrf-collection-spec");
+    const visitSelect = wrapper.find("#ecrf-planned-activity");
+    expect(specSelect.element.tagName).toBe("SELECT");
+    expect(visitSelect.element.tagName).toBe("SELECT");
+    expect(
+      specSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "VS", "AE"]);
+
+    await specSelect.setValue("AE");
+    await nextTick();
+    // AE is unscheduled-only (plannedActivityIds: []) so only Unscheduled ("") is offered
+    expect(
+      visitSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual([""]);
+
+    // Users can still load an existing form directly when supplying a known form reference
+    await wrapper.find("#ecrf-form-id").setValue(FORM_ID);
+    await wrapper.find("form.ecrf-form-reuse-block").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledWith(FORM_ID);
+    expect(wrapper.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
   });
 });

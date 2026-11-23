@@ -343,7 +343,7 @@
                     class="btn btn-secondary"
                     type="button"
                     :disabled="sdv.sdvBusy"
-                    @click="sdv.cancelPendingSdv()"
+                    @click="sdv.cancelPendingSdv(true)"
                   >
                     Back
                   </button>
@@ -395,9 +395,10 @@
                     Raise query
                   </button>
                   <button
+                    id="ecrf-raise-cancel"
                     class="btn btn-secondary"
                     type="button"
-                    @click="raising = null"
+                    @click="cancelRaise"
                   >
                     Back
                   </button>
@@ -525,6 +526,7 @@ import {
   watch,
   type UnwrapNestedRefs,
 } from "vue";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
@@ -599,12 +601,31 @@ watch(
   }
 );
 
+const EMPTY_LIVE_QUERIES: FormQueryResponse[] = Object.freeze(
+  []
+) as unknown as FormQueryResponse[];
+
+const liveQueriesByItemId = computed(() => {
+  const byItem = new Map<string, FormQueryResponse[]>();
+  const currentForm = props.formState.form;
+  if (!currentForm) return byItem;
+  for (const item of props.formState.items) {
+    if (byItem.has(item.item_id)) continue;
+    const itemQueries = props.queries.forItem(
+      currentForm.form_id,
+      item.item_id
+    );
+    if (itemQueries.length === 0) continue;
+    const live = itemQueries.filter(isLiveQuery);
+    if (live.length > 0) {
+      byItem.set(item.item_id, live);
+    }
+  }
+  return byItem;
+});
+
 function liveOn(item: EcrfFormItem): FormQueryResponse[] {
-  return props.formState.form
-    ? props.queries
-        .forItem(props.formState.form.form_id, item.item_id)
-        .filter(isLiveQuery)
-    : [];
+  return liveQueriesByItemId.value.get(item.item_id) ?? EMPTY_LIVE_QUERIES;
 }
 
 function beginRaise(item: EcrfFormItem) {
@@ -620,6 +641,20 @@ function beginRaise(item: EcrfFormItem) {
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
+}
+
+function cancelRaise() {
+  const itemId = raising.value?.item_id ?? null;
+  raising.value = null;
+  raiseText.value = "";
+  raiseReason.value = "";
+  void handoffFocus([
+    itemId ? `#ecrf-raise-${itemId}` : null,
+    itemId ? `#ecrf-item-${itemId}` : null,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function confirmRaise() {
@@ -648,6 +683,13 @@ async function confirmRaise() {
   );
   if (raised) {
     raising.value = null;
+    void handoffFocus([
+      `#ecrf-raise-${target.item_id}`,
+      `#ecrf-item-${target.item_id}`,
+      "#ecrf-form-queries-title",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
   }
 }
 

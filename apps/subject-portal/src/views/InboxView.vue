@@ -11,7 +11,7 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Notification Inbox</h2>
+      <h2 id="inbox-view-heading" tabindex="-1">My Notification Inbox</h2>
       <p>
         Receive reminders, alerts, and system notifications regarding your trial
         schedule.

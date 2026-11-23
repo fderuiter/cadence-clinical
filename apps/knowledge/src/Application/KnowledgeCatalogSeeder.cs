@@ -84,7 +84,7 @@ public static class KnowledgeCatalogSeeder
     public static async Task EnsureSeededAsync(KnowledgeDbContext db, IClock clock, CancellationToken ct = default)
     {
         string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
-        string latestSentinelId = $"art-observations-sop{tenantSuffix}";
+        string latestSentinelId = $"art-unavailable-sop{tenantSuffix}";
 
         // Fast path: once our complete live-workspace SOP baseline exists for this tenant, skip locking and writes entirely.
         bool alreadySeeded = await db.KnowledgeArticles
@@ -760,6 +760,563 @@ public static class KnowledgeCatalogSeeder
                     personaAnchors: new Dictionary<string, string>(),
                     priority: 25,
                     createdAt: baseTime.AddMinutes(-2))),
+
+            // 16. Clinical Canvas: Design -> Protocol versions (?stage=design&section=protocol-versions)
+            CreateSop(
+                articleId: "art-can-prot-sop",
+                versionId: "ver-can-110",
+                slug: "sop-can-110-canvas-protocol-versions",
+                title: "SOP-CAN-110: Clinical Canvas Protocol Versions, USDM Import & Amendment Impact",
+                categoryId: "cat-study-authoring",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "protocol-versions", "usdm", "design", "amendments"],
+                markdown: """
+                    ## Protocol Versions & USDM Draft Governance
+                    Governs protocol version inspection, USDM JSON draft import, Schedule of Activities review, and amendment impact evaluation in Clinical Canvas (`stage=design&section=protocol-versions`).
+
+                    ## Key Controls
+                    1. Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.
+                    2. Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.
+                    """,
+                html: "<h2>Protocol Versions &amp; USDM Draft Governance</h2><p>Governs protocol version inspection, USDM JSON draft import, Schedule of Activities review, and amendment impact evaluation in Clinical Canvas.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-55),
+                mappings: BuildCanvasSectionMappings(
+                    code: "pv",
+                    stage: "design",
+                    section: "protocol-versions",
+                    includeStageFallback: true,
+                    articleId: "art-can-prot-sop",
+                    defaultAnchor: "#canvas-protocol-versions",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-55))),
+
+            // 17. Clinical Canvas: Start -> Sites (?stage=start&section=sites)
+            CreateSop(
+                articleId: "art-can-sites-sop",
+                versionId: "ver-can-111",
+                slug: "sop-can-111-canvas-study-sites",
+                title: "SOP-CAN-111: Clinical Canvas Study Site Roster & Investigator Assignment",
+                categoryId: "cat-site-startup",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "sites", "investigator", "site-roster", "start"],
+                markdown: """
+                    ## Study Site Roster & Investigator Binding
+                    Standardizes clinical site linking, Principal Investigator assignment, and country-level site scope verification in Clinical Canvas (`stage=start&section=sites`).
+
+                    ## Operational Steps
+                    1. Confirm organization and facility identifiers prior to linking a clinical site to the study.
+                    2. Verify site code uniqueness and RBAC scope visibility for assigned site coordinators and monitors.
+                    """,
+                html: "<h2>Study Site Roster &amp; Investigator Binding</h2><p>Standardizes clinical site linking, Principal Investigator assignment, and country-level site scope verification in Clinical Canvas.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-52),
+                mappings:
+                [
+                    .. BuildCanvasSectionMappings(
+                        code: "st",
+                        stage: "start",
+                        section: "sites",
+                        includeStageFallback: true,
+                        articleId: "art-can-sites-sop",
+                        defaultAnchor: "#canvas-study-sites",
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-52)),
+                    .. BuildCanvasSectionMappings(
+                        code: "cs",
+                        stage: "conduct",
+                        section: "sites",
+                        includeStageFallback: false,
+                        articleId: "art-can-sites-sop",
+                        defaultAnchor: "#canvas-study-sites",
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-52)),
+                ]),
+
+            // 18. Clinical Canvas: Start -> Site activation (?stage=start&section=site-activation)
+            CreateSop(
+                articleId: "art-can-actv-sop",
+                versionId: "ver-can-112",
+                slug: "sop-can-112-canvas-site-activation",
+                title: "SOP-CAN-112: Clinical Canvas Site Activation Lifecycle & Country Regulatory Gates",
+                categoryId: "cat-site-startup",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "site-activation", "irb-iec", "regulatory", "start"],
+                markdown: """
+                    ## Site Activation Lifecycle Controls
+                    Defines site status progression from feasibility and IRB/IEC submission through activation readiness in Clinical Canvas (`stage=start&section=site-activation`).
+
+                    ## Mandatory Checks
+                    1. Confirm ethics approval and executed clinical trial agreement dates before advancing site activation state.
+                    2. Document regulatory submission blockers via support escalation with study and site scope attached.
+                    """,
+                html: "<h2>Site Activation Lifecycle Controls</h2><p>Defines site status progression from feasibility and IRB/IEC submission through activation readiness in Clinical Canvas.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-49),
+                mappings: BuildCanvasSectionMappings(
+                    code: "sa",
+                    stage: "start",
+                    section: "site-activation",
+                    includeStageFallback: false,
+                    articleId: "art-can-actv-sop",
+                    defaultAnchor: "#canvas-site-activation",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-49))),
+
+            // 19. Clinical Canvas: Start -> Startup readiness (?stage=start&section=startup-greenlight)
+            CreateSop(
+                articleId: "art-can-grnl-sop",
+                versionId: "ver-can-113",
+                slug: "sop-can-113-canvas-startup-greenlight",
+                title: "SOP-CAN-113: Clinical Canvas Startup Readiness Matrix & Greenlight Certification",
+                categoryId: "cat-site-startup",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "startup-greenlight", "readiness", "ssu", "start"],
+                markdown: """
+                    ## Startup Readiness & Enrollment Greenlight Gate
+                    Governs pre-enrollment checklist verification across essential documents, training completion, delegation sign-off, and IP pharmacy release (`stage=start&section=startup-greenlight`).
+
+                    ## Greenlight Rules
+                    1. Verify 100% completion of mandatory startup prerequisites prior to issuing site enrollment greenlight.
+                    2. Retain immutable certification timestamps and approver attribution in the study audit trail.
+                    """,
+                html: "<h2>Startup Readiness &amp; Enrollment Greenlight Gate</h2><p>Governs pre-enrollment checklist verification across essential documents, training completion, delegation sign-off, and IP pharmacy release.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-46),
+                mappings: BuildCanvasSectionMappings(
+                    code: "sg",
+                    stage: "start",
+                    section: "startup-greenlight",
+                    includeStageFallback: false,
+                    articleId: "art-can-grnl-sop",
+                    defaultAnchor: "#canvas-startup-greenlight",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-46))),
+
+            // 20. Clinical Canvas: Start -> Documents (?stage=start&section=documents)
+            CreateSop(
+                articleId: "art-can-docs-sop",
+                versionId: "ver-can-114",
+                slug: "sop-can-114-canvas-essential-documents",
+                title: "SOP-CAN-114: Clinical Canvas Essential Documents & Study eTMF Binder QC",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "documents", "etmf", "dia-reference-model", "start"],
+                markdown: """
+                    ## Study Essential Document Filing & QC
+                    Standardizes DIA TMF Reference Model filing, metadata verification, and quality review within Clinical Canvas (`stage=start&section=documents`).
+
+                    ## Operational Controls
+                    1. Classify uploaded essential documents under the correct study and site scope without participant PII.
+                    2. Complete QC verification prior to relying on regulatory artifacts for site greenlight.
+                    """,
+                html: "<h2>Study Essential Document Filing &amp; QC</h2><p>Standardizes DIA TMF Reference Model filing, metadata verification, and quality review within Clinical Canvas.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-43),
+                mappings: BuildCanvasSectionMappings(
+                    code: "dc",
+                    stage: "start",
+                    section: "documents",
+                    includeStageFallback: false,
+                    articleId: "art-can-docs-sop",
+                    defaultAnchor: "#canvas-essential-documents",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-43))),
+
+            // 21. Clinical Canvas: Start -> Training (?stage=start&section=training)
+            CreateSop(
+                articleId: "art-can-trng-sop",
+                versionId: "ver-can-115",
+                slug: "sop-can-115-canvas-study-training",
+                title: "SOP-CAN-115: Clinical Canvas Study Training Curricula & Qualification Gating",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "training", "qualification", "ich-e6", "start"],
+                markdown: """
+                    ## Study Protocol Training & Role Qualification
+                    Defines protocol-specific training assignment, read-and-understand attestation, and write-access qualification checks (`stage=start&section=training`).
+
+                    ## Qualification Rules
+                    1. Ensure site personnel complete required protocol version curricula prior to delegation sign-off.
+                    2. Re-verify training currency following major protocol amendments.
+                    """,
+                html: "<h2>Study Protocol Training &amp; Role Qualification</h2><p>Defines protocol-specific training assignment, read-and-understand attestation, and write-access qualification checks.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-40),
+                mappings: BuildCanvasSectionMappings(
+                    code: "tr",
+                    stage: "start",
+                    section: "training",
+                    includeStageFallback: false,
+                    articleId: "art-can-trng-sop",
+                    defaultAnchor: "#canvas-study-training",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-40))),
+
+            // 22. Clinical Canvas: Start -> Site milestones (?stage=start&section=site-milestones)
+            CreateSop(
+                articleId: "art-can-mile-sop",
+                versionId: "ver-can-116",
+                slug: "sop-can-116-canvas-site-milestones",
+                title: "SOP-CAN-116: Clinical Canvas Site Activation Milestones & Target Variance Review",
+                categoryId: "cat-site-monitoring",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "site-milestones", "ctms", "timelines", "start"],
+                markdown: """
+                    ## Site Milestone Tracking & Baseline Variance Governance
+                    Governs planned, baseline, and actual startup milestone tracking across study sites (`stage=start&section=site-milestones`).
+
+                    ## Operational Steps
+                    1. Record contemporaneous actual completion dates for IRB submission, contract execution, and SIV completion.
+                    2. Escalate critical-path startup delays with root-cause commentary.
+                    """,
+                html: "<h2>Site Milestone Tracking &amp; Baseline Variance Governance</h2><p>Governs planned, baseline, and actual startup milestone tracking across study sites.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-37),
+                mappings: BuildCanvasSectionMappings(
+                    code: "ml",
+                    stage: "start",
+                    section: "site-milestones",
+                    includeStageFallback: false,
+                    articleId: "art-can-mile-sop",
+                    defaultAnchor: "#canvas-site-milestones",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-37))),
+
+            // 23. Clinical Canvas: Start -> Delegation log (?stage=start&section=delegation)
+            CreateSop(
+                articleId: "art-can-delg-sop",
+                versionId: "ver-can-117",
+                slug: "sop-can-117-canvas-delegation-log",
+                title: "SOP-CAN-117: Clinical Canvas Delegation of Authority Log & PI Electronic Sign-Off",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "delegation", "doa-log", "part11", "start"],
+                markdown: """
+                    ## Principal Investigator Delegation of Authority (DoA) Governance
+                    Establishes electronic DoA duty assignment, effective date tracking, and Principal Investigator 21 CFR Part 11 countersignature rules (`stage=start&section=delegation`).
+
+                    ## Mandatory Controls
+                    1. Verify active GxP training completion before delegating clinical assessment or eCRF entry responsibilities.
+                    2. Capture step-up electronic signatures when authorizing or ending delegated site duties.
+                    """,
+                html: "<h2>Principal Investigator Delegation of Authority (DoA) Governance</h2><p>Establishes electronic DoA duty assignment, effective date tracking, and Principal Investigator 21 CFR Part 11 countersignature rules.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-34),
+                mappings: BuildCanvasSectionMappings(
+                    code: "dl",
+                    stage: "start",
+                    section: "delegation",
+                    includeStageFallback: false,
+                    articleId: "art-can-delg-sop",
+                    defaultAnchor: "#canvas-delegation-log",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-34))),
+
+            // 24. Clinical Canvas: Conduct -> Participants (?stage=conduct&section=participants)
+            CreateSop(
+                articleId: "art-can-part-sop",
+                versionId: "ver-can-118",
+                slug: "sop-can-118-canvas-participants-execution",
+                title: "SOP-CAN-118: Clinical Canvas Participant Enrollment, Visit Forms & Source Verification",
+                categoryId: "cat-clinical-ops",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "participants", "enrollment", "ecrf", "conduct"],
+                markdown: """
+                    ## Participant Lifecycle, Visit Matrix & eCRF Execution
+                    Governs participant screening, enrollment, visit collection instances, source data verification, and PI form signatures (`stage=conduct&section=participants`).
+
+                    ## Mandatory GxP Controls
+                    1. Reference participants strictly by pseudonymous subject code (for example `SUBJ-1001`); never record direct PII.
+                    2. Provide an auditable 21 CFR Part 11 reason for change on every observation amendment or form correction.
+                    """,
+                html: "<h2>Participant Lifecycle, Visit Matrix &amp; eCRF Execution</h2><p>Governs participant screening, enrollment, visit collection instances, source data verification, and PI form signatures.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-31),
+                mappings: BuildCanvasSectionMappings(
+                    code: "pt",
+                    stage: "conduct",
+                    section: "participants",
+                    includeStageFallback: true,
+                    articleId: "art-can-part-sop",
+                    defaultAnchor: "#canvas-participants-execution",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-31))),
+
+            // 25. Clinical Canvas: Conduct -> Monitoring visits (?stage=conduct&section=monitoring-visits)
+            CreateSop(
+                articleId: "art-can-monv-sop",
+                versionId: "ver-can-119",
+                slug: "sop-can-119-canvas-monitoring-visits",
+                title: "SOP-CAN-119: Clinical Canvas Site Monitoring Visits, Findings & Follow-Up Letters",
+                categoryId: "cat-site-monitoring",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "monitoring-visits", "mvr", "sdv", "conduct"],
+                markdown: """
+                    ## Site Monitoring Visit Execution & Finding Resolution
+                    Standardizes SIV, IMV, and COV visit execution, finding severity grading, and compiled follow-up letter sign-off (`stage=conduct&section=monitoring-visits`).
+
+                    ## Operational Checklist
+                    1. Reconcile SDV coverage and open discrepancy queries before finalizing monitoring visit reports.
+                    2. Escalate major or critical monitoring findings to the quality and site operations queue with site scope preserved.
+                    """,
+                html: "<h2>Site Monitoring Visit Execution &amp; Finding Resolution</h2><p>Standardizes SIV, IMV, and COV visit execution, finding severity grading, and compiled follow-up letter sign-off.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-28),
+                mappings: BuildCanvasSectionMappings(
+                    code: "mv",
+                    stage: "conduct",
+                    section: "monitoring-visits",
+                    includeStageFallback: false,
+                    articleId: "art-can-monv-sop",
+                    defaultAnchor: "#canvas-monitoring-visits",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-28))),
+
+            // 26. Clinical Canvas: Conduct -> Investigational supply (?stage=conduct&section=supply)
+            CreateSop(
+                articleId: "art-can-supp-sop",
+                versionId: "ver-can-120",
+                slug: "sop-can-120-canvas-investigational-supply",
+                title: "SOP-CAN-120: Clinical Canvas Investigational Supply, Kit Dispensing & Excursion Control",
+                categoryId: "cat-clinical-ops",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "supply", "rtsm", "ip-accountability", "conduct"],
+                markdown: """
+                    ## Investigational Product Inventory & Temperature Excursion Controls
+                    Governs depot-to-site shipments, kit quarantine on temperature excursion, subject dispensing, and IP accountability (`stage=conduct&section=supply`).
+
+                    ## Mandatory Controls
+                    1. Quarantine affected kit lots immediately upon cold-chain excursion detection and escalate under `SUPPLY_EXCURSION`.
+                    2. Maintain blinded kit reconciliation records across dispensing and return workflows.
+                    """,
+                html: "<h2>Investigational Product Inventory &amp; Temperature Excursion Controls</h2><p>Governs depot-to-site shipments, kit quarantine on temperature excursion, subject dispensing, and IP accountability.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-25),
+                mappings: BuildCanvasSectionMappings(
+                    code: "sp",
+                    stage: "conduct",
+                    section: "supply",
+                    includeStageFallback: false,
+                    articleId: "art-can-supp-sop",
+                    defaultAnchor: "#canvas-investigational-supply",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-25))),
+
+            // 27. Clinical Canvas: Data -> Queries (?stage=data&section=queries)
+            CreateSop(
+                articleId: "art-can-qrys-sop",
+                versionId: "ver-can-121",
+                slug: "sop-can-121-canvas-discrepancy-queries",
+                title: "SOP-CAN-121: Clinical Canvas Discrepancy Query Triage, Site Response & Closure",
+                categoryId: "cat-data-management",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "queries", "discrepancies", "data-cleaning", "data"],
+                markdown: """
+                    ## Study Discrepancy Query Triage & Resolution
+                    Defines manual and rule-generated query review, site coordinator response, and data manager closure verification (`stage=data&section=queries`).
+
+                    ## Operational Steps
+                    1. Inspect linked observation provenance before answering or closing open discrepancy queries.
+                    2. Never close discrepancy queries without verifying either an observation correction or a documented clinical explanation.
+                    """,
+                html: "<h2>Study Discrepancy Query Triage &amp; Resolution</h2><p>Defines manual and rule-generated query review, site coordinator response, and data manager closure verification.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-22),
+                mappings: BuildCanvasSectionMappings(
+                    code: "qr",
+                    stage: "data",
+                    section: "queries",
+                    includeStageFallback: true,
+                    articleId: "art-can-qrys-sop",
+                    defaultAnchor: "#canvas-discrepancy-queries",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-22))),
+
+            // 28. Clinical Canvas: Data -> Locks (?stage=data&section=locks & /data-lock)
+            CreateSop(
+                articleId: "art-can-lock-sop",
+                versionId: "ver-can-122",
+                slug: "sop-can-122-canvas-scoped-data-locks",
+                title: "SOP-CAN-122: Clinical Canvas Scoped Data Locks, Prerequisite Audits & Part 11 Attestation",
+                categoryId: "cat-data-management",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "locks", "data-lock", "part11", "data"],
+                markdown: """
+                    ## Scoped Data Lock & Unlock Governance
+                    Governs observation, form, participant, site, and study lock readiness checks, Part 11 step-up electronic signatures, and controlled unlock procedures (`stage=data&section=locks` and `/data-lock`).
+
+                    ## Mandatory Lock Gates
+                    1. Resolve all open discrepancy queries, pending SDV items, and required PI signatures before applying a hard lock.
+                    2. Record an explicit regulatory justification and step-up signature for every lock or controlled unlock action.
+                    """,
+                html: "<h2>Scoped Data Lock &amp; Unlock Governance</h2><p>Governs observation, form, participant, site, and study lock readiness checks, Part 11 step-up electronic signatures, and controlled unlock procedures.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-19),
+                mappings:
+                [
+                    ..BuildCanvasSectionMappings(
+                        code: "lk",
+                        stage: "data",
+                        section: "locks",
+                        includeStageFallback: false,
+                        articleId: "art-can-lock-sop",
+                        defaultAnchor: "#canvas-scoped-data-locks",
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-19)),
+                    ..BuildRouteMappings(
+                        prefix: "m-dlk",
+                        exactRoute: "/data-lock",
+                        wildcardRoute: "/data-lock/*",
+                        articleId: "art-can-lock-sop",
+                        defaultAnchor: "#canvas-scoped-data-locks",
+                        personaAnchors: new Dictionary<string, string>(),
+                        priority: 30,
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-19)),
+                ]),
+
+            // 29. Clinical Canvas: Data -> Validation (?stage=data&section=validation)
+            CreateSop(
+                articleId: "art-can-vald-sop",
+                versionId: "ver-can-123",
+                slug: "sop-can-123-canvas-rule-validation",
+                title: "SOP-CAN-123: Clinical Canvas Edit-Check Rule Packs, Dry-Run Preview & Validation Findings",
+                categoryId: "cat-data-management",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "validation", "edit-checks", "rules", "data"],
+                markdown: """
+                    ## Edit-Check Rule Pack Authoring & Validation Findings
+                    Standardizes deterministic edit-check specification, dry-run impact preview, rule pack activation, and cross-visit validation triage (`stage=data&section=validation`).
+
+                    ## Key Controls
+                    1. Execute dry-run previews against study observations to verify false-positive rates before activating new rule packs.
+                    2. Review validation findings alongside query ownership to coordinate timely site data cleaning.
+                    """,
+                html: "<h2>Edit-Check Rule Pack Authoring &amp; Validation Findings</h2><p>Standardizes deterministic edit-check specification, dry-run impact preview, rule pack activation, and cross-visit validation triage.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-16),
+                mappings: BuildCanvasSectionMappings(
+                    code: "vl",
+                    stage: "data",
+                    section: "validation",
+                    includeStageFallback: false,
+                    articleId: "art-can-vald-sop",
+                    defaultAnchor: "#canvas-rule-validation",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-16))),
+
+            // 30. Clinical Canvas: Analyze stage (?stage=analyze)
+            CreateSop(
+                articleId: "art-can-anlz-sop",
+                versionId: "ver-can-125",
+                slug: "sop-can-125-canvas-analysis-readiness",
+                title: "SOP-CAN-125: Clinical Canvas Endpoint Analysis Readiness & Blinded Review",
+                categoryId: "cat-data-management",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "analyze", "blinded-review", "biostatistics"],
+                markdown: """
+                    ## Blinded Data Review & Endpoint Analysis Readiness
+                    Defines pre-lock blinded data review, population evaluability checks, and statistical readiness governance (`stage=analyze`).
+
+                    ## Operational Controls
+                    1. Confirm database lock prerequisites and protocol deviation classifications prior to unblinded analysis cutoffs.
+                    2. Preserve treatment-assignment blinding across operational support escalations.
+                    """,
+                html: "<h2>Blinded Data Review &amp; Endpoint Analysis Readiness</h2><p>Defines pre-lock blinded data review, population evaluability checks, and statistical readiness governance.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-13),
+                mappings: BuildCanvasStageOnlyMappings(
+                    code: "an",
+                    stage: "analyze",
+                    articleId: "art-can-anlz-sop",
+                    defaultAnchor: "#canvas-analysis-readiness",
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-13))),
+
+            // 31. Clinical Canvas: Submit -> Exports (?stage=submit&section=exports & /exports)
+            CreateSop(
+                articleId: "art-can-expt-sop",
+                versionId: "ver-can-124",
+                slug: "sop-can-124-canvas-regulated-exports",
+                title: "SOP-CAN-124: Clinical Canvas Regulated Dataset & Audit-Trail Export Generation",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["clinical-canvas", "exports", "submission", "cdisc", "submit"],
+                markdown: """
+                    ## Regulated Clinical Dataset & Audit-Trail Exports
+                    Governs authorized clinical observation exports, 21 CFR Part 11 audit-trail archival packages, and submission readiness checks (`stage=submit&section=exports` and `/exports`).
+
+                    ## Mandatory Controls
+                    1. Verify study/site authorization and lock state prior to generating regulatory submission or inspection export bundles.
+                    2. Confirm SHA-256 manifest integrity and pseudonymous subject de-identification on exported deliverables.
+                    """,
+                html: "<h2>Regulated Clinical Dataset &amp; Audit-Trail Exports</h2><p>Governs authorized clinical observation exports, 21 CFR Part 11 audit-trail archival packages, and submission readiness checks.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-10),
+                mappings:
+                [
+                    ..BuildCanvasSectionMappings(
+                        code: "ex",
+                        stage: "submit",
+                        section: "exports",
+                        includeStageFallback: true,
+                        articleId: "art-can-expt-sop",
+                        defaultAnchor: "#canvas-regulated-exports",
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-10)),
+                    ..BuildRouteMappings(
+                        prefix: "m-exp",
+                        exactRoute: "/exports",
+                        wildcardRoute: "/exports/*",
+                        articleId: "art-can-expt-sop",
+                        defaultAnchor: "#canvas-regulated-exports",
+                        personaAnchors: new Dictionary<string, string>(),
+                        priority: 30,
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-10)),
+                ]),
+
+            // 32. /forbidden (Role-Based Access Refusal & Least-Privilege Provisioning)
+            CreateSop(
+                articleId: "art-forbidden-sop",
+                versionId: "ver-rbac-403",
+                slug: "sop-rbac-403-rbac-access-refusal-governance",
+                title: "SOP-RBAC-403: Role-Based Access Refusal, Least-Privilege Scope & Provisioning Escalation",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["forbidden", "rbac", "access-control", "least-privilege", "provisioning"],
+                markdown: """
+                    ## Role-Based Access Control (RBAC) Refusal & Scope Escalation
+                    Explains ICH E6(R3) least-privilege role enforcement, study/site assignment boundaries, and controlled access request procedures when landing on `/forbidden`.
+
+                    ## Operational Steps
+                    1. Confirm your active workspace persona and assigned study/site scope before retrying restricted clinical routes.
+                    2. Escalate legitimate role or site provisioning requests under `ACCESS_CONTROL` for Sponsor Admin review and training verification.
+                    """,
+                html: "<h2>Role-Based Access Control (RBAC) Refusal &amp; Scope Escalation</h2><p>Explains ICH E6(R3) least-privilege role enforcement, study/site assignment boundaries, and controlled access request procedures on <code>/forbidden</code>.</p>",
+                createdAt: baseTime.AddMinutes(-1).AddSeconds(-5),
+                mappings: BuildRouteMappings(
+                    prefix: "m-frb",
+                    exactRoute: "/forbidden",
+                    wildcardRoute: "/forbidden/*",
+                    articleId: "art-forbidden-sop",
+                    defaultAnchor: "#rbac-access-refusal-and-escalation",
+                    personaAnchors: new Dictionary<string, string>(),
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-5))),
+
+            // 33. /unavailable (Pre-Release Module Availability & Validated Fallback Workflows)
+            CreateSop(
+                articleId: "art-unavailable-sop",
+                versionId: "ver-sys-404",
+                slug: "sop-sys-404-module-availability-fallback",
+                title: "SOP-SYS-404: Pre-Release Workspace Module Availability & Validated Fallback Workflows",
+                categoryId: "cat-clinical-ops",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["unavailable", "roadmap", "validated-workflows", "clinical-canvas"],
+                markdown: """
+                    ## Workspace Module Availability & Validated Clinical Canvas Fallbacks
+                    Guides operators encountering pre-release module screens on `/unavailable` to the validated Clinical Kernel workflows active in Clinical Canvas.
+
+                    ## Operational Steps
+                    1. Use Clinical Canvas (`/studies/:studyCode`), Data Collection (`/ecrf`), Site Readiness (`/ctms`, `/ssu`), eTMF (`/etmf`), Training (`/training`), Support (`/tickets`), and Knowledge (`/knowledge`) for live regulated operations.
+                    2. Log an operational support ticket under `SYSTEM_SUPPORT` if an expected entitlement or module workflow is unavailable.
+                    """,
+                html: "<h2>Workspace Module Availability &amp; Validated Clinical Canvas Fallbacks</h2><p>Guides operators encountering pre-release module screens on <code>/unavailable</code> to validated Clinical Kernel workflows active in Clinical Canvas.</p>",
+                createdAt: baseTime.AddMinutes(-1),
+                mappings: BuildRouteMappings(
+                    prefix: "m-unv",
+                    exactRoute: "/unavailable",
+                    wildcardRoute: "/unavailable/*",
+                    articleId: "art-unavailable-sop",
+                    defaultAnchor: "#module-availability-and-roadmap",
+                    personaAnchors: new Dictionary<string, string>(),
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-1))),
         };
 
         return list;
@@ -923,6 +1480,92 @@ public static class KnowledgeCatalogSeeder
             list.Add(NewMapping($"m-obs-p-{persona}", "/observations/:observationRef", persona, articleId, anchor, 35, createdAt));
             list.Add(NewMapping($"m-obs-ps-{persona}", "/observations/:observationRef/*", persona, articleId, anchor, 32, createdAt));
             list.Add(NewMapping($"m-obs-wc-{persona}", "/observations/*", persona, articleId, anchor, 24, createdAt));
+        }
+
+        return list;
+    }
+
+    private static string ShortPersonaKey(string persona) =>
+        persona switch
+        {
+            "super_admin" => "sa",
+            "sponsor_designer" => "sd",
+            "site_crc" => "sc",
+            "site_investigator" => "si",
+            "cra_monitor" => "cm",
+            "data_manager" => "dm",
+            "safety_officer" => "so",
+            "auditor" => "au",
+            _ => persona[..Math.Min(4, persona.Length)],
+        };
+
+    private static List<ContextualHelpMapping> BuildCanvasSectionMappings(
+        string code,
+        string stage,
+        string section,
+        bool includeStageFallback,
+        string articleId,
+        string defaultAnchor,
+        DateTimeOffset createdAt)
+    {
+        string paramFull = $"/studies/:studyCode?stage={stage}&section={section}";
+        string paramSec = $"/studies/:studyCode?section={section}";
+        string rootFull = $"/studies?stage={stage}&section={section}";
+        string rootSec = $"/studies?section={section}";
+
+        var list = new List<ContextualHelpMapping>
+        {
+            NewMapping($"mc-{code}-pf-any", paramFull, null, articleId, defaultAnchor, 40, createdAt),
+            NewMapping($"mc-{code}-ps-any", paramSec, null, articleId, defaultAnchor, 38, createdAt),
+            NewMapping($"mc-{code}-rf-any", rootFull, null, articleId, defaultAnchor, 40, createdAt),
+            NewMapping($"mc-{code}-rs-any", rootSec, null, articleId, defaultAnchor, 38, createdAt),
+        };
+
+        if (includeStageFallback)
+        {
+            list.Add(NewMapping($"mc-{code}-pg-any", $"/studies/:studyCode?stage={stage}", null, articleId, defaultAnchor, 36, createdAt));
+            list.Add(NewMapping($"mc-{code}-rg-any", $"/studies?stage={stage}", null, articleId, defaultAnchor, 36, createdAt));
+        }
+
+        foreach (string persona in AllStaffPersonas)
+        {
+            string pk = ShortPersonaKey(persona);
+            list.Add(NewMapping($"mc-{code}-pf-{pk}", paramFull, persona, articleId, defaultAnchor, 45, createdAt));
+            list.Add(NewMapping($"mc-{code}-ps-{pk}", paramSec, persona, articleId, defaultAnchor, 43, createdAt));
+            list.Add(NewMapping($"mc-{code}-rf-{pk}", rootFull, persona, articleId, defaultAnchor, 45, createdAt));
+            list.Add(NewMapping($"mc-{code}-rs-{pk}", rootSec, persona, articleId, defaultAnchor, 43, createdAt));
+
+            if (includeStageFallback)
+            {
+                list.Add(NewMapping($"mc-{code}-pg-{pk}", $"/studies/:studyCode?stage={stage}", persona, articleId, defaultAnchor, 41, createdAt));
+                list.Add(NewMapping($"mc-{code}-rg-{pk}", $"/studies?stage={stage}", persona, articleId, defaultAnchor, 41, createdAt));
+            }
+        }
+
+        return list;
+    }
+
+    private static List<ContextualHelpMapping> BuildCanvasStageOnlyMappings(
+        string code,
+        string stage,
+        string articleId,
+        string defaultAnchor,
+        DateTimeOffset createdAt)
+    {
+        string paramStage = $"/studies/:studyCode?stage={stage}";
+        string rootStage = $"/studies?stage={stage}";
+
+        var list = new List<ContextualHelpMapping>
+        {
+            NewMapping($"mc-{code}-pg-any", paramStage, null, articleId, defaultAnchor, 40, createdAt),
+            NewMapping($"mc-{code}-rg-any", rootStage, null, articleId, defaultAnchor, 40, createdAt),
+        };
+
+        foreach (string persona in AllStaffPersonas)
+        {
+            string pk = ShortPersonaKey(persona);
+            list.Add(NewMapping($"mc-{code}-pg-{pk}", paramStage, persona, articleId, defaultAnchor, 45, createdAt));
+            list.Add(NewMapping($"mc-{code}-rg-{pk}", rootStage, persona, articleId, defaultAnchor, 45, createdAt));
         }
 
         return list;

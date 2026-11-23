@@ -41,7 +41,7 @@ Each ticket should be a vertical tracer-bullet:
 2. **Requirement Link**: `@req:PRD-SYS-XXX`
 3. **Seam Under Test**: The public interface and test slice.
 4. **Implementation Steps**: Files to touch, models to create, endpoints to add.
-5. **Quality Gates**: Commands to run (`dotnet cadence test --fast`, etc.).
+5. **Quality Gates**: Commands to run (`pnpm cadence test --fast`, etc.).
 
 ---
 

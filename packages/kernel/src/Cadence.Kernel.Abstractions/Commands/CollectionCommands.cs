@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
@@ -84,7 +85,7 @@ public sealed record RecordCollectedValues(
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
-[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid), nameof(CollectionErrors.NotReadyToSign))]
 [RaisesKernelErrors(
     typeof(TrustErrors),
     nameof(TrustErrors.PersonRequired),
@@ -122,6 +123,8 @@ public sealed record CollectedValue(
 /// <remarks>
 /// <para><c>ProtocolVersionId</c>: The protocol version that governs the form (K-TIME-8).</para>
 /// <para><c>Version</c>: 1 when opened, one more per save.</para>
+/// <para><c>VisitTimingAssessment</c>: How <c>CollectedAt</c> fell against the expected visit window (ADR-2507) when an
+/// enrolled participant opens a timed planned activity; null otherwise.</para>
 /// </remarks>
 public sealed record CollectionInstanceState(
     CollectionInstanceId CollectionInstanceId,
@@ -130,7 +133,8 @@ public sealed record CollectionInstanceState(
     string CollectionSpecId,
     string? PlannedActivityId,
     DateTimeOffset CollectedAt,
-    long Version);
+    long Version,
+    VisitTimingAssessment? VisitTimingAssessment = null);
 
 /// <summary>
 /// A form page after a save: every value of the form instance, ordered by item id, so the client marks values saved only
@@ -169,7 +173,10 @@ public static class CollectionErrors
     public static readonly KernelError SignatureMeaningInvalid =
         new("K.Collection.SignatureMeaningInvalid", 422, "A form is signed as Approved or Responsibility.");
 
+    public static readonly KernelError NotReadyToSign =
+        new("K.Collection.NotReadyToSign", 409, "The form cannot be signed until all required items have recorded values, active queries are closed, and Error validation findings are resolved, accepted, or explained.");
+
     /// <summary>Every form instance error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid];
+        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid, NotReadyToSign];
 }

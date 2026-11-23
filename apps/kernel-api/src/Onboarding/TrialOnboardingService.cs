@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Execution;
@@ -60,6 +61,7 @@ public sealed partial class TrialOnboardingService(
         "person.register",
         "tenant.enroll_member",
         "subscription.provision",
+        "work_queue.define",
     ];
 
     private static readonly string[] SponsorAdminCapabilities =
@@ -115,6 +117,9 @@ public sealed partial class TrialOnboardingService(
         "validation_finding.accept",
         "validation_finding.explain",
         "validation_finding.reopen",
+        "work_queue.define",
+        "proposal.approve",
+        "proposal.reject",
         "study.export",
         "enrollment.export",
     ];
@@ -164,18 +169,15 @@ public sealed partial class TrialOnboardingService(
 
     private static readonly string[] TrialDataManagerCapabilities =
     [
-        "validation_run.record",
-        "validation_finding.accept",
-        "validation_finding.reopen",
-        "lock.apply",
-        "lock.release",
-        "observation.verify",
-        "assertion.retract",
-        "execution.query.raise",
-        "execution.query.manage",
-        "study.declare_standards",
-        "study.export",
-        "enrollment.export",
+        "study.declare_standards", "validation_run.record",
+        "validation_finding.investigate", "validation_finding.classify", "validation_finding.accept", "validation_finding.reopen",
+        "lock.apply", "lock.release", "attestation.sign",
+        "observation.verify", "assertion.retract",
+        "execution.query.raise", "execution.query.manage",
+        "artifact.register", "artifact.add_version", "effectivity.declare", "effectivity.change_status",
+        "site.register", "study_site.link", "study_site.activate",
+        "proposal.approve", "proposal.reject",
+        "study.export", "enrollment.export",
     ];
 
     private static readonly (string Consumer, string RoleCode, string Name, string[] Capabilities)[] ModuleServiceAccounts =
@@ -456,6 +458,13 @@ public sealed partial class TrialOnboardingService(
             }
         }
 
+        var finalSnapshot = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (!finalSnapshot.IsReadOnly
+            && await EnsureDefaultWorkQueuesAsync(tenant, ids, reason, cancellationToken).ConfigureAwait(false) is { } wqErr)
+        {
+            return wqErr;
+        }
+
         var existingStudies = await studyDirectory.ListStudiesAsync(tenant, cancellationToken).ConfigureAwait(false);
         var explicitStudyCodes = existingStudies
             .Select(s => s.StudyCode)
@@ -482,7 +491,6 @@ public sealed partial class TrialOnboardingService(
             return CommercialErrors.IdentityProviderSyncFailed;
         }
 
-        var finalSnapshot = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         LogTrialProvisioned(logger, tenantCode, tenant, newlyProvisioned, finalSnapshot.Tier);
 
         return CommandResult<TrialOnboardingOutcome>.Success(
@@ -597,6 +605,49 @@ public sealed partial class TrialOnboardingService(
         return null;
     }
 
+    private async Task<KernelError?> EnsureDefaultWorkQueuesAsync(
+        TenantId tenant,
+        TrialIds ids,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        HashSet<string> existingCodes = [];
+        await using (var scope = scopes.CreateAsyncScope())
+        {
+            if (scope.ServiceProvider.GetService<IWorkQueueDefinitions>() is { } definitions)
+            {
+                var current = await definitions.CurrentAsync(tenant, cancellationToken).ConfigureAwait(false);
+                existingCodes = current.Select(d => d.Code).ToHashSet(StringComparer.Ordinal);
+            }
+        }
+
+        foreach (var (code, title, capability, verbClass, source) in DevelopmentDemoData.DefaultWorkQueues)
+        {
+            if (existingCodes.Contains(code))
+            {
+                continue;
+            }
+
+            if (await EnsureRecordAsync(
+                    new DefineWorkQueue(
+                        tenant,
+                        ids.WorkQueueDefinition(code),
+                        code,
+                        title,
+                        capability,
+                        verbClass,
+                        source,
+                        ids.Key($"work-queue:{code}"),
+                        reason),
+                    cancellationToken).ConfigureAwait(false) is { } err)
+            {
+                return err;
+            }
+        }
+
+        return null;
+    }
+
     private async Task<KernelError?> EnsureRecordAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
     {
         var result = await SendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
@@ -665,6 +716,9 @@ public sealed partial class TrialOnboardingService(
         public RoleId Role(string code) => RoleId.FromGuid(Derive("role", code));
 
         public GrantId Grant(string name) => GrantId.FromGuid(Derive("grant", name));
+
+        public WorkQueueDefinitionId WorkQueueDefinition(string code) =>
+            WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", code));
 
         public string Key(string step) => $"trial-onboarding:{TenantCode}:{step}";
 
