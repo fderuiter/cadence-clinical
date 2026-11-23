@@ -233,6 +233,7 @@ import { executionApi } from "../../api/executionApi";
 import { canActivateSite } from "../../canvas/authority";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
+import { syncActiveStudyScope } from "../../stores/studyScopeBridge";
 import { useToastStore } from "../../stores/toasts.js";
 import {
   formatScopeForbiddenGuidance,
@@ -379,6 +380,7 @@ async function checkStatus() {
   const site = siteCode.value.trim();
   store.activeStudyId = study;
   store.activeSiteId = site;
+  syncActiveStudyScope(study);
   checked.value = true;
   loading.value = true;
   loadError.value = false;

@@ -960,6 +960,7 @@ import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1028,6 +1029,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
+const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
@@ -2228,8 +2230,19 @@ function openTypedStudy() {
 
 // Switching study drops everything read for the previous one.
 watch(
-  studyCode,
-  (code) => {
+  [studyCode, () => single(route.query.studyId ?? route.query.study_id).trim()],
+  ([code, queryStudyCode]) => {
+    if (!code && queryStudyCode) {
+      const nextQuery: LocationQueryRaw = { ...route.query };
+      delete nextQuery.studyId;
+      delete nextQuery.study_id;
+      router.replace({
+        name: "study",
+        params: { studyCode: queryStudyCode },
+        query: nextQuery,
+      });
+      return;
+    }
     formWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
@@ -2237,7 +2250,9 @@ watch(
     resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
-    if (!code) {
+    if (code) {
+      setActiveStudyCode(code);
+    } else {
       loadStudyDirectory();
     }
   },

@@ -235,6 +235,7 @@ import {
 import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
 import { toDirectScopeLocks } from "../canvas/kernelLocks";
+import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
 
@@ -486,13 +487,29 @@ watch(
       const studyStep = steps.find(
         (s) => s.level === "study" && s.mask === null
       );
+      const legacyStudyNode =
+        (studyStep as { node?: string | null } | undefined)?.node ?? null;
+      const studyRef = studyStep?.ref ?? legacyStudyNode;
       if (!props.studyRef && !props.studyCode) {
-        observationStudyRef.value = studyStep?.node ?? null;
+        observationStudyRef.value = studyRef;
       }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );
-      if (!studyStep?.label || !enrollmentStep) return;
+      if (!enrollmentStep) {
+        return;
+      }
+      let resolvedStudyCode = "";
+      if (studyStep?.ref && typeof kernelApi.getNode === "function") {
+        const studyNode = await kernelApi.getNode(studyStep.ref);
+        if (request !== redirectRequest) return;
+        resolvedStudyCode =
+          studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
+      } else if (!studyStep?.ref && studyStep?.label) {
+        resolvedStudyCode = studyStep.label.trim();
+      }
+      if (!resolvedStudyCode) return;
+      syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
         (s) => s.level === "study_site" && s.mask === null && s.label
       );
@@ -507,7 +524,7 @@ watch(
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: studyStep.label },
+        params: { studyCode: resolvedStudyCode },
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),

@@ -323,7 +323,6 @@
 <script setup>
 import {
   computed,
-  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -339,6 +338,7 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
@@ -348,12 +348,9 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
+import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
-
-const OnboardingTour = defineAsyncComponent(
-  () => import("./OnboardingTour.vue")
-);
 
 provide("inAppShell", true);
 
@@ -383,10 +380,13 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
+const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
 const workspaceScope = computed(() =>
   resolveActiveWorkspaceScope(route, canvasStore)
 );
-const activeStudyCode = computed(() => workspaceScope.value.studyCode);
+const activeStudyCode = computed(
+  () => workspaceScope.value.studyCode || syncedStudyCode.value
+);
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -396,7 +396,7 @@ const studiesPath = computed(() =>
 
 const dataCollectionPath = computed(() =>
   buildDataCollectionPath({
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.explicitSiteId,
     subjectCode: workspaceScope.value.subjectCode,
     enrollmentId: workspaceScope.value.enrollmentId,
@@ -409,7 +409,7 @@ const showDataCollectionNav = computed(() =>
 );
 const siteReadinessPath = computed(() =>
   resolveSiteReadinessPath(normalizedRoles.value, {
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
   })
 );

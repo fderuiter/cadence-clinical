@@ -500,6 +500,7 @@ import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
@@ -531,6 +532,7 @@ const route =
   typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
 const router =
   typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
 const selectedDoc = ref(null);
@@ -565,7 +567,11 @@ const canReviewQc = computed(
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || etmfStore.currentStudyId || clinicalStore.activeStudyId
+  () =>
+    props.studyId ||
+    etmfStore.currentStudyId ||
+    activeStudyCode.value ||
+    clinicalStore.activeStudyId
 );
 const effectiveSiteId = computed(
   () => props.siteId || etmfStore.currentSiteId || clinicalStore.activeSiteId
@@ -604,6 +610,7 @@ function syncScope(study, site) {
   const normalizedSite = typeof site === "string" ? site.trim() : "";
   etmfStore.setScope(normalizedStudy, normalizedSite);
   if (normalizedStudy) {
+    setActiveStudyCode(normalizedStudy);
     clinicalStore.activeStudyId = normalizedStudy;
   }
   clinicalStore.activeSiteId = normalizedSite;
@@ -666,8 +673,19 @@ async function applyStandaloneScope() {
 }
 
 watch(
-  () => [props.studyId, props.siteId],
-  async ([nextStudy, nextSite], [prevStudy, prevSite]) => {
+  () => [props.studyId, props.siteId, route?.query?.studyId],
+  async (
+    [propStudy, nextSite, queryStudy],
+    [prevPropStudy, prevSite, prevQueryStudy] = []
+  ) => {
+    const nextStudy =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    const prevStudy =
+      (typeof prevPropStudy === "string" && prevPropStudy.trim()) ||
+      (typeof prevQueryStudy === "string" && prevQueryStudy.trim()) ||
+      "";
     if (!nextStudy && nextSite === prevSite) return;
     syncScope(nextStudy || etmfStore.currentStudyId, nextSite || "");
     await etmfStore.fetchBinderTree(nextStudy || undefined);
@@ -894,6 +912,7 @@ onMounted(async () => {
   const initialStudy =
     props.studyId ||
     queryStudy ||
+    activeStudyCode.value ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
     (authStore.assignedStudies?.length ? authStore.assignedStudies[0] : "");

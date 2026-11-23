@@ -317,28 +317,37 @@ describe("ObservationView (ADR-2620)", () => {
     wrapper.unmount();
   });
 
-  it("resolves study lineage and redirects authorized standalone observation links into Clinical Canvas", async () => {
+  it("resolves study lineage via studyStep.ref + kernelApi.getNode and redirects authorized standalone observation links into Clinical Canvas", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80";
     vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
-        label: "CAD-101",
+        ref: studyRef,
+        label: "CAD-101 — Phase II Hypertension Study",
         mask: null,
       },
       {
         level: "study_site",
-        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
         label: "017",
         mask: null,
       },
       {
         level: "enrollment",
-        node: ENROLLMENT,
+        ref: ENROLLMENT,
         label: "017-0001",
         mask: null,
       },
     ]);
+    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: studyRef,
+      kind: "study",
+      title: "Phase II Hypertension Study",
+      code: "CAD-101",
+      status: "Active",
+      mask: null,
+    });
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -366,6 +375,7 @@ describe("ObservationView (ADR-2620)", () => {
     await flushPromises();
 
     expect(kernelApi.getZoomPath).toHaveBeenCalledWith(ENROLLMENT);
+    expect(kernelApi.getNode).toHaveBeenCalledWith(studyRef);
     expect(router.currentRoute.value.name).toBe("study");
     expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
     expect(router.currentRoute.value.query).toEqual({
@@ -381,7 +391,7 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: null,
+        ref: null,
         label: null,
         mask: { kind: "study", reason: "unauthorized" },
       },

@@ -19,6 +19,7 @@ import {
   resetNodeResolutionSession,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
 function seedParticipantNode(participant: SubjectSummary): void {
@@ -127,7 +128,7 @@ function fetchStudyPage(
  */
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
-    studyCode: "",
+    studyCode: getSyncedStudyScope(),
     participants: [] as SubjectSummary[],
     /** Study participants available to the ⌘K command palette across all views. */
     paletteParticipants: [] as SubjectSummary[],
@@ -192,6 +193,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       resetNodeResolutionSession(studyCode);
       if (typeof resetKernelStudySession === "function") {
         resetKernelStudySession(studyCode);
+      }
+      if (studyCode.trim()) {
+        syncActiveStudyScope(studyCode);
       }
     },
 
