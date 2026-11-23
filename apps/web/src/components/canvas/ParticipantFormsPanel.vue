@@ -1033,7 +1033,6 @@ watch(
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .casebook-matrix th,

@@ -23,10 +23,18 @@ public sealed class SubjectConsentConfiguration : IEntityTypeConfiguration<Subje
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasConversion(id => id.Value, v => new SubjectConsentId(v));
 
+        builder.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uuid")
+            .IsRequired();
+
         builder.Property(x => x.SubjectCode)
             .HasConversion(c => c.Value, v => new SubjectCode(v))
             .HasMaxLength(255)
             .IsRequired();
+
+        builder.HasIndex(x => new { x.TenantId, x.SubjectCode })
+            .HasDatabaseName("IX_subject_consents_tenant_id_SubjectCode");
 
         // ProtocolVersionRef is an EF Core 10 Complex Type (ComplexProperty) — it has no independent PK,
         // so OwnsOne (which models an owned *entity* with its own key/table-splitting semantics) does not

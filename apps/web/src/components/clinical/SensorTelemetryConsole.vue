@@ -1571,7 +1571,6 @@ onMounted(() => {
   border-collapse: collapse;
   font-size: 13px;
   text-align: left;
-  font-variant-numeric: tabular-nums;
 }
 
 .data-table th {
