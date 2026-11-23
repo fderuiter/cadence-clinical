@@ -192,6 +192,7 @@ describe("ObservationView (ADR-2620)", () => {
           locked_at: "2026-10-15T10:00:00Z",
           locked_by: "dm@sponsor.test",
           reason_for_change: "Data review complete",
+          masked: false,
         },
       ],
     });
@@ -493,6 +494,7 @@ describe("ObservationView (ADR-2620)", () => {
               locked_at: "2026-10-15T10:00:00Z",
               locked_by: dmPersonRef,
               reason_for_change: "Interim review cut",
+              masked: false,
             },
           ],
         })
