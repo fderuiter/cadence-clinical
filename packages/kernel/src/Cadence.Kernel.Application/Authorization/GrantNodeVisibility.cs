@@ -28,10 +28,10 @@ namespace Cadence.Kernel.Application.Authorization;
 /// <item>tenant reference data, roles and the tenant's people, when it holds any grant in effect in the tenant.</item>
 /// </list>
 /// Everything out of scope is masked <see cref="MaskReason.NotPermitted"/>, and a reader with no grant in effect sees
-/// nothing. Scope-visible <c>observation</c> and <c>validation_finding</c> nodes that classify as blinded treatment data
-/// are masked <see cref="MaskReason.Blinded"/> unless the reader (and, for an automation agent under K-AI-6, the
-/// requesting person together with any required K-AUTH-5 qualifications) holds <c>enrollment.unblind</c> covering the
-/// node's scope path. The IdentityVault (#4782) is enforced separately.
+/// nothing. Scope-visible <c>observation</c>, <c>validation_finding</c>, <c>assertion</c>, and <c>form_query</c> nodes
+/// that classify as blinded treatment data are masked <see cref="MaskReason.Blinded"/> unless the reader (and, for an
+/// automation agent under K-AI-6, the requesting person together with any required K-AUTH-5 qualifications) holds
+/// <c>enrollment.unblind</c> covering the node's scope path. The IdentityVault (#4782) is enforced separately.
 /// </summary>
 public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : INodeVisibility
 {

@@ -480,7 +480,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
         }
 
-        // Also lock the blinded observation directly before tCut via POST /api/v1/kernel/locks so both blinded lock attestations and blinded form signatures are exercised.
+        // Also freeze the blinded observation directly before tCut via POST /api/v1/kernel/locks (while its query remains open, per LockReadinessEvaluator) so both blinded lock attestations and blinded form signatures are exercised.
         using (var lockReq = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/kernel/locks", UriKind.Relative)))
         {
             lockReq.Headers.Add(FormEndpoints.IdempotencyKeyHeader, KernelProtocolScenario.Key());
@@ -492,7 +492,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             {
                 study_ref = NodeRef.For(world.Study).ToString(),
                 scope_ref = NodeRef.For(blindedObsId).ToString(),
-                kind = "Locked",
+                kind = "Frozen",
                 meaning = "Approved",
             });
             using var lockRes = await unblindedPharm.SendAsync(lockReq, ct);
@@ -557,7 +557,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var latestOdm = await GetRawAsync(unblindedPharm, $"/api/v1/kernel/studies/{studyRef}/exports?format=odm_xml&as_of={asOfAfterV2Param}", HttpStatusCode.OK, ct);
         latestOdm.Should().Contain(futureItemMarker);
 
-        // 2. BlindedStatistician exports (ODM XML + JSON/ODM/HTML casebooks) strip all blinded side channels.
+        // 2. BlindedStatistician exports (ODM XML + JSON/ODM/HTML/PDF casebooks) strip all blinded side channels.
         var statOdm = await GetRawAsync(blindedStat, $"/api/v1/kernel/studies/{studyRef}/exports?format=odm_xml", HttpStatusCode.OK, ct);
         AssertNoBlindedLeak(statOdm, blindedObsUuid);
         XNamespace odmNs = "http://www.cdisc.org/ns/odm/v1.3";
@@ -568,7 +568,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var blindedSigDef = statOdmDoc.Descendants(odmNs + "SignatureDef").Single(sd => sd.Attribute("OID")?.Value == blindedSigOid);
         blindedSigDef.Elements(odmNs + "LegalReason").Should().BeEmpty("blinded ODM signatures must omit LegalReason");
 
-        foreach (var format in new[] { "json", "odm_xml", "html" })
+        foreach (var format in new[] { "json", "odm_xml", "html", "pdf" })
         {
             var statCasebookRaw = await GetRawAsync(blindedStat, $"/api/v1/kernel/enrollments/{enrollmentARef}/casebook?format={format}", HttpStatusCode.OK, ct);
             AssertNoBlindedLeak(statCasebookRaw, blindedObsUuid);
