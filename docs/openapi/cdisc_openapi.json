@@ -1431,6 +1431,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1517,6 +1527,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Designer_AmendmentRegressionReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
                 }
               }
             }
@@ -21658,6 +21678,12 @@
             ]
           },
           "dataset": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "variable": {
             "type": [
               "null",
               "string"

@@ -132,4 +132,112 @@ public class ParallelBatchRuleValidatorTests
         finalReport!.Status.Should().Be("Completed");
         finalReport.Timing.RecordsEvaluated.Should().Be(15);
     }
+
+    [Fact(DisplayName = "ParallelBatchRuleValidator_WithLoadedRulePacks_MatchesValidationRunnerFindingIdsAndDeterministicOrder")]
+    [Trait("Category", "Unit")]
+    public async Task ValidateAsync_WithLoadedRulePacks_MatchesValidationRunnerFindingIdsAndDeterministicOrder()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.Zero));
+        var evaluator = new DotNetRuleEvaluator();
+        var validator = new ParallelBatchRuleValidator(evaluator, new BatchJobStore(), clock);
+
+        var packAlpha = new RulePack(
+            RuleAuthority.Sponsor,
+            "Human Readable Alpha Pack Title",
+            [
+                new Rule(
+                    "R_VS_HIGH", 1, RuleAuthority.Sponsor, new SourceCitation("Ref A1", null, null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "VS"),
+                    ValidationSeverity.Error,
+                    new ComparisonExpression(ComparisonOperator.Greater, new VariableExpression("SYSBP"), new LiteralExpression(RuleValue.FromNumber(140m))),
+                    "High SYSBP", null, EffectivePeriod.Always),
+                new Rule(
+                    "R_ANY_FLAG", 1, RuleAuthority.Sponsor, new SourceCitation("Ref A2", null, null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, null),
+                    ValidationSeverity.Notice,
+                    new ComparisonExpression(ComparisonOperator.Equal, new VariableExpression("FLAG"), new LiteralExpression(RuleValue.FromText("Y"))),
+                    "Flagged record", null, EffectivePeriod.Always),
+            ]);
+
+        var packBeta = new RulePack(
+            RuleAuthority.Sponsor,
+            "Human Readable Beta Pack Title",
+            [
+                new Rule(
+                    "R_LB_LOW", 2, RuleAuthority.Sponsor, new SourceCitation("Ref B1", null, null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "LB"),
+                    ValidationSeverity.Warning,
+                    new ComparisonExpression(ComparisonOperator.Less, new VariableExpression("HGB"), new LiteralExpression(RuleValue.FromNumber(11m))),
+                    "Low HGB", null, EffectivePeriod.Always),
+            ]);
+
+        var loadedPacks = new List<LoadedRulePack>
+        {
+            new(LibraryItemId.New(), "mdr.pack.alpha", 1, "sha256:alpha", GovernanceStatus.Approved, packAlpha),
+            new(LibraryItemId.New(), "mdr.pack.beta", 2, "sha256:beta", GovernanceStatus.Approved, packBeta),
+        };
+
+        var records = Enumerable.Range(1, 30).Select(BuildInterleavedRecord).ToList();
+
+        var context = new RuleEvaluationContext(ValidationStage.Collection, AsOf);
+        var expectedDetections = loadedPacks
+            .SelectMany(lp => evaluator.Evaluate(lp.Pack, context, records)
+                .Select(v => ValidationRunner.Detection(lp.Key, FindingTargetKind.DatasetRecord, v)))
+            .ToList();
+
+        var request = new BatchValidationRequest(
+            TestTenant,
+            TestStudy,
+            ValidationStage.Collection,
+            AsOf,
+            records,
+            [packAlpha, packBeta])
+        {
+            AsyncThreshold = 1000,
+            LoadedRulePacks = loadedPacks,
+        };
+
+        var report = await validator.ValidateAsync(request, Ct);
+
+        report.Detections.Select(d => (d.PackKey, d.Target.Dataset, d.Target.Key, d.RuleId))
+            .Should().Equal(expectedDetections.Select(d => (d.PackKey, d.Target.Dataset, d.Target.Key, d.RuleId)));
+
+        var batchFindingIds = report.Detections
+            .Select(d => ValidationFindingId.For(TestTenant, new FindingIdentity(TestStudy, ValidationStage.Collection, d.PackKey, d.RuleId, d.Target)))
+            .ToList();
+        var runnerFindingIds = expectedDetections
+            .Select(d => ValidationFindingId.For(TestTenant, new FindingIdentity(TestStudy, ValidationStage.Collection, d.PackKey, d.RuleId, d.Target)))
+            .ToList();
+
+        batchFindingIds.Should().NotBeEmpty();
+        batchFindingIds.Should().Equal(runnerFindingIds);
+    }
+
+    private static RuleRecord BuildInterleavedRecord(int index)
+    {
+        if (index % 2 == 1)
+        {
+            var sysbp = index % 3 == 0 ? 155m : 120m;
+            var flag = index % 5 == 0 ? "Y" : "N";
+            return new RuleRecord(
+                "VS",
+                $"vs-{index:D2}",
+                new Dictionary<string, RuleValue>
+                {
+                    ["SYSBP"] = RuleValue.FromNumber(sysbp),
+                    ["FLAG"] = RuleValue.FromText(flag),
+                });
+        }
+
+        var hgb = index % 4 == 0 ? 9.5m : 13.5m;
+        var labFlag = index % 6 == 0 ? "Y" : "N";
+        return new RuleRecord(
+            "LB",
+            $"lb-{index:D2}",
+            new Dictionary<string, RuleValue>
+            {
+                ["HGB"] = RuleValue.FromNumber(hgb),
+                ["FLAG"] = RuleValue.FromText(labFlag),
+            });
+    }
 }
