@@ -219,7 +219,8 @@ import {
   observationNodeRef,
 } from "../canvas/nodeRef";
 import { canCorrectObservations } from "../canvas/authority";
-import { findKernelStudyRef } from "../canvas/kernelStudy";
+import { toDirectScopeLocks } from "../canvas/kernelLocks";
+import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
 
 /**
@@ -368,55 +369,25 @@ const SCOPE_LABELS: Record<string, string> = {
   observation: "this value",
 };
 
-const observationStudyRef = ref<string | null>(null);
+const { studyRef: observationStudyRef } = useKernelStudyRef(
+  () => props.studyCode,
+  {
+    studyRef: () => props.studyRef,
+    embedded: () => props.embedded,
+  }
+);
+
 const cleanObservationRef = computed(() => {
   const raw = observation.value?.ref ?? props.observationRef;
   const at = raw.indexOf("@");
   return at < 0 ? raw : raw.slice(0, at);
 });
 
-const directObservationLocks = computed<DirectScopeLockItem[]>(() => {
-  const current = observation.value;
-  if (!current) return [];
-  return current.locks
-    .filter((held) => String(held.scope) === cleanObservationRef.value)
-    .map((held) => {
-      const idText = String(held.lock_id);
-      return {
-        lockRef: idText.startsWith("assertion:")
-          ? idText
-          : `assertion:${idText}`,
-        kind: held.kind,
-      };
-    });
-});
-
-let studyLookupSeq = 0;
-
-watch(
-  [() => props.studyRef, () => props.studyCode],
-  async ([explicitStudyRef, code]) => {
-    const seq = ++studyLookupSeq;
-    if (explicitStudyRef) {
-      observationStudyRef.value = explicitStudyRef;
-      return;
-    }
-    if (!code) {
-      if (props.embedded) observationStudyRef.value = null;
-      return;
-    }
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq === studyLookupSeq) {
-        observationStudyRef.value = resolved;
-      }
-    } catch {
-      if (seq === studyLookupSeq) {
-        observationStudyRef.value = null;
-      }
-    }
-  },
-  { immediate: true }
+const directObservationLocks = computed<DirectScopeLockItem[]>(() =>
+  toDirectScopeLocks(
+    observation.value?.locks,
+    observation.value ? cleanObservationRef.value : ""
+  )
 );
 
 function lockScopeLabel(scope: unknown): string {
@@ -641,11 +612,5 @@ td {
 .observation-audit th:nth-child(2),
 .observation-audit td:nth-child(2) {
   min-width: 8.5rem;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -332,8 +332,8 @@ public sealed class CommercialAndOnboardingUnitTests
             .Should().BeFalse();
     }
 
-    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimAndSponsorRolesWithoutProfileMutationOrStudyWildcard_AndFailsClosedWhenUnconfigured")]
-    public async Task HttpKeycloakOnboardingClientWritesTenantClaimAndSponsorRolesWithoutProfileMutationOrStudyWildcardAndFailsClosedWhenUnconfigured()
+    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimExplicitSiteAndStudyScopesWithoutProfileMutationOrWildcard_AndFailsClosedWhenUnconfigured")]
+    public async Task HttpKeycloakOnboardingClientWritesTenantClaimExplicitSiteAndStudyScopesWithoutProfileMutationOrWildcardAndFailsClosedWhenUnconfigured()
     {
         var ct = TestContext.Current.CancellationToken;
         string subjectId = "4e999999-1111-4444-8888-999999999999";
@@ -360,11 +360,14 @@ public sealed class CommercialAndOnboardingUnitTests
 
         await using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredService<IKeycloakOnboardingClient>();
+        var scopeSync = provider.GetRequiredService<IKernelIdentityScopeSynchronizer>();
 
         await client.AssignTrialWorkspaceAsync(
             subjectId,
             tenantCode,
-            ["Sponsor Admin", "Sponsor Designer"],
+            ["Sponsor Admin", "Sponsor Designer", "Site Investigator"],
+            ["SITE-MERIDIAN"],
+            [],
             ct);
 
         handler.TokenRequested.Should().BeTrue();
@@ -374,17 +377,30 @@ public sealed class CommercialAndOnboardingUnitTests
         handler.UpdatedUserJson["email"]!.GetValue<string>().Should().Be("founder@meridian.example");
         handler.UpdatedUserJson["firstName"]!.GetValue<string>().Should().Be("Elena");
         handler.UpdatedUserJson["attributes"]!["tenant_id"]![0]!.GetValue<string>().Should().Be(tenantCode);
+        handler.UpdatedUserJson["attributes"]!["site_id"]![0]!.GetValue<string>().Should().Be("SITE-MERIDIAN");
         handler.UpdatedUserJson["attributes"]!["study_ids"].Should().BeNull("onboarding must never stamp wildcard study_ids = ['*'] onto OIDC tokens");
-        handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer");
+        handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer", "Site Investigator");
 
-        // Blank KeycloakAdmin config registers FailClosedKeycloakOnboardingClient instead of a silent no-op.
+        await scopeSync.GrantStudyScopeAsync(Actor.Person(subjectId), TenantId.New(), tenantCode, "MERIDIAN-101", ct);
+        handler.ProfileEndpointCalled.Should().BeFalse("study scope sync must never call /users/profile");
+        handler.UpdatedUserJson["attributes"]!["study_ids"]![0]!.GetValue<string>().Should().Be("MERIDIAN-101");
+        handler.UpdatedUserJson["attributes"]!["study_ids"]!.AsArray().Select(n => n!.GetValue<string>())
+            .Should().NotContain("*");
+
+        // Blank KeycloakAdmin config fails closed instead of silently succeeding.
         var emptyConfig = new ConfigurationBuilder().Build();
         var unconfiguredServices = new ServiceCollection();
         unconfiguredServices.AddLogging();
         unconfiguredServices.AddKeycloakOnboarding(emptyConfig);
         await using var unconfiguredProvider = unconfiguredServices.BuildServiceProvider();
         var failClosedClient = unconfiguredProvider.GetRequiredService<IKeycloakOnboardingClient>();
-        Func<Task> act = () => failClosedClient.AssignTrialWorkspaceAsync(subjectId, tenantCode, ["Sponsor Admin"], ct);
+        Func<Task> act = () => failClosedClient.AssignTrialWorkspaceAsync(
+            subjectId,
+            tenantCode,
+            ["Sponsor Admin"],
+            ["SITE-MERIDIAN"],
+            [],
+            ct);
         await act.Should().ThrowAsync<KeycloakOnboardingException>();
     }
 
