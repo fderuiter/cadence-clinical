@@ -69,30 +69,30 @@ public sealed record ActivateSubscription(
 /// Grants a commercial <c>ProductEntitlement</c> for one product family under a tenant's <c>Subscription</c>.
 /// Never confers clinical study grants or unmasks clinical records.
 /// </summary>
-[KernelCapability("entitlement.grant", VerbClass.Execute)]
+[KernelCapability("entitlement.grant", VerbClass.Execute, Resource = nameof(SubscriptionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
-[BaselineKernelCommand]
 public sealed record GrantProductEntitlement(
     TenantId TenantId,
     ProductEntitlementId ProductEntitlementId,
     SubscriptionId SubscriptionId,
     ProductFamily Family,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<ProductEntitlementId>;
+    string ReasonForChange,
+    string? QuoteToken = null) : ICommand<ProductEntitlementId>;
 
 /// <summary>
 /// Disables a commercial <c>ProductEntitlement</c> for one product family under a tenant's <c>Subscription</c>
 /// when switching to a narrower commercial tier. Never alters clinical study grants or existing clinical records.
 /// </summary>
-[KernelCapability("entitlement.revoke", VerbClass.Execute)]
+[KernelCapability("entitlement.revoke", VerbClass.Execute, Resource = nameof(SubscriptionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
-[BaselineKernelCommand]
 public sealed record RevokeProductEntitlement(
     TenantId TenantId,
     SubscriptionId SubscriptionId,
     ProductFamily Family,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<SubscriptionId>;
+    string ReasonForChange,
+    string? QuoteToken = null) : ICommand<SubscriptionId>;
 
 /// <summary>Validation and domain errors raised by commercial subscription and entitlement commands.</summary>
 public static class CommercialErrors
@@ -113,13 +113,22 @@ public static class CommercialErrors
         new("K.Commercial.SubscriptionAlreadyProvisioned", 409, "A subscription is already provisioned for this tenant.");
 
     public static readonly KernelError OnboardingCallerInvalid =
-        new("K.Commercial.OnboardingCallerInvalid", 403, "Self-service trial onboarding requires an accountable signed-in person.");
+        new("K.Commercial.OnboardingCallerInvalid", 403, "Self-service trial onboarding requires an unbound signed-in person without existing tenant claims, foreign memberships, or clinical roles.");
 
     public static readonly KernelError TierInvalid =
         new("K.Commercial.TierInvalid", 422, "The requested commercial tier must be Individual, Select, or Complete.");
 
     public static readonly KernelError ScopingInvalid =
         new("K.Commercial.ScopingInvalid", 422, "Study scoping parameters and a purchase order or quote reference are required to activate a subscription.");
+
+    public static readonly KernelError QuoteInvalid =
+        new("K.Commercial.QuoteInvalid", 403, "Subscription activation requires a verified cryptographic commercial quote token bound to this workspace, tier, and study scoping, or a CommercialBillingOperator service account.");
+
+    public static readonly KernelError ProductFamilyNotEntitled =
+        new("K.Commercial.ProductFamilyNotEntitled", 403, "This workspace subscription does not include the required commercial product family.");
+
+    public static readonly KernelError ScopingCapExceeded =
+        new("K.Commercial.ScopingCapExceeded", 403, "The requested clinical operation exceeds the workspace subscription's contracted study scoping limits.");
 
     public static readonly KernelError IdentityProviderSyncFailed =
         new("K.Commercial.IdentityProviderSyncFailed", 502, "The trial workspace was provisioned, but updating identity provider claims failed; retry to complete synchronization.");
