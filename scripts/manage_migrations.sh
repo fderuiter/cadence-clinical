@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - EF Core PostgreSQL Migration Manager (POSIX)
-# Requirements: PRD-SYS-053, ADR-2233
+# Requirements: PRD-SYS-053, ADR-2233, ADR-2447, ADR-2536
 # ==============================================================================
 
 set -euo pipefail
@@ -54,12 +54,21 @@ if [ -z "$SERVICE" ]; then
 fi
 
 KNOWN_SERVICES=(
-    "ctms" "econsent" "eisf" "etmf" "execution" "executionmodule" "fileshare" "imaging"
-    "intelligence" "interop" "kernel" "knowledge" "notifications" "org" "payments"
-    "quality" "safety" "tickets"
+    "kernel" "executionmodule" "intelligence"
+    "ctms" "econsent" "eisf" "etmf" "execution" "fileshare" "imaging"
+    "interop" "knowledge" "notifications" "org" "payments" "quality" "safety" "tickets"
 )
 
 SERVICE_LOWER="$(echo "$SERVICE" | tr '[:upper:]' '[:lower:]')"
+
+if [ "$SERVICE_LOWER" = "all" ] && [ "$ACTION" = "apply" ]; then
+    echo -e "\n=== Cadence EF Core Migration Manager ==="
+    echo "Target: All 18 DbContext assemblies (19 PostgreSQL schemas)"
+    echo -e "Action: apply\n"
+    dotnet run --project "$REPO_ROOT/packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj"
+    echo "[SUCCESS] Database update complete."
+    exit 0
+fi
 
 if [ "$SERVICE_LOWER" = "all" ]; then
     SERVICES=("${KNOWN_SERVICES[@]}")
@@ -71,26 +80,32 @@ run_action_for_service() {
     cd "$REPO_ROOT"
     local service="$1"
     local cap_name
-    cap_name="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}"
-    local project_dir="$REPO_ROOT/apps/$service/src"
-    local project_path="$project_dir/Cadence.Apps.$cap_name.csproj"
-    local compiled_ns="Cadence.Apps.$cap_name.CompiledModels"
+    local project_dir
+    local project_path
+    local compiled_ns
 
     case "$service" in
         kernel)
+            # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
             project_dir="$REPO_ROOT/packages/kernel/src/Cadence.Kernel.Persistence"
             project_path="$project_dir/Cadence.Kernel.Persistence.csproj"
             compiled_ns="Cadence.Kernel.Persistence.CompiledModels"
             ;;
-        intelligence)
+        executionmodule|execution-module|execution_module|modules/execution)
+            project_dir="$REPO_ROOT/apps/execution/module"
+            project_path="$project_dir/Cadence.Modules.Execution.csproj"
+            compiled_ns="Cadence.Modules.Execution.CompiledModels"
+            ;;
+        intelligence|intelligence-module|intelligence_module|modules/intelligence)
             project_dir="$REPO_ROOT/apps/intelligence/src"
             project_path="$project_dir/Cadence.Modules.Intelligence.csproj"
             compiled_ns="Cadence.Modules.Intelligence.CompiledModels"
             ;;
-        executionmodule|execution-module|execution_module)
-            project_dir="$REPO_ROOT/apps/execution/module"
-            project_path="$project_dir/Cadence.Modules.Execution.csproj"
-            compiled_ns="Cadence.Modules.Execution.CompiledModels"
+        *)
+            cap_name="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}"
+            project_dir="$REPO_ROOT/apps/$service/src"
+            project_path="$project_dir/Cadence.Apps.$cap_name.csproj"
+            compiled_ns="Cadence.Apps.$cap_name.CompiledModels"
             ;;
     esac
 
@@ -113,7 +128,12 @@ run_action_for_service() {
             ;;
         apply)
             echo "Applying pending migrations to target database..."
-            dotnet ef database update --project "$project_path" --no-build || dotnet ef database update --project "$project_path"
+            local conn_str="${ConnectionStrings__cadence:-${POSTGRES_CONNECTION_STRING:-}}"
+            if [ -n "$conn_str" ]; then
+                dotnet ef database update --project "$project_path" --connection "$conn_str" --no-build || dotnet ef database update --project "$project_path" --connection "$conn_str"
+            else
+                dotnet ef database update --project "$project_path" --no-build || dotnet ef database update --project "$project_path"
+            fi
             echo "[SUCCESS] Database update complete."
             ;;
         seed)

@@ -1,4 +1,4 @@
-# ADR-2651: Add ClinicalFormActionBar and CSS Variable Form Reflow
+# ADR-2653: Add ClinicalFormActionBar and CSS Variable Form Reflow
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

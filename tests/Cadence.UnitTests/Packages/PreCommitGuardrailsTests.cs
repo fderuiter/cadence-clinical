@@ -288,7 +288,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             ProbePostgres = () => new CiPostgresStatus(true, "ok"),
             FindFiles = (_, _) => [],
             DeleteDirectory = _ => { },
-            FindSkippedDatabaseTests = _ => [],
+            FindSkippedDatabaseTests = (_, _) => [],
         };
 
         var passResult = LocalCiRunner.Run([onlyStepJob], options, env).Single();
@@ -358,19 +358,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
-    }
-
-    [Fact]
-    public void VulnerabilityAuditor_BuildPipAuditCandidates_ChecksCadenceVenvBeforeLegacyVenv()
-    {
-        string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        string exeName = OperatingSystem.IsWindows() ? "pip-audit.exe" : "pip-audit";
-        string cadenceVenvExe = Write(Path.Combine(".cadence", "venv", binSubdir, exeName), "");
-        string legacyVenvExe = Write(Path.Combine(".venv", binSubdir, exeName), "");
-
-        var candidates = VulnerabilityAuditorService.BuildPipAuditCandidates(_tempDir);
-
-        candidates.Select(c => c.FileName).Take(2).Should().Equal(cadenceVenvExe, legacyVenvExe);
     }
 
     [Fact]
@@ -1150,7 +1137,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string venvBin = Path.Combine(wizardRepo, ".cadence", "venv", "bin");
         Directory.CreateDirectory(venvBin);
         WriteExecutable(Path.Combine(venvBin, "detect-secrets-hook"), "#!/bin/sh\necho '1.5.0'\n");
-        WriteExecutable(Path.Combine(venvBin, "pip-audit"), "#!/bin/sh\necho 'pip-audit 2.10.1'\n");
 
         string wizardHome = Path.Combine(_tempDir, "wizard-home");
         Directory.CreateDirectory(wizardHome);

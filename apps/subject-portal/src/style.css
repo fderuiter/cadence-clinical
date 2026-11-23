@@ -14,8 +14,20 @@
 
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+    "Inter",
+    var(
+      --font-sans,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      Helvetica,
+      Arial,
+      sans-serif
+    );
+  font-feature-settings:
+    "cv05" 1,
+    "cv08" 1;
   color: var(--text-main);
   background-color: var(--bg-main);
   line-height: 1.5;
@@ -67,7 +79,7 @@ body {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -103,12 +115,6 @@ body {
   gap: 24px;
 }
 
-@media (max-width: 768px) {
-  .portal-container {
-    flex-direction: column;
-  }
-}
-
 /* Sidebar Navigation */
 .portal-navigation {
   width: 260px;
@@ -116,154 +122,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-@media (max-width: 768px) {
-  .portal-navigation {
-    width: 100%;
-  }
-}
-
-.mobile-session-toggle {
-  display: none;
-}
-
-@media (max-width: 767px) {
-  :root {
-    --form-action-bar-bottom: var(
-      --portal-mobile-nav-offset,
-      calc(
-        var(--portal-mobile-nav-height, 56px) + env(safe-area-inset-bottom, 0px)
-      )
-    );
-  }
-
-  #app {
-    padding-bottom: calc(
-      var(
-          --portal-mobile-nav-offset,
-          calc(var(--touch-target-min, 48px) + env(safe-area-inset-bottom, 0px))
-        ) +
-        var(--spacing-2xl, 32px)
-    );
-  }
-
-  .portal-header {
-    padding: 12px 16px;
-    gap: 10px;
-  }
-
-  .header-branding h1 {
-    font-size: 20px;
-  }
-
-  .portal-container {
-    padding: 12px 16px;
-    gap: 12px;
-  }
-
-  .portal-navigation {
-    gap: 8px;
-  }
-
-  .nav-tabs {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 900;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    justify-content: space-around;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    border-top: 1px solid var(--border);
-    box-shadow: var(--semantic-shadow-sm);
-    overflow-x: auto;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .nav-item {
-    flex: 1 0 auto;
-    min-width: var(--touch-target-min, 48px);
-  }
-
-  .nav-item button {
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 6px 4px;
-    gap: 2px;
-    font-size: 11px;
-    line-height: 1.15;
-    min-height: var(--touch-target-min, 48px);
-    min-width: var(--touch-target-min, 48px);
-    position: relative;
-  }
-
-  .nav-item.active button {
-    border-left: none;
-    border-top: 3px solid var(--primary);
-    padding-left: 4px;
-    padding-top: 3px;
-  }
-
-  .nav-item .badge-unread {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    margin-left: 0;
-  }
-
-  .mobile-session-toggle {
-    display: inline-flex;
-    width: 100%;
-    justify-content: space-between;
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  .participant-info-card {
-    padding: 10px 12px;
-  }
-
-  .participant-info-card .info-title {
-    display: none;
-  }
-
-  .participant-info-card .info-row {
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-bottom: 4px;
-  }
-
-  .participant-secondary-details:not(.is-mobile-expanded) {
-    display: none;
-  }
-
-  .participant-secondary-details.is-mobile-expanded {
-    display: block;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border);
-  }
-
-  .view-header {
-    margin-bottom: 16px;
-  }
-
-  .toast-notification {
-    bottom: calc(
-      var(--touch-target-min, 48px) + var(--spacing-xl, 24px) +
-        env(safe-area-inset-bottom, 0px)
-    );
-    left: 16px;
-    right: 16px;
-  }
 }
 
 .nav-tabs {
@@ -291,6 +149,12 @@ body {
   transition: all 0.2s ease;
 }
 
+.nav-item .icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .can-hover .nav-item button:hover {
   background-color: var(--bg-main);
   color: var(--text-main);
@@ -306,7 +170,8 @@ body {
 .badge-unread {
   background-color: var(--danger);
   color: white;
-  font-size: 10px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 10px;
@@ -344,6 +209,7 @@ body {
 
 .participant-info-card .info-val {
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .text-muted {
@@ -366,6 +232,7 @@ body {
 .portal-main {
   flex: 1;
   min-width: 0;
+  max-width: 800px;
   overflow: visible;
 }
 
@@ -464,13 +331,14 @@ body {
 .inbox-due {
   font-size: 13px;
   color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .status-pill {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -528,6 +396,147 @@ body {
   text-decoration: underline;
 }
 
+.mobile-session-toggle,
+.btn.mobile-session-toggle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --form-action-bar-bottom: var(
+      --portal-mobile-nav-offset,
+      calc(
+        var(--portal-mobile-nav-height, 56px) + env(safe-area-inset-bottom, 0px)
+      )
+    );
+  }
+
+  #app {
+    padding-bottom: calc(
+      var(
+          --portal-mobile-nav-offset,
+          calc(var(--touch-target-min, 48px) + env(safe-area-inset-bottom, 0px))
+        ) +
+        var(--spacing-2xl, 32px)
+    );
+  }
+
+  .portal-header {
+    padding: 8px 16px;
+    gap: 8px;
+  }
+
+  .header-branding h1 {
+    font-size: 20px;
+  }
+
+  .portal-container {
+    flex-direction: column;
+    padding: 8px 16px;
+    gap: 8px;
+  }
+
+  .portal-navigation {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .nav-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-width: var(--touch-target-min, 48px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    box-shadow: var(--semantic-shadow-sm);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .nav-item {
+    flex: 1 0 auto;
+    min-width: var(--touch-target-min, 48px);
+  }
+
+  .nav-item button {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 6px 8px;
+    gap: 2px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    min-height: var(--touch-target-min, 48px);
+    min-width: var(--touch-target-min, 48px);
+    position: relative;
+  }
+
+  .nav-item.active button {
+    border-left: none;
+    border-top: 3px solid var(--primary);
+    padding-left: 8px;
+    padding-top: 3px;
+  }
+
+  .nav-item .badge-unread {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    margin-left: 0;
+  }
+
+  .mobile-session-toggle,
+  .btn.mobile-session-toggle {
+    display: inline-flex;
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .participant-info-card {
+    padding: 10px 12px;
+  }
+
+  .participant-info-card .info-title {
+    display: none;
+  }
+
+  .participant-info-card .info-row {
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .participant-secondary-details:not(.is-mobile-expanded) {
+    display: none;
+  }
+
+  .participant-secondary-details.is-mobile-expanded {
+    display: block;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .view-header {
+    margin-bottom: 16px;
+  }
+}
+
 /* Questionnaire views & clinical form modifications */
 
 .form-title {
@@ -543,14 +552,18 @@ body {
 /* Compliance Overview styling */
 .grid-layout {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 1024px) {
   .grid-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   }
+}
+
+.history-card {
+  min-width: 0;
 }
 
 .compliance-score-card {
@@ -577,11 +590,12 @@ body {
 .score-value {
   font-size: 28px;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: var(--primary-dark);
 }
 
 .score-lbl {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -608,6 +622,7 @@ body {
 
 .breakdown-item .val {
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Table styling */
@@ -899,7 +914,7 @@ body {
 
 .ledger-verification-details {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -911,7 +926,7 @@ body {
 
 .ledger-hash {
   color: var(--semantic-color-accent-inverse);
-  font-size: 11px;
+  font-size: 0.75rem;
   margin-top: 4px;
   word-break: break-all;
 }
@@ -1039,7 +1054,8 @@ body {
 .sync-badge {
   background-color: var(--semantic-color-warning-action);
   color: var(--semantic-color-text-on-solid);
-  font-size: 11px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 9999px;
@@ -1224,7 +1240,8 @@ body {
 }
 
 .item-time {
-  font-size: 11px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
@@ -1270,19 +1287,9 @@ body {
   padding: 4px 8px;
   border-radius: 4px;
   font-family: monospace;
-  font-size: 11px;
+  font-size: 0.75rem;
   margin-top: 4px;
   overflow-x: auto;
-}
-
-/* Large viewports: prevent overlaps/obstructions by shifting content when drawer is open */
-@media (min-width: 992px) {
-  #app {
-    transition: padding-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  #app.drawer-open {
-    padding-right: 400px;
-  }
 }
 
 /* Toast Notification Styles */
@@ -1299,6 +1306,7 @@ body {
   font-weight: 600;
   font-size: 14px;
   opacity: 0;
+  pointer-events: none;
   transform: translateY(20px);
   transition:
     opacity 0.3s ease,
@@ -1318,6 +1326,17 @@ body {
 .toast-notification.toast-show {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (max-width: 767px) {
+  .toast-notification {
+    bottom: calc(
+      var(--touch-target-min, 48px) + var(--spacing-xl, 24px) +
+        env(safe-area-inset-bottom, 0px)
+    );
+    left: 16px;
+    right: 16px;
+  }
 }
 
 /* Recovery UX: Suspended Banner, Quarantine Cards, Retry Countdown, Drafts, PIN Lockout, & Site Contacts */
@@ -1368,6 +1387,7 @@ body {
   border: 1px solid var(--semantic-color-warning-border-strong);
   color: var(--semantic-color-warning-dark);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .drawer-submission-item.submission-quarantined {

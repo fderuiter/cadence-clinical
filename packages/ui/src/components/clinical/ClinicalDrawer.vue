@@ -125,7 +125,17 @@ useFocusTrap(drawerRef, {
   isOpen: drawerOpen,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
-  restoreFocus: props.restoreFocus,
+  restoreFocus:
+    typeof props.restoreFocus === "boolean"
+      ? props.restoreFocus
+      : () =>
+          typeof props.restoreFocus === "function"
+            ? props.restoreFocus()
+            : props.restoreFocus,
+  fallbackFocus: () =>
+    typeof props.fallbackFocus === "function"
+      ? props.fallbackFocus()
+      : props.fallbackFocus,
   onEscape: closeDrawer,
 });
 </script>
@@ -227,8 +237,11 @@ useFocusTrap(drawerRef, {
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  outline: none;
   animation: clinical-drawer-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clinical-drawer-panel:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .clinical-drawer-panel.position-left {

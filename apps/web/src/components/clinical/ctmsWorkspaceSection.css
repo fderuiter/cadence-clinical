@@ -120,8 +120,14 @@
 }
 
 .ctms-section .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 8px;
   font-size: 0.8rem;
+  box-sizing: border-box;
 }
 
 @media (max-width: 640px) {

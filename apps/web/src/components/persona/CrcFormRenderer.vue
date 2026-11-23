@@ -412,7 +412,6 @@
         @submit.prevent
       >
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <fieldset
           :disabled="isReconsentGated"
           style="border: none; padding: 0; margin: 0; display: contents"
@@ -559,7 +558,6 @@
                   border: 1px dashed var(--semantic-color-success-border-soft);
                   padding: 8px;
                   border-radius: 4px;
-                  margin-top: -6px;
                 "
                 class="sdv-box"
               >
@@ -1172,6 +1170,10 @@ function updateFieldValue(fieldId, val) {
 .crc-submit-gated {
   background-color: var(--semantic-color-error);
   opacity: 0.92;
+}
+
+#form-VS_DEMO :deep(.clinical-form-field-wrapper) {
+  content-visibility: visible !important;
 }
 
 @media (max-width: 640px) {

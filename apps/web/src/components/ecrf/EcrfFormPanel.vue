@@ -840,11 +840,53 @@ onUnmounted(() => {
 .ecrf-panel-header .card-title {
   margin-bottom: 0;
 }
+.ecrf-form-panel
+  :deep(
+    :where(
+      input:not([type="checkbox"]):not([type="radio"]):not(.clinical-input):not(
+          .sr-only
+        ):not(.visually-hidden),
+      select:not(.clinical-input):not(.sr-only):not(.visually-hidden)
+    )
+  ) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 4px 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
+}
+.ecrf-form-panel
+  :deep(
+    :where(
+      input[type="checkbox"]:not(.sr-only):not(.visually-hidden),
+      input[type="radio"]:not(.sr-only):not(.visually-hidden)
+    )
+  ) {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
+}
+.ecrf-form-panel :deep(:where(button:not(.sr-only):not(.visually-hidden))) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+}
+.ecrf-form-panel .ecrf-close-btn,
+.ecrf-form-panel .ecrf-action-tray-row button,
+.ecrf-form-panel :deep(.clinical-form-action-bar__secondary button),
+.ecrf-form-panel :deep(.clinical-form-action-bar__actions button) {
+  min-height: var(--form-action-bar-target-min, 44px);
+  min-width: var(--form-action-bar-target-min, 44px);
+}
 .ecrf-close-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
 }
 .ecrf-action-tray-row {
   display: flex;
@@ -856,9 +898,6 @@ onUnmounted(() => {
 .ecrf-action-tray-row textarea {
   flex: 1 1 12rem;
   min-width: 0;
-}
-.ecrf-action-tray-row button {
-  min-height: 44px;
 }
 .ecrf-bulk-sdv-tray {
   display: flex;

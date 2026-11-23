@@ -43,7 +43,11 @@
                 >
               </label>
               <div v-if="item.concept" class="ecrf-item-concept">
-                {{ item.concept }}
+                <NodeRefChip
+                  v-if="normalizeLookupNodeRef(item.concept)"
+                  :node-ref="normalizeLookupNodeRef(item.concept)!"
+                />
+                <template v-else>{{ item.concept }}</template>
               </div>
             </th>
             <td data-cell-label="Value">
@@ -343,6 +347,8 @@ import {
   isLiveQuery,
   type useFormQueries,
 } from "../../composables/useFormQueries";
+import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
+import NodeRefChip from "../canvas/NodeRefChip.vue";
 
 export interface RaisingQueryTarget {
   item_id: string;
@@ -406,12 +412,13 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   position: relative;
   overflow-x: auto;
   max-width: 100%;
-  padding-block: 2px;
+  padding-block: 4px;
   padding-inline: 0;
 }
 .ecrf-table-scroll:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
+  outline: 3px solid var(--semantic-color-accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
   border-radius: 4px;
 }
 .ecrf-form-items {
@@ -653,6 +660,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
     border-radius: 8px;
     background-color: var(--semantic-color-surface);
     box-sizing: border-box;
+    scroll-margin-bottom: 164px;
   }
   .ecrf-form-items > tbody > tr.ecrf-item-edited {
     background-color: var(--semantic-color-warning-bg-soft);

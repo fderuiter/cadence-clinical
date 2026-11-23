@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 using Cadence.Cli.Commands;
@@ -26,9 +28,13 @@ public class LocalCiRunnerTests
 
     private LocalCiEnvironment Environment(
         bool postgres = true,
+        bool docker = true,
+        bool hasRecordedDatabaseEnvironment = true,
+        CiContainerScanScope? containerSecurityScope = null,
         Func<string, bool>? tools = null,
         IReadOnlyList<string>? files = null,
-        IReadOnlyList<SkippedDatabaseTest>? skippedDatabaseTests = null) => new()
+        IReadOnlyList<SkippedDatabaseTest>? skippedDatabaseTests = null,
+        Action<string, string?>? onFindSkippedDatabaseTests = null) => new()
         {
             RepoRoot = "/repo",
             Run = (command, extra, variables) =>
@@ -47,9 +53,16 @@ public class LocalCiRunnerTests
             RestoreFile = (path, content) => _files[path] = content,
             IsToolOnPath = tools ?? (_ => true),
             ProbePostgres = () => new CiPostgresStatus(postgres, postgres ? "reachable." : "Neither CADENCE_TEST_POSTGRES nor CADENCE_TEST_DOCKER=1 is set."),
+            ProbeDocker = () => new CiDockerStatus(docker, docker ? "Docker daemon is reachable." : "Docker daemon is not reachable (Cannot connect to the Docker daemon)."),
+            ShouldRunContainerSecurity = _ => containerSecurityScope ?? new CiContainerScanScope(true, ""),
             FindFiles = (_, _) => files ?? [],
             DeleteDirectory = _ => { },
-            FindSkippedDatabaseTests = _ => skippedDatabaseTests ?? [],
+            FindSkippedDatabaseTests = (resultsPath, repoRoot) =>
+            {
+                onFindSkippedDatabaseTests?.Invoke(resultsPath, repoRoot);
+                return skippedDatabaseTests ?? [];
+            },
+            HasRecordedDatabaseEnvironment = _ => hasRecordedDatabaseEnvironment,
         };
 
     private static CiJob Job(string key, params CiStep[] steps) => new(key, key, steps);
@@ -148,6 +161,8 @@ public class LocalCiRunnerTests
     [InlineData("hadolint", "lint-and-static")]
     [InlineData("shellcheck", "lint-and-static")]
     [InlineData("detect-secrets-hook", "security")]
+    [InlineData("docker", "container-security")]
+    [InlineData("trivy", "container-security")]
     public void LocalCiCommand_ExitsOneWhenARequiredToolIsMissing_UnlessAllowMissingToolsOrAllowSkipIsPassed(string missingTool, string jobKey)
     {
         var env = Environment(tools: tool => tool != missingTool, files: ["Dockerfile"]);
@@ -164,7 +179,7 @@ public class LocalCiRunnerTests
         int shorthandExit = LocalCiCommand.Execute([jobKey], allowSkip: true, baseRef: "origin/main", list: false, environment: env);
         shorthandExit.Should().Be(0);
 
-        var skipResults = LocalCiRunner.Run(CiPlan.Select([jobKey]), Defaults with { AllowMissingTools = true }, env);
+        var skipResults = LocalCiRunner.Run(CiPlan.Select([jobKey]), Defaults with { AllowMissingTools = true, RequestedJobs = [jobKey] }, env);
         skipResults.Should().ContainSingle(r => r.Step.RequiredTool == missingTool)
             .Which.Should().Match<CiStepResult>(r =>
                 r.Outcome == CiOutcome.Skipped &&
@@ -341,5 +356,315 @@ public class LocalCiRunnerTests
         var results = LocalCiRunner.Run([Job("a", step)], Defaults, Environment());
         results.Single().Outcome.Should().Be(CiOutcome.Failed);
         _files["/repo/report.md"].Should().Be("committed");
+    }
+
+    [Fact]
+    public void ContainerSecurity_FailsWhenDockerDaemonIsUnreachable_AndSkipsWithAllowMissingToolsOrAllowSkip()
+    {
+        var jobs = CiPlan.Select(["container-security"]);
+        var env = Environment(docker: false);
+
+        var strictResults = LocalCiRunner.Run(jobs, Defaults with { RequestedJobs = ["container-security"] }, env);
+        strictResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.Skipped);
+        strictResults[0].Note.Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
+        _ran.Should().BeEmpty();
+
+        var dbSkipOnlyResults = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true, RequestedJobs = ["container-security"] }, env);
+        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.Skipped);
+
+        var skipResults = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true, RequestedJobs = ["container-security"] }, env);
+        skipResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        skipResults[0].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults[1].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        _ran.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ContainerSecurity_BuildsAndScansAllFourImages_AndRespectsDiffScopeUnlessExplicitlyRequested()
+    {
+        var jobs = CiPlan.Select(["container-security"]);
+        var skippedScope = new CiContainerScanScope(false, "no container or dependency changes against origin/main (pass --job container-security to force)");
+        var envWhenNoDiffAndMissingTools = Environment(
+            docker: false,
+            tools: _ => false,
+            containerSecurityScope: skippedScope);
+
+        var defaultRunResults = LocalCiRunner.Run(jobs, Defaults, envWhenNoDiffAndMissingTools);
+        defaultRunResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        defaultRunResults[0].Note.Should().Contain("no container or dependency changes");
+
+        var capturedCommands = new List<string>();
+        var readyEnv = new LocalCiEnvironment
+        {
+            RepoRoot = "/repo",
+            Run = (command, extra, _) =>
+            {
+                capturedCommands.Add(extra.Count == 0 ? command.Display : $"{command.Display} {string.Join(' ', extra)}");
+                return 0;
+            },
+            IsToolOnPath = _ => true,
+            ProbePostgres = () => new CiPostgresStatus(true, "ok"),
+            ProbeDocker = () => new CiDockerStatus(true, "ok"),
+            ShouldRunContainerSecurity = _ => skippedScope,
+            FindFiles = (_, _) => [],
+            DeleteDirectory = _ => { },
+        };
+
+        var forcedResults = LocalCiRunner.Run(
+            jobs,
+            Defaults with { RequestedJobs = ["container-security"] },
+            readyEnv);
+        forcedResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
+        capturedCommands.Should().HaveCount(8);
+        capturedCommands.Take(4).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
+        capturedCommands.Skip(4).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ResolveContainerSecurityScope_SkipsNonContainerBranchDiffs_AndRunsOnTriggerEditsOrTrackedFallback()
+    {
+        string tempRepo = Path.Combine(Path.GetTempPath(), $"cadence-ci-scope-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRepo);
+        try
+        {
+            RunGit(tempRepo, "init", "-q", "-b", "main");
+            RunGit(tempRepo, "config", "user.email", "ci-test@cadence.example");
+            RunGit(tempRepo, "config", "user.name", "CI Test");
+            File.WriteAllText(Path.Combine(tempRepo, "README.md"), "# baseline\n");
+            File.WriteAllText(Path.Combine(tempRepo, "Dockerfile"), "FROM scratch\n");
+            RunGit(tempRepo, "add", ".");
+            RunGit(tempRepo, "commit", "-q", "-m", "initial");
+            RunGit(tempRepo, "update-ref", "refs/remotes/origin/main", "HEAD");
+
+            // HEAD == origin/main triggers tracked-files fallback -> runs unconditionally.
+            LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
+
+            // Docs-only branch commit -> skipped on default run.
+            RunGit(tempRepo, "checkout", "-q", "-b", "feature/docs-only");
+            File.WriteAllText(Path.Combine(tempRepo, "README.md"), "# updated docs\n");
+            RunGit(tempRepo, "add", "README.md");
+            RunGit(tempRepo, "commit", "-q", "-m", "docs update");
+            var docsOnlyScope = LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main");
+            docsOnlyScope.ShouldRun.Should().BeFalse();
+            docsOnlyScope.Note.Should().Contain("no container or dependency changes");
+
+            // Touching a csproj or Dockerfile on the branch -> runs container-security.
+            Directory.CreateDirectory(Path.Combine(tempRepo, "packages", "sample"));
+            File.WriteAllText(Path.Combine(tempRepo, "packages", "sample", "Sample.csproj"), "<Project />\n");
+            RunGit(tempRepo, "add", "packages/sample/Sample.csproj");
+            RunGit(tempRepo, "commit", "-q", "-m", "touch csproj");
+            LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(tempRepo))
+            {
+                Directory.Delete(tempRepo, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void DotnetTestsAndCompliance_FailOnUnitOnlyTrxOrMissingDatabaseMetadata_UnlessAllowDbSkipIsSet()
+    {
+        string tempRepo = Path.Combine(Path.GetTempPath(), $"cadence-ci-db-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRepo);
+        try
+        {
+            WriteMinimalDatabaseRepoFixture(tempRepo, includeIntegrationTrx: false, includeDatabaseMetadata: true);
+            var envUnitOnly = CreateInProcessTestEnvironment(tempRepo);
+
+            var dotnetJobs = CiPlan.Select(["dotnet-tests"]);
+            var strictUnitOnlyResults = LocalCiRunner.Run(dotnetJobs, Defaults with { AllowMissingTools = true }, envUnitOnly);
+            strictUnitOnlyResults.Single(r => r.Step.Name == "Execute .NET 10 xUnit Test Suites").Outcome.Should().Be(CiOutcome.Failed);
+            strictUnitOnlyResults.Single(r => r.Step.Name == "Execute .NET 10 xUnit Test Suites").Note
+                .Should().Contain("1 database test(s) did not execute").And.Contain("RlsTests.Isolates");
+            strictUnitOnlyResults.Single(r => r.Step.Name == "Fail the run when a PostgreSQL test did not execute").Outcome.Should().Be(CiOutcome.NotRun);
+
+            var gateStepOnly = new CiJob("dotnet-tests", ".NET", [dotnetJobs.Single().Steps.Single(s => s.Name == "Fail the run when a PostgreSQL test did not execute")]);
+            LocalCiRunner.Run([gateStepOnly], Defaults with { AllowMissingTools = true }, envUnitOnly).Single().Outcome.Should().Be(CiOutcome.Failed);
+            LocalCiRunner.Run([gateStepOnly], Defaults with { AllowDbSkip = true }, envUnitOnly).Single().Outcome.Should().Be(CiOutcome.Passed);
+
+            var complianceOnly = new CiJob("compliance", "Compliance", [CiPlan.Jobs.Single(j => j.Key == "compliance").Steps.Single(s => s.Name == "Generate Compliance Reports")]);
+            LocalCiRunner.Run([complianceOnly], Defaults with { AllowMissingTools = true }, envUnitOnly).Single().Outcome.Should().Be(CiOutcome.Failed);
+            LocalCiRunner.Run([complianceOnly], Defaults with { AllowDbSkip = true }, envUnitOnly).Single().Outcome.Should().Be(CiOutcome.Passed);
+
+            // Now write passing TRX for the database test, but omit *.database.txt fixture metadata.
+            WriteMinimalDatabaseRepoFixture(tempRepo, includeIntegrationTrx: true, includeDatabaseMetadata: false);
+            var envMissingMetadata = CreateInProcessTestEnvironment(tempRepo);
+
+            var strictMissingMetadataResults = LocalCiRunner.Run(dotnetJobs, Defaults with { AllowMissingTools = true }, envMissingMetadata);
+            strictMissingMetadataResults.Single(r => r.Step.Name == "Execute .NET 10 xUnit Test Suites").Outcome.Should().Be(CiOutcome.Failed);
+            strictMissingMetadataResults.Single(r => r.Step.Name == "Execute .NET 10 xUnit Test Suites").Note
+                .Should().Contain("*.database.txt").And.Contain("--allow-db-skip");
+            LocalCiRunner.Run([gateStepOnly], Defaults with { AllowMissingTools = true }, envMissingMetadata).Single().Outcome.Should().Be(CiOutcome.Failed);
+            LocalCiRunner.Run([complianceOnly], Defaults with { AllowMissingTools = true }, envMissingMetadata).Single().Outcome.Should().Be(CiOutcome.Failed);
+
+            LocalCiRunner.Run(dotnetJobs, Defaults with { AllowDbSkip = true }, envMissingMetadata)
+                .Should().OnlyContain(r => r.Outcome == CiOutcome.Passed);
+            LocalCiRunner.Run([complianceOnly], Defaults with { AllowDbSkip = true }, envMissingMetadata).Single().Outcome.Should().Be(CiOutcome.Passed);
+
+            // With both full TRX and *.database.txt for every database assembly, strict mode passes both dotnet-tests and compliance.
+            WriteMinimalDatabaseRepoFixture(tempRepo, includeIntegrationTrx: true, includeDatabaseMetadata: true);
+            var envComplete = CreateInProcessTestEnvironment(tempRepo);
+            LocalCiRunner.Run(dotnetJobs, Defaults, envComplete).Should().OnlyContain(r => r.Outcome == CiOutcome.Passed);
+            LocalCiRunner.Run([complianceOnly], Defaults, envComplete).Single().Outcome.Should().Be(CiOutcome.Passed);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRepo))
+            {
+                Directory.Delete(tempRepo, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void AccessibilityE2E_StandaloneRun_DoesNotRequireFullRepositoryDatabaseEvidence()
+    {
+        string? observedDiscoveryRoot = "not-called";
+        var env = Environment(
+            hasRecordedDatabaseEnvironment: false,
+            onFindSkippedDatabaseTests: (_, repoRoot) => observedDiscoveryRoot = repoRoot);
+
+        var e2eJobs = CiPlan.Select(["accessibility-e2e"]);
+        var results = LocalCiRunner.Run(
+            e2eJobs,
+            Defaults with { RequestedJobs = ["accessibility-e2e"] },
+            env);
+
+        results.Where(r => r.Step.NotRunLocally is null).Should().OnlyContain(r => r.Outcome == CiOutcome.Passed);
+        observedDiscoveryRoot.Should().BeNull("standalone accessibility-e2e runs one filtered integration test rather than the full solution TRX suite");
+    }
+
+    private static LocalCiEnvironment CreateInProcessTestEnvironment(string repoRoot) => new()
+    {
+        RepoRoot = repoRoot,
+        Run = (_, _, _) => 0,
+        IsToolOnPath = _ => true,
+        ProbePostgres = () => new CiPostgresStatus(true, "PostgreSQL 18 reachable."),
+        FindFiles = (_, _) => [],
+        DeleteDirectory = _ => { },
+    };
+
+    private static void WriteMinimalDatabaseRepoFixture(string repoRoot, bool includeIntegrationTrx, bool includeDatabaseMetadata)
+    {
+        string docsSdlc = Path.Combine(repoRoot, "docs", "SDLC");
+        string unitTestDir = Path.Combine(repoRoot, "tests", "Cadence.UnitTests");
+        string integrationTestDir = Path.Combine(repoRoot, "tests", "Cadence.IntegrationTests");
+        string resultsDir = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
+        if (Directory.Exists(resultsDir))
+        {
+            Directory.Delete(resultsDir, recursive: true);
+        }
+
+        Directory.CreateDirectory(docsSdlc);
+        Directory.CreateDirectory(unitTestDir);
+        Directory.CreateDirectory(integrationTestDir);
+        Directory.CreateDirectory(resultsDir);
+
+        File.WriteAllText(Path.Combine(docsSdlc, "prd.md"), "#### PRD-AAA-001: Sample Requirement\n");
+        string baselineStamp = GxPSigner.StampGxpMarkdown(
+            "# Baseline\n\n" + new RtmEvidenceContext("`0123abc` (clean working tree)", "2026-10-20 00:00:00", "PostgreSQL 18", "test").Render());
+        File.WriteAllText(Path.Combine(docsSdlc, "Requirements_Traceability_Matrix.md"), baselineStamp);
+        File.WriteAllText(Path.Combine(docsSdlc, "IQ_OQ_PQ_Execution_Report.md"), baselineStamp);
+
+        // Build sample tagged test line-by-line so RequirementTagScanner does not treat LocalCiRunnerTests.cs as tagged.
+        string gxpAttr = "GxP" + "Requirement";
+        File.WriteAllText(
+            Path.Combine(unitTestDir, "SampleUnitTests.cs"),
+            string.Join("\n",
+                "using Xunit;",
+                "namespace Cadence.UnitTests;",
+                "public class SampleUnitTests",
+                "{",
+                "    [Fact]",
+                $"    [{gxpAttr}(\"PRD-AAA-001\")]",
+                "    public void UnitPasses() { }",
+                "}"));
+        File.WriteAllText(
+            Path.Combine(integrationTestDir, "RlsTests.cs"),
+            string.Join("\n",
+                "using Xunit;",
+                "namespace Cadence.IntegrationTests.Kernel;",
+                "public class RlsTests",
+                "{",
+                "    [Fact]",
+                "    public void Isolates() { }",
+                "}"));
+
+        File.WriteAllText(
+            Path.Combine(resultsDir, "gxp_unit.trx"),
+            BuildTrxXml("Cadence.UnitTests.dll", ("Cadence.UnitTests.SampleUnitTests", "UnitPasses", "Passed")));
+        if (includeIntegrationTrx)
+        {
+            File.WriteAllText(
+                Path.Combine(resultsDir, "gxp_integration.trx"),
+                BuildTrxXml("Cadence.IntegrationTests.dll", ("Cadence.IntegrationTests.Kernel.RlsTests", "Isolates", "Passed")));
+        }
+
+        if (includeDatabaseMetadata)
+        {
+            foreach (string assembly in DatabaseTestEvidence.DatabaseAssemblies)
+            {
+                File.WriteAllText(
+                    Path.Combine(resultsDir, $"{assembly}.database.txt"),
+                    string.Join("\n",
+                        "fixture=kernel",
+                        "server_version=18.3",
+                        "source=CADENCE_TEST_POSTGRES",
+                        "extensions=pgcrypto",
+                        "latest_migration=20261001_Initial",
+                        "app_role=cadence"));
+            }
+        }
+    }
+
+    private static string BuildTrxXml(string storage, params (string ClassName, string MethodName, string Outcome)[] results)
+    {
+        const string ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"; // deid-ignore: XML namespace, not PHI
+        var unitTestResults = string.Join(
+            '\n',
+            results.Select((r, idx) =>
+                $"""<UnitTestResult executionId="e{idx}" testId="t{idx}" testName="{r.ClassName}.{r.MethodName}" outcome="{r.Outcome}" duration="00:00:00.010" />"""));
+        var unitTests = string.Join(
+            '\n',
+            results.Select((r, idx) =>
+                $"""
+                <UnitTest name="{r.ClassName}.{r.MethodName}" storage="{storage}" id="t{idx}">
+                  <Execution id="e{idx}" />
+                  <TestMethod codeBase="/bin/{storage}" className="{r.ClassName}" name="{r.MethodName}" />
+                </UnitTest>
+                """));
+        return $"""
+            <?xml version="1.0" encoding="utf-8"?>
+            <TestRun xmlns="{ns}">
+              <Results>
+                {unitTestResults}
+              </Results>
+              <TestDefinitions>
+                {unitTests}
+              </TestDefinitions>
+            </TestRun>
+            """;
+    }
+
+    private static void RunGit(string workingDir, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var proc = Process.Start(psi)!;
+        proc.WaitForExit();
+        proc.ExitCode.Should().Be(0);
     }
 }

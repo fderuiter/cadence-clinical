@@ -11,6 +11,7 @@ async function expectNoWcagViolations(page: Page, contextLabel: string) {
   const results = await new AxeBuilder({ page })
     // Exclude non-interactive regulatory watermark overlay per ADR-2388
     .exclude(".watermark-overlay-container")
+    .options({ rules: { "target-size": { enabled: true } } })
     .withTags(WCAG_AA_TAGS)
     .analyze();
 
@@ -54,6 +55,215 @@ async function getBorderContrastRatio(page: Page, selector: string) {
       const l2 = luminance(bgRgb);
       return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     });
+}
+
+async function expectClinicalTabsKeyboardNavigation(
+  page: Page,
+  tablistSelector: string,
+  label: string
+) {
+  const tablist = page.locator(tablistSelector).first();
+  await expect(tablist, `${label}: tablist visible`).toBeVisible();
+  await expect(tablist).toHaveAttribute("role", "tablist");
+
+  const enabledTabs = tablist.locator('[role="tab"]:not([disabled])');
+  const count = await enabledTabs.count();
+  expect(count, `${label}: expected >= 2 enabled tabs`).toBeGreaterThanOrEqual(
+    2
+  );
+
+  // Verify roving tabindex invariant: exactly 1 tab has tabindex="0"
+  await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
+
+  const assertActiveTabAndPanel = async (tabIndex: number) => {
+    const tab = enabledTabs.nth(tabIndex);
+    await expect(tab).toBeFocused();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expect(tab).toHaveAttribute("tabindex", "0");
+    const tabId = await tab.getAttribute("id");
+    const panelId = await tab.getAttribute("aria-controls");
+    expect(tabId, `${label}: tab id defined`).toBeTruthy();
+    expect(panelId, `${label}: aria-controls defined`).toBeTruthy();
+    const panel = page.locator(`[id="${panelId}"]`);
+    await expect(panel, `${label}: controlled tabpanel visible`).toBeVisible();
+    await expect(panel).toHaveAttribute("role", "tabpanel");
+    await expect(panel).toHaveAttribute("aria-labelledby", tabId!);
+  };
+
+  // Focus first enabled tab and ensure starting at index 0 via Home
+  await enabledTabs.first().focus();
+  await page.keyboard.press("Home");
+  await assertActiveTabAndPanel(0);
+
+  // ArrowRight advances to index 1
+  await page.keyboard.press("ArrowRight");
+  await assertActiveTabAndPanel(1);
+
+  // End jumps to last enabled tab
+  await page.keyboard.press("End");
+  await assertActiveTabAndPanel(count - 1);
+
+  // Home returns to index 0
+  await page.keyboard.press("Home");
+  await assertActiveTabAndPanel(0);
+
+  // ArrowLeft wraps to last enabled tab, then Home restores initial tab
+  await page.keyboard.press("ArrowLeft");
+  await assertActiveTabAndPanel(count - 1);
+  await page.keyboard.press("Home");
+  await assertActiveTabAndPanel(0);
+}
+
+async function expectNoTargetSizeViolations(page: Page, contextLabel: string) {
+  const results = await new AxeBuilder({ page })
+    .exclude(".watermark-overlay-container")
+    .options({ rules: { "target-size": { enabled: true } } })
+    .withRules(["target-size"])
+    .analyze();
+
+  expect(
+    results.violations,
+    `SC 2.5.8 target-size violations on ${contextLabel}: ${JSON.stringify(
+      results.violations.map((v) => ({
+        id: v.id,
+        nodes: v.nodes.map((n) => ({
+          target: n.target,
+          failureSummary: n.failureSummary,
+        })),
+      })),
+      null,
+      2
+    )}`
+  ).toEqual([]);
+}
+
+async function expectVisibleBoxesAtLeast24px(
+  page: Page,
+  selector: string,
+  contextLabel: string
+) {
+  const locator = page.locator(selector);
+  const total = await locator.count();
+  let checked = 0;
+
+  for (let i = 0; i < total; i++) {
+    const item = locator.nth(i);
+    if (!(await item.isVisible().catch(() => false))) {
+      continue;
+    }
+    const box = await item.boundingBox();
+    if (!box) {
+      continue;
+    }
+    checked++;
+    expect(
+      box.width,
+      `${contextLabel} (${selector} #${i}) width ${box.width.toFixed(2)}px < 24px`
+    ).toBeGreaterThanOrEqual(23.95);
+    expect(
+      box.height,
+      `${contextLabel} (${selector} #${i}) height ${box.height.toFixed(2)}px < 24px`
+    ).toBeGreaterThanOrEqual(23.95);
+  }
+
+  expect(
+    checked,
+    `Expected at least one visible element matching ${selector} on ${contextLabel}`
+  ).toBeGreaterThan(0);
+}
+
+async function focusWithKeyboardAndMeasureDualRing(
+  page: Page,
+  selector: string
+) {
+  const target = page.locator(selector).first();
+  await expect(target).toBeVisible();
+  await target.scrollIntoViewIfNeeded();
+  // Establish keyboard modality in Chromium before focusing the target element
+  await page.keyboard.press("Tab");
+  await target.focus();
+
+  return target.evaluate((el) => {
+    function parseRgba(str: string): [number, number, number, number] | null {
+      const m = str.match(
+        /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/
+      );
+      if (!m) return null;
+      return [
+        Number(m[1]),
+        Number(m[2]),
+        Number(m[3]),
+        m[4] === undefined ? 1 : Number(m[4]),
+      ];
+    }
+    function luminance([r, g, b]: [number, number, number]) {
+      const [rl, gl, bl] = [r, g, b].map((v) => {
+        const s = v / 255;
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+    }
+    function contrast(
+      a: [number, number, number],
+      b: [number, number, number]
+    ) {
+      const l1 = luminance(a);
+      const l2 = luminance(b);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+    function resolveOpaqueBackground(
+      start: Element | null
+    ): [number, number, number] {
+      let cur: Element | null = start;
+      while (cur) {
+        const bg = parseRgba(window.getComputedStyle(cur).backgroundColor);
+        if (bg && bg[3] >= 0.9) {
+          return [bg[0], bg[1], bg[2]];
+        }
+        cur = cur.parentElement;
+      }
+      return [255, 255, 255];
+    }
+
+    const style = window.getComputedStyle(el);
+    const outlineParsed = parseRgba(style.outlineColor) || [0, 0, 0, 1];
+    const outlineRgb: [number, number, number] = [
+      outlineParsed[0],
+      outlineParsed[1],
+      outlineParsed[2],
+    ];
+    const shadowParsed = parseRgba(style.boxShadow);
+    const haloRgb: [number, number, number] | null = shadowParsed
+      ? [shadowParsed[0], shadowParsed[1], shadowParsed[2]]
+      : null;
+
+    const parentSurfaceRgb = resolveOpaqueBackground(el.parentElement);
+    const selfSurfaceRgb = resolveOpaqueBackground(el);
+
+    const parentContrast = haloRgb
+      ? Math.max(
+          contrast(outlineRgb, parentSurfaceRgb),
+          contrast(haloRgb, parentSurfaceRgb)
+        )
+      : contrast(outlineRgb, parentSurfaceRgb);
+
+    const selfContrast = haloRgb
+      ? Math.max(
+          contrast(outlineRgb, selfSurfaceRgb),
+          contrast(haloRgb, selfSurfaceRgb)
+        )
+      : contrast(outlineRgb, selfSurfaceRgb);
+
+    return {
+      matchesFocusVisible: el.matches(":focus-visible"),
+      outlineStyle: style.outlineStyle,
+      outlineWidthPx: parseFloat(style.outlineWidth),
+      outlineOffsetPx: parseFloat(style.outlineOffset),
+      hasHaloShadow: Boolean(haloRgb) && style.boxShadow !== "none",
+      parentContrast,
+      selfContrast,
+    };
+  });
 }
 
 test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gates", () => {
@@ -359,6 +569,433 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(dataLockModal).toBeHidden();
   });
 
+  test("Clinical Canvas skip link, proposal selection, roving toolbar, Cmd/Ctrl+E shortcut, site activation Explain, and CanvasErrorAlert pass WCAG 2.2 AA", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_CANVAS_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await gotoHashRoute(page, "/login");
+    await expect(page.locator("#section-login")).toBeVisible();
+
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-0000000000a1@2";
+    const SITE_REF = "study_site:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@1";
+    const PARTICIPANT_ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
+    const PARTICIPANT_REF = `participant:${PARTICIPANT_ID}`;
+    const PROPOSAL_BASE = "proposal:0192f3c4-5e6a-7b8c-9d0e-0000000000e1";
+    const PROPOSAL_REF = `${PROPOSAL_BASE}@1`;
+
+    await page.evaluate(
+      ({ studyRef, siteRef, participantId, participantRef, proposalRef }) => {
+        (
+          window as unknown as { __failQueriesOnce?: boolean }
+        ).__failQueriesOnce = false;
+        const origFetch = window.fetch.bind(window);
+        const json = (payload: unknown, status = 200) =>
+          new Response(JSON.stringify(payload), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+
+        window.fetch = async (input, init) => {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          const method = (init?.method || "GET").toUpperCase();
+
+          if (method === "GET" && url.includes("/api/v1/kernel/search")) {
+            return json([
+              {
+                ref: studyRef,
+                kind: "study",
+                code: "CADENCE-101",
+                title: "Phase III Melanoma",
+                detail: null,
+                exact_code: true,
+                rank: 1,
+              },
+            ]);
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/activity")) {
+            return json({ entries: [], next: null });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/nodes/") &&
+            url.includes("/children")
+          ) {
+            return json([
+              {
+                node: {
+                  ref: siteRef,
+                  kind: "study_site",
+                  code: "SITE-101",
+                  title: "Mayo Clinic Oncology",
+                  status: "PENDING",
+                  mask: null,
+                },
+                child_count: 1,
+              },
+            ]);
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/nodes/") &&
+            url.includes("/commands")
+          ) {
+            return json([
+              {
+                command: "proposal.reject",
+                capability: "proposal.reject",
+                decision: {
+                  permitted: false,
+                  reason:
+                    "An active Data Manager role grant on CADENCE-101 is required.",
+                  conditions: [
+                    {
+                      code: "grant.data_manager",
+                      description:
+                        "Active Data Manager role grant on CADENCE-101",
+                      met: false,
+                      evidence: [studyRef],
+                    },
+                  ],
+                  explanation: {
+                    claim:
+                      "Proposal rejection requires an active Data Manager grant on CADENCE-101.",
+                    steps: [
+                      {
+                        claim:
+                          "Evaluated actor grants across study scope CADENCE-101.",
+                        evidence: [studyRef],
+                      },
+                    ],
+                    conditions: [
+                      {
+                        code: "grant.data_manager",
+                        description:
+                          "Active Data Manager role grant on CADENCE-101",
+                        met: false,
+                        evidence: [studyRef],
+                      },
+                    ],
+                    next_actions: [
+                      {
+                        description:
+                          "Request a Data Manager role grant on CADENCE-101.",
+                        target: studyRef,
+                      },
+                    ],
+                  },
+                },
+              },
+            ]);
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/authorization/can-i")
+          ) {
+            return json({
+              permitted: false,
+              reason:
+                "Site activation requires an executed clinical site agreement in eTMF.",
+              conditions: [
+                {
+                  code: "etmf.irb_approval",
+                  description: "Approved IRB determination filed in eTMF",
+                  met: true,
+                  evidence: [siteRef],
+                },
+                {
+                  code: "etmf.site_contract_executed",
+                  description: "Executed clinical site agreement filed in eTMF",
+                  met: false,
+                  evidence: [siteRef],
+                },
+              ],
+              explanation: {
+                claim:
+                  "SITE-101 cannot be activated until the executed clinical site agreement is filed.",
+                steps: [
+                  {
+                    claim:
+                      "Checked study_site.activate prerequisites for SITE-101.",
+                    evidence: [siteRef],
+                  },
+                ],
+                conditions: [
+                  {
+                    code: "etmf.irb_approval",
+                    description: "Approved IRB determination filed in eTMF",
+                    met: true,
+                    evidence: [siteRef],
+                  },
+                  {
+                    code: "etmf.site_contract_executed",
+                    description:
+                      "Executed clinical site agreement filed in eTMF",
+                    met: false,
+                    evidence: [siteRef],
+                  },
+                ],
+                next_actions: [
+                  {
+                    description:
+                      "Upload and approve the executed clinical site agreement for SITE-101.",
+                    target: siteRef,
+                  },
+                ],
+              },
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/proposals/")) {
+            return json({
+              ref: proposalRef,
+              study: studyRef,
+              intent: "Query the out-of-range systolic pressure at visit 3",
+              plan: {
+                ref: "artifact_version:0192f3c4-5e6a-7b8c-9d0e-0000000000d1@1",
+                title: "Data review plan",
+                number: 1,
+                media_type: "text/markdown",
+                content_hash: "sha256:plan",
+                mask: null,
+              },
+              affected: [{ ref: `${participantRef}@4`, mask: null }],
+              simulated_impact: null,
+              requested_capabilities: ["query.raise"],
+              proposed_at: "2026-10-20T09:00:00Z",
+              expires_at: "2026-10-27T09:00:00Z",
+              proposed_by: "agent:data-reviewer",
+              requested_by: "data-manager@sponsor.test",
+              proposed_by_kind: "AutomationAgent",
+              model_id: "claude-3-7-sonnet",
+              confidence_score: 0.86,
+              content_hash: "sha256:proposal",
+              status: "Open",
+              decided_at: null,
+              decided_by: null,
+              approval_attestation: null,
+              decision_reason: null,
+              is_escalated: false,
+              escalated_to: null,
+              escalation_reason: null,
+              mask: null,
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/proposals")) {
+            return json([]);
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
+            if (url.includes("proposal")) {
+              return json({
+                ref: proposalRef,
+                kind: "proposal",
+                title: "Query the out-of-range systolic pressure at visit 3",
+                code: null,
+                status: "Open",
+                mask: null,
+              });
+            }
+            if (url.includes("study_site")) {
+              return json({
+                ref: siteRef,
+                kind: "study_site",
+                title: "Mayo Clinic Oncology",
+                code: "SITE-101",
+                status: "PENDING",
+                mask: null,
+              });
+            }
+            return json({
+              ref: `${participantRef}@4`,
+              kind: "participant",
+              title: "017-0001",
+              code: "017-0001",
+              status: "ACTIVE",
+              mask: null,
+            });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/sites/SITE-101/compliance-status")
+          ) {
+            return json({
+              study_id: "CADENCE-101",
+              site_id: "SITE-101",
+              is_complete: false,
+              is_activated: false,
+              checked_at: "2026-11-22T12:00:00Z",
+              missing_documents: ["Executed Clinical Site Agreement"],
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/execution/subjects")) {
+            return json({
+              items: [
+                {
+                  id: participantId,
+                  subject_id: "017-0001",
+                  study_id: "CADENCE-101",
+                  site_id: "SITE-101",
+                  status: "ACTIVE",
+                  active_protocol_version: "3.0",
+                  enrollment_index: 1,
+                },
+              ],
+              total: 1,
+              limit: 50,
+              offset: 0,
+            });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/forms/queries")
+          ) {
+            const win = window as unknown as { __failQueriesOnce?: boolean };
+            if (win.__failQueriesOnce) {
+              win.__failQueriesOnce = false;
+              return json(
+                { detail: "Upstream Execution gateway read timeout (503)" },
+                503
+              );
+            }
+            return json([]);
+          }
+
+          return origFetch(input, init);
+        };
+      },
+      {
+        studyRef: STUDY_REF,
+        siteRef: SITE_REF,
+        participantId: PARTICIPANT_ID,
+        participantRef: PARTICIPANT_REF,
+        proposalRef: PROPOSAL_REF,
+      }
+    );
+
+    // 1. Study skip link + ?proposal= inspector expansion + roving toolbar + Ctrl+E shortcut
+    await gotoHashRoute(page, `/studies/CADENCE-101?proposal=${PROPOSAL_BASE}`);
+    await expect(page.locator("#proposal-review")).toBeVisible();
+
+    const skipWorkspace = page.locator("#skip-to-workspace");
+    await skipWorkspace.focus();
+    await expect(skipWorkspace).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#canvas-workspace")).toBeFocused();
+
+    const inspector = page.locator("#canvas-inspector");
+    await expect(inspector).toHaveAttribute("data-collapsed", "false");
+    await expect(page.locator("#canvas-inspector-title")).toHaveText(
+      "Query the out-of-range systolic pressure at visit 3"
+    );
+
+    const verbDetails = page.locator("#verb-details");
+    await verbDetails.focus();
+    await expect(verbDetails).toHaveAttribute("tabindex", "0");
+    await expect(page.locator("#verb-trace")).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#verb-trace")).toBeFocused();
+    await expect(page.locator("#verb-trace")).toHaveAttribute("tabindex", "0");
+    await expect(verbDetails).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("End");
+    await expect(page.locator("#verb-assist")).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(verbDetails).toBeFocused();
+
+    // Typing Ctrl+E inside an editable textarea is ignored
+    await page.locator("#proposal-reject-reason").focus();
+    await page.keyboard.press("Control+e");
+    await expect(page.locator("#kernel-explain")).toHaveCount(0);
+
+    // Pressing Ctrl+E outside editable inputs opens #kernel-explain and moves focus to it
+    await page.locator("#canvas-workspace").focus();
+    await page.keyboard.press("Control+e");
+    await expect(page.locator("#kernel-explain")).toBeVisible();
+    await expect(page.locator("#kernel-explain")).toBeFocused();
+
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas proposal review, roving toolbar, and Explain"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-canvas-proposal-toolbar.png",
+      });
+    }
+
+    // 2. SiteActivationPanel persistent disabled button + inline Explain disclosure via kernelApi.canI
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=start&section=site-activation"
+    );
+    await expect(page.locator("#site-activation-panel")).toBeVisible();
+    await page.locator("#site-activation-site").fill("SITE-101");
+    await page.locator("#btn-check-site-compliance").click();
+
+    const activateBtn = page.locator("#btn-activate-site");
+    await expect(activateBtn).toBeVisible();
+    await expect(activateBtn).toBeDisabled();
+
+    const explainBtn = page.locator("#btn-explain-site-activation");
+    await expect(explainBtn).toBeVisible();
+    await expect(explainBtn).toHaveAttribute("aria-expanded", "false");
+    await explainBtn.click();
+    await expect(explainBtn).toHaveAttribute("aria-expanded", "true");
+
+    const siteExplain = page.locator("#site-activation-explanation");
+    await expect(siteExplain).toBeVisible();
+    await expect(siteExplain).toContainText(
+      "SITE-101 cannot be activated until the executed clinical site agreement is filed."
+    );
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas SiteActivationPanel disabled Explain disclosure"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-site-activation-explain.png",
+      });
+    }
+
+    // 3. CanvasErrorAlert Retry, Explain, and SupportDetails on QueriesSection
+    await page.evaluate(() => {
+      (window as unknown as { __failQueriesOnce?: boolean }).__failQueriesOnce =
+        true;
+    });
+    await gotoHashRoute(
+      page,
+      `/studies/CADENCE-101?stage=data&section=queries&node=${PARTICIPANT_REF}`
+    );
+
+    const errorAlert = page.locator("#study-queries-error");
+    await expect(errorAlert).toBeVisible();
+    await errorAlert.locator("details.support-details summary").click();
+    await expect(errorAlert).toContainText(
+      "Upstream Execution gateway read timeout (503)"
+    );
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas CanvasErrorAlert with SupportDetails"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-canvas-error-alert.png",
+      });
+    }
+
+    await errorAlert.locator('[data-testid="canvas-error-explain"]').click();
+    await expect(page.locator("#kernel-explain")).toBeVisible();
+
+    await errorAlert.locator('[data-testid="canvas-error-retry"]').click();
+    await expect(errorAlert).toBeHidden();
+  });
+
   test("Live /etmf, BatchUploadDrawer, single-document upload modal, /training, and /ssu pass WCAG 2.2 AA and SC 2.5.3 Label in Name", async ({
     page,
   }) => {
@@ -624,6 +1261,213 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
   });
 
+  test("Enforces >= 24x24px pointer targets (SC 2.5.8) with zero axe-core target-size violations across /etmf, /training, /ctms, /ssu, /studies/CADENCE-101, /ecrf, and /knowledge", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // 1. /etmf: .btn-node-export buttons
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+    await expect(page.locator(".btn-node-export").first()).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      ".btn-node-export",
+      "DocumentManagerView (/etmf)"
+    );
+    await expectNoTargetSizeViolations(
+      page,
+      "DocumentManagerView (/etmf tree)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-24px-targets.png" });
+    }
+
+    // 2. /training: #training-protocol-filter select
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expect(page.locator("#training-protocol-filter")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#training-protocol-filter",
+      "StudyTrainingView (/training)"
+    );
+    await expectNoTargetSizeViolations(page, "StudyTrainingView (/training)");
+
+    // 3. /ctms and /ssu: .btn-sm compact action buttons
+    await gotoHashRoute(page, "/ctms");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(page, ".btn-sm", "CtmsView (/ctms)");
+    await expectNoWcagViolations(page, "CtmsView (/ctms)");
+
+    await gotoHashRoute(page, "/ssu");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await page.locator("#tab-startup").click();
+    await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(page, ".btn-sm", "SsuView (/ssu)");
+    await expectNoWcagViolations(page, "SsuView (/ssu)");
+
+    // 4. /studies/CADENCE-101: Participants table buttons, inspector copy button, and Locks controls
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=conduct&section=participants"
+    );
+    await expect(page.locator("#study-canvas")).toBeVisible();
+    await expect(page.locator("#participants-section")).toBeVisible();
+    await expect(page.locator(".row-select").first()).toBeVisible();
+    await page.locator(".row-select").first().click();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#study-canvas button",
+      "StudyCanvasView (/studies/CADENCE-101 participants)"
+    );
+    await expectNoTargetSizeViolations(
+      page,
+      "StudyCanvasView (/studies/CADENCE-101 participants)"
+    );
+
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=closeout&section=locks"
+    );
+    await expect(page.locator("#study-locks-section")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#study-locks-active-only, #study-locks-refresh",
+      "StudyCanvasView (/studies/CADENCE-101 locks)"
+    );
+    await expectNoTargetSizeViolations(
+      page,
+      "StudyCanvasView (/studies/CADENCE-101 locks)"
+    );
+
+    // 5. /ecrf: inputs, radios, and CRA SDV checkboxes (while preserving 48px .clinical-input controls)
+    await gotoHashRoute(page, "/ecrf");
+    await expect(page.locator("#section-ecrf")).toBeVisible();
+    const roleSelect = page.locator("#role-tester-select");
+    if (await roleSelect.isVisible().catch(() => false)) {
+      await roleSelect.selectOption("cra");
+    }
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      '#section-ecrf input:not([type="hidden"]), #section-ecrf select',
+      "EcrfView (/ecrf inputs and selects)"
+    );
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      '#section-ecrf input[type="radio"]',
+      "EcrfView (/ecrf radios)"
+    );
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      '#section-ecrf input[type="checkbox"]',
+      "EcrfView (/ecrf checkboxes)"
+    );
+    const clinicalTextBox = await page
+      .locator(
+        '.clinical-input input[type="text"], .clinical-input input[type="number"]'
+      )
+      .first()
+      .boundingBox();
+    expect(clinicalTextBox?.height ?? 0).toBeGreaterThanOrEqual(47.95);
+    await expectNoWcagViolations(page, "EcrfView (/ecrf CRA SDV mode)");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/ecrf-24px-controls.png" });
+    }
+
+    // 6. /knowledge: .tag-chip buttons
+    await gotoHashRoute(page, "/knowledge");
+    await expect(page.locator("#section-knowledge-hub")).toBeVisible();
+    await expect(page.locator(".tag-chip").first()).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      ".tag-chip",
+      "KnowledgeView (/knowledge .tag-chip)"
+    );
+    await expectNoTargetSizeViolations(page, "KnowledgeView (/knowledge)");
+  });
+
+  test("Displays two-color :focus-visible rings at >= 3:1 contrast on dark imaging controls (.toolbar-select, .toolbar-btn.active, .field-input, .diameter-input) and .ai-reason-input", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await gotoHashRoute(page, "/imaging");
+    await expect(page.locator("#section-imaging-viewer")).toBeVisible();
+    await expect(page.locator(".mpr-toolbar")).toBeVisible();
+    await expect(page.locator(".oncology-calipers-panel")).toBeVisible();
+    await expectNoTargetSizeViolations(page, "ImagingView (/imaging)");
+
+    for (const selector of [
+      ".toolbar-select",
+      ".toolbar-btn.active",
+      ".field-input",
+      ".diameter-input",
+    ]) {
+      await expectVisibleBoxesAtLeast24px(
+        page,
+        selector,
+        `ImagingView (${selector})`
+      );
+      const metrics = await focusWithKeyboardAndMeasureDualRing(page, selector);
+      expect(
+        metrics.matchesFocusVisible,
+        `${selector} should match :focus-visible`
+      ).toBe(true);
+      expect(
+        metrics.outlineStyle,
+        `${selector} outline-style must not be none`
+      ).not.toBe("none");
+      expect(metrics.outlineWidthPx).toBeGreaterThanOrEqual(2);
+      expect(
+        metrics.hasHaloShadow,
+        `${selector} must render inner 2px halo box-shadow`
+      ).toBe(true);
+      expect(
+        metrics.parentContrast,
+        `${selector} dual focus ring contrast on parent surface (${metrics.parentContrast.toFixed(2)}:1) < 3:1`
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        metrics.selfContrast,
+        `${selector} dual focus ring contrast on control surface (${metrics.selfContrast.toFixed(2)}:1) < 3:1`
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/focus-ring-imaging-dark.png" });
+    }
+
+    // Verify .ai-reason-input computed :focus-visible ring against both light drawer surface and dark surface
+    await page.evaluate(() => {
+      const probeHost = document.createElement("div");
+      probeHost.id = "ai-reason-focus-probe-host";
+      probeHost.style.cssText =
+        "position: fixed; bottom: 12px; right: 12px; padding: 12px; background: var(--semantic-color-surface); z-index: 9999;";
+      const textarea = document.createElement("textarea");
+      textarea.className = "ai-reason-input";
+      textarea.setAttribute("aria-label", "AI Audit Justification Probe");
+      probeHost.appendChild(textarea);
+      document.body.appendChild(probeHost);
+    });
+
+    const aiReasonMetrics = await focusWithKeyboardAndMeasureDualRing(
+      page,
+      "#ai-reason-focus-probe-host .ai-reason-input"
+    );
+    expect(aiReasonMetrics.matchesFocusVisible).toBe(true);
+    expect(aiReasonMetrics.outlineStyle).not.toBe("none");
+    expect(aiReasonMetrics.outlineWidthPx).toBeGreaterThanOrEqual(2);
+    expect(aiReasonMetrics.hasHaloShadow).toBe(true);
+    expect(aiReasonMetrics.parentContrast).toBeGreaterThanOrEqual(3);
+    expect(aiReasonMetrics.selfContrast).toBeGreaterThanOrEqual(3);
+
+    await page.evaluate(() => {
+      document.getElementById("ai-reason-focus-probe-host")?.remove();
+    });
+  });
+
   test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 and card bounds unclipped across Plans, Unavailable, Login, and Forbidden", async ({
     page,
   }) => {
@@ -767,6 +1611,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     const exportCasebookBtn = page.locator("#btn-export-casebook");
     await expect(exportCasebookBtn).toBeVisible();
     await exportCasebookBtn.click();
+    const digestSummary = page.locator(".casebook-digest-disclosure > summary");
+    await expect(digestSummary).toBeVisible();
+    await digestSummary.click();
     const shaCode = page.locator('[data-testid="participant-casebook-sha256"]');
     await expect(shaCode).toBeVisible();
     const shaBox = await shaCode.boundingBox();
@@ -950,6 +1797,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
         '[data-testid="clinical-form-action-bar"]'
       );
       await expect(mobileActionBar).toBeVisible();
+      await mobileActionBar.scrollIntoViewIfNeeded();
 
       if (viewport.width === 390) {
         await page.screenshot({
@@ -1179,5 +2027,418 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       "TicketCreateModal .form-row at 320x640"
     );
     await expectZeroDocOverflow("TicketCreateModal open at 320x640");
+  });
+
+  test("Operational eTMF hub (/etmf) passes WCAG 2.2 AA, ClinicalTabs keyboard navigation, TmfBinderTree Home/End & filter focus clamping, DocumentGrid (0,0) roving focus & button keys, and CraQcQueue focus fallback", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+    await expectNoWcagViolations(page, "DocumentManagerView initial (/etmf)");
+
+    // 1. ClinicalTabs bar #1: DocumentManagerView workspace tabs
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="eTMF workspace views"]',
+      "DocumentManagerView workspace tabs (/etmf)"
+    );
+
+    // 2. TmfBinderTree: zero nested buttons inside role="treeitem", dynamic aria-selected, Home/End, and filter focus clamping
+    const tree = page.locator('[role="tree"]');
+    await expect(tree).toBeVisible();
+    await expect(tree.locator('[role="treeitem"] button')).toHaveCount(0);
+    await expect(tree.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(
+      1
+    );
+
+    const treeItems = tree.locator('[role="treeitem"]');
+    const initialTreeCount = await treeItems.count();
+    expect(initialTreeCount).toBeGreaterThanOrEqual(2);
+
+    await treeItems.first().focus();
+    await page.keyboard.press("End");
+    await expect(treeItems.nth(initialTreeCount - 1)).toBeFocused();
+    await expect(treeItems.nth(initialTreeCount - 1)).toHaveAttribute(
+      "tabindex",
+      "0"
+    );
+    await page.keyboard.press("Home");
+    await expect(treeItems.first()).toBeFocused();
+    await expect(treeItems.first()).toHaveAttribute("tabindex", "0");
+
+    // Filter binder tree and verify roving tabindex="0" is preserved on visible items
+    const binderFilterInput = page.locator("#tmf-binder-search-input");
+    if ((await binderFilterInput.count()) > 0) {
+      await binderFilterInput.fill("05");
+      await expect(tree.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(
+        1
+      );
+      await binderFilterInput.fill("");
+      await expect(tree.locator('[role="treeitem"][tabindex="0"]')).toHaveCount(
+        1
+      );
+    }
+
+    // Expand a zone -> section -> artifact with documents (only clicking collapsed containers) and verify aria-selected="true"
+    const zoneWithDocs = page
+      .locator(".zone-header")
+      .filter({ has: page.locator(".zone-badge") })
+      .first();
+    if ((await zoneWithDocs.getAttribute("aria-expanded")) !== "true") {
+      await zoneWithDocs.click();
+    }
+
+    const sectionWithDocs = page
+      .locator(".section-header")
+      .filter({ has: page.locator(".section-badge") })
+      .first();
+    if ((await sectionWithDocs.getAttribute("aria-expanded")) !== "true") {
+      await sectionWithDocs.click();
+    }
+
+    const artifactWithDocs = page
+      .locator(".artifact-node")
+      .filter({ has: page.locator(".artifact-badge") })
+      .first();
+    await artifactWithDocs.click();
+    await expect(artifactWithDocs).toHaveAttribute("aria-selected", "true");
+
+    // 3. DocumentGrid: aria-colcount="8", 1 tabindex="0" cell after load, Enter on Inspect, Space on Preview
+    const docGrid = page.locator('.documents-table[role="grid"]');
+    await expect(docGrid).toBeVisible();
+    await expect(docGrid).toHaveAttribute("aria-colcount", "8");
+    await expect(
+      docGrid.locator('[role="gridcell"][tabindex="0"]')
+    ).toHaveCount(1);
+    await expectNoWcagViolations(
+      page,
+      "DocumentGrid populated with artifact documents (/etmf)"
+    );
+
+    const inspectBtn = docGrid.locator(".btn-inspect-doc").first();
+    await inspectBtn.focus();
+    await page.keyboard.press("Enter");
+    const drawerDialog = page.locator('.metadata-drawer[role="dialog"]');
+    await expect(drawerDialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(drawerDialog).toBeHidden();
+
+    const previewBtn = docGrid.locator(".btn-preview-doc").first();
+    await previewBtn.focus();
+    await page.keyboard.press(" ");
+    const pdfDialog = page.locator('.pdf-preview-modal[role="dialog"]');
+    await expect(pdfDialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(pdfDialog).toBeHidden();
+
+    // 4. CraQcQueue: stage a document if queue is empty, adjudicate via keyboard/modal, verify focus stays off BODY
+    await page.evaluate(async () => {
+      await fetch("/cadence-clinical/api/v1/etmf/intelligence/stage-qc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          study_id: "CADENCE-101",
+          site_id: "SITE-101",
+          filename: "site-101-fda-1572-staged.pdf",
+          artifact_code: "05.02.01",
+          artifact_type: "FDA Form 1572",
+        }),
+      });
+    });
+
+    await page.locator("#btn-etmf-tab-qc-queue").click();
+    await expect(page.locator(".qc-queue-container")).toBeVisible();
+    await page.locator("#btn-refresh-qc-queue").click();
+
+    const inspectQcBtn = page.locator(".btn-inspect-qc").first();
+    await expect(inspectQcBtn).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "CraQcQueue with staged technical QC item (/etmf)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-hub-a11y.png" });
+    }
+
+    await inspectQcBtn.focus();
+    await inspectQcBtn.click();
+    const qcModal = page.locator(
+      '[role="dialog"][aria-labelledby="qc-inspect-modal-title"]'
+    );
+    await expect(qcModal).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "CraQcQueue single-item review modal (/etmf)"
+    );
+
+    await qcModal
+      .locator("#review-reason-input")
+      .fill("Verified regulatory taxonomy classification against source PDF");
+    await qcModal.locator(".btn-accept-qc").click();
+    await expect(qcModal).toBeHidden();
+
+    const activeAfterQc = await page.evaluate(() => ({
+      tag: document.activeElement?.tagName ?? null,
+      id: document.activeElement?.id ?? null,
+    }));
+    expect(
+      activeAfterQc.tag,
+      "Completing CraQcQueue review must not drop focus to BODY"
+    ).not.toBe("BODY");
+    expect(activeAfterQc.id).toBe("btn-refresh-qc-queue");
+  });
+
+  test("Tickets hub (/tickets) passes WCAG 2.2 AA, native button cards, labeled filters, ClinicalTabs keyboard navigation, and Part 11 sign-off focus retention", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    await gotoHashRoute(page, "/tickets");
+    await expect(page.locator("#section-tickets-hub")).toBeVisible();
+    await expect(page.locator("button.ticket-card").first()).toBeVisible();
+    await expectNoWcagViolations(page, "TicketsView Kanban board (/tickets)");
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/tickets-hub-a11y.png" });
+    }
+
+    // Verify interactive KRI stat cards and Kanban ticket cards are native <button type="button">
+    const statCardCount = await page
+      .locator("#section-tickets-hub button.stat-card[type='button']")
+      .count();
+    expect(statCardCount).toBe(3);
+    const nonButtonTicketCards = await page
+      .locator("#section-tickets-hub .ticket-card:not(button)")
+      .count();
+    expect(nonButtonTicketCards).toBe(0);
+
+    // ClinicalTabs bar #2: TicketsView Kanban / Table view switcher
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="Tickets workspace view mode"]',
+      "TicketsView view mode tabs (/tickets)"
+    );
+
+    // Switch to Table view to audit WCAG 2.2 AA on list table, then return to Kanban
+    const tableTab = page
+      .locator(
+        '[role="tablist"][aria-label="Tickets workspace view mode"] [role="tab"]'
+      )
+      .nth(1);
+    await tableTab.click();
+    await expectNoWcagViolations(page, "TicketsView List table (/tickets)");
+    await page
+      .locator(
+        '[role="tablist"][aria-label="Tickets workspace view mode"] [role="tab"]'
+      )
+      .first()
+      .click();
+
+    // Activate a Kanban ticket card via keyboard Enter -> opens TicketDetailDrawer
+    const resolvedOrFirstCard = page
+      .locator("button.ticket-card")
+      .filter({ hasText: /RESOLVED/i })
+      .first();
+    const targetCard =
+      (await resolvedOrFirstCard.count()) > 0
+        ? resolvedOrFirstCard
+        : page.locator("button.ticket-card").first();
+
+    await targetCard.focus();
+    await page.keyboard.press("Enter");
+
+    const drawer = page.locator(
+      '.drawer-panel[role="dialog"][aria-labelledby="drawer-ticket-title"]'
+    );
+    await expect(drawer).toBeVisible();
+    await expectNoWcagViolations(page, "TicketDetailDrawer open (/tickets)");
+
+    // ClinicalTabs bar #3: TicketDetailDrawer tabs
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '.drawer-panel[aria-labelledby="drawer-ticket-title"] [role="tablist"][aria-label="Ticket detail sections"]',
+      "TicketDetailDrawer section tabs (/tickets)"
+    );
+
+    // Ensure ticket is in RESOLVED state so Part 11 eSign button is available
+    const signTrigger = drawer.locator("#btn-open-part11-sign");
+    if ((await signTrigger.count()) === 0) {
+      const startWorkBtn = drawer
+        .locator("button", { hasText: /Start Work/i })
+        .first();
+      if (await startWorkBtn.isVisible().catch(() => false)) {
+        await drawer
+          .locator("#transition-reason-input")
+          .fill("Initiating clinical triage review");
+        await startWorkBtn.click();
+      }
+      const openResolveBtn = drawer.locator("#btn-open-resolve");
+      if (await openResolveBtn.isVisible().catch(() => false)) {
+        await openResolveBtn.click();
+        await drawer
+          .locator("#resolve-rca-summary")
+          .fill("Verified protocol workflow alignment and updated site SOP.");
+        await drawer
+          .locator("#resolve-change-reason")
+          .fill("Root-cause corrective action verified");
+        await drawer.locator("#btn-confirm-resolve").click();
+      }
+    }
+
+    await expect(signTrigger).toBeVisible();
+    await signTrigger.focus();
+    await signTrigger.click();
+
+    const signModal = page.locator('.ticket-sign-modal[role="dialog"]');
+    await expect(signModal).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "TicketSignModal 21 CFR Part 11 dialog (/tickets)"
+    );
+
+    await signModal
+      .locator("#signature-reason")
+      .fill("Authoritative clinical verification of issue closure");
+    await signModal.locator("#signature-password").fill("DemoPass!2026");
+    await signModal.locator(".btn-sign-action").click();
+
+    await expect(signModal).toBeHidden();
+    await expect(signTrigger).toHaveCount(0);
+
+    // Verify focus stayed inside the parent TicketDetailDrawer instead of dropping to BODY
+    const activeAfterSign = await page.evaluate(() => {
+      const active = document.activeElement;
+      return {
+        tag: active?.tagName ?? null,
+        id: active?.id ?? null,
+        insideDrawer: Boolean(
+          active?.closest(
+            '.drawer-panel[aria-labelledby="drawer-ticket-title"]'
+          )
+        ),
+      };
+    });
+    expect(
+      activeAfterSign.tag,
+      "Completing TicketSignModal sign-off must not drop focus to BODY"
+    ).not.toBe("BODY");
+    expect(activeAfterSign.insideDrawer).toBe(true);
+  });
+
+  test("Knowledge (/knowledge), CTMS (/ctms), SSU (/ssu), Training (/training), and Trial Onboarding (/onboarding/trial) pass WCAG 2.2 AA, 24px chip targets, native buttons, and ClinicalTabs keyboard navigation", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    // 1. /knowledge: labeled search, 24px .tag-chip targets, native <button> SOP & stat cards, and ClinicalTabs bar #4
+    await gotoHashRoute(page, "/knowledge");
+    await expect(page.locator("#section-knowledge-hub")).toBeVisible();
+    await expect(page.locator("button.article-card").first()).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "KnowledgeView SOP repository (/knowledge)"
+    );
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/knowledge-hub-a11y.png" });
+    }
+
+    await expect(
+      page.locator("#section-knowledge-hub .article-card:not(button)")
+    ).toHaveCount(0);
+    await expect(
+      page.locator("#section-knowledge-hub .stat-card:not(button)")
+    ).toHaveCount(0);
+
+    const tagChips = page.locator(".tag-chips-scroll .tag-chip");
+    const chipCount = await tagChips.count();
+    expect(chipCount).toBeGreaterThan(0);
+    for (let i = 0; i < Math.min(chipCount, 6); i++) {
+      const box = await tagChips.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(
+        box!.height,
+        `Expected .tag-chip[${i}] height >= 24px (WCAG 2.2 SC 2.5.8)`
+      ).toBeGreaterThanOrEqual(24);
+      expect(
+        box!.width,
+        `Expected .tag-chip[${i}] width >= 24px (WCAG 2.2 SC 2.5.8)`
+      ).toBeGreaterThanOrEqual(24);
+    }
+
+    // Activate first SOP card with keyboard Enter and test SOP reader ClinicalTabs (#4)
+    const firstArticleBtn = page.locator("button.article-card").first();
+    await firstArticleBtn.focus();
+    await page.keyboard.press("Enter");
+
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="SOP document inspection tabs"]',
+      "KnowledgeView SOP reader tabs (/knowledge)"
+    );
+    await expectNoWcagViolations(
+      page,
+      "KnowledgeView SOP reader panel (/knowledge)"
+    );
+
+    // 2. /ctms: ClinicalTabs bar #5 (CtmsView workspace tabs)
+    await gotoHashRoute(page, "/ctms");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '#section-ctms [role="tablist"]',
+      "CtmsView workspace tabs (/ctms)"
+    );
+
+    // 3. /ssu: ClinicalTabs bar #6 (SsuGreenlightConsole view mode tabs)
+    await gotoHashRoute(page, "/ssu");
+    await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="Study startup view mode"]',
+      "SsuGreenlightConsole view mode tabs (/ssu)"
+    );
+    await expectNoWcagViolations(
+      page,
+      "SsuGreenlightConsole after keyboard tab navigation (/ssu)"
+    );
+
+    // 4. /training: native <button> .module-item controls and ClinicalTabs bar #7 (ProtocolTrainingConsole)
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expect(
+      page
+        .locator("#section-study-training button.module-item[type='button']")
+        .first()
+    ).toBeVisible();
+    await expect(
+      page.locator("#section-study-training .module-item:not(button)")
+    ).toHaveCount(0);
+
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="Protocol training workspace sections"]',
+      "ProtocolTrainingConsole tabs (/training)"
+    );
+    await expectNoWcagViolations(
+      page,
+      "ProtocolTrainingConsole after keyboard tab navigation (/training)"
+    );
+
+    // 5. /onboarding/trial: TrialSetupView WCAG 2.2 AA gate
+    await gotoHashRoute(page, "/onboarding/trial");
+    await expect(page.locator("#section-trial-setup")).toBeVisible();
+    await expect(page.locator("#input-organization-name")).toBeVisible();
+    await expect(page.locator("#select-residency")).toBeVisible();
+    await expect(page.locator("#select-trial-tier")).toBeVisible();
+    await expectNoWcagViolations(page, "TrialSetupView (/onboarding/trial)");
   });
 });
