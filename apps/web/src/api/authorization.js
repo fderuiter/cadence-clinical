@@ -1,6 +1,6 @@
 import { isStepUpAuthFailure } from "ui";
 import { useAuthStore } from "../stores/auth";
-import { resolveGatewayBaseUrl } from "../utils/demoMode";
+import { isDemoBuild, resolveGatewayBaseUrl } from "../utils/demoMode";
 
 /**
  * Bearer-token attachment for calls to the Cadence API gateway.
@@ -74,6 +74,89 @@ export function notifySubscriptionExpiredIfNeeded(status, errorBody) {
 
 export function getApiBaseUrl() {
   return resolveGatewayBaseUrl();
+}
+
+/**
+ * Builds synthetic demo identity headers (`X-Demo-Persona`, `X-User-Roles`,
+ * `X-User-Id`, `X-Site-Id`) strictly for authenticated offline demo sessions.
+ * Returns `null` in production builds, signed-out states, or OIDC sessions.
+ *
+ * @returns {Record<string, string> | null}
+ */
+export function getDemoIdentityHeaders() {
+  if (!isDemoBuild()) {
+    return null;
+  }
+  let authStore;
+  try {
+    authStore = useAuthStore();
+  } catch {
+    return null;
+  }
+  if (
+    !authStore ||
+    !authStore.isAuthenticated ||
+    !authStore.isDemoMode ||
+    authStore.accessToken
+  ) {
+    return null;
+  }
+  const siteList = Array.isArray(authStore.assignedSiteIds)
+    ? authStore.assignedSiteIds
+    : Array.isArray(authStore.siteIds)
+      ? authStore.siteIds
+      : [];
+  const siteHeader =
+    siteList.length > 0 ? siteList.join(",") : authStore.user?.siteId || "";
+  return {
+    "X-Demo-Persona": String(authStore.currentPersona || "super_admin"),
+    "X-User-Roles": Array.isArray(authStore.rawRoles)
+      ? authStore.rawRoles.join(",")
+      : "",
+    "X-User-Id": String(
+      authStore.user?.id || authStore.user?.username || "demo-user"
+    ),
+    "X-Site-Id": String(siteHeader),
+  };
+}
+
+/**
+ * Applies synthetic demo identity headers onto a `Headers` instance or plain
+ * header record without overwriting explicitly supplied test headers.
+ *
+ * @template {Headers | Record<string, string>} T
+ * @param {T} headers
+ * @returns {T}
+ */
+export function applyDemoIdentityHeaders(headers) {
+  if (!isDemoBuild()) {
+    return headers;
+  }
+  if (!headers) {
+    return headers;
+  }
+  const demoHeaders = getDemoIdentityHeaders();
+  if (!demoHeaders) {
+    return headers;
+  }
+  if (typeof Headers !== "undefined" && headers instanceof Headers) {
+    for (const [key, value] of Object.entries(demoHeaders)) {
+      if (!headers.has(key)) {
+        headers.set(key, value);
+      }
+    }
+    return headers;
+  }
+  const record = /** @type {Record<string, string>} */ (headers);
+  const existingLower = new Set(
+    Object.keys(record).map((k) => k.toLowerCase())
+  );
+  for (const [key, value] of Object.entries(demoHeaders)) {
+    if (!existingLower.has(key.toLowerCase())) {
+      record[key] = value;
+    }
+  }
+  return headers;
 }
 
 /**
@@ -168,6 +251,9 @@ export function installAuthorizedFetch(target = globalThis) {
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
+    }
+    if (isDemoBuild()) {
+      applyDemoIdentityHeaders(headers);
     }
     const retryClone =
       !hadExplicitAuth && input instanceof Request ? input.clone() : null;
