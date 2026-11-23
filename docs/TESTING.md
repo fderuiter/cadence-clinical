@@ -13,6 +13,7 @@ requirement as qualified.
 | `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
 | `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                        |
+| `packages/usdm-schemas/tests/`                                     | Vitest suite for the shared CDISC USDM Zod schemas and graph validators.                                                                         | `pnpm --filter usdm-schemas test`                                              |
 | `apps/subject-portal/tests/`                                       | Vitest suite for the participant portal stores, sync queue and views (jsdom). Playwright specs under `tests/e2e/` are excluded.                  | `pnpm --filter subject-portal test`                                            |
 | `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
 | `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                              |
@@ -159,8 +160,9 @@ These tests currently use it:
 
 ## Web app tests (`apps/web`)
 
-`pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm --filter web typecheck` and
-`pnpm --filter web lint` are the other two checks to run before pushing a web change.
+`pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm -r typecheck` (strict `vue-tsc --noEmit` across
+`apps/web` and `packages/ui`, and `tsc --noEmit` across `packages/usdm-schemas`) and `pnpm -r lint` are the other two
+checks to run before pushing a frontend or shared-package change.
 
 Coverage is measured over every hand-written source file in `apps/web`, `apps/subject-portal` and `packages/ui`
 (ADR-2530). The global thresholds in `apps/web/vitest.config.js`, `apps/subject-portal/vite.config.js` and

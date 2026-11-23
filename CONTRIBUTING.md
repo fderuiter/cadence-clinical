@@ -81,7 +81,7 @@ pnpm cadence check
 
 `make verify` runs `pnpm cadence check`, `pnpm test`, and `pnpm cadence test` in sequence.
 
-Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
 `duplication`, `security`, `deid`, `vulnerabilities`.
 

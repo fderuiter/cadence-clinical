@@ -147,44 +147,79 @@
 
       <div
         class="panes"
-        :class="{ 'panes--inspector-collapsed': inspectorCollapsed }"
+        :class="{
+          'panes--navigator-collapsed': navigatorCollapsed,
+          'panes--inspector-collapsed': inspectorCollapsed,
+        }"
       >
-        <nav id="canvas-navigator" class="navigator" aria-label="Sections">
-          <router-link
-            id="nav-study-home"
-            :to="scopedStudyLocation()"
-            class="nav-link"
-            :class="{ current: !stage }"
-            :aria-current="!stage ? 'page' : undefined"
-          >
-            Study home
-          </router-link>
+        <nav
+          id="canvas-navigator"
+          class="navigator"
+          :class="{ 'navigator--collapsed': navigatorCollapsed }"
+          :data-collapsed="navigatorCollapsed ? 'true' : 'false'"
+          aria-label="Sections"
+        >
+          <div class="navigator-rail">
+            <button
+              id="btn-toggle-navigator"
+              type="button"
+              class="navigator-toggle"
+              :aria-expanded="!navigatorCollapsed"
+              aria-controls="canvas-navigator-body"
+              :aria-label="
+                navigatorCollapsed ? 'Expand navigator' : 'Collapse navigator'
+              "
+              :title="
+                navigatorCollapsed ? 'Expand navigator' : 'Collapse navigator'
+              "
+              @click="toggleNavigator"
+            >
+              <span aria-hidden="true">{{
+                navigatorCollapsed ? "▸" : "◂"
+              }}</span>
+            </button>
+          </div>
           <div
-            v-for="group in navigatorStages"
-            :key="group.id"
-            class="nav-group"
+            v-if="!navigatorCollapsed"
+            id="canvas-navigator-body"
+            class="navigator-body"
           >
-            <h2 class="nav-group-title">
-              {{ group.label }}
-            </h2>
-            <ul v-if="group.sections.length">
-              <li v-for="item in group.sections" :key="item.id">
-                <router-link
-                  :id="`nav-${item.id}`"
-                  :to="
-                    scopedStudyLocation({ stage: group.id, section: item.id })
-                  "
-                  class="nav-link"
-                  :class="{ current: section?.id === item.id }"
-                  :aria-current="section?.id === item.id ? 'page' : undefined"
-                >
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-            <p v-else class="nav-empty">
-              No sections are available in this stage yet.
-            </p>
+            <router-link
+              id="nav-study-home"
+              :to="scopedStudyLocation()"
+              class="nav-link"
+              :class="{ current: !stage }"
+              :aria-current="!stage ? 'page' : undefined"
+            >
+              Study home
+            </router-link>
+            <div
+              v-for="group in navigatorStages"
+              :key="group.id"
+              class="nav-group"
+            >
+              <h2 class="nav-group-title">
+                {{ group.label }}
+              </h2>
+              <ul v-if="group.sections.length">
+                <li v-for="item in group.sections" :key="item.id">
+                  <router-link
+                    :id="`nav-${item.id}`"
+                    :to="
+                      scopedStudyLocation({ stage: group.id, section: item.id })
+                    "
+                    class="nav-link"
+                    :class="{ current: section?.id === item.id }"
+                    :aria-current="section?.id === item.id ? 'page' : undefined"
+                  >
+                    {{ item.label }}
+                  </router-link>
+                </li>
+              </ul>
+              <p v-else class="nav-empty">
+                No sections are available in this stage yet.
+              </p>
+            </div>
           </div>
         </nav>
 
@@ -1110,9 +1145,59 @@ const paletteOpen = ref(false);
 const typedStudy = ref("");
 const inspectorCollapsed = ref(true);
 const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
+const MEDIUM_CANVAS_MEDIA_QUERY = "(min-width: 961px) and (max-width: 1280px)";
+const isMediumCanvasViewport = ref(false);
+const manualNavigatorCollapsed = ref<boolean | null>(null);
+let mediumCanvasMediaList: MediaQueryList | null = null;
 const topbarRef = ref<HTMLElement | null>(null);
 const topbarHeight = ref(45);
 let topbarResizeObserver: ResizeObserver | null = null;
+
+function syncMediumCanvasViewport() {
+  if (typeof window === "undefined") {
+    isMediumCanvasViewport.value = false;
+    return;
+  }
+  if (typeof window.matchMedia === "function") {
+    const mql =
+      mediumCanvasMediaList ?? window.matchMedia(MEDIUM_CANVAS_MEDIA_QUERY);
+    isMediumCanvasViewport.value = Boolean(mql?.matches);
+    return;
+  }
+  isMediumCanvasViewport.value =
+    window.innerWidth >= 961 && window.innerWidth <= 1280;
+}
+
+function toggleNavigator() {
+  manualNavigatorCollapsed.value = !navigatorCollapsed.value;
+}
+
+async function focusAndScrollInspector(options?: {
+  scrollIntoView?: boolean;
+}): Promise<void> {
+  inspectorRef.value?.expand();
+  await nextTick();
+  syncTopbarHeight();
+  await nextTick();
+  if (options?.scrollIntoView === false || typeof document === "undefined") {
+    return;
+  }
+  const inspectorEl = document.getElementById("canvas-inspector");
+  if (!inspectorEl) return;
+  const computedPos =
+    typeof window !== "undefined" &&
+    typeof window.getComputedStyle === "function"
+      ? window.getComputedStyle(inspectorEl).position
+      : "";
+  const isDesktopSticky =
+    typeof window !== "undefined" &&
+    window.innerWidth > 960 &&
+    computedPos === "sticky";
+  if (isDesktopSticky) {
+    return;
+  }
+  inspectorEl.scrollIntoView?.({ block: "start", behavior: "auto" });
+}
 
 function syncTopbarHeight() {
   const el = topbarRef.value;
@@ -1120,6 +1205,10 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
+    const canvasEl = el.closest?.(".canvas");
+    if (canvasEl instanceof HTMLElement) {
+      canvasEl.style.setProperty("--canvas-topbar-height", `${measured}px`);
+    }
   }
 }
 
@@ -1142,10 +1231,12 @@ const linkSandboxSiteOnCreate = ref(true);
 
 const defaultStarterSite = computed<KernelSiteSummary | null>(() => {
   if (workspaceSites.value.length === 0) return null;
-  const assigned = authStore.assignedSiteIds ?? [];
+  const assigned: string[] = authStore.assignedSiteIds ?? [];
   if (assigned.length > 0) {
     const matched = workspaceSites.value.find((site) =>
-      assigned.some((code) => code.toLowerCase() === site.code.toLowerCase())
+      assigned.some(
+        (code: string) => code.toLowerCase() === site.code.toLowerCase()
+      )
     );
     if (matched) return matched;
   }
@@ -1394,25 +1485,23 @@ async function submitCreateStudy() {
       } catch {
         // Non-OIDC test sessions continue with the existing in-memory session.
       }
+      const createdCode = created?.code;
       if (
-        created?.code &&
+        createdCode &&
         !authStore.studyIds.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.studyIds = [...authStore.studyIds, created.code];
+        authStore.studyIds = [...authStore.studyIds, createdCode];
       }
       if (
-        created?.code &&
+        createdCode &&
         Array.isArray(authStore.assignedStudies) &&
         !authStore.assignedStudies.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.assignedStudies = [
-          ...authStore.assignedStudies,
-          created.code,
-        ];
+        authStore.assignedStudies = [...authStore.assignedStudies, createdCode];
       }
       if (
         starterSite?.code &&
@@ -1700,12 +1789,18 @@ async function loadInspectedProtocolVersion(text: string) {
     const version = await kernelApi.getProtocolVersion(text);
     if (request === versionRequest) {
       inspectedVersion.value = version;
-      seedNodeSummary(version.ref, {
-        kind: "protocol_version",
-        code: version.version,
-        title: `Protocol ${version.version}`,
-        status: version.status,
-      });
+      const versionNumber =
+        version.number !== null && version.number !== undefined
+          ? String(version.number)
+          : text;
+      if (version.ref) {
+        seedNodeSummary(version.ref, {
+          kind: "protocol_version",
+          code: versionNumber,
+          title: `Protocol v${versionNumber}`,
+          status: version.status,
+        });
+      }
     }
   } catch (e) {
     if (request === versionRequest) {
@@ -1904,26 +1999,24 @@ function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
   );
 }
 
-function selectParticipant(participant: SubjectSummary) {
+async function selectParticipant(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   if (!node) return;
-  inspectorRef.value?.expand();
-  router.push(
+  const nodeText = formatNodeRef(node);
+  await router.push(
     studyLocation({
       stage: "conduct",
       section: "participants",
       status: statusFilter.value,
       site: siteFilter.value,
       q: participantSearchFilter.value,
-      node: formatNodeRef(node),
+      node: nodeText,
     })
   );
-  // Stacked panes on a narrow screen: bring the inspector into view (§2.4).
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
+  await canvas.requestInspectorFocus({
+    nodeRef: nodeText,
+    scrollIntoView: true,
+  });
 }
 
 /** The participant's data, opened at the participant zoom level with the participant in the inspector. */
@@ -2309,21 +2402,19 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
 }
 
-function selectVersion(version: KernelProtocolVersion) {
+async function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
-  inspectorRef.value?.expand();
-  router.push(
+  await router.push(
     studyLocation({
       stage: "design",
       section: "protocol-versions",
       node: version.ref,
     })
   );
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
+  await canvas.requestInspectorFocus({
+    nodeRef: version.ref,
+    scrollIntoView: true,
+  });
 }
 
 function applyParticipantFilter(filter: {
@@ -2383,15 +2474,18 @@ function openParticipantsForSite(siteCode: string) {
   );
 }
 
-function goToPaletteTarget(target: PaletteTarget) {
+async function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
   if (target.ask) {
-    inspectorRef.value?.expand();
     // Ask keeps the view and its selection, and opens Assist with the question.
-    router.push({
+    await router.push({
       name: "study",
       params: { studyCode: target.studyCode },
       query: { ...route.query, ask: target.ask },
+    });
+    await canvas.requestInspectorFocus({
+      nodeRef: null,
+      scrollIntoView: true,
     });
     return;
   }
@@ -2400,21 +2494,27 @@ function goToPaletteTarget(target: PaletteTarget) {
       canvas.openStudy(target.studyCode);
     }
     canvas.rememberParticipants([target.participant]);
-    inspectorRef.value?.expand();
   }
   const node = target.participant
     ? tryNodeRef("participant", target.participant.id)
     : null;
-  router.push(
+  const nodeText = node ? formatNodeRef(node) : "";
+  await router.push(
     studyLocation(
       {
         stage: target.stage,
         section: target.section,
-        node: node ? formatNodeRef(node) : "",
+        node: nodeText,
       },
       target.studyCode
     )
   );
+  if (target.participant) {
+    await canvas.requestInspectorFocus({
+      nodeRef: nodeText,
+      scrollIntoView: true,
+    });
+  }
 }
 
 function openTypedStudy() {
@@ -2567,6 +2667,19 @@ watch(openObservationRef, (refText) => {
   if (!refText) {
     loadedObservation.value = null;
   }
+});
+
+const autoCollapseNavigator = computed(
+  () =>
+    isMediumCanvasViewport.value &&
+    (hasOpenForm.value || Boolean(openObservationRef.value))
+);
+const navigatorCollapsed = computed(
+  () => manualNavigatorCollapsed.value ?? autoCollapseNavigator.value
+);
+
+watch([studyCode, autoCollapseNavigator], () => {
+  manualNavigatorCollapsed.value = null;
 });
 
 watch([hasOpenForm, openObservationRef], ([formOpen, obsRef]) => {
@@ -3155,8 +3268,31 @@ function handleDemoReset() {
 }
 
 let unregisterCanvasExplain: (() => void) | null = null;
+let unregisterInspectorFocus: (() => void) | null = null;
 
 onMounted(() => {
+  syncMediumCanvasViewport();
+  if (typeof window !== "undefined") {
+    if (typeof window.matchMedia === "function") {
+      mediumCanvasMediaList = window.matchMedia(MEDIUM_CANVAS_MEDIA_QUERY);
+      if (typeof mediumCanvasMediaList?.addEventListener === "function") {
+        mediumCanvasMediaList.addEventListener(
+          "change",
+          syncMediumCanvasViewport
+        );
+      } else if (typeof mediumCanvasMediaList?.addListener === "function") {
+        mediumCanvasMediaList.addListener(syncMediumCanvasViewport);
+      }
+    }
+    window.addEventListener("resize", syncMediumCanvasViewport);
+  }
+  unregisterInspectorFocus = canvas.registerInspectorCoordinator(
+    async (request) => {
+      await focusAndScrollInspector({
+        scrollIntoView: request.scrollIntoView,
+      });
+    }
+  );
   unregisterCanvasExplain = canvas.registerExplainCoordinator((options) => {
     if (options?.fromShortcut) return false;
     const targetRef = options?.targetNodeRef;
@@ -3187,19 +3323,37 @@ onMounted(() => {
     document.addEventListener("keydown", onGlobalKeydown);
   }
   syncTopbarHeight();
+  window.addEventListener("resize", syncTopbarHeight);
   if (
     typeof ResizeObserver !== "undefined" &&
     topbarRef.value instanceof HTMLElement
   ) {
     topbarResizeObserver = new ResizeObserver(() => syncTopbarHeight());
-    topbarResizeObserver.observe(topbarRef.value);
+    topbarResizeObserver.observe(topbarRef.value, { box: "border-box" });
   }
 });
 onUnmounted(() => {
   knowledgeStore.clearCanvasEscalationContext();
   stopReturnFocusObserver();
+  unregisterInspectorFocus?.();
+  unregisterInspectorFocus = null;
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;
+  if (mediumCanvasMediaList) {
+    if (typeof mediumCanvasMediaList.removeEventListener === "function") {
+      mediumCanvasMediaList.removeEventListener(
+        "change",
+        syncMediumCanvasViewport
+      );
+    } else if (typeof mediumCanvasMediaList.removeListener === "function") {
+      mediumCanvasMediaList.removeListener(syncMediumCanvasViewport);
+    }
+    mediumCanvasMediaList = null;
+  }
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", syncMediumCanvasViewport);
+    window.removeEventListener("resize", syncTopbarHeight);
+  }
   window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("cadence:demo-reset", handleDemoReset);
   document.removeEventListener("click", onWorkspaceInteractionCapture, true);
@@ -3300,7 +3454,21 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-@media (min-width: 768px) and (max-width: 1280px) {
+@media (min-width: 961px) {
+  .topbar {
+    padding: 0 14px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .zoom-path ol {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 960px) {
   .topbar {
     padding: 0 12px;
     gap: 8px;
@@ -3412,10 +3580,20 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr) 20rem;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.panes.panes--navigator-collapsed {
+  grid-template-columns: 2.75rem minmax(0, 1fr) 20rem;
 }
 
 .panes.panes--inspector-collapsed {
   grid-template-columns: 14rem minmax(0, 1fr) 2.75rem;
+}
+
+.panes.panes--navigator-collapsed.panes--inspector-collapsed {
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
 }
 
 .navigator {
@@ -3424,8 +3602,54 @@ onUnmounted(() => {
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px;
+  min-width: 0;
   background: var(--semantic-color-surface);
+}
+
+.navigator.navigator--collapsed {
+  padding: 8px 6px;
+  align-items: center;
+}
+
+.navigator-rail {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.navigator.navigator--collapsed .navigator-rail {
+  justify-content: center;
+}
+
+.navigator-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-dark);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.navigator-toggle:hover {
+  background: var(--neutral-light);
+  color: var(--primary);
+}
+
+.navigator-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .nav-group-title {
@@ -3465,13 +3689,21 @@ onUnmounted(() => {
 .workspace {
   padding: 16px;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
+}
+
+.workspace > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .canvas :deep(#canvas-inspector) {
   position: sticky;
   top: var(--canvas-pane-top);
+  scroll-margin-top: calc(var(--canvas-pane-top, 0px) + 12px);
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
@@ -3699,9 +3931,34 @@ onUnmounted(() => {
   color: var(--neutral-dark);
 }
 
+@media (min-width: 961px) and (max-width: 1280px) {
+  .study-header {
+    padding: 8px 12px;
+    gap: 6px 16px;
+  }
+
+  .panes {
+    grid-template-columns: 11rem minmax(0, 1fr) 15.5rem;
+  }
+
+  .panes.panes--navigator-collapsed {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 15.5rem;
+  }
+
+  .panes.panes--inspector-collapsed {
+    grid-template-columns: 11rem minmax(0, 1fr) 2.75rem;
+  }
+
+  .panes.panes--navigator-collapsed.panes--inspector-collapsed {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  }
+}
+
 @media (max-width: 960px) {
   .panes,
-  .panes.panes--inspector-collapsed {
+  .panes.panes--navigator-collapsed,
+  .panes.panes--inspector-collapsed,
+  .panes.panes--navigator-collapsed.panes--inspector-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -3711,6 +3968,15 @@ onUnmounted(() => {
     overflow-y: visible;
     align-self: stretch;
     border-bottom: 1px solid var(--border);
+  }
+
+  .navigator.navigator--collapsed {
+    align-items: stretch;
+    padding: 6px 12px;
+  }
+
+  .navigator.navigator--collapsed .navigator-rail {
+    justify-content: flex-start;
   }
 
   .workspace {
@@ -3724,6 +3990,12 @@ onUnmounted(() => {
     overflow-y: visible;
     align-self: stretch;
     border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    position: static;
   }
 }
 </style>
