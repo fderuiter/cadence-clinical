@@ -67,10 +67,53 @@ public interface IWorkItemSource
 }
 
 /// <summary>
+/// Masks work items whose subject or underlying clinical observation records blinded treatment allocation unless the
+/// reader holds an unblinding capability on the covered enrollment or study (K-AUTH-4, ADR-2471).
+/// </summary>
+public interface IWorkItemBlindingMask
+{
+    /// <summary>Returns <see cref="MaskReason.Blinded"/> for any node in <paramref name="nodes"/> that is blinded to the current caller.</summary>
+    ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IAuthorizationProbe probe,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken);
+}
+
+/// <summary>Navigation context resolved for an unmasked work item so clinical workspaces can deep-link directly to the target screen.</summary>
+/// <param name="StudyRef">The owning study's unversioned NodeRef, when the item belongs to a study.</param>
+/// <param name="StudyId">The owning study's raw identifier, when the item belongs to a study.</param>
+/// <param name="EnrollmentId">The participant enrollment identifier, when the item belongs to an enrollment.</param>
+/// <param name="FormId">The form instance identifier, when the item targets a form or an observation collected on a form.</param>
+/// <param name="ObservationRef">The observation's NodeRef, when the item targets an observation or a query/finding on one.</param>
+/// <param name="FindingRef">The validation finding's NodeRef, when the item targets a validation finding.</param>
+/// <param name="ProtocolVersionRef">The protocol version's NodeRef, when the item targets a protocol version.</param>
+/// <param name="ProposalRef">The proposal's NodeRef, when the item targets a proposal.</param>
+public sealed record WorkItemTargetContext(
+    string? StudyRef = null,
+    Guid? StudyId = null,
+    Guid? EnrollmentId = null,
+    Guid? FormId = null,
+    string? ObservationRef = null,
+    string? FindingRef = null,
+    string? ProtocolVersionRef = null,
+    string? ProposalRef = null);
+
+/// <summary>Resolves navigation context for unmasked work items.</summary>
+public interface IWorkItemTargetResolver
+{
+    /// <summary>Resolves navigation context keyed by unmasked subject <see cref="NodeRef"/>.</summary>
+    Task<IReadOnlyDictionary<NodeRef, WorkItemTargetContext>> ResolveAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> subjects,
+        CancellationToken cancellationToken);
+}
+
+/// <summary>
 /// The work-queue read (Canvas D10, ADR-2486). For each current definition it takes the source's oldest candidates
 /// and keeps those the current actor may act on, asking <see cref="IAuthorizationProbe"/> for each one, so a queue
-/// holds exactly what the corresponding command would permit now. Objects the actor may not see are masked in place
-/// (ADR-2471).
+/// holds exactly what the corresponding command would permit now. Objects the actor may not see or that are blinded
+/// to the actor are masked in place (ADR-2471, K-AUTH-4).
 /// </summary>
 public sealed partial class WorkQueueService(
     IWorkQueueDefinitions definitions,
@@ -78,7 +121,8 @@ public sealed partial class WorkQueueService(
     IAuthorizationProbe probe,
     INodeVisibility visibility,
     ICurrentActor currentActor,
-    ILogger<WorkQueueService> logger) : IWorkQueues
+    ILogger<WorkQueueService> logger,
+    IWorkItemBlindingMask? blinding = null) : IWorkQueues
 {
     /// <summary>The most candidates one queue read examines per queue.</summary>
     public const int MaxExamined = WorkQueueQuery.MaxLimit;
@@ -160,12 +204,34 @@ public sealed partial class WorkQueueService(
             return ([], truncated);
         }
 
-        var hidden = await visibility.MaskAsync(tenant, actor, [.. permitted.Select(c => c.Subject)], cancellationToken).ConfigureAwait(false);
+        var subjects = permitted.Select(c => c.Subject).ToList();
+        var hidden = await visibility.MaskAsync(tenant, actor, subjects, cancellationToken).ConfigureAwait(false);
+        IReadOnlyDictionary<NodeRef, MaskReason>? blinded = null;
+        if (blinding is not null)
+        {
+            var visibleSubjects = subjects.Where(s => !hidden.ContainsKey(s)).Distinct().ToList();
+            if (visibleSubjects.Count > 0)
+            {
+                blinded = await blinding.MaskAsync(tenant, probe, visibleSubjects, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         IReadOnlyList<WorkItem> items =
         [
-            .. permitted.Select(c => hidden.TryGetValue(c.Subject, out var reason)
-                ? new WorkItem(null, c.Subject.Kind, null, c.Since, reason)
-                : new WorkItem(c.Subject, c.Subject.Kind, c.Title, c.Since, null)),
+            .. permitted.Select(c =>
+            {
+                if (hidden.TryGetValue(c.Subject, out var reason))
+                {
+                    return new WorkItem(null, c.Subject.Kind, null, c.Since, reason);
+                }
+
+                if (blinded is not null && blinded.TryGetValue(c.Subject, out var blindReason))
+                {
+                    return new WorkItem(null, c.Subject.Kind, null, c.Since, blindReason);
+                }
+
+                return new WorkItem(c.Subject, c.Subject.Kind, c.Title, c.Since, null);
+            }),
         ];
         return (items, truncated);
     }
