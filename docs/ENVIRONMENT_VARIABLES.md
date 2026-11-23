@@ -105,21 +105,27 @@ All services share the `cadence` database, each in its own schema; see
   `docker compose` and the AppHost set `true`.
 - `KeycloakAdmin__BaseUrl` — Read by
   `apps/kernel-api/src/Onboarding/KeycloakOnboardingClient.cs`. Default: none.
-  Not required; base URL of Keycloak for Admin REST writeback during
-  `POST /api/v1/kernel/onboarding/trial` (ADR-2547). Empty skips remote
-  claim/role writeback in isolated tests.
+  Required for `POST /api/v1/kernel/onboarding/trial` (ADR-2547, ADR-2605);
+  blank or incomplete settings fail closed with
+  `502 K.Commercial.IdentityProviderSyncFailed`.
 - `KeycloakAdmin__Realm` — Read by
   `apps/kernel-api/src/Onboarding/KeycloakOnboardingClient.cs`. Default:
-  `cadence`. Not required; target Keycloak realm receiving `tenant_id` and
-  initial trial roles (`Sponsor Admin`, `Sponsor Designer`).
+  `cadence`. Required for trial onboarding; target Keycloak realm receiving
+  `ADMIN_EDIT` `tenant_id` attribute and initial trial roles (`Sponsor Admin`,
+  `Sponsor Designer`).
 - `KeycloakAdmin__AdminUsername` — Read by
   `apps/kernel-api/src/Onboarding/KeycloakOnboardingClient.cs`. Default:
-  `admin`. Not required; Keycloak admin username used when
-  `KeycloakAdmin__BaseUrl` is set.
+  `admin`. Required for trial onboarding; Keycloak admin username used to obtain
+  short-lived Admin REST tokens.
 - `KeycloakAdmin__AdminPassword` — Read by
   `apps/kernel-api/src/Onboarding/KeycloakOnboardingClient.cs`. Default: none.
-  Required only when `KeycloakAdmin__BaseUrl` is set; Keycloak admin password
-  used to obtain short-lived Admin REST tokens.
+  Required for trial onboarding; Keycloak admin password used to obtain
+  short-lived Admin REST tokens.
+- `CommercialQuote__SigningSecret` — Read by `apps/kernel-api/src/Program.cs`
+  (ADR-2605). Default: falls back to `Security__GatewaySecret`. Not required;
+  HMAC-SHA256 secret used to verify signed `SubscriptionQuoteToken`
+  (`qtk1.<payload>.<sig>`) tokens during
+  `POST /api/v1/kernel/entitlements/activate`.
 
 ## Intelligence module
 

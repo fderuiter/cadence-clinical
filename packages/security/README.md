@@ -45,11 +45,15 @@ service.
   `HttpContext.VerifiedSigToken()` reads the verified token;
   `AuditorWriteGuardMiddleware`, `ExpiredSubscriptionWriteGuardMiddleware`
   (enforces `403 K.Subscription.Expired` on mutating requests when signed
-  `X-Tenant-Read-Only` is `true`, exempting `GET`/`HEAD`,
-  `etmf_document:export`, `ElectronicSignatureRequired`, and routes marked with
+  `X-Tenant-Read-Only` is `true`, exempting only `GET`/`HEAD`,
+  `etmf_document:export`, and closeout routes marked with
   `AllowExpiredTenantWrite()`,
   [ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)),
-  and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain printable
+  `ProductFamilyGuardMiddleware` (enforces
+  `403 K.Commercial.ProductFamilyNotEntitled` across all 20 surfaces from signed
+  `X-Tenant-Product-Families`), `SubscriptionScopingGuardMiddleware` (enforces
+  `403 K.Commercial.ScopingCapExceeded` from signed `X-Tenant-Scoping`), and
+  `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain printable
   ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every
   reader decodes the header with it, so the audit trail stores what the user
   typed
@@ -59,8 +63,10 @@ service.
   `Principal.TenantId`, and `CallerScope.TenantId` are null when the sign-in
   names none
   ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md)).
-  `GatewayHeaders.TenantReadOnly` (`X-Tenant-Read-Only`) is bound into
-  `HmacSigner` and exposed as `Principal.TenantReadOnly`.
+  `GatewayHeaders.TenantReadOnly` (`X-Tenant-Read-Only`),
+  `GatewayHeaders.TenantProductFamilies` (`X-Tenant-Product-Families`), and
+  `GatewayHeaders.TenantScoping` (`X-Tenant-Scoping`) are bound into
+  `HmacSigner` and exposed on `Principal`.
 - **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`,
   `ClinicalScopeGuard`, site/study access evaluators and the permission, role,
   tenant-scope, study-scope, site-scope, change-justification and

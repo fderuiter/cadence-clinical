@@ -75,12 +75,13 @@ Checks the local environment. It reports:
   `package.json` (ADR-2508)
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or
   `uvx`
-- whether `actionlint` and `hadolint` run from `.cadence/bin` or `PATH`
+- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` or
+  `PATH`
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
 It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from
-the pin, or `detect-secrets`, `actionlint`, or `hadolint` is unavailable, and
-`0` otherwise.
+the pin, or `detect-secrets`, `actionlint`, `hadolint`, or `shellcheck` is
+unavailable, and `0` otherwise.
 
 | Option           | Description                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------ |
@@ -167,7 +168,7 @@ gate against a fixture that must make it fail.
 | `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                           |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                           |
 | `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files vs `HEAD` (`CADENCE_BASELINE_GROWTH` admits growth) |
-| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: runs in CI and deploy-docs after building static portal/demo bundles  |
+| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: post-build gate; runs fail-closed in `docs-build` and `deploy-docs`   |
 
 <!-- quality-gates:end -->
 
@@ -227,8 +228,10 @@ generated text file in `docs/.vitepress/dist`, `apps/web/dist`, and
 `apps/subject-portal/dist` after compilation with zero comment or pragma
 exemptions, rejecting national identifiers, unapproved email domains, secrets,
 external assets, executable local backend URLs, and missing or permissive
-`Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit`
-and runs in `docs-build` and `deploy-docs.yml`.
+`Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit`,
+is skipped by unscoped `cadence check` only when all three `dist/` folders are
+absent (partial `dist/` output fails closed), and always fails closed on direct
+`cadence check public-bundle` calls in `docs-build` and `deploy-docs.yml`.
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
@@ -260,10 +263,16 @@ pnpm cadence ci --list                  # what each step runs locally, without r
 - `-j|--job <job>`: Runs this job and the jobs it needs. Jobs: `actionlint`,
   `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`,
   `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.
-- `--allow-skip`: Skips steps whose required binary (`actionlint`, `hadolint`,
-  `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the
-  install hint, and accepts a run whose database tests did not execute (without
-  PostgreSQL or with skipped TRX).
+- `--allow-missing-tools`: Skips steps whose required binary (`actionlint`,
+  `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing with the
+  install hint, while still requiring PostgreSQL and database test execution.
+- `--allow-db-skip`: Accepts a run whose database tests did not execute (without
+  PostgreSQL or with skipped TRX), while still requiring all external tool
+  binaries.
+- `--allow-skip`: Shorthand for `--allow-missing-tools --allow-db-skip`: skips
+  steps whose required binary is missing with the install hint, and accepts a
+  run whose database tests did not execute (without PostgreSQL or with skipped
+  TRX).
 - `--base <ref>`: The ref forwarded as `--base <ref>` to CLI `check` steps and
   `Check GxP Snapshot Policy`. Default: `origin/main`.
 - `--list`: Prints each step and what it runs locally, then exits `0`.
@@ -285,7 +294,8 @@ Where it differs from CI:
   execute fails the step too (#5325), except the opt-in lineage benchmark and
   browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
   browser correction check runs with `CADENCE_TEST_BROWSER=1` in the
-  `accessibility-e2e` job). `--allow-skip` accepts the skips.
+  `accessibility-e2e` job). `--allow-db-skip` (or `--allow-skip`) accepts the
+  skips.
 - **Checks already run once are not repeated.** `actionlint` runs `actionlint`,
   `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and
   `api-clients`, `dotnet-quality` runs `cadence check` excluding `prettier`,
@@ -315,11 +325,15 @@ Where it differs from CI:
   the committed ones outside their evidence block, and puts the committed copies
   back when they match.
 - **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in
-  CI), Hadolint, ShellCheck, `detect-secrets-hook` (resolved from
-  `.cadence/venv`, `.venv`, or `PATH`) and `bash` are not installed for you:
-  when any required binary is missing, the step fails with the install hint so
-  an incomplete environment cannot report green. Pass `--allow-skip` to record
-  missing tool steps as skipped, with the install hint, instead of failing.
+  CI), Hadolint, and ShellCheck (resolved from `.cadence/bin` or `PATH`),
+  `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), and
+  `bash` are not installed automatically by `cadence ci` (provision them with
+  `./scripts/setup_wizard.sh --minimal` or
+  `pwsh scripts/setup_wizard.ps1 -Minimal`): when any required binary is
+  missing, the step fails with the install hint so an incomplete environment
+  cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to
+  record missing tool steps as skipped, with the install hint, instead of
+  failing.
 - **Not run:** the Playwright browser install, and the jobs that act on GitHub
   or container registries (`container-security`, `ci-gate`, `classify`,
   `automerge`, `release-and-archive`, `deploy-docs`).

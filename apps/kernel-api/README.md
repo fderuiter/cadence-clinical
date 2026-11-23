@@ -135,35 +135,50 @@ Routes under `/api/v1/kernel`:
   entry about a hidden object is masked in place.
 - `GET entitlements`: active commercial subscription tier (`Individual`,
   `Select`, `Complete`), status (`Trialing`, `Active`, `Expired`), trial end
-  timestamp, read-only state, scoping metadata and enabled product families for
-  the caller's kernel tenant
+  timestamp, read-only state, scoping metadata, masked/unmasked
+  `billing_confirmation` (requires `subscription.activate` to view unmasked),
+  and enabled product families for callers with tenant node visibility and
+  `TenantMembership`
   ([ADR-2547](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md),
-  [ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md)).
-- `POST entitlements/tier`: switches the commercial tier (`Individual`,
-  `Select`, `Complete`) of an active `Trialing` subscription in place while
-  preserving `TrialEndsAt` (`SwitchTrialTier`); refused with
-  `403 K.Subscription.Expired` once expired.
+  [ADR-2604](../../docs/adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md),
+  [ADR-2605](../../docs/adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md)).
+- `GET entitlements/posture`: minimal internal posture payload (`read_only`,
+  `product_families`, `scoping`), omitting `billing_confirmation` and restricted
+  to `svc:gateway-entitlements`
+  ([ADR-2605](../../docs/adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md)).
+- `POST entitlements/tier`: appends a new bitemporal `SubscriptionPeriod` and
+  synchronized `ProductEntitlement` periods in one transaction while preserving
+  `TrialEndsAt` (`SwitchTrialTier`), requiring `Idempotency-Key` and signed
+  `X-Change-Reason`; refused with `403 K.Subscription.Expired` once expired.
 - `POST entitlements/activate`: transitions a `Trialing` or `Expired` workspace
-  to `Active` after validating structured study scoping (`study_phase`,
+  to `Active` in one bitemporal transaction after requiring `Idempotency-Key`,
+  signed `X-Change-Reason`, structured study scoping (`study_phase`,
   `study_duration_months`, `countries`, `site_count`, `participant_count`,
-  `active_study_count`, `billing_confirmation`), returning
-  `422 K.Commercial.ScopingInvalid` with field errors when incomplete
-  (`ActivateSubscription`, marked `AllowExpiredTenantWrite()`).
+  `active_study_count`), and a cryptographic `SubscriptionQuoteToken` (`qtk1`)
+  or `svc:kernel-commercial-billing` (`ActivateSubscription`, marked
+  `AllowExpiredTenantWrite()`).
 
-### Self-service trial onboarding (ADR-2547)
+### Self-service trial onboarding (ADR-2547, ADR-2605)
 
 `POST /api/v1/kernel/onboarding/trial` runs outside `KernelTenantFilter`
-(protected by `SignedInCallerPolicy`) so newly self-registered Keycloak users
-without a `tenant_id` claim can bootstrap an isolated trial workspace
-(`organization_name`, `tier`, `residency`). `TrialOnboardingService` executes
-idempotently per OIDC `sub` under platform operator
+(protected by `SignedInCallerPolicy`, without `.AllowExpiredTenantWrite()`) so
+newly self-registered Keycloak users with no existing `tenant_id` claim, foreign
+`TenantMembership`, or clinical roles
+(`403 K.Commercial.OnboardingCallerInvalid`) can bootstrap an isolated trial
+workspace (`organization_name`, `tier`, `residency`) with caller-supplied
+`Idempotency-Key` and signed `X-Change-Reason`. `TrialOnboardingService`
+executes idempotently per OIDC `sub` under platform operator
 `svc:kernel-trial-onboarding`
 (`KernelAuthorityOptions.TrialOnboardingOperator`), dispatching kernel commands
 to provision the `Tenant`, sponsor `Organization`, pseudonymous `Person`,
 `TenantMembership`, initial `sponsor_admin` and `sponsor_designer` `Role` and
-`Grant` records, `Subscription` (`Trialing`), and `ProductEntitlement` rows
-(`Blueprint`, `Capture`, plus tier-included families), then writes `tenant_id`
-and realm roles back to Keycloak via `KeycloakOnboardingClient`.
+`Grant` records (excluding commercial operator capabilities
+`subscription.activate`, `subscription.expire`, `entitlement.grant`, and
+`entitlement.revoke`), and bitemporal `SubscriptionPeriod` (`Trialing`) +
+`ProductEntitlement` rows (`Blueprint`, `Capture`, plus tier-included families),
+then writes `tenant_id` (`ADMIN_EDIT`) and realm roles back to Keycloak
+fail-closed (`502 K.Commercial.IdentityProviderSyncFailed`) via
+`KeycloakOnboardingClient`.
 
 ### Study creation & synchronous protocol draft import
 

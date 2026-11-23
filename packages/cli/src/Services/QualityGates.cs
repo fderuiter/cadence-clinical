@@ -53,6 +53,15 @@ public sealed record QualityGate(string Name, IReadOnlyList<string> Aliases, str
     /// <summary>Whether the gate limits itself to the files given to <c>cadence check &lt;gate&gt; [files]</c>.</summary>
     public bool TakesFiles { get; init; }
 
+    /// <summary>
+    /// Whether the gate inspects compiled build artifacts that unscoped <c>cadence check</c> skips only when none of its
+    /// output directories exist yet (while partial output or direct <c>cadence check &lt;gate&gt;</c> fails closed).
+    /// </summary>
+    public bool PostBuild { get; init; }
+
+    /// <summary>Why unscoped <c>cadence check</c> skipped a <see cref="PostBuild"/> gate when all build outputs are absent.</summary>
+    public string? PostBuildSkipNote { get; init; }
+
     /// <summary>The short name followed by the aliases.</summary>
     public IEnumerable<string> AllNames => Aliases.Prepend(Name);
 }
@@ -245,11 +254,13 @@ public static class QualityGates
             PreCommitNote = "checks staged files vs `HEAD` (`CADENCE_BASELINE_GROWTH` admits growth)",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles for PHI, secrets, external assets, local URLs, and CSP headers",
+            "Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles (skipped in unscoped `check` only when all three `dist/` are absent)",
             ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
         {
             PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "runs in CI and deploy-docs after building static portal/demo bundles",
+            PreCommitNote = "post-build gate; runs fail-closed in `docs-build` and `deploy-docs`",
+            PostBuild = true,
+            PostBuildSkipNote = "post-build gate; none of docs/.vitepress/dist, apps/web/dist, or apps/subject-portal/dist exist yet (build bundles or run 'pnpm cadence check public-bundle')",
         },
     ];
 

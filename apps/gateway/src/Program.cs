@@ -150,6 +150,7 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.UseChangeReasonValidation();
+app.UseTenantEntitlementPosture();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Gateway", version = "10.0" }))
     .WithName("HealthCheck")

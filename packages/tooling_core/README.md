@@ -14,18 +14,19 @@ schema docs).
     `GitIndexReader` and `StagedBlobWorkspace` (lock-free staged Git index blob
     reader via `git cat-file --batch` and disposable workspace materializer for
     `--pre-commit` gates), `CliLinterGateService` (fail-closed `actionlint` and
-    `hadolint` gates resolving `.cadence/bin` or `PATH`),
-    `WorkflowSecurityValidatorService` (GitHub Actions workflow security,
-    40-char commit SHA pinning, `sha256:` container digests,
+    `hadolint` gates plus `shellcheck` resolution from `.cadence/bin` or
+    `PATH`), `WorkflowSecurityValidatorService` (GitHub Actions workflow
+    security, 40-char commit SHA pinning, `sha256:` container digests,
     `persist-credentials: false`, and least-privilege permissions),
     `YamlSyntaxValidatorService` (Native AOT YAML 1.2 validator),
     `FileHygieneValidatorService` (`trailing-whitespace` and `end-of-file`
     newline checks), `FrontendQualityGateService` (fail-closed Prettier
     check/format and ESLint gates streaming staged blobs over `stdin` under
-    `--pre-commit`), `DetectSecretsGateService` (fail-closed
-    `detect-secrets-hook` gate resolving `.cadence/venv`, `.venv`, `PATH` or
-    `uvx`), `SecretsBaselineCleanerService` (canonical `.secrets.baseline`
-    cleaner, non-mutating `--check` verifier, and file-exclusion regex),
+    `--pre-commit`), `DetectSecretsGateService` (fail-closed bounded-parallel
+    `detect-secrets-hook` gate with isolated per-batch temporary baselines
+    resolving `.cadence/venv`, `.venv`, `PATH` or `uvx`),
+    `SecretsBaselineCleanerService` (canonical `.secrets.baseline` cleaner,
+    non-mutating `--check` verifier, and file-exclusion regex),
     `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`,
     `ArchitectureDriftValidatorService`, `ImportValidatorService`,
     `DependencyValidatorService` (fail-closed JSON validation across workspace

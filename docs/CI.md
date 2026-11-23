@@ -103,8 +103,9 @@ failure locally. The Cadence CLI runs as `pnpm cadence <command>` (a wrapper for
    database fixture ([TESTING.md](TESTING.md#tests-that-need-postgresql)), and
    `cadence ci` runs `bash scripts/test-check-database-test-results.sh` and
    fails via `DatabaseTestEvidence` when any integration or E2E test was skipped
-   or did not execute, unless `--allow-skip` is given. In GitHub Actions,
-   `dotnet-tests` runs `scripts/test-check-database-test-results.sh` and
+   or did not execute, unless `--allow-db-skip` (or `--allow-skip`) is given. In
+   GitHub Actions, `dotnet-tests` runs
+   `scripts/test-check-database-test-results.sh` and
    `scripts/check-database-test-results.sh`, verifying that both
    `tests/Cadence.IntegrationTests` and `tests/Cadence.E2ETests` produced TRX
    reports and `*.database.txt` metadata in `TestResults/gxp` and failing on any
@@ -221,10 +222,11 @@ Dockerfiles, and `.github/dependabot.yml` (ADR-2527).
 > every check on a pull request fails within seconds without running. Until
 > then, run `pnpm cadence ci` (or `make ci`) before merging. It runs the
 > pull-request jobs above (starting with `actionlint`) on your machine with the
-> same commands, requires `actionlint` and `hadolint` (in `.cadence/bin` or on
-> `PATH`), `shellcheck`, `detect-secrets-hook` (in `.cadence/venv`, `.venv` or
-> on `PATH`) and `bash` on `PATH` plus PostgreSQL for the .NET tests, and fails
-> when any required binary or database is missing unless `--allow-skip` is
+> same commands, requires `actionlint`, `hadolint`, and `shellcheck` (in
+> `.cadence/bin` or on `PATH`), `detect-secrets-hook` (in `.cadence/venv`,
+> `.venv` or on `PATH`) and `bash` on `PATH` plus PostgreSQL for the .NET tests,
+> and fails when any required binary or database is missing unless
+> `--allow-missing-tools` or `--allow-db-skip` (or `--allow-skip` for both) is
 > passed ([cli.md](cli.md#cadence-ci)). A full run takes about 20 minutes:
 > `CADENCE_TEST_POSTGRES=<connection string> pnpm cadence ci`. Without a
 > terminal (an AI agent, a script, a pipe, a git hook) the CLI prints plain
@@ -251,11 +253,13 @@ pre-commit hooks, `pnpm cadence check` or `pnpm cadence ci` locally must restore
 `Cadence.sln` (`dotnet restore Cadence.sln`), provision local guardrails via
 `./scripts/setup_wizard.sh --minimal` (or `./scripts/setup_wizard.ps1 -Minimal`,
 which installs `detect-secrets==1.5.0` and `pip-audit==2.10.1` into
-`.cadence/venv` and SHA-256-verified `actionlint` v1.7.12 and `hadolint` v2.15.1
-into `.cadence/bin`), and build the static bundles
-(`pnpm --filter ui build && pnpm docs:build && pnpm docs:stage-demos`) when
-running `check public-bundle` (or pass `--exclude public-bundle` before
-building), because `prettier`, `eslint`, `actionlint`, `hadolint`,
+`.cadence/venv` and SHA-256-verified `actionlint` v1.7.12, `hadolint` v2.15.1,
+and `shellcheck` v0.11.0 into `.cadence/bin`), and build the static bundles
+(`pnpm --filter ui build && pnpm docs:build && pnpm docs:stage-demos`) before
+running `check public-bundle` directly (unscoped `cadence check` skips
+`public-bundle` only when all three `dist/` directories are absent and fails
+closed on partial `dist/` output, while direct `check public-bundle` always
+fails closed), because `prettier`, `eslint`, `actionlint`, `hadolint`,
 `detect-secrets`, `vulnerabilities`, and `public-bundle` all fail closed
 whenever their toolchains or inputs are missing. The table is generated from the
 registry by `pnpm cadence generate-cli-docs`, and the `cli-docs` gate fails when
@@ -308,7 +312,7 @@ not get in.
 | `rtm`                 | Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts                |
 | `gxp-snapshot`        | The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)                  |
 | `baseline-ratchet`    | No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) grew without a `Baseline-Growth: <path> - <reason>` commit trailer         |
-| `public-bundle`       | Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles for PHI, secrets, external assets, local URLs, and CSP headers           |
+| `public-bundle`       | Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles (skipped in unscoped `check` only when all three `dist/` are absent)     |
 
 <!-- quality-gates:end -->
 
@@ -354,13 +358,14 @@ ratchet ([docs/TESTING.md](TESTING.md#ratchet-baselines)); it runs inside
 (`scripts/setup-git-hooks.js`) point git at `.githooks/`
 (`git config core.hooksPath .githooks`), and the setup wizards provision
 `detect-secrets==1.5.0` and `pip-audit==2.10.1` in `.cadence/venv` plus
-SHA-256-verified `actionlint` (`1.7.12`) and `hadolint` (`2.15.1`) binaries in
-`.cadence/bin`. On Linux, macOS, and Windows (via Git for Windows `sh`),
-`.githooks/pre-commit` is a fail-closed POSIX launcher that verifies `node` and
-`dotnet` are on `PATH` (preserving `$HOME/.dotnet/tools` on `PATH` and setting
-`DOTNET_ROOT` to `$HOME/.dotnet` only when `dotnet` is absent from `PATH` and
-both `$HOME/.dotnet/dotnet` and `$HOME/.dotnet/host/fxr` exist) and delegates
-directly to `node scripts/run-cli.js check --pre-commit`.
+SHA-256-verified `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and
+`shellcheck` (`0.11.0`) binaries in `.cadence/bin`. On Linux, macOS, and Windows
+(via Git for Windows `sh`), `.githooks/pre-commit` is a fail-closed POSIX
+launcher that verifies `node` and `dotnet` are on `PATH` (preserving
+`$HOME/.dotnet/tools` on `PATH` and setting `DOTNET_ROOT` to `$HOME/.dotnet`
+only when `dotnet` is absent from `PATH` and both `$HOME/.dotnet/dotnet` and
+`$HOME/.dotnet/host/fxr` exist) and delegates directly to
+`node scripts/run-cli.js check --pre-commit`.
 
 `cadence check --pre-commit` executes every gate in `QualityGates.cs`
 fail-closed against staged Git index blobs (`GitIndexReader` via

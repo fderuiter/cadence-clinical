@@ -102,9 +102,10 @@ Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`,
 not run jobs for this repository until 2027, so this is the check that stands in
 for CI: it runs the pull-request jobs of `.github/workflows/ci.yml` locally
 (including `actionlint`) with the same commands, and fails when a required
-binary (`actionlint` or `hadolint` in `.cadence/bin` or `PATH`, `shellcheck`,
+binary (`actionlint`, `hadolint`, or `shellcheck` in `.cadence/bin` or `PATH`,
 `detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing
-or the .NET tests have no PostgreSQL unless `--allow-skip` is passed
+or the .NET tests have no PostgreSQL unless `--allow-missing-tools` or
+`--allow-db-skip` (or `--allow-skip` for both) is passed
 ([docs/cli.md](docs/cli.md#cadence-ci)). A full run takes about 20 minutes:
 
 ```bash

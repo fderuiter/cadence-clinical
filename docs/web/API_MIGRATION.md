@@ -15,8 +15,9 @@ request and response shapes match.
 ### What the .NET services serve
 
 - **Execution:** subjects (list by study with site/status filters and paging,
-  create, get, consent, state, demographics); forms (create, get, update, list
-  by subject, complete, approve, unlock); observations (create, get, list by
+  grouped status counts via `GET /api/v1/execution/subjects/counts`, create,
+  get, consent, state, demographics); forms (create, get, update, list by
+  subject, complete, approve, unlock); observations (create, get, list by
   subject, SDV, SDV flag); sites (activate, compliance-status with persistent
   `is_activated`, `activated_at`, `activated_by`); eTMF completeness webhook
   (`POST /api/v1/execution/webhooks/etmf`); randomization schemes; RTSM IP kit
@@ -202,22 +203,23 @@ SDV and site activation parts are the only ones with a real backend behind them.
   `sponsor_dm` vs `investigator` vs `pharmacist` boundaries match
   `PermissionMatrix`.
 - **Study home, Participants, Site activation** (`executionApi.listSubjects`,
-  `executionApi.getSubjectDetail`, `executionApi.getSiteComplianceStatus`,
-  `executionApi.activateSite`): the study-centric shell from
-  [CLINICAL_CANVAS.md](../ux/CLINICAL_CANVAS.md) UX-1 (`AppShell.vue`) wraps
-  every authenticated screen (`StudyCanvasView.vue`, `EcrfView.vue`,
-  `CtmsView.vue`, `OverviewView.vue`) in one persistent header with **Studies**,
-  **Data collection** and **Site readiness** primary navigation, a single global
-  **⌘K** command palette, the persona view switcher (UX-6), **Orientation**
-  checklist/tour controls and **Help & SOPs**, with no legacy product sidebar,
-  sandbox banner or telemetry footer. Study home counts participants by state
-  (one list call per state, `limit=1`, reading `total`); each count opens the
-  participants it counts. Participants pages 50 at a time with subject code
-  search (`?q=`), state (`?status=`) and study site (`?site=`) filters;
-  selecting one fills the inspector and puts its NodeRef (`participant:<uuid>`,
-  ADR-2481) in the URL, and cold links resolve participant details by surrogate
-  UUID or subject code. Participant simulation stays disabled naming #4888.
-  Stages and sections with no service are empty, not mocked.
+  `executionApi.getSubjectCounts`, `executionApi.getSubjectDetail`,
+  `executionApi.getSiteComplianceStatus`, `executionApi.activateSite`): the
+  study-centric shell from [CLINICAL_CANVAS.md](../ux/CLINICAL_CANVAS.md) UX-1
+  (`AppShell.vue`) wraps every authenticated screen (`StudyCanvasView.vue`,
+  `EcrfView.vue`, `CtmsView.vue`, `OverviewView.vue`) in one persistent header
+  with **Studies**, **Data collection** and **Site readiness** primary
+  navigation, a single global **⌘K** command palette, the persona view switcher
+  (UX-6), **Orientation** checklist/tour controls and **Help & SOPs**, with no
+  legacy product sidebar, sandbox banner or telemetry footer. Study home counts
+  participants by state in one summary call (`executionApi.getSubjectCounts`,
+  `GET /api/v1/execution/subjects/counts`); each count opens the participants it
+  counts. Participants pages 50 at a time with subject code search (`?q=`),
+  state (`?status=`) and study site (`?site=`) filters; selecting one fills the
+  inspector and puts its NodeRef (`participant:<uuid>`, ADR-2481) in the URL,
+  and cold links resolve participant details by surrogate UUID or subject code.
+  Participant simulation stays disabled naming #4888. Stages and sections with
+  no service are empty, not mocked.
 - **Participant data (#4828)** (`executionApi.listObservations`,
   `listFormSubmissions`, `verifyObservationSdv`, `flagObservationSdv`; queries
   through `ecrfQueriesApi.listForEnrollment` and `transition`, #5461): "Open

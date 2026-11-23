@@ -52,16 +52,17 @@ Common commands:
   `.secrets.baseline` normalization, doc/ADR/CLI/demo index sync, and diff-based
   EF Core schema, OpenAPI, and web API client regeneration.
 - `test`: test runner wrapper.
-- `ci [--job <job>] [--allow-skip] [--base <ref>] [--list]`: runs the
-  pull-request jobs of `.github/workflows/ci.yml` locally (including
+- `ci [--job <job>] [--allow-missing-tools] [--allow-db-skip] [--allow-skip] [--base <ref>] [--list]`:
+  runs the pull-request jobs of `.github/workflows/ci.yml` locally (including
   `actionlint` and forwarding `--base <ref>` to CLI checks), failing on missing
-  tools or PostgreSQL unless `--allow-skip` is passed (`Services/CiPlan.cs`,
+  tools or PostgreSQL unless `--allow-missing-tools` or `--allow-db-skip` (or
+  `--allow-skip` for both) is passed (`Services/CiPlan.cs`,
   `Services/LocalCiRunner.cs`).
 - `rulesets [--dry-run] [--repo <owner/repo>]`: validates
   `.github/rulesets/*.json` against workflow definitions and reconciles them to
   GitHub Repository Rulesets via `gh api` (`Services/RulesetService.cs`).
 - `doctor`: checks the local toolchain and environment (`.NET 10 SDK`, `pnpm`
-  pin, `detect-secrets`, `actionlint`, `hadolint`, PostgreSQL).
+  pin, `detect-secrets`, `actionlint`, `hadolint`, `shellcheck`, PostgreSQL).
 - `db reset`, `db migrate`: database utilities.
 - `gxp sync`, `gxp snapshot`, `gxp validate`, `gxp diff`, `generate-rtm`:
   requirements traceability and GxP reports (`--results-dir <dir>` reuses

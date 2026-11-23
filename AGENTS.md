@@ -332,8 +332,9 @@ or `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
   and `pnpm --filter subject-portal test:e2e`).
 - **Quality gates and auto-fix:** `pnpm cadence check` (all gates;
   `--pre-commit` for staged blobs, `--base <ref>` for branch diffs, or `<gate>`
-  for one gate such as `markdown`, `deid`, `adrs`, or `rulesets`) and
-  `pnpm cadence fix`.
+  for one gate such as `markdown`, `deid`, `adrs`, or `rulesets`),
+  `pnpm cadence fix`, and `./scripts/setup_wizard.sh --minimal` (provisions
+  `detect-secrets`, `pip-audit`, `actionlint`, `hadolint`, and `shellcheck`).
 
 - **Compliance and diagnostics:** `pnpm cadence gxp sync` (branch validation),
   `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (integration owner only),

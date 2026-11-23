@@ -165,15 +165,17 @@ public sealed class CommercialAndOnboardingUnitTests
         unitOfWork.CommittedCount.Should().Be(0, "expired-trial refusal never commits state mutations");
         unitOfWork.Refusals.Should().ContainSingle(r => r.Code == "K.Subscription.Expired");
 
-        // 2. Baseline regulated capability ([BaselineKernelCommand], e.g. Attest / DefineRole / ActivateSubscription) is never blocked by subscription expiry,
-        //    whereas SwitchTrialTier is NOT baseline so expired workspaces cannot bypass scoped activation.
+        // 2. Baseline regulated capability ([BaselineKernelCommand], e.g. Attest / ApplyLock / ReleaseLock / ActivateSubscription) is never blocked by subscription expiry,
+        //    whereas SwitchTrialTier, GrantProductEntitlement, and RevokeProductEntitlement are NOT baseline so expired workspaces cannot bypass scoped activation.
         BaselineKernelCommandAttribute.IsBaseline(typeof(Attest)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(SignCollectionInstance)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(ApplyLock)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(ReleaseLock)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(DefineRole)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(IssueGrant)).Should().BeTrue();
         BaselineKernelCommandAttribute.IsBaseline(typeof(ActivateSubscription)).Should().BeTrue();
-        BaselineKernelCommandAttribute.IsBaseline(typeof(GrantProductEntitlement)).Should().BeTrue();
-        BaselineKernelCommandAttribute.IsBaseline(typeof(RevokeProductEntitlement)).Should().BeTrue();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(GrantProductEntitlement)).Should().BeFalse();
+        BaselineKernelCommandAttribute.IsBaseline(typeof(RevokeProductEntitlement)).Should().BeFalse();
         BaselineKernelCommandAttribute.IsBaseline(typeof(SwitchTrialTier)).Should().BeFalse();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RegisterStudy)).Should().BeFalse();
         BaselineKernelCommandAttribute.IsBaseline(typeof(RecordObservation)).Should().BeFalse();
@@ -201,16 +203,28 @@ public sealed class CommercialAndOnboardingUnitTests
         subscription.Status.Should().Be(SubscriptionStatus.Trialing);
         subscription.TrialEndsAt.Should().Be(trialEnd);
 
-        // Switching tiers during an active trial keeps Status == Trialing and preserves original 30-day TrialEndsAt.
-        subscription.SwitchTierInPlace(CommercialTier.Select, actor.Id, "Switch trial tier to Select");
+        // Switching tiers during an active trial appends bitemporal SubscriptionPeriod + ProductEntitlement rows,
+        // keeps Status == Trialing, and preserves original 30-day TrialEndsAt and prior CreatedBy/ReasonForChange.
+        subscription.SwitchTier(CommercialTier.Select, T0.AddDays(1), "actor-select", "Switch trial tier to Select");
         subscription.Tier.Should().Be(CommercialTier.Select);
         subscription.Status.Should().Be(SubscriptionStatus.Trialing);
         subscription.TrialEndsAt.Should().Be(trialEnd);
+        subscription.GetEnabledProductFamilies().Should().HaveCount(5);
 
-        subscription.SwitchTierInPlace(CommercialTier.Complete, actor.Id, "Switch trial tier to Complete");
+        subscription.SwitchTier(CommercialTier.Complete, T0.AddDays(2), "actor-complete-1", "Switch trial tier to Complete");
         subscription.Tier.Should().Be(CommercialTier.Complete);
         subscription.Status.Should().Be(SubscriptionStatus.Trialing);
         subscription.TrialEndsAt.Should().Be(trialEnd);
+        subscription.GetEnabledProductFamilies().Should().HaveCount(8);
+
+        subscription.SwitchTier(CommercialTier.Select, T0.AddDays(3), "actor-narrow", "Narrow trial tier to Select");
+        subscription.GetEnabledProductFamilies().Should().HaveCount(5);
+
+        subscription.SwitchTier(CommercialTier.Complete, T0.AddDays(4), "actor-complete-2", "Re-expand trial tier to Complete");
+        subscription.Tier.Should().Be(CommercialTier.Complete);
+        subscription.TrialEndsAt.Should().Be(trialEnd);
+        subscription.GetEnabledProductFamilies().Should().HaveCount(8);
+        subscription.Periods.Should().Contain(p => p.CreatedBy == actor.Id && p.ReasonForChange == "Start trial", "original period row is preserved untouched in bitemporal history");
 
         // Validation rejects missing or invalid scoping fields with structured per-field errors.
         var missingErrors = SubscriptionScopingValidator.Validate(null);
@@ -266,12 +280,64 @@ public sealed class CommercialAndOnboardingUnitTests
         subscription.GetScoping()!.BillingConfirmation.Should().Be("PO-2026-8841");
     }
 
-    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimStudyWildcardAndSponsorRoles_PreservingUserFields")]
-    public async Task HttpKeycloakOnboardingClientWritesTenantClaimStudyWildcardAndSponsorRolesPreservingUserFields()
+    [Fact(DisplayName = "SubscriptionQuoteToken_VerifiesHmacBoundQuotes_AndRejectsRawPoTamperingWrongTenantOrExpiry")]
+    public void SubscriptionQuoteTokenVerifiesHmacBoundQuotesAndRejectsRawPoTamperingWrongTenantOrExpiry()
+    {
+        const string secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"; // pragma: allowlist secret
+        var tenantId = TenantId.New();
+        var scoping = new SubscriptionScoping(
+            StudyPhase: "Phase II",
+            StudyDurationMonths: 18,
+            Countries: ["US", "DE"],
+            SiteCount: 12,
+            ParticipantCount: 240,
+            ActiveStudyCount: 2,
+            BillingConfirmation: "pending");
+
+        string token = SubscriptionQuoteToken.Issue(
+            signingSecret: secret,
+            tenantId: tenantId,
+            tier: CommercialTier.Select,
+            scoping: scoping,
+            quoteReference: "QUOTE-2026-901",
+            issuedAt: T0,
+            expiresAt: T0.AddHours(4));
+        token.Should().StartWith("qtk1.");
+
+        var signedScoping = scoping with { BillingConfirmation = token };
+        SubscriptionQuoteToken.TryVerify(
+            token,
+            secret,
+            tenantId,
+            CommercialTier.Select,
+            signedScoping,
+            T0.AddHours(1),
+            out var verified).Should().BeTrue();
+        verified!.QuoteReference.Should().Be("QUOTE-2026-901");
+
+        // Plain PO string is rejected
+        SubscriptionQuoteToken.TryVerify("PO-2026-8841", secret, tenantId, CommercialTier.Select, signedScoping, T0, out _)
+            .Should().BeFalse();
+
+        // Wrong tenant, escalated tier, inflated scoping cap, expired token, or tampered signature all fail closed
+        SubscriptionQuoteToken.TryVerify(token, secret, TenantId.New(), CommercialTier.Select, signedScoping, T0, out _)
+            .Should().BeFalse();
+        SubscriptionQuoteToken.TryVerify(token, secret, tenantId, CommercialTier.Complete, signedScoping, T0, out _)
+            .Should().BeFalse();
+        SubscriptionQuoteToken.TryVerify(token, secret, tenantId, CommercialTier.Select, signedScoping with { SiteCount = 13 }, T0, out _)
+            .Should().BeFalse();
+        SubscriptionQuoteToken.TryVerify(token, secret, tenantId, CommercialTier.Select, signedScoping, T0.AddHours(5), out _)
+            .Should().BeFalse();
+        SubscriptionQuoteToken.TryVerify(token[..^2] + "ff", secret, tenantId, CommercialTier.Select, signedScoping, T0, out _)
+            .Should().BeFalse();
+    }
+
+    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimAndSponsorRolesWithoutProfileMutationOrStudyWildcard_AndFailsClosedWhenUnconfigured")]
+    public async Task HttpKeycloakOnboardingClientWritesTenantClaimAndSponsorRolesWithoutProfileMutationOrStudyWildcardAndFailsClosedWhenUnconfigured()
     {
         var ct = TestContext.Current.CancellationToken;
         string subjectId = "4e999999-1111-4444-8888-999999999999";
-        string tenantCode = "TRIAL-4E9999991111";
+        string tenantCode = "trial-4e9999991111";
         var handler = new FakeKeycloakAdminHandler(subjectId);
 
         var config = new ConfigurationBuilder()
@@ -302,14 +368,24 @@ public sealed class CommercialAndOnboardingUnitTests
             ct);
 
         handler.TokenRequested.Should().BeTrue();
-        handler.UpdatedProfilePolicy.Should().Be("ENABLED");
+        handler.ProfileEndpointCalled.Should().BeFalse("runtime code must never weaken Keycloak declarative user-profile policy");
         handler.UpdatedUserJson.Should().NotBeNull();
         handler.UpdatedUserJson!["username"]!.GetValue<string>().Should().Be("founder@meridian.example");
         handler.UpdatedUserJson["email"]!.GetValue<string>().Should().Be("founder@meridian.example");
         handler.UpdatedUserJson["firstName"]!.GetValue<string>().Should().Be("Elena");
         handler.UpdatedUserJson["attributes"]!["tenant_id"]![0]!.GetValue<string>().Should().Be(tenantCode);
-        handler.UpdatedUserJson["attributes"]!["study_ids"]![0]!.GetValue<string>().Should().Be("*");
+        handler.UpdatedUserJson["attributes"]!["study_ids"].Should().BeNull("onboarding must never stamp wildcard study_ids = ['*'] onto OIDC tokens");
         handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer");
+
+        // Blank KeycloakAdmin config registers FailClosedKeycloakOnboardingClient instead of a silent no-op.
+        var emptyConfig = new ConfigurationBuilder().Build();
+        var unconfiguredServices = new ServiceCollection();
+        unconfiguredServices.AddLogging();
+        unconfiguredServices.AddKeycloakOnboarding(emptyConfig);
+        await using var unconfiguredProvider = unconfiguredServices.BuildServiceProvider();
+        var failClosedClient = unconfiguredProvider.GetRequiredService<IKeycloakOnboardingClient>();
+        Func<Task> act = () => failClosedClient.AssignTrialWorkspaceAsync(subjectId, tenantCode, ["Sponsor Admin"], ct);
+        await act.Should().ThrowAsync<KeycloakOnboardingException>();
     }
 
     private sealed class FixedActor(Actor actor) : ICurrentActor
@@ -328,7 +404,8 @@ public sealed class CommercialAndOnboardingUnitTests
         public Task<TenantEntitlementSnapshot> GetEntitlementsAsync(
             TenantId tenantId,
             DateTimeOffset asOf,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken,
+            DateTimeOffset? knownAt = null) =>
             Task.FromResult(snapshot);
     }
 
@@ -425,7 +502,7 @@ public sealed class CommercialAndOnboardingUnitTests
     {
         public bool TokenRequested { get; private set; }
 
-        public string? UpdatedProfilePolicy { get; private set; }
+        public bool ProfileEndpointCalled { get; private set; }
 
         public JsonObject? UpdatedUserJson { get; private set; }
 
@@ -446,16 +523,10 @@ public sealed class CommercialAndOnboardingUnitTests
             request.Headers.Authorization?.Scheme.Should().Be("Bearer");
             request.Headers.Authorization?.Parameter.Should().Be("kc-admin-token");
 
-            if (request.Method == HttpMethod.Get && path == "/admin/realms/cadence/users/profile")
+            if (path == "/admin/realms/cadence/users/profile")
             {
-                return JsonResponse("""{"attributes":[]}""");
-            }
-
-            if (request.Method == HttpMethod.Put && path == "/admin/realms/cadence/users/profile")
-            {
-                var body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!.AsObject();
-                UpdatedProfilePolicy = body["unmanagedAttributePolicy"]?.GetValue<string>();
-                return new HttpResponseMessage(HttpStatusCode.OK);
+                ProfileEndpointCalled = true;
+                return new HttpResponseMessage(HttpStatusCode.Forbidden);
             }
 
             if (request.Method == HttpMethod.Get && path == $"/admin/realms/cadence/users/{subjectId}")
