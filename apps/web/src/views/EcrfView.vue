@@ -204,15 +204,39 @@
           @screen="onSubjectScreen"
         />
 
+        <!-- Participant's opened case report forms outside demo mode when no single form is selected -->
+        <ParticipantFormsPanel
+          v-if="!demoBuild && !routeQuery('formId') && resolvedEnrollmentId"
+          style="margin-bottom: 16px"
+          :study-code="store.activeStudyId.trim() || undefined"
+          :subject-code="selectedSubjectId || 'participant'"
+          :enrollment-id="resolvedEnrollmentId"
+          :form-location="ecrfFormLocation"
+          :new-form-location="null"
+        />
+
         <!-- The participant's case report form, a kernel form instance saved a page at a time (ADR-2622). -->
         <EcrfFormPanel
           :form-id="routeQuery('formId')"
           :enrollment-id="activeEnrollmentProp"
+          :enrollment-context="ecrfEnrollmentContext"
+          :schedule-loading="
+            !demoBuild && !routeQuery('formId') && canvasStore.scheduleLoading
+          "
+          :schedule-error="
+            !demoBuild && !routeQuery('formId')
+              ? canvasStore.scheduleError
+              : null
+          "
           :collection-spec-id="routeQuery('collectionSpecId')"
           :planned-activity-id="
             routeQuery('plannedActivityId') ?? routeQuery('visitId')
           "
           :highlight-item-id="routeQuery('itemId')"
+          :form-location="!demoBuild ? ecrfFormLocation : undefined"
+          :observation-location="
+            !demoBuild ? ecrfObservationLocation : undefined
+          "
           :can-manage-queries="
             authStore.isAuthenticated
               ? canManageQueries(authStore)
@@ -223,6 +247,7 @@
               ? canVerifySource(authStore)
               : activeUserRole === 'cra'
           "
+          @retry-schedule="onRetryScheduleOptions"
           @dirty-change="formPanelDirty = $event"
           @form-loaded="onFormPanelLoaded"
           @closed="onFormPanelClosed"
@@ -443,7 +468,9 @@ import {
 import * as VueRouter from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
@@ -452,6 +479,7 @@ import ReasonModal from "../components/ReasonModal.vue";
 // Import Persona Sub-Components
 import CrcFormRenderer from "../components/persona/CrcFormRenderer.vue";
 import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
+import ParticipantFormsPanel from "../components/canvas/ParticipantFormsPanel.vue";
 import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
 import SubjectEnrollmentForm from "../components/clinical/SubjectEnrollmentForm.vue";
 import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
@@ -473,6 +501,7 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
+import { collectionInstanceRef, observationNodeRef } from "../canvas/nodeRef";
 
 const { useRoute, onBeforeRouteLeave } = VueRouter;
 const useRouter = "useRouter" in VueRouter ? VueRouter.useRouter : undefined;
@@ -483,6 +512,7 @@ const onBeforeRouteUpdate =
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const canvasStore = useStudyCanvasStore();
 const toastStore = useToastStore();
 const route = useRoute();
 const router = typeof useRouter === "function" ? useRouter() : null;
@@ -498,6 +528,7 @@ const showEhrReconciliationDrawer = ref(false);
 // Whether the case report form has entries that are not saved yet.
 const formPanelDirty = ref(false);
 const loadedFormId = ref(null);
+const loadedFormTitle = ref("");
 
 /** One route query value as a string, or null. */
 function routeQuery(name, targetRoute = route) {
@@ -514,6 +545,7 @@ watch(
   (next) => {
     if (!next) {
       loadedFormId.value = null;
+      loadedFormTitle.value = "";
     }
   }
 );
@@ -521,6 +553,12 @@ watch(
 function onFormPanelLoaded(loaded) {
   const nextId = loaded?.form_id || null;
   loadedFormId.value = nextId;
+  const baseTitle =
+    loaded?.collection_title || loaded?.collection_spec_id || "";
+  loadedFormTitle.value =
+    baseTitle && loaded?.planned_activity_id
+      ? `${baseTitle} · ${loaded.planned_activity_id}`
+      : baseTitle;
   if (!nextId || routeQuery("formId") === nextId) return;
   if (typeof router?.replace === "function") {
     void router.replace({
@@ -535,10 +573,12 @@ function onFormPanelLoaded(loaded) {
 function onFormPanelClosed() {
   formPanelDirty.value = false;
   loadedFormId.value = null;
-  if (!routeQuery("formId")) return;
+  loadedFormTitle.value = "";
+  if (!routeQuery("formId") && !routeQuery("itemId")) return;
   if (typeof router?.replace === "function") {
     const nextQuery = { ...(route?.query || {}) };
     delete nextQuery.formId;
+    delete nextQuery.itemId;
     void router.replace({ query: nextQuery });
   }
 }
@@ -589,6 +629,123 @@ const activeEnrollmentProp = computed(() => {
   if (demoBuild) return routeQuery("enrollmentId");
   return resolvedEnrollmentId.value || null;
 });
+
+const scheduleForActiveStudy = computed(() => {
+  const code = store.activeStudyId.trim();
+  if (!code) return null;
+  return Object.prototype.hasOwnProperty.call(
+    canvasStore.scheduleOptionsByStudy,
+    code
+  )
+    ? canvasStore.scheduleOptionsByStudy[code]
+    : canvasStore.studyCode === code || !canvasStore.studyCode
+      ? canvasStore.scheduleOptions
+      : null;
+});
+
+const ecrfEnrollmentContext = computed(() => {
+  if (demoBuild || !resolvedEnrollmentId.value) return null;
+  return {
+    enrollmentId: resolvedEnrollmentId.value,
+    subjectCode: selectedSubjectId.value.trim() || undefined,
+    collectionSpecs: scheduleForActiveStudy.value?.collectionSpecs ?? [],
+    plannedActivities: scheduleForActiveStudy.value?.plannedActivities ?? [],
+    scheduleLoading: !routeQuery("formId") && canvasStore.scheduleLoading,
+    scheduleError: !routeQuery("formId") ? canvasStore.scheduleError : null,
+  };
+});
+
+function onRetryScheduleOptions() {
+  const code = store.activeStudyId.trim();
+  if (!demoBuild && code) {
+    void canvasStore.retryScheduleOptions(code);
+  }
+}
+
+watch(
+  [() => store.activeStudyId.trim(), () => routeQuery("formId")],
+  ([code, activeFormId]) => {
+    if (!demoBuild && code && !activeFormId) {
+      void canvasStore.loadScheduleOptions(code);
+    }
+  },
+  { immediate: true }
+);
+
+function buildEcrfScopeQuery(extra = {}) {
+  const query = {};
+  const studyCode = store.activeStudyId.trim() || routeQuery("studyId") || "";
+  if (studyCode) query.studyId = studyCode;
+  const siteCode =
+    selectedSubject.value?.siteId ||
+    store.activeSiteId.trim() ||
+    routeQuery("siteId") ||
+    "";
+  if (siteCode) query.siteId = siteCode;
+  const subjectCode =
+    selectedSubjectId.value.trim() || routeQuery("subjectId") || "";
+  if (subjectCode) query.subjectId = subjectCode;
+  const enrollment =
+    resolvedEnrollmentId.value || routeQuery("enrollmentId") || "";
+  if (enrollment) query.enrollmentId = enrollment;
+  for (const [key, val] of Object.entries(extra)) {
+    if (val !== undefined && val !== null && val !== "") {
+      query[key] = String(val);
+    }
+  }
+  return query;
+}
+
+function buildEcrfReturnUrl(formId, itemId) {
+  const query = buildEcrfScopeQuery({
+    formId,
+    itemId: itemId || undefined,
+  });
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(query)) {
+    if (val) params.set(key, String(val));
+  }
+  const qs = params.toString();
+  return qs ? `/ecrf?${qs}` : "/ecrf";
+}
+
+function ecrfFormLocation(formId, itemId) {
+  if (!formId) return null;
+  return {
+    path: "/ecrf",
+    query: buildEcrfScopeQuery({
+      formId,
+      itemId: itemId || undefined,
+    }),
+  };
+}
+
+function ecrfObservationLocation(observationId, formId, itemId) {
+  const obsRef = observationNodeRef(observationId);
+  if (!obsRef) return null;
+  const effectiveFormId =
+    formId || loadedFormId.value || routeQuery("formId") || "";
+  const effectiveItemId = itemId || routeQuery("itemId") || "";
+  const formRef = effectiveFormId
+    ? collectionInstanceRef(effectiveFormId)
+    : null;
+  const studyCode = store.activeStudyId.trim() || routeQuery("studyId") || "";
+  const returnTo = buildEcrfReturnUrl(effectiveFormId, effectiveItemId);
+  const returnLabel = loadedFormTitle.value
+    ? `Back to ${loadedFormTitle.value}`
+    : "Back to form";
+  return {
+    name: "observation",
+    params: { observationRef: obsRef },
+    query: {
+      ...(studyCode ? { studyId: studyCode } : {}),
+      ...(formRef ? { form: formRef } : {}),
+      ...(effectiveItemId ? { item: effectiveItemId } : {}),
+      returnTo,
+      returnLabel,
+    },
+  };
+}
 
 const showManageParticipantsLink = computed(
   () =>
@@ -1068,16 +1225,24 @@ const hasUnsavedChanges = computed(
   () => formPanelDirty.value || (demoBuild && isDirty.value)
 );
 
+function confirmLeaveDirtyDraft() {
+  return confirmDialog({
+    title: "Unsaved eCRF Changes",
+    message:
+      "You have unsaved eCRF draft changes. Are you sure you want to leave?",
+    confirmLabel: "Leave Without Saving",
+    cancelLabel: "Stay on Form",
+    variant: "warning",
+  });
+}
+
 // Route & Browser Navigation Guards
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
     if (hasUnsavedChanges.value && !shouldSuppressUnsavedGuard()) {
-      const confirmLeave = window.confirm(
-        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      return confirmLeaveDirtyDraft().then((confirmLeave) =>
+        confirmLeave ? undefined : false
       );
-      if (!confirmLeave) {
-        return false;
-      }
     }
   });
 }
@@ -1089,12 +1254,9 @@ if (typeof onBeforeRouteUpdate === "function") {
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);
     if (nextFormId !== currentFormId) {
-      const confirmSwitch = window.confirm(
-        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      return confirmLeaveDirtyDraft().then((confirmSwitch) =>
+        confirmSwitch ? undefined : false
       );
-      if (!confirmSwitch) {
-        return false;
-      }
     }
   });
 }

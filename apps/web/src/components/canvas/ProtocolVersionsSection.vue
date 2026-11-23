@@ -19,46 +19,48 @@
       {{ statusLine }}
     </p>
 
-    <table v-if="versions.length" class="versions-table">
-      <thead>
-        <tr>
-          <th scope="col" class="numeric">Version</th>
-          <th scope="col">Status</th>
-          <th scope="col">Amends</th>
-          <th scope="col">Amendment intent</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="(version, index) in versions"
-          :key="version.ref ?? `masked-${index}`"
-          :class="{
-            selected:
-              version.ref !== null && version.ref === activeSummaryVersionRef,
-          }"
-        >
-          <template v-if="version.ref !== null">
-            <th scope="row" class="numeric">
-              <button
-                :id="`protocol-version-${version.number}`"
-                type="button"
-                class="row-select"
-                :aria-pressed="version.ref === activeSummaryVersionRef"
-                @click="emit('select', version)"
-              >
-                {{ version.number }}
-              </button>
-            </th>
-            <td>{{ version.status }}</td>
-            <td>{{ parentNumber(version) }}</td>
-            <td>{{ version.amendment_intent || "None recorded" }}</td>
-          </template>
-          <td v-else colspan="4" class="masked-row">
-            A version you may not see ({{ maskWords(version.mask) }})
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="versions.length" class="scrollable-table-wrapper">
+      <table class="versions-table">
+        <thead>
+          <tr>
+            <th scope="col" class="numeric">Version</th>
+            <th scope="col">Status</th>
+            <th scope="col">Amends</th>
+            <th scope="col">Amendment intent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(version, index) in versions"
+            :key="version.ref ?? `masked-${index}`"
+            :class="{
+              selected:
+                version.ref !== null && version.ref === activeSummaryVersionRef,
+            }"
+          >
+            <template v-if="version.ref !== null">
+              <th scope="row" class="numeric">
+                <button
+                  :id="`protocol-version-${version.number}`"
+                  type="button"
+                  class="row-select"
+                  :aria-pressed="version.ref === activeSummaryVersionRef"
+                  @click="emit('select', version)"
+                >
+                  {{ version.number }}
+                </button>
+              </th>
+              <td>{{ version.status }}</td>
+              <td>{{ parentNumber(version) }}</td>
+              <td>{{ version.amendment_intent || "None recorded" }}</td>
+            </template>
+            <td v-else colspan="4" class="masked-row">
+              A version you may not see ({{ maskWords(version.mask) }})
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <div
       v-if="governanceActionMessage"

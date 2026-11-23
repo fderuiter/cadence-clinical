@@ -394,4 +394,93 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     }
     await router.push("/");
   });
+
+  it("carries studyId and siteId to Site readiness (/ctms and /ssu) and preserves CADENCE-101 on Studies and Data collection links", async () => {
+    const { useStudyCanvasStore } =
+      await import("../../src/stores/studyCanvas");
+    const { useClinicalStore } = await import("../../src/stores/clinical");
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+
+    // Seed stale store state to prove URL parameters take precedence
+    const studyCanvas = useStudyCanvasStore();
+    studyCanvas.studyCode = "STALE-STUDY";
+    const clinicalStore = useClinicalStore();
+    clinicalStore.activeStudyId = "STALE-CLINICAL";
+    clinicalStore.activeSiteId = "STALE-SITE";
+
+    // 1. Sponsor/Monitor at /studies/CADENCE-101?site=SITE-101 -> /ctms?studyId=CADENCE-101&siteId=SITE-101
+    authStore.rawRoles = ["CRA"];
+    await router.push("/studies/CADENCE-101?site=SITE-101");
+    await router.isReady();
+
+    const craWrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    expect(craWrapper.find("#nav-site-readiness").attributes("href")).toBe(
+      "/ctms?studyId=CADENCE-101&siteId=SITE-101"
+    );
+    expect(craWrapper.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CADENCE-101"
+    );
+    expect(craWrapper.find("#nav-data-collection").attributes("href")).toBe(
+      "/studies/CADENCE-101?stage=conduct&site=SITE-101&section=participants"
+    );
+    craWrapper.unmount();
+
+    // Static demo builds preserve /ecrf?studyId=CADENCE-101&siteId=SITE-101
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const demoCraWrapper = mount(AppShell, {
+        global: { plugins: [router] },
+      });
+      expect(
+        demoCraWrapper.find("#nav-data-collection").attributes("href")
+      ).toBe("/ecrf?studyId=CADENCE-101&siteId=SITE-101");
+      demoCraWrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+
+    // 2. Site coordinator/investigator at /studies/CADENCE-101?site=SITE-101 -> /ssu?studyId=CADENCE-101&siteId=SITE-101
+    authStore.rawRoles = ["Site Investigator"];
+    const crcWrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    expect(crcWrapper.find("#nav-site-readiness").attributes("href")).toBe(
+      "/ssu?studyId=CADENCE-101&siteId=SITE-101"
+    );
+    crcWrapper.unmount();
+
+    // 3. Returning from /ecrf?studyId=CADENCE-101 or /ctms?studyId=CADENCE-101 preserves CADENCE-101
+    authStore.rawRoles = ["CRA"];
+    await router.push("/ecrf?studyId=CADENCE-101");
+    const fromEcrf = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    expect(fromEcrf.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CADENCE-101"
+    );
+    expect(fromEcrf.find("#nav-data-collection").attributes("href")).toBe(
+      "/studies/CADENCE-101?stage=conduct&section=participants"
+    );
+    expect(fromEcrf.find("#nav-site-readiness").attributes("href")).toBe(
+      "/ctms?studyId=CADENCE-101"
+    );
+    fromEcrf.unmount();
+
+    await router.push("/ctms?studyId=CADENCE-101");
+    const fromCtms = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    expect(fromCtms.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CADENCE-101"
+    );
+    expect(fromCtms.find("#nav-data-collection").attributes("href")).toBe(
+      "/studies/CADENCE-101?stage=conduct&section=participants"
+    );
+    fromCtms.unmount();
+
+    await router.push("/");
+  });
 });

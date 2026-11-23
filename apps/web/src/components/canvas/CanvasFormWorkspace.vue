@@ -116,14 +116,15 @@ const props = defineProps<{
   backLocation: RouteLocationRaw;
   backLabel: string;
   handoffLocation?: RouteLocationRaw | null;
-  formLocation: (formId: string) => RouteLocationRaw;
+  formLocation: (formId: string, itemId?: string | null) => RouteLocationRaw;
   newFormCellLocation?: (
     collectionSpecId: string,
     plannedActivityId?: string | null
   ) => RouteLocationRaw;
   observationLocation: (
     observationId: string,
-    formId: string
+    formId: string,
+    itemId?: string | null
   ) => RouteLocationRaw;
 }>();
 

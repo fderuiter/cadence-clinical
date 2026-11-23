@@ -16,23 +16,23 @@ However, the static public demo builds (`apps/web` and `apps/subject-portal`, AD
 
 ## 2. Decision Drivers & Constraints
 
-- **Single synthetic trial across local stack and static demos:** `apps/web`, `apps/subject-portal`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` must share one canonical study, sponsor, site list, participant cohort, and persona set without manual duplication.
-- **Kernel time discipline (`K-TIME-3`):** C# tooling must never read the system wall clock; all exported timestamps derive from `DevelopmentDemoData.Epoch` (`2026-01-05T09:00:00Z`).
-- **Native AOT & layer boundaries (`K-XS-1`, `K-XS-2`):** The CLI exporter in `packages/tooling_core` and `packages/cli` must compile cleanly under Native AOT without reflection serialization or references to kernel persistence/application projects.
+- **Single synthetic trial across local stack and static demos:** `apps/web`, `apps/subject-portal`, `packages/demo-fixtures/demo-seed.json` (loaded by `DevelopmentDemoData.cs`), `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` must share one canonical study, sponsor, site list, participant cohort, and persona set without manual duplication or fragile C# source-scraping regular expressions.
+- **Kernel time discipline (`K-TIME-3`):** C# tooling must never read the system wall clock; all exported timestamps derive from the canonical `epoch` (`2026-01-05T09:00:00Z`) in `packages/demo-fixtures/demo-seed.json` (`DevelopmentDemoData.Epoch`).
+- **Native AOT & layer boundaries (`K-XS-1`, `K-XS-2`):** Both `DevelopmentDemoData.cs` and the CLI exporter in `packages/tooling_core` / `packages/cli` must deserialize `demo-seed.json` via `System.Text.Json` source generation (`JsonSerializerContext`) so `Cadence.Cli` compiles cleanly under Native AOT without reflection serialization or references to kernel persistence/application projects.
 - **Strict production isolation:** Non-demo production bundles must exclude `packages/demo-fixtures`, and authenticated sessions must keep live clocks, Web Crypto randomness (`crypto.getRandomValues`), and identity provider claims without synthetic fallbacks.
-- **Automated drift prevention (ADR-2534):** `pnpm cadence check` must fail whenever backend demo seeds and committed frontend fixtures diverge.
+- **Automated drift prevention (ADR-2534):** `pnpm cadence check` must fail whenever demo seeds and committed frontend fixtures diverge, while `pnpm cadence check --pre-commit` scopes `demo-manifest` to staged seed and fixture paths.
 
 ## 3. Options Considered
 
-### Option 1: Export a shared `packages/demo-fixtures` catalog via `cadence generate-demo-manifest` with a drift gate and Vite production stub (selected)
+### Option 1: Store canonical seed data in `packages/demo-fixtures/demo-seed.json` and export `packages/demo-fixtures` via `cadence generate-demo-manifest` with a drift gate and Vite production stub (selected)
 
-- **Overview:** Parse and cross-validate `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` in `DemoManifestGeneratorService`, emit deterministic `manifest.js` and `manifest.d.ts` into `packages/demo-fixtures`, enforce parity in `QualityGates` (`demo-manifest`), strip the package in non-demo Vite builds via `scripts/vite-strip-demo-fixtures.mjs`, and gate deterministic clock and Mulberry32 PRNG helpers on `isDemoBuild` / `isDemoModeActive`.
+- **Overview:** Store the `CADENCE-101` study, sponsor, sites, participants, roles, and user grants in `packages/demo-fixtures/demo-seed.json`, deserialize it via source-generated `System.Text.Json` in both `DevelopmentDemoData.cs` (embedded resource) and `DemoManifestGeneratorService`, cross-validate against `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`, emit deterministic `manifest.js` and `manifest.d.ts` into `packages/demo-fixtures` (also wired into `pnpm cadence fix`), enforce parity in `QualityGates` (`demo-manifest`, `PreCommitMode.Quick` with `TakesFiles = true`), strip the package in non-demo Vite builds via `scripts/vite-strip-demo-fixtures.mjs`, and gate deterministic clock and Mulberry32 PRNG helpers on `isDemoBuild` / `isDemoModeActive`.
 - **Pros:**
-  - ✅ Guarantees byte-identical static demo fixtures, UUIDv8 derivations, and role-named realm personas from one CLI command.
+  - ✅ Guarantees byte-identical static demo fixtures, UUIDv8 derivations, and role-named realm personas from one CLI command without fragile C# tuple or constant regular expressions.
   - ✅ Eliminates maintainer PII from source and compiled bundles without adding scanner path exclusions.
   - ✅ Keeps production bundles free of synthetic trial payloads while preserving offline static demo capability.
 - **Cons:**
-  - ❌ Updating `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, or `docker/cadence-realm.json` requires running `pnpm cadence generate-demo-manifest` before commit.
+  - ❌ Updating `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs`, or `docker/cadence-realm.json` requires running `pnpm cadence generate-demo-manifest` (or `pnpm cadence fix`) before commit.
 
 ### Option 2: Hand-maintain synchronized constants in `apps/web` and `apps/subject-portal`
 
@@ -53,20 +53,20 @@ However, the static public demo builds (`apps/web` and `apps/subject-portal`, AD
 ## 4. Decision Outcome
 
 - **Chosen Option:** Option 1.
-- **CLI generator & quality gate:** `pnpm cadence generate-demo-manifest` (`DemoManifestGeneratorService`) cross-checks `apps/kernel-api/src/DevelopmentDemoData.cs`, `apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs`, and `docker/cadence-realm.json`, derives RFC 9562 version 8 UUIDs over SHA-256 (`cadence-development-demo:{tenant}:{kind}:{name}`) and fixed `2026-01-05T09:00:00Z` timestamps, and writes byte-identical `packages/demo-fixtures/src/manifest.js` and `manifest.d.ts`. The `demo-manifest` quality gate (`--check`) blocks drift in `pnpm cadence check`.
+- **Canonical JSON seed, CLI generator & quality gate:** `packages/demo-fixtures/demo-seed.json` holds the canonical `CADENCE-101` study, sponsor, sites, participants, roles, and realm user grants, deserialized via `System.Text.Json` source generation in both `apps/kernel-api/src/DevelopmentDemoData.cs` (embedded into `Cadence.Kernel.Host`) and `DemoManifestGeneratorService` (`packages/tooling_core`). `pnpm cadence generate-demo-manifest` (also run by `pnpm cadence fix` via `SelfHealService`) cross-checks `packages/demo-fixtures/demo-seed.json`, `apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs`, and `docker/cadence-realm.json`, derives RFC 9562 version 8 UUIDs over SHA-256 (`cadence-development-demo:{tenant}:{kind}:{name}`) and fixed `2026-01-05T09:00:00Z` timestamps, and writes byte-identical `packages/demo-fixtures/src/manifest.js` and `manifest.d.ts`. The `demo-manifest` quality gate (`--check`) blocks drift in `pnpm cadence check` and runs in `pnpm cadence check --pre-commit` (`PreCommitMode.Quick`, `TakesFiles = true`) whenever staged files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, or `docker/cadence-realm.json`.
 - **Production bundle exclusion:** `scripts/vite-strip-demo-fixtures.mjs` (`createDemoFixturesPlugin`) resolves `demo-fixtures` to an inert virtual module during non-demo production Rollup builds (`pnpm --filter web build`, `pnpm --filter subject-portal build`) while resolving to `packages/demo-fixtures/src/index.js` in `build:demo`, `dev`, and Vitest runs.
 - **Synthetic role-based personas:** Demo authentication in `apps/web/src/stores/auth.js` maps coordinator, investigator, monitor, data manager, designer, designer lead, safety, and auditor workspaces to the eight synthetic realm accounts (`crc.site101`, `pi.site101`, `cra.monitor`, `dm.lead`, `designer_demo`, `designer.lead`, `safety.officer`, `auditor.lead`), removing all personal maintainer attributes and the `deid-ignore` override on `auth.js`.
 - **Deterministic demo clock and PRNG:** `demoNowMs`, `demoNowIso`, `createDemoPrng`, `demoRandom`, `demoRandomInt`, and `demoRandomToken` in `demoMode.js` anchor demo-only Genesis SHA-256 ledger blocks, relative task schedules, commercial trial entitlements, and simulated telemetry/IDs to `2026-01-05T09:00:00Z` and keyed Mulberry32 streams, while delegating to `Date.now()` and `crypto.getRandomValues` outside demo mode.
 
 ## 5. Consequences & Trade-offs
 
-- **Positive Impact:** Both static demo portals and the local Aspire/Compose stack present the same `CADENCE-101` cardiovascular trial, synthetic hospital sites, screened participants, and role-named personas, with repeatable Genesis SHA-256 digests and zero maintainer PII in compiled bundles.
-- **Negative Impact / Technical Debt:** Changes to `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, or `docker/cadence-realm.json` fail `pnpm cadence check demo-manifest` until `pnpm cadence generate-demo-manifest` is run.
-- **Mitigation Strategy:** The error message from `demo-manifest` names the exact regeneration command (`pnpm cadence generate-demo-manifest`).
+- **Positive Impact:** Both static demo portals and the local Aspire/Compose stack present the same `CADENCE-101` cardiovascular trial, synthetic hospital sites, screened participants, and role-named personas from one typed JSON seed, with repeatable Genesis SHA-256 digests, Native AOT safety, and zero maintainer PII in compiled bundles.
+- **Negative Impact / Technical Debt:** Changes to `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs`, or `docker/cadence-realm.json` fail `pnpm cadence check demo-manifest` (and pre-commit when those paths are staged) until `pnpm cadence generate-demo-manifest` or `pnpm cadence fix` is run.
+- **Mitigation Strategy:** `pnpm cadence fix` automatically regenerates `packages/demo-fixtures`, and the error message from `demo-manifest` names `pnpm cadence generate-demo-manifest`.
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `packages/tooling_core`, `packages/cli`, `packages/demo-fixtures`, `scripts/vite-strip-demo-fixtures.mjs`, `apps/web`, `apps/subject-portal`, `docs/cli.md`, `docs/CI.md`.
+- **Affected Repositories / Services:** `apps/kernel-api`, `packages/tooling_core`, `packages/cli`, `packages/demo-fixtures`, `scripts/vite-strip-demo-fixtures.mjs`, `apps/web`, `apps/subject-portal`, `docs/cli.md`, `docs/CI.md`.
 - **Verification Plan:**
   - `DemoManifestGeneratorTests` and `QualityGateRegistryTests` verify RFC 9562 UUIDv8 derivation, byte-identical output, eight-persona parity, and drift failure in `Cadence.UnitTests`.
   - `apps/web/tests/demo_manifest_determinism.spec.ts` and `apps/subject-portal/tests/demo_manifest_determinism.test.js` verify identical Genesis SHA-256 hashes, fixed task schedules, repeatable PRNG sequences, synthetic persona switching, and live clock / Web Crypto preservation outside demo mode.

@@ -11,6 +11,7 @@
       margin-bottom: 24px;
       border-radius: 8px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
@@ -18,9 +19,17 @@
     "
     role="alert"
   >
-    <div style="display: flex; align-items: center; gap: 12px">
+    <div
+      style="
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1 1 180px;
+        min-width: 0;
+      "
+    >
       <span style="font-size: 24px">⚠️</span>
-      <div>
+      <div style="min-width: 0">
         <h3
           style="
             margin: 0 0 4px 0;
@@ -42,7 +51,9 @@
       type="button"
       class="btn btn-primary"
       style="
-        white-space: nowrap;
+        white-space: normal;
+        text-align: center;
+        max-width: 100%;
         background-color: var(--semantic-color-warning-action);
         border: 1px solid var(--semantic-color-warning-action-border);
         color: var(--semantic-color-surface);

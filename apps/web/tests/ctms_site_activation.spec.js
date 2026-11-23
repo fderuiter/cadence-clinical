@@ -572,4 +572,83 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     );
     expect(wrapper.find("#kernel-site-active-banner").exists()).toBe(true);
   });
+
+  it("passes studyCode=CADENCE-101 and siteId=SITE-101 props across all six live tabs when opened from /studies/CADENCE-101?site=SITE-101", async () => {
+    // Seed stale store scope to verify URL parameters are primary authority
+    const store = useClinicalStore();
+    store.activeStudyId = "STALE-STUDY";
+    store.activeSiteId = "STALE-SITE";
+    useAuthStore().rawRoles = ["Sponsor Admin"];
+
+    routeQuery.value = { studyId: "CADENCE-101", siteId: "SITE-101" };
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValueOnce(
+      status({ study_id: "CADENCE-101", site_id: "SITE-101" })
+    );
+    vi.mocked(ctmsApi.evaluateSiteGreenlight).mockResolvedValueOnce({
+      study_id: "CADENCE-101",
+      site_id: "SITE-101",
+      country_code: "US",
+      overall_status: "READY",
+      is_ready_for_certification: true,
+      facets: [],
+      blocking_reasons: [],
+      evaluated_at: "2026-06-15T10:00:00Z",
+    });
+
+    const wrapper = await mountView();
+
+    // Tab 1: Activation
+    expect(executionApi.getSiteComplianceStatus).toHaveBeenCalledWith(
+      "SITE-101",
+      "CADENCE-101"
+    );
+    expect(store.activeStudyId).toBe("CADENCE-101");
+    expect(store.activeSiteId).toBe("SITE-101");
+
+    // Tab 2: Startup readiness
+    await wrapper.find("#ctms-tab-startup").trigger("click");
+    await flushPromises();
+    expect(ctmsApi.getCountryGreenlightMatrix).toHaveBeenCalledWith(
+      "CADENCE-101",
+      "US"
+    );
+    expect(ctmsApi.evaluateSiteGreenlight).toHaveBeenCalledWith(
+      "SITE-101",
+      "CADENCE-101",
+      "US"
+    );
+
+    // Tab 3: Milestones
+    await wrapper.find("#ctms-tab-milestones").trigger("click");
+    await flushPromises();
+    expect(ctmsApi.listSiteMilestones).toHaveBeenCalledWith({
+      siteId: "SITE-101",
+      studyId: "CADENCE-101",
+    });
+
+    // Tab 4: Monitoring
+    await wrapper.find("#ctms-tab-monitoring").trigger("click");
+    await flushPromises();
+    expect(ctmsApi.listMonitoringVisits).toHaveBeenCalledWith({
+      studyId: "CADENCE-101",
+      siteId: "SITE-101",
+    });
+
+    // Tab 5: Delegation
+    await wrapper.find("#ctms-tab-delegation").trigger("click");
+    await flushPromises();
+    expect(ctmsApi.getSiteDoaLog).toHaveBeenCalledWith("SITE-101");
+
+    // Tab 6: Supply (Sponsor Admin sees randomization schemes for CADENCE-101; Pharmacist sees kit inventory for SITE-101)
+    useAuthStore().rawRoles = ["Sponsor Admin", "Pharmacist"];
+    await wrapper.find("#ctms-tab-supply").trigger("click");
+    await flushPromises();
+    expect(executionApi.getSiteIpKitInventory).toHaveBeenCalledWith(
+      "CADENCE-101",
+      "SITE-101"
+    );
+    expect(executionApi.listRandomizationSchemes).toHaveBeenCalledWith(
+      "CADENCE-101"
+    );
+  });
 });
