@@ -3,6 +3,8 @@
     id="view-compliance"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-compliance' }"
+    :hidden="ui.currentView !== 'view-compliance'"
+    :inert="ui.currentView !== 'view-compliance' || undefined"
     role="tabpanel"
     aria-labelledby="btn-tab-btn-compliance"
     tabindex="0"

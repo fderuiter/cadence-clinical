@@ -1,6 +1,30 @@
 // HTML-string widget factories for generated clinical form fields (CDASH
 // inputs, radio grids, visual analog sliders) and their query flag and panel.
 
+const SLIDER_TOUCHED_BADGE_STYLE =
+  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-surface); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: var(--font-size-sm, 0.875rem);";
+const SLIDER_UNTOUCHED_BADGE_STYLE =
+  "background: var(--semantic-color-surface); color: var(--semantic-color-text-secondary); border: 1px solid var(--semantic-color-border-control); padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: var(--font-size-sm, 0.875rem);";
+
+export function markClinicalSliderTouched(inputEl, explicitValue = undefined) {
+  if (!inputEl) return;
+  if (explicitValue !== undefined && explicitValue !== null) {
+    inputEl.value = String(explicitValue);
+  }
+  inputEl.setAttribute("data-touched", "true");
+  inputEl.removeAttribute("aria-valuetext");
+  if (inputEl.style) {
+    inputEl.style.accentColor = "var(--semantic-color-interactive-primary)";
+  }
+  const doc = inputEl.ownerDocument || document;
+  const disp = inputEl.id ? doc.getElementById(`${inputEl.id}_display`) : null;
+  if (disp) {
+    disp.textContent = `Value: ${inputEl.value}`;
+    disp.setAttribute("data-state", "touched");
+    disp.setAttribute("style", SLIDER_TOUCHED_BADGE_STYLE);
+  }
+}
+
 export function createClinicalSlider(
   id,
   label,
@@ -16,6 +40,19 @@ export function createClinicalSlider(
     value !== "" && value !== null && value !== undefined;
   const initialValue = hasExplicitValue ? value : minVal;
   const initialTouched = hasExplicitValue ? "true" : "false";
+  const initialDisplay = hasExplicitValue
+    ? `Value: ${initialValue}`
+    : "Not answered";
+  const initialBadgeState = hasExplicitValue ? "touched" : "untouched";
+  const initialBadgeStyle = hasExplicitValue
+    ? SLIDER_TOUCHED_BADGE_STYLE
+    : SLIDER_UNTOUCHED_BADGE_STYLE;
+  const initialAccentColor = hasExplicitValue
+    ? "var(--semantic-color-interactive-primary)"
+    : "var(--semantic-color-border-control)";
+  const ariaValueTextAttr = hasExplicitValue
+    ? ""
+    : '\n        aria-valuetext="Not answered"';
   const minLabel = attributes.min_label || attributes.minLabel || `${minVal}`;
   const maxLabel = attributes.max_label || attributes.maxLabel || `${maxVal}`;
 
@@ -30,8 +67,8 @@ export function createClinicalSlider(
   <div class="vas-slider-wrapper" style="background: var(--semantic-color-surface-muted); padding: 16px; border: 1px solid var(--semantic-color-border-control); border-radius: 8px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <span class="vas-min-label" style="font-size: 0.75rem; color: var(--semantic-color-text-secondary); font-weight: 500;">${minLabel}</span>
-      <span class="vas-value-badge" id="${id}_display" style="background: var(--semantic-color-interactive-primary); color: var(--semantic-color-surface); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: var(--font-size-sm, 0.875rem);">
-        Value: ${initialValue}
+      <span class="vas-value-badge" id="${id}_display" data-state="${initialBadgeState}" style="${initialBadgeStyle}">
+        ${initialDisplay}
       </span>
       <span class="vas-max-label" style="font-size: 0.75rem; color: var(--semantic-color-text-secondary); font-weight: 500;">${maxLabel}</span>
     </div>
@@ -44,10 +81,10 @@ export function createClinicalSlider(
         max="${maxVal}"
         step="${stepVal}"
         value="${initialValue}"
-        data-touched="${initialTouched}"
+        data-touched="${initialTouched}"${ariaValueTextAttr}
         class="vas-slider-input"
-        style="width: 100%; cursor: pointer; accent-color: var(--semantic-color-interactive-primary); min-height: var(--touch-target-min); height: var(--touch-target-min);"
-        oninput="this.setAttribute('data-touched', 'true'); const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
+        style="width: 100%; cursor: pointer; accent-color: ${initialAccentColor}; min-height: var(--touch-target-min); height: var(--touch-target-min);"
+        oninput="this.setAttribute('data-touched', 'true'); this.removeAttribute('aria-valuetext'); this.style.accentColor = 'var(--semantic-color-interactive-primary)'; const disp = document.getElementById('${id}_display'); if (disp) { disp.textContent = 'Value: ' + this.value; disp.setAttribute('data-state', 'touched'); disp.setAttribute('style', '${SLIDER_TOUCHED_BADGE_STYLE}'); }"
       />
       ${queryFlagHTML}
     </div>

@@ -213,7 +213,11 @@ import {
   sameObservationValue,
   type ExpectedItemSpec,
 } from "../api/observationValue";
-import { observationNodeRef } from "../canvas/nodeRef";
+import {
+  collectionInstanceId,
+  collectionInstanceRef,
+  observationNodeRef,
+} from "../canvas/nodeRef";
 import { canCorrectObservations } from "../canvas/authority";
 import { findKernelStudyRef } from "../canvas/kernelStudy";
 import { useAuthStore } from "../stores/auth";
@@ -246,16 +250,86 @@ const activeRouter = (instance?.appContext.config.globalProperties.$router ??
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 const hasRouter = computed(() => activeRouter !== null);
 
+function queryString(name: string): string {
+  const raw = activeRouter?.currentRoute.value?.query?.[name];
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+function appendFormAndItemToReturnPath(
+  rawPath: string,
+  formVal: string,
+  itemVal: string
+): string {
+  if (!formVal && !itemVal) return rawPath;
+  try {
+    const parsed = new URL(rawPath, "https://cadence.local");
+    const formUuid = collectionInstanceId(formVal);
+    const formRef = collectionInstanceRef(formVal) ?? formVal;
+    if (parsed.pathname === "/ecrf") {
+      if (formUuid && !parsed.searchParams.has("formId")) {
+        parsed.searchParams.set("formId", formUuid);
+      }
+      if (itemVal && !parsed.searchParams.has("itemId")) {
+        parsed.searchParams.set("itemId", itemVal);
+      }
+    } else if (parsed.pathname.startsWith("/studies/")) {
+      if (formRef && !parsed.searchParams.has("form")) {
+        parsed.searchParams.set("form", formRef);
+      }
+      if (itemVal && !parsed.searchParams.has("item")) {
+        parsed.searchParams.set("item", itemVal);
+      }
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return rawPath;
+  }
+}
+
 const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
   if (props.returnTo) return props.returnTo;
   if (!activeRouter) return null;
+  const rawForm = queryString("form") || queryString("formId");
+  const rawItem = queryString("item") || queryString("itemId");
   const queryReturn = activeRouter.currentRoute.value?.query?.returnTo;
   if (
     typeof queryReturn === "string" &&
     queryReturn.startsWith("/") &&
     !queryReturn.startsWith("//")
   ) {
-    return queryReturn;
+    return appendFormAndItemToReturnPath(queryReturn, rawForm, rawItem);
+  }
+  const studyFromContext =
+    (props.studyCode && props.studyCode.trim()) ||
+    queryString("studyId") ||
+    queryString("study");
+  const formRef = rawForm ? (collectionInstanceRef(rawForm) ?? rawForm) : "";
+  const formUuid = rawForm ? collectionInstanceId(rawForm) : null;
+  if (studyFromContext && activeRouter.hasRoute("study")) {
+    const sectionVal = queryString("section");
+    const isDataWorklist =
+      sectionVal === "queries" || sectionVal === "validation";
+    const siteVal = queryString("site") || queryString("siteId");
+    return {
+      name: "study",
+      params: { studyCode: studyFromContext },
+      query: {
+        stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
+        ...(isDataWorklist ? { section: sectionVal } : {}),
+        ...(siteVal ? { site: siteVal } : {}),
+        ...(formRef ? { form: formRef } : {}),
+        ...(rawItem ? { item: rawItem } : {}),
+      },
+    };
+  }
+  if ((formUuid || rawItem) && activeRouter.hasRoute("ecrf")) {
+    return {
+      name: "ecrf",
+      query: {
+        ...(formUuid ? { formId: formUuid } : {}),
+        ...(rawItem ? { itemId: rawItem } : {}),
+      },
+    };
   }
   if (activeRouter.hasRoute("study")) {
     return { name: "study" };
@@ -269,6 +343,8 @@ const effectiveReturnLabel = computed(() => {
   if (typeof queryLabel === "string" && queryLabel.trim().length > 0) {
     return queryLabel.trim();
   }
+  const rawForm = queryString("form") || queryString("formId");
+  if (rawForm) return props.returnLabel || "Back to form";
   return props.returnLabel || "Back to studies";
 });
 
@@ -407,6 +483,14 @@ watch(
     ) {
       return;
     }
+    const explicitReturn = activeRouter.currentRoute.value.query?.returnTo;
+    if (
+      typeof explicitReturn === "string" &&
+      explicitReturn.startsWith("/") &&
+      !explicitReturn.startsWith("//")
+    ) {
+      return;
+    }
     const request = ++redirectRequest;
     try {
       const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
@@ -424,13 +508,24 @@ watch(
       const siteStep = steps.find(
         (s) => s.level === "study_site" && s.mask === null && s.label
       );
+      const rawForm = queryString("form") || queryString("formId");
+      const formRef = rawForm
+        ? (collectionInstanceRef(rawForm) ?? rawForm)
+        : "";
+      const rawItem = queryString("item") || queryString("itemId");
+      const sectionVal = queryString("section");
+      const isDataWorklist =
+        sectionVal === "queries" || sectionVal === "validation";
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
         params: { studyCode: studyStep.label },
         query: {
-          stage: "conduct",
+          stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
+          ...(isDataWorklist ? { section: sectionVal } : {}),
           ...(siteStep?.label ? { site: siteStep.label } : {}),
+          ...(formRef ? { form: formRef } : {}),
+          ...(rawItem ? { item: rawItem } : {}),
           observation: canonicalRef,
         },
       });

@@ -1484,6 +1484,16 @@ a:focus-visible,
   cursor: pointer;
 }
 
+.vas-slider-input[data-touched="false"] {
+  accent-color: var(--semantic-color-border-control);
+}
+
+.vas-value-badge[data-state="untouched"] {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-secondary);
+  border: 1px solid var(--semantic-color-border-control);
+}
+
 label.radio-option {
   display: inline-flex;
   align-items: center;

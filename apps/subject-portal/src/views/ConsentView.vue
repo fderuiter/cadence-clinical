@@ -3,6 +3,8 @@
     id="view-consent"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-consent' }"
+    :hidden="ui.currentView !== 'view-consent'"
+    :inert="ui.currentView !== 'view-consent' || undefined"
     role="tabpanel"
     aria-labelledby="btn-tab-btn-consent"
     tabindex="0"

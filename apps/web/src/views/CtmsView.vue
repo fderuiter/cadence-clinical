@@ -34,12 +34,36 @@
         </button>
       </nav>
 
-      <SiteActivationPanel v-if="liveTab === 'activation'" />
-      <CtmsGreenlightSection v-else-if="liveTab === 'startup'" />
-      <CtmsMilestonesSection v-else-if="liveTab === 'milestones'" />
-      <CtmsMonitoringSection v-else-if="liveTab === 'monitoring'" />
-      <CtmsDelegationSection v-else-if="liveTab === 'delegation'" />
-      <RtsmSupplySection v-else-if="liveTab === 'supply'" />
+      <SiteActivationPanel
+        v-if="liveTab === 'activation'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsGreenlightSection
+        v-else-if="liveTab === 'startup'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsMilestonesSection
+        v-else-if="liveTab === 'milestones'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsMonitoringSection
+        v-else-if="liveTab === 'monitoring'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsDelegationSection
+        v-else-if="liveTab === 'delegation'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <RtsmSupplySection
+        v-else-if="liveTab === 'supply'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
 
       <p id="ctms-unbacked-scope-note" class="live-unbacked-note">
         Grant financials, CRA workload allocation, recruitment target updates,
@@ -3293,13 +3317,22 @@ const liveTab = ref(
       : "activation"
 );
 
+const initialQueryStudy =
+  typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
+const initialQuerySite =
+  typeof route?.query?.siteId === "string" && route.query.siteId.trim()
+    ? route.query.siteId.trim()
+    : typeof route?.query?.site === "string"
+      ? route.query.site.trim()
+      : "";
+
 // Scope comes from props or the route; apply before the first render so child panels see it.
 if (route && route.query) {
-  if (typeof route.query.studyId === "string" && route.query.studyId) {
-    store.activeStudyId = route.query.studyId;
+  if (initialQueryStudy) {
+    store.activeStudyId = initialQueryStudy;
   }
-  if (typeof route.query.siteId === "string" && route.query.siteId) {
-    store.activeSiteId = route.query.siteId;
+  if (initialQuerySite) {
+    store.activeSiteId = initialQuerySite;
   }
   if (typeof route.query.subjectId === "string" && route.query.subjectId) {
     store.activeSubjectId = route.query.subjectId;
@@ -3310,12 +3343,11 @@ if (route && route.query) {
 }
 
 const initialResolvedSite =
-  props.initialSiteId ||
-  (typeof route?.query?.site === "string" ? route.query.site : "") ||
-  store.activeSiteId ||
-  "";
+  props.initialSiteId || initialQuerySite || store.activeSiteId || "";
 
-const localStudyId = ref(props.studyCode || store.activeStudyId || "");
+const localStudyId = ref(
+  props.studyCode || initialQueryStudy || store.activeStudyId || ""
+);
 const localSiteId = ref(initialResolvedSite);
 const sitePickerChoice = ref(
   !initialResolvedSite
@@ -3323,6 +3355,38 @@ const sitePickerChoice = ref(
     : KNOWN_SITE_CODES.includes(initialResolvedSite)
       ? initialResolvedSite
       : "__custom__"
+);
+
+watch(
+  [
+    () => route?.query?.studyId,
+    () => route?.query?.siteId,
+    () => route?.query?.site,
+    () => route?.query?.tab,
+  ],
+  ([nextStudy, nextSiteId, nextSite, nextTab]) => {
+    const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
+    if (trimmedStudy) {
+      localStudyId.value = trimmedStudy;
+      store.activeStudyId = trimmedStudy;
+    }
+    const trimmedSite =
+      typeof nextSiteId === "string" && nextSiteId.trim()
+        ? nextSiteId.trim()
+        : typeof nextSite === "string"
+          ? nextSite.trim()
+          : "";
+    if (trimmedSite) {
+      localSiteId.value = trimmedSite;
+      store.activeSiteId = trimmedSite;
+      sitePickerChoice.value = KNOWN_SITE_CODES.includes(trimmedSite)
+        ? trimmedSite
+        : "__custom__";
+    }
+    if (typeof nextTab === "string" && liveTabs.some((t) => t.id === nextTab)) {
+      liveTab.value = nextTab;
+    }
+  }
 );
 
 function onSitePickerChange() {
@@ -3381,6 +3445,12 @@ const studyId = computed(() => {
     (store.activeStudyId || "").trim();
   if (candidate) return candidate;
   return demoBuild ? "STUDY-USDM-001" : "";
+});
+
+const scopedStudyProp = computed(() => {
+  const routeStudy =
+    typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
+  return props.studyCode.trim() || routeStudy;
 });
 
 const hasActiveScope = computed(() =>
