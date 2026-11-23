@@ -6,7 +6,9 @@
   >
     <div class="section-header-row">
       <div>
-        <h3 id="ctms-greenlight-title" class="card-title">Startup readiness</h3>
+        <h3 id="ctms-greenlight-title" class="card-title" tabindex="-1">
+          Startup readiness
+        </h3>
         <p class="section-subtitle">
           Six-facet country and site greenlight checklist and Part 11 readiness
           certification.

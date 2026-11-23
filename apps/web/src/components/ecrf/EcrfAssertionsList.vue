@@ -4,7 +4,7 @@
     aria-labelledby="ecrf-form-queries-title"
     :aria-busy="queriesLoading"
   >
-    <h3 id="ecrf-form-queries-title">Queries</h3>
+    <h3 id="ecrf-form-queries-title" tabindex="-1">Queries</h3>
     <p v-if="queriesLoading" role="status">Loading queries…</p>
     <p v-else-if="queriesLoadError" class="ecrf-form-error" role="alert">
       The queries could not be loaded: {{ queriesLoadError }}

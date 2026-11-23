@@ -8,6 +8,7 @@ Generated from `docs/openapi/tickets_openapi.json` by `pnpm cadence generate-api
 | `POST` | `/api/v1/tickets` | CreateTicket |  |
 | `GET` | `/api/v1/tickets/status` | TicketsStatus | Returns Tickets operational status. |
 | `GET` | `/api/v1/tickets/{ticket_id}` | GetTicket |  |
+| `PATCH` | `/api/v1/tickets/{ticket_id}` | UpdateTicket |  |
 | `GET` | `/api/v1/tickets/{ticket_id}/audit-trail` | GetTicketAuditTrail |  |
 | `GET` | `/api/v1/tickets/{ticket_id}/comments` | ListTicketComments |  |
 | `POST` | `/api/v1/tickets/{ticket_id}/comments` | CreateTicketComment |  |

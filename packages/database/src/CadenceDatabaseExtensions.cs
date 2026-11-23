@@ -1,10 +1,12 @@
 using System;
 using System.Text.RegularExpressions;
 
+using Cadence.Database.Concurrency;
 using Cadence.Database.Tenancy;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +66,10 @@ public static partial class CadenceDatabaseExtensions
             builder.Services.AddCadencePostgresTenancy(baseConnectionString);
         }
 
+        builder.Services.AddProblemDetails();
+        builder.Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IExceptionHandler, StandaloneConcurrencyExceptionHandler>());
+
         builder.Services.AddCadenceDbContext<TDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
@@ -71,7 +77,8 @@ public static partial class CadenceDatabaseExtensions
             configureOptions?.Invoke(sp, options);
             options.AddInterceptors(
                 StandaloneTenantConnectionInterceptor.Instance,
-                StandaloneTenantSaveChangesInterceptor.Instance);
+                StandaloneTenantSaveChangesInterceptor.Instance,
+                StandaloneConcurrencyTokenInterceptor.Instance);
         });
 
         builder.Services.AddHealthChecks()
@@ -115,6 +122,9 @@ public static partial class CadenceDatabaseExtensions
 
     private static void RegisterScopedTenantAccessors(IServiceCollection services)
     {
+        services.AddProblemDetails();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IExceptionHandler, StandaloneConcurrencyExceptionHandler>());
         services.TryAddSingleton<CurrentTenantAccessor>();
         services.TryAddSingleton<ICurrentTenantAccessor>(sp => sp.GetRequiredService<CurrentTenantAccessor>());
         services.TryAddSingleton<ITenantScope>(sp => sp.GetRequiredService<CurrentTenantAccessor>());

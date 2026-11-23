@@ -435,6 +435,8 @@ export interface components {
       record_id: string;
       reason_for_change: null | string;
       study_id?: null | string;
+      /** Format: int64 */
+      expected_version_index?: null | number | string;
     };
     Ctms_FindingCreateDto: {
       text: string;
@@ -497,6 +499,8 @@ export interface components {
       record_id: string;
       reason_for_change: null | string;
       study_id?: null | string;
+      /** Format: int64 */
+      expected_version_index?: null | number | string;
     };
     Ctms_SiteGreenlightGateResponseDto: {
       id: string;
@@ -1447,6 +1451,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
     };
   };
   SignOffDelegation: {
@@ -1500,12 +1513,23 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
     };
   };
   GetSiteDoaLog: {
     parameters: {
       query?: {
         study_id?: string;
+        valid_at?: string;
+        known_at?: string;
       };
       header?: never;
       path: {

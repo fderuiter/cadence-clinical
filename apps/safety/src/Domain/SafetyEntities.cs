@@ -126,6 +126,44 @@ public class SafetyNarrative
     public int VersionIndex { get; set; } = 1;
 }
 
+public class SafetyNarrativeRevision
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string SafetyNarrativeId { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string SectionsJson { get; set; } = "[]";
+    public string RawNarrativeText { get; set; } = string.Empty;
+    public string TimelineEventsJson { get; set; } = "[]";
+    public string GroundedClaimsJson { get; set; } = "[]";
+    public string ReviewStatus { get; set; } = "DRAFT_AI";
+    public string? ApprovedByUserId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public string? EsignatureManifestId { get; set; }
+    public required DateTimeOffset RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+
+    public static SafetyNarrativeRevision FromNarrative(SafetyNarrative narrative, DateTimeOffset recordedAt, string recordedBy) =>
+        new()
+        {
+            SafetyNarrativeId = narrative.Id,
+            RevisionNumber = narrative.VersionIndex,
+            Title = narrative.Title,
+            SectionsJson = narrative.SectionsJson,
+            RawNarrativeText = narrative.RawNarrativeText,
+            TimelineEventsJson = narrative.TimelineEventsJson,
+            GroundedClaimsJson = narrative.GroundedClaimsJson,
+            ReviewStatus = narrative.ReviewStatus,
+            ApprovedByUserId = narrative.ApprovedByUserId,
+            ApprovedAt = narrative.ApprovedAt,
+            EsignatureManifestId = narrative.EsignatureManifestId,
+            RecordedAt = recordedAt,
+            RecordedBy = recordedBy,
+            ReasonForChange = narrative.ReasonForChange,
+        };
+}
+
 public class SafetyAuditLog
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -275,6 +313,72 @@ public class PeriodicSafetyReportRecord : IGxPAuditable
     DateTime IGxPAuditable.CreatedAt => CreatedAt.UtcDateTime;
 
     long IGxPAuditable.VersionIndex => VersionIndex;
+}
+
+public class PeriodicSafetyReportRevision
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string ReportId { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public string ReportType { get; set; } = "DSUR";
+    public string StudyCode { get; set; } = string.Empty;
+    public string CompoundName { get; set; } = string.Empty;
+    public DateTimeOffset PeriodStart { get; set; }
+    public DateTimeOffset PeriodEnd { get; set; }
+    public string Status { get; set; } = "DRAFT";
+    public double TotalPatientYearsExposure { get; set; }
+    public int TotalSaes { get; set; }
+    public string ReportPayloadJson { get; set; } = "{}";
+    public string? ApprovedByUserId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public string? EsignatureManifestId { get; set; }
+    public required DateTimeOffset RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+
+    public static PeriodicSafetyReportRevision FromRecord(PeriodicSafetyReportRecord record, DateTimeOffset recordedAt, string recordedBy) =>
+        new()
+        {
+            ReportId = record.Id,
+            RevisionNumber = record.VersionIndex,
+            ReportType = record.ReportType,
+            StudyCode = record.StudyId,
+            CompoundName = record.CompoundName,
+            PeriodStart = record.PeriodStart,
+            PeriodEnd = record.PeriodEnd,
+            Status = record.Status,
+            TotalPatientYearsExposure = record.TotalPatientYearsExposure,
+            TotalSaes = record.TotalSaes,
+            ReportPayloadJson = record.ReportPayloadJson,
+            ApprovedByUserId = record.ApprovedByUserId,
+            ApprovedAt = record.ApprovedAt,
+            EsignatureManifestId = record.EsignatureManifestId,
+            RecordedAt = recordedAt,
+            RecordedBy = recordedBy,
+            ReasonForChange = record.ReasonForChange,
+        };
+
+    public PeriodicSafetyReportRecord ToRecord(DateTimeOffset createdAt, string createdBy) =>
+        new()
+        {
+            Id = ReportId,
+            ReportType = ReportType,
+            StudyId = StudyCode,
+            CompoundName = CompoundName,
+            PeriodStart = PeriodStart,
+            PeriodEnd = PeriodEnd,
+            Status = Status,
+            TotalPatientYearsExposure = TotalPatientYearsExposure,
+            TotalSaes = TotalSaes,
+            ReportPayloadJson = ReportPayloadJson,
+            ApprovedByUserId = ApprovedByUserId,
+            ApprovedAt = ApprovedAt,
+            EsignatureManifestId = EsignatureManifestId,
+            CreatedAt = createdAt,
+            CreatedBy = createdBy,
+            ReasonForChange = ReasonForChange,
+            VersionIndex = RevisionNumber,
+        };
 }
 
 public class DeviceSafetyInvestigation

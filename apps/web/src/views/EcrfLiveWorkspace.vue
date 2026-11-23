@@ -17,17 +17,9 @@
     >
       <div style="font-size: 0.9rem">
         {{ $t("ecrf.activeRole") }}
-        <span
-          class="badge"
-          style="
-            background-color: var(--accent);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-          "
-          >{{ activeUserRole.toUpperCase() }}</span
-        >
+        <span class="clinical-badge clinical-badge--signed badge">{{
+          activeUserRole.toUpperCase()
+        }}</span>
       </div>
     </div>
 

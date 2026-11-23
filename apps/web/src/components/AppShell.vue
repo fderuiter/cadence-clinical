@@ -1033,9 +1033,9 @@ onUnmounted(() => {
 }
 
 .shell-canvas-actions :deep(.ai-toggle[aria-pressed="true"]) {
-  border-color: var(--semantic-color-ai-border);
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  border-color: var(--semantic-color-info-border);
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
 }
 
 .header-controls {

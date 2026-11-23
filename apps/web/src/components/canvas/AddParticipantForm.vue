@@ -74,7 +74,12 @@
       >
         Add participant
       </button>
-      <button type="button" class="btn btn-secondary" @click="emit('close')">
+      <button
+        id="btn-cancel-add-participant"
+        type="button"
+        class="btn btn-secondary"
+        @click="emit('close')"
+      >
         Cancel
       </button>
     </div>
@@ -82,10 +87,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import type { StudySiteOption } from "../../canvas/kernelStudy";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { addParticipantMutation } from "../../stores/studyCanvasParticipantMutations";
 
 /**
  * Adds a participant to the open study through Execution, which starts it in screening and audits the reason.
@@ -118,6 +125,10 @@ const siteId = ref(
 const reason = ref("");
 const busy = ref(false);
 
+onMounted(() => {
+  void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
+});
+
 watch(
   () =>
     [props.defaultSiteId, props.restrictToOptions, props.siteOptions] as const,
@@ -140,7 +151,12 @@ async function submit() {
   if (!code || !why || busy.value) return;
   busy.value = true;
   try {
-    const result = await canvas.addParticipant(code, siteId.value.trim(), why);
+    const result = await addParticipantMutation(
+      canvas,
+      code,
+      siteId.value.trim(),
+      why
+    );
     // When adding fails nothing was created: keep the form so the user can correct it.
     if (result.added) emit("added", result.participant);
   } finally {

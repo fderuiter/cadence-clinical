@@ -135,6 +135,93 @@ public class Ticket
     {
         return TransitionTo(TicketStatus.RESOLVED, resolutionCode, rootCauseSummary, rootCauseCategory);
     }
+
+    public static Ticket ReconstructFromRevision(Ticket head, TicketRevision revision) =>
+        new()
+        {
+            Id = head.Id,
+            Reference = revision.Reference,
+            Title = revision.Title,
+            Description = revision.Description,
+            Category = revision.Category,
+            Priority = revision.Priority,
+            Status = revision.Status,
+            Reporter = head.Reporter,
+            AssigneeUser = revision.AssigneeUser,
+            AssigneeRole = revision.AssigneeRole,
+            OrgId = head.OrgId,
+            SiteId = revision.SiteCode,
+            StudyId = revision.StudyCode,
+            RelatedEntityType = head.RelatedEntityType,
+            RelatedEntityId = head.RelatedEntityId,
+            ContextPayload = revision.ContextPayload,
+            GxpSeverity = revision.GxpSeverity,
+            RootCauseCategory = revision.RootCauseCategory,
+            RootCauseSummary = revision.RootCauseSummary,
+            ResolutionCode = revision.ResolutionCode,
+            DueDate = head.DueDate,
+            SlaTargetAt = revision.SlaTargetAt,
+            SlaBreached = head.SlaBreached,
+            SlaAmberWarned = head.SlaAmberWarned,
+            EscalationCount = head.EscalationCount,
+            IsDeleted = head.IsDeleted,
+            CreatedAt = head.CreatedAt,
+            CreatedBy = head.CreatedBy,
+            ReasonForChange = revision.ReasonForChange,
+            VersionIndex = revision.RevisionNumber,
+        };
+}
+
+public class TicketRevision
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string TicketId { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; }
+    public string Reference { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Category { get; set; } = "OTHER";
+    public string Priority { get; set; } = "LOW";
+    public TicketStatus Status { get; set; } = TicketStatus.OPEN;
+    public string GxpSeverity { get; set; } = "NOT_APPLICABLE";
+    public string? AssigneeUser { get; set; }
+    public string? AssigneeRole { get; set; }
+    public string? StudyCode { get; set; }
+    public string? SiteCode { get; set; }
+    public string? RootCauseCategory { get; set; }
+    public string? RootCauseSummary { get; set; }
+    public string? ResolutionCode { get; set; }
+    public DateTimeOffset? SlaTargetAt { get; set; }
+    public string? ContextPayload { get; set; }
+    public required DateTimeOffset RecordedAt { get; set; }
+    public string RecordedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+
+    public static TicketRevision FromTicket(Ticket ticket, DateTimeOffset recordedAt, string recordedBy) =>
+        new()
+        {
+            TicketId = ticket.Id,
+            RevisionNumber = ticket.VersionIndex,
+            Reference = ticket.Reference,
+            Title = ticket.Title,
+            Description = ticket.Description,
+            Category = ticket.Category,
+            Priority = ticket.Priority,
+            Status = ticket.Status,
+            GxpSeverity = ticket.GxpSeverity,
+            AssigneeUser = ticket.AssigneeUser,
+            AssigneeRole = ticket.AssigneeRole,
+            StudyCode = ticket.StudyId,
+            SiteCode = ticket.SiteId,
+            RootCauseCategory = ticket.RootCauseCategory,
+            RootCauseSummary = ticket.RootCauseSummary,
+            ResolutionCode = ticket.ResolutionCode,
+            SlaTargetAt = ticket.SlaTargetAt,
+            ContextPayload = ticket.ContextPayload,
+            RecordedAt = recordedAt,
+            RecordedBy = recordedBy,
+            ReasonForChange = ticket.ReasonForChange,
+        };
 }
 
 public class TicketComment

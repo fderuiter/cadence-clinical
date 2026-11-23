@@ -6,7 +6,7 @@
     :aria-busy="record.loading"
   >
     <header class="record-header">
-      <h2 id="participant-record-title">
+      <h2 id="participant-record-title" tabindex="-1">
         {{ participant.subject_id }}
       </h2>
       <span class="record-meta">
