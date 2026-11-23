@@ -224,6 +224,61 @@ public class DomainEngineUnitTests
         }
     }
 
+    [Fact]
+    public void DuplicationDetectorService_TypeScriptFilesGateDuplicates_AndExcludeGeneratedAndShorthandBlocks()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-ts-{Guid.NewGuid():N}");
+        try
+        {
+            string apiDir = Path.Combine(tempRoot, "apps", "web", "src", "api");
+            string compDir = Path.Combine(tempRoot, "apps", "web", "src", "composables");
+            string genDir = Path.Combine(apiDir, "generated");
+            string uiTypesDir = Path.Combine(tempRoot, "packages", "ui", "src", "types");
+            string demoFixturesDir = Path.Combine(tempRoot, "packages", "demo-fixtures", "src");
+            Directory.CreateDirectory(apiDir);
+            Directory.CreateDirectory(compDir);
+            Directory.CreateDirectory(genDir);
+            Directory.CreateDirectory(uiTypesDir);
+            Directory.CreateDirectory(demoFixturesDir);
+
+            // Bare object-literal / destructuring shorthand properties (>15 lines) should normalize to empty and not false-positive.
+            string shorthandBlock = string.Join(
+                "\n",
+                Enumerable.Range(1, 20).Select(i => $"    fieldProp{i},"));
+            string cleanTsA = $"export function alpha() {{\n  const state = {{\n{shorthandBlock}\n  }};\n  return state;\n}}\n";
+            string cleanTsB = $"export function beta() {{\n  const bag = {{\n{shorthandBlock}\n  }};\n  return bag;\n}}\n";
+
+            string fileA = Path.Combine(apiDir, "alphaClient.ts");
+            string fileB = Path.Combine(compDir, "useBeta.ts");
+            File.WriteAllText(fileA, cleanTsA);
+            File.WriteAllText(fileB, cleanTsB);
+
+            // Duplicate blocks in excluded generated/.d.ts/cdash.ts paths must be ignored even when identical to hand-written .ts.
+            string duplicatedLogic = string.Join(
+                "\n",
+                Enumerable.Range(1, 18).Select(i => $"  const stepMetric{i} = inputValue * {i} + {i * 3};"));
+            string generatedBody = $"export function compute(inputValue: number) {{\n{duplicatedLogic}\n  return stepMetric18;\n}}\n";
+
+            File.WriteAllText(Path.Combine(genDir, "etmf.ts"), generatedBody);
+            File.WriteAllText(Path.Combine(uiTypesDir, "cdash.ts"), generatedBody);
+            File.WriteAllText(Path.Combine(demoFixturesDir, "manifest.d.ts"), generatedBody);
+            File.AppendAllText(fileA, "\n" + generatedBody);
+
+            DuplicationDetectorService.DetectDuplication(null, tempRoot).Should().Be(0);
+
+            // Injecting the same >=15-line block into a second hand-written .ts file must fail with exit code 1.
+            File.AppendAllText(fileB, "\n" + generatedBody);
+            DuplicationDetectorService.DetectDuplication(null, tempRoot).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         string? dir = AppContext.BaseDirectory;
