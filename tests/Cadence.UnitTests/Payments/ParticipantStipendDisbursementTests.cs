@@ -13,6 +13,7 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,8 @@ public class ParticipantStipendDisbursementTests
     // The site coordinator who verified the visit, as the gateway signs them (#5361).
     private static readonly ClaimsPrincipal SiteCoordinator = TestSecurityContext.CreateScopedPrincipal(
         "crc-1", TestSecurityContext.AllStudies, ["SITE-101"], "crc");
+
+    private static HttpContext SiteCoordinatorContext() => new DefaultHttpContext { User = SiteCoordinator };
 
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"payments-test-{Guid.NewGuid():N}.db");
 
@@ -76,7 +79,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -139,12 +142,12 @@ public class ParticipantStipendDisbursementTests
         // Act 1: First call
         await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
 
         // Act 2: Duplicate call with same EventId
         var dupResult = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         dupResult.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -220,7 +223,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -276,7 +279,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -328,7 +331,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinator])!;
+            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -365,7 +368,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("DisburseStipendDirect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [req, dbContext, SiteCoordinator])!;
+            .Invoke(null, [req, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<DisburseStipendResponse>>();
@@ -441,7 +444,7 @@ public class ParticipantStipendDisbursementTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("ReviewExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, ["claim-001", reviewReq, dbContext, SiteCoordinator])!;
+            .Invoke(null, ["claim-001", reviewReq, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();

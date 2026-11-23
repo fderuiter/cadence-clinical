@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Ports;
@@ -9,6 +10,7 @@ using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Core.Domain;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -65,13 +67,25 @@ public static class CecEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var existing = await repository.GetDossierByIdAsync(id, cancellationToken).ConfigureAwait(false);
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing?.StudyId ?? "STUDY-001", existing?.SiteId) is { } scopeDenied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
+                httpContext,
+                existing?.StudyId ?? "STUDY-001",
+                existing?.SiteId,
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
 
-        var caller = httpContext.User.ToAuthenticatedCaller();
+        var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is { UserId.Length: > 0 } p
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
+            : null;
         var result = await cecService.ChairAdjudicateAsync(id, request, caller, cancellationToken);
         return result.IsSuccess
             ? TypedResults.Ok(result.Value)
@@ -84,8 +98,7 @@ public static class CecEndpoints
         ICecRepository repository,
         CancellationToken cancellationToken)
     {
-        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -96,7 +109,12 @@ public static class CecEndpoints
             return TypedResults.NotFound(new { code = "NOT_FOUND", message = $"CEC Dossier '{id}' not found." });
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, dossier.StudyId, dossier.SiteId) is { } recordDenied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
+                httpContext,
+                dossier.StudyId,
+                dossier.SiteId,
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }

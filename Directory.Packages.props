@@ -61,7 +61,8 @@
 
     <!-- Testing Infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <!-- Stay on xunit.v3 1.1.0 while dotnet test and GxP TRX pipelines use VSTest; xunit.v3 >= 4.0.0 pulls xunit.v3.mtp-v2 which rejects VSTest on .NET 10 SDK (#6038). -->
+    <PackageVersion Include="xunit.v3" Version="1.1.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
