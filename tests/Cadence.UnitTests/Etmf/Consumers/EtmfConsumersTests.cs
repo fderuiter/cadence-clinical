@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Consumers;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
@@ -192,6 +193,101 @@ public class EtmfConsumersTests
             var expectedKey = "SUBJ-100:STUDY-01:1";
             var count = await dbContext.TmfDocuments.CountAsync(d => d.IdempotencyKey == expectedKey, ct);
             count.Should().Be(1);
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    [Fact]
+    public async Task Consume_EtmfDocumentFilingRequested_SanitizesSlashesAndTraversalTokens()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+
+        await using var provider = CreateEtmfServiceProvider(options, clock);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+        try
+        {
+            var slashTitleMessage = new EtmfDocumentFilingRequested(
+                DocumentId: "DOC-2003",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                ZoneCode: "4",
+                SectionCode: "04.02",
+                ArtifactCode: "04.02.01",
+                DocumentTitle: "IRB/IEC Approval.pdf",
+                StoragePath: "s3://etmf/DOC-2003.pdf",
+                RequestedBy: "cra-user-1",
+                RequestedAt: clock.UtcNow);
+
+            var traversalMessage = new EtmfDocumentFilingRequested(
+                DocumentId: "DOC-2004",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                ZoneCode: "1",
+                SectionCode: "..\\..\\01.01",
+                ArtifactCode: "01.01.01",
+                DocumentTitle: "../../../canary-outside-binder.txt",
+                StoragePath: "s3://etmf/DOC-2004.pdf",
+                RequestedBy: "cra-user-1",
+                RequestedAt: clock.UtcNow);
+
+            await harness.PublishAndWaitForConsumeAsync(slashTitleMessage, ct);
+            await harness.PublishAndWaitForConsumeAsync(traversalMessage, ct);
+
+            var slashDoc = await dbContext.TmfDocuments.SingleAsync(d => d.Id == "DOC-2003", ct);
+            slashDoc.Filename.Should().Be("IRB_IEC Approval.pdf");
+            TmfDocument.IsValidPathSegment(slashDoc.Filename).Should().BeTrue();
+
+            var traversalDoc = await dbContext.TmfDocuments.SingleAsync(d => d.Id == "DOC-2004", ct);
+            TmfDocument.IsValidPathSegment(traversalDoc.Filename).Should().BeTrue();
+            TmfDocument.IsValidPathSegment(traversalDoc.Section).Should().BeTrue();
+            traversalDoc.Filename.Should().NotContain("..").And.NotContain("/").And.NotContain("\\");
+            traversalDoc.Section.Should().NotContain("..").And.NotContain("/").And.NotContain("\\");
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    [Fact]
+    public async Task Consume_EConsentCompleted_SanitizesFilenameAndObjectKeySegments()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+
+        await using var provider = CreateEtmfServiceProvider(options, clock);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        await harness.Start();
+        try
+        {
+            var message = new EConsentCompleted(
+                SubjectId: "SUBJ/../101",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                VersionTag: "..\\v2.0\r\n",
+                VersionIndex: 2,
+                SignedAt: clock.UtcNow);
+
+            await harness.PublishAndWaitForConsumeAsync(message, ct);
+
+            var expectedKey = "SUBJ/../101:STUDY-01:2";
+            var doc = await dbContext.TmfDocuments.SingleAsync(d => d.IdempotencyKey == expectedKey, ct);
+            TmfDocument.IsValidPathSegment(doc.Filename).Should().BeTrue();
+            doc.Filename.Should().NotContain("..").And.NotContain("/").And.NotContain("\\");
+            doc.ObjectKey.Should().NotContain("..").And.NotContain("\\");
         }
         finally
         {

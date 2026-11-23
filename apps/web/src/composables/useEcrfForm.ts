@@ -255,6 +255,21 @@ export function useEcrfForm(
       : formatObservationValue(value);
   }
 
+  const initialTextByItemId = computed(() => {
+    const byId = new Map<string, string>();
+    for (const item of items.value) {
+      const current = item.value;
+      if (
+        !isUnrecordedValue(current) &&
+        current &&
+        current.type !== "missing"
+      ) {
+        byId.set(item.item_id, formatEntryText(current).trim());
+      }
+    }
+    return byId;
+  });
+
   function isEdited(item: EcrfFormItem): boolean {
     const entry = entries[item.item_id];
     if (!entry) return false;
@@ -268,7 +283,10 @@ export function useEcrfForm(
       );
     }
     if (current && current.type !== "missing") {
-      return entry.text.trim() !== formatEntryText(current).trim();
+      const initialText =
+        initialTextByItemId.value.get(item.item_id) ??
+        formatEntryText(current).trim();
+      return entry.text.trim() !== initialText;
     }
     return entry.text.trim().length > 0;
   }
