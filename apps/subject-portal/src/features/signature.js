@@ -15,6 +15,7 @@ import {
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
+  createNonExtractableCryptoKey,
   deleteDraft,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
@@ -539,9 +540,29 @@ export async function verifyAndSubmitSignature() {
         }
         try {
           const kwk = await deriveKeyFromPIN(cleanPassword, wrappedConfig.salt);
-          const decrypted = await decryptAESGCM(wrappedConfig.wrappedKey, kwk);
+          let decrypted;
+          try {
+            decrypted = await decryptAESGCM(wrappedConfig.wrappedKey, kwk);
+          } finally {
+            if (kwk instanceof Uint8Array) {
+              kwk.fill(0);
+            }
+          }
           if (!getInMemorySessionKey() && decrypted?.masterKey) {
-            setInMemorySessionKey(new Uint8Array(decrypted.masterKey));
+            const rawMasterKey = new Uint8Array(decrypted.masterKey);
+            if (Array.isArray(decrypted.masterKey)) {
+              decrypted.masterKey.fill(0);
+            }
+            const cryptoKey = await createNonExtractableCryptoKey(rawMasterKey);
+            if (
+              rawMasterKey instanceof Uint8Array &&
+              cryptoKey !== rawMasterKey
+            ) {
+              rawMasterKey.fill(0);
+            }
+            setInMemorySessionKey(cryptoKey);
+          } else if (Array.isArray(decrypted?.masterKey)) {
+            decrypted.masterKey.fill(0);
           }
         } catch {
           displayModalOrToastError(

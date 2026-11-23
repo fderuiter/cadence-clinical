@@ -128,6 +128,126 @@ public class AmendmentRegressionEngineTests
             .Which.ReferencedVariable.Should().Be("UNKNOWN_VAR");
     }
 
+    [Fact(DisplayName = "AmendmentRegressionEngine_CompareAsync_WithDatasetSchemasAndEmptyRecords_ValidatesSchemaAndAllowsOptionalFields")]
+    [Trait("Category", "Unit")]
+    public async Task CompareAsync_WithDatasetSchemasAndEmptyRecords_ValidatesSchemaAndAllowsOptionalFields()
+    {
+        var engine = new AmendmentRegressionEngine(new DotNetRuleEvaluator(), new FakeClock());
+
+        var standardPackage = new StandardPackage(
+            "SDTMIG",
+            "3.4",
+            "SDTMIG 3.4",
+            "CDISC",
+            null,
+            null,
+            [
+                new DatasetDefinitionData(
+                    "VS",
+                    "Vital Signs",
+                    "Findings",
+                    null,
+                    1,
+                    [
+                        new VariableDefinitionData("SYSBP", "Systolic BP", 1, StandardDataType.Num, null, VariableCore.Expected, [], [], null, null),
+                        new VariableDefinitionData("VSPOS", "Position", 2, StandardDataType.Char, null, VariableCore.Permissible, [], [], null, null),
+                    ]),
+                new DatasetDefinitionData(
+                    "DM",
+                    "Demographics",
+                    "Special Purpose",
+                    null,
+                    2,
+                    [
+                        new VariableDefinitionData("AGE", "Age", 1, StandardDataType.Num, null, VariableCore.Expected, [], [], null, null),
+                    ]),
+            ],
+            [],
+            []);
+
+        var schemas = AmendmentRegressionEngine.BuildDatasetSchemas([standardPackage]);
+
+        var validOptionalAndCrossDatasetRule = new Rule(
+            "R_VALID", 1, RuleAuthority.Sponsor, new SourceCitation("S1", null, null),
+            new RuleApplicability(ValidationStage.Collection, null, null, null, "VS"),
+            ValidationSeverity.Warning,
+            new LogicalExpression(
+                LogicalOperator.And,
+                [
+                    new ComparisonExpression(ComparisonOperator.Equal, new VariableExpression("VSPOS"), new LiteralExpression(RuleValue.FromText("STANDING"))),
+                    new ComparisonExpression(ComparisonOperator.Greater, new VariableExpression("DM.AGE"), new LiteralExpression(RuleValue.FromNumber(65m))),
+                ]),
+            "Valid optional and cross-dataset variables", null, EffectivePeriod.Always);
+
+        var brokenRule = new Rule(
+            "R_BROKEN", 2, RuleAuthority.Sponsor, new SourceCitation("S2", null, null),
+            new RuleApplicability(ValidationStage.Collection, null, null, null, "VS"),
+            ValidationSeverity.Error,
+            new ComparisonExpression(ComparisonOperator.Greater, new VariableExpression("NONEXISTENT_VAR"), new LiteralExpression(RuleValue.FromNumber(10m))),
+            "Broken schema reference", null, EffectivePeriod.Always);
+
+        var baseline = CreateLoadedPack("PACK-01", 1, [validOptionalAndCrossDatasetRule]);
+        var target = CreateLoadedPack("PACK-01", 2, [validOptionalAndCrossDatasetRule, brokenRule]);
+
+        var report = await engine.CompareAsync(baseline, target, ValidationStage.Collection, AsOf, records: [], schemas, Ct);
+
+        report.BrokenAstReferences.Should().ContainSingle();
+        report.BrokenAstReferences[0].RuleId.Should().Be("R_BROKEN");
+        report.BrokenAstReferences[0].ReferencedVariable.Should().Be("NONEXISTENT_VAR");
+    }
+
+    [Fact(DisplayName = "AmendmentRegressionEngine_CompareAsync_DetectsAllRuleMetadataModifications")]
+    [Trait("Category", "Unit")]
+    public async Task CompareAsync_DetectsAllRuleMetadataModifications()
+    {
+        var engine = new AmendmentRegressionEngine(new DotNetRuleEvaluator(), new FakeClock());
+        var cond = new ComparisonExpression(ComparisonOperator.Greater, new VariableExpression("SYSBP"), new LiteralExpression(RuleValue.FromNumber(140m)));
+
+        Rule BaseRule(string id) => new(
+            id, 1, RuleAuthority.Sponsor, new SourceCitation("Doc A", "1.1", null),
+            new RuleApplicability(ValidationStage.Collection, null, null, null, "VS", "SYSBP"),
+            ValidationSeverity.Warning,
+            cond,
+            "Initial explanation",
+            "Initial guidance",
+            EffectivePeriod.Always);
+
+        var baselineRules = new List<Rule>
+        {
+            BaseRule("R_UNCHANGED"),
+            BaseRule("R_SEVERITY"),
+            BaseRule("R_APPLICABILITY"),
+            BaseRule("R_EFFECTIVE"),
+            BaseRule("R_AUTHORITY"),
+            BaseRule("R_CITATION"),
+            BaseRule("R_EXPLANATION"),
+            BaseRule("R_GUIDANCE"),
+        };
+
+        var targetRules = new List<Rule>
+        {
+            BaseRule("R_UNCHANGED"),
+            BaseRule("R_SEVERITY") with { Severity = ValidationSeverity.Error },
+            BaseRule("R_APPLICABILITY") with { Applicability = BaseRule("R_APPLICABILITY").Applicability with { Variable = "DIABP" } },
+            BaseRule("R_EFFECTIVE") with { Effective = new EffectivePeriod(new DateOnly(2026, 1, 1), null) },
+            BaseRule("R_AUTHORITY") with { Authority = RuleAuthority.Study },
+            BaseRule("R_CITATION") with { Citation = new SourceCitation("Doc A", "1.2", null) },
+            BaseRule("R_EXPLANATION") with { Explanation = "Updated explanation" },
+            BaseRule("R_GUIDANCE") with { RemediationGuidance = "Updated guidance" },
+        };
+
+        var report = await engine.CompareAsync(
+            CreateLoadedPack("PACK-01", 1, baselineRules),
+            CreateLoadedPack("PACK-01", 2, targetRules),
+            ValidationStage.Collection,
+            AsOf,
+            records: [],
+            Ct);
+
+        report.RuleDiffs.ModifiedRules.Should().HaveCount(7);
+        report.RuleDiffs.ModifiedRules.Should().NotContain(r => r.Id == "R_UNCHANGED");
+    }
+
     private static LoadedRulePack CreateLoadedPack(string key, int version, List<Rule> rules)
     {
         var pack = new RulePack(RuleAuthority.Sponsor, key, rules);

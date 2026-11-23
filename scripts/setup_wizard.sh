@@ -335,6 +335,11 @@ else
       fail_blocking "pnpm is on the PATH but crashes. Run 'corepack enable' so pnpm follows the packageManager pin in package.json."
     elif pnpm install --frozen-lockfile; then
       ok "pnpm ${PNPM_VERSION}: workspace dependencies installed."
+      if pnpm --filter ui build; then
+        ok "packages/ui: shared UI package built."
+      else
+        fail_blocking "pnpm --filter ui build failed — apps/web and apps/subject-portal import packages/ui/dist."
+      fi
     else
       fail_blocking "pnpm install failed — see output above. Every 'pnpm cadence' command needs it."
     fi
