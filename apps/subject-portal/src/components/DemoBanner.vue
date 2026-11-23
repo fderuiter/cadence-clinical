@@ -40,7 +40,7 @@ const showBanner = computed(() => {
 @media (max-width: 767px) {
   .demo-mode-banner {
     padding: 4px 12px;
-    font-size: var(--font-size-2xs, 0.6875rem);
+    font-size: 0.75rem;
     line-height: 1.25;
   }
 }

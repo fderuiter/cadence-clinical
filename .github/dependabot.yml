@@ -176,14 +176,9 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # PostgreSQL major and digest are locked in lockstep across PostgresTestImage.cs, CI, AppHost, and compose (ADR-2533).
+      # PostgreSQL major version is locked across PostgresTestImage, CI, and compose (ADR-2533).
       - dependency-name: "postgres"
-        update-types:
-          [
-            "version-update:semver-major",
-            "version-update:semver-minor",
-            "version-update:semver-patch",
-          ]
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

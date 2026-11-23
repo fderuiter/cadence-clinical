@@ -236,7 +236,7 @@ export async function renderSyncQueueList() {
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
               <span style="font-weight: 700; font-size: var(--font-size-sm, 0.875rem);">${escapeQueueHtml(instName)}</span>
-              <span style="font-size: var(--font-size-2xs, 0.6875rem); color: var(--text-muted);">Saved ${escapeQueueHtml(submittedTime)}</span>
+              <span style="font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--text-muted);">Saved ${escapeQueueHtml(submittedTime)}</span>
             </div>
             <span class="status-pill ${badgeClass}">${escapeQueueHtml(statusLabel)}</span>
           </div>

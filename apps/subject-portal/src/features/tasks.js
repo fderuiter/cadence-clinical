@@ -161,7 +161,7 @@ export function renderTasks() {
             <span class="task-name">${instName}</span>
             <span class="task-due">Scheduled Due: <strong>${dueText}</strong></span>
           </div>
-          <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0;">
             <span class="status-pill ${statusClass}">${statusLabel}</span>
             ${actionHtml}
           </div>

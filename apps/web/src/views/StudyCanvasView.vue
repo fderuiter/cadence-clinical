@@ -133,7 +133,7 @@
             <li v-for="item in STAGES" :key="item.id">
               <router-link
                 :id="`stage-${item.id}`"
-                :to="studyLocation({ stage: item.id })"
+                :to="scopedStudyLocation({ stage: item.id })"
                 class="stage"
                 :class="{ current: stage?.id === item.id }"
                 :aria-current="stage?.id === item.id ? 'step' : undefined"
@@ -152,7 +152,7 @@
         <nav id="canvas-navigator" class="navigator" aria-label="Sections">
           <router-link
             id="nav-study-home"
-            :to="studyLocation()"
+            :to="scopedStudyLocation()"
             class="nav-link"
             :class="{ current: !stage }"
             :aria-current="!stage ? 'page' : undefined"
@@ -171,7 +171,9 @@
               <li v-for="item in group.sections" :key="item.id">
                 <router-link
                   :id="`nav-${item.id}`"
-                  :to="studyLocation({ stage: group.id, section: item.id })"
+                  :to="
+                    scopedStudyLocation({ stage: group.id, section: item.id })
+                  "
                   class="nav-link"
                   :class="{ current: section?.id === item.id }"
                   :aria-current="section?.id === item.id ? 'page' : undefined"
@@ -274,7 +276,7 @@
             />
           </template>
 
-          <template v-else-if="recordRef">
+          <template v-else-if="isParticipantRecordOpen">
             <ParticipantRecord
               v-if="recordParticipant"
               :participant="recordParticipant"
@@ -331,7 +333,7 @@
             :status="statusFilter"
             :site-id="siteFilter"
             :query="participantSearchFilter"
-            :selected-id="selectedNode?.id ?? ''"
+            :selected-id="(selectedNode ?? recordRef)?.id ?? ''"
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
             @filter="applyParticipantFilter"
@@ -416,6 +418,7 @@
             v-else-if="section?.id === 'training'"
             :key="`training-${studyCode}`"
             :study-id="studyCode"
+            :site-id="siteFilter"
           />
 
           <QueriesSection
@@ -466,7 +469,9 @@
             <ul v-if="stage.sections.length" class="stage-sections">
               <li v-for="item in stage.sections" :key="item.id">
                 <router-link
-                  :to="studyLocation({ stage: stage.id, section: item.id })"
+                  :to="
+                    scopedStudyLocation({ stage: stage.id, section: item.id })
+                  "
                 >
                   {{ item.label }}
                 </router-link>
@@ -501,7 +506,8 @@
           :generic-node-loading="inspectedGenericLoading"
           :record-location="
             inspectorContextParticipant &&
-            (inspectorContextParticipant !== recordParticipant ||
+            (!isParticipantRecordOpen ||
+              inspectorContextParticipant !== recordParticipant ||
               hasOpenForm ||
               Boolean(openObservationRef))
               ? recordLocationFor(inspectorContextParticipant)
@@ -955,7 +961,10 @@ import {
   canReadEtmf,
   canVerifySource,
 } from "../canvas/authority";
-import type { PaletteTarget } from "../canvas/palette";
+import {
+  syncInstantiatedClinicalScope,
+  type PaletteTarget,
+} from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
@@ -1481,7 +1490,9 @@ const queryPriorityFilter = computed(() => {
   const priority = single(route.query.priority).toLowerCase();
   return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
-const siteFilter = computed(() => single(route.query.site).trim());
+const siteFilter = computed(() =>
+  (single(route.query.site) || single(route.query.siteId)).trim()
+);
 const participantSearchFilter = computed(() => single(route.query.q).trim());
 const queryParticipantFilter = computed(() =>
   single(route.query.subject).trim()
@@ -1519,9 +1530,9 @@ const lineageParticipant = computed<SubjectSummary | null>(() =>
 const {
   explicitNode,
   recordRef,
-  recordParticipant,
-  activeFormParticipant,
-  activeParticipantNodeText,
+  recordParticipant: selectionRecordParticipant,
+  activeFormParticipant: selectionActiveFormParticipant,
+  activeParticipantNodeText: selectionActiveParticipantNodeText,
   isNewForm,
   openFormId,
   openObservationRef,
@@ -1531,7 +1542,7 @@ const {
   isSelectedParticipantLoading,
   selectedVersionText,
   selectedGenericNodeRef,
-  inspectedParticipant,
+  inspectedParticipant: selectionInspectedParticipant,
   inspectedNodeText,
 } = useCanvasSelection({
   query: () => route.query,
@@ -1541,6 +1552,55 @@ const {
   isParticipantPending,
   canResolveRemotely: canResolveNodesRemotely,
 });
+
+const rawParticipantQuery = computed(() =>
+  single(route.query.participant).trim()
+);
+const participantCodeQuery = computed(() =>
+  !recordRef.value && !rawParticipantQuery.value.includes(":")
+    ? rawParticipantQuery.value
+    : ""
+);
+const codeQueryParticipant = computed<SubjectSummary | null>(() => {
+  if (!participantCodeQuery.value) return null;
+  return (
+    Object.values(canvas.knownParticipants).find(
+      (item) => item?.subject_id === participantCodeQuery.value
+    ) ?? null
+  );
+});
+const hasRecordScope = computed(() =>
+  Boolean(recordRef.value || participantCodeQuery.value)
+);
+const isParticipantRecordOpen = computed(
+  () => hasRecordScope.value && stage.value?.id === "conduct" && !section.value
+);
+const recordParticipant = computed<SubjectSummary | null>(
+  () => selectionRecordParticipant.value ?? codeQueryParticipant.value
+);
+const activeFormParticipant = computed<SubjectSummary | null>(
+  () => selectionActiveFormParticipant.value ?? codeQueryParticipant.value
+);
+const activeParticipantNodeText = computed(() => {
+  if (selectionActiveParticipantNodeText.value) {
+    return selectionActiveParticipantNodeText.value;
+  }
+  if (codeQueryParticipant.value) {
+    const node = tryNodeRef("participant", codeQueryParticipant.value.id);
+    return node ? formatNodeRef(node) : "";
+  }
+  return "";
+});
+const inspectedParticipant = computed<SubjectSummary | null>(
+  () =>
+    selectionInspectedParticipant.value ??
+    (!explicitNode.value &&
+    !openObservationRef.value &&
+    !openFormId.value &&
+    !proposalRef.value
+      ? codeQueryParticipant.value
+      : null)
+);
 
 const inspectorContextParticipant = computed<SubjectSummary | null>(
   () =>
@@ -1557,7 +1617,14 @@ const hasOpenForm = computed(
 const askText = computed(() => single(route.query.ask).trim());
 
 const isRecordParticipantLoading = computed(() =>
-  isParticipantPending(recordRef.value?.id)
+  recordRef.value
+    ? isParticipantPending(recordRef.value.id)
+    : Boolean(
+        studyCode.value &&
+        participantCodeQuery.value &&
+        !codeQueryParticipant.value &&
+        canvas.participantCodeLookups?.[participantCodeQuery.value]
+      )
 );
 
 // The protocol version in the inspector, read from the kernel whenever the URL names one.
@@ -1669,6 +1736,7 @@ const zoomParticipant = computed(
 const zoomParticipantCode = computed(
   () =>
     zoomParticipant.value?.subject_id ||
+    participantCodeQuery.value ||
     resolvedLineage.value?.subjectCode ||
     ""
 );
@@ -1682,7 +1750,9 @@ const zoomSite = computed(
 const zoomCurrent = computed(() => {
   if (openObservationRef.value) return "observation";
   if (hasOpenForm.value) return "form";
-  if (zoomParticipantCode.value) return "participant";
+  if (zoomParticipantCode.value) {
+    return isParticipantRecordOpen.value ? "participant" : "section";
+  }
   return zoomSite.value ? "site" : "study";
 });
 
@@ -1721,8 +1791,8 @@ const workspaceLabel = computed(() => {
   if (hasOpenForm.value) {
     return zoomFormLabel.value;
   }
-  if (recordRef.value) {
-    return `${recordParticipant.value?.subject_id ?? "Participant"} data`;
+  if (isParticipantRecordOpen.value) {
+    return `${recordParticipant.value?.subject_id ?? (participantCodeQuery.value || "Participant")} data`;
   }
   if (!stage.value) return `${studyCode.value} home`;
   return section.value
@@ -1736,6 +1806,34 @@ function studyLocation(query: StudyQuery = {}, code = studyCode.value) {
     if (value) clean[key] = value;
   }
   return { name: "study", params: { studyCode: code }, query: clean };
+}
+
+const activeParticipantScopeParam = computed(() => {
+  if (recordRef.value) return formatNodeRef(recordRef.value);
+  return participantCodeQuery.value || "";
+});
+
+const activeInspectorParticipantNodeParam = computed(() => {
+  if (selectedNode.value) return formatNodeRef(selectedNode.value);
+  if (!activeParticipantScopeParam.value && activeParticipantNodeText.value) {
+    return activeParticipantNodeText.value;
+  }
+  return "";
+});
+
+function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
+  const preservedSite = siteFilter.value || zoomSite.value || undefined;
+  const preservedParticipant = activeParticipantScopeParam.value || undefined;
+  const preservedNode = activeInspectorParticipantNodeParam.value || undefined;
+  return studyLocation(
+    {
+      site: preservedSite,
+      participant: preservedParticipant,
+      node: preservedNode,
+      ...query,
+    },
+    code
+  );
 }
 
 function selectParticipant(participant: SubjectSummary) {
@@ -1909,7 +2007,24 @@ function observationLocationFromForm(
 }
 
 const zoomParticipantLocation = computed(() => {
-  if (zoomParticipant.value) return recordLocationFor(zoomParticipant.value);
+  if (zoomParticipant.value) {
+    const base = recordLocationFor(zoomParticipant.value);
+    if (siteFilter.value) {
+      return studyLocation({
+        stage: "conduct",
+        site: siteFilter.value,
+        participant: base.query.participant as string | undefined,
+      });
+    }
+    return base;
+  }
+  if (participantCodeQuery.value) {
+    return studyLocation({
+      stage: "conduct",
+      site: zoomSite.value || undefined,
+      participant: participantCodeQuery.value,
+    });
+  }
   return studyLocation({
     stage: "conduct",
     section: "participants",
@@ -2325,6 +2440,35 @@ watch(
   { immediate: true }
 );
 
+watch(
+  [studyCode, participantCodeQuery],
+  ([code, subjectCode]) => {
+    if (!code || !subjectCode || codeQueryParticipant.value) return;
+    void canvas.resolveParticipantByCode(subjectCode, code);
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, zoomSite, zoomParticipantCode],
+  ([code, site, subject]) => {
+    syncInstantiatedClinicalScope(
+      code
+        ? {
+            activeStudyId: code,
+            activeSiteId: site || "",
+            activeSubjectId: subject || "",
+          }
+        : {
+            activeStudyId: "",
+            activeSiteId: "",
+            activeSubjectId: "",
+          }
+    );
+  },
+  { immediate: true }
+);
+
 // Load what the current view shows, once per study and filter.
 watch(
   [
@@ -2334,11 +2478,12 @@ watch(
     statusFilter,
     siteFilter,
     participantSearchFilter,
+    isParticipantRecordOpen,
   ],
   () => {
     if (
       !studyCode.value ||
-      recordRef.value ||
+      isParticipantRecordOpen.value ||
       hasOpenForm.value ||
       openObservationRef.value
     )
@@ -2381,7 +2526,17 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   if (observationNodeRef(to.query.observation)) return true;
 
   const nextFormQuery = single(to.query.form).trim();
-  if (nextFormQuery === "new") return true;
+  if (nextFormQuery === "new") {
+    if (!isNewForm.value) return true;
+    const nextSpec = single(to.query.spec).trim();
+    const nextVisit = single(to.query.visit).trim();
+    const nextParticipant = single(to.query.participant).trim();
+    return (
+      nextSpec !== initialSpecId.value ||
+      nextVisit !== initialVisitId.value ||
+      nextParticipant !== rawParticipantQuery.value
+    );
+  }
   const nextFormId = collectionInstanceId(nextFormQuery);
   if (!nextFormId) return true;
 
@@ -2553,8 +2708,8 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  padding: 8px 16px;
+  gap: 8px 12px;
+  padding: 2px 16px;
   min-width: 0;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
@@ -2568,25 +2723,60 @@ onUnmounted(() => {
 .zoom-path ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: 0.9rem;
 }
 
+.zoom-path li {
+  display: inline-flex;
+  align-items: center;
+}
+
 .zoom-path li + li::before {
   content: "/";
-  margin-right: 6px;
+  margin-right: 4px;
   color: var(--neutral-dark);
 }
 
 .zoom-path a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 6px;
+  border-radius: 6px;
   color: inherit;
 }
 
 .zoom-path [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 6px;
   font-weight: 600;
+}
+
+@media (min-width: 768px) and (max-width: 1280px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .zoom-path ol {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    font-size: 0.84rem;
+  }
+
+  .study-header {
+    padding: 8px 12px;
+    gap: 6px 16px;
+  }
 }
 
 .palette-trigger {
