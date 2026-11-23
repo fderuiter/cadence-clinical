@@ -100,10 +100,17 @@ public static class FrontendQualityGateService
 
             if (!write && reader is { HasAuthoritativeIndex: true })
             {
+                var diskMatched = new List<string>();
                 foreach (string rel in matching)
                 {
                     if (!reader.TryReadBytes(rel, out byte[] blobBytes))
                     {
+                        continue;
+                    }
+
+                    if (WorkingTreeMatchesBlob(repoRoot, rel, blobBytes))
+                    {
+                        diskMatched.Add(rel);
                         continue;
                     }
 
@@ -124,7 +131,11 @@ public static class FrontendQualityGateService
                     }
                 }
 
-                return 0;
+                matching = diskMatched;
+                if (matching.Count == 0)
+                {
+                    return 0;
+                }
             }
 
             string modeFlag = write ? "--write" : "--check";
@@ -242,12 +253,21 @@ public static class FrontendQualityGateService
             var errors = new List<EslintFinding>();
             var warnings = new List<(EslintFinding Finding, string Key)>();
 
+            int batchSize = OperatingSystem.IsWindows() ? WindowsEslintBatchSize : PosixEslintBatchSize;
+            var batchCandidates = matching;
             if (reader is { HasAuthoritativeIndex: true })
             {
+                batchCandidates = [];
                 foreach (string rel in matching)
                 {
                     if (!reader.TryReadBytes(rel, out byte[] blobBytes))
                     {
+                        continue;
+                    }
+
+                    if (WorkingTreeMatchesBlob(repoRoot, rel, blobBytes))
+                    {
+                        batchCandidates.Add(rel);
                         continue;
                     }
 
@@ -271,19 +291,16 @@ public static class FrontendQualityGateService
                     }
                 }
             }
-            else
-            {
-                int batchSize = OperatingSystem.IsWindows() ? WindowsEslintBatchSize : PosixEslintBatchSize;
-                foreach (string[] batch in matching.Chunk(batchSize))
-                {
-                    var args = new List<string> { "exec", "eslint", "--no-warn-ignored", "--format", "json", "--" };
-                    args.AddRange(batch);
 
-                    var (exitCode, stdout, stderr) = RunProcessCapture(repoRoot, pnpm, args, stdinBytes: null);
-                    if (!TryCollectEslintResults(repoRoot, stdout, stderr, exitCode, fallbackRelativePath: null, reader, lineCache, errors, warnings))
-                    {
-                        return 1;
-                    }
+            foreach (string[] batch in batchCandidates.Chunk(batchSize))
+            {
+                var args = new List<string> { "exec", "eslint", "--no-warn-ignored", "--format", "json", "--" };
+                args.AddRange(batch);
+
+                var (exitCode, stdout, stderr) = RunProcessCapture(repoRoot, pnpm, args, stdinBytes: null);
+                if (!TryCollectEslintResults(repoRoot, stdout, stderr, exitCode, fallbackRelativePath: null, reader, lineCache, errors, warnings))
+                {
+                    return 1;
                 }
             }
 
@@ -578,6 +595,25 @@ public static class FrontendQualityGateService
 
     public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
         ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
+
+    private static bool WorkingTreeMatchesBlob(string repoRoot, string relativePath, ReadOnlySpan<byte> stagedBytes)
+    {
+        string fullPath = Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        if (!File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            byte[] diskBytes = File.ReadAllBytes(fullPath);
+            return diskBytes.AsSpan().SequenceEqual(stagedBytes);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
 
     private static string? ResolveUsablePnpm(string repoRoot)
     {
