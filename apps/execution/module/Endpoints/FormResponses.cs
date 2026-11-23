@@ -250,13 +250,15 @@ public sealed record FormResponse(
             .Where(i => i.Required && (i.Value is null || i.Value is MissingValue { Reason: NullFlavor.NotAsked }))
             .Select(i => i.ItemId)
             .ToList();
+        var recordedCount = record.Values.Count(v => v.Value is not null and not MissingValue { Reason: NullFlavor.NotAsked });
         var effectiveOpen = openQueryCount ?? record.OpenQueryCount;
         var effectiveAnswered = answeredQueryCount ?? record.AnsweredQueryCount;
-        var complete = CollectionReadiness.IsComplete(
-            missing.Count,
-            effectiveOpen,
-            effectiveAnswered,
-            record.OpenErrorFindingCount);
+        var complete = (items.Count == 0 || recordedCount > 0)
+            && CollectionReadiness.IsComplete(
+                missing.Count,
+                effectiveOpen,
+                effectiveAnswered,
+                record.OpenErrorFindingCount);
         var blockers = CollectionReadiness.BuildBlockers(
             missing,
             missing.Count,

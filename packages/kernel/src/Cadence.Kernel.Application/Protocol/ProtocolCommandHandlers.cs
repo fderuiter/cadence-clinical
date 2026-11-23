@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -210,7 +211,9 @@ internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<Retu
 /// version's content hash (spec §6.2, 21 CFR 11.70). The approval also writes the design's elements as lineage parts
 /// of the approved version (ADR-2474), so amendment impact can start from the elements an amendment changes.
 /// </summary>
-internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifier) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
+internal sealed class ApproveProtocolVersionHandler(
+    IAttestationVerifier verifier,
+    IProtocolFormCompiler? formCompiler = null) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
 {
     public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
         ApproveProtocolVersion command, ICommandContext context, CancellationToken cancellationToken)
@@ -246,75 +249,39 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         context.Work.Raise(new ProtocolVersionApproved(
             version.TenantId, version.StudyId, version.Id, version.Number, version.ContentHash!, command.AttestationId));
 
-        if (!string.IsNullOrWhiteSpace(version.Content))
+        if (formCompiler is not null && version.Design() is { } design)
         {
-            try
+            var versionTag = version.Number.ToString(CultureInfo.InvariantCulture);
+            if (formCompiler.Compile(design, version.StudyId.Value.ToString(), versionTag) is { } compiled)
             {
-                if (TryCompileUsdm(version.Content, version.StudyId.Value.ToString(), version.Number.ToString()) is { } compiled)
-                {
-                    var snapshot = new FormVersionSnapshot(
-                        FormVersionSnapshotId.New(),
-                        version.TenantId,
-                        version.StudyId,
-                        version.Id,
-                        version.Number.ToString(),
-                        compiled.FormId,
-                        compiled.FormHash,
-                        compiled.OpenRosaXml,
-                        compiled.DdfIrJson,
-                        compiled.OdmXml,
-                        context.RecordedAt);
+                var snapshot = new FormVersionSnapshot(
+                    FormVersionSnapshotId.New(context.RecordedAt),
+                    version.TenantId,
+                    version.StudyId,
+                    version.Id,
+                    versionTag,
+                    compiled.FormId,
+                    compiled.FormHash,
+                    compiled.OpenRosaXml,
+                    compiled.DdfIrJson,
+                    compiled.OdmXml,
+                    context.RecordedAt);
 
-                    context.Work.Add(snapshot);
+                context.Work.Add(snapshot);
 
-                    context.Work.Raise(new FormVersionPublished(
-                        version.TenantId,
-                        version.StudyId,
-                        version.Id,
-                        version.Number.ToString(),
-                        compiled.FormId,
-                        compiled.FormHash,
-                        compiled.OpenRosaXml,
-                        compiled.DdfIrJson));
-                }
-            }
-            catch (Exception)
-            {
-                // Gracefully ignore if version.Content is not valid USDM JSON (e.g. in legacy/simple tests)
+                context.Work.Raise(new FormVersionPublished(
+                    version.TenantId,
+                    version.StudyId,
+                    version.Id,
+                    versionTag,
+                    compiled.FormId,
+                    compiled.FormHash,
+                    compiled.OpenRosaXml,
+                    compiled.DdfIrJson));
             }
         }
 
         return ProtocolVersionStates.Of(version);
-    }
-
-    private static (string FormHash, string OpenRosaXml, string DdfIrJson, string FormId, string? OdmXml)? TryCompileUsdm(
-        string content, string fallbackStudyId, string versionTag)
-    {
-        var ddfAssembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "Cadence.Ddf")
-            ?? System.Reflection.Assembly.Load("Cadence.Ddf");
-        if (ddfAssembly is null) return null;
-
-        var compilerType = ddfAssembly.GetType("Cadence.Ddf.UsdmCompiler");
-        if (compilerType is null) return null;
-
-        var compileMethod = compilerType.GetMethod("CompileUsdm", [typeof(string), typeof(string), typeof(string)]);
-        var parseMethod = compilerType.GetMethod("ParseUsdmToIr", [typeof(string), typeof(string), typeof(string)]);
-        if (compileMethod is null || parseMethod is null) return null;
-
-        var compilation = compileMethod.Invoke(null, [content, fallbackStudyId, versionTag]);
-        var parseResult = parseMethod.Invoke(null, [content, fallbackStudyId, versionTag]);
-        if (compilation is null || parseResult is null) return null;
-
-        var formHash = compilation.GetType().GetProperty("FormHash")?.GetValue(compilation) as string ?? string.Empty;
-        var openRosaXml = compilation.GetType().GetProperty("OpenRosaXml")?.GetValue(compilation) as string ?? string.Empty;
-        var odmXml = compilation.GetType().GetProperty("OdmXml")?.GetValue(compilation) as string;
-
-        var studyIr = parseResult.GetType().GetProperty("Item1")?.GetValue(parseResult);
-        var ddfIrJson = studyIr is not null ? System.Text.Json.JsonSerializer.Serialize(studyIr) : "{}";
-        var studyIdProp = studyIr?.GetType().GetProperty("StudyId")?.GetValue(studyIr) as string;
-        var formId = string.IsNullOrWhiteSpace(studyIdProp) ? fallbackStudyId : studyIdProp;
-
-        return (formHash, openRosaXml, ddfIrJson, formId, odmXml);
     }
 
     /// <summary>The version and its ancestors, first version first, as (number, content).</summary>

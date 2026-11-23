@@ -172,6 +172,8 @@ export const DEMO_MANIFEST = Object.freeze({
         "study_site.link",
         "study_site.activate",
         "concept.define",
+        "code_system.register",
+        "code_system.import_version",
         "protocol.draft",
         "protocol.revise_draft",
         "protocol.submit_for_review",
