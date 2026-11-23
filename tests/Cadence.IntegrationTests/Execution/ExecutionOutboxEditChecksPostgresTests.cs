@@ -137,6 +137,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             HttpStatusCode.OK,
             ct);
         saved.Values.Should().HaveCount(2);
+        saved.Form.Should().NotBeNull();
+        saved.Form!.FormId.Should().Be(form);
+        saved.Form.Version.Should().Be(saved.Version);
+        saved.Form.Complete.Should().BeTrue();
+        saved.Form.CanSign.Should().BeFalse();
         var sbpObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
 
         // Outbox consumer evaluates study collections and opens one automated FormQuery.
