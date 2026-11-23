@@ -59,6 +59,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |
 | `POST` | `/api/v1/execution/subjects` | CreateSubject |  |
+| `GET` | `/api/v1/execution/subjects/counts` | GetSubjectCounts | Counts a study's subjects grouped by lifecycle status. |
 | `GET` | `/api/v1/execution/subjects/{subjectId}` | GetSubjectDetail |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/consent` | RecordSubjectConsent |  |
 | `PUT` | `/api/v1/execution/subjects/{subjectId}/demographics` | UpdateSubjectDemographics |  |
