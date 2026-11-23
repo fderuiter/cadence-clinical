@@ -23,7 +23,7 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
+        const string pnpmCommand = "pnpm";
 
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
         if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)

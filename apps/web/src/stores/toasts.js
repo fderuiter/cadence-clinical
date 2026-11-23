@@ -18,9 +18,24 @@ const rawUseToastStore = defineStore("toasts", {
     toasts: [],
   }),
   actions: {
-    push({ tone = "error", title, message, timeoutMs = 8000 }) {
+    push({ tone = "error", title, message, action = null, timeoutMs = 8000 }) {
       const id = nextId++;
-      this.toasts.push({ id, tone, title, message });
+      const normalizedAction =
+        action &&
+        typeof action === "object" &&
+        typeof action.label === "string" &&
+        action.label.trim() &&
+        typeof action.to === "string" &&
+        action.to.trim()
+          ? { label: action.label.trim(), to: action.to.trim() }
+          : null;
+      this.toasts.push({
+        id,
+        tone,
+        title,
+        message,
+        action: normalizedAction,
+      });
       if (timeoutMs > 0 && typeof window !== "undefined") {
         window.setTimeout(() => this.dismiss(id), timeoutMs);
       }

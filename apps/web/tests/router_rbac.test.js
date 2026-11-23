@@ -4,6 +4,7 @@ import { router } from "../src/router";
 import { setKeycloakClient } from "../src/auth/keycloak.js";
 import { useAuthStore } from "../src/stores/auth";
 import { useOnboardingStore } from "../src/stores/onboarding.js";
+import { useStudyCanvasStore } from "../src/stores/studyCanvas";
 
 describe("Router OIDC & RBAC Navigation Guards", () => {
   beforeEach(async () => {
@@ -119,6 +120,52 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
 
       await router.push("/no-such-screen");
       expect(router.currentRoute.value.name).toBeUndefined();
+    });
+
+    it("redirects /data-lock into StudyCanvasView (stage=data&section=locks) for Data Manager and blocks unauthorized roles", async () => {
+      const authStore = useAuthStore();
+      const canvasStore = useStudyCanvasStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Data Manager"];
+      canvasStore.studyCode = "CAD-101";
+
+      await router.push("/data-lock");
+      expect(router.currentRoute.value.name).toBe("study");
+      expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "data",
+        section: "locks",
+      });
+
+      authStore.rawRoles = ["CRC"];
+      await router.push("/data-lock");
+      expect(router.currentRoute.value.path).toBe("/forbidden");
+    });
+
+    it("grants Auditor and TMF Auditor access on /exports and redirects into StudyCanvasView (stage=submit&section=exports)", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Auditor"]; // maps to auditor & tmf_auditor
+
+      await router.push("/exports?studyCode=CAD-101");
+      expect(router.currentRoute.value.name).toBe("study");
+      expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "submit",
+        section: "exports",
+      });
+
+      authStore.rawRoles = ["TMF Auditor"];
+      await router.push("/exports");
+      expect(router.currentRoute.value.name).toBe("study");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "submit",
+        section: "exports",
+      });
+
+      authStore.rawRoles = ["CRC"];
+      await router.push("/exports");
+      expect(router.currentRoute.value.path).toBe("/forbidden");
     });
   });
 

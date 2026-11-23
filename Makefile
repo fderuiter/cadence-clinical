@@ -18,8 +18,9 @@ CADENCE_CLI := pnpm cadence
 
 ##@ Setup
 
-setup: ## Install all Node deps and pre-commit hooks
+setup: ## Install all Node deps, restore .NET solution, and configure pre-commit hooks
 	pnpm install --frozen-lockfile
+	dotnet restore Cadence.sln
 	git config core.hooksPath .githooks
 	chmod +x .githooks/pre-commit
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"

@@ -1135,6 +1135,22 @@ async function loadStudyDirectory() {
   studyDirectoryError.value = "";
   try {
     visibleStudies.value = await kernelApi.listStudies();
+    if (
+      !studyCode.value &&
+      (route.query.section === "locks" || route.query.section === "exports") &&
+      visibleStudies.value.length > 0
+    ) {
+      await router.replace(
+        studyLocation(
+          {
+            stage: stage.value?.id,
+            section: section.value?.id,
+          },
+          visibleStudies.value[0].code
+        )
+      );
+      return;
+    }
   } catch (err) {
     studyDirectoryError.value = describeKernelError(err);
   } finally {
@@ -1156,7 +1172,17 @@ async function loadStudyDirectory() {
 
 function openStudyByCode(code: string) {
   const clean = code.trim();
-  if (clean) router.push(studyLocation({}, clean));
+  if (clean) {
+    router.push(
+      studyLocation(
+        {
+          stage: stage.value?.id,
+          section: section.value?.id,
+        },
+        clean
+      )
+    );
+  }
 }
 
 function openStudyDesign(code: string) {
@@ -2631,6 +2657,7 @@ onUnmounted(() => {
 
 .study-card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -2703,7 +2730,7 @@ onUnmounted(() => {
 .create-study-grid {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -2711,6 +2738,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .create-field-wide {
@@ -2722,7 +2750,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.create-field input,
+.create-field input:not(.sr-only),
 .create-field select {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
