@@ -105,6 +105,44 @@ public interface ICollectionValidationService
         PreviewFormAsync(tenant, formId, draftValues, asOf, cancellationToken);
 
     /// <summary>
+    /// Evaluates the study's pinned rule packs in memory over an already-loaded <paramref name="target"/> form record
+    /// overlaid with <paramref name="draftValues"/> (plus sibling forms on the enrollment) without re-reading the target
+    /// form or mutating kernel state.
+    /// </summary>
+    Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(
+            tenant,
+            (target ?? throw new ArgumentNullException(nameof(target))).CollectionInstanceId,
+            draftValues,
+            asOf,
+            cancellationToken);
+
+    /// <summary>
+    /// Evaluates the study's pinned rule packs in memory over an already-loaded <paramref name="target"/> form record
+    /// overlaid with <paramref name="draftValues"/> (plus sibling forms on the enrollment) without re-reading the target
+    /// form or mutating kernel state, replacing blinded variables with <c>null</c> and suppressing blinded warnings when
+    /// <paramref name="unblinded"/> is <see langword="false"/> (K-AUTH-4, K-RULE-3).
+    /// </summary>
+    Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        bool unblinded,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(
+            tenant,
+            target ?? throw new ArgumentNullException(nameof(target)),
+            draftValues,
+            asOf,
+            cancellationToken);
+
+    /// <summary>
     /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item (draft or approved) in memory against
     /// all current collection instances of <paramref name="studyId"/> without recording a validation run.
     /// </summary>

@@ -66,6 +66,30 @@ public sealed class CollectionValidationService(
             return [];
         }
 
+        return await PreviewFormAsync(tenant, target, draftValues, asOf, unblinded, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(tenant, target, draftValues, asOf, unblinded: true, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        bool unblinded,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(draftValues);
+
         var packs = await loader.LoadForStudyAsync(tenant, target.StudyId, cancellationToken).ConfigureAwait(false);
         if (packs.Count == 0)
         {

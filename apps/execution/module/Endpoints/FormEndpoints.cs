@@ -190,14 +190,7 @@ internal static class FormEndpoints
         }
 
         var enrollmentNode = NodeRef.For(record.EnrollmentId);
-        var nodesToCheck = new List<NodeRef> { enrollmentNode };
-        nodesToCheck.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
-        nodesToCheck.AddRange(record.Attestations
-            .Where(s => s.SignedValues is not null)
-            .SelectMany(s => s.SignedValues!)
-            .Select(sv => NodeRef.For(sv.ObservationId)));
-        nodesToCheck.AddRange(record.Assertions.Where(a => a.Target.Kind == NodeKinds.Observation).Select(a => a.Target));
-        nodesToCheck.AddRange(record.Locks.Where(l => l.Scope.Kind == NodeKinds.Observation).Select(l => l.Scope));
+        var nodesToCheck = CollectFormNodes(record);
 
         // A form is seen by whoever may see its enrollment (ADR-2457); blinded observations are masked in place (K-AUTH-4).
         var masks = await access.MaskAsync(tenant, nodesToCheck, cancellationToken).ConfigureAwait(false);
@@ -228,7 +221,187 @@ internal static class FormEndpoints
             EnrollmentUnblindCapability,
             enrollmentNode,
             cancellationToken).ConfigureAwait(false);
+        var (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
+            tenant,
+            record,
+            masks,
+            canUnblind,
+            context.RequestServices,
+            cancellationToken).ConfigureAwait(false);
 
+        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds));
+    }
+
+    internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
+        Guid formId,
+        PreviewFormValuesRequest? request,
+        HttpContext context,
+        ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (request?.Values is null || request.Values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId)))
+        {
+            return BadRequest("Invalid preview", "Provide values as an array of draft items naming item_id.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var id = CollectionInstanceId.FromGuid(formId);
+        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        {
+            return NotFound(formId);
+        }
+
+        var enrollmentNode = NodeRef.For(record.EnrollmentId);
+        var previewNodes = new List<NodeRef>(1 + record.Values.Count) { enrollmentNode };
+        previewNodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        var masks = await access.MaskAsync(tenant, previewNodes, cancellationToken).ConfigureAwait(false);
+        if (masks.ContainsKey(enrollmentNode))
+        {
+            return TypedResults.Problem(
+                title: "Not visible", detail: $"You may not see form {formId:D}.", statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var validation = context.RequestServices?.GetService<ICollectionValidationService>();
+        if (validation is null)
+        {
+            return TypedResults.Ok(new FormPreviewResponse(formId, []));
+        }
+
+        var canUnblind = await access.CanExerciseAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            enrollmentNode,
+            cancellationToken).ConfigureAwait(false);
+        var unblinded = canUnblind && !masks.Values.Any(reason => reason == MaskReason.Blinded);
+
+        var overlay = new Dictionary<string, ObservationValue?>(StringComparer.Ordinal);
+        foreach (var entry in request.Values)
+        {
+            overlay[entry.ItemId.Trim()] = entry.Value;
+        }
+
+        var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        var warnings = await validation.PreviewFormAsync(tenant, record, overlay, asOf, unblinded, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(new FormPreviewResponse(
+            formId,
+            [.. warnings.Select(FormPreviewWarningResponse.From)]));
+    }
+
+    internal static async Task<Results<Ok<FormSavedResponse>, ProblemHttpResult>> SaveAsync(
+        Guid formId,
+        SaveFormValuesRequest request,
+        HttpContext context,
+        ICollectionInstanceRecords forms,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken,
+        [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext>? contexts = null,
+        [FromServices] IKernelReadAccess? access = null)
+    {
+        if (request?.Values is not { Count: > 0 } values
+            || values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId) || v.Value is null || v.ExpectedRevision < 0))
+        {
+            return BadRequest("Invalid save", "Send at least one value, each naming its item, its value and the revision it was edited from.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var id = CollectionInstanceId.FromGuid(formId);
+
+        // The save is authorized against the form's enrollment, which the client does not send.
+        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        {
+            return NotFound(formId);
+        }
+
+        var result = await sender.SendAsync(
+            new RecordCollectedValues(
+                tenant,
+                id,
+                record.EnrollmentId,
+                [.. values.Select(v => new CollectedValue(
+                    v.ItemId,
+                    v.Value!,
+                    v.ExpectedRevision,
+                    v.ObservationId is { } observation ? ObservationId.FromGuid(observation) : null,
+                    v.ObservedAt))],
+                IdempotencyKey(context),
+                changeReason.Read(context) ?? string.Empty),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (result.Value is not { } state)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        FormResponse? hydrated = null;
+        HashSet<string>? blindedItemIds = null;
+        HashSet<ObservationId>? blindedObservationIds = null;
+        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } updated)
+        {
+            string[]? layout = null;
+            if (contexts is not null)
+            {
+                await using var db = contexts.Create(tenant);
+                layout = await db.FormInstances
+                    .Where(f => f.Id == formId)
+                    .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
+                    .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            var enrollmentNode = NodeRef.For(updated.EnrollmentId);
+            var canSign = access is not null
+                && await access.CanExerciseAsync(
+                    tenant,
+                    SignFormCapability,
+                    enrollmentNode,
+                    cancellationToken).ConfigureAwait(false);
+            if (access is not null)
+            {
+                var masks = await access.MaskAsync(tenant, CollectFormNodes(updated), cancellationToken).ConfigureAwait(false);
+                var canUnblind = await access.CanExerciseAsync(
+                    tenant,
+                    EnrollmentUnblindCapability,
+                    enrollmentNode,
+                    cancellationToken).ConfigureAwait(false);
+                (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
+                    tenant,
+                    updated,
+                    masks,
+                    canUnblind,
+                    context.RequestServices,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds);
+        }
+
+        return TypedResults.Ok(FormSavedResponse.From(state, hydrated, blindedItemIds, blindedObservationIds));
+    }
+
+    internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
+
+    private static List<NodeRef> CollectFormNodes(CollectionInstanceRecord record)
+    {
+        var nodes = new List<NodeRef> { NodeRef.For(record.EnrollmentId) };
+        nodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        nodes.AddRange(record.Attestations
+            .Where(s => s.SignedValues is not null)
+            .SelectMany(s => s.SignedValues!)
+            .Select(sv => NodeRef.For(sv.ObservationId)));
+        nodes.AddRange(record.Assertions.Where(a => a.Target.Kind == NodeKinds.Observation).Select(a => a.Target));
+        nodes.AddRange(record.Locks.Where(l => l.Scope.Kind == NodeKinds.Observation).Select(l => l.Scope));
+        return nodes;
+    }
+
+    private static async Task<(HashSet<string> BlindedItemIds, HashSet<ObservationId> BlindedObservationIds)> ResolveBlindedFormTargetsAsync(
+        TenantId tenant,
+        CollectionInstanceRecord record,
+        IReadOnlyDictionary<NodeRef, MaskReason> masks,
+        bool canUnblind,
+        IServiceProvider? services,
+        CancellationToken cancellationToken)
+    {
         var blindedObservationIds = new HashSet<ObservationId>(
             masks.Keys
                 .Where(n => n.Kind == NodeKinds.Observation)
@@ -240,10 +413,10 @@ internal static class FormEndpoints
 
         if (!canUnblind)
         {
-            var classifier = context.RequestServices.GetService<IBlindedTreatmentClassifier>()
+            var classifier = services?.GetService<IBlindedTreatmentClassifier>()
                 ?? BlindedTreatmentClassifier.Instance;
-            var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, context.RequestServices, cancellationToken).ConfigureAwait(false);
-            var concepts = await LoadItemConceptsAsync(tenant, record.Items, context.RequestServices, cancellationToken).ConfigureAwait(false);
+            var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, services, cancellationToken).ConfigureAwait(false);
+            var concepts = await LoadItemConceptsAsync(tenant, record.Items, services, cancellationToken).ConfigureAwait(false);
             var specById = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
             var valuesById = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
 
@@ -293,117 +466,17 @@ internal static class FormEndpoints
             }
         }
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds));
+        return (blindedItemIds, blindedObservationIds);
     }
-
-    internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
-        Guid formId,
-        PreviewFormValuesRequest? request,
-        HttpContext context,
-        ICollectionInstanceRecords forms,
-        IKernelReadAccess access,
-        IClock clock,
-        CancellationToken cancellationToken)
-    {
-        if (request?.Values is null || request.Values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId)))
-        {
-            return BadRequest("Invalid preview", "Provide values as an array of draft items naming item_id.");
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        var id = CollectionInstanceId.FromGuid(formId);
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
-        {
-            return NotFound(formId);
-        }
-
-        var enrollmentNode = NodeRef.For(record.EnrollmentId);
-        var previewNodes = new List<NodeRef>(1 + record.Values.Count) { enrollmentNode };
-        previewNodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
-        var masks = await access.MaskAsync(tenant, previewNodes, cancellationToken).ConfigureAwait(false);
-        if (masks.ContainsKey(enrollmentNode))
-        {
-            return TypedResults.Problem(
-                title: "Not visible", detail: $"You may not see form {formId:D}.", statusCode: StatusCodes.Status403Forbidden);
-        }
-
-        var validation = context.RequestServices.GetService<ICollectionValidationService>();
-        if (validation is null)
-        {
-            return TypedResults.Ok(new FormPreviewResponse(formId, []));
-        }
-
-        var canUnblind = await access.CanExerciseAsync(
-            tenant,
-            EnrollmentUnblindCapability,
-            enrollmentNode,
-            cancellationToken).ConfigureAwait(false);
-        var unblinded = canUnblind && !masks.Values.Any(reason => reason == MaskReason.Blinded);
-
-        var overlay = new Dictionary<string, ObservationValue?>(StringComparer.Ordinal);
-        foreach (var entry in request.Values)
-        {
-            overlay[entry.ItemId.Trim()] = entry.Value;
-        }
-
-        var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
-        var warnings = await validation.PreviewFormAsync(tenant, id, overlay, asOf, unblinded, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(new FormPreviewResponse(
-            formId,
-            [.. warnings.Select(FormPreviewWarningResponse.From)]));
-    }
-
-    internal static async Task<Results<Ok<FormSavedResponse>, ProblemHttpResult>> SaveAsync(
-        Guid formId,
-        SaveFormValuesRequest request,
-        HttpContext context,
-        ICollectionInstanceRecords forms,
-        IKernelCommandSender sender,
-        IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
-    {
-        if (request?.Values is not { Count: > 0 } values
-            || values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId) || v.Value is null || v.ExpectedRevision < 0))
-        {
-            return BadRequest("Invalid save", "Send at least one value, each naming its item, its value and the revision it was edited from.");
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        var id = CollectionInstanceId.FromGuid(formId);
-
-        // The save is authorized against the form's enrollment, which the client does not send.
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
-        {
-            return NotFound(formId);
-        }
-
-        var result = await sender.SendAsync(
-            new RecordCollectedValues(
-                tenant,
-                id,
-                record.EnrollmentId,
-                [.. values.Select(v => new CollectedValue(
-                    v.ItemId,
-                    v.Value!,
-                    v.ExpectedRevision,
-                    v.ObservationId is { } observation ? ObservationId.FromGuid(observation) : null,
-                    v.ObservedAt))],
-                IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return result.Value is { } state ? TypedResults.Ok(FormSavedResponse.From(state)) : KernelErrorEndpoints.Problem(result.Error!);
-    }
-
-    internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
 
     private static async Task<IReadOnlyList<ProtocolDesign>> LoadStudyDesignsAsync(
         TenantId tenant,
         StudyId studyId,
         ProtocolVersionId governingVersionId,
-        IServiceProvider services,
+        IServiceProvider? services,
         CancellationToken cancellationToken)
     {
-        var reader = services.GetService<IProtocolVersionReader>();
+        var reader = services?.GetService<IProtocolVersionReader>();
         if (reader is null)
         {
             return [];
@@ -431,10 +504,10 @@ internal static class FormEndpoints
     private static async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadItemConceptsAsync(
         TenantId tenant,
         IReadOnlyList<CollectionItem> items,
-        IServiceProvider services,
+        IServiceProvider? services,
         CancellationToken cancellationToken)
     {
-        var concepts = services.GetService<IConceptRegistry>();
+        var concepts = services?.GetService<IConceptRegistry>();
         if (concepts is null || items.Count == 0)
         {
             return new Dictionary<ConceptId, BlindedConceptMetadata>();

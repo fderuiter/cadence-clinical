@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,16 +30,39 @@ public interface IKernelReadAccess
         IReadOnlyCollection<NodeRef> nodes,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(nodes);
         var masked = new Dictionary<NodeRef, MaskReason>();
         foreach (var node in nodes)
         {
-            if (!await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false))
+            if (!masked.ContainsKey(node) && !await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false))
             {
                 masked[node] = MaskReason.NotPermitted;
             }
         }
 
         return masked;
+    }
+
+    /// <summary>
+    /// Returns the subset of <paramref name="nodes"/> that the current caller may see in <paramref name="tenant"/>,
+    /// evaluated in one visibility pass when supported by the host.
+    /// </summary>
+    async ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var visible = new HashSet<NodeRef>();
+        foreach (var node in nodes)
+        {
+            if (!visible.Contains(node) && await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false))
+            {
+                visible.Add(node);
+            }
+        }
+
+        return visible;
     }
 
     /// <summary>

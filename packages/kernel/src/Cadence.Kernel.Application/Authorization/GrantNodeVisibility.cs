@@ -230,6 +230,39 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
         return result;
     }
 
+    /// <summary>
+    /// Evaluates <paramref name="nodes"/> in one visibility pass and returns the unmasked subset <paramref name="reader"/> may see.
+    /// </summary>
+    public async ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(
+        TenantId tenant,
+        Actor reader,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return FrozenSet<NodeRef>.Empty;
+        }
+
+        var masked = await MaskAsync(tenant, reader, distinct, cancellationToken).ConfigureAwait(false);
+        return distinct.Where(node => !masked.ContainsKey(node)).ToHashSet();
+    }
+
+    /// <summary>True when <paramref name="path"/> is on the way from the tenant down to <paramref name="below"/>, or is it.</summary>
+    public static bool IsAtOrAbove(ScopePath path, ScopePath below)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(below);
+        return path.Organization is not null
+            && path.Organization == below.Organization
+            && (path.Study is null || path.Study == below.Study)
+            && (path.Country is null || string.Equals(path.Country, below.Country, StringComparison.Ordinal))
+            && (path.StudySite is null || path.StudySite == below.StudySite);
+    }
+
     private async Task MaskBlindedWithoutUnblindAsync(
         TenantId tenant,
         Actor reader,
@@ -312,18 +345,6 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
         || (grant.RoleId is { } roleId
             && roles.TryGetValue(roleId, out var role)
             && role.Capabilities.Contains(token, StringComparer.Ordinal));
-
-    /// <summary>True when <paramref name="path"/> is on the way from the tenant down to <paramref name="below"/>, or is it.</summary>
-    public static bool IsAtOrAbove(ScopePath path, ScopePath below)
-    {
-        ArgumentNullException.ThrowIfNull(path);
-        ArgumentNullException.ThrowIfNull(below);
-        return path.Organization is not null
-            && path.Organization == below.Organization
-            && (path.Study is null || path.Study == below.Study)
-            && (path.Country is null || string.Equals(path.Country, below.Country, StringComparison.Ordinal))
-            && (path.StudySite is null || path.StudySite == below.StudySite);
-    }
 
     private static Dictionary<NodeRef, MaskReason> MaskAll(List<NodeRef> distinct) =>
         distinct.ToDictionary(n => n, _ => MaskReason.NotPermitted);
