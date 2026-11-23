@@ -9,6 +9,16 @@ namespace Cadence.ToolingCore.Services;
 public static class DependencyValidatorService
 {
     private static readonly string[] ForbiddenPackages = ["node-forge", "elliptic", "jose"];
+    private static readonly string[] ForbiddenRuntimeTestPackages =
+    [
+        "axe-core",
+        "@axe-core/playwright",
+        "vitest",
+        "@vue/test-utils",
+        "jsdom",
+        "fake-indexeddb",
+        "msw",
+    ];
     private static readonly string[] DependencySections = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 
     public static int ValidateDependencies(string? repoRoot = null)
@@ -123,6 +133,18 @@ public static class DependencyValidatorService
                     {
                         Console.WriteLine($"[SECURITY VIOLATION] Forbidden client-side crypto package '{forbidden}' detected in {relativePath} ({section}).");
                         errors++;
+                    }
+                }
+
+                if (string.Equals(section, "dependencies", StringComparison.Ordinal))
+                {
+                    foreach (string testPkg in ForbiddenRuntimeTestPackages)
+                    {
+                        if (depsObj.TryGetProperty(testPkg, out _))
+                        {
+                            Console.WriteLine($"[DEPENDENCY VIOLATION] Test-only package '{testPkg}' is forbidden in runtime 'dependencies' of {relativePath}; move it to 'devDependencies'.");
+                            errors++;
+                        }
                     }
                 }
             }

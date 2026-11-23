@@ -161,8 +161,8 @@ describe("lazy demo state on application boot", () => {
         _s: Map<string, { ledgerBlocks: Array<{ action: string }> }>;
       }
     )._s;
-    expect(storesMap.has("clinical")).toBe(true);
     await vi.waitFor(() => {
+      expect(storesMap.has("clinical")).toBe(true);
       expect(storesMap.get("clinical")?.ledgerBlocks[0]?.action).toBe(
         "GENESIS"
       );

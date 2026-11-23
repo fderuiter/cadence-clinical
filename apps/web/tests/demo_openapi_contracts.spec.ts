@@ -12,7 +12,11 @@ import {
   vi,
 } from "vitest";
 import { DEMO_STUDY } from "demo-fixtures";
-import type { components, paths } from "@/api/generated/kernel";
+import type {
+  components as ExecutionFormsComponents,
+  paths as ExecutionFormsPaths,
+} from "@/api/generated/execution_forms";
+import type { paths as KernelPaths } from "@/api/generated/kernel";
 import { ecrfFormsApi } from "@/api/ecrfFormsApi";
 import { kernelApi } from "@/api/kernelApi";
 import { createWebDemoStore } from "@/mocks/demoStore";
@@ -20,33 +24,50 @@ import { buildWebGatewayHandlers } from "@/mocks/handlers";
 import { resetDemoRandom } from "@/utils/demoMode";
 
 type StudyRulePacksResponse =
-  paths["/api/v1/kernel/studies/{studyRef}/rule-packs"]["get"]["responses"][200]["content"]["application/json"];
+  KernelPaths["/api/v1/kernel/studies/{studyRef}/rule-packs"]["get"]["responses"][200]["content"]["application/json"];
 type RulePackPreviewResponse =
-  paths["/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview"]["post"]["responses"][200]["content"]["application/json"];
+  KernelPaths["/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview"]["post"]["responses"][200]["content"]["application/json"];
 type ApproveLibraryItemResponse =
-  paths["/api/v1/kernel/library-items/{itemRef}/approve"]["post"]["responses"][200]["content"]["application/json"];
+  KernelPaths["/api/v1/kernel/library-items/{itemRef}/approve"]["post"]["responses"][200]["content"]["application/json"];
 type DeclareStudyStandardsResponse =
-  paths["/api/v1/kernel/studies/{studyRef}/standards"]["put"]["responses"][200]["content"]["application/json"];
+  KernelPaths["/api/v1/kernel/studies/{studyRef}/standards"]["put"]["responses"][200]["content"]["application/json"];
 type ValidationFindingPageResponse =
-  paths["/api/v1/kernel/studies/{studyRef}/validation/findings"]["get"]["responses"][200]["content"]["application/json"];
+  KernelPaths["/api/v1/kernel/studies/{studyRef}/validation/findings"]["get"]["responses"][200]["content"]["application/json"];
 type ValidationFindingDetailResponse =
-  paths["/api/v1/kernel/validation/findings/{findingRef}"]["get"]["responses"][200]["content"]["application/json"];
+  KernelPaths["/api/v1/kernel/validation/findings/{findingRef}"]["get"]["responses"][200]["content"]["application/json"];
 type FormPreviewResponse =
-  paths["/api/v1/execution/forms/{formId}/preview"]["post"]["responses"][200]["content"]["application/json"];
+  ExecutionFormsPaths["/api/v1/execution/forms/{formId}/preview"]["post"]["responses"][200]["content"]["application/json"];
 
-const openApiPath = path.resolve(
-  __dirname,
-  "../../../docs/openapi/kernel_openapi.json"
-);
-const kernelOpenApi = JSON.parse(fs.readFileSync(openApiPath, "utf8")) as {
+type OpenApiDocument = {
   paths: Record<string, Record<string, any>>;
   components: { schemas: Record<string, any> };
 };
 
+const kernelOpenApiPath = path.resolve(
+  __dirname,
+  "../../../docs/openapi/kernel_openapi.json"
+);
+const executionFormsOpenApiPath = path.resolve(
+  __dirname,
+  "../../../docs/openapi/execution_forms_openapi.json"
+);
+const kernelOpenApi = JSON.parse(
+  fs.readFileSync(kernelOpenApiPath, "utf8")
+) as OpenApiDocument;
+const executionFormsOpenApi = JSON.parse(
+  fs.readFileSync(executionFormsOpenApiPath, "utf8")
+) as OpenApiDocument;
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function resolveSchemaRef(schema: any): any {
+function resolveOpenApiDocument(routeTemplate: string): OpenApiDocument {
+  return routeTemplate.startsWith("/api/v1/execution/forms")
+    ? executionFormsOpenApi
+    : kernelOpenApi;
+}
+
+function resolveSchemaRef(schema: any, doc: OpenApiDocument): any {
   if (!schema || typeof schema !== "object") return schema;
   if (typeof schema.$ref === "string") {
     const prefix = "#/components/schemas/";
@@ -54,11 +75,11 @@ function resolveSchemaRef(schema: any): any {
       throw new Error(`Unsupported OpenAPI $ref: ${schema.$ref}`);
     }
     const name = schema.$ref.slice(prefix.length);
-    const resolved = kernelOpenApi.components.schemas[name];
+    const resolved = doc.components.schemas[name];
     if (!resolved) {
       throw new Error(`Missing OpenAPI schema component: ${name}`);
     }
-    return resolveSchemaRef(resolved);
+    return resolveSchemaRef(resolved, doc);
   }
   return schema;
 }
@@ -66,9 +87,10 @@ function resolveSchemaRef(schema: any): any {
 function assertMatchesOpenApiSchema(
   value: unknown,
   rawSchema: any,
-  pointer = "$"
+  pointer = "$",
+  doc: OpenApiDocument = kernelOpenApi
 ): void {
-  const schema = resolveSchemaRef(rawSchema);
+  const schema = resolveSchemaRef(rawSchema, doc);
   if (!schema || Object.keys(schema).length === 0) {
     return;
   }
@@ -77,7 +99,7 @@ function assertMatchesOpenApiSchema(
     const errors: string[] = [];
     for (const branch of schema.oneOf) {
       try {
-        assertMatchesOpenApiSchema(value, branch, pointer);
+        assertMatchesOpenApiSchema(value, branch, pointer, doc);
         return;
       } catch (err: any) {
         errors.push(err?.message || String(err));
@@ -138,7 +160,7 @@ function assertMatchesOpenApiSchema(
 
   if (Array.isArray(value) && schema.items) {
     value.forEach((item, idx) => {
-      assertMatchesOpenApiSchema(item, schema.items, `${pointer}[${idx}]`);
+      assertMatchesOpenApiSchema(item, schema.items, `${pointer}[${idx}]`, doc);
     });
   }
 
@@ -155,7 +177,8 @@ function assertMatchesOpenApiSchema(
           assertMatchesOpenApiSchema(
             record[propName],
             propSchema,
-            `${pointer}.${propName}`
+            `${pointer}.${propName}`,
+            doc
           );
         }
       }
@@ -168,7 +191,8 @@ function getResponseSchema(
   method: string,
   status = "200"
 ) {
-  const pathEntry = kernelOpenApi.paths[routeTemplate];
+  const doc = resolveOpenApiDocument(routeTemplate);
+  const pathEntry = doc.paths[routeTemplate];
   expect(pathEntry, `Missing OpenAPI path ${routeTemplate}`).toBeDefined();
   const op = pathEntry[method.toLowerCase()];
   expect(op, `Missing ${method} on ${routeTemplate}`).toBeDefined();
@@ -177,7 +201,7 @@ function getResponseSchema(
     schema,
     `Missing ${status} JSON schema on ${method} ${routeTemplate}`
   ).toBeDefined();
-  return schema;
+  return { schema, doc };
 }
 
 describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
@@ -214,7 +238,8 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
       await kernelApi.listStudyRulePacks(studyRef);
     assertMatchesOpenApiSchema(
       initialPacks,
-      getResponseSchema("/api/v1/kernel/studies/{studyRef}/rule-packs", "get"),
+      getResponseSchema("/api/v1/kernel/studies/{studyRef}/rule-packs", "get")
+        .schema,
       "listStudyRulePacks"
     );
     expect(initialPacks.study_ref).toBe(studyRef);
@@ -235,7 +260,7 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
       getResponseSchema(
         "/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview",
         "post"
-      ),
+      ).schema,
       "previewStudyRulePack"
     );
     expect(previewRes.forms_evaluated).toBeGreaterThanOrEqual(2);
@@ -276,7 +301,7 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
       getResponseSchema(
         "/api/v1/kernel/library-items/{itemRef}/approve",
         "post"
-      ),
+      ).schema,
       "approveLibraryItem"
     );
     expect(approvedResult.status).toBe("Approved");
@@ -291,7 +316,8 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
       });
     assertMatchesOpenApiSchema(
       pinnedResult,
-      getResponseSchema("/api/v1/kernel/studies/{studyRef}/standards", "put"),
+      getResponseSchema("/api/v1/kernel/studies/{studyRef}/standards", "put")
+        .schema,
       "declareStudyRulePacks"
     );
     expect(pinnedResult.pinned_rule_pack_refs).toHaveLength(2);
@@ -305,7 +331,7 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
       getResponseSchema(
         "/api/v1/kernel/studies/{studyRef}/validation/findings",
         "get"
-      ),
+      ).schema,
       "listStudyValidationFindings"
     );
     expect(findingsPage.total).toBeGreaterThanOrEqual(2);
@@ -329,7 +355,7 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
       getResponseSchema(
         "/api/v1/kernel/validation/findings/{findingRef}",
         "get"
-      ),
+      ).schema,
       "getValidationFinding"
     );
     expect(detail.finding.ref).toBe(openFinding!.ref);
@@ -367,10 +393,15 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
         },
       ]
     );
+    const formPreviewContract = getResponseSchema(
+      "/api/v1/execution/forms/{formId}/preview",
+      "post"
+    );
     assertMatchesOpenApiSchema(
       cleanPreview,
-      getResponseSchema("/api/v1/execution/forms/{formId}/preview", "post"),
-      "previewValues(clean)"
+      formPreviewContract.schema,
+      "previewValues(clean)",
+      formPreviewContract.doc
     );
     expect(cleanPreview.form_id).toBe(formId);
     expect(cleanPreview.warnings).toHaveLength(0);
@@ -407,10 +438,11 @@ describe("Demo MSW OpenAPI Contracts & Stateful Governance Workflows", () => {
     );
     assertMatchesOpenApiSchema(
       breachPreview,
-      getResponseSchema("/api/v1/execution/forms/{formId}/preview", "post"),
-      "previewValues(breach)"
+      formPreviewContract.schema,
+      "previewValues(breach)",
+      formPreviewContract.doc
     );
-    const typedWarnings: components["schemas"]["Kernel_FormPreviewWarningResponse"][] =
+    const typedWarnings: ExecutionFormsComponents["schemas"]["ExecutionForms_FormPreviewWarningResponse"][] =
       breachPreview.warnings;
     expect(typedWarnings.map((w) => w.rule_id)).toEqual(
       expect.arrayContaining([

@@ -453,16 +453,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, defineAsyncComponent, onMounted, watch } from "vue";
 import { ClinicalIconButton } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
 import ActivityFeed from "../components/fileshare/ActivityFeed.vue";
-import MediaPreviewModal from "../components/fileshare/MediaPreviewModal.vue";
 import BatchUploadDrawer from "../components/etmf/BatchUploadDrawer.vue";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import { useConfirmDialog } from "../composables/useConfirmDialog.js";
+
+const MediaPreviewModal = defineAsyncComponent(
+  () => import("../components/fileshare/MediaPreviewModal.vue")
+);
 
 const props = defineProps({
   initialStudyId: {
