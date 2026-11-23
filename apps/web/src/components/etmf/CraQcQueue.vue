@@ -13,7 +13,7 @@
             color: var(--semantic-color-text-secondary);
           "
         >
-          Adjudicate AI auto-classified documents staged in TECHNICAL_QC state
+          Adjudicate AI auto-classified documents staged for Technical QC review
           under FDA 21 CFR Part 11
         </p>
       </div>
@@ -185,13 +185,15 @@
               />
             </td>
             <td>
-              <div style="display: flex; flex-direction: column">
+              <div style="display: flex; flex-direction: column; gap: 2px">
                 <span class="font-mono font-bold" style="font-size: 12px">{{
                   item.filename
                 }}</span>
-                <span class="text-muted" style="font-size: 10px"
-                  >ID: {{ item.document_id }}</span
-                >
+                <SupportDetails
+                  v-if="item.document_id"
+                  summary-label="Document reference"
+                  :reference="item.document_id"
+                />
               </div>
             </td>
             <td>
@@ -568,6 +570,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useFocusTrap } from "ui";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";

@@ -243,6 +243,9 @@ useFocusTrap(dialogRef, {
   flex-direction: column;
   max-height: 90vh;
   width: 100%;
+}
+
+.clinical-modal-dialog:focus:not(:focus-visible) {
   outline: none;
 }
 

@@ -195,7 +195,7 @@
             <div class="meta-item">
               <span class="meta-label">Lifecycle Status</span>
               <span class="meta-val badge status-approved">{{
-                inspectedDoc.status || "DRAFT"
+                formatClinicalStatus(inspectedDoc.status || "DRAFT")
               }}</span>
             </div>
           </div>
@@ -247,21 +247,28 @@
               "
             >
               <span style="font-size: 11px; font-weight: 600"
-                >SHA-256 Checksum Digest</span
+                >Cryptographic Integrity Verification</span
               >
               <span
                 v-if="getDocSha256(inspectedDoc) !== '—'"
                 class="badge status-approved"
                 style="font-size: 9px"
-                >SHA-256 RECORDED</span
+                >SHA-256 Recorded</span
               >
               <span v-else class="badge status-draft" style="font-size: 9px"
-                >NOT COMPUTED</span
+                >Not Computed</span
               >
             </div>
-            <code class="sha256-hash-display">{{
-              getDocSha256(inspectedDoc)
-            }}</code>
+            <SupportDetails
+              v-if="getDocSha256(inspectedDoc) !== '—'"
+              summary-label="SHA-256 verification digest"
+              :reference="getDocSha256(inspectedDoc)"
+            />
+            <span
+              v-else
+              style="font-size: 11px; color: var(--semantic-color-text-muted)"
+              >Digest not yet recorded</span
+            >
           </div>
         </div>
 
@@ -308,7 +315,9 @@
             <div class="meta-grid">
               <div class="meta-item">
                 <span class="meta-label">Detected Modality</span>
-                <span class="meta-val">{{ getDocModality(inspectedDoc) }}</span>
+                <span class="meta-val">{{
+                  formatDocumentModality(getDocModality(inspectedDoc))
+                }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Signature Verification</span>
@@ -476,8 +485,12 @@
 <script setup>
 import { ClinicalDrawer, ClinicalTabs } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
-import * as VueRouter from "vue-router";
 import { kernelApi } from "../api/kernelApi";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
 import {
   ETMF_QC_REVIEW_ROLE_REASON,
   ETMF_READ_ROLE_REASON,
@@ -486,11 +499,13 @@ import {
   canReviewEtmfQc,
   canStageEtmfQc,
 } from "../canvas/authority";
+import SupportDetails from "../components/canvas/SupportDetails.vue";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
@@ -499,6 +514,10 @@ import {
   extractAssignedSites,
   extractAssignedStudies,
 } from "../utils/callerScope";
+import {
+  formatClinicalStatus,
+  formatDocumentModality,
+} from "../utils/clinicalLabels";
 
 const props = defineProps({
   studyId: {
@@ -514,10 +533,8 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
-const route =
-  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
-const router =
-  typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
+const { route, router } = resolveRouteAndRouter();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
 const etmfWorkspaceTabs = [
@@ -566,7 +583,11 @@ const canReviewQc = computed(
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || etmfStore.currentStudyId || clinicalStore.activeStudyId
+  () =>
+    props.studyId ||
+    etmfStore.currentStudyId ||
+    activeStudyCode.value ||
+    clinicalStore.activeStudyId
 );
 const effectiveSiteId = computed(
   () => props.siteId || etmfStore.currentSiteId || clinicalStore.activeSiteId
@@ -605,6 +626,7 @@ function syncScope(study, site) {
   const normalizedSite = typeof site === "string" ? site.trim() : "";
   etmfStore.setScope(normalizedStudy, normalizedSite);
   if (normalizedStudy) {
+    setActiveStudyCode(normalizedStudy);
     clinicalStore.activeStudyId = normalizedStudy;
   }
   clinicalStore.activeSiteId = normalizedSite;
@@ -628,6 +650,11 @@ async function loadStudyDirectoryOptions() {
         const defaultCode = studies[0]?.code || "";
         if (defaultCode) {
           syncScope(defaultCode, standaloneSiteInput.value);
+          void replaceRouteQueryParams(router, route, {
+            studyId: defaultCode,
+            siteId: standaloneSiteInput.value || null,
+            subjectId: clinicalStore.activeSubjectId || null,
+          });
           await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
         }
       }
@@ -643,19 +670,11 @@ async function applyStandaloneScope() {
   const nextSite = standaloneSiteInput.value.trim();
   syncScope(nextStudy, nextSite);
 
-  if (router && route) {
-    try {
-      await router.replace({
-        query: {
-          ...route.query,
-          studyId: nextStudy || undefined,
-          siteId: nextSite || undefined,
-        },
-      });
-    } catch {
-      // Ignore router navigation errors in isolated test mounts.
-    }
-  }
+  await replaceRouteQueryParams(router, route, {
+    studyId: nextStudy || null,
+    siteId: nextSite || null,
+    subjectId: clinicalStore.activeSubjectId || null,
+  });
 
   await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
   if (activeWorkspaceTab.value === "qc-queue") {
@@ -665,6 +684,32 @@ async function applyStandaloneScope() {
     await etmfStore.fetchExportJobs(nextStudy).catch(() => {});
   }
 }
+
+watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+  ],
+  async () => {
+    if (props.studyId || !route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+    clinicalStore.activeSubjectId = nextScope.subjectId;
+    if (
+      resolvedStudy !== standaloneStudyInput.value ||
+      nextScope.siteId !== standaloneSiteInput.value
+    ) {
+      syncScope(resolvedStudy, nextScope.siteId);
+      await etmfStore.fetchBinderTree(resolvedStudy || undefined);
+      if (canRead.value) {
+        await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+      }
+    }
+  }
+);
 
 watch(
   () => [props.studyId, props.siteId],
@@ -877,24 +922,14 @@ async function handleAcceptClassification(doc) {
 }
 
 onMounted(async () => {
-  const queryStudy =
-    typeof route?.query?.studyId === "string"
-      ? route.query.studyId
-      : typeof route?.query?.study_id === "string"
-        ? route.query.study_id
-        : "";
-  const querySite =
-    typeof route?.query?.siteId === "string"
-      ? route.query.siteId
-      : typeof route?.query?.site_id === "string"
-        ? route.query.site_id
-        : typeof route?.query?.site === "string"
-          ? route.query.site
-          : "";
+  const routeScope = readRouteScopeQuery(route);
+  const queryStudy = routeScope.studyId;
+  const querySite = routeScope.siteId;
 
   const initialStudy =
     props.studyId ||
     queryStudy ||
+    activeStudyCode.value ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
     (authStore.assignedStudies?.length ? authStore.assignedStudies[0] : "");
@@ -908,11 +943,11 @@ onMounted(async () => {
   if (initialStudy || initialSite) {
     syncScope(initialStudy, initialSite);
   }
-  if (route?.query?.subjectId) {
-    clinicalStore.activeSubjectId = String(route.query.subjectId);
+  if (routeScope.subjectId) {
+    clinicalStore.activeSubjectId = routeScope.subjectId;
   }
-  if (route?.query?.visitId) {
-    clinicalStore.activeVisitId = String(route.query.visitId);
+  if (routeScope.visitId) {
+    clinicalStore.activeVisitId = routeScope.visitId;
   }
 
   if (!canRead.value) {

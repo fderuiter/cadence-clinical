@@ -1,4 +1,4 @@
-# ADR-2651: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates
+# ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -39,7 +39,7 @@ Across the six live operational hubs in `apps/web` (`/etmf`, `/tickets`, `/knowl
   - ✅ Guarantees focus never falls to `document.body` after single-item QC adjudication or nested 21 CFR Part 11 sign-off.
   - ✅ Enforces zero `vuejs-accessibility` suppressions in `packages/ui` and live hubs at lint time and full WCAG 2.2 AA compliance in Playwright E2E.
 - **Cons:**
-  - ❌ Increases the shared `packages/ui` component catalog from 22 to 23 components and requires keeping unmigrated demo-only screens scoped outside the new suppression-ban glob until migrated.
+  - ❌ Increases the shared `packages/ui` component catalog from 23 to 24 components and requires keeping unmigrated demo-only screens scoped outside the new suppression-ban glob until migrated.
 
 ### Option 2: Patch Individual Hub Views Inline Without Shared `ClinicalTabs` or `useFocusTrap` Stack Fallbacks
 
@@ -58,7 +58,7 @@ Across the six live operational hubs in `apps/web` (`/etmf`, `/tickets`, `/knowl
 
 - **Positive Impact:** Consistent keyboard and screen-reader behavior across all seven operational tab bars, deterministic focus retention during eTMF QC and Ticket Part 11 sign-off workflows, valid ARIA tree and 2D grid semantics in `/etmf`, native `<button>` activation on interactive cards, `>= 24px` tag filter targets, zero `vuejs-accessibility` suppressions across `packages/ui` and live hubs, and automated WCAG 2.2 Level A & AA E2E coverage across `/etmf`, `/tickets`, `/knowledge`, `/ctms`, `/ssu`, `/training`, and `/onboarding/trial`.
 - **Negative Impact / Technical Debt:** Unmigrated demo-only views outside `AVAILABLE_SCREENS` / `ALWAYS_AVAILABLE` remain excluded from `custom-vue/no-vuejs-a11y-suppression` until promoted to live backend-wired routes.
-- **Mitigation Strategy:** Expand the live hub file list in `eslint.config.mjs` whenever a view is promoted into `AVAILABLE_SCREENS` (`apps/web/src/config/screenAvailability.js`).
+- **Mitigation Strategy:** Expand the live hub file list in `eslint.config.mjs` whenever a view is promoted into `AVAILABLE_SCREENS` (`apps/web/src/router/availability.js`).
 
 ## 6. Implementation & Verification
 

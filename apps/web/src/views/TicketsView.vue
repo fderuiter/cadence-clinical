@@ -180,6 +180,31 @@
           <option value="RESOLVED">Resolved</option>
           <option value="CLOSED">Closed</option>
         </select>
+
+        <input
+          id="tickets-study-filter"
+          v-model="filterStudyId"
+          type="text"
+          class="filter-select scope-filter-input"
+          aria-label="Filter issues by study"
+          placeholder="Study (all)"
+        />
+        <input
+          id="tickets-site-filter"
+          v-model="filterSiteId"
+          type="text"
+          class="filter-select scope-filter-input"
+          aria-label="Filter issues by site"
+          placeholder="Site (all)"
+        />
+        <input
+          id="tickets-subject-filter"
+          v-model="filterSubjectId"
+          type="text"
+          class="filter-select scope-filter-input"
+          aria-label="Filter issues by participant"
+          placeholder="Participant (all)"
+        />
       </div>
 
       <ClinicalTabs
@@ -666,6 +691,12 @@ import { ClinicalTabs } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -673,8 +704,11 @@ import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const demoBuild = isDemoBuild();
 const instance = getCurrentInstance();
+const { route, router } = resolveRouteAndRouter();
+const scopeStore = useClinicalScopeStore();
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
+const initialRouteScope = readRouteScopeQuery(route);
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
@@ -693,6 +727,21 @@ const searchQuery = ref("");
 const filterCategory = ref("ALL");
 const filterSeverity = ref("ALL");
 const filterStatus = ref("ALL");
+const filterStudyId = ref(initialRouteScope.studyId);
+const filterSiteId = ref(initialRouteScope.siteId);
+const filterSubjectId = ref(initialRouteScope.subjectId);
+
+if (route?.query) {
+  if (initialRouteScope.studyId) {
+    scopeStore.activeStudyId = initialRouteScope.studyId;
+  }
+  if (initialRouteScope.siteId) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+  }
+  if (initialRouteScope.subjectId) {
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  }
+}
 
 // Selection & Batch Action State
 const selectedTicketIds = ref(new Set());
@@ -914,6 +963,43 @@ onMounted(async () => {
 });
 
 watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+  ],
+  () => {
+    if (!route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    filterStudyId.value = nextScope.studyId;
+    filterSiteId.value = nextScope.siteId;
+    filterSubjectId.value = nextScope.subjectId;
+    scopeStore.activeStudyId = nextScope.studyId;
+    scopeStore.activeSiteId = nextScope.siteId;
+    scopeStore.activeSubjectId = nextScope.subjectId;
+  }
+);
+
+watch(
+  [filterStudyId, filterSiteId, filterSubjectId],
+  ([nextStudy, nextSite, nextSubject]) => {
+    const trimmedStudy = nextStudy.trim();
+    const trimmedSite = nextSite.trim();
+    const trimmedSubject = nextSubject.trim();
+    scopeStore.activeStudyId = trimmedStudy;
+    scopeStore.activeSiteId = trimmedSite;
+    scopeStore.activeSubjectId = trimmedSubject;
+    void replaceRouteQueryParams(router, route, {
+      studyId: trimmedStudy || null,
+      siteId: trimmedSite || null,
+      subjectId: trimmedSubject || null,
+    });
+  }
+);
+
+watch(
   () => instance?.proxy?.$route?.query?.ref,
   async (nextRef, prevRef) => {
     if (nextRef && nextRef !== prevRef) {
@@ -1031,6 +1117,22 @@ const filteredTickets = computed(() => {
     }
     // Status match
     if (filterStatus.value !== "ALL" && t.status !== filterStatus.value) {
+      return false;
+    }
+    // Clinical scope match
+    const scopedStudy = filterStudyId.value.trim().toLowerCase();
+    if (scopedStudy && t.study_id && t.study_id.toLowerCase() !== scopedStudy) {
+      return false;
+    }
+    const scopedSite = filterSiteId.value.trim().toLowerCase();
+    if (scopedSite && t.site_id && t.site_id.toLowerCase() !== scopedSite) {
+      return false;
+    }
+    const scopedSubject = filterSubjectId.value.trim().toLowerCase();
+    if (
+      scopedSubject &&
+      (!t.subject_id || t.subject_id.toLowerCase() !== scopedSubject)
+    ) {
       return false;
     }
     return true;
@@ -1584,14 +1686,16 @@ const exportAuditTrail = (format) => {
 
 .search-input {
   border: none;
+  border-radius: 4px;
   background: transparent;
-  outline: none;
   font-size: 0.85rem;
   width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
 }
 
 .filter-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -1602,7 +1706,11 @@ const exportAuditTrail = (format) => {
   font-size: 0.82rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
-  outline: none;
+}
+
+.scope-filter-input {
+  width: 132px;
+  font-family: var(--font-mono);
 }
 
 .view-mode-toggle {
@@ -1908,6 +2016,8 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-xs {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 3px 8px;
   font-size: 0.75rem;
 }
@@ -1976,8 +2086,10 @@ const exportAuditTrail = (format) => {
 }
 
 .ticket-checkbox {
-  width: 16px;
-  height: 16px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
   accent-color: var(--semantic-color-interactive-primary);
 }
@@ -1987,6 +2099,8 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-sm {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
   font-size: 0.8rem;
 }

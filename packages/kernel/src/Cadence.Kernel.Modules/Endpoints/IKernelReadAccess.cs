@@ -22,6 +22,16 @@ public interface IKernelReadAccess
     ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The mask reason preventing the current caller from seeing <paramref name="node"/> in <paramref name="tenant"/>,
+    /// or null when <paramref name="node"/> is visible.
+    /// </summary>
+    async ValueTask<MaskReason?> MaskForAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    {
+        var masked = await MaskAsync(tenant, [node], cancellationToken).ConfigureAwait(false);
+        return masked.TryGetValue(node, out var reason) ? reason : null;
+    }
+
+    /// <summary>
     /// Evaluates visibility across <paramref name="nodes"/> in <paramref name="tenant"/> as a single batch, returning
     /// the <see cref="MaskReason"/> for each masked node (visible nodes are omitted).
     /// </summary>
@@ -74,4 +84,15 @@ public interface IKernelReadAccess
         Capability capability,
         NodeRef resource,
         CancellationToken cancellationToken) => ValueTask.FromResult(true);
+
+    /// <summary>
+    /// True when the current caller holds <c>enrollment.unblind</c> covering <paramref name="enrollment"/> in
+    /// <paramref name="tenant"/> (K-AUTH-4). Defaults to false when no capability probe is configured so blinded
+    /// treatment values fail closed unless explicitly unblinded.
+    /// </summary>
+    ValueTask<bool> CanUnblindAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken) =>
+        CanExerciseAsync(tenant, new Capability("enrollment.unblind", VerbClass.Read), NodeRef.For(enrollment), cancellationToken);
 }

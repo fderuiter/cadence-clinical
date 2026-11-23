@@ -236,13 +236,19 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 }
 
 .row-select {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   border: none;
+  border-radius: 4px;
   background: none;
-  padding: 0;
+  padding: 2px 4px;
   font: inherit;
   font-weight: 600;
   color: var(--primary);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .masked-row {
