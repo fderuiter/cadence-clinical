@@ -9,9 +9,25 @@ const SINGLE_CORE_WRAPPER_PATH = path.resolve(
   "playwright-chromium-single-core.sh"
 );
 
+function isTruthyCiEnv(value) {
+  if (!value) {
+    return false;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  return normalized !== "" && normalized !== "0" && normalized !== "false";
+}
+
+function shouldPinChromiumSingleCore(env) {
+  if (env.CADENCE_PIN_CHROMIUM_SINGLE_CORE === "0") {
+    return false;
+  }
+  return env.CADENCE_PIN_CHROMIUM_SINGLE_CORE === "1" || isTruthyCiEnv(env.CI);
+}
+
 /**
  * Builds Playwright Chromium `launchOptions` that pin the Chromium browser
- * process tree to a single allowed CPU core on Linux hosts (`taskset`).
+ * process tree to a single allowed CPU core on virtualized CI Linux hosts (`taskset`)
+ * or when `CADENCE_PIN_CHROMIUM_SINGLE_CORE=1` is set explicitly.
  *
  * On virtualized multi-vCPU Linux runners (GitHub Actions Azure VMs / KVM),
  * microsecond cross-vCPU `CLOCK_MONOTONIC` skew triggers a fatal `CHECK`
@@ -46,6 +62,7 @@ export function buildChromiumLaunchOptions(
 
   if (
     platform === "linux" &&
+    shouldPinChromiumSingleCore(env) &&
     resolvedBinary &&
     fs.existsSync(resolvedBinary) &&
     fs.existsSync(wrapperPath)

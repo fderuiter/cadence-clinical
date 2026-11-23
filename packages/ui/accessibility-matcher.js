@@ -15,10 +15,6 @@ function getAxe() {
   return cachedAxePromise;
 }
 
-if (typeof process !== "undefined" && process.env?.VITEST) {
-  void getAxe();
-}
-
 function runAxeSerialized(axe, element, options) {
   const nextRun = axeRunQueue.then(
     () => axe.run(element, options),

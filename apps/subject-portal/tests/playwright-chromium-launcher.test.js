@@ -12,8 +12,40 @@ const wrapperScript = path.resolve(
 );
 
 describe("Playwright single-core Chromium launcher", () => {
-  it("wraps existing Chromium executable on Linux and sets CADENCE_REAL_CHROMIUM_BIN", () => {
+  it("leaves local Linux launches unpinned when neither CI nor CADENCE_PIN_CHROMIUM_SINGLE_CORE=1 is set", () => {
     const env = {};
+    const options = buildChromiumLaunchOptions(
+      { executablePath: () => process.execPath },
+      {
+        args: ["--no-sandbox", "--disable-dev-shm-usage"],
+        platform: "linux",
+        env,
+        wrapperPath: wrapperScript,
+      }
+    );
+
+    expect(options.executablePath).toBeUndefined();
+    expect(options.args).toEqual(["--no-sandbox", "--disable-dev-shm-usage"]);
+    expect(env.CADENCE_REAL_CHROMIUM_BIN).toBeUndefined();
+
+    const falseCiEnv = {
+      CI: "false",
+      PLAYWRIGHT_CHROMIUM_PATH: process.execPath,
+    };
+    const overrideOptions = buildChromiumLaunchOptions(
+      { executablePath: () => "/nonexistent/default" },
+      {
+        platform: "linux",
+        env: falseCiEnv,
+        wrapperPath: wrapperScript,
+      }
+    );
+    expect(overrideOptions.executablePath).toBe(process.execPath);
+    expect(falseCiEnv.CADENCE_REAL_CHROMIUM_BIN).toBeUndefined();
+  });
+
+  it("wraps existing Chromium executable on Linux when CI=true and sets CADENCE_REAL_CHROMIUM_BIN", () => {
+    const env = { CI: "true" };
     const options = buildChromiumLaunchOptions(
       { executablePath: () => process.execPath },
       {
@@ -29,8 +61,11 @@ describe("Playwright single-core Chromium launcher", () => {
     expect(env.CADENCE_REAL_CHROMIUM_BIN).toBe(process.execPath);
   });
 
-  it("honors PLAYWRIGHT_CHROMIUM_PATH override before default browserType executablePath", () => {
-    const env = { PLAYWRIGHT_CHROMIUM_PATH: process.execPath };
+  it("wraps Chromium on Linux when CADENCE_PIN_CHROMIUM_SINGLE_CORE=1 and honors PLAYWRIGHT_CHROMIUM_PATH", () => {
+    const env = {
+      CADENCE_PIN_CHROMIUM_SINGLE_CORE: "1",
+      PLAYWRIGHT_CHROMIUM_PATH: process.execPath,
+    };
     const options = buildChromiumLaunchOptions(
       {
         executablePath: () => {
@@ -48,13 +83,13 @@ describe("Playwright single-core Chromium launcher", () => {
     expect(env.CADENCE_REAL_CHROMIUM_BIN).toBe(process.execPath);
   });
 
-  it("falls back gracefully on non-Linux platforms or missing binaries", () => {
+  it("falls back gracefully on non-Linux platforms or missing binaries even under CI=true", () => {
     const darwinOptions = buildChromiumLaunchOptions(
       { executablePath: () => process.execPath },
       {
         args: ["--no-sandbox"],
         platform: "darwin",
-        env: {},
+        env: { CI: "true" },
         wrapperPath: wrapperScript,
       }
     );
@@ -65,7 +100,7 @@ describe("Playwright single-core Chromium launcher", () => {
       { executablePath: () => "/nonexistent/chromium-binary" },
       {
         platform: "linux",
-        env: {},
+        env: { CI: "true" },
         wrapperPath: wrapperScript,
       }
     );

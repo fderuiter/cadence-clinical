@@ -685,7 +685,7 @@ jobs:
         id: run_tests
         if: always()
         run: |
-          pnpm -r test
+          pnpm -r test:coverage
           pnpm exec vitest run --config vitest.config.mjs
 
   dotnet-tests:

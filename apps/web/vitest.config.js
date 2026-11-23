@@ -28,24 +28,71 @@ function eagerDemoWorkspacesForVitest() {
   };
 }
 
+const SHARED_TEST_EXCLUDES = [
+  "**/node_modules/**",
+  "**/dist/**",
+  "**/tests/e2e/**",
+  "**/tests/browser/**",
+];
+
+const NODE_TEST_FILES = [
+  "tests/**/*.node.{test,spec}.{js,ts}",
+  "tests/api/changeReason.test.js",
+  "tests/api/ecrfFormsApi.test.js",
+  "tests/api/ecrfQueriesApi.test.js",
+  "tests/api/executionApi.test.js",
+  "tests/api/generated_types.test.js",
+  "tests/api/kernelApi.test.js",
+  "tests/api/observationValue.test.ts",
+  "tests/api_gateway_clients.test.js",
+  "tests/canvas/contracts.spec.ts",
+  "tests/canvas/kernelLocks.spec.ts",
+  "tests/cold_boot_bundle.spec.ts",
+  "tests/composables/useDomainFormatter.spec.ts",
+  "tests/composables/useErrorPresenter.spec.ts",
+  "tests/composables/useFormQueries.spec.ts",
+  "tests/composables/useSignedKernelLock.spec.ts",
+  "tests/keycloak_signin.test.js",
+  "tests/msw_mock_gateway.test.js",
+  "tests/portal_subpath_cohosting.spec.js",
+  "tests/utils/cryoLoggerParser.spec.ts",
+  "tests/vite_strip_demo_fixtures.spec.ts",
+];
+
 export default mergeConfig(
   viteConfig,
   defineConfig({
     plugins: [eagerDemoWorkspacesForVitest()],
     test: {
-      environment: "jsdom",
       globals: true,
       testTimeout: 15000,
       hookTimeout: 15000,
       // Tests opt into a demo build with vi.stubEnv("VITE_DEMO_MODE", "true"); undo it after each test.
       unstubEnvs: true,
-      setupFiles: [fileURLToPath(new URL("./tests/setup.js", import.meta.url))],
       // Playwright specs (tests/e2e, and tests/browser for the browser-to-database check) are not Vitest tests.
-      exclude: [
-        "**/node_modules/**",
-        "**/dist/**",
-        "**/tests/e2e/**",
-        "**/tests/browser/**",
+      exclude: SHARED_TEST_EXCLUDES,
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: "node",
+            environment: "node",
+            include: NODE_TEST_FILES,
+            exclude: SHARED_TEST_EXCLUDES,
+            setupFiles: [],
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: "jsdom",
+            environment: "jsdom",
+            setupFiles: [
+              fileURLToPath(new URL("./tests/setup.js", import.meta.url)),
+            ],
+            exclude: [...SHARED_TEST_EXCLUDES, ...NODE_TEST_FILES],
+          },
+        },
       ],
       coverage: {
         provider: "v8",

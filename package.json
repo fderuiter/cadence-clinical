@@ -9,6 +9,7 @@
   },
   "scripts": {
     "test": "pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs",
+    "test:coverage": "pnpm --filter ui build && pnpm -r test:coverage && pnpm exec vitest run --config vitest.config.mjs",
     "test:all": "pnpm test && node scripts/run-cli.js test",
     "check-docs-drift": "node scripts/run-cli.js validate-architecture-drift",
     "lint": "node scripts/run-cli.js validate-path-patterns && pnpm -r lint && pnpm exec eslint \"docs/.vitepress/theme/**/*.js\"",
