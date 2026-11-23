@@ -380,6 +380,12 @@
               :key="`home-sites-${studyCode}`"
               :study-code="studyCode"
               :can-manage-sites="authStore.canManageWorkspaceSites"
+              :manage-sites-location="
+                scopedStudyLocation({ stage: 'conduct', section: 'sites' })
+              "
+              :active-site="siteFilter || zoomSite"
+              :active-participant="activeParticipantScopeParam"
+              :active-node="activeInspectorParticipantNodeParam"
               compact
               @open-participants="openParticipantsForSite"
             />
@@ -533,6 +539,9 @@
             :key="`validation-${studyCode}`"
             :study-code="studyCode"
             :can-manage-rules="canManageRules"
+            :site="siteFilter || zoomSite"
+            :participant="activeParticipantScopeParam"
+            :node="activeInspectorParticipantNodeParam"
           />
 
           <ExportsSection
@@ -1001,6 +1010,7 @@ import {
   watch,
 } from "vue";
 import {
+  isNavigationFailure,
   useRoute,
   useRouter,
   type LocationQueryRaw,
@@ -1049,6 +1059,7 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import {
+  readInstantiatedClinicalScope,
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
@@ -1204,10 +1215,10 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
-    const canvasEl = el.closest?.(".canvas");
-    if (canvasEl instanceof HTMLElement) {
-      canvasEl.style.setProperty("--canvas-topbar-height", `${measured}px`);
-    }
+    el.closest?.<HTMLElement>(".canvas")?.style?.setProperty(
+      "--canvas-topbar-height",
+      `${measured}px`
+    );
   }
 }
 
@@ -2391,6 +2402,15 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
+    if (
+      isDemoBuild() &&
+      siteFilter.value &&
+      lineage?.siteCode &&
+      lineage.siteCode !== siteFilter.value
+    ) {
+      resolvedLineage.value = null;
+      return;
+    }
     if (lineage?.subjectCode && !zoomParticipant.value) {
       const participant = await canvas.resolveParticipantByCode(
         lineage.subjectCode
@@ -2476,13 +2496,40 @@ function openParticipantsForSite(siteCode: string) {
 
 async function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
-  if (target.ask) {
-    // Ask keeps the view and its selection, and opens Assist with the question.
-    await router.push({
-      name: "study",
-      params: { studyCode: target.studyCode },
-      query: { ...route.query, ask: target.ask },
+  const targetStudy = (target.studyCode || studyCode.value).trim();
+  const isCrossStudy = Boolean(
+    studyCode.value && targetStudy && targetStudy !== studyCode.value
+  );
+  const previousScope = isCrossStudy ? readInstantiatedClinicalScope() : null;
+  if (isCrossStudy) {
+    syncInstantiatedClinicalScope({
+      activeStudyId: targetStudy,
+      activeSiteId: "",
+      activeSubjectId: "",
     });
+  }
+  const restorePreviousScope = () => {
+    if (previousScope) {
+      syncInstantiatedClinicalScope({
+        activeStudyId: previousScope.activeStudyId ?? "",
+        activeSiteId: previousScope.activeSiteId ?? "",
+        activeSubjectId: previousScope.activeSubjectId ?? "",
+      });
+    }
+  };
+  if (target.ask) {
+    // Ask keeps the view and its selection within the same study, and opens Assist with the question.
+    const failure = await router.push({
+      name: "study",
+      params: { studyCode: targetStudy },
+      query: isCrossStudy
+        ? { ask: target.ask }
+        : { ...route.query, ask: target.ask },
+    });
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
     await canvas.requestInspectorFocus({
       nodeRef: null,
       scrollIntoView: true,
@@ -2490,31 +2537,68 @@ async function goToPaletteTarget(target: PaletteTarget) {
     return;
   }
   if (target.participant) {
-    if (target.studyCode && target.studyCode !== canvas.studyCode) {
-      canvas.openStudy(target.studyCode);
+    if (!isCrossStudy) {
+      canvas.rememberParticipants([target.participant]);
+    }
+    const node = tryNodeRef("participant", target.participant.id);
+    const nodeText = node ? formatNodeRef(node) : "";
+    const activeSite = siteFilter.value || zoomSite.value;
+    const compatibleSite =
+      !isCrossStudy &&
+      activeSite &&
+      (!target.participant.site_id || target.participant.site_id === activeSite)
+        ? activeSite
+        : undefined;
+    const failure = await router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+          site: compatibleSite,
+          node: nodeText,
+        },
+        targetStudy
+      )
+    );
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
+    if (targetStudy && targetStudy !== canvas.studyCode) {
+      canvas.openStudy(targetStudy);
     }
     canvas.rememberParticipants([target.participant]);
-  }
-  const node = target.participant
-    ? tryNodeRef("participant", target.participant.id)
-    : null;
-  const nodeText = node ? formatNodeRef(node) : "";
-  await router.push(
-    studyLocation(
-      {
-        stage: target.stage,
-        section: target.section,
-        node: nodeText,
-      },
-      target.studyCode
-    )
-  );
-  if (target.participant) {
     await canvas.requestInspectorFocus({
       nodeRef: nodeText,
       scrollIntoView: true,
     });
+    return;
   }
+  if (isCrossStudy) {
+    const failure = await router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+        },
+        targetStudy
+      )
+    );
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
+    return;
+  }
+  await router.push(
+    scopedStudyLocation(
+      {
+        stage: target.stage,
+        section: target.section,
+      },
+      targetStudy
+    )
+  );
 }
 
 function openTypedStudy() {

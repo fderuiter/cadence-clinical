@@ -12,8 +12,11 @@ import {
   findKernelStudyRef,
   findStudyScheduleOptions,
 } from "../../src/canvas/kernelStudy";
+import CanvasPalette from "../../src/components/canvas/CanvasPalette.vue";
 import { useAuthStore } from "../../src/stores/auth";
+import { useClinicalScopeStore } from "../../src/stores/clinicalScope";
 import { useConfirmStore } from "../../src/stores/confirm";
+import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
@@ -1180,6 +1183,29 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(router.currentRoute.value.query.observation).toBe(
         `observation:${OBS_ID}`
       );
+
+      // Cancelling a cross-study palette jump restores clinicalScope and keeps studyCanvas on CAD-101.
+      const scopeStore = useClinicalScopeStore();
+      const canvasStore = useStudyCanvasStore();
+      scopeStore.activeStudyId = "CAD-101";
+      scopeStore.activeSiteId = "SITE-17";
+      scopeStore.activeSubjectId = "017-0001";
+      await wrapper.find("#btn-open-palette").trigger("click");
+      await flushPromises();
+      wrapper
+        .findComponent(CanvasPalette)
+        .vm.$emit("go", { kind: "study", studyCode: "CAD-202" });
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Changes"
+      );
+      confirmStore.cancelConfirm();
+      await flushPromises();
+      expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+      expect(canvasStore.studyCode).toBe("CAD-101");
+      expect(scopeStore.activeStudyId).toBe("CAD-101");
+      expect(scopeStore.activeSiteId).toBe("SITE-17");
+      expect(scopeStore.activeSubjectId).toBe("017-0001");
 
       // Confirming discard clears observationWorkspaceDirty and returns to the form without a second prompt.
       await wrapper.find("#observation-back").trigger("click");

@@ -288,6 +288,7 @@ import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useUnsavedNavigationGuard } from "../composables/useUnsavedNavigationGuard";
 import { useAuthStore } from "../stores/auth";
+import { isDemoBuild } from "../utils/demoMode";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
@@ -652,7 +653,7 @@ watch(
       if (!enrollmentStep) {
         return;
       }
-      let resolvedStudyCode = "";
+      let lineageStudyCode = "";
       if (studyStep?.ref && typeof kernelApi.getNode === "function") {
         try {
           const studyNode = await kernelApi.getNode(studyStep.ref);
@@ -660,14 +661,24 @@ watch(
           if (studyNode && studyNode.mask !== null) {
             return;
           }
-          resolvedStudyCode = studyNode?.code?.trim() ?? "";
+          lineageStudyCode = studyNode?.code?.trim() ?? "";
         } catch {
           // Fall back to unmasked zoom-path label when node detail lookup is unavailable.
         }
       }
-      if (!resolvedStudyCode && studyStep?.label) {
-        resolvedStudyCode = studyStep.label.split(/\s+[—–-]\s+/)[0].trim();
+      if (!lineageStudyCode && studyStep?.label) {
+        lineageStudyCode = studyStep.label.split(/\s+[—–-]\s+/)[0].trim();
       }
+      const demoMode = isDemoBuild();
+      const explicitStudy = queryString("studyId") || queryString("study");
+      const explicitSite = queryString("site") || queryString("siteId");
+      const explicitParticipant =
+        queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject");
+      const resolvedStudyCode = demoMode
+        ? explicitStudy || lineageStudyCode
+        : lineageStudyCode;
       if (!resolvedStudyCode) return;
       syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
@@ -679,16 +690,29 @@ watch(
       const canonicalSiteLabel = siteStep?.label
         ? siteStep.label.split(" — ")[0].trim()
         : "";
-      const siteVal =
-        canonicalSiteLabel || queryString("site") || queryString("siteId");
+      const siteVal = demoMode
+        ? explicitSite || canonicalSiteLabel
+        : canonicalSiteLabel || explicitSite;
+      const studyOverridden = Boolean(
+        demoMode &&
+        explicitStudy &&
+        lineageStudyCode &&
+        explicitStudy.toUpperCase() !== lineageStudyCode.toUpperCase()
+      );
+      const siteOverridden = Boolean(
+        demoMode &&
+        explicitSite &&
+        canonicalSiteLabel &&
+        explicitSite.toUpperCase() !== canonicalSiteLabel.toUpperCase()
+      );
       resolvedSiteLabel.value = siteVal || "";
-      resolvedParticipantLabel.value = enrollmentStep.label || "";
+      resolvedParticipantLabel.value =
+        studyOverridden || siteOverridden
+          ? explicitParticipant
+          : enrollmentStep.label || "";
       const participantCandidate =
-        queryString("participant") ||
-        queryString("subjectId") ||
-        queryString("subject") ||
-        enrollmentStep.label ||
-        "";
+        explicitParticipant ||
+        (studyOverridden || siteOverridden ? "" : enrollmentStep.label || "");
       const participantVal = resolveCanonicalParticipantParam(
         resolvedStudyCode,
         participantCandidate
