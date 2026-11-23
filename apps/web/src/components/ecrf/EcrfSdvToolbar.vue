@@ -167,6 +167,7 @@
 <script setup lang="ts">
 import { computed, type UnwrapNestedRefs } from "vue";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
+import { toDirectScopeLocks } from "../../canvas/kernelLocks";
 import type { useEcrfSdv } from "../../composables/useEcrfSdv";
 import ScopeLockControls, {
   type DirectScopeLockItem,
@@ -185,17 +186,12 @@ const emit = defineEmits<{
   (e: "reload-stale"): void;
 }>();
 
-const directFormLocks = computed<DirectScopeLockItem[]>(() => {
-  const targetScope = `collection_instance:${props.form.form_id}`;
-  return props.form.locks
-    .filter((held) => held.scope === targetScope)
-    .map((held) => ({
-      lockRef: held.lock_id.startsWith("assertion:")
-        ? held.lock_id
-        : `assertion:${held.lock_id}`,
-      kind: held.kind,
-    }));
-});
+const directFormLocks = computed<DirectScopeLockItem[]>(() =>
+  toDirectScopeLocks(
+    props.form.locks,
+    `collection_instance:${props.form.form_id}`
+  )
+);
 </script>
 
 <style scoped>
