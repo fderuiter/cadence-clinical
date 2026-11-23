@@ -452,6 +452,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) (2026-11-22)
 - [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) (2026-11-22)
 - [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) (2026-11-23)
+- [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
