@@ -47,8 +47,15 @@ internal sealed class GetNodeTool(IKernelNavigator navigator, IObservationRecord
         NodeSummary? summary;
         if (node.Kind == NodeKinds.Observation)
         {
-            observation = await observations.FindAsync(tenant, new ObservationId(node.Id), cancellationToken).ConfigureAwait(false);
+            var initialMasks = await visibility.MaskAsync(context.Principal, [node.Unversioned()], cancellationToken).ConfigureAwait(false);
+            var unblinded = !initialMasks.ContainsKey(node.Unversioned());
+            observation = await observations.FindForReaderAsync(tenant, new ObservationId(node.Id), unblinded, cancellationToken).ConfigureAwait(false);
             if (observation is null || (node.Version is { } wanted && wanted != observation.Version))
+            {
+                return ToolResult<NodeView>.NotFoundOrNotVisible();
+            }
+
+            if (observation.ObservationId.IsEmpty || initialMasks.ContainsKey(node.Unversioned()))
             {
                 return ToolResult<NodeView>.NotFoundOrNotVisible();
             }
