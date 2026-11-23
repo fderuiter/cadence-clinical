@@ -16,6 +16,7 @@ import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
+import ThemeSwitcher from "./components/clinical/ThemeSwitcher.vue";
 import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
@@ -35,11 +36,28 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import {
+  CADENCE_THEME_STORAGE_KEY,
+  THEME_MODES,
+  VITEPRESS_THEME_STORAGE_KEY,
+  applyThemeToDocument,
+  cycleThemePreference,
+  getResolvedTheme,
+  getThemePreference,
+  initTheme,
+  normalizeThemePreference,
+  readStoredThemePreference,
+  resetThemeControllerForTests,
+  resolveEffectiveTheme,
+  setThemePreference,
+  useTheme,
+} from "./composables/useTheme.js";
 
 export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  CADENCE_THEME_STORAGE_KEY,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
@@ -59,15 +77,29 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  THEME_MODES,
+  ThemeSwitcher,
+  VITEPRESS_THEME_STORAGE_KEY,
+  applyThemeToDocument,
+  cycleThemePreference,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
+  getResolvedTheme,
+  getThemePreference,
   hasRegisteredUnsavedDrafts,
+  initTheme,
+  normalizeThemePreference,
+  readStoredThemePreference,
   registerDraftSource,
   resetDraftSourcesForTests,
+  resetThemeControllerForTests,
+  resolveEffectiveTheme,
+  setThemePreference,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
   useSignOutGuard,
+  useTheme,
 };

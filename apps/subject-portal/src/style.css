@@ -275,7 +275,7 @@ body {
 
 .badge-unread {
   background-color: var(--danger);
-  color: white;
+  color: var(--semantic-color-text-on-solid);
   font-size: 10px;
   font-weight: 700;
   padding: 2px 6px;
@@ -833,7 +833,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 16px;
-  color: var(--semantic-color-border);
+  color: var(--semantic-color-text-inverse);
 }
 
 .ledger-timeline {
@@ -863,7 +863,7 @@ body {
 }
 
 .ledger-item-details {
-  color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-inverse);
 }
 
 .ledger-verification-details {
@@ -900,7 +900,7 @@ body {
   top: -9999px;
   left: -9999px;
   background-color: var(--primary-dark);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-solid);
   padding: 12px 20px;
   z-index: 10000;
   font-weight: 700;
@@ -938,11 +938,11 @@ body {
 
 /* 2. Color Contrast Adjustments */
 .portal-footer {
-  color: var(--semantic-color-primary-light) !important;
+  color: var(--semantic-color-text-inverse-muted) !important;
 }
 
 .ledger-item-details {
-  color: var(--semantic-color-surface-header) !important;
+  color: var(--semantic-color-text-inverse) !important;
 }
 
 .badge-gxp {
@@ -1260,7 +1260,7 @@ body {
   bottom: 24px;
   right: 24px;
   background-color: var(--success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
   padding: 12px 24px;
   border-radius: 8px;
   box-shadow: var(--semantic-shadow-xl);
@@ -1277,7 +1277,7 @@ body {
 
 .toast-notification.toast-error {
   background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .toast-notification.toast-warning {
@@ -1333,7 +1333,7 @@ body {
 
 .sync-badge.sync-badge-quarantined {
   background-color: var(--semantic-color-error-dark);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .drawer-sync-btn {
@@ -1347,7 +1347,7 @@ body {
   border-radius: 6px;
   background-color: var(--warning-bg);
   border: 1px solid var(--semantic-color-warning-border-strong);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text-dark);
   font-size: 12px;
 }
 
@@ -1362,7 +1362,7 @@ body {
   padding: 8px 10px;
   border-radius: 6px;
   background-color: var(--danger-bg);
-  border: 1px solid var(--semantic-color-error-border-soft);
+  border: 1px solid var(--semantic-color-error-border);
   color: var(--semantic-color-error-text-deep);
 }
 
@@ -1539,7 +1539,7 @@ body {
 .btn-danger-solid {
   background-color: var(--semantic-color-error-dark);
   border-color: var(--semantic-color-error-dark);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .modal-footer-wrap {

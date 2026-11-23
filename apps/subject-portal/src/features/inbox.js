@@ -48,6 +48,7 @@ export function renderInbox() {
 
   const unread = state.notifications.filter((n) => !n.is_read);
   state.unreadCount = unread.length;
+  container.style.display = "";
   const badge = document.getElementById("unread-count");
   if (badge) {
     badge.textContent = unread.length;

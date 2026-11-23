@@ -1,7 +1,7 @@
 // Cadence Clinical Vue SPA Bootstrap entrypoint
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import { initHoverDetection, sanitizeReturnUrl } from "ui";
+import { initHoverDetection, initTheme, sanitizeReturnUrl } from "ui";
 import App from "./App.vue";
 import { installAuthorizedFetch } from "./api/authorization.js";
 import { initKeycloakAuth } from "./auth/bootstrap.js";
@@ -28,6 +28,9 @@ const authStore = useAuthStore(pinia);
 
 // Every gateway-bound fetch carries the Keycloak bearer token (ADR-2250).
 installAuthorizedFetch(window);
+
+// Synchronize theme attributes and listeners idempotently
+initTheme();
 
 // Dynamic Hover Pointer Capability Detection
 initHoverDetection();

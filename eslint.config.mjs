@@ -127,9 +127,13 @@ const noInlineHexRule = {
             stripCssCommentsPreservingNewlines(sourceText)
           );
           if (filename.endsWith("/packages/ui/tokens.css")) {
-            masked = masked.replace(
-              /(?::root(?:\[[^\]]+\])?|\[data-theme="[^"]+"\]|\.dark)[^{]*\{[^}]*\}/g,
-              (rootBlock) => rootBlock.replace(/[^\r\n]/g, " ")
+            const themeSelector = String.raw`(?::root(?:\[data-theme="[^"]+"\]|:not\(\[data-theme="[^"]+"\]\))?|\[data-theme="[^"]+"\]|\.dark(?![\w-]))`;
+            const themeBlockRegex = new RegExp(
+              String.raw`${themeSelector}(?:\s*,\s*${themeSelector})*\s*\{[^}]*\}`,
+              "g"
+            );
+            masked = masked.replace(themeBlockRegex, (rootBlock) =>
+              rootBlock.replace(/[^\r\n]/g, " ")
             );
           }
           for (const match of masked.matchAll(hexColorRegex)) {

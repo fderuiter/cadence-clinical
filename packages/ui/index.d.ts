@@ -698,3 +698,72 @@ export function createOidcSessionCoordinator(options?: {
   storage?: Storage | null;
   returnUrlKey?: string;
 }): OidcSessionCoordinator;
+
+export type ThemeMode = "light" | "dark" | "auto";
+export type ResolvedTheme = "light" | "dark";
+
+export const THEME_MODES: readonly ["light", "dark", "auto"];
+export const VITEPRESS_THEME_STORAGE_KEY: "vitepress-theme-appearance";
+export const CADENCE_THEME_STORAGE_KEY: "cadence-theme-preference";
+
+export interface ThemeApplicationResult {
+  preference: ThemeMode;
+  resolvedTheme: ResolvedTheme;
+  systemPrefersDark: boolean;
+}
+
+export interface ThemeControllerOptions {
+  storage?: Storage | null;
+  document?: Document | null;
+  rootElement?: HTMLElement | null;
+  window?: Window | null;
+  matchMedia?: ((query: string) => MediaQueryList) | null;
+  systemPrefersDark?: boolean;
+  listen?: boolean;
+  persist?: boolean;
+}
+
+export function normalizeThemePreference(raw: unknown): ThemeMode;
+export function readStoredThemePreference(storage?: Storage | null): ThemeMode;
+export function resolveEffectiveTheme(
+  preference: unknown,
+  systemPrefersDark?: boolean
+): ResolvedTheme;
+export function applyThemeToDocument(
+  preference: unknown,
+  options?: ThemeControllerOptions
+): ThemeApplicationResult;
+export function initTheme(
+  options?: ThemeControllerOptions
+): ThemeApplicationResult;
+export function getThemePreference(): ThemeMode;
+export function getResolvedTheme(): ResolvedTheme;
+export function setThemePreference(
+  nextPreference: ThemeMode | string,
+  options?: ThemeControllerOptions
+): ThemeApplicationResult;
+export function cycleThemePreference(
+  options?: ThemeControllerOptions
+): ThemeApplicationResult;
+export function resetThemeControllerForTests(): void;
+
+export function useTheme(options?: ThemeControllerOptions): {
+  modes: readonly ["light", "dark", "auto"];
+  preference: Readonly<import("vue").Ref<ThemeMode>>;
+  resolvedTheme: import("vue").ComputedRef<ResolvedTheme>;
+  isDark: import("vue").ComputedRef<boolean>;
+  setTheme: (mode: ThemeMode | string) => ThemeApplicationResult;
+  cycleTheme: () => ThemeApplicationResult;
+  initTheme: () => ThemeApplicationResult;
+};
+
+export const ThemeSwitcher: DefineComponent<
+  {
+    id?: string;
+    size?: "compact" | "comfortable";
+    showLabels?: boolean;
+    groupLabel?: string;
+  },
+  {},
+  any
+>;

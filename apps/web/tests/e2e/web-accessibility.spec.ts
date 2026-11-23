@@ -1554,6 +1554,11 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     const exportCasebookBtn = page.locator("#btn-export-casebook");
     await expect(exportCasebookBtn).toBeVisible();
     await exportCasebookBtn.click();
+    const digestSummary = page.locator(
+      "details.casebook-digest-disclosure summary"
+    );
+    await expect(digestSummary).toBeVisible();
+    await digestSummary.click();
     const shaCode = page.locator('[data-testid="participant-casebook-sha256"]');
     await expect(shaCode).toBeVisible();
     const shaBox = await shaCode.boundingBox();
@@ -1574,5 +1579,149 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     ).toBeVisible();
     await expectPageWithin320("ProtocolVersionsSection");
     await expectNoWcagViolations(page, "ProtocolVersionsSection at 320x640");
+  });
+
+  test("Unified ThemeSwitcher, pre-paint bootstrap, compact <= 52px AppShell header, VitePress storage sync, and dark-mode WCAG 2.2 AA contrast pass across clinical workspaces", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_THEME_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // Pre-seed VitePress dark appearance before navigation to verify pre-paint bootstrap
+    await page.addInitScript(() => {
+      if (!window.sessionStorage.getItem("__seeded_dark_boot")) {
+        window.sessionStorage.setItem("__seeded_dark_boot", "1");
+        window.localStorage.setItem("vitepress-theme-appearance", "dark");
+      }
+    });
+
+    await gotoHashRoute(page, "/overview");
+    await expect(page.locator("#overview-hub-root")).toBeVisible();
+
+    const bootState = await page.evaluate(() => ({
+      dataTheme: document.documentElement.getAttribute("data-theme"),
+      hasDarkClass: document.documentElement.classList.contains("dark"),
+      colorScheme: document.documentElement.style.colorScheme,
+      bodyBg: window.getComputedStyle(document.body).backgroundColor,
+    }));
+    expect(bootState.dataTheme).toBe("dark");
+    expect(bootState.hasDarkClass).toBe(true);
+    expect(bootState.colorScheme).toBe("dark");
+    // Dark --semantic-color-surface-header (#172033 -> rgb(23, 32, 51))
+    expect(bootState.bodyBg).toBe("rgb(23, 32, 51)");
+
+    // Persistent staff top chrome stays compact (<= 52px) on desktop and tablet
+    const desktopHeaderBox = await page.locator(".app-header").boundingBox();
+    expect(desktopHeaderBox).not.toBeNull();
+    expect(desktopHeaderBox!.height).toBeLessThanOrEqual(52);
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const tabletHeaderBox = await page.locator(".app-header").boundingBox();
+    expect(tabletHeaderBox).not.toBeNull();
+    expect(tabletHeaderBox!.height).toBeLessThanOrEqual(52);
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // ThemeSwitcher renders 3 Lucide SVG buttons with >= 44px compact hit targets and zero Unicode emojis
+    const switcher = page.locator("#shell-theme-switcher");
+    await expect(switcher).toBeVisible();
+    const switcherHtml = await switcher.innerHTML();
+    expect(switcherHtml).not.toMatch(/\p{Extended_Pictographic}/u);
+    const themeBtns = switcher.locator("button");
+    await expect(themeBtns).toHaveCount(3);
+    for (let i = 0; i < 3; i++) {
+      const box = await themeBtns.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(43.9);
+      expect(box!.height).toBeGreaterThanOrEqual(43.9);
+    }
+
+    // Dual focus-visible ring contrast >= 3:1 on ThemeSwitcher in dark mode
+    const darkFocusRing = await focusWithKeyboardAndMeasureDualRing(
+      page,
+      "#shell-theme-switcher-dark"
+    );
+    expect(darkFocusRing.matchesFocusVisible).toBe(true);
+    expect(darkFocusRing.hasHaloShadow).toBe(true);
+    expect(darkFocusRing.parentContrast).toBeGreaterThanOrEqual(3);
+
+    // Dark-mode WCAG 2.2 AA + SC 1.4.11 >= 3:1 border contrast across key views
+    await expectNoWcagViolations(page, "OverviewView (dark)");
+    expect(
+      await getBorderContrastRatio(page, ".btn-task-launch")
+    ).toBeGreaterThanOrEqual(3);
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-dark.png" });
+    }
+
+    await gotoHashRoute(page, "/ctms");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await expectNoWcagViolations(page, "CtmsView Operations (dark)");
+    await page.locator("#tab-startup").click();
+    await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+    await expectNoWcagViolations(page, "SsuGreenlightConsole (dark)");
+
+    await gotoHashRoute(page, "/ecrf");
+    await expect(page.locator("main")).toBeVisible();
+    await expectNoWcagViolations(page, "EcrfView (dark)");
+    const clinicalControl = page.locator(
+      ".clinical-input input, .clinical-input select, .clinical-input textarea"
+    );
+    if ((await clinicalControl.count()) > 0) {
+      expect(
+        await getBorderContrastRatio(
+          page,
+          ".clinical-input input, .clinical-input select, .clinical-input textarea"
+        )
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    await gotoHashRoute(page, "/plans");
+    await expect(page.locator(".plans-view")).toBeVisible();
+    await expectNoWcagViolations(page, "PlansView (dark)");
+
+    await gotoHashRoute(page, "/login");
+    await expect(page.locator("#section-login")).toBeVisible();
+    await expectNoWcagViolations(page, "LoginView (dark)");
+
+    // Switch to Light mode via ThemeSwitcher and capture light screenshot
+    await gotoHashRoute(page, "/overview");
+    await expect(page.locator("#overview-hub-root")).toBeVisible();
+    await page.locator("#shell-theme-switcher-light").click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    const lightStorage = await page.evaluate(() => ({
+      vp: window.localStorage.getItem("vitepress-theme-appearance"),
+      cadence: window.localStorage.getItem("cadence-theme-preference"),
+      hasDarkClass: document.documentElement.classList.contains("dark"),
+    }));
+    expect(lightStorage).toEqual({
+      vp: "light",
+      cadence: "light",
+      hasDarkClass: false,
+    });
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-light.png" });
+    }
+
+    // Switch to Auto mode and verify live prefers-color-scheme media reactivity + storage sync
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.locator("#shell-theme-switcher-auto").click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "auto");
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+
+    await page.evaluate(() => {
+      window.localStorage.setItem("vitepress-theme-appearance", "dark");
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "vitepress-theme-appearance",
+          newValue: "dark",
+        })
+      );
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("html")).toHaveClass(/dark/);
   });
 });

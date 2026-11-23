@@ -4,16 +4,16 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Core Principles
 
-- **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light and dark themes (`[data-theme="dark"]`).
+- **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light, explicit dark (`[data-theme="dark"]`, `.dark`), and zero-drift OS auto-dark (`@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`) themes.
 - **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width with `font-variant-numeric: tabular-nums` digit alignment.
-- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), two-color `:focus-visible` indicators (`2px` `--semantic-color-text-on-solid` inner halo + `3px` `--semantic-color-accent` outer outline delivering `>= 6.34:1` contrast across light, brand, and dark surfaces, with `@media (forced-colors: active)` `Highlight` outlines), live regions for terminology lookup feedback, `48px` enhanced touch targets (`--semantic-touch-target-min`) on `.clinical-input` and `.touch-target`, `24px` minimum pointer targets (`--semantic-control-target-min`) on compact controls per SC 2.5.8, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), two-color `:focus-visible` indicators (`2px` `--semantic-color-text-inverse` inner halo + `3px` `--semantic-color-accent` outer outline delivering `>= 6.34:1` contrast across light, brand, and dark surfaces, with `@media (forced-colors: active)` `Highlight` outlines), live regions for terminology lookup feedback, `48px` enhanced touch targets (`--semantic-touch-target-min`) on `.clinical-input` and `.touch-target`, `24px` minimum pointer targets (`--semantic-control-target-min`) on compact controls per SC 2.5.8, `>= 4.5:1` AA semantic text/status token contrast across light and dark modes, and `>= 3:1` non-text boundary contrast (`--semantic-color-border-control`, `--semantic-color-ai-border`, and semantic info/warning/success/error borders).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 23 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
@@ -24,6 +24,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot       | `button`                          |
 | `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
 | [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
+| `ThemeSwitcher`                            | Accessible `lucide-vue-next` `light` / `dark` / `auto` appearance switcher (`44px` compact and `48px` comfortable variants)   | `group`, `button`                 |
 | [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
 | `ClinicalFieldLayout`                      | Shared accessible field wrapper for inputs, radio groups, validation messages, and query flags                                | `group`, `status`                 |
 | `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
@@ -40,6 +41,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
 | `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
+| `useTheme` / `initTheme`                   | Reactive `light` / `dark` / `auto` theme controller synced with `vitepress-theme-appearance`, `storage`, and OS media queries | Theme helper                      |
 | `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |

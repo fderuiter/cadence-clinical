@@ -1,9 +1,32 @@
 import DefaultTheme from "vitepress/theme";
-import { onMounted, onUnmounted, watch } from "vue";
-import { useRoute } from "vitepress";
+import { onMounted, onUnmounted, ref, watch } from "vue";
+import * as vitepress from "vitepress";
+import {
+  CADENCE_THEME_STORAGE_KEY,
+  VITEPRESS_THEME_STORAGE_KEY,
+  normalizeThemePreference,
+} from "../../../packages/ui/src/composables/useTheme.js";
 import BlogLayout from "./BlogLayout.vue";
 import BlogIndex from "./components/BlogIndex.vue";
 import "./custom.css";
+
+function resolveVitePressDarkRef() {
+  try {
+    const useDataFn = vitepress.useData;
+    if (typeof useDataFn === "function") {
+      const data = useDataFn();
+      if (data && data.isDark) {
+        return data.isDark;
+      }
+    }
+  } catch {
+    // Partial VitePress mocks in unit tests may omit useData
+  }
+  return ref(
+    typeof document !== "undefined" &&
+      document.documentElement.classList.contains("dark")
+  );
+}
 
 export default {
   extends: DefaultTheme,
@@ -12,8 +35,38 @@ export default {
     app.component("BlogIndex", BlogIndex);
   },
   setup() {
-    const route = useRoute();
+    const route = vitepress.useRoute();
+    const isDark = resolveVitePressDarkRef();
     const activeCleanups = new Set();
+    let removeThemeStorageListener = null;
+
+    const syncDocsThemeAttributes = (dark) => {
+      if (typeof document === "undefined") return;
+      const effective = dark ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", effective);
+      document.documentElement.style.colorScheme = effective;
+    };
+
+    const syncDocsStoredPreference = (dark) => {
+      if (typeof window === "undefined") return;
+      try {
+        const vpRaw = window.localStorage.getItem(VITEPRESS_THEME_STORAGE_KEY);
+        const normalizedVp = normalizeThemePreference(vpRaw);
+        const nextPref =
+          vpRaw !== null && vpRaw !== ""
+            ? normalizedVp
+            : dark
+              ? "dark"
+              : "light";
+        if (
+          window.localStorage.getItem(CADENCE_THEME_STORAGE_KEY) !== nextPref
+        ) {
+          window.localStorage.setItem(CADENCE_THEME_STORAGE_KEY, nextPref);
+        }
+      } catch {
+        // Ignore restricted storage environments
+      }
+    };
 
     const clearAllActiveDrags = () => {
       activeCleanups.forEach((cleanup) => {
@@ -28,6 +81,10 @@ export default {
 
     onUnmounted(() => {
       clearAllActiveDrags();
+      if (removeThemeStorageListener) {
+        removeThemeStorageListener();
+        removeThemeStorageListener = null;
+      }
     });
 
     const initPanZoom = () => {
@@ -288,8 +345,42 @@ export default {
     };
 
     onMounted(() => {
+      syncDocsThemeAttributes(isDark.value);
+      syncDocsStoredPreference(isDark.value);
+
+      if (typeof window !== "undefined") {
+        const onStorage = (event) => {
+          if (
+            event &&
+            event.key !== null &&
+            event.key !== VITEPRESS_THEME_STORAGE_KEY &&
+            event.key !== CADENCE_THEME_STORAGE_KEY
+          ) {
+            return;
+          }
+          const incoming = normalizeThemePreference(event?.newValue);
+          const prefersDark =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const targetDark =
+            incoming === "auto" ? prefersDark : incoming === "dark";
+          if (isDark.value !== targetDark) {
+            isDark.value = targetDark;
+          }
+          syncDocsThemeAttributes(targetDark);
+        };
+        window.addEventListener("storage", onStorage);
+        removeThemeStorageListener = () =>
+          window.removeEventListener("storage", onStorage);
+      }
+
       // Delay initialization slightly to let mermaid finish rendering
       setTimeout(initPanZoom, 200);
+    });
+
+    watch(isDark, (dark) => {
+      syncDocsThemeAttributes(dark);
+      syncDocsStoredPreference(dark);
     });
 
     watch(

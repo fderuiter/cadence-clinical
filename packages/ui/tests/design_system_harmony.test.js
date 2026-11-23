@@ -32,12 +32,26 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ModalErrorAlert",
   "PersonaSwitcher",
   "SignOutConfirmModal",
+  "ThemeSwitcher",
 ];
 
 const EXPECTED_KEYBOARD_HELPERS = [
   "useFocusTrap",
   "getFocusableElements",
   "useEscapeClose",
+];
+
+const EXPECTED_THEME_HELPERS = [
+  "initTheme",
+  "useTheme",
+  "getThemePreference",
+  "getResolvedTheme",
+  "setThemePreference",
+  "cycleThemePreference",
+  "applyThemeToDocument",
+  "normalizeThemePreference",
+  "readStoredThemePreference",
+  "resolveEffectiveTheme",
 ];
 
 function walkFiles(dir, extensions, ignoreDirs = new Set()) {
@@ -191,7 +205,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 22 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 23 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -201,16 +215,17 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(22);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(23);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+    it("exposes all 3 keyboard interaction helpers, theme controller helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        ...EXPECTED_THEME_HELPERS,
         "createSrOnlyActionButton",
         "useAsyncRetry",
       ]) {
@@ -219,9 +234,14 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
           `root index.js missing ${helperName}`
         ).toBeTypeOf("function");
       }
+      expect(rootUi.THEME_MODES).toEqual(["light", "dark", "auto"]);
+      expect(rootUi.VITEPRESS_THEME_STORAGE_KEY).toBe(
+        "vitepress-theme-appearance"
+      );
+      expect(rootUi.CADENCE_THEME_STORAGE_KEY).toBe("cadence-theme-preference");
     });
 
-    it("declares complete TypeScript definitions for all 22 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 23 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -230,6 +250,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        ...EXPECTED_THEME_HELPERS,
         "createSrOnlyActionButton",
         "useAsyncRetry",
       ]) {
@@ -307,9 +328,10 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         /:root\[data-theme="dark"\][\s\S]*?\{/
       );
       const autoDarkMatch = tokensCss.match(
-        /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{[\s\S]*?:root\[data-theme="auto"\]\s*\{([\s\S]*?)\}/
+        /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{([\s\S]*?)\}/
       );
       expect(autoDarkMatch).not.toBeNull();
+      expect(tokensCss).not.toContain(':root[data-theme="auto"]');
       const autoDarkBody = autoDarkMatch[1];
 
       const webAliases = parseCssBlockVars(webStyleCss, /:root\s*\{/);
@@ -540,42 +562,73 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       tokensCss,
       /:root\[data-theme="dark"\][\s\S]*?\{/
     );
+    const autoDarkOverrides = parseCssBlockVars(
+      tokensCss,
+      /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{/
+    );
     const darkTheme = { ...lightTheme, ...darkThemeOverrides };
 
     const semanticContrastPairs = [
-      // Core text roles on surfaces
+      // Core text roles across primary, muted, subtle & header surfaces
       ["--semantic-color-text", "--semantic-color-surface"],
       ["--semantic-color-text", "--semantic-color-surface-muted"],
+      ["--semantic-color-text", "--semantic-color-surface-subtle"],
+      ["--semantic-color-text", "--semantic-color-surface-header"],
       ["--semantic-color-text-muted", "--semantic-color-surface"],
       ["--semantic-color-text-muted", "--semantic-color-surface-muted"],
+      ["--semantic-color-text-muted", "--semantic-color-surface-subtle"],
       ["--semantic-color-text-muted", "--semantic-color-surface-header"],
       ["--semantic-color-text-dark", "--semantic-color-surface"],
       ["--semantic-color-text-dark", "--semantic-color-surface-muted"],
+      ["--semantic-color-text-dark", "--semantic-color-surface-subtle"],
       ["--semantic-color-text-body", "--semantic-color-surface"],
       ["--semantic-color-text-body", "--semantic-color-surface-muted"],
+      ["--semantic-color-text-body", "--semantic-color-surface-subtle"],
       ["--semantic-color-text-secondary", "--semantic-color-surface"],
       ["--semantic-color-text-secondary", "--semantic-color-surface-muted"],
+      ["--semantic-color-text-secondary", "--semantic-color-surface-subtle"],
       ["--semantic-color-text-subtle", "--semantic-color-surface"],
       ["--semantic-color-text-subtle", "--semantic-color-surface-muted"],
+      ["--semantic-color-text-subtle", "--semantic-color-surface-subtle"],
 
       // Brand & interactive roles
       ["--semantic-color-primary", "--semantic-color-surface"],
+      ["--semantic-color-primary", "--semantic-color-surface-muted"],
       ["--semantic-color-primary", "--semantic-color-primary-light"],
       ["--semantic-color-text-on-primary", "--semantic-color-primary"],
+      [
+        "--semantic-color-text-on-primary",
+        "--semantic-color-interactive-primary",
+      ],
+      [
+        "--semantic-color-text-on-primary",
+        "--semantic-color-interactive-primary-hover",
+      ],
+      ["--semantic-color-text-on-primary", "--semantic-color-accent"],
+      ["--semantic-color-text-on-primary", "--semantic-color-ai"],
       ["--semantic-color-primary-dark", "--semantic-color-surface"],
       ["--semantic-color-primary-dark", "--semantic-color-primary-light"],
       ["--semantic-color-accent", "--semantic-color-surface"],
       ["--semantic-color-accent", "--semantic-color-accent-bg"],
+      ["--semantic-color-accent", "--semantic-color-accent-light"],
       ["--semantic-color-interactive-primary", "--semantic-color-surface"],
+      [
+        "--semantic-color-interactive-primary-hover",
+        "--semantic-color-surface",
+      ],
       ["--semantic-color-interactive-brand", "--semantic-color-surface"],
 
-      // Validation, info, warning, success, error & AI badge/banner pairs
+      // Validation, info, warning, success, error, AI & categorical badge/banner pairs
       ["--semantic-color-success", "--semantic-color-surface"],
       ["--semantic-color-success", "--semantic-color-success-bg"],
+      ["--semantic-color-success", "--semantic-color-success-bg-soft"],
       ["--semantic-color-success-dark", "--semantic-color-surface"],
       ["--semantic-color-success-dark", "--semantic-color-success-bg"],
       ["--semantic-color-warning", "--semantic-color-surface"],
       ["--semantic-color-warning", "--semantic-color-warning-bg"],
+      ["--semantic-color-warning", "--semantic-color-warning-bg-soft"],
+      ["--semantic-color-warning", "--semantic-color-warning-bg-light"],
+      ["--semantic-color-warning-dark", "--semantic-color-warning-bg-badge"],
       ["--semantic-color-warning-text", "--semantic-color-warning-bg"],
       ["--semantic-color-warning-text", "--semantic-color-warning-bg-light"],
       ["--semantic-color-warning-text", "--semantic-color-warning-bg-badge"],
@@ -590,27 +643,82 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       ],
       ["--semantic-color-error", "--semantic-color-surface"],
       ["--semantic-color-error", "--semantic-color-error-bg"],
+      ["--semantic-color-error", "--semantic-color-error-bg-soft"],
+      ["--semantic-color-error", "--semantic-color-error-bg-row"],
       ["--semantic-color-error-dark", "--semantic-color-surface"],
       ["--semantic-color-error-dark", "--semantic-color-error-bg"],
+      ["--semantic-color-error-text-dark", "--semantic-color-error-bg"],
+      ["--semantic-color-error-text-deep", "--semantic-color-error-bg"],
       ["--semantic-color-info", "--semantic-color-surface"],
       ["--semantic-color-info", "--semantic-color-info-bg"],
+      ["--semantic-color-info", "--semantic-color-info-bg-soft"],
       ["--semantic-color-info", "--semantic-color-info-light"],
       ["--semantic-color-ai", "--semantic-color-surface"],
       ["--semantic-color-ai", "--semantic-color-ai-bg"],
+      ["--semantic-color-ai-dark", "--semantic-color-ai-bg"],
+      ["--semantic-color-teal-text", "--semantic-color-teal-bg"],
+      ["--semantic-color-indigo-text", "--semantic-color-indigo-bg"],
+      ["--semantic-color-purple-text", "--semantic-color-purple-bg"],
+      ["--semantic-color-text", "--semantic-color-purple-bg"],
+      ["--semantic-color-orange-text", "--semantic-color-orange-bg"],
+      ["--semantic-color-rose-text", "--semantic-color-rose-bg"],
+      ["--semantic-color-pink-text", "--semantic-color-pink-bg"],
 
-      // Solid action/badge pairs
+      // Inverse chrome pairs
+      ["--semantic-color-text-inverse", "--semantic-color-surface-inverse"],
+      [
+        "--semantic-color-text-inverse-muted",
+        "--semantic-color-surface-inverse",
+      ],
+      [
+        "--semantic-color-text-inverse-muted",
+        "--semantic-color-surface-elevated",
+      ],
+      ["--semantic-color-accent-inverse", "--semantic-color-surface-inverse"],
+      [
+        "--semantic-color-emerald-inverse-text",
+        "--semantic-color-surface-inverse",
+      ],
+
+      // Solid action/badge/wallet pairs
+      ["--semantic-color-text-on-solid", "--semantic-color-primary-dark"],
       ["--semantic-color-text-on-solid", "--semantic-color-warning-dark"],
       ["--semantic-color-text-on-solid", "--semantic-color-warning-action"],
+      ["--semantic-color-text-on-solid", "--semantic-color-success"],
+      ["--semantic-color-text-on-solid", "--semantic-color-success-dark"],
       [
         "--semantic-color-text-on-solid",
         "--semantic-color-success-interactive",
       ],
       ["--semantic-color-text-on-solid", "--semantic-color-success-accent"],
+      ["--semantic-color-text-on-solid", "--semantic-color-error"],
+      ["--semantic-color-text-on-solid", "--semantic-color-text-muted"],
       ["--semantic-color-text-on-solid", "--semantic-color-wallet-start"],
       ["--semantic-color-text-on-solid", "--semantic-color-wallet-end"],
     ];
 
+    it("overrides all 118 :root color and shadow tokens with 100% parity between [data-theme=dark] and @media (prefers-color-scheme: dark) :root:not([data-theme=light])", () => {
+      const rootColorAndShadowTokens = Object.keys(lightTheme).filter(
+        (k) =>
+          k.startsWith("--color-") ||
+          k.startsWith("--shadow-") ||
+          k.startsWith("--semantic-color-") ||
+          k.startsWith("--semantic-shadow-")
+      );
+      expect(rootColorAndShadowTokens).toHaveLength(118);
+
+      const missingInDark = rootColorAndShadowTokens.filter(
+        (k) => !(k in darkThemeOverrides)
+      );
+      expect(missingInDark).toEqual([]);
+      expect(Object.keys(darkThemeOverrides)).toHaveLength(140);
+
+      // Zero drift between explicit dark theme and OS prefers-color-scheme auto-dark
+      expect(autoDarkOverrides).toEqual(darkThemeOverrides);
+    });
+
     it("achieves >= 4.5:1 WCAG AA contrast across all shared semantic pairs in light theme", () => {
+      expect(semanticContrastPairs.length).toBeGreaterThanOrEqual(69);
       for (const [fgVar, bgVar] of semanticContrastPairs) {
         const fgHex = resolveVar(fgVar, lightTheme);
         const bgHex = resolveVar(bgVar, lightTheme);
@@ -625,9 +733,8 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
     });
 
     it("defines paired dark-theme semantic tokens and achieves >= 4.5:1 WCAG AA contrast in dark theme", () => {
-      expect(Object.keys(darkThemeOverrides).length).toBeGreaterThan(30);
       expect(tokensCss).toContain("@media (prefers-color-scheme: dark)");
-      expect(tokensCss).toContain(':root[data-theme="auto"]');
+      expect(tokensCss).toContain(':root:not([data-theme="light"])');
 
       for (const [fgVar, bgVar] of semanticContrastPairs) {
         const fgHex = resolveVar(fgVar, darkTheme);
@@ -642,7 +749,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("achieves >= 4.5:1 WCAG AA contrast on centralized .btn-primary, portal .sync-badge, and clinician CRF designer badges/buttons", () => {
+    it("achieves >= 4.5:1 WCAG AA contrast on centralized .btn-primary, portal alerts/badges/footers, AiLabel/AiActionButton, and clinician CRF/chrome rules in light and dark modes", () => {
       const btnPrimary = parseRuleProps(
         tokensCss,
         /\.btn-primary,\s*\.btn\.btn-primary\s*\{/
@@ -687,18 +794,64 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         ...parseCssBlockVars(portalStyleCss, /:root\s*\{/),
       };
 
-      const syncBadge = parseRuleProps(portalStyleCss, /\.sync-badge\s*\{/);
-      expect(syncBadge).not.toBeNull();
-      for (const [mode, map] of [
-        ["light", portalMapLight],
-        ["dark", portalMapDark],
-      ]) {
-        const fg = resolveCssColorExpr(syncBadge.color, map);
-        const bg = resolveCssColorExpr(syncBadge["background-color"], map);
-        expect(
-          contrastRatio(fg, bg),
-          `sync-badge ${mode}`
-        ).toBeGreaterThanOrEqual(4.5);
+      const portalRulesToVerify = [
+        { name: ".sync-badge", re: /\.sync-badge\s*\{/ },
+        {
+          name: ".sync-badge.sync-badge-quarantined",
+          re: /\.sync-badge\.sync-badge-quarantined\s*\{/,
+        },
+        {
+          name: ".inbox-item.unread",
+          re: /\.inbox-item\.unread\s*\{/,
+          fallbackFg: "var(--semantic-color-text)",
+        },
+        {
+          name: ".sync-suspended-desc",
+          re: /\.sync-suspended-desc\s*\{/,
+          fallbackBg: "var(--danger-bg)",
+        },
+        {
+          name: ".retry-countdown-banner",
+          re: /\.retry-countdown-banner\s*\{/,
+        },
+        { name: ".quarantine-guidance", re: /\.quarantine-guidance\s*\{/ },
+        { name: ".badge-unread", re: /(?:^|\n)\.badge-unread\s*\{/ },
+        { name: ".toast-notification", re: /\.toast-notification\s*\{/ },
+        {
+          name: ".footer-title",
+          re: /\.footer-title\s*\{/,
+          fallbackBg: "var(--semantic-color-surface-inverse)",
+        },
+        {
+          name: ".ledger-item-details",
+          re: /\.ledger-item-details\s*\{/,
+          fallbackBg: "var(--semantic-color-surface-inverse)",
+        },
+        { name: ".skip-link", re: /\.skip-link\s*\{/ },
+        { name: ".btn-danger-solid", re: /\.btn-danger-solid\s*\{/ },
+      ];
+
+      for (const { name, re, fallbackFg, fallbackBg } of portalRulesToVerify) {
+        const props = parseRuleProps(portalStyleCss, re);
+        expect(props, `Portal rule not found: ${name}`).not.toBeNull();
+        for (const [mode, map] of [
+          ["light", portalMapLight],
+          ["dark", portalMapDark],
+        ]) {
+          const fg = resolveCssColorExpr(props.color || fallbackFg, map);
+          const bg = resolveCssColorExpr(
+            props["background-color"] ||
+              props.background ||
+              fallbackBg ||
+              "var(--semantic-color-surface)",
+            map
+          );
+          const ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            `portal ${name} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
       }
 
       const webMapLight = {
@@ -723,6 +876,26 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
           name: ".clinical-soa-matrix th.arm-header",
           re: /\.clinical-soa-matrix\s+th\.arm-header\s*\{/,
         },
+        { name: ".app-header", re: /\.app-header\s*\{/ },
+        { name: ".persona-select", re: /\.persona-select\s*\{/ },
+        { name: ".user-avatar", re: /\.user-avatar\s*\{/ },
+        {
+          name: ".btn-logout-action, .btn-login-action",
+          re: /\.btn-logout-action,\s*\.btn-login-action\s*\{/,
+        },
+        { name: ".btn-close-query", re: /\}\s*\.btn-close-query\s*\{/ },
+        { name: ".btn-reopen-query", re: /\}\s*\.btn-reopen-query\s*\{/ },
+        {
+          name: ".badge-open, .query-status-open",
+          re: /\.badge-open,\s*\.query-status-open\s*\{/,
+        },
+        { name: ".modal-header", re: /\.modal-header\s*\{/ },
+        { name: ".error-banner", re: /\.error-banner\s*\{/ },
+        {
+          name: ".skip-link:focus-visible",
+          re: /\.skip-link:focus,\s*\.skip-link:focus-visible\s*\{/,
+        },
+        { name: ".btn-viewport.active", re: /\.btn-viewport\.active\s*\{/ },
       ];
 
       for (const { name, re } of webRulesToVerify) {
@@ -745,6 +918,55 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
             `${name} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
           ).toBeGreaterThanOrEqual(4.5);
         }
+      }
+
+      // Verify AiLabel.vue (.ai-label text & >= 3:1 border, .ai-mark solid badge) and AiActionButton.vue (.ai-btn-primary)
+      const aiLabelVue = fs.readFileSync(
+        path.join(webSrcDir, "components/ai/AiLabel.vue"),
+        "utf-8"
+      );
+      const aiLabelProps = parseRuleProps(aiLabelVue, /\.ai-label\s*\{/);
+      const aiMarkProps = parseRuleProps(aiLabelVue, /\.ai-mark\s*\{/);
+      expect(aiLabelProps).not.toBeNull();
+      expect(aiMarkProps).not.toBeNull();
+
+      const aiBtnVue = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/AiActionButton.vue"),
+        "utf-8"
+      );
+      const aiBtnPrimaryProps = parseRuleProps(
+        aiBtnVue,
+        /\.ai-btn-primary\s*\{/
+      );
+      expect(aiBtnPrimaryProps).not.toBeNull();
+
+      for (const [mode, map] of [
+        ["light", webMapLight],
+        ["dark", webMapDark],
+      ]) {
+        const labelFg = resolveCssColorExpr(aiLabelProps.color, map);
+        const labelBg = resolveCssColorExpr(aiLabelProps.background, map);
+        expect(
+          contrastRatio(labelFg, labelBg),
+          `AiLabel .ai-label (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+
+        const markFg = resolveCssColorExpr(aiMarkProps.color, map);
+        const markBg = resolveCssColorExpr(aiMarkProps.background, map);
+        expect(
+          contrastRatio(markFg, markBg),
+          `AiLabel .ai-mark (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+
+        const aiBtnFg = resolveCssColorExpr(aiBtnPrimaryProps.color, map);
+        const aiBtnBg = resolveCssColorExpr(
+          aiBtnPrimaryProps["background-color"] || aiBtnPrimaryProps.background,
+          map
+        );
+        expect(
+          contrastRatio(aiBtnFg, aiBtnBg),
+          `AiActionButton .ai-btn-primary (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
       }
     });
   });

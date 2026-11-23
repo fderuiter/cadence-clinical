@@ -155,7 +155,7 @@ const handleClick = (e) => {
 .ai-action-btn:focus-visible {
   outline: 3px solid var(--semantic-color-accent);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
+  box-shadow: 0 0 0 2px var(--semantic-color-text-inverse);
 }
 
 /* Sizes */
@@ -180,7 +180,7 @@ const handleClick = (e) => {
 /* Variants */
 .ai-btn-primary {
   background: var(--color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   border-color: var(--color-primary-dark);
 }
 
@@ -207,7 +207,7 @@ const handleClick = (e) => {
 }
 
 .ai-btn-subtle:hover:not(:disabled) {
-  background: var(--semantic-color-info-border-accent);
+  background: var(--semantic-color-info-light);
 }
 
 .ai-btn-outline {

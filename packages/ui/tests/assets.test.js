@@ -177,10 +177,17 @@ describe("CSS Assets and Package Exports", () => {
 
   describe("WCAG 2.2 Relative Luminance Contrast Gates", () => {
     const tokensPath = path.join(uiDir, "tokens.css");
-    const tokens = parseRootTokens(fs.readFileSync(tokensPath, "utf-8"));
+    const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+    const tokens = parseRootTokens(tokensContent);
+    const darkTokens = parseThemeOverlayTokens(
+      tokensContent,
+      /:root\[data-theme="dark"\][\s\S]*?\{([\s\S]*?)\}/,
+      tokens
+    );
     const lightSurfaces = ["#ffffff", "#f8fafc", "#f1f5f9", "#eff6ff"];
+    const darkSurfaces = ["#0f172a", "#1e293b", "#1e293d", "#172554"];
 
-    it("delivers >= 4.5:1 contrast for all semantic text and interactive foreground tokens across #ffffff, #f8fafc, #f1f5f9, and #eff6ff (SC 1.4.3 / G18)", () => {
+    it("delivers >= 4.5:1 contrast for all semantic text and interactive foreground tokens across light and dark surfaces (SC 1.4.3 / G18)", () => {
       const normalTextTokens = [
         "--semantic-color-text",
         "--semantic-color-text-dark",
@@ -219,59 +226,93 @@ describe("CSS Assets and Package Exports", () => {
       ];
 
       for (const tokenName of normalTextTokens) {
-        const fgHex = tokens.get(tokenName);
-        expect(fgHex, `${tokenName} must be defined`).toBeDefined();
+        const lightFgHex = tokens.get(tokenName);
+        expect(lightFgHex, `Light ${tokenName} must be defined`).toBeDefined();
         for (const bgHex of lightSurfaces) {
-          const ratio = contrastRatio(fgHex, bgHex);
+          const ratio = contrastRatio(lightFgHex, bgHex);
           expect(
             ratio,
-            `${tokenName} (${fgHex}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+            `Light ${tokenName} (${lightFgHex}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+
+        const darkFgHex = darkTokens.get(tokenName);
+        expect(darkFgHex, `Dark ${tokenName} must be defined`).toBeDefined();
+        for (const bgHex of darkSurfaces) {
+          const ratio = contrastRatio(darkFgHex, bgHex);
+          expect(
+            ratio,
+            `Dark ${tokenName} (${darkFgHex}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
           ).toBeGreaterThanOrEqual(4.5);
         }
       }
     });
 
-    it("delivers >= 4.5:1 normal-text contrast and >= 3:1 large-scale figure contrast (G145) for filled buttons, badges, and wallet gradient cards", () => {
-      const surfaceHex = tokens.get("--semantic-color-surface");
-      const filledActionAndWalletTokens = [
+    it("delivers >= 4.5:1 normal-text contrast and >= 3:1 large-scale figure contrast (G145) for filled buttons, badges, and wallet gradient cards in light and dark themes", () => {
+      const onPrimaryFills = [
         "--semantic-color-primary",
-        "--semantic-color-primary-dark",
-        "--semantic-color-accent",
         "--semantic-color-interactive-primary",
         "--semantic-color-interactive-primary-hover",
+        "--semantic-color-accent",
+        "--semantic-color-ai",
+      ];
+      const onSolidFills = [
+        "--semantic-color-primary-dark",
+        "--semantic-color-warning-dark",
         "--semantic-color-warning-action",
         "--semantic-color-success",
         "--semantic-color-success-dark",
+        "--semantic-color-success-interactive",
+        "--semantic-color-success-accent",
         "--semantic-color-error",
-        "--semantic-color-ai",
         "--semantic-color-wallet-start",
         "--semantic-color-wallet-end",
       ];
 
-      for (const bgToken of filledActionAndWalletTokens) {
-        const bgHex = tokens.get(bgToken);
-        const ratio = contrastRatio(surfaceHex, bgHex);
-        expect(
-          ratio,
-          `White text (${surfaceHex}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
-        ).toBeGreaterThanOrEqual(4.5);
+      for (const [mode, map] of [
+        ["light", tokens],
+        ["dark", darkTokens],
+      ]) {
+        const textOnPrimary = map.get("--semantic-color-text-on-primary");
+        for (const bgToken of onPrimaryFills) {
+          const bgHex = map.get(bgToken);
+          const ratio = contrastRatio(textOnPrimary, bgHex);
+          expect(
+            ratio,
+            `${mode} --semantic-color-text-on-primary (${textOnPrimary}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+
+        const textOnSolid = map.get("--semantic-color-text-on-solid");
+        for (const bgToken of onSolidFills) {
+          const bgHex = map.get(bgToken);
+          const ratio = contrastRatio(textOnSolid, bgHex);
+          expect(
+            ratio,
+            `${mode} --semantic-color-text-on-solid (${textOnSolid}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
       }
 
-      // Large-scale heading and wallet gradient tokens against light surfaces (G145 >= 3:1)
+      // Large-scale heading and wallet gradient tokens against light & dark surfaces (G145 >= 3:1)
       for (const largeToken of [
         "--semantic-color-wallet-start",
         "--semantic-color-wallet-end",
         "--semantic-color-primary",
         "--semantic-color-primary-dark",
       ]) {
-        const fgHex = tokens.get(largeToken);
+        const lightFgHex = tokens.get(largeToken);
         for (const bgHex of lightSurfaces) {
-          expect(contrastRatio(fgHex, bgHex)).toBeGreaterThanOrEqual(3);
+          expect(contrastRatio(lightFgHex, bgHex)).toBeGreaterThanOrEqual(3);
+        }
+        const darkFgHex = darkTokens.get(largeToken);
+        for (const bgHex of darkSurfaces) {
+          expect(contrastRatio(darkFgHex, bgHex)).toBeGreaterThanOrEqual(3);
         }
       }
     });
 
-    it("delivers >= 4.5:1 contrast for semantic status badge foreground/background pairs and inverse chrome tokens", () => {
+    it("delivers >= 4.5:1 contrast for semantic status badge foreground/background pairs and inverse chrome tokens across light and dark themes", () => {
       const badgePairs = [
         ["--semantic-color-success", "--semantic-color-success-bg"],
         ["--semantic-color-success-dark", "--semantic-color-success-bg"],
@@ -307,35 +348,113 @@ describe("CSS Assets and Package Exports", () => {
         ],
       ];
 
-      for (const [fgToken, bgToken] of badgePairs) {
-        const fgHex = tokens.get(fgToken);
-        const bgHex = tokens.get(bgToken);
-        const ratio = contrastRatio(fgHex, bgHex);
-        expect(
-          ratio,
-          `${fgToken} (${fgHex}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
-        ).toBeGreaterThanOrEqual(4.5);
+      for (const [mode, map] of [
+        ["light", tokens],
+        ["dark", darkTokens],
+      ]) {
+        for (const [fgToken, bgToken] of badgePairs) {
+          const fgHex = map.get(fgToken);
+          const bgHex = map.get(bgToken);
+          const ratio = contrastRatio(fgHex, bgHex);
+          expect(
+            ratio,
+            `${mode} ${fgToken} (${fgHex}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
       }
     });
 
-    it("delivers >= 3:1 non-text boundary contrast for --semantic-color-border-control across light surfaces while preserving subtle --semantic-color-border (SC 1.4.11)", () => {
-      const controlBorderHex = tokens.get("--semantic-color-border-control");
-      const passiveBorderHex = tokens.get("--semantic-color-border");
-
-      expect(controlBorderHex).toBe(tokens.get("--color-border-control"));
-      expect(passiveBorderHex).toBe("#e2e8f0");
+    it("delivers >= 3:1 non-text boundary contrast for control, AI, and semantic status borders across light and dark themes while keeping passive --semantic-color-border subtle (SC 1.4.11)", () => {
+      const lightControlBorder = tokens.get("--semantic-color-border-control");
+      const lightPassiveBorder = tokens.get("--semantic-color-border");
+      expect(lightControlBorder).toBe(tokens.get("--color-border-control"));
+      expect(lightPassiveBorder).toBe("#e2e8f0");
+      expect(
+        contrastRatio(
+          lightPassiveBorder,
+          tokens.get("--semantic-color-surface")
+        )
+      ).toBeLessThan(3);
 
       for (const bgHex of lightSurfaces) {
-        const ratio = contrastRatio(controlBorderHex, bgHex);
+        const ratio = contrastRatio(lightControlBorder, bgHex);
         expect(
           ratio,
-          `--semantic-color-border-control (${controlBorderHex}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 3:1)`
+          `light --semantic-color-border-control (${lightControlBorder}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 3:1)`
         ).toBeGreaterThanOrEqual(3);
+      }
+
+      const darkControlBorder = darkTokens.get(
+        "--semantic-color-border-control"
+      );
+      const darkPassiveBorder = darkTokens.get("--semantic-color-border");
+      expect(darkControlBorder).toBe(darkTokens.get("--color-border-control"));
+      expect(darkPassiveBorder).toBe("#334155");
+      expect(
+        contrastRatio(
+          darkPassiveBorder,
+          darkTokens.get("--semantic-color-surface")
+        )
+      ).toBeLessThan(3);
+
+      for (const bgHex of darkSurfaces) {
+        const ratio = contrastRatio(darkControlBorder, bgHex);
+        expect(
+          ratio,
+          `dark --semantic-color-border-control (${darkControlBorder}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 3:1)`
+        ).toBeGreaterThanOrEqual(3);
+      }
+
+      const semanticBorderPairs = [
+        ["--semantic-color-ai-border", "--semantic-color-ai-bg"],
+        ["--semantic-color-info-border", "--semantic-color-info-bg"],
+        ["--semantic-color-info-border-accent", "--semantic-color-info-bg"],
+        ["--semantic-color-warning-border", "--semantic-color-warning-bg"],
+        [
+          "--semantic-color-warning-border-strong",
+          "--semantic-color-warning-bg",
+        ],
+        [
+          "--semantic-color-warning-action-border",
+          "--semantic-color-warning-bg",
+        ],
+        ["--semantic-color-success-border", "--semantic-color-success-bg"],
+        [
+          "--semantic-color-success-border-soft",
+          "--semantic-color-success-bg-soft",
+        ],
+        ["--semantic-color-error-border", "--semantic-color-error-bg"],
+        [
+          "--semantic-color-error-border-soft",
+          "--semantic-color-error-bg-soft",
+        ],
+      ];
+
+      for (const [mode, map] of [
+        ["light", tokens],
+        ["dark", darkTokens],
+      ]) {
+        const primarySurfaceHex = map.get("--semantic-color-surface");
+        for (const [borderToken, statusBgToken] of semanticBorderPairs) {
+          const borderHex = map.get(borderToken);
+          const statusBgHex = map.get(statusBgToken);
+
+          const surfaceRatio = contrastRatio(borderHex, primarySurfaceHex);
+          expect(
+            surfaceRatio,
+            `${mode} ${borderToken} (${borderHex}) on --semantic-color-surface (${primarySurfaceHex}) achieved ${surfaceRatio.toFixed(2)}:1 (< 3:1)`
+          ).toBeGreaterThanOrEqual(3);
+
+          const statusBgRatio = contrastRatio(borderHex, statusBgHex);
+          expect(
+            statusBgRatio,
+            `${mode} ${borderToken} (${borderHex}) on ${statusBgToken} (${statusBgHex}) achieved ${statusBgRatio.toFixed(2)}:1 (< 3:1)`
+          ).toBeGreaterThanOrEqual(3);
+        }
       }
     });
 
     it("standardizes 24px --control-target-min while preserving 48px --touch-target-min (SC 2.5.8 / SC 2.5.5)", () => {
-      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
       expect(tokens.get("--control-target-min")).toBe("24px");
       expect(tokens.get("--semantic-control-target-min")).toBe("24px");
       expect(tokens.get("--touch-target-min")).toBe("48px");
@@ -345,13 +464,6 @@ describe("CSS Assets and Package Exports", () => {
     });
 
     it("delivers >= 3:1 (specifically >= 6.34:1) dual focus-visible ring contrast across #ffffff, #f8fafc, #026597, #1e293b, #0f172a, and #090d16 (SC 2.4.7 / SC 1.4.11 / C40)", () => {
-      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
-      const darkTokens = parseThemeOverlayTokens(
-        tokensContent,
-        /:root\[data-theme="dark"\][\s\S]*?\{([\s\S]*?)\}/,
-        tokens
-      );
-
       const requiredSurfaces = [
         "#ffffff",
         "#f8fafc",
@@ -361,7 +473,7 @@ describe("CSS Assets and Package Exports", () => {
         "#090d16",
       ];
 
-      const innerHaloHex = tokens.get("--semantic-color-text-on-solid");
+      const innerHaloHex = tokens.get("--semantic-color-text-inverse");
       const lightOuterOutlineHex = tokens.get("--semantic-color-accent");
       expect(innerHaloHex).toBe("#ffffff");
       expect(lightOuterOutlineHex).toBe("#4338ca");
@@ -382,8 +494,8 @@ describe("CSS Assets and Package Exports", () => {
         ).toBeGreaterThanOrEqual(6.34);
       }
 
-      // Dark-theme token overlay: --semantic-color-text-on-solid (#ffffff) + --semantic-color-accent (#a5b4fc)
-      const darkInnerHaloHex = darkTokens.get("--semantic-color-text-on-solid");
+      // Dark-theme token overlay: --semantic-color-text-inverse (#ffffff) + --semantic-color-accent (#a5b4fc)
+      const darkInnerHaloHex = darkTokens.get("--semantic-color-text-inverse");
       const darkOuterOutlineHex = darkTokens.get("--semantic-color-accent");
       expect(darkInnerHaloHex).toBe("#ffffff");
       expect(darkOuterOutlineHex).toBe("#a5b4fc");
@@ -452,6 +564,46 @@ describe("CSS Assets and Package Exports", () => {
       const cssRules = cssResult.messages.map((m) => m.ruleId);
       expect(cssRules).toContain("custom-vue/no-inline-hex");
       expect(cssRules).toContain("custom-vue/no-undefined-css-vars");
+    });
+
+    it("permits hex color definitions only inside canonical theme blocks in packages/ui/tokens.css and rejects local theme hex overrides elsewhere", async () => {
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const [tokensCanonicalResult] = await eslint.lintText(
+        fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8"),
+        {
+          filePath: path.join(uiDir, "tokens.css"),
+        }
+      );
+      expect(tokensCanonicalResult.messages).toEqual([]);
+
+      // Non-theme class selector inside packages/ui/tokens.css must NOT be masked
+      const [tokensRogueRuleResult] = await eslint.lintText(
+        `:root {\n  --color-primary: #0369a1;\n}\n.dark-card {\n  color: #ff00aa;\n}\n`,
+        {
+          filePath: path.join(uiDir, "tokens.css"),
+        }
+      );
+      expect(tokensRogueRuleResult.messages.map((m) => m.ruleId)).toContain(
+        "custom-vue/no-inline-hex"
+      );
+
+      // Consumer stylesheets must NOT define local hex overrides even inside [data-theme="dark"]
+      for (const consumerCssPath of [
+        path.join(repoRoot, "apps/web/src/style.css"),
+        path.join(repoRoot, "apps/subject-portal/src/style.css"),
+      ]) {
+        const [consumerResult] = await eslint.lintText(
+          `[data-theme="dark"] {\n  --local-override: #ff00aa;\n}\n`,
+          { filePath: consumerCssPath }
+        );
+        expect(consumerResult.messages.map((m) => m.ruleId)).toContain(
+          "custom-vue/no-inline-hex"
+        );
+      }
     });
 
     it("rejects synthetic Vue and CSS fixtures with bare outline: none / outline: 0 without :focus-visible while permitting :focus:not(:focus-visible)", async () => {

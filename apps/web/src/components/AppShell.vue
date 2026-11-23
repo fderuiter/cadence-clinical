@@ -165,21 +165,27 @@
           >
             Help &amp; SOPs
           </button>
-
-          <div class="user-session-controls">
-            <span class="user-badge">
-              {{ authStore.identity?.username || "Signed in" }}
-            </span>
-            <button
-              id="btn-logout"
-              type="button"
-              class="btn btn-sm btn-secondary"
-              @click="handleLogout"
-            >
-              Sign out
-            </button>
-          </div>
         </template>
+
+        <ThemeSwitcher
+          id="shell-theme-switcher"
+          size="compact"
+          @change="handleThemeChange"
+        />
+
+        <div v-if="authStore.isAuthenticated" class="user-session-controls">
+          <span class="user-badge">
+            {{ authStore.identity?.username || "Signed in" }}
+          </span>
+          <button
+            id="btn-logout"
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="handleLogout"
+          >
+            Sign out
+          </button>
+        </div>
 
         <template v-else>
           <router-link
@@ -344,7 +350,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { SignOutConfirmModal, ThemeSwitcher, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -501,6 +507,13 @@ function handlePersonaChange(event) {
   }
 }
 
+function handleThemeChange({ preference, resolvedTheme }) {
+  statusAnnouncement.value =
+    preference === "auto"
+      ? `Appearance set to system default (${resolvedTheme} mode)`
+      : `Appearance switched to ${preference} mode`;
+}
+
 async function handleLogin() {
   if (typeof authStore.login === "function") {
     await authStore.login();
@@ -626,9 +639,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 10px 20px;
+  gap: 6px;
+  padding: 2px 12px;
   background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border-bottom: 1px solid var(--semantic-color-border);
   position: sticky;
   top: 0;
@@ -638,47 +652,50 @@ onUnmounted(() => {
 .header-left {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   text-decoration: none;
   color: var(--semantic-color-text);
 }
 
 .brand-mark {
   color: var(--semantic-color-interactive-primary);
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
 .header-title-area h1 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--semantic-color-text);
+  white-space: nowrap;
 }
 
 .primary-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 1px;
 }
 
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  padding: 4px 6px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.79rem;
   font-weight: 500;
   color: var(--semantic-color-text-body);
   text-decoration: none;
+  white-space: nowrap;
   border: 1px solid transparent;
   transition:
     background-color 0.15s ease,
@@ -702,15 +719,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 5px;
 }
 
 .plan-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
+  padding: 3px 7px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-decoration: none;
   background: var(--semantic-color-info-bg);
@@ -764,14 +781,15 @@ onUnmounted(() => {
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 4px 7px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -783,8 +801,8 @@ onUnmounted(() => {
 
 .palette-kbd {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
-  padding: 1px 5px;
+  font-size: 0.72rem;
+  padding: 1px 4px;
   border-radius: 4px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
@@ -795,39 +813,40 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   max-width: 100%;
   min-width: 0;
 }
 
 .persona-label {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .persona-select {
-  padding: 5px 8px;
+  padding: 3px 5px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
-  max-width: min(220px, 100%);
+  font-size: 0.76rem;
+  max-width: min(104px, 100%);
   min-width: 0;
 }
 
 .shell-control-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 4px;
+  padding: 4px 7px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -837,9 +856,9 @@ onUnmounted(() => {
 }
 
 .setup-progress-pill {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 1px 6px;
+  padding: 1px 5px;
   border-radius: 999px;
   background: var(--semantic-color-info-bg);
   color: var(--semantic-color-info);
@@ -849,18 +868,21 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-left: 6px;
+  gap: 6px;
+  padding-left: 5px;
   border-left: 1px solid var(--semantic-color-border);
   max-width: 100%;
   min-width: 0;
 }
 
 .user-badge {
-  font-size: 0.83rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
-  overflow-wrap: anywhere;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shell-main {
@@ -887,6 +909,8 @@ onUnmounted(() => {
   display: none;
   align-items: center;
   justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -933,7 +957,26 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1520px) {
+  .persona-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .palette-kbd,
+  .user-badge {
+    display: none;
+  }
+}
+
+@media (max-width: 1279px) {
   .primary-nav {
     display: none;
   }

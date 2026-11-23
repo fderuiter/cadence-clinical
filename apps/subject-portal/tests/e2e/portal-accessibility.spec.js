@@ -1614,4 +1614,174 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
   });
+
+  test("should synchronize dark/light/auto ThemeSwitcher (>= 48px targets), pre-paint bootstrap, and pass WCAG 2.2 AA in dark mode across tasks, inbox, validation errors, SyncDrawer, and WalletView", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_THEME_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await page.route("**/interop/epro/sync", async (route) => {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          detail: [
+            {
+              loc: ["body", "submissions", 0, "answers", "vssbp"],
+              msg: "Systolic blood pressure exceeds protocol safety ceiling of 250 mmHg",
+            },
+          ],
+        }),
+      });
+    });
+
+    await page.route("**/interop/epro/submit", async (route) => {
+      await route.fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          detail: [
+            {
+              loc: ["body", "answers", "vssbp"],
+              msg: "Systolic blood pressure exceeds protocol safety ceiling of 250 mmHg",
+            },
+          ],
+        }),
+      });
+    });
+
+    await page.addInitScript(() => {
+      if (!window.sessionStorage.getItem("__portal_seeded_dark_boot")) {
+        window.sessionStorage.setItem("__portal_seeded_dark_boot", "1");
+        window.localStorage.setItem("vitepress-theme-appearance", "dark");
+      }
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    const bootState = await page.evaluate(() => ({
+      dataTheme: document.documentElement.getAttribute("data-theme"),
+      hasDarkClass: document.documentElement.classList.contains("dark"),
+      colorScheme: document.documentElement.style.colorScheme,
+      bodyBg: window.getComputedStyle(document.body).backgroundColor,
+    }));
+    expect(bootState.dataTheme).toBe("dark");
+    expect(bootState.hasDarkClass).toBe(true);
+    expect(bootState.colorScheme).toBe("dark");
+    // Dark --bg-main / --semantic-color-surface-muted (#1e293b -> rgb(30, 41, 59))
+    expect(bootState.bodyBg).toBe("rgb(30, 41, 59)");
+
+    // Comfortable ThemeSwitcher in PortalHeader: 3 Lucide SVG buttons >= 48x48px, zero emojis
+    const switcher = page.locator("#portal-theme-switcher");
+    await expect(switcher).toBeVisible();
+    const switcherHtml = await switcher.innerHTML();
+    expect(switcherHtml).not.toMatch(/\p{Extended_Pictographic}/u);
+    const themeBtns = switcher.locator("button");
+    await expect(themeBtns).toHaveCount(3);
+    for (let i = 0; i < 3; i++) {
+      const box = await themeBtns.nth(i).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box.width).toBeGreaterThanOrEqual(47.9);
+      expect(box.height).toBeGreaterThanOrEqual(47.9);
+    }
+
+    const expectZeroDarkAxeViolations = async (label) => {
+      const results = await new AxeBuilder({ page })
+        .options({ rules: { "target-size": { enabled: true } } })
+        .withTags(WCAG_AA_TAGS)
+        .analyze();
+      expect(
+        results.violations,
+        `Dark WCAG 2.2 AA violations on ${label}: ${JSON.stringify(results.violations)}`
+      ).toEqual([]);
+    };
+
+    // 1. Dark Tasks view + screenshot
+    await expect(page.locator("#view-tasks")).toBeVisible();
+    await expectZeroDarkAxeViolations("Tasks view (dark)");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/portal-dark.png" });
+    }
+
+    // 2. Dark Inbox view (.inbox-item.unread)
+    await page.click("#tab-btn-inbox button");
+    await expect(page.locator("#view-inbox")).toBeVisible();
+    await expect(page.locator(".inbox-item.unread").first()).toBeVisible();
+    await expectZeroDarkAxeViolations("Inbox view with unread cards (dark)");
+
+    // 3. Dark WalletView (gradient stipend card + >= 3:1 control border)
+    await page.click("#tab-btn-wallet button");
+    await expect(page.locator("#view-wallet")).toBeVisible();
+    await expectZeroDarkAxeViolations("WalletView (dark)");
+    const walletSelect = page.locator("#view-wallet select").first();
+    if ((await walletSelect.count()) > 0) {
+      expect(
+        await getControlBorderContrast(page, "#view-wallet select")
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    // 4. Dark Questionnaire validation error state (.has-error)
+    await page.click("#tab-btn-tasks button");
+    await page.click("#task-card-assign_01 .btn-start-task");
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+    await page.click("#btn-submit-questionnaire");
+    await expect(page.locator("#field-container-vssbp")).toHaveClass(
+      /has-error/
+    );
+    await expectZeroDarkAxeViolations("Questionnaire validation errors (dark)");
+
+    // 5. Dark Quarantined SyncDrawer (.sync-badge-quarantined + .quarantine-guidance)
+    await page.evaluate(async () => {
+      const { queueSubmission } =
+        await import("/subject-portal/src/sync-queue.js");
+      const { refreshSubmissionsState } =
+        await import("/subject-portal/src/index.js");
+      await queueSubmission({
+        subject_id: "subject_mocked_001",
+        diary_id: "inst_daily_diary",
+        assignment_id: "assign_01",
+        answers: { vssbp: 265, vsdpb: 90, vshr: 78 },
+        change_reason: "Dark mode quarantine contrast check",
+        username: "subject_mocked_001",
+      });
+      await refreshSubmissionsState();
+    });
+    await page.click("#btn-global-sync-drawer");
+    await expect(page.locator("#global-sync-drawer")).toHaveClass(/active/);
+    await page.click("#btn-drawer-sync-now");
+    await expect(page.locator("#header-sync-badge")).toHaveClass(
+      /sync-badge-quarantined/
+    );
+    const drawerDarkResults = await new AxeBuilder({ page })
+      .include("#global-sync-drawer")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(drawerDarkResults.violations).toEqual([]);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#global-sync-drawer")).not.toHaveClass(/active/);
+
+    // 6. Switch to Light mode via ThemeSwitcher + capture light screenshot + verify VitePress storage sync
+    await page.click("#tab-btn-tasks button");
+    await expect(page.locator("#view-tasks")).toBeVisible();
+    await page.click("#portal-theme-switcher-light");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/portal-light.png" });
+    }
+
+    await page.evaluate(() => {
+      window.localStorage.setItem("vitepress-theme-appearance", "dark");
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "vitepress-theme-appearance",
+          newValue: "dark",
+        })
+      );
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("html")).toHaveClass(/dark/);
+  });
 });

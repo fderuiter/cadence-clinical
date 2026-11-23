@@ -1,6 +1,6 @@
 // Bootstrap: restores the session, mounts the shell, signs in, loads the
 // participant's data, renders the views and starts the offline sync.
-import { initHoverDetection } from "ui";
+import { initHoverDetection, initTheme } from "ui";
 
 import { isAuthenticatedSession } from "../api/client.js";
 import {
@@ -70,6 +70,9 @@ export async function initializeApp() {
     if (appEl) {
       mountPortal(appEl);
     }
+
+    // Synchronize theme attributes and listeners idempotently
+    initTheme();
 
     // Dynamic Hover Pointer Capability Detection
     initHoverDetection();

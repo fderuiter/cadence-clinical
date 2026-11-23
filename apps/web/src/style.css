@@ -24,7 +24,7 @@ body {
    ========================================================================== */
 .app-header {
   background-color: var(--semantic-color-surface-inverse);
-  color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-inverse);
   padding: 12px 24px;
   display: flex;
   justify-content: space-between;
@@ -73,7 +73,7 @@ body {
     background-color: var(--semantic-color-surface-elevated);
     border: 1px solid var(--semantic-color-border-inverse);
     border-radius: 6px;
-    color: var(--semantic-color-surface-muted);
+    color: var(--semantic-color-text-inverse);
     padding: 6px 10px;
     font-size: 1.1rem;
     cursor: pointer;
@@ -189,7 +189,7 @@ body {
 .cmd-palette-trigger:hover {
   background-color: var(--semantic-color-border-inverse);
   border-color: var(--semantic-color-text-inverse-muted);
-  color: var(--semantic-color-border);
+  color: var(--semantic-color-text-inverse);
 }
 
 .cmd-palette-trigger .search-icon {
@@ -246,7 +246,7 @@ body {
 
 .persona-select {
   background-color: var(--semantic-color-surface-elevated);
-  color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
@@ -277,7 +277,7 @@ body {
   width: 28px;
   height: 28px;
   background-color: var(--semantic-color-wallet-start);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-solid);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -295,7 +295,7 @@ body {
 .user-name {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-inverse);
 }
 
 .user-role-label {
@@ -311,7 +311,7 @@ body {
   font-weight: 600;
   background-color: var(--semantic-color-error);
   border: none;
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-solid);
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -323,7 +323,7 @@ body {
 }
 
 .btn-logout-action:hover {
-  background-color: var(--semantic-color-error-text-dark);
+  background-color: var(--semantic-color-error-dark);
 }
 
 /* ==========================================================================
@@ -819,13 +819,13 @@ main {
 
 .btn-close-query {
   background-color: var(--success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
   margin-right: 8px;
 }
 
 .btn-reopen-query {
   background-color: var(--warning);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .query-status-badge {
@@ -839,7 +839,7 @@ main {
 
 .badge-open,
 .query-status-open {
-  background-color: var(--semantic-color-warning-border);
+  background-color: var(--semantic-color-warning-bg-badge);
   color: var(--semantic-color-warning-text);
   border: 1px solid var(--semantic-color-warning-border-strong);
 }
@@ -915,9 +915,9 @@ main {
   overflow: hidden;
 }
 
-.modal-header {
+:where(.modal) > .modal-header {
   background-color: var(--primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   padding: 16px 20px;
   font-weight: 700;
   font-size: 1.1rem;
@@ -1027,7 +1027,7 @@ main {
 
 .error-banner {
   background: var(--semantic-color-error-bg-soft);
-  border: 1px solid var(--semantic-color-error-border-soft);
+  border: 1px solid var(--semantic-color-error-border);
   color: var(--semantic-color-error-text-dark);
   padding: 10px 12px;
   border-radius: 6px;
@@ -1218,7 +1218,7 @@ main {
 
 /* Color Contrast Adjustments */
 .header-title-area p {
-  color: var(--semantic-color-primary-light) !important;
+  color: var(--semantic-color-text-inverse-muted) !important;
 }
 
 .query-meta,
@@ -1272,7 +1272,7 @@ main {
   z-index: 10000 !important;
   text-decoration: none !important;
   box-shadow:
-    0 0 0 2px var(--semantic-color-text-on-solid),
+    0 0 0 2px var(--semantic-color-text-inverse),
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   outline: 3px solid var(--semantic-color-accent) !important;
@@ -1375,7 +1375,7 @@ main {
 
 .btn-viewport.active {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
