@@ -61,25 +61,41 @@ describe("vite.config.js manualChunks split", () => {
     "/repo/apps/web/src/api/training.ts",
   ];
 
-  it("routes all 11 unbacked stubs to api-legacy-stubs", () => {
+  it("leaves all 11 unbacked stubs ungrouped so Rollup code-splits them into async route chunks", () => {
     for (const moduleId of legacyStubs) {
-      expect(resolveManualChunk(moduleId), moduleId).toBe("api-legacy-stubs");
+      expect(resolveManualChunk(moduleId), moduleId).toBeUndefined();
     }
   });
 
-  it("keeps all 14 live .NET clients and helpers in api-services", () => {
+  it("leaves all 14 live .NET clients and helpers ungrouped so route-only clients are not forced into boot", () => {
     for (const moduleId of liveClients) {
-      expect(resolveManualChunk(moduleId), moduleId).toBe("api-services");
+      expect(resolveManualChunk(moduleId), moduleId).toBeUndefined();
     }
   });
 
-  it("keeps clinical store and usdm-schemas in isolated chunks", () => {
-    expect(resolveManualChunk("/repo/apps/web/src/stores/clinical.ts")).toBe(
-      "store-clinical"
-    );
-    expect(resolveManualChunk("/repo/packages/usdm-schemas/src/index.ts")).toBe(
-      "workspace-usdm"
-    );
+  it("leaves clinical store and usdm-schemas ungrouped and isolates vendor chunks", () => {
+    expect(
+      resolveManualChunk("/repo/apps/web/src/stores/clinical.ts")
+    ).toBeUndefined();
+    expect(
+      resolveManualChunk("/repo/packages/usdm-schemas/src/index.ts")
+    ).toBeUndefined();
+    expect(
+      resolveManualChunk(
+        "/repo/node_modules/vue/dist/vue.runtime.esm-bundler.js"
+      )
+    ).toBe("vendor-vue");
+    expect(
+      resolveManualChunk("/repo/node_modules/vuedraggable/src/vuedraggable.js")
+    ).toBe("vendor-vuedraggable");
+    expect(
+      resolveManualChunk(
+        "/repo/node_modules/sortablejs/modular/sortable.esm.js"
+      )
+    ).toBe("vendor-vuedraggable");
+    expect(
+      resolveManualChunk("/repo/node_modules/zod/index.js")
+    ).toBeUndefined();
   });
 });
 
@@ -146,7 +162,11 @@ describe("lazy demo state on application boot", () => {
       }
     )._s;
     expect(storesMap.has("clinical")).toBe(true);
-    expect(storesMap.get("clinical")?.ledgerBlocks[0]?.action).toBe("GENESIS");
+    await vi.waitFor(() => {
+      expect(storesMap.get("clinical")?.ledgerBlocks[0]?.action).toBe(
+        "GENESIS"
+      );
+    });
     wrapper.unmount();
   });
 

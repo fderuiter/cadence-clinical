@@ -57,6 +57,12 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Aspire.*"
         update-types: ["version-update:semver-major"]
+      # Microsoft.CodeAnalysis.NetAnalyzers >= 10.0 promotes CA1711/CA1716/CA1720/CA1000 under AnalysisLevel=latest-recommended across kernel contracts.
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        update-types: ["version-update:semver-major"]
+      # Fluid.Core 3.x removed mutable TemplateOptions and MemberNameStrategies; stay on 2.x until FluidTemplateRenderer is migrated.
+      - dependency-name: "Fluid.Core"
+        update-types: ["version-update:semver-major"]
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]

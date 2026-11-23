@@ -102,13 +102,16 @@ public sealed class DemoManifestGeneratorTests : IDisposable
 
         DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: _tempRoot).Should().Be(1);
 
-        // Restore manifest, then mutate kernel seed to simulate backend drift without regenerating frontend fixtures
+        // Restore manifest, then mutate canonical demo-seed.json to simulate seed drift without regenerating frontend fixtures
         File.WriteAllText(manifestPath, originalManifest, Encoding.UTF8);
-        string kernelPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.KernelSeedRelativePath);
-        string kernelContent = File.ReadAllText(kernelPath, Encoding.UTF8);
+        string seedPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.DemoSeedRelativePath);
+        string seedContent = File.ReadAllText(seedPath, Encoding.UTF8);
         File.WriteAllText(
-            kernelPath,
-            kernelContent.Replace("(\"SUBJ-102-001\", \"SITE-102\"),", "(\"SUBJ-102-001\", \"SITE-102\"),\n        (\"SUBJ-102-002\", \"SITE-102\"),", StringComparison.Ordinal),
+            seedPath,
+            seedContent.Replace(
+                "\"subjectCode\": \"SUBJ-102-001\",\n      \"siteCode\": \"SITE-102\"\n    }",
+                "\"subjectCode\": \"SUBJ-102-001\",\n      \"siteCode\": \"SITE-102\"\n    },\n    {\n      \"subjectCode\": \"SUBJ-102-002\",\n      \"siteCode\": \"SITE-102\"\n    }",
+                StringComparison.Ordinal),
             Encoding.UTF8);
 
         DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: _tempRoot).Should().Be(1);
@@ -135,35 +138,29 @@ public sealed class DemoManifestGeneratorTests : IDisposable
 
         // Granting a Subject-only realm account a staff kernel role must fail K027 validation
         File.WriteAllText(realmPath, originalRealm, Encoding.UTF8);
-        string kernelPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.KernelSeedRelativePath);
-        string originalKernel = File.ReadAllText(kernelPath, Encoding.UTF8);
+        string seedPath = Path.Combine(_tempRoot, DemoManifestGeneratorService.DemoSeedRelativePath);
+        string originalSeed = File.ReadAllText(seedPath, Encoding.UTF8);
         File.WriteAllText(
-            kernelPath,
-            originalKernel.Replace(
-                "(\"auditor.lead\", \"d43095eb-1912-40dd-a528-fa04335a2342\", \"DEMO_AUDITOR\", null),",
-                "(\"auditor.lead\", \"d43095eb-1912-40dd-a528-fa04335a2342\", \"DEMO_AUDITOR\", null),\n        (\"subject.site101\", \"7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d\", \"DEMO_CRC\", \"SITE-101\"),",
+            seedPath,
+            originalSeed.Replace(
+                "\"username\": \"auditor.lead\",\n      \"subject\": \"d43095eb-1912-40dd-a528-fa04335a2342\",\n      \"role\": \"DEMO_AUDITOR\",\n      \"site\": null\n    }",
+                "\"username\": \"auditor.lead\",\n      \"subject\": \"d43095eb-1912-40dd-a528-fa04335a2342\",\n      \"role\": \"DEMO_AUDITOR\",\n      \"site\": null\n    },\n    {\n      \"username\": \"subject.site101\",\n      \"subject\": \"7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d\",\n      \"role\": \"DEMO_CRC\",\n      \"site\": \"SITE-101\"\n    }",
                 StringComparison.Ordinal),
             Encoding.UTF8);
         DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var grantErrors).Should().BeFalse();
         grantErrors.Should().Contain(e => e.Contains("K027", StringComparison.Ordinal));
 
-        // Referencing an undefined C# constant identifier in Users must fail closed with a clear diagnostic
-        File.WriteAllText(
-            kernelPath,
-            originalKernel.Replace(
-                "(\"designer.lead\", DesignerLeadSubject, \"DEMO_DESIGNER\", null),",
-                "(\"designer.lead\", MissingSubjectConst, \"DEMO_DESIGNER\", null),",
-                StringComparison.Ordinal),
-            Encoding.UTF8);
-        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var constErrors).Should().BeFalse();
-        constErrors.Should().Contain(e => e.Contains("MissingSubjectConst", StringComparison.Ordinal));
+        // Malformed JSON in demo-seed.json must fail closed with a clear diagnostic
+        File.WriteAllText(seedPath, "{ invalid json", Encoding.UTF8);
+        DemoManifestGeneratorService.TryBuildExpectedArtifacts(_tempRoot, out _, out _, out _, out var jsonErrors).Should().BeFalse();
+        jsonErrors.Should().Contain(e => e.Contains("Invalid JSON", StringComparison.Ordinal));
     }
 
     private void CopySeedFilesToTempRepo(string repoRoot)
     {
         foreach (string rel in new[]
         {
-            DemoManifestGeneratorService.KernelSeedRelativePath,
+            DemoManifestGeneratorService.DemoSeedRelativePath,
             DemoManifestGeneratorService.ExecutionSeedRelativePath,
             DemoManifestGeneratorService.RealmRelativePath,
         })

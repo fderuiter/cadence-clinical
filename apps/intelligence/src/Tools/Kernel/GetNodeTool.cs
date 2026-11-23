@@ -66,9 +66,16 @@ internal sealed class GetNodeTool(IKernelNavigator navigator, IObservationRecord
         }
 
         var path = await navigator.GetZoomPathAsync(tenant, summary.Ref, cancellationToken).ConfigureAwait(false) ?? [];
-        var refs = path.Where(s => s.Ref is not null).Select(s => s.Ref!).Append(summary.Ref).Distinct().ToList();
-        var masks = await visibility.MaskAsync(context.Principal, refs, cancellationToken).ConfigureAwait(false);
-        if (masks.ContainsKey(summary.Ref))
+        var refs = path.Where(s => s.Ref is not null).Select(s => s.Ref!).Append(summary.Ref).ToList();
+        NodeRef? observationEnrollment = observation is null ? null : NodeRef.For(observation.EnrollmentId);
+        if (observationEnrollment is not null)
+        {
+            refs.Add(observationEnrollment);
+        }
+
+        var distinctRefs = refs.Distinct().ToList();
+        var masks = await visibility.MaskAsync(context.Principal, distinctRefs, cancellationToken).ConfigureAwait(false);
+        if (masks.ContainsKey(summary.Ref) || (observationEnrollment is not null && masks.ContainsKey(observationEnrollment)))
         {
             return ToolResult<NodeView>.NotFoundOrNotVisible();
         }

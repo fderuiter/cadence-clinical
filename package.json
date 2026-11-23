@@ -11,7 +11,7 @@
     "test": "pnpm -r test && pnpm exec vitest run --config vitest.config.mjs",
     "test:all": "pnpm -r test && pnpm exec vitest run --config vitest.config.mjs && node scripts/run-cli.js test",
     "check-docs-drift": "node scripts/run-cli.js validate-architecture-drift",
-    "lint": "node scripts/run-cli.js validate-path-patterns && pnpm -r lint",
+    "lint": "node scripts/run-cli.js validate-path-patterns && pnpm -r lint && pnpm exec eslint \"docs/.vitepress/theme/**/*.js\"",
     "format": "pnpm exec prettier --write --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"",
     "fix": "node scripts/run-cli.js fix",
     "cadence": "node scripts/run-cli.js",
