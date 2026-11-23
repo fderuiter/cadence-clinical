@@ -534,13 +534,24 @@ public sealed class CommercialAndOnboardingUnitTests
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult<SiteDirectoryEntry?>(null);
 
-        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<SiteDirectoryEntry?>(null);
 
         public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([]);
 
         public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudySiteDirectoryEntry?>(null);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<StudySiteDirectoryEntry?>(null);
     }
 

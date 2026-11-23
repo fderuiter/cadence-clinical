@@ -63,6 +63,7 @@ public static class ContextualHelpScorer
         ["crc"] = "site_crc",
         ["site_coordinator"] = "site_crc",
         ["study_coordinator"] = "site_crc",
+        ["trial_coordinator"] = "site_crc",
         ["pharmacist"] = "site_crc",
 
         ["site_investigator"] = "site_investigator",
@@ -86,28 +87,14 @@ public static class ContextualHelpScorer
         ["regulatory_inspector"] = "auditor",
     };
 
-    /// <summary>Normalizes a UI route path by stripping query/hash fragments and trailing slashes.</summary>
+    /// <summary>
+    /// Normalizes a UI route path by stripping hash fragments, trailing slashes, and non-routing query parameters
+    /// while preserving canonical Clinical Canvas <c>stage</c> and <c>section</c> query parameters.
+    /// </summary>
     public static string NormalizeRoute(string? route)
     {
-        if (string.IsNullOrWhiteSpace(route))
-        {
-            return "/";
-        }
-
-        string clean = route.Trim();
-        int queryIdx = clean.IndexOfAny(['?', '#']);
-        if (queryIdx >= 0)
-        {
-            clean = clean[..queryIdx];
-        }
-
-        if (!clean.StartsWith('/'))
-        {
-            clean = "/" + clean;
-        }
-
-        clean = clean.TrimEnd('/');
-        return clean.Length == 0 ? "/" : clean;
+        var (path, stage, section) = ParseCanonicalRoute(route);
+        return FormatCanonicalRoute(path, stage, section);
     }
 
     /// <summary>Normalizes a persona key or RBAC role into one of the canonical workspace persona identifiers.</summary>
@@ -140,12 +127,51 @@ public static class ContextualHelpScorer
             return -1;
         }
 
-        string normalizedRoute = NormalizeRoute(route);
-        string pattern = rawPattern.Trim();
+        var (routePath, routeStage, routeSection) = ParseCanonicalRoute(route);
+        string trimmedPattern = rawPattern.Trim();
 
-        if (pattern is "*" or "/*")
+        if (trimmedPattern is "*" or "/*")
         {
             return 1000;
+        }
+
+        int hashIdx = trimmedPattern.IndexOf('#');
+        if (hashIdx >= 0)
+        {
+            trimmedPattern = trimmedPattern[..hashIdx];
+        }
+
+        string patternPathPart = trimmedPattern;
+        string? patternQueryPart = null;
+        int queryIdx = trimmedPattern.IndexOf('?');
+        if (queryIdx >= 0)
+        {
+            patternPathPart = trimmedPattern[..queryIdx];
+            patternQueryPart = trimmedPattern[(queryIdx + 1)..];
+        }
+
+        var (patternStage, patternSection, hasUnsupportedQueryFilter) = ParsePatternQuery(patternQueryPart);
+        if (hasUnsupportedQueryFilter)
+        {
+            return -1;
+        }
+
+        if (patternStage is not null && !string.Equals(routeStage, patternStage, StringComparison.OrdinalIgnoreCase))
+        {
+            return -1;
+        }
+
+        if (patternSection is not null && !string.Equals(routeSection, patternSection, StringComparison.OrdinalIgnoreCase))
+        {
+            return -1;
+        }
+
+        int queryBonus = (patternStage is not null ? 200 : 0) + (patternSection is not null ? 400 : 0);
+
+        string pattern = patternPathPart.Trim();
+        if (pattern is "*" or "/*")
+        {
+            return 1000 + queryBonus;
         }
 
         if (!pattern.StartsWith('/'))
@@ -153,7 +179,7 @@ public static class ContextualHelpScorer
             pattern = "/" + pattern;
         }
 
-        string[] routeSegments = SplitSegments(normalizedRoute);
+        string[] routeSegments = SplitSegments(routePath);
 
         // Prefix wildcard pattern: e.g. "/studies/*" or "/studies/:studyCode/*"
         if (pattern.EndsWith("/*", StringComparison.Ordinal))
@@ -162,7 +188,7 @@ public static class ContextualHelpScorer
             string normalizedPrefix = prefixPart.Length == 0 ? "/" : prefixPart.TrimEnd('/');
             if (normalizedPrefix.Length == 0)
             {
-                return 1000;
+                return 1000 + queryBonus;
             }
 
             string[] prefixSegments = SplitSegments(normalizedPrefix);
@@ -194,7 +220,7 @@ public static class ContextualHelpScorer
             }
 
             // Longer prefixes and literal prefix segments outrank shorter prefixes; exact/parameterized full matches stay in 3000+/4000+.
-            return 2000 + (prefixSegments.Length * 25) + (literalMatches * 10);
+            return 2000 + (prefixSegments.Length * 25) + (literalMatches * 10) + queryBonus;
         }
 
         string cleanPattern = pattern.TrimEnd('/');
@@ -208,8 +234,8 @@ public static class ContextualHelpScorer
 
         if (!hasParameter)
         {
-            return string.Equals(normalizedRoute, cleanPattern, StringComparison.OrdinalIgnoreCase)
-                ? 4000 + (routeSegments.Length * 10)
+            return string.Equals(routePath, cleanPattern, StringComparison.OrdinalIgnoreCase)
+                ? 4000 + (routeSegments.Length * 10) + queryBonus
                 : -1;
         }
 
@@ -240,7 +266,7 @@ public static class ContextualHelpScorer
             }
         }
 
-        return 3000 + (literalSegmentCount * 15) + routeSegments.Length;
+        return 3000 + (literalSegmentCount * 15) + routeSegments.Length + queryBonus;
     }
 
     /// <summary>
@@ -360,6 +386,135 @@ public static class ContextualHelpScorer
             primaryVersion,
             winner.Mapping.SectionAnchor,
             related);
+    }
+
+    private static (string Path, string? Stage, string? Section) ParseCanonicalRoute(string? route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return ("/", null, null);
+        }
+
+        string clean = route.Trim();
+        int hashIdx = clean.IndexOf('#');
+        if (hashIdx >= 0)
+        {
+            clean = clean[..hashIdx];
+        }
+
+        string rawPath = clean;
+        string? rawQuery = null;
+        int queryIdx = clean.IndexOf('?');
+        if (queryIdx >= 0)
+        {
+            rawPath = clean[..queryIdx];
+            rawQuery = clean[(queryIdx + 1)..];
+        }
+
+        const char RouteDelimiter = '/';
+        string normalizedPath = rawPath.Trim();
+        if (!normalizedPath.StartsWith(RouteDelimiter))
+        {
+            normalizedPath = string.Concat(RouteDelimiter, normalizedPath);
+        }
+
+        normalizedPath = normalizedPath.TrimEnd(RouteDelimiter);
+        if (normalizedPath.Length == 0)
+        {
+            normalizedPath = RouteDelimiter.ToString();
+        }
+
+        var (stage, section, _) = ParseQueryStageAndSection(rawQuery, rejectUnknownKeys: false);
+        return (normalizedPath, stage, section);
+    }
+
+    private static string FormatCanonicalRoute(string path, string? stage, string? section)
+    {
+        if (stage is not null && section is not null)
+        {
+            return $"{path}?stage={stage}&section={section}";
+        }
+
+        if (stage is not null)
+        {
+            return $"{path}?stage={stage}";
+        }
+
+        if (section is not null)
+        {
+            return $"{path}?section={section}";
+        }
+
+        return path;
+    }
+
+    private static (string? Stage, string? Section, bool HasUnsupportedFilter) ParsePatternQuery(string? query) =>
+        ParseQueryStageAndSection(query, rejectUnknownKeys: true);
+
+    private static (string? Stage, string? Section, bool HasUnsupportedFilter) ParseQueryStageAndSection(
+        string? query,
+        bool rejectUnknownKeys)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return (null, null, false);
+        }
+
+        string? stage = null;
+        string? section = null;
+        bool hasUnsupported = false;
+
+        foreach (string pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eqIdx = pair.IndexOf('=');
+            string rawKey = eqIdx >= 0 ? pair[..eqIdx] : pair;
+            string rawVal = eqIdx >= 0 ? pair[(eqIdx + 1)..] : string.Empty;
+
+            string key = DecodeQueryPart(rawKey).Trim();
+            string val = DecodeQueryPart(rawVal).Trim().ToLowerInvariant();
+            if (key.Length == 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(key, "stage", StringComparison.OrdinalIgnoreCase))
+            {
+                if (val.Length > 0)
+                {
+                    stage = val;
+                }
+            }
+            else if (string.Equals(key, "section", StringComparison.OrdinalIgnoreCase))
+            {
+                if (val.Length > 0)
+                {
+                    section = val;
+                }
+            }
+            else if (rejectUnknownKeys)
+            {
+                hasUnsupported = true;
+            }
+        }
+
+        return (stage, section, hasUnsupported);
+    }
+
+    private static string DecodeQueryPart(string value)
+    {
+        if (value.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            return Uri.UnescapeDataString(value.Replace('+', ' '));
+        }
+        catch (UriFormatException)
+        {
+            return value;
+        }
     }
 
     private static string[] SplitSegments(string normalizedPath) =>

@@ -303,12 +303,8 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             return HttpMethods.IsGet(method) ? null : AllFamilies;
         }
 
-        if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/sites", StringComparison.OrdinalIgnoreCase))
-        {
-            return HttpMethods.IsGet(method) ? null : StudyCreationFamilies;
-        }
-
-        if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/studies", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/studies", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(path.TrimEnd('/'), "/api/v1/kernel/sites", StringComparison.OrdinalIgnoreCase))
         {
             return HttpMethods.IsGet(method) ? null : StudyCreationFamilies;
         }
