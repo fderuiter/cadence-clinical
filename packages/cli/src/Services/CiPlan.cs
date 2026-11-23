@@ -92,7 +92,7 @@ public sealed record CiStep(string Job, string Name)
     public string? CoveredBy { get; init; }
 
     /// <summary>
-    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-skip</c> skips it with
+    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-missing-tools</c> skips it with
     /// <see cref="ToolHint"/>.
     /// </summary>
     public string? RequiredTool { get; init; }
@@ -195,7 +195,7 @@ public static class CiPlan
 
     private static CiCommand Dotnet(params string[] args) => new("dotnet", args);
 
-    private static CiCommand Pnpm(params string[] args) => new(OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm", args)
+    private static CiCommand Pnpm(params string[] args) => new("pnpm", args)
     {
         CiText = string.Join(' ', args.Prepend("pnpm")),
     };
@@ -234,6 +234,7 @@ public static class CiPlan
                     Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
                         with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
                     Pnpm("-r", "lint"),
+                    Pnpm("exec", "eslint", "--max-warnings", "0", "."),
                 ],
             },
             new("lint-and-static", "Run Hadolint on Dockerfiles")
@@ -246,7 +247,7 @@ public static class CiPlan
             new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
-                ToolHint = "install ShellCheck (CI runs 'apt-get install shellcheck')",
+                ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
             },
@@ -268,7 +269,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
             },
             new("dotnet-quality", "Run architecture tests")
             {
@@ -382,7 +383,7 @@ public static class CiPlan
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
             {
                 // LocalCiRunner checks DatabaseTestEvidence on DefaultResultsDir when NeedsPostgres is set (unless
-                // --allow-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
+                // --allow-db-skip is passed), standing in for check-database-test-results.sh while also running its self-test.
                 NeedsPostgres = true,
                 RequiredTool = "bash",
                 ToolHint = "install bash to run the shell gate self-test; DatabaseTestEvidence already checked the TRX reports",
@@ -405,6 +406,15 @@ public static class CiPlan
             {
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands = [Pnpm("--filter", "web", "test:e2e")],
+            },
+            new(E2eJob, "Run Web Application E2E Workflow Tests")
+            {
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_BROWSER"] = "1",
+                    ["DEMO_MODE"] = "false",
+                },
+                Commands = [Pnpm("--filter", "web", "test:e2e:workflows")],
             },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {

@@ -3,8 +3,15 @@
     id="view-lay-summaries"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-lay-summaries' }"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-lay-summaries"
+    :hidden="ui.currentView !== 'view-lay-summaries'"
+    :inert="ui.currentView !== 'view-lay-summaries' || undefined"
+    :role="hasLaySummariesTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="
+      hasLaySummariesTab ? 'btn-tab-btn-lay-summaries' : undefined
+    "
+    :aria-label="
+      hasLaySummariesTab ? undefined : 'Plain-Language Clinical Trial Results'
+    "
     tabindex="0"
   >
     <div class="view-header">
@@ -52,6 +59,7 @@
 <script setup>
 import { computed } from "vue";
 
+import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
@@ -61,5 +69,12 @@ const session = useSessionStore();
 const isDemo = computed(() => {
   void session.session?.isDemoMode;
   return isDemoModeActive();
+});
+const hasLaySummariesTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemo.value || isScreenAvailable("lay-summaries");
 });
 </script>

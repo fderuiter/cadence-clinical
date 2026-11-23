@@ -105,7 +105,26 @@ export function getPortalRouter() {
     }
   });
 
-  // Synchronous, so the push supersedes any navigation still in flight.
+  // Synchronous, so the push supersedes any navigation still in flight
+  // (including rapid A -> B -> A transitions before B commits currentRoute).
+  let pushSeq = 0;
+  let activePushSeq = 0;
+  let pendingRouteName = null;
+
+  function syncPushRoute(targetLocation, targetName) {
+    const seq = ++pushSeq;
+    activePushSeq = seq;
+    pendingRouteName = targetName;
+    router
+      .push(targetLocation)
+      .catch(console.warn)
+      .finally(() => {
+        if (activePushSeq === seq) {
+          pendingRouteName = null;
+        }
+      });
+  }
+
   watch(
     () => state.currentView,
     (viewId) => {
@@ -118,22 +137,26 @@ export function getPortalRouter() {
         return;
       }
 
+      const effectiveCurrentName =
+        pendingRouteName ?? router.currentRoute.value.name;
+
       if (route.name === "unavailable") {
-        if (router.currentRoute.value.name !== "unavailable") {
-          router
-            .push({
+        if (effectiveCurrentName !== "unavailable") {
+          syncPushRoute(
+            {
               name: "unavailable",
               query: state.unavailableScreen
                 ? { screen: state.unavailableScreen }
                 : undefined,
-            })
-            .catch(console.warn);
+            },
+            "unavailable"
+          );
         }
         return;
       }
 
-      if (router.currentRoute.value.name !== route.name) {
-        router.push({ name: route.name }).catch(console.warn);
+      if (effectiveCurrentName !== route.name) {
+        syncPushRoute({ name: route.name }, route.name);
       }
     },
     { flush: "sync" }

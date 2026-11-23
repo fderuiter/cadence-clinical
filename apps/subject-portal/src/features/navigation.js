@@ -7,6 +7,14 @@ import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
 import { loadConsentDetails } from "./consent.js";
 
+const viewLeaveHandlers = new Map();
+
+export function registerViewLeaveHandler(viewId, handler) {
+  if (typeof handler === "function") {
+    viewLeaveHandlers.set(viewId, handler);
+  }
+}
+
 function escapeSelectorId(id) {
   if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
     return CSS.escape(id);
@@ -20,14 +28,16 @@ function hasActiveModalOrDrawer() {
     state.reconsentModalOpen ||
     state.isSyncDrawerOpen ||
     state.disburseModalOpen ||
+    state.questionnaireCancelConfirmOpen ||
     state.session?.pinSetup?.isOpen ||
     state.session?.pinUnlock?.isOpen
   );
 }
 
-// Activates a view: enforces screen availability outside demo builds, updates
-// `.active` classes and single-source tab ARIA attributes, and loads consent
-// details when the consent view opens.
+// Activates a view: enforces screen availability outside demo builds, invokes
+// leave callbacks, updates `.active`/`hidden`/`inert` attributes and
+// single-source tab ARIA attributes, hands off focus to the active view, and
+// loads consent details when opened.
 export function showView(viewId, options = {}) {
   const matchedRoute = routeForView(viewId);
   let targetViewId = viewId;
@@ -37,12 +47,54 @@ export function showView(viewId, options = {}) {
     targetViewId = "view-unavailable";
   }
 
+  const previousView = state.currentView;
+  if (previousView && previousView !== targetViewId) {
+    const leaveHandler = viewLeaveHandlers.get(previousView);
+    if (typeof leaveHandler === "function") {
+      try {
+        leaveHandler(targetViewId);
+      } catch (err) {
+        console.warn(`Error running leave handler for ${previousView}:`, err);
+      }
+    }
+  }
+
   state.currentView = targetViewId;
 
   if (typeof document !== "undefined") {
     document.querySelectorAll(".portal-view").forEach((v) => {
-      v.classList.toggle("active", v.id === targetViewId);
+      const isActive = v.id === targetViewId;
+      v.classList.toggle("active", isActive);
+      v.hidden = !isActive;
+      if (isActive) {
+        v.removeAttribute("hidden");
+        v.removeAttribute("inert");
+        if ("inert" in v) {
+          v.inert = false;
+        }
+      } else {
+        v.setAttribute("hidden", "");
+        v.setAttribute("inert", "");
+        if ("inert" in v) {
+          v.inert = true;
+        }
+      }
     });
+
+    const questionnaireSection = document.getElementById("view-questionnaire");
+    if (questionnaireSection) {
+      if (!questionnaireSection.hasAttribute("role")) {
+        questionnaireSection.setAttribute("role", "tabpanel");
+      }
+      if (!questionnaireSection.hasAttribute("tabindex")) {
+        questionnaireSection.setAttribute("tabindex", "0");
+      }
+      const hasTasksTab = Boolean(document.getElementById("btn-tab-btn-tasks"));
+      questionnaireSection.setAttribute(
+        "aria-labelledby",
+        hasTasksTab ? "btn-tab-btn-tasks" : "questionnaire-title"
+      );
+    }
 
     const activeTab = activeTabForView(targetViewId);
     for (const tab of tabs) {
@@ -56,6 +108,14 @@ export function showView(viewId, options = {}) {
       if (btn) {
         btn.setAttribute("aria-selected", isSelected ? "true" : "false");
         btn.setAttribute("tabindex", isSelected ? "0" : "-1");
+        if (btn.hasAttribute("aria-controls")) {
+          btn.setAttribute(
+            "aria-controls",
+            tab.id === "tasks" && targetViewId === "view-questionnaire"
+              ? "view-questionnaire"
+              : tab.viewId
+          );
+        }
       }
     }
 

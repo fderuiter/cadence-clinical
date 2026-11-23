@@ -1,7 +1,10 @@
 import { vi, expect } from "vitest";
 import { config } from "@vue/test-utils";
 import { toBeAccessible } from "ui";
+import * as usdmSchemas from "usdm-schemas";
 import { i18n } from "../src/i18n/index.js";
+
+globalThis.__CADENCE_USDM_SCHEMAS__ = usdmSchemas;
 
 config.global.plugins = [i18n];
 

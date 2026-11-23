@@ -1,5 +1,5 @@
 // 4. My Inbox: notifications, reminders and their acknowledgement.
-import { handoffFocus } from "ui";
+import { createSrOnlyActionButton, handoffFocus } from "ui";
 import {
   dispatchApi,
   fetchNotifications,
@@ -102,19 +102,34 @@ export function renderInbox() {
         (notif.message &&
           notif.message.toLowerCase().includes("re-consent required"));
 
+      const notifLabel =
+        notif.message_content ||
+        notif.message ||
+        `Scheduled trial survey reminder (channel: ${notif.channel})`;
+
       let actionHtml = `<span class="status-pill completed">Read</span>`;
       if (isUnread) {
         if (isReconsent) {
-          actionHtml = `<button type="button" class="btn btn-primary btn-reconsent-action" data-id="${notif.id}">Review & Sign</button>`;
+          actionHtml = createSrOnlyActionButton({
+            label: "Review & Sign",
+            srContext: notifLabel,
+            className: "btn btn-primary btn-reconsent-action",
+            dataId: notif.id,
+          });
         } else {
-          actionHtml = `<button type="button" class="btn btn-secondary btn-acknowledge" data-id="${notif.id}">Acknowledge & Read</button>`;
+          actionHtml = createSrOnlyActionButton({
+            label: "Acknowledge & Read",
+            srContext: notifLabel,
+            className: "btn btn-secondary btn-acknowledge",
+            dataId: notif.id,
+          });
         }
       }
 
       return `
         <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}" tabindex="-1">
           <div class="inbox-meta">
-            <span class="inbox-name">${notif.message_content || notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}</span>
+            <span class="inbox-name">${notifLabel}</span>
             <span class="inbox-due">Timestamp: ${dueText} (Channel: ${notif.channel || "IN_APP"})</span>
           </div>
           <div class="inbox-actions">

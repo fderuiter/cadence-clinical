@@ -683,7 +683,7 @@ defineExpose({
 
 .template-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 6px;
   max-height: 180px;
   overflow-y: auto;
@@ -697,6 +697,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -721,7 +722,7 @@ defineExpose({
 
 .import-fields-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -729,6 +730,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .checkbox-group {

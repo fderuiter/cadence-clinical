@@ -19,15 +19,30 @@ import {
   createClinicalInput,
   createClinicalRadioGrid,
   createClinicalSlider,
+  markClinicalSliderTouched,
 } from "../widgets/clinical-fields.js";
 import {
   clearFieldInvalid,
   markFieldInvalid,
 } from "../widgets/field-errors.js";
 import { showToast } from "../widgets/toast.js";
-import { showView } from "./navigation.js";
+import { registerViewLeaveHandler, showView } from "./navigation.js";
 import { openSignatureModal } from "./signature.js";
 import { renderTasks } from "./tasks.js";
+
+const SLIDER_INTERACTION_KEYS = new Set([
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  " ",
+]);
+
+let pendingDraftFlushPromise = null;
 
 function isSliderField(field) {
   return (
@@ -54,11 +69,9 @@ function readCurrentFormAnswers(instrument, existingAnswers = {}) {
     }
 
     if (isSliderField(field)) {
-      const defaultMin = String(field.min !== undefined ? field.min : 0);
       const wasTouched =
         inputEl.getAttribute("data-touched") === "true" ||
-        (existingAnswers[id] !== undefined && existingAnswers[id] !== "") ||
-        String(inputEl.value) !== defaultMin;
+        (existingAnswers[id] !== undefined && existingAnswers[id] !== "");
       collected[id] = wasTouched ? String(inputEl.value).trim() : "";
       return;
     }
@@ -91,6 +104,31 @@ function setDraftPresenceFlag(assignmentId, hasDraft) {
   }
 }
 
+function persistQuestionnaireDraftSnapshot(assignmentId, collected) {
+  setDraftPresenceFlag(assignmentId, true);
+  renderTasks();
+
+  const flushTask = (async () => {
+    await saveDraft(assignmentId, collected);
+    setDraftPresenceFlag(assignmentId, true);
+    renderTasks();
+    try {
+      await saveAssignmentsToDB(state.assignments);
+    } catch (err) {
+      console.warn("Could not persist draft flag on assignment:", err);
+    }
+    return true;
+  })();
+
+  pendingDraftFlushPromise = flushTask.finally(() => {
+    if (pendingDraftFlushPromise === flushTask) {
+      pendingDraftFlushPromise = null;
+    }
+  });
+
+  return pendingDraftFlushPromise;
+}
+
 export async function saveActiveDraftProgress() {
   if (!state.activeQuestionnaire) return false;
   const { instrument, assignment } = state.activeQuestionnaire;
@@ -104,25 +142,47 @@ export async function saveActiveDraftProgress() {
     return false;
   }
 
-  await saveDraft(assignment.id, collected);
-  setDraftPresenceFlag(assignment.id, true);
-  try {
-    await saveAssignmentsToDB(state.assignments);
-  } catch (err) {
-    console.warn("Could not persist draft flag on assignment:", err);
-  }
-  return true;
+  return await persistQuestionnaireDraftSnapshot(assignment.id, collected);
 }
 
 export const debouncedSaveActiveDraft = debounce(saveActiveDraftProgress, 1500);
 
-export async function flushActiveQuestionnaireDraft() {
+export async function flushActiveQuestionnaireDraft(options = {}) {
+  const { clearActive = false } = options;
   debouncedSaveActiveDraft.cancel();
+
   if (!state.activeQuestionnaire) {
+    if (pendingDraftFlushPromise) {
+      return await pendingDraftFlushPromise;
+    }
     return false;
   }
-  return await saveActiveDraftProgress();
+
+  const { instrument, assignment } = state.activeQuestionnaire;
+  const collected = readCurrentFormAnswers(
+    instrument,
+    state.activeQuestionnaire.answers
+  );
+  state.activeQuestionnaire.answers = collected;
+
+  if (clearActive) {
+    state.questionnaireCancelConfirmOpen = false;
+    state.activeQuestionnaire = null;
+  }
+
+  if (!hasAnyRecordedAnswer(collected)) {
+    if (clearActive) {
+      renderTasks();
+    }
+    return false;
+  }
+
+  return await persistQuestionnaireDraftSnapshot(assignment.id, collected);
 }
+
+registerViewLeaveHandler("view-questionnaire", () => {
+  void flushActiveQuestionnaireDraft({ clearActive: true });
+});
 
 export function hasUnsavedQuestionnaireDrafts() {
   if (state.activeQuestionnaire?.instrument) {
@@ -262,18 +322,38 @@ export async function startQuestionnaire(assignmentId) {
   // Set up listeners for real-time background auto-saving and slider interaction tracking
   const markSliderTouchedAndSave = (event) => {
     if (event?.target?.type === "range") {
-      event.target.setAttribute("data-touched", "true");
+      markClinicalSliderTouched(event.target);
     }
     debouncedSaveActiveDraft();
   };
+  const handleSliderPointerDown = (event) => {
+    if (event?.target?.type === "range") {
+      markClinicalSliderTouched(event.target);
+      debouncedSaveActiveDraft();
+    }
+  };
+  const handleSliderKeyDown = (event) => {
+    if (
+      event?.target?.type === "range" &&
+      SLIDER_INTERACTION_KEYS.has(event.key)
+    ) {
+      markClinicalSliderTouched(event.target);
+      debouncedSaveActiveDraft();
+    }
+  };
   formContainer.addEventListener("input", markSliderTouchedAndSave);
   formContainer.addEventListener("change", markSliderTouchedAndSave);
+  formContainer.addEventListener("pointerdown", handleSliderPointerDown);
+  formContainer.addEventListener("keydown", handleSliderKeyDown);
 
   // Render and navigate synchronously
   showView("view-questionnaire");
 
   // Load and apply draft answers asynchronously
   try {
+    if (pendingDraftFlushPromise) {
+      await pendingDraftFlushPromise.catch(() => {});
+    }
     const draftAnswers = await getDraft(assignmentId);
     if (
       draftAnswers &&
@@ -297,13 +377,14 @@ export async function startQuestionnaire(assignmentId) {
           } else {
             const inputEl = document.getElementById(id);
             if (inputEl) {
-              inputEl.value = String(val);
               if (inputEl.type === "range") {
-                inputEl.setAttribute("data-touched", "true");
-              }
-              const dispEl = document.getElementById(`${id}_display`);
-              if (dispEl) {
-                dispEl.textContent = `Value: ${val}`;
+                markClinicalSliderTouched(inputEl, val);
+              } else {
+                inputEl.value = String(val);
+                const dispEl = document.getElementById(`${id}_display`);
+                if (dispEl) {
+                  dispEl.textContent = `Value: ${val}`;
+                }
               }
             }
           }
@@ -324,10 +405,18 @@ export function validateActiveQuestionnaire() {
   const errors = [];
 
   Object.entries(instrument.items).forEach(([id, field]) => {
-    const val =
-      field.type === "choice_single"
-        ? document.querySelector(`input[name="${id}"]:checked`)?.value || ""
-        : document.getElementById(id)?.value.trim() || "";
+    let val;
+    if (field.type === "choice_single") {
+      val = document.querySelector(`input[name="${id}"]:checked`)?.value || "";
+    } else if (isSliderField(field)) {
+      const sliderEl = document.getElementById(id);
+      val =
+        sliderEl && sliderEl.getAttribute("data-touched") === "true"
+          ? sliderEl.value.trim()
+          : "";
+    } else {
+      val = document.getElementById(id)?.value.trim() || "";
+    }
 
     // Clean previous error markers
     clearFieldInvalid(id);
@@ -428,6 +517,7 @@ export function dismissCancelQuestionnaire() {
 }
 
 export async function confirmCancelQuestionnaire() {
+  debouncedSaveActiveDraft.cancel();
   const returningAssignmentId =
     state.activeQuestionnaire?.assignment?.id || null;
   if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {

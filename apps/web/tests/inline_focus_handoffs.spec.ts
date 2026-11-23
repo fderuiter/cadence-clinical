@@ -679,7 +679,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
 
     const backBtn = wrapper
       .findAll(".form-query-form button")
-      .find((b) => b.text() === "Back");
+      .find((b) => b.text().trim().startsWith("Back"));
     expect(backBtn).toBeDefined();
     await backBtn!.trigger("click");
     await settleFocus();

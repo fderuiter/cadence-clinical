@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,6 +29,30 @@ public sealed class KernelReadAccess(
     {
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
         return masks.For(node) is null;
+    }
+
+    /// <inheritdoc />
+    public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken) =>
+        KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken);
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        if (nodes.Count == 0)
+        {
+            return new HashSet<NodeRef>();
+        }
+
+        var distinct = nodes.Distinct().ToList();
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, distinct, cancellationToken).ConfigureAwait(false);
+        return distinct.Where(node => masks.For(node) is null).ToHashSet();
     }
 
     /// <inheritdoc />
