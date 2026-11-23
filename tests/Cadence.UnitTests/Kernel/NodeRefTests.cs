@@ -28,6 +28,7 @@ public sealed class NodeRefTests
     [Theory(DisplayName = "NodeRef_RoundTripsItsCanonicalForm")]
     [InlineData("study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3")]
     [InlineData("participant:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e")]
+    [InlineData("task_configuration:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@1")]
     [InlineData("tenant:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@9223372036854775807")]
     public void NodeRefRoundTripsItsCanonicalForm(string text)
     {
@@ -89,6 +90,18 @@ public sealed class NodeRefTests
         node.TryGetId<StudyId>(out _).Should().BeFalse();
         node.Unversioned().Should().Be(new NodeRef(NodeKinds.StudySite, Id));
         node.Unversioned().AtVersion(2).Should().Be(node);
+
+        var taskConfiguration = TaskConfigurationId.FromGuid(Id);
+        var taskNode = NodeRef.For(taskConfiguration, version: 1);
+        NodeKinds.Of<TaskConfigurationId>().Should().Be(NodeKinds.TaskConfiguration);
+        taskNode.Kind.Should().Be(NodeKinds.TaskConfiguration);
+        taskNode.Should().Be(NodeRef.For((IEntityId)taskConfiguration, 1));
+        taskNode.TryGetId<TaskConfigurationId>(out var taskBack).Should().BeTrue();
+        taskBack.Should().Be(taskConfiguration);
+        taskNode.TryGetId<StudyId>(out _).Should().BeFalse();
+        TaskConfigurationId.Parse(Id.ToString("D")).Should().Be(taskConfiguration);
+        TaskConfigurationId.TryParse(Id.ToString("D"), out var parsedTask).Should().BeTrue();
+        parsedTask.Should().Be(taskConfiguration);
     }
 
     /// <summary>Constructing a reference validates it the same way parsing does.</summary>

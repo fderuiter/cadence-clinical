@@ -7,6 +7,9 @@ Generated from `docs/openapi/etmf_openapi.json` by `pnpm cadence generate-api-do
 | `GET` | `/api/v1/etmf/documents` |  |  |
 | `POST` | `/api/v1/etmf/documents/export` |  |  |
 | `GET` | `/api/v1/etmf/documents/{document_id}` |  |  |
+| `GET` | `/api/v1/etmf/documents/{document_id}/content` |  |  |
+| `POST` | `/api/v1/etmf/documents/{document_id}/submit-qc` |  |  |
+| `PATCH` | `/api/v1/etmf/documents/{document_id}/taxonomy` |  |  |
 | `GET` | `/api/v1/etmf/export-jobs` |  |  |
 | `GET` | `/api/v1/etmf/export-jobs/{job_id}` |  |  |
 | `GET` | `/api/v1/etmf/export-jobs/{job_id}/download` |  |  |

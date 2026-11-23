@@ -127,7 +127,7 @@ public static partial class RulesetService
     }
 
     /// <summary>
-    /// Validates <c>.github/rulesets/*.json</c>, <c>pull_request</c> bypass limits, <c>merge_queue</c> policy,
+    /// Validates declarative <c>.github/rulesets/*.json</c>, <c>pull_request</c> bypass limits, <c>merge_queue</c> policy,
     /// strict status check policy, <c>CI Gate</c> upstream job coverage, and <c>pull_request</c> / <c>merge_group</c>
     /// workflow parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
     /// </summary>
