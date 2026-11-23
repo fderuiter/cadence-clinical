@@ -48,15 +48,22 @@ delegation checks, module-local audit mixins) describe behaviour the kernel spec
 - **Chosen Option:** Option 2
 - **Justification:** It keeps the only record of unported behaviour while removing everything that is ported,
   tested or superseded. The first pass deleted 76 files (and 6 `pyproject.toml`) and inventoried 55 files in 7 packages;
-  subsequent ports and the consolidated retirement pass remove all remaining ported, superseded and manifest files,
-  leaving 13 `Port missing` `.py` files across `packages/ddf`, `packages/engine_core` and `packages/security` (and 0
-  `pyproject.toml` or `__init__.py` files).
+  subsequent ports and retirement passes removed all remaining ported, manifest and superseded files—including
+  `packages/ddf/dataset_json_etl.py` ([ADR-2504](2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md)),
+  `packages/engine_core/operations/{engine,evaluator,models}.py`
+  ([ADR-2456](2026-09-30-effectivity-and-study-site-activation.md),
+  [ADR-2459](2026-09-30-qualifications-gate-capabilities.md),
+  [ADR-2805](2026-10-02-ctms-site-startup-greenlight-matrix.md)), and
+  `packages/security/{auditor_token,permissions}.py`
+  ([ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md),
+  [ADR-2516](2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md))—leaving 7 `Port missing` `.py`
+  files across `packages/engine_core` and `packages/security` (and 0 `pyproject.toml` or `__init__.py` files).
 
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** Search and review stop surfacing dead Python; the duplication gate no longer scans `.py`
   files; Dependabot tracks NuGet instead of a Python workspace that no longer exists.
-- **Negative Impact / Technical Debt:** 13 Python files remain until their ports are written or dispositioned.
+- **Negative Impact / Technical Debt:** 7 Python files remain until their ports are written or dispositioned.
 - **Mitigation Strategy:** A PR that ports or tests one of them deletes the Python file and its inventory row in
   the same change (`docs/MIGRATION_WORKFLOW.md` §4).
 

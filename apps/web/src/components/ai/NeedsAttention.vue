@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   kernelApi,
@@ -89,12 +89,12 @@ import {
   type KernelValidationFinding,
 } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import {
   collectionInstanceRef,
   observationNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords } from "../../canvas/nodeResolver";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -110,9 +110,54 @@ const LIMIT = 20;
 
 const proposals = ref<KernelProposal[]>([]);
 const findings = ref<KernelValidationFinding[]>([]);
-const loading = ref(false);
-const error = ref("");
-const noStudy = ref(false);
+
+const {
+  studyLoading: loading,
+  studyError: error,
+  noStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    proposals.value = [];
+    findings.value = [];
+  },
+  onResolved: async (studyRef, { isCurrent }) => {
+    const canReadFindings =
+      typeof kernelApi.listStudyValidationFindings === "function";
+    const [open, openFindingsPage, investigatingFindingsPage] =
+      await Promise.all([
+        kernelApi.listProposals(studyRef, {
+          status: "Open",
+          limit: LIMIT,
+        }),
+        canReadFindings
+          ? kernelApi
+              .listStudyValidationFindings(studyRef, { status: "Open" })
+              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
+          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
+        canReadFindings
+          ? kernelApi
+              .listStudyValidationFindings(studyRef, {
+                status: "Investigating",
+              })
+              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
+          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
+      ]);
+    if (!isCurrent()) return;
+    proposals.value = open;
+    const seen = new Set<string>();
+    const merged: KernelValidationFinding[] = [];
+    for (const item of [
+      ...(openFindingsPage?.findings ?? []),
+      ...(investigatingFindingsPage?.findings ?? []),
+    ]) {
+      if (seen.has(item.ref)) continue;
+      seen.add(item.ref);
+      merged.push(item);
+      if (merged.length >= LIMIT) break;
+    }
+    findings.value = merged;
+  },
+});
 
 const statusLine = computed(() => {
   if (loading.value) return "Reading what needs attention...";
@@ -168,69 +213,6 @@ function when(value: string): string {
 function maskWords(mask: string | null | undefined): string {
   return maskReasonWords(mask);
 }
-
-let latest = 0;
-
-async function load() {
-  const request = ++latest;
-  loading.value = true;
-  error.value = "";
-  noStudy.value = false;
-  proposals.value = [];
-  findings.value = [];
-  try {
-    const studyRef = await findKernelStudyRef(props.studyCode);
-    if (request !== latest) return;
-    if (!studyRef) {
-      noStudy.value = true;
-      return;
-    }
-    const canReadFindings =
-      typeof kernelApi.listStudyValidationFindings === "function";
-    const [open, openFindingsPage, investigatingFindingsPage] =
-      await Promise.all([
-        kernelApi.listProposals(studyRef, {
-          status: "Open",
-          limit: LIMIT,
-        }),
-        canReadFindings
-          ? kernelApi
-              .listStudyValidationFindings(studyRef, { status: "Open" })
-              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
-          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
-        canReadFindings
-          ? kernelApi
-              .listStudyValidationFindings(studyRef, {
-                status: "Investigating",
-              })
-              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
-          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
-      ]);
-    if (request === latest) {
-      proposals.value = open;
-      const seen = new Set<string>();
-      const merged: KernelValidationFinding[] = [];
-      for (const item of [
-        ...(openFindingsPage?.findings ?? []),
-        ...(investigatingFindingsPage?.findings ?? []),
-      ]) {
-        if (seen.has(item.ref)) continue;
-        seen.add(item.ref);
-        merged.push(item);
-        if (merged.length >= LIMIT) break;
-      }
-      findings.value = merged;
-    }
-  } catch (e) {
-    if (request === latest) {
-      error.value = e instanceof Error ? e.message : String(e);
-    }
-  } finally {
-    if (request === latest) loading.value = false;
-  }
-}
-
-watch(() => props.studyCode, load, { immediate: true });
 </script>
 
 <style scoped>
