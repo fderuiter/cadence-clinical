@@ -636,6 +636,79 @@ public sealed class QualityGateRegistryTests : IDisposable
             .Should().BeTrue("push-scoped CI runs skip merge-readiness cleanly");
     }
 
+    [Fact]
+    public void ApiClientsAndVulnerabilitiesGates_AreQuickAndFileScopedInPreCommit()
+    {
+        var apiClients = QualityGates.Find("api-clients")!;
+        apiClients.TakesFiles.Should().BeTrue();
+        apiClients.PreCommit.Should().Be(PreCommitMode.Quick);
+        apiClients.PreCommitNote.Should().NotBeNullOrWhiteSpace();
+
+        var vulnerabilities = QualityGates.Find("vulnerabilities")!;
+        vulnerabilities.TakesFiles.Should().BeTrue();
+        vulnerabilities.PreCommit.Should().Be(PreCommitMode.Quick);
+        vulnerabilities.PreCommitNote.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void RunQualityGates_FailFastStopsAtFirstFailureInPreCommit_AndReportsAllFailuresWhenUnscoped()
+    {
+        // Both trailing-whitespace ("note.md   \n") and path-patterns ("scratch/notes.txt") fail.
+        // trailing-whitespace runs before path-patterns in QualityGates.All.
+        Write("docs/note.md", "# Note   \n");
+        Write("scratch/notes.txt", "forbidden directory\n");
+        Git("init", "-q", "-b", "main");
+        Git("config", "user.email", "fixture@example.invalid");
+        Git("config", "user.name", "Fixture");
+        Git("config", "commit.gpgsign", "false");
+        Git("add", "docs/note.md", "scratch/notes.txt");
+
+        string[] excluded = QualityGates.All
+            .Select(g => g.Name)
+            .Where(n => n is not "trailing-whitespace" and not "path-patterns")
+            .ToArray();
+
+        string preCommitOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: true, repoRoot: _root)
+                .Should().Be(1));
+        preCommitOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.NotContain("[PATH VIOLATION]", "pre-commit defaults to fail-fast and exits on the first failing gate");
+
+        string explicitNonFailFastPreCommitOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: true, repoRoot: _root, failFast: false)
+                .Should().Be(1));
+        explicitNonFailFastPreCommitOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.Contain("[PATH VIOLATION]", "--fail-fast=false overrides the pre-commit fail-fast default");
+
+        string fullOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: false, repoRoot: _root)
+                .Should().Be(1));
+        fullOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.Contain("[PATH VIOLATION]", "unscoped cadence check continues running remaining gates");
+
+        string fullFailFastOutput = CaptureConsoleOutput(() =>
+            QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: false, repoRoot: _root, failFast: true)
+                .Should().Be(1));
+        fullFailFastOutput.Should().Contain("[TRAILING WHITESPACE]")
+            .And.NotContain("[PATH VIOLATION]", "explicit --fail-fast stops full cadence check on the first failure");
+    }
+
+    private static string CaptureConsoleOutput(Action action)
+    {
+        var originalOut = Console.Out;
+        using var writer = new StringWriter();
+        Console.SetOut(writer);
+        try
+        {
+            action();
+            return writer.ToString();
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
     private GateContext Context(string[]? files = null, bool preCommit = false, string? baseRef = null, string? pushBefore = null) =>
         new(_root, files, preCommit, BaseRef: baseRef, PushBefore: pushBefore);
 

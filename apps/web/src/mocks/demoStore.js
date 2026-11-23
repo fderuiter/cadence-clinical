@@ -4472,6 +4472,7 @@ export function createWebDemoStore() {
         can_freeze: true,
         open_query_count: openQueryCount,
         missing_required_item_count: missingRequiredItemCount,
+        open_error_finding_count: 0,
         blocker_count: blockers.length,
         blockers,
         explanation: {

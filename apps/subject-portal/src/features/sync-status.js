@@ -43,13 +43,7 @@ function patchActiveSyncCountdownDescriptions() {
         (itemSeq !== null && String(itemSeq) === String(seq));
       if (!matchesTarget) return;
       const statusKind = itemEl.getAttribute("data-sync-status-kind") || "";
-      if (
-        statusKind === "QUARANTINED" ||
-        statusKind === "DECRYPTION_ERROR" ||
-        statusKind === "MERGED" ||
-        statusKind === "SYNCED" ||
-        statusKind === "COMPLETED"
-      ) {
+      if (statusKind !== "QUEUED") {
         return;
       }
       const descEl = itemEl.querySelector("[data-sync-status-desc]");
@@ -91,7 +85,6 @@ function startSyncCountdownTimer() {
       state.syncStatusText = statusMsg;
       updateDomSyncStatusText(statusMsg);
       patchActiveSyncCountdownDescriptions();
-      void renderSyncQueueList();
     } else {
       stopSyncCountdownTimer();
     }
@@ -147,6 +140,7 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
     const statusMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries}`;
     state.syncStatusText = statusMsg;
     updateDomSyncStatusText(statusMsg);
+    patchActiveSyncCountdownDescriptions();
   } else if (eventType === "sync:retry-scheduled") {
     const delaySec = Math.max(1, Math.ceil(payload.nextRetryDelay / 1000));
     state.syncRetryInfo.attempt = payload.attempt;
@@ -160,6 +154,7 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
     const statusMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries} (Next retry in ${delaySec}s)`;
     state.syncStatusText = statusMsg;
     updateDomSyncStatusText(statusMsg);
+    patchActiveSyncCountdownDescriptions();
     startSyncCountdownTimer();
   } else if (eventType === "sync:success") {
     resetSyncRetryInfo();
@@ -356,17 +351,25 @@ function createOrPatchSyncQueueItem(doc, existingEl, item, key, contact) {
   return itemEl;
 }
 
-export async function renderSyncQueueList() {
+export async function renderSyncQueueList(submissionsSnapshot = null) {
   const listEl = document.getElementById("sync-queue-list");
   if (!listEl) return;
 
-  const all = await getAllSubmissions();
+  const all = Array.isArray(submissionsSnapshot)
+    ? submissionsSnapshot
+    : await getAllSubmissions();
   // Re-verify listEl after asyncIndexedDB read in case the DOM unmounted
   const currentListEl = document.getElementById("sync-queue-list");
   if (!currentListEl) return;
 
   if (all.length === 0) {
-    currentListEl.innerHTML = `<div class="loading-state" data-sync-empty="true" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No saved surveys waiting to send.</div>`;
+    const hasOnlyEmptyPlaceholder =
+      currentListEl.children.length === 1 &&
+      currentListEl.firstElementChild?.getAttribute("data-sync-empty") ===
+        "true";
+    if (!hasOnlyEmptyPlaceholder) {
+      currentListEl.innerHTML = `<div class="loading-state" data-sync-empty="true" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No saved surveys waiting to send.</div>`;
+    }
     return;
   }
 
@@ -413,13 +416,23 @@ export async function renderSyncQueueList() {
   });
 }
 
-export async function refreshSubmissionsState() {
+export async function refreshSubmissionsState(submissionsSnapshot = null) {
   try {
-    const all = await getAllSubmissions();
+    const all = Array.isArray(submissionsSnapshot)
+      ? submissionsSnapshot.slice()
+      : await getAllSubmissions();
     state.submissions = all;
+    return all;
   } catch (err) {
     console.warn("Failed to refresh submissions state:", err);
+    return state.submissions || [];
   }
+}
+
+export async function refreshSyncViews(submissionsSnapshot = null) {
+  const all = await refreshSubmissionsState(submissionsSnapshot);
+  await renderSyncQueueList(all);
+  return all;
 }
 
 /**

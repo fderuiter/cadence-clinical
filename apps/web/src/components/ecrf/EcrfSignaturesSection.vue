@@ -130,7 +130,9 @@
         {{ signOutcome.message }}
       </template>
       <button
-        v-if="signOutcome.kind === 'changed'"
+        v-if="
+          signOutcome.kind === 'changed' || signOutcome.kind === 'not_ready'
+        "
         id="ecrf-sign-reload"
         class="btn btn-secondary"
         type="button"

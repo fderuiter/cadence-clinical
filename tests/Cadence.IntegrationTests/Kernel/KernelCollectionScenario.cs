@@ -129,7 +129,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     /// Approves a version whose design collects systolic and diastolic pressure in mm[Hg] and a free-text comment, and makes
     /// it effective study-wide on an ethics approval. Returns the version.
     /// </summary>
-    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct, bool requireDiastolic = true)
     {
         var systolic = await DefineAsync(tenant, "Systolic blood pressure", ct);
         var diastolic = await DefineAsync(tenant, "Diastolic blood pressure", ct);
@@ -147,7 +147,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                     "Vital signs",
                     [
                         new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
-                        new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: true),
+                        new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: requireDiastolic),
                         new CollectionItem(Comment, systolic, ValueKind: ObservationValueKind.Text),
                     ]),
             ],
