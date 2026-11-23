@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Database.Temporal;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -46,6 +48,110 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
         }
 
         await Context.SiteComplianceCaches.AddAsync(cache, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task RecordActivationPeriodAsync(
+        SiteComplianceCache cache,
+        DateTimeOffset recordedAt,
+        string? reasonForChange,
+        CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+        var existingPeriods = await Context.SiteActivationPeriods
+            .Where(p => p.SiteComplianceCacheId == cache.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var activeOpenPeriods = existingPeriods
+            .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
+            .ToList();
+
+        DateTimeOffset recordedCutover = recordedAt;
+        foreach (var openPeriod in activeOpenPeriods)
+        {
+            var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(openPeriod.RecordedPeriod, recordedAt);
+            openPeriod.RecordedPeriod = closed;
+            if (closed.UpperBound > recordedCutover)
+            {
+                recordedCutover = closed.UpperBound;
+            }
+        }
+
+        var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+
+        Guid? effectiveTenantId = Context.ActiveBoundTenantId ?? (cache.TenantId != Guid.Empty ? cache.TenantId : null);
+
+        foreach (var prior in activeOpenPeriods.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+        {
+            var closedPrior = new SiteActivationPeriod
+            {
+                SiteComplianceCacheId = prior.SiteComplianceCacheId,
+                StudyCode = prior.StudyCode,
+                SiteCode = prior.SiteCode,
+                Milestone = prior.Milestone,
+                IsComplete = prior.IsComplete,
+                MissingDocuments = prior.MissingDocuments.ToList(),
+                IsActivated = prior.IsActivated,
+                ActivatedAt = prior.ActivatedAt,
+                ActivatedBy = prior.ActivatedBy,
+                ReasonForChange = prior.ReasonForChange,
+                ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                RecordedPeriod = openRecorded,
+            };
+            await AddActivationPeriodAsync(closedPrior, effectiveTenantId, cancellationToken).ConfigureAwait(false);
+        }
+
+        var currentPeriod = new SiteActivationPeriod
+        {
+            SiteComplianceCacheId = cache.Id,
+            StudyCode = cache.StudyCode,
+            SiteCode = cache.SiteCode,
+            Milestone = cache.Milestone,
+            IsComplete = cache.IsComplete,
+            MissingDocuments = cache.MissingDocuments.ToList(),
+            IsActivated = cache.IsActivated,
+            ActivatedAt = cache.ActivatedAt,
+            ActivatedBy = cache.ActivatedBy,
+            ReasonForChange = reasonForChange,
+            ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
+            RecordedPeriod = openRecorded,
+        };
+        await AddActivationPeriodAsync(currentPeriod, effectiveTenantId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AddActivationPeriodAsync(
+        SiteActivationPeriod period,
+        Guid? effectiveTenantId,
+        CancellationToken cancellationToken)
+    {
+        var entry = await Context.SiteActivationPeriods.AddAsync(period, cancellationToken).ConfigureAwait(false);
+        if (effectiveTenantId is { } tenantId && entry.Metadata.FindProperty("tenant_id") is not null)
+        {
+            entry.Property("tenant_id").CurrentValue = tenantId;
+        }
+    }
+
+    public async Task<SiteActivationPeriod?> GetPeriodAsOfAsync(
+        StudyCode studyCode,
+        SiteCode siteCode,
+        string milestone,
+        DateTimeOffset validAt,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+        var query = Context.SiteActivationPeriods.AsNoTracking()
+            .Where(p => p.StudyCode == studyCode && p.SiteCode == siteCode && p.Milestone == milestone);
+        if (relationalTenantFilter is { } tenantId)
+        {
+            query = query.Where(p => EF.Property<Guid>(p, "tenant_id") == tenantId);
+        }
+
+        var matches = await query
+            .QueryAsOfAsync(Context, validAt, knownAt, cancellationToken)
+            .ConfigureAwait(false);
+        return matches.FirstOrDefault();
     }
 
     private void EnsureVerifiedTenantContext()

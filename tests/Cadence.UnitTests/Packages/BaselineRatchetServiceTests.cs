@@ -282,13 +282,44 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     }
 
     [Fact]
-    public void MissingBaseRef_SkipsLocally_AndFailsInCi()
+    public void MissingBaseRef_FailsClosedLocallyAndInCi()
     {
         Git("update-ref", "-d", "refs/remotes/origin/main");
 
-        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(0);
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "CI" ? "true" : null).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "GITHUB_ACTIONS" ? "true" : null).Should().Be(1);
+    }
+
+    [Fact]
+    public void MergeWithOriginMain_AdmitsUpstreamBaselineGrowth_WhileRejectingExtraMergeAdditions()
+    {
+        Write("src/Feature.cs", "class Feature {}\n");
+        Commit("feat: branch change");
+
+        Git("checkout", "-q", "main");
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"fix: upstream authorized baseline growth\n\nBaseline-Growth: {Baseline} - authorized on main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Git("merge", "--no-commit", "--no-ff", "origin/main");
+
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        Check().Should().Be(0);
+
+        // Sneaking an extra entry during the merge that exists in neither parent must still fail closed.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\nK-XS-1|App|D\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(1);
+        Check().Should().Be(1);
+
+        // Restoring the upstream baseline content allows committing the merge cleanly without a duplicate trailer.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        Git("commit", "-q", "--no-edit");
+        Check().Should().Be(0);
     }
 
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);

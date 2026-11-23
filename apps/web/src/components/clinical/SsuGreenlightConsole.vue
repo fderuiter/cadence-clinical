@@ -1895,8 +1895,8 @@ onMounted(() => {
 }
 
 .btn-override {
-  background: var(--semantic-color-ai);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text-on-solid);
 }
 .btn-counter-badge {
   background: var(--semantic-color-surface);

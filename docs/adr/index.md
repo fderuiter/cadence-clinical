@@ -384,6 +384,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
 - [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 - [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
+- [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) (2026-11-22)
 
 ### 5. Compliance, Audit & Governance
 
@@ -453,7 +454,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) (2026-11-22)
 - [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) (2026-11-23)
 - [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
-- [ADR-2654: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
+- [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
+- [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -613,6 +615,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2535: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots](2026-11-20-forward-verified-ci-gxp-evidence-and-sync-service-migrations.md) (2026-11-20)
 - [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) (2026-11-22)
 - [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) (2026-11-22)
+- [ADR-2538: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories](2026-11-22-share-demo-runtime-and-msw-worker-factories.md) (2026-11-22)
 - [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) (2026-11-20)
 - [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) (2026-11-20)
 - [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](2026-11-21-kernel-site-setup-and-execution-tenancy.md) (2026-11-21)
