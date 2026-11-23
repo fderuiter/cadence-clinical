@@ -1,4 +1,4 @@
-# ADR-2539: Adopt Microsoft.Testing.Platform and Isolate Unit WebApplicationFactory Hosts
+# ADR-2832: Adopt Microsoft.Testing.Platform and Isolate Unit WebApplicationFactory Hosts
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

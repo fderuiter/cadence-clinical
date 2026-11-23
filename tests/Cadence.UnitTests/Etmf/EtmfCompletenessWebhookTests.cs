@@ -398,6 +398,8 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
 
         public Task LockStudyAsync(StudyCode studyCode, CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public Task LockSchemeAsync(Guid schemeId, CancellationToken cancellationToken) => Task.CompletedTask;
+
         public Task<IReadOnlyList<RandomizationScheme>> ListSchemesAsync(StudyCode studyCode, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<RandomizationScheme>>(
                 _schemes.Where(s => s.StudyCode == studyCode).OrderByDescending(s => s.Version).ToList());

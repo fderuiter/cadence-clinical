@@ -520,6 +520,83 @@ public sealed class TicketEndpointsTests : IAsyncDisposable
         auditTrail.Should().OnlyContain(a => !string.IsNullOrWhiteSpace(a.BlockHash));
     }
 
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-TCK-001")]
+    [GxPRequirement("PRD-TCK-002")]
+    public async Task CreateTicket_ContextualEscalationWithoutCrfForm_PreservesOverviewRoutingAndEcrfClinicalScope()
+    {
+        await EnsureDbCreatedAsync();
+        using var adminClient = CreateScopedClient(
+            "usr-admin-01",
+            ["Sponsor Admin"],
+            studyIds: ["STUDY-A"],
+            siteIds: ["SITE-101"]);
+
+        // 1. Escalating from /overview with SYSTEM_SUPPORT and empty EntityType routes to PLATFORM_ADMIN_ACCESS
+        using var overviewReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/tickets")
+        {
+            Content = JsonContent.Create(new CreateTicketRequestDto(
+                Title: "[Help Escalation] Operational Assistance on /overview",
+                Description: "Requested assistance from Contextual Help on /overview.",
+                Category: "SYSTEM_SUPPORT",
+                GxpSeverity: "MINOR",
+                Priority: "MEDIUM",
+                EntityType: string.Empty,
+                EntityId: null,
+                SourceRoute: "/overview",
+                Persona: "super_admin")),
+        };
+        overviewReq.Headers.Add(GatewayHeaders.ChangeReason, "Escalated to Support Ticket from Contextual Help on /overview");
+
+        var overviewResp = await adminClient.SendAsync(overviewReq, Ct);
+        overviewResp.StatusCode.Should().Be(HttpStatusCode.Created);
+        var overviewTicket = await overviewResp.Content.ReadFromJsonAsync<TicketResponseDto>(cancellationToken: Ct);
+        overviewTicket.Should().NotBeNull();
+        overviewTicket!.AssignedQueue.Should().Be("PLATFORM_ADMIN_ACCESS");
+        overviewTicket.RelatedEntityType.Should().BeNull();
+        overviewTicket.RelatedEntityId.Should().BeNull();
+
+        // 2. Escalating from /ecrf?studyId=STUDY-A&siteId=SITE-101&subjectId=SUBJ-1001 persists clinical scope and can be listed/fetched inline
+        using var ecrfReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/tickets")
+        {
+            Content = JsonContent.Create(new CreateTicketRequestDto(
+                Title: "[Help Escalation] Operational Assistance on /ecrf?studyId=STUDY-A&siteId=SITE-101&subjectId=SUBJ-1001",
+                Description: "Subject SUBJ-1001 visit form assistance.",
+                Category: "PROTOCOL_DEVIATION",
+                GxpSeverity: "MINOR",
+                Priority: "MEDIUM",
+                StudyScope: "STUDY-A",
+                SiteScope: "SITE-101",
+                SubjectCode: "SUBJ-1001",
+                EntityType: string.Empty,
+                EntityId: null,
+                SourceRoute: "/ecrf?studyId=STUDY-A&siteId=SITE-101&subjectId=SUBJ-1001",
+                Persona: "site_crc")),
+        };
+        ecrfReq.Headers.Add(GatewayHeaders.ChangeReason, "Escalated to Support Ticket from Contextual Help on /ecrf");
+
+        var ecrfResp = await adminClient.SendAsync(ecrfReq, Ct);
+        ecrfResp.StatusCode.Should().Be(HttpStatusCode.Created);
+        var ecrfTicket = await ecrfResp.Content.ReadFromJsonAsync<TicketResponseDto>(cancellationToken: Ct);
+        ecrfTicket.Should().NotBeNull();
+        ecrfTicket!.AssignedQueue.Should().Be("DATA_CAPTURE_ECRF");
+        ecrfTicket.StudyScope.Should().Be("STUDY-A");
+        ecrfTicket.SiteScope.Should().Be("SITE-101");
+        ecrfTicket.SubjectCode.Should().Be("SUBJ-1001");
+
+        var scopedList = await adminClient.GetFromJsonAsync<List<TicketResponseDto>>(
+            "/api/v1/tickets?study_id=STUDY-A&site_id=SITE-101",
+            Ct);
+        scopedList.Should().ContainSingle(t => t.Id == ecrfTicket.Id);
+
+        var fetchedDetail = await adminClient.GetFromJsonAsync<TicketResponseDto>(
+            $"/api/v1/tickets/{ecrfTicket.Id}",
+            Ct);
+        fetchedDetail!.Reference.Should().Be(ecrfTicket.Reference);
+        fetchedDetail.SubjectCode.Should().Be("SUBJ-1001");
+    }
+
     private static async Task<TicketResponseDto> CreateTestTicketAsync(HttpClient client, string studyCode, string siteCode)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/tickets")

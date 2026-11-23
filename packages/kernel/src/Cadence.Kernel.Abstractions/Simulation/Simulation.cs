@@ -45,11 +45,19 @@ public enum CandidateKind
 /// </summary>
 public sealed record SimulationCandidate
 {
-    private SimulationCandidate(CandidateKind kind, ProtocolVersionId? versionId, ProtocolVersionId? baseVersionId, string? content)
+    private SimulationCandidate(
+        CandidateKind kind,
+        ProtocolVersionId? versionId,
+        long? version,
+        ProtocolVersionId? baseVersionId,
+        long? baseVersion,
+        string? content)
     {
         Kind = kind;
         VersionId = versionId;
+        Version = version;
         BaseVersionId = baseVersionId;
+        BaseVersion = baseVersion;
         Content = content;
     }
 
@@ -59,8 +67,14 @@ public sealed record SimulationCandidate
     /// <summary>A stored candidate version; null for unsaved content.</summary>
     public ProtocolVersionId? VersionId { get; }
 
+    /// <summary>Optional audit version pin for <see cref="VersionId"/>; null evaluates the latest stored version.</summary>
+    public long? Version { get; }
+
     /// <summary>The base of unsaved content; null for a stored candidate, whose base is its parent version.</summary>
     public ProtocolVersionId? BaseVersionId { get; }
+
+    /// <summary>Optional audit version pin for <see cref="BaseVersionId"/>; null evaluates the latest stored base version.</summary>
+    public long? BaseVersion { get; }
 
     /// <summary>Unsaved candidate content, a protocol design document (ADR-2472); null for a stored candidate.</summary>
     public string? Content { get; }
@@ -69,14 +83,19 @@ public sealed record SimulationCandidate
     /// A stored protocol version, usually a draft, compared with the version it was forked from. A study's first
     /// version has no parent, so all of its elements are added.
     /// </summary>
-    public static SimulationCandidate StoredProtocolVersion(ProtocolVersionId version)
+    public static SimulationCandidate StoredProtocolVersion(ProtocolVersionId version, long? expectedVersion = null)
     {
         if (version.IsEmpty)
         {
             throw new ArgumentException("Name the protocol version to simulate.", nameof(version));
         }
 
-        return new SimulationCandidate(CandidateKind.ProtocolVersion, version, null, null);
+        if (expectedVersion is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(expectedVersion), expectedVersion, "A pinned version must be at least 1.");
+        }
+
+        return new SimulationCandidate(CandidateKind.ProtocolVersion, version, expectedVersion, null, null, null);
     }
 
     /// <summary>
@@ -84,15 +103,20 @@ public sealed record SimulationCandidate
     /// frozen content (in review or later) so the comparison is reproducible. The content must read as a protocol
     /// design, as a stored draft's must (ADR-2472).
     /// </summary>
-    public static SimulationCandidate UnsavedProtocolVersion(ProtocolVersionId baseVersion, string content)
+    public static SimulationCandidate UnsavedProtocolVersion(ProtocolVersionId baseVersion, string content, long? expectedBaseVersion = null)
     {
         if (baseVersion.IsEmpty)
         {
             throw new ArgumentException("Name the protocol version the content is compared with.", nameof(baseVersion));
         }
 
+        if (expectedBaseVersion is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(expectedBaseVersion), expectedBaseVersion, "A pinned version must be at least 1.");
+        }
+
         ArgumentNullException.ThrowIfNull(content);
-        return new SimulationCandidate(CandidateKind.ProtocolVersion, null, baseVersion, content);
+        return new SimulationCandidate(CandidateKind.ProtocolVersion, null, null, baseVersion, expectedBaseVersion, content);
     }
 }
 
@@ -203,6 +227,9 @@ public static class SimulationErrors
 {
     public static readonly KernelError VersionUnknown =
         new("K.Simulation.VersionUnknown", 404, "The protocol version does not exist.");
+
+    public static readonly KernelError VersionStale =
+        new("K.Simulation.VersionStale", 409, "The protocol version is not at the pinned version; reload and simulate the current version.");
 
     public static readonly KernelError BaseNotFrozen =
         new("K.Simulation.BaseNotFrozen", 422, "The base version is still a draft; compare with a version whose content is frozen.");

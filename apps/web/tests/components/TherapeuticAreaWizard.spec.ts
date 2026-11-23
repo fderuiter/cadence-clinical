@@ -45,11 +45,12 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
     });
 
     const cards = wrapper.findAll(".ta-card");
+    const vm = wrapper.vm as Record<string, any>;
     // Click second template (Cardiology)
     await cards[1].trigger("click");
 
-    expect(wrapper.vm.selectedTemplateId).toBe("cardiology");
-    expect(wrapper.vm.activeConfig.protocol_id).toBe("CDNC-2026-CARD");
+    expect(vm.selectedTemplateId).toBe("cardiology");
+    expect(vm.activeConfig.protocol_id).toBe("CDNC-2026-CARD");
     expect(wrapper.text()).toContain("Heart Failure");
   });
 
@@ -59,17 +60,18 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
     // Modify sample size and arm name
-    wrapper.vm.activeConfig.arms[0].target_sample_size = 250;
-    wrapper.vm.activeConfig.arms[0].name = "Custom Kinase Inhibitor Arm";
+    vm.activeConfig.arms[0].target_sample_size = 250;
+    vm.activeConfig.arms[0].name = "Custom Kinase Inhibitor Arm";
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.totalSampleSize).toBe(
-      250 + wrapper.vm.activeConfig.arms[1].target_sample_size
+    expect(vm.totalSampleSize).toBe(
+      250 + vm.activeConfig.arms[1].target_sample_size
     );
     expect(wrapper.text()).toContain(
-      `Target Participants:${250 + wrapper.vm.activeConfig.arms[1].target_sample_size} subjects`
+      `Target Participants:${250 + vm.activeConfig.arms[1].target_sample_size} subjects`
     );
     const inputEl = wrapper.find(".input-arm-name").element as HTMLInputElement;
     expect(inputEl.value).toBe("Custom Kinase Inhibitor Arm");
@@ -81,17 +83,18 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
-    const initialArmCount = wrapper.vm.activeConfig.arms.length;
-    wrapper.vm.addArm();
+    const initialArmCount = vm.activeConfig.arms.length;
+    vm.addArm();
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.activeConfig.arms.length).toBe(initialArmCount + 1);
+    expect(vm.activeConfig.arms.length).toBe(initialArmCount + 1);
 
-    wrapper.vm.removeArm(wrapper.vm.activeConfig.arms.length - 1);
+    vm.removeArm(vm.activeConfig.arms.length - 1);
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.activeConfig.arms.length).toBe(initialArmCount);
+    expect(vm.activeConfig.arms.length).toBe(initialArmCount);
   });
 
   it("modifies visit schedule target days and window tolerances", async () => {
@@ -100,17 +103,18 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
-    wrapper.vm.configTab = "visits";
+    vm.configTab = "visits";
     await wrapper.vm.$nextTick();
 
-    const visit = wrapper.vm.activeConfig.visits[0];
+    const visit = vm.activeConfig.visits[0];
     visit.target_day = -14;
     visit.window_lower_days = 5;
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.activeConfig.visits[0].target_day).toBe(-14);
-    expect(wrapper.vm.activeConfig.visits[0].window_lower_days).toBe(5);
+    expect(vm.activeConfig.visits[0].target_day).toBe(-14);
+    expect(vm.activeConfig.visits[0].window_lower_days).toBe(5);
   });
 
   it("emits synthesize event and marks onboarding task_protocol completed", async () => {
@@ -146,8 +150,9 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
-    wrapper.vm.activeConfig.protocol_id = "CUSTOM-PERSISTED-001";
+    vm.activeConfig.protocol_id = "CUSTOM-PERSISTED-001";
     await wrapper.vm.$nextTick();
 
     const savedRaw = window.localStorage.getItem("cadence_ta_wizard_state");
@@ -167,10 +172,11 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
-    expect(wrapper.vm.storageError).not.toBeNull();
-    expect(wrapper.vm.storageError).toContain("Failed to load saved state");
-    expect(wrapper.vm.isStorageAvailable).toBe(false);
+    expect(vm.storageError).not.toBeNull();
+    expect(vm.storageError).toContain("Failed to load saved state");
+    expect(vm.isStorageAvailable).toBe(false);
     expect(consoleWarnSpy).toHaveBeenCalled();
     expect(wrapper.find(".storage-warning-banner").exists()).toBe(true);
   });
@@ -187,20 +193,22 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
     // Clear initial state
-    wrapper.vm.storageError = null;
+    vm.storageError = null;
 
     // Trigger state change to execute watcher
-    wrapper.vm.activeConfig.protocol_id = "FAIL-PERSIST-001";
+    vm.activeConfig.protocol_id = "FAIL-PERSIST-001";
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.storageError).toContain("Auto-save paused");
-    expect(wrapper.vm.isStorageAvailable).toBe(false);
+    expect(vm.storageError).toContain("Auto-save paused");
+    expect(vm.isStorageAvailable).toBe(false);
 
     const banner = wrapper.find(".storage-warning-banner");
     expect(banner.exists()).toBe(true);
     expect(banner.text()).toContain("Auto-Save Warning");
+    void setItemSpy;
   });
 
   it("prevents duplicate toast spam on repeated watch executions while in error state", async () => {
@@ -215,22 +223,26 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
     // Initial edit triggers error and toast
-    wrapper.vm.activeConfig.protocol_id = "KESTROKE-1";
+    vm.activeConfig.protocol_id = "KESTROKE-1";
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.storageError).not.toBeNull();
+    expect(vm.storageError).not.toBeNull();
 
     // Subsequent edits while in error state update activeConfig without throw disruption
-    wrapper.vm.activeConfig.protocol_id = "KEYSTROKE-2";
+    vm.activeConfig.protocol_id = "KEYSTROKE-2";
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.activeConfig.protocol_id).toBe("KEYSTROKE-2");
+    expect(vm.activeConfig.protocol_id).toBe("KEYSTROKE-2");
+    void setItemSpy;
   });
 
   it("allows user to dismiss and retry storage error banner", async () => {
     let shouldFail = true;
     vi.spyOn(window.localStorage, "setItem").mockImplementation(
       (key, value) => {
+        void key;
+        void value;
         if (shouldFail) {
           throw new DOMException("QuotaExceededError", "QuotaExceededError");
         }
@@ -242,8 +254,9 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
         plugins: [pinia],
       },
     });
+    const vm = wrapper.vm as Record<string, any>;
 
-    wrapper.vm.activeConfig.protocol_id = "RETRY-TEST";
+    vm.activeConfig.protocol_id = "RETRY-TEST";
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".storage-warning-banner").exists()).toBe(true);
@@ -252,11 +265,11 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
     const dismissBtn = wrapper.find(".btn-dismiss-warning");
     await dismissBtn.trigger("click");
 
-    expect(wrapper.vm.storageError).toBeNull();
+    expect(vm.storageError).toBeNull();
     expect(wrapper.find(".storage-warning-banner").exists()).toBe(false);
 
     // Set error again for retry test
-    wrapper.vm.activeConfig.protocol_id = "RETRY-TEST-2";
+    vm.activeConfig.protocol_id = "RETRY-TEST-2";
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".storage-warning-banner").exists()).toBe(true);
 
@@ -265,8 +278,8 @@ describe("TherapeuticAreaWizard.vue - Interactive Therapeutic Area Wizard Specif
     const retryBtn = wrapper.find(".btn-retry-save");
     await retryBtn.trigger("click");
 
-    expect(wrapper.vm.storageError).toBeNull();
-    expect(wrapper.vm.isStorageAvailable).toBe(true);
+    expect(vm.storageError).toBeNull();
+    expect(vm.isStorageAvailable).toBe(true);
     expect(wrapper.find(".storage-warning-banner").exists()).toBe(false);
   });
 });

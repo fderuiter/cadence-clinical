@@ -2,14 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Services;
 using Cadence.Deid;
 using Cadence.Kernel.Time;
+using Cadence.Testing.Time;
 
 using FellowOakDicom;
 using FellowOakDicom.IO.Buffer;
@@ -17,11 +20,19 @@ using FellowOakDicom.IO.Buffer;
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using Xunit;
 
 namespace Cadence.UnitTests.Imaging;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public static class ProcessWideGcMetricsCollection
+{
+    public const string Name = "ProcessWideGcMetrics";
+}
+
+[Collection(ProcessWideGcMetricsCollection.Name)]
 public sealed class DicomIngestionServiceTests
 {
     private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
@@ -275,7 +286,7 @@ public sealed class DicomIngestionServiceTests
         (await dbContext.ImagingStudyEnvelopes.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
-    private static byte[] CreateUnsupportedCompressedDicomBytes()
+    internal static byte[] CreateUnsupportedCompressedDicomBytes()
     {
         var dataset = new DicomDataset
         {
@@ -325,5 +336,345 @@ public sealed class DicomIngestionServiceTests
         using var ms = new MemoryStream();
         file.Save(ms);
         return ms.ToArray();
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_StreamingMatchesDeidentify_OnChecksumsSizesUidsMasksAndManifestSignature()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var deidentifier = TestDeidentifier();
+        var clock = new FakeClock();
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingBatchParityTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, deidentifier, clock);
+
+        byte[] rawSlice1 = CreateSampleDicomBytesWithPhi("8101");
+        byte[] rawSlice2 = CreateSampleDicomBytesWithPhi("8102");
+        byte[] rawSlice3 = CreateSampleDicomBytesWithPhi("8103");
+
+        byte[] zipBytes = CreateArchiveBytes(
+        [
+            ("DICOM/slice_001.dcm", rawSlice1),
+            ("DICOM/readme.pdf", Encoding.UTF8.GetBytes("%PDF-1.7 imaging notes")),
+            ("DICOM/sub/slice_002.dcm", rawSlice2)
+        ]);
+
+        var request = new BatchIngestionRequest(
+            Files: [],
+            SubjectId: "SUBJ-PARITY-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-PARITY-01",
+            TimepointName: "WEEK_4",
+            OperatorIdentity: "crc@cadence.org")
+        {
+            StreamFiles = EnumerateMixedStreamsAsync(zipBytes, rawSlice3)
+        };
+
+        var result = await service.IngestBatchAsync(request, ct);
+
+        result.TotalFilesReceived.Should().Be(5);
+        result.IngestedSliceCount.Should().Be(3);
+        result.SkippedNonDicomCount.Should().Be(2);
+        result.SkippedNonDicomFiles.Should().Equal("DICOM/readme.pdf", "notes.txt");
+
+        var payload = DicomIngestionService.CreateBatchManifestPayloadWithoutSignature(result.Manifest);
+        deidentifier.VerifyPayload(payload, result.Signature).Should().BeTrue();
+
+        var expectedSlices = new[] { rawSlice1, rawSlice2, rawSlice3 }
+            .Select(bytes => deidentifier.Deidentify(
+                bytes,
+                subjectId: "SUBJ-PARITY-01",
+                siteId: "SITE-101",
+                studyId: "STUDY-PARITY-01",
+                deidentifiedAt: clock.UtcNow,
+                applyPixelMask: true,
+                operatorIdentity: "crc@cadence.org"))
+            .ToArray();
+
+        result.AnonymizedStudyUid.Should().Be(expectedSlices[0].AnonymizedStudyUid);
+
+        var instances = await dbContext.ImagingInstanceEnvelopes
+            .OrderBy(i => i.InstanceNumber)
+            .ToListAsync(ct);
+        instances.Should().HaveCount(3);
+
+        for (int i = 0; i < expectedSlices.Length; i++)
+        {
+            instances[i].SopInstanceUid.Should().Be(expectedSlices[i].AnonymizedSopUid);
+            instances[i].ChecksumSha256.Should().Be(expectedSlices[i].Certificate.TargetSha256);
+            instances[i].SizeBytes.Should().Be(expectedSlices[i].DeidentifiedBytes.Length);
+            instances[i].BurnedInPhiMasked.Should().Be(expectedSlices[i].Certificate.PixelMaskApplied);
+            instances[i].Rows.Should().Be(expectedSlices[i].Rows);
+            instances[i].Columns.Should().Be(expectedSlices[i].Columns);
+            instances[i].BitsAllocated.Should().Be(expectedSlices[i].BitsAllocated);
+        }
+
+        var cert = await dbContext.DeidentificationCertificates.SingleAsync(c => c.Id == result.CertificateId, ct);
+        cert.SourceSha256.Should().Be(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(result.Signature))));
+        cert.TargetSha256.Should().Be(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(result.Manifest.ManifestId))));
+        cert.OriginalStudyInstanceUidHash.Should().Be(expectedSlices[0].Certificate.OriginalStudyInstanceUidHash);
+        cert.OriginalSopInstanceUidHash.Should().Be(expectedSlices[0].Certificate.OriginalSopInstanceUidHash);
+        cert.AnonymizedStudyInstanceUid.Should().Be(expectedSlices[0].AnonymizedStudyUid);
+        cert.AnonymizedSopInstanceUid.Should().Be(expectedSlices[0].AnonymizedSopUid);
+        cert.PixelMaskApplied.Should().BeTrue();
+        cert.ScrubbedTagsCount.Should().Be(result.Manifest.ScrubbedTagsCount);
+        result.Manifest.PixelMasks.Should().Equal(expectedSlices[0].Certificate.PixelMasks);
+    }
+
+    [Fact]
+    [Cadence.Testing.GxPRequirement("PRD-IMG-002")]
+    public async Task IngestBatchAsync_NonSeekableZipArchive_AbortsPersistenceAndDeletesSpoolFile_WhenPixelMaskingFails()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingNonSeekableZipAbort_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        byte[] zipBytes = CreateArchiveBytes(
+        [
+            ("DICOM/slice_001.dcm", CreateSampleDicomBytesWithPhi("8201")),
+            ("DICOM/slice_002.dcm", CreateSampleDicomBytesWithPhi("8202")),
+            ("DICOM/slice_bad.dcm", CreateUnsupportedCompressedDicomBytes())
+        ]);
+
+        var spoolFilesBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip").ToHashSet(StringComparer.Ordinal);
+
+        var request = new BatchIngestionRequest(
+            Files: [],
+            SubjectId: "SUBJ-ZIP-FAIL",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-ZIP-FAIL")
+        {
+            StreamFiles = SingleNonSeekableZipStreamAsync("study.zip", zipBytes)
+        };
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+        await act.Should().ThrowAsync<DicomPixelDeidException>();
+
+        (await dbContext.DeidentificationCertificates.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingSeriesEnvelopes.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+
+        var leakedSpoolFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip")
+            .Where(path => !spoolFilesBefore.Contains(path))
+            .ToArray();
+        leakedSpoolFiles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_MultiSlice512ZipArchive_KeepsLiveLohBoundedAtSaveChanges()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var deidentifier = TestDeidentifier();
+
+        // Warm shared ArrayPool buckets before comparing 40-slice vs 100-slice 512x512 runs
+        _ = await RunZipLohProbeAsync(sliceCount: 4, deidentifier, ct);
+
+        var (lohAt40Slices, _) = await RunZipLohProbeAsync(sliceCount: 40, deidentifier, ct);
+        var (lohAt100Slices, totalAllocatedAt100Slices) = await RunZipLohProbeAsync(sliceCount: 100, deidentifier, ct);
+
+        // 60 extra 512x512x16-bit slices represent >30 MiB raw + >30 MiB de-identified (>60 MiB on LOH if retained).
+        // Streaming slice de-identification retains zero slice byte[] buffers at SaveChangesAsync.
+        long lohGrowthBytes = lohAt100Slices - lohAt40Slices;
+        lohGrowthBytes.Should().BeLessThan(8 * 1024 * 1024);
+
+        // 100 uncompressed 512x512x16-bit slices alone are >50 MiB raw (>100 MiB raw + de-identified);
+        // pooled streaming keeps total managed allocations far below a single retained copy of the batch.
+        totalAllocatedAt100Slices.Should().BeLessThan(35L * 1024 * 1024);
+    }
+
+    internal static byte[] CreateArchiveBytes((string EntryName, byte[] Content)[] entries)
+    {
+        using var zipMs = new MemoryStream();
+        using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (entryName, content) in entries)
+            {
+                var entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);
+                using var entryStream = entry.Open();
+                entryStream.Write(content, 0, content.Length);
+            }
+        }
+
+        return zipMs.ToArray();
+    }
+
+    private static async Task<(long LiveLohBytes, long TotalAllocatedBytes)> RunZipLohProbeAsync(int sliceCount, DicomDeidentifier deidentifier, CancellationToken ct)
+    {
+        string tempInputZip = Path.Combine(Path.GetTempPath(), $"test-input-{sliceCount}-{Guid.NewGuid():N}.zip");
+        var spoolFilesBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip").ToHashSet(StringComparer.Ordinal);
+
+        try
+        {
+            await using (var zipFs = new FileStream(tempInputZip, FileMode.Create, FileAccess.Write, FileShare.None))
+            await using (var archive = await ZipArchive.CreateAsync(zipFs, ZipArchiveMode.Create, leaveOpen: false, entryNameEncoding: null, ct))
+            {
+                for (int i = 1; i <= sliceCount; i++)
+                {
+                    var entry = archive.CreateEntry($"DICOM/slice_{i:D4}.dcm", CompressionLevel.Fastest);
+                    await using var entryStream = await entry.OpenAsync(ct);
+                    byte[] sliceBytes = Create512CtSliceBytes(i);
+                    await entryStream.WriteAsync(sliceBytes, ct);
+                }
+            }
+
+            var interceptor = new LohSnapshotSaveChangesInterceptor();
+            var options = new DbContextOptionsBuilder<ImagingDbContext>()
+                .UseInMemoryDatabase($"ImagingLohTest_{sliceCount}_{Guid.NewGuid():N}")
+                .AddInterceptors(interceptor)
+                .Options;
+
+            await using var dbContext = new ImagingDbContext(options);
+            var service = new DicomIngestionService(dbContext, deidentifier, SystemClock.Instance);
+
+            await using var rawZipRead = new FileStream(tempInputZip, FileMode.Open, FileAccess.Read, FileShare.Read);
+            await using var nonSeekable = new NonSeekableTestReadStream(rawZipRead);
+
+            var request = new BatchIngestionRequest(
+                Files: [],
+                SubjectId: "SUBJ-LOH-01",
+                SiteId: "SITE-101",
+                StudyId: "STUDY-LOH-01")
+            {
+                StreamFiles = SingleStreamAsync(new BatchStreamItem("study.zip", nonSeekable, IsZipHint: true))
+            };
+
+            _ = GC.GetTotalMemory(forceFullCollection: true);
+            long allocBefore = GC.GetTotalAllocatedBytes(precise: true);
+
+            var result = await service.IngestBatchAsync(request, ct);
+            long allocAfter = GC.GetTotalAllocatedBytes(precise: true);
+
+            result.IngestedSliceCount.Should().Be(sliceCount);
+            (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(sliceCount);
+
+            var leakedSpoolFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip")
+                .Where(path => !spoolFilesBefore.Contains(path))
+                .ToArray();
+            leakedSpoolFiles.Should().BeEmpty();
+
+            return (interceptor.LiveLohBytesAtSaveChanges, allocAfter - allocBefore);
+        }
+        finally
+        {
+            if (File.Exists(tempInputZip))
+            {
+                File.Delete(tempInputZip);
+            }
+        }
+    }
+
+    private static byte[] Create512CtSliceBytes(int index)
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.CTImageStorage },
+            { DicomTag.SOPInstanceUID, $"1.2.840.10008.5.1.4.1.1.2.950.{index}" },
+            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.2.950" },
+            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.2.950.1" },
+            { DicomTag.PatientID, $"RAW-LOH-{index}" },
+            { DicomTag.PatientName, "DOE^BENCH" },
+            { DicomTag.StudyDate, "20260301" },
+            { DicomTag.Modality, "SC" },
+            { DicomTag.Rows, (ushort)512 },
+            { DicomTag.Columns, (ushort)512 },
+            { DicomTag.BitsAllocated, (ushort)16 }
+        };
+
+        byte[] pixels = new byte[512 * 512 * 2];
+        pixels[0] = (byte)(index & 0xFF);
+        dataset.Add(new DicomOtherByte(DicomTag.PixelData, pixels));
+
+        using var ms = new MemoryStream(pixels.Length + 4_096);
+        new DicomFile(dataset).Save(ms);
+        return ms.ToArray();
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> EnumerateMixedStreamsAsync(byte[] zipBytes, byte[] standaloneSlice)
+    {
+        await using var zipMs = new MemoryStream(zipBytes, writable: false);
+        await using var nonSeekableZip = new NonSeekableTestReadStream(zipMs);
+        yield return new BatchStreamItem("archive.zip", nonSeekableZip);
+
+        await using var sliceMs = new MemoryStream(standaloneSlice, writable: false);
+        await using var nonSeekableSlice = new NonSeekableTestReadStream(sliceMs);
+        yield return new BatchStreamItem("slice_003.dcm", nonSeekableSlice);
+
+        await using var noteMs = new MemoryStream(Encoding.UTF8.GetBytes("operator note"), writable: false);
+        yield return new BatchStreamItem("notes.txt", noteMs);
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> SingleNonSeekableZipStreamAsync(string fileName, byte[] zipBytes)
+    {
+        await using var ms = new MemoryStream(zipBytes, writable: false);
+        await using var nonSeekable = new NonSeekableTestReadStream(ms);
+        yield return new BatchStreamItem(fileName, nonSeekable);
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> SingleStreamAsync(BatchStreamItem item)
+    {
+        await Task.CompletedTask;
+        yield return item;
+    }
+
+    private sealed class LohSnapshotSaveChangesInterceptor : SaveChangesInterceptor
+    {
+        public long LiveLohBytesAtSaveChanges { get; private set; }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            _ = GC.GetTotalMemory(forceFullCollection: true);
+            var gcInfo = GC.GetGCMemoryInfo();
+            LiveLohBytesAtSaveChanges = gcInfo.GenerationInfo.Length > 3 ? gcInfo.GenerationInfo[3].SizeAfterBytes : 0L;
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
+    internal sealed class NonSeekableTestReadStream(Stream inner) : Stream
+    {
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => inner.Flush();
+        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+        public override int Read(Span<byte> buffer) => inner.Read(buffer);
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            inner.ReadAsync(buffer, offset, count, cancellationToken);
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            inner.ReadAsync(buffer, cancellationToken);
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
     }
 }
