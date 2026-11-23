@@ -13,6 +13,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -111,6 +112,10 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       total: 1,
       limit: 50,
       offset: 0,
+    });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 1,
+      counts: { ACTIVE: 1 },
     });
     for (const method of Object.values(kernelApi))
       vi.mocked(method).mockReset();

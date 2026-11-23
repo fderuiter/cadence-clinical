@@ -12,6 +12,7 @@ import CanvasPalette from "../../src/components/canvas/CanvasPalette.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -127,6 +128,10 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
       total: 1,
       limit: 50,
       offset: 0,
+    });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 1,
+      counts: { ACTIVE: 1 },
     });
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     vi.mocked(kernelApi.getCommands).mockReset();

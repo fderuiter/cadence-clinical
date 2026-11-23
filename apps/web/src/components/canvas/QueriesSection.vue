@@ -111,7 +111,7 @@
         id="study-queries-error"
         :message="`${studyCode}'s queries couldn't be loaded.`"
         :detail="queries.loadError"
-        @retry="queries.reload()"
+        @retry="refreshQueries()"
         @explain="explainLoadError"
       />
       <p
@@ -224,6 +224,14 @@ const appliedParticipant = ref((props.participant ?? "").trim());
 const changedFilter = ref(props.changed ?? "");
 
 let filterTimer: ReturnType<typeof setTimeout> | undefined;
+let queryAbortController: AbortController | null = null;
+
+function abortActiveQueryRead() {
+  if (queryAbortController) {
+    queryAbortController.abort();
+    queryAbortController = null;
+  }
+}
 
 function isSiteFocused(): boolean {
   return (
@@ -402,10 +410,16 @@ function clearFilters() {
   syncFilterUrl();
 }
 
-onBeforeUnmount(() => clearTimeout(filterTimer));
+onBeforeUnmount(() => {
+  clearTimeout(filterTimer);
+  abortActiveQueryRead();
+});
 
 async function refreshQueries() {
   if (!studyId.value) return;
+  abortActiveQueryRead();
+  const controller = new AbortController();
+  queryAbortController = controller;
   const normalizedStatus = VALID_STATUSES.has(
     statusFilter.value as FormQueryStatus
   )
@@ -417,15 +431,22 @@ async function refreshQueries() {
       : changedFilter.value === "false"
         ? false
         : null;
-  await queries.load({
-    studyId: studyId.value,
-    filters: {
-      status: normalizedStatus,
-      site: appliedSite.value || undefined,
-      participant: appliedParticipant.value || undefined,
-      valueChanged,
+  await queries.load(
+    {
+      studyId: studyId.value,
+      filters: {
+        status: normalizedStatus,
+        site: appliedSite.value || undefined,
+        participant: appliedParticipant.value || undefined,
+        valueChanged,
+      },
     },
-  });
+    { signal: controller.signal }
+  );
+  if (controller.signal.aborted) return;
+  if (queryAbortController === controller) {
+    queryAbortController = null;
+  }
   for (const q of queries.queries) {
     if (q.site_code && !seenSites.value.includes(q.site_code)) {
       seenSites.value.push(q.site_code);
@@ -440,6 +461,7 @@ async function loadStudy(code: string) {
   const request = ++studyLookup;
   clearTimeout(filterTimer);
   filterTimer = undefined;
+  abortActiveQueryRead();
   studyId.value = null;
   studyError.value = null;
   seenSites.value = [];

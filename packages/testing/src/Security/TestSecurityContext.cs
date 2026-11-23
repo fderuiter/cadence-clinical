@@ -53,20 +53,37 @@ public static class TestSecurityContext
     /// </summary>
     public static IReadOnlyList<string> AllStudies { get; } = [StudyAccessEvaluator.AllStudies];
 
+    /// <summary>
+    /// All module product families enabled for general integration and RBAC test identities. Tests verifying commercial
+    /// packaging restrictions pass an explicit subset (such as <c>["Blueprint"]</c>) or <c>[]</c>.
+    /// </summary>
+    public static IReadOnlyList<string> AllProductFamilies { get; } =
+    [
+        "Blueprint",
+        "Capture",
+        "Orbit",
+        "Engage",
+        "Allocate",
+        "Vigil",
+        "Lens",
+        "Assure",
+    ];
+
     /// <summary>The identity signed onto requests when a test does not name one.</summary>
     public static GatewayIdentity DefaultIdentity { get; } = new(
         UserId: "test-user",
         Roles: ["Data Manager", "CRA", "Site Investigator"],
         SiteIds: [],
         TenantId: TenantCode,
-        StudyIds: AllStudies);
+        StudyIds: AllStudies,
+        ProductFamilies: AllProductFamilies);
 
     /// <summary>
     /// An identity for <paramref name="userId"/> with <paramref name="roles"/> in <see cref="TenantCode"/>, assigned to
-    /// every study.
+    /// every study and entitled to all product families unless overridden.
     /// </summary>
     public static GatewayIdentity Identity(string userId, params string[] roles) =>
-        new(userId, roles, [], TenantId: TenantCode, StudyIds: AllStudies);
+        new(userId, roles, [], TenantId: TenantCode, StudyIds: AllStudies, ProductFamilies: AllProductFamilies);
 
     /// <summary>Signed gateway headers for <paramref name="identity"/>, issued now unless a time is given.</summary>
     public static IReadOnlyDictionary<string, string> CreateHmacHeaders(
@@ -100,7 +117,7 @@ public static class TestSecurityContext
     public static IOptionsMonitor<GatewayAuthenticationOptions> GatewayOptions(string? secret = GatewaySecret) =>
         new FixedOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = secret });
 
-    /// <summary>An authenticated principal carrying <c>sub</c>, <c>tenant_id</c>, and role claims, as the gateway scheme emits.</summary>
+    /// <summary>An authenticated principal carrying <c>sub</c>, <c>tenant_id</c>, product families, and role claims, as the gateway scheme emits.</summary>
     public static ClaimsPrincipal CreatePrincipal(string userId, params string[] roles)
     {
         var claims = new List<Claim>
@@ -110,6 +127,7 @@ public static class TestSecurityContext
             new(CadenceClaimTypes.TenantId, TenantCode),
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(AllProductFamilies.Select(family => new Claim(CadenceClaimTypes.ProductFamily, family)));
         return new ClaimsPrincipal(new ClaimsIdentity(claims, GatewayAuthenticationHandler.SchemeName, CadenceClaimTypes.Subject, ClaimTypes.Role));
     }
 
@@ -139,6 +157,8 @@ public static class TestSecurityContext
             {
                 ChangeReason = DecodedChangeReason(request) ?? identity.ChangeReason,
                 SigToken = FirstHeader(request, GatewayHeaders.SigToken) ?? identity.SigToken,
+                ProductFamilies = identity.ProductFamilies
+                    ?? (string.IsNullOrWhiteSpace(identity.TenantId) ? null : AllProductFamilies),
             };
 
             foreach (var (name, value) in CreateHmacHeaders(signed))
