@@ -210,21 +210,22 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # actionlint, native-aot-build, lint-and-static, dotnet-quality, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
-pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
-pnpm cadence ci --job compliance        # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
-pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
-pnpm cadence ci --list                  # what each step runs locally, without running it
+pnpm cadence ci                          # actionlint, native-aot-build, lint-and-static, dotnet-quality, docs-build, security, container-security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci --job container-security # build and Trivy-scan gateway, kernel-api, sce-python and sce-r
+pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
+pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
+pnpm cadence ci --job accessibility-e2e  # the Playwright E2E and browser-to-database job alone
+pnpm cadence ci --list                   # what each step runs locally, without running it
 ```
 
-| Option                  | Description                                                                                                                                                                                                                 |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>`       | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                |
-| `--allow-missing-tools` | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing with the install hint, while still requiring PostgreSQL and database test execution.                   |
-| `--allow-db-skip`       | Accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX), while still requiring all external tool binaries.                                                                              |
-| `--allow-skip`          | Shorthand for `--allow-missing-tools --allow-db-skip`: skips steps whose required binary is missing with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
-| `--base <ref>`          | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                           |
-| `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                  |
+| Option                  | Description                                                                                                                                                                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-j\|--job <job>`       | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `container-security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                              |
+| `--allow-missing-tools` | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `docker`, `trivy`, `bash`) or Docker daemon is unavailable with setup guidance, while still requiring PostgreSQL and `*.database.txt` database test evidence. |
+| `--allow-db-skip`       | Accepts a run whose PostgreSQL tests or `*.database.txt` fixture metadata did not execute (without PostgreSQL or with incomplete TRX/metadata), while still requiring all external tool binaries and the Docker daemon.                                         |
+| `--allow-skip`          | Shorthand for `--allow-missing-tools --allow-db-skip`: skips steps whose required binary or Docker daemon is unavailable with setup guidance, and accepts a run without PostgreSQL or complete database test evidence.                                          |
+| `--base <ref>`          | The ref used to scope `container-security` trigger diffs and forwarded as `--base <ref>` to scoped CLI `check` steps (`Run Cadence quality sentinels`, `detect-secrets`, `deid`) and `Check GxP Snapshot Policy`. Default: `origin/main`.                       |
+| `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                      |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -233,14 +234,18 @@ failed.
 
 Where it differs from CI:
 
-- **PostgreSQL is required.** CI gives the .NET tests a database, so without `CADENCE_TEST_POSTGRES` or
+- **PostgreSQL and fixture metadata are required.** CI gives the .NET tests a database, so without `CADENCE_TEST_POSTGRES` or
   `CADENCE_TEST_DOCKER=1` ([TESTING.md](TESTING.md#tests-that-need-postgresql)) the test step fails before it starts
-  instead of passing with every database test skipped. After the test step passes, its TRX files are read, and any test
-  in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
+  instead of passing with every database test skipped. After `dotnet-tests` passes, both `LocalCiRunner` and `Fail the run when a PostgreSQL test did not execute` (`SyncGxPService.VerifyDatabaseEvidence`) verify every mandatory database test across `tests/` (`Cadence.IntegrationTests` and `Cadence.E2ETests`) against the TRX files in `TestResults/gxp` and require `*.database.txt` fixture metadata for every database assembly (#5325),
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
-  browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-db-skip` (or
-  `--allow-skip`) accepts the skips.
-- **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and `api-clients`,
+  browser correction check runs with `CADENCE_TEST_BROWSER=1` in `accessibility-e2e`, which scopes out full-repository TRX/`*.database.txt` discovery so `--job accessibility-e2e` runs standalone). `--allow-db-skip` (or `--allow-skip`) accepts incomplete database evidence outside snapshot mode.
+- **Container builds and Trivy scans follow branch diffs.** `container-security` builds `gateway`, `kernel-api`,
+  `sce-python` and `sce-r` and runs `trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`
+  against each image. On a default `pnpm cadence ci` run it resolves changed files via `GitRevisionScopeService.ResolveFileScanScope`,
+  skipping when a branch diff touches no Dockerfile, `docker/*`, `.dockerignore`, `.github/dependabot.yml`, `.github/workflows/ci.yml`,
+  MSBuild/NuGet, or `package.json`/`pnpm-lock.yaml` trigger, and running unconditionally when the scope falls back to all tracked
+  files or when `--job container-security` is requested.
+- **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, ShellCheck, `markdown` and `api-clients`,
   `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests`
   (followed by its dedicated `Cadence.ArchitectureTests` step, while `Cadence.UnitTests` runs in `dotnet-tests`),
   `docs-build` builds the VitePress portal and co-hosted interactive demos and runs `public-bundle`,
@@ -250,21 +255,22 @@ Where it differs from CI:
   failed. The Node install and UI build in later jobs are covered by earlier jobs.
   The documentation build (`pnpm docs:build`) runs the read-only `openapi`, `schema-doc`, `markdown` and `rtm`
   checks unconditionally on every build without touching `docs/SDLC` or `docs/schema`.
-- **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job's
+- **The tests run once.** The .NET test step writes its TRX files and `*.database.txt` fixture evidence to `TestResults/gxp`, and the compliance job's
   `Generate Compliance Reports` step builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which
   would run every test again. It writes them to `TestResults/gxp/preview/` (to `docs/SDLC` only with
-  `CADENCE_GXP_SNAPSHOT=1`), stages nothing, and fails on unknown requirement IDs and failing tagged tests.
+  `CADENCE_GXP_SNAPSHOT=1`), stages nothing, and fails on unknown requirement IDs, failing tagged tests, skipped database tests,
+  and missing `*.database.txt` files (`SyncGxPService.VerifyDatabaseEvidence`, skipped with `--allow-db-skip` or `--allow-skip` outside snapshot mode).
   `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
-- **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, and ShellCheck (resolved
-  from `.cadence/bin` or `PATH`), `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), and `bash`
-  are not installed automatically by `cadence ci` (provision them with `./scripts/setup_wizard.sh --minimal` or
-  `pwsh scripts/setup_wizard.ps1 -Minimal`): when any required binary is missing, the step fails with the install hint
-  so an incomplete environment cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to record missing
-  tool steps as skipped, with the install hint, instead of failing.
-- **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
-  (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+- **Required binaries and daemons must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, and ShellCheck (resolved
+  from `.cadence/bin` or `PATH`, provisioned by `./scripts/setup_wizard.sh --minimal` or `pwsh scripts/setup_wizard.ps1 -Minimal`),
+  `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), `docker` (with a reachable Docker daemon), `trivy`,
+  and `bash` are not installed automatically by `cadence ci`: when any required binary or daemon is unavailable, the step fails with setup guidance
+  so an incomplete environment cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to record unavailable tool or Docker steps as skipped,
+  with the setup hint, instead of failing.
+- **Not run:** the Playwright browser install, `Upload Trivy scan results to GitHub Security tab` (SARIF upload to GitHub Code Scanning), and the jobs that act on GitHub itself
+  (`ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
   full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
   when the branch has no commits over the base.
@@ -272,7 +278,7 @@ Where it differs from CI:
   writes to a temporary folder.
 
 `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs` reads `ci.yml` and fails when a job or step is added, renamed or
-removed, or runs a different command, until `packages/cli/src/Services/CiPlan.cs` follows.
+removed, changes its command or `ForwardsBaseRef` flag, leaves `InProcess` null while declaring `InProcessCiText` or `InProcessDisplay`, or breaks `CoveredBy` gate coverage, until `packages/cli/src/Services/CiPlan.cs` follows.
 
 ### `cadence rulesets`
 
