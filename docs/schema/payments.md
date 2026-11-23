@@ -4,26 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persistence.PaymentsDbContext`, not from a live database. Unqualified tables live in the `payments` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`payments.audit_log_entries`](#paymentsaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`payments.payments_audit_logs`](#paymentspayments_audit_logs) | `PaymentAuditLog` | 14 |
-| [`payments.payments_budget_contracts`](#paymentspayments_budget_contracts) | `BudgetContract` | 18 |
-| [`payments.payments_erp_sync_logs`](#paymentspayments_erp_sync_logs) | `ErpSyncLog` | 14 |
-| [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 20 |
-| [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 21 |
-| [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 22 |
-| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 12 |
-| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 25 |
-| [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 20 |
-| [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 14 |
-| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 33 |
-| [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations) | `PayableAllocation` | 17 |
-| [`payments.payments_payables`](#paymentspayments_payables) | `Payable` | 31 |
-| [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices) | `RemittanceAdvice` | 27 |
-| [`payments.payments_self_billing_invoices`](#paymentspayments_self_billing_invoices) | `SelfBillingInvoice` | 34 |
-| [`payments.payments_split_payees`](#paymentspayments_split_payees) | `SplitPayeeConfig` | 15 |
-
 ## payments.audit_log_entries
 
 Entity: `AuditLogEntry`

@@ -1,4 +1,4 @@
-# ADR-2645: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions
+# ADR-2646: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

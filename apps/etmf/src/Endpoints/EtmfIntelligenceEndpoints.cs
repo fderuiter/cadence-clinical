@@ -14,8 +14,10 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
+using Cadence.Storage;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -40,6 +42,9 @@ public static class EtmfIntelligenceEndpoints
 
         group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
         group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapGet("/documents/{document_id}/content", DownloadDocumentContent).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapPost("/documents/{document_id}/submit-qc", SubmitDocumentForQc).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
+        group.MapPatch("/documents/{document_id}/taxonomy", UpdateDocumentTaxonomy).RequirePermission("etmf_document:tag").RequireCallerStudyAndSiteScope();
         group.MapPost("/documents/export", ExportDocuments).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
         group.MapGet("/export-jobs/{job_id}", GetExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
         group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob).RequirePermission("etmf_document:export").RequireCallerStudyAndSiteScope();
@@ -60,11 +65,150 @@ public static class EtmfIntelligenceEndpoints
         return studies == null ? documents : documents.Where(d => studies.Contains(d.StudyId));
     }
 
-    private static IResult OutsideStudy() =>
+    private const int MaxStoredExcerptChars = 8192;
+
+    private static IResult ForbiddenScope(string detail = ClinicalScopeGuard.StudyAccessDeniedDetail) =>
         TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
+            title: "Forbidden",
+            detail: detail,
+            statusCode: StatusCodes.Status403Forbidden,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "FORBIDDEN_SCOPE",
+            });
+
+    private static IResult? CheckStudyAndOptionalSiteScope(HttpContext httpContext, string? studyId, string? siteId)
+    {
+        if (!ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
+        {
+            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, studyId, siteId, allowUnassignedSiteForScopedCaller: true) is not null)
+        {
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+        }
+
+        return null;
+    }
+
+    private static string? ResolveChangeReason(string? bodyReason, HttpContext httpContext)
+    {
+        if (!string.IsNullOrWhiteSpace(bodyReason))
+        {
+            return bodyReason.Trim();
+        }
+
+        if (ChangeReasonHeader.Read(httpContext.Request) is { Length: > 0 } headerReason)
+        {
+            return headerReason.Trim();
+        }
+
+        if (CallerScope.Principal(httpContext)?.ChangeReason is { Length: > 0 } principalReason
+            && !string.IsNullOrWhiteSpace(principalReason))
+        {
+            return principalReason.Trim();
+        }
+
+        return null;
+    }
+
+    private static string SanitizeTextExcerpt(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+        {
+            return string.Empty;
+        }
+
+        string withoutNuls = raw.Replace('\0', ' ');
+        return withoutNuls.Length <= MaxStoredExcerptChars
+            ? withoutNuls
+            : withoutNuls[..MaxStoredExcerptChars];
+    }
+
+    private static bool TryDecodeDocumentPayload(
+        string? contentBase64,
+        string? contentText,
+        out byte[] bytes,
+        out string textExcerpt,
+        out string? errorMessage)
+    {
+        bytes = [];
+        textExcerpt = string.Empty;
+        errorMessage = null;
+
+        if (!string.IsNullOrWhiteSpace(contentBase64))
+        {
+            string normalized = contentBase64.Trim();
+            int commaIndex = normalized.IndexOf(',', StringComparison.Ordinal);
+            if (commaIndex >= 0 && normalized[..commaIndex].Contains("base64", StringComparison.OrdinalIgnoreCase))
+            {
+                normalized = normalized[(commaIndex + 1)..].Trim();
+            }
+
+            try
+            {
+                bytes = Convert.FromBase64String(normalized);
+            }
+            catch (FormatException)
+            {
+                errorMessage = "content_base64 is not valid Base64-encoded binary data.";
+                return false;
+            }
+
+            if (bytes.Length == 0)
+            {
+                errorMessage = "Document binary payload cannot be empty.";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(contentText))
+            {
+                textExcerpt = SanitizeTextExcerpt(contentText);
+            }
+            else
+            {
+                int sampleLen = Math.Min(bytes.Length, MaxStoredExcerptChars);
+                textExcerpt = SanitizeTextExcerpt(Encoding.UTF8.GetString(bytes, 0, sampleLen));
+            }
+
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(contentText))
+        {
+            bytes = Encoding.UTF8.GetBytes(contentText);
+            textExcerpt = SanitizeTextExcerpt(contentText);
+            return true;
+        }
+
+        errorMessage = "Document binary payload or text content is required; empty uploads are not permitted.";
+        return false;
+    }
+
+    private static async Task<(string ObjectKey, string Sha256)> PersistBinaryPayloadAsync(
+        IStoragePort<byte[]>? storage,
+        string studyId,
+        string docId,
+        string filename,
+        string mimeType,
+        byte[] bytes,
+        CancellationToken ct)
+    {
+        string sha256 = ComputeSha256(bytes);
+        string objectKey = EtmfExportPackager.BuildDocumentObjectKey(studyId, docId, filename);
+        if (storage is not null)
+        {
+            sha256 = await storage.PutObjectAsync(
+                key: objectKey,
+                data: bytes,
+                contentType: mimeType,
+                expectedSha256: sha256,
+                ct: ct);
+        }
+
+        return (objectKey, sha256);
+    }
 
     public static Task<IResult> ClassifyDocument(
         [FromBody] ClassifyRequest request,
@@ -87,28 +231,45 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct,
-        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null,
+        [FromServices] IStoragePort<byte[]>? storage = null)
     {
-        if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Length < 10)
+        string? reason = ResolveChangeReason(request.ReasonForChange, httpContext);
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length < 10)
         {
             return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
+        if (CheckStudyAndOptionalSiteScope(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
-            return OutsideStudy();
+            return scopeDenied;
+        }
+
+        if (!TryDecodeDocumentPayload(request.ContentBase64, request.Content, out var payloadBytes, out var textExcerpt, out var payloadError))
+        {
+            return TypedResults.BadRequest(new { error = payloadError });
         }
 
         var now = clock.UtcNow;
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var mimeType = request.MimeType ?? "application/pdf";
+        var (objectKey, contentChecksum) = await PersistBinaryPayloadAsync(
+            storage,
+            request.StudyId,
+            docId,
+            request.Filename,
+            mimeType,
+            payloadBytes,
+            ct);
 
         var report = PerformClassification(
             docId: docId,
             filename: request.Filename,
-            mimeType: request.MimeType ?? "application/pdf",
-            content: request.Content,
+            mimeType: mimeType,
+            content: textExcerpt,
             hint: request.ArtifactHint,
-            now: now);
+            now: now,
+            sha256Override: contentChecksum);
 
         var user = Caller(httpContext);
         var roles = CallerScope.Roles(httpContext);
@@ -120,20 +281,22 @@ public static class EtmfIntelligenceEndpoints
             createdBy: user,
             actorRole: roles,
             timestamp: now,
-            reasonForChange: request.ReasonForChange,
+            reasonForChange: reason,
             siteId: request.SiteId,
             zone: report.PrimaryClassification.Zone,
             section: report.PrimaryClassification.Section,
             artifactCode: report.PrimaryClassification.ArtifactCode,
             artifactType: report.PrimaryClassification.ArtifactType,
-            content: request.Content,
-            mimeType: request.MimeType ?? "application/pdf",
+            content: textExcerpt,
+            mimeType: mimeType,
             taxonomyVersion: request.TaxonomyVersion ?? "v3.2.0-complete",
             metadataJson: JsonSerializer.Serialize(new
             {
                 document_intelligence = report,
                 assigned_cra = request.AssignedCra
-            })
+            }),
+            objectKey: objectKey,
+            contentChecksum: contentChecksum
         );
 
         dbContext.TmfDocuments.Add(doc);
@@ -151,7 +314,7 @@ public static class EtmfIntelligenceEndpoints
             Action = "STAGE_QC",
             DocumentId = docId,
             Details = $"Staged document {request.Filename} for CRA QC in study {request.StudyId}.",
-            ReasonForChange = request.ReasonForChange
+            ReasonForChange = reason
         };
         dbContext.TmfAuditLogs.Add(audit);
 
@@ -164,7 +327,7 @@ public static class EtmfIntelligenceEndpoints
                 studyId: request.StudyId,
                 siteId: request.SiteId,
                 tenantId: CallerScope.TenantId(httpContext),
-                reasonForChange: request.ReasonForChange,
+                reasonForChange: reason,
                 ct: ct);
         }
 
@@ -189,23 +352,36 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery] string? site_id = null)
     {
         if (!string.IsNullOrWhiteSpace(study_id) && !CallerScope.CanAccessStudy(httpContext, study_id))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+        }
+
+        string? requestedSiteId = !string.IsNullOrWhiteSpace(site_id)
+            ? site_id
+            : httpContext.Request.Query["site_id"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
+        {
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
 
         var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext).Where(d => d.Status == "TECHNICAL_QC");
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
+        }
+        if (!string.IsNullOrWhiteSpace(requestedSiteId))
+        {
+            query = query.Where(d => d.SiteId == requestedSiteId);
         }
 
         var docs = (await query.ToListAsync(ct))
@@ -225,17 +401,17 @@ public static class EtmfIntelligenceEndpoints
                     }
                     else
                     {
-                        report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow);
+                        report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
                     }
                 }
                 else
                 {
-                    report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow);
+                    report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
                 }
             }
             catch
             {
-                report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow);
+                report = PerformClassification(doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
             }
 
             return new CraqcStagingItem(
@@ -264,7 +440,8 @@ public static class EtmfIntelligenceEndpoints
         CancellationToken ct,
         [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
     {
-        if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Length < 10)
+        string? reason = ResolveChangeReason(request.ReasonForChange, httpContext);
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length < 10)
         {
             return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
         }
@@ -275,9 +452,9 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.NotFound(new { error = $"Document with ID '{doc_id}' not found." });
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, doc.StudyId, doc.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
+        if (CheckStudyAndOptionalSiteScope(httpContext, doc.StudyId, doc.SiteId) is { } scopeDenied)
         {
-            return OutsideStudy();
+            return scopeDenied;
         }
 
         var decision = request.Decision.ToUpperInvariant();
@@ -315,8 +492,8 @@ public static class EtmfIntelligenceEndpoints
         try
         {
             transition = decision == "REJECT"
-                ? doc.Reject(user, roles, request.ReasonForChange, now, nextSeq)
-                : doc.Approve(user, roles, request.ReasonForChange, now, nextSeq);
+                ? doc.Reject(user, roles, reason, now, nextSeq)
+                : doc.Approve(user, roles, reason, now, nextSeq);
         }
         catch (InvalidStateTransitionException ex)
         {
@@ -339,8 +516,8 @@ public static class EtmfIntelligenceEndpoints
             UserRole = roles,
             Action = $"QC_REVIEW_{decision}",
             DocumentId = doc_id,
-            Details = $"CRA QC Review decision: {decision}. Reason: {request.ReasonForChange}",
-            ReasonForChange = request.ReasonForChange
+            Details = $"CRA QC Review decision: {decision}. Reason: {reason}",
+            ReasonForChange = reason
         };
         dbContext.TmfAuditLogs.Add(audit);
 
@@ -353,7 +530,7 @@ public static class EtmfIntelligenceEndpoints
                 studyId: doc.StudyId,
                 siteId: doc.SiteId,
                 tenantId: CallerScope.TenantId(httpContext),
-                reasonForChange: request.ReasonForChange,
+                reasonForChange: reason,
                 ct: ct);
         }
 
@@ -365,24 +542,26 @@ public static class EtmfIntelligenceEndpoints
         [FromQuery] int? zone,
         [FromServices] EtmfDbContext dbContext,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery] string? site_id = null)
     {
         if (!string.IsNullOrWhiteSpace(study_id) && !ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
 
-        string? requestedSiteId = httpContext.Request.Query["site_id"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(requestedSiteId)
-            && ClinicalScopeGuard.RequireSite(httpContext, requestedSiteId) is { } siteDenied)
+        string? requestedSiteId = !string.IsNullOrWhiteSpace(site_id)
+            ? site_id
+            : httpContext.Request.Query["site_id"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
         {
-            return siteDenied;
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
 
         var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext);
@@ -420,26 +599,304 @@ public static class EtmfIntelligenceEndpoints
         return TypedResults.Ok(doc);
     }
 
+    public static async Task<IResult> DownloadDocumentContent(
+        [FromRoute] string document_id,
+        [FromServices] EtmfDbContext dbContext,
+        HttpContext httpContext,
+        CancellationToken ct,
+        [FromServices] IStoragePort<byte[]>? storage = null)
+    {
+        var doc = await dbContext.TmfDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == document_id, ct);
+        if (doc == null)
+        {
+            return TypedResults.NotFound(new { error = $"Document '{document_id}' not found." });
+        }
+
+        if (CheckStudyAndOptionalSiteScope(httpContext, doc.StudyId, doc.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        byte[]? bytes = null;
+        string? verifiedSha256 = null;
+
+        if (storage is not null && !string.IsNullOrWhiteSpace(doc.ObjectKey))
+        {
+            try
+            {
+                (bytes, verifiedSha256) = await storage.GetObjectAsync(doc.ObjectKey, ct);
+            }
+            catch (StorageIntegrityException ex)
+            {
+                return TypedResults.Problem(
+                    title: "Document integrity check failed",
+                    detail: ex.Message,
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+            catch (StorageObjectNotFoundException)
+            {
+                bytes = null;
+            }
+        }
+
+        if (bytes is null)
+        {
+            if (string.IsNullOrEmpty(doc.Content))
+            {
+                return TypedResults.NotFound(new { error = $"Stored binary content for document '{document_id}' was not found." });
+            }
+
+            byte[] fallbackBytes = Encoding.UTF8.GetBytes(doc.Content);
+            string fallbackSha256 = ComputeSha256(fallbackBytes);
+            if (!string.IsNullOrWhiteSpace(doc.ContentChecksum)
+                && !string.Equals(doc.ContentChecksum, fallbackSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                return TypedResults.NotFound(new { error = $"Stored binary content for document '{document_id}' is unavailable." });
+            }
+
+            bytes = fallbackBytes;
+            verifiedSha256 = fallbackSha256;
+        }
+        else if (!string.IsNullOrWhiteSpace(doc.ContentChecksum)
+            && !string.Equals(doc.ContentChecksum, verifiedSha256, StringComparison.OrdinalIgnoreCase))
+        {
+            return TypedResults.Problem(
+                title: "Document integrity check failed",
+                detail: $"Stored SHA-256 digest '{verifiedSha256}' does not match recorded ContentChecksum '{doc.ContentChecksum}'.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        verifiedSha256 ??= ComputeSha256(bytes);
+        httpContext.Response.Headers["X-Content-SHA256"] = verifiedSha256;
+        httpContext.Response.Headers.CacheControl = "no-store";
+
+        var mimeType = string.IsNullOrWhiteSpace(doc.MimeType) ? "application/pdf" : doc.MimeType;
+        return TypedResults.File(bytes, mimeType);
+    }
+
+    public static async Task<IResult> SubmitDocumentForQc(
+        [FromRoute] string document_id,
+        [FromBody] SubmitDocumentForQcRequest request,
+        [FromServices] EtmfDbContext dbContext,
+        [FromServices] IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
+    {
+        string? reason = ResolveChangeReason(request.ReasonForChange, httpContext);
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length < 10)
+        {
+            return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
+        }
+
+        var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.Id == document_id, ct);
+        if (doc == null)
+        {
+            return TypedResults.NotFound(new { error = $"Document with ID '{document_id}' not found." });
+        }
+
+        if (CheckStudyAndOptionalSiteScope(httpContext, doc.StudyId, doc.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (!string.Equals(doc.Status, TmfDocumentLifecycleState.Draft, StringComparison.OrdinalIgnoreCase))
+        {
+            var allowed = TmfDocument.GetAllowedTransitions(doc.Status);
+            var allowedStr = allowed.Count > 0 ? string.Join(", ", allowed) : "None";
+            return TypedResults.BadRequest(new
+            {
+                error = $"Cannot submit document with status '{doc.Status}' for Technical QC. Only 'DRAFT' documents can be submitted. Allowed transitions from '{doc.Status}': {allowedStr}."
+            });
+        }
+
+        var now = clock.UtcNow;
+        var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
+
+        var currentSeq = await dbContext.TmfDocumentQcTransitions
+            .Where(t => t.DocumentId == document_id)
+            .MaxAsync(t => (int?)t.TransitionSequence, ct) ?? 0;
+
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
+        var transition = doc.StageForQc(user, roles, reason, now, currentSeq + 1);
+        dbContext.TmfDocumentQcTransitions.Add(transition);
+
+        var report = PerformClassification(
+            docId: doc.Id,
+            filename: doc.Filename,
+            mimeType: doc.MimeType,
+            content: doc.Content,
+            hint: doc.ArtifactType,
+            now: now,
+            sha256Override: doc.ContentChecksum);
+        doc.MetadataJson = JsonSerializer.Serialize(new
+        {
+            document_intelligence = report,
+            assigned_cra = request.AssignedCra
+        });
+        doc.VersionIndex = baselineVersion + 1;
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
+
+        dbContext.TmfAuditLogs.Add(new TmfAuditLog
+        {
+            Timestamp = now,
+            UserId = user,
+            UserRole = roles,
+            Action = "SUBMIT_TECHNICAL_QC",
+            DocumentId = document_id,
+            Details = $"Submitted draft document {doc.Filename} to TECHNICAL_QC.",
+            ReasonForChange = reason
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+
+        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(doc.SiteId))
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: doc.StudyId,
+                siteId: doc.SiteId,
+                tenantId: CallerScope.TenantId(httpContext),
+                reasonForChange: reason,
+                ct: ct);
+        }
+
+        return TypedResults.Ok(doc);
+    }
+
+    public static async Task<IResult> UpdateDocumentTaxonomy(
+        [FromRoute] string document_id,
+        [FromBody] UpdateDocumentTaxonomyRequest request,
+        [FromServices] EtmfDbContext dbContext,
+        [FromServices] IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct,
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
+    {
+        string? reason = ResolveChangeReason(request.ReasonForChange, httpContext);
+        if (string.IsNullOrWhiteSpace(reason) || reason.Length < 10)
+        {
+            return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
+        }
+
+        var doc = await dbContext.TmfDocuments.FirstOrDefaultAsync(d => d.Id == document_id, ct);
+        if (doc == null)
+        {
+            return TypedResults.NotFound(new { error = $"Document with ID '{document_id}' not found." });
+        }
+
+        if (CheckStudyAndOptionalSiteScope(httpContext, doc.StudyId, doc.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        int targetZone = request.Zone ?? doc.Zone;
+        string targetSection = !string.IsNullOrWhiteSpace(request.Section) ? request.Section.Trim() : doc.Section;
+        string targetArtifactCode = !string.IsNullOrWhiteSpace(request.ArtifactCode) ? request.ArtifactCode.Trim() : doc.ArtifactCode;
+        string targetArtifactType = !string.IsNullOrWhiteSpace(request.ArtifactType) ? request.ArtifactType.Trim() : doc.ArtifactType;
+
+        if (!string.IsNullOrWhiteSpace(request.ArtifactCode))
+        {
+            var resolved = ResolveTaxonomyByCode(targetArtifactCode);
+            if (request.Zone is null && string.IsNullOrWhiteSpace(request.Section))
+            {
+                targetZone = resolved.Zone;
+                targetSection = resolved.Section;
+            }
+            if (string.IsNullOrWhiteSpace(request.ArtifactType)
+                && (!string.Equals(resolved.ArtifactType, "Custom Artifact", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(targetArtifactType)))
+            {
+                targetArtifactType = resolved.ArtifactType;
+            }
+        }
+
+        if (targetZone <= 0 || string.IsNullOrWhiteSpace(targetSection) || string.IsNullOrWhiteSpace(targetArtifactType))
+        {
+            return TypedResults.BadRequest(new { error = "Valid zone, section, and artifact_type are required for taxonomy updates." });
+        }
+
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
+        var previous = $"Z{doc.Zone}/{doc.Section}/{doc.ArtifactCode} ({doc.ArtifactType})";
+        doc.OverrideTaxonomy(targetZone, targetSection, targetArtifactType, targetArtifactCode);
+        doc.ReasonForChange = reason;
+        doc.VersionIndex = baselineVersion + 1;
+
+        var now = clock.UtcNow;
+        var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
+
+        dbContext.TmfAuditLogs.Add(new TmfAuditLog
+        {
+            Timestamp = now,
+            UserId = user,
+            UserRole = roles,
+            Action = "TAXONOMY_UPDATE",
+            DocumentId = document_id,
+            Details = $"Updated taxonomy from {previous} to Z{doc.Zone}/{doc.Section}/{doc.ArtifactCode} ({doc.ArtifactType}).",
+            ReasonForChange = reason
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+
+        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(doc.SiteId))
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: doc.StudyId,
+                siteId: doc.SiteId,
+                tenantId: CallerScope.TenantId(httpContext),
+                reasonForChange: reason,
+                ct: ct);
+        }
+
+        return TypedResults.Ok(doc);
+    }
+
     public static async Task<IResult> IngestDocument(
         [FromBody] IngestDocumentRequest request,
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IStoragePort<byte[]>? storage = null,
+        [FromServices] IEtmfCompletenessWebhookPublisher? completenessPublisher = null)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId))
         {
             return TypedResults.BadRequest(new { error = "study_id is required: every document is filed in a study." });
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
+        if (CheckStudyAndOptionalSiteScope(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
-            return OutsideStudy();
+            return scopeDenied;
+        }
+
+        string effectiveReason = ResolveChangeReason(request.ReasonForChange, httpContext) ?? "Initial filing";
+        if (effectiveReason.Length < 10)
+        {
+            return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
+        }
+
+        if (!TryDecodeDocumentPayload(request.ContentBase64, request.Content, out var payloadBytes, out var textExcerpt, out var payloadError))
+        {
+            return TypedResults.BadRequest(new { error = payloadError });
         }
 
         var now = clock.UtcNow;
         var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var mimeType = request.MimeType ?? "application/pdf";
+        var (objectKey, contentChecksum) = await PersistBinaryPayloadAsync(
+            storage,
+            request.StudyId,
+            docId,
+            request.Filename,
+            mimeType,
+            payloadBytes,
+            ct);
 
         var doc = TmfDocument.CreateDraft(
             id: docId,
@@ -447,20 +904,43 @@ public static class EtmfIntelligenceEndpoints
             filename: request.Filename,
             createdBy: user,
             createdAt: now.UtcDateTime,
-            reasonForChange: request.ReasonForChange ?? "Initial filing",
+            reasonForChange: effectiveReason,
             siteId: request.SiteId,
             zone: request.Zone > 0 ? request.Zone : 1,
             section: request.Section ?? "01.01",
             artifactCode: request.ArtifactCode ?? "01.01.01",
             artifactType: request.ArtifactType ?? "Clinical Trial Protocol",
-            content: request.Content ?? string.Empty,
-            mimeType: request.MimeType ?? "application/pdf",
-            taxonomyVersion: request.TaxonomyVersion ?? "v3.2.0-complete"
+            content: textExcerpt,
+            mimeType: mimeType,
+            taxonomyVersion: request.TaxonomyVersion ?? "v3.2.0-complete",
+            objectKey: objectKey,
+            contentChecksum: contentChecksum
         );
 
         dbContext.TmfDocuments.Add(doc);
         dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
+        dbContext.TmfAuditLogs.Add(new TmfAuditLog
+        {
+            Timestamp = now,
+            UserId = user,
+            UserRole = roles,
+            Action = "INGEST_DRAFT",
+            DocumentId = docId,
+            Details = $"Ingested draft document {request.Filename} in study {request.StudyId} (SHA-256: {contentChecksum}).",
+            ReasonForChange = effectiveReason
+        });
         await dbContext.SaveChangesAsync(ct);
+
+        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            await completenessPublisher.PublishSiteActivationCompletenessAsync(
+                dbContext: dbContext,
+                studyId: request.StudyId,
+                siteId: request.SiteId,
+                tenantId: CallerScope.TenantId(httpContext),
+                reasonForChange: effectiveReason,
+                ct: ct);
+        }
 
         return TypedResults.Created($"/api/v1/etmf/documents/{docId}", doc);
     }
@@ -477,12 +957,15 @@ public static class EtmfIntelligenceEndpoints
         string mimeType,
         string? content,
         string? hint,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string? sha256Override = null)
     {
         var textToScan = $"{filename} {hint} {content}".ToLowerInvariant();
         var primary = PredictTaxonomy(textToScan);
 
-        var sha256 = ComputeSha256(content ?? filename);
+        var sha256 = !string.IsNullOrWhiteSpace(sha256Override)
+            ? sha256Override
+            : ComputeSha256(content ?? filename);
 
         string tier = "LOW";
         if (primary.Confidence >= 0.85)
@@ -569,6 +1052,7 @@ public static class EtmfIntelligenceEndpoints
         {
             "01.01.01" => new TaxonomyMatchCandidate(1, "01.01", "01.01.01", "Clinical Trial Protocol", 1.0),
             "01.01.02" => new TaxonomyMatchCandidate(1, "01.01", "01.01.02", "Clinical Trial Protocol Amendment", 1.0),
+            "01.01.03" => new TaxonomyMatchCandidate(1, "01.01", "01.01.03", "Clinical Trial Protocol Signoff", 1.0),
             "02.01.01" => new TaxonomyMatchCandidate(2, "02.01", "02.01.01", "Investigator's Brochure", 1.0),
             "04.02.01" => new TaxonomyMatchCandidate(4, "04.02", "04.02.01", "IRB/IEC Approval Notification", 1.0),
             "05.02.01" => new TaxonomyMatchCandidate(5, "05.02", "05.02.01", "FDA Form 1572", 1.0),
@@ -583,9 +1067,11 @@ public static class EtmfIntelligenceEndpoints
         };
     }
 
-    private static string ComputeSha256(string content)
+    private static string ComputeSha256(string content) =>
+        ComputeSha256(Encoding.UTF8.GetBytes(content));
+
+    private static string ComputeSha256(byte[] bytes)
     {
-        var bytes = Encoding.UTF8.GetBytes(content);
         var hash = SHA256.HashData(bytes);
         return Convert.ToHexStringLower(hash);
     }
@@ -614,7 +1100,8 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfExportQueue exportQueue,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IStoragePort<byte[]>? storage = null)
     {
         // An export is one study's binder, and the caller must be assigned to that study.
         if (string.IsNullOrWhiteSpace(request.StudyId))
@@ -623,9 +1110,13 @@ public static class EtmfIntelligenceEndpoints
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId) || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+        }
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+        {
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
 
         var query = dbContext.TmfDocuments.AsNoTracking().Where(d => d.StudyId == request.StudyId);
@@ -665,11 +1156,13 @@ public static class EtmfIntelligenceEndpoints
         {
             var exportId = "EXP-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
             var now = clock.UtcNow;
-            var zipBytes = EtmfExportPackager.CreateZipArchive(
+            var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(
                 exportId,
                 studyId,
                 matchingDocs,
-                now);
+                storage,
+                now,
+                ct: ct);
 
             var filename = $"etmf_export_{studyId}_{now:yyyyMMdd_HHmmss}.zip";
             return TypedResults.File(zipBytes, "application/zip", filename);
@@ -753,7 +1246,8 @@ public static class EtmfIntelligenceEndpoints
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IStoragePort<byte[]>? storage = null)
     {
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
@@ -774,25 +1268,44 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.StatusCode(StatusCodes.Status410Gone);
         }
 
-        var filePath = Path.Combine(Path.GetTempPath(), "etmf_exports", $"{job_id}.zip");
-        if (!File.Exists(filePath) || ClinicalScopeGuard.IsSiteBound(principal))
-        {
-            var docs = (await dbContext.TmfDocuments
-                .AsNoTracking()
-                .Where(d => d.StudyId == job.StudyId)
-                .OrderBy(d => d.Zone)
-                .ThenBy(d => d.Section)
-                .ThenBy(d => d.Filename)
-                .ToListAsync(ct))
-                .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
-                .ToList();
+        string downloadFilename = $"etmf_export_{job.StudyId}_{job.Id}.zip";
 
-            var zipBytes = EtmfExportPackager.CreateZipArchive(job.Id, job.StudyId, docs, clock.UtcNow);
-            return TypedResults.File(zipBytes, "application/zip", $"etmf_export_{job.StudyId}_{job.Id}.zip");
+        if (!ClinicalScopeGuard.IsSiteBound(principal))
+        {
+            if (storage is not null)
+            {
+                var exportKey = EtmfExportPackager.BuildExportObjectKey(job.StudyId, job.Id);
+                try
+                {
+                    var (storedZipBytes, _) = await storage.GetObjectAsync(exportKey, ct);
+                    return TypedResults.File(storedZipBytes, "application/zip", downloadFilename);
+                }
+                catch (StorageObjectNotFoundException)
+                {
+                    // Fall through to repackaging if archive was not persisted in object storage
+                }
+            }
+
+            var filePath = Path.Combine(Path.GetTempPath(), "etmf_exports", $"{job_id}.zip");
+            if (storage is null && File.Exists(filePath))
+            {
+                var fileStream = File.OpenRead(filePath);
+                return TypedResults.File(fileStream, "application/zip", downloadFilename);
+            }
         }
 
-        var fileStream = File.OpenRead(filePath);
-        return TypedResults.File(fileStream, "application/zip", $"etmf_export_{job.StudyId}_{job.Id}.zip");
+        var docs = (await dbContext.TmfDocuments
+            .AsNoTracking()
+            .Where(d => d.StudyId == job.StudyId)
+            .OrderBy(d => d.Zone)
+            .ThenBy(d => d.Section)
+            .ThenBy(d => d.Filename)
+            .ToListAsync(ct))
+            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
+            .ToList();
+
+        var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(job.Id, job.StudyId, docs, storage, clock.UtcNow, ct: ct);
+        return TypedResults.File(zipBytes, "application/zip", downloadFilename);
     }
 
     public static async Task<IResult> ListExportJobs(
@@ -804,11 +1317,11 @@ public static class EtmfIntelligenceEndpoints
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
         if (!string.IsNullOrWhiteSpace(study_id) && !CallerScope.CanAccessStudy(httpContext, study_id))
         {
-            return OutsideStudy();
+            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
         }
 
         var studies = CallerScope.StudyFilter(httpContext);
@@ -849,7 +1362,7 @@ public record ClassifyRequest(
 );
 
 public record StageDocumentQCRequest(
-    string Content,
+    string? Content,
     string Filename,
     string StudyId,
     string? SiteId = null,
@@ -857,7 +1370,8 @@ public record StageDocumentQCRequest(
     string? ArtifactHint = null,
     string? TaxonomyVersion = "v3.2.0-complete",
     string ReasonForChange = "Batch upload AI auto-classification staging for CRA QC",
-    string? AssignedCra = null
+    string? AssignedCra = null,
+    string? ContentBase64 = null
 );
 
 public record CraqcReviewRequest(
@@ -865,6 +1379,19 @@ public record CraqcReviewRequest(
     string ReasonForChange,
     string? OverrideArtifactCode = null,
     string? DiscrepancyComment = null
+);
+
+public record SubmitDocumentForQcRequest(
+    string? ReasonForChange = null,
+    string? AssignedCra = null
+);
+
+public record UpdateDocumentTaxonomyRequest(
+    int? Zone = null,
+    string? Section = null,
+    string? ArtifactCode = null,
+    string? ArtifactType = null,
+    string? ReasonForChange = null
 );
 
 public record IngestDocumentRequest(
@@ -878,7 +1405,8 @@ public record IngestDocumentRequest(
     string? ArtifactCode,
     string? ArtifactType,
     string? TaxonomyVersion,
-    string? ReasonForChange
+    string? ReasonForChange,
+    string? ContentBase64 = null
 );
 
 public record DocumentIntelligenceReport(

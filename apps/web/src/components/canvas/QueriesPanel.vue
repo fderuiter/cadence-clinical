@@ -7,15 +7,19 @@
   >
     <h3 id="record-queries-title">Queries</h3>
     <p
-      v-if="!enrollmentId"
+      v-if="queries.loading || enrollmentLoading"
+      class="status-line"
+      role="status"
+    >
+      Loading {{ subjectCode }}'s queries…
+    </p>
+    <p
+      v-else-if="!enrollmentId"
       id="record-queries-no-enrollment"
       class="status-line"
     >
       No enrollment record is visible for {{ subjectCode }}, so queries aren't
       available here.
-    </p>
-    <p v-else-if="queries.loading" class="status-line" role="status">
-      Loading {{ subjectCode }}'s queries…
     </p>
     <div
       v-else-if="queries.loadError"
@@ -76,24 +80,29 @@ const props = defineProps<{
   subjectCode: string;
   /** The participant's enrollment id, or null when none is visible. */
   enrollmentId: string | null;
+  enrollmentLoading?: boolean;
   canManage: boolean;
   formTitles?: Record<string, string>;
-  formLocation?: (formId: string) => RouteLocationRaw | null;
+  formLocation?: (
+    formId: string,
+    itemId?: string | null
+  ) => RouteLocationRaw | null;
   observationLocation?: (
     observationId: string,
-    formId: string
+    formId: string,
+    itemId?: string | null
   ) => RouteLocationRaw | null;
 }>();
 
 const formTo = computed(() =>
   props.formLocation
-    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id, q.item_id)
     : undefined
 );
 const observationTo = computed(() =>
   props.observationLocation
     ? (q: FormQueryResponse) =>
-        props.observationLocation!(q.observation_id, q.form_id)
+        props.observationLocation!(q.observation_id, q.form_id, q.item_id)
     : undefined
 );
 

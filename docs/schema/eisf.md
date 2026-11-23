@@ -4,15 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Eisf.Infrastructure.Persistence.EisfDbContext`, not from a live database. Unqualified tables live in the `eisf` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`eisf.audit_log_entries`](#eisfaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`eisf.eisf_document_records`](#eisfeisf_document_records) | `EisfDocumentRecord` | 18 |
-| [`eisf.eisf_document_revisions`](#eisfeisf_document_revisions) | `EisfDocumentRevision` | 18 |
-| [`eisf.eisf_section_taxonomies`](#eisfeisf_section_taxonomies) | `EisfSectionTaxonomy` | 7 |
-| [`eisf.isf_audit_logs`](#eisfisf_audit_logs) | `IsfAuditLog` | 12 |
-| [`eisf.isf_documents`](#eisfisf_documents) | `IsfDocument` | 20 |
-
 ## eisf.audit_log_entries
 
 Entity: `AuditLogEntry`

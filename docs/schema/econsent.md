@@ -4,30 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Econsent.Infrastructure.Persistence.EconsentDbContext`, not from a live database. Unqualified tables live in the `econsent` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`econsent.InboxState`](#econsentinboxstate) | `InboxState` | 11 |
-| [`econsent.OutboxMessage`](#econsentoutboxmessage) | `OutboxMessage` | 21 |
-| [`econsent.OutboxState`](#econsentoutboxstate) | `OutboxState` | 6 |
-| [`econsent.audit_log_entries`](#econsentaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`econsent.biometric_liveness_verifications`](#econsentbiometric_liveness_verifications) | `BiometricLivenessVerification` | 14 |
-| [`econsent.comprehension_checks`](#econsentcomprehension_checks) | `ComprehensionCheck` | 10 |
-| [`econsent.comprehension_results`](#econsentcomprehension_results) | `ComprehensionResult` | 14 |
-| [`econsent.consent_audit_logs`](#econsentconsent_audit_logs) | `ConsentAuditLog` | 12 |
-| [`econsent.consent_clauses`](#econsentconsent_clauses) | `ConsentClause` | 10 |
-| [`econsent.consent_document_revisions`](#econsentconsent_document_revisions) | `ConsentDocumentRevision` | 12 |
-| [`econsent.consent_documents`](#econsentconsent_documents) | `ConsentDocument` | 10 |
-| [`econsent.consent_signatures`](#econsentconsent_signatures) | `ConsentSignature` | 16 |
-| [`econsent.consent_templates`](#econsentconsent_templates) | `ConsentTemplate` | 14 |
-| [`econsent.consent_translations`](#econsentconsent_translations) | `ConsentTranslation` | 14 |
-| [`econsent.consent_withdrawals`](#econsentconsent_withdrawals) | `ConsentWithdrawal` | 16 |
-| [`econsent.consumed_signature_tokens`](#econsentconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`econsent.etmf_archival_deliveries`](#econsentetmf_archival_deliveries) | `EtmfArchivalDelivery` | 19 |
-| [`econsent.granular_consent_options`](#econsentgranular_consent_options) | `GranularConsentOption` | 13 |
-| [`econsent.reconsent_requirements`](#econsentreconsent_requirements) | `ReconsentRequirement` | 17 |
-| [`econsent.subject_consent_option_selections`](#econsentsubject_consent_option_selections) | `SubjectConsentOptionSelection` | 10 |
-| [`econsent.subject_consents`](#econsentsubject_consents) | `SubjectConsent` | 16 |
-
 ## econsent.InboxState
 
 Entity: `InboxState`

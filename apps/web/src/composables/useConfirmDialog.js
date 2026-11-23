@@ -5,17 +5,26 @@ export function confirmDialog(options) {
   return store.confirm(options);
 }
 
-export function useConfirmDialog() {
+export function promptDialog(options, defaultValue = "") {
   const store = useConfirmStore();
+  return store.prompt(options, defaultValue);
+}
 
-  const confirm = (options) => store.confirm(options);
-  const confirmDlg = (options) => store.confirm(options);
+export function useConfirmDialog() {
+  const confirm = (options) => useConfirmStore().confirm(options);
+  const confirmDlg = (options) => useConfirmStore().confirm(options);
+  const prompt = (options, defaultValue = "") =>
+    useConfirmStore().prompt(options, defaultValue);
+  const promptDlg = (options, defaultValue = "") =>
+    useConfirmStore().prompt(options, defaultValue);
 
   return {
     confirm,
     confirmDialog: confirmDlg,
-    cancelConfirm: () => store.cancelConfirm(),
-    resolveConfirm: () => store.resolveConfirm(),
+    prompt,
+    promptDialog: promptDlg,
+    cancelConfirm: () => useConfirmStore().cancelConfirm(),
+    resolveConfirm: (value) => useConfirmStore().resolveConfirm(value),
   };
 }
 

@@ -4,39 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbContext`, not from a live database. Unqualified tables live in the `edc` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`edc.AuditLogEntries`](#edcauditlogentries) | `AuditLogEntry` | 12 |
-| [`edc.InboxState`](#edcinboxstate) | `InboxState` | 11 |
-| [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
-| [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
-| [`edc.bulk_lab_range_import_jobs`](#edcbulk_lab_range_import_jobs) | `BulkLabRangeImportJob` | 19 |
-| [`edc.bulk_synonym_import_jobs`](#edcbulk_synonym_import_jobs) | `BulkSynonymImportJob` | 15 |
-| [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 18 |
-| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 27 |
-| [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 24 |
-| [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody) | `CgtChainOfCustody` | 21 |
-| [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 33 |
-| [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 26 |
-| [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 21 |
-| [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
-| [`edc.consumed_signature_tokens`](#edcconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 31 |
-| [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 29 |
-| [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 20 |
-| [`edc.ip_kit_inventory_items`](#edcip_kit_inventory_items) | `IpKitInventoryItem` | 22 |
-| [`edc.ip_kit_reconciliation_batches`](#edcip_kit_reconciliation_batches) | `IpKitReconciliationBatch` | 16 |
-| [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 16 |
-| [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 23 |
-| [`edc.randomization_allocations`](#edcrandomization_allocations) | `RandomizationAllocation` | 19 |
-| [`edc.randomization_list_slots`](#edcrandomization_list_slots) | `RandomizationListSlot` | 8 |
-| [`edc.randomization_schemes`](#edcrandomization_schemes) | `RandomizationScheme` | 24 |
-| [`edc.site_activation_periods`](#edcsite_activation_periods) | `SiteActivationPeriod` | 15 |
-| [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 16 |
-| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 28 |
-| [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 15 |
-| [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 16 |
-
 ## edc.AuditLogEntries
 
 Entity: `AuditLogEntry`

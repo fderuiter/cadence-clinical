@@ -10,7 +10,7 @@
     "build:demo": "vite build --mode demo",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "lint": "eslint .",
+    "lint": "eslint --max-warnings 0 .",
     "format": "prettier --write ."
   },
   "dependencies": {

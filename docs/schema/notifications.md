@@ -4,16 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext`, not from a live database. Unqualified tables live in the `notifications` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`notifications.InboxState`](#notificationsinboxstate) | `InboxState` | 11 |
-| [`notifications.OutboxMessage`](#notificationsoutboxmessage) | `OutboxMessage` | 21 |
-| [`notifications.OutboxState`](#notificationsoutboxstate) | `OutboxState` | 6 |
-| [`notifications.audit_log_entries`](#notificationsaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 8 |
-| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 11 |
-| [`notifications.notification_records`](#notificationsnotification_records) | `NotificationRecord` | 17 |
-
 ## notifications.InboxState
 
 Entity: `InboxState`

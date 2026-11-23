@@ -76,14 +76,64 @@ public sealed record TicketResponseDto(
     [property: JsonPropertyName("related_entity_type")] string? RelatedEntityType,
     [property: JsonPropertyName("related_entity_id")] string? RelatedEntityId,
     [property: JsonPropertyName("source_route")] string? SourceRoute,
+    [property: JsonPropertyName("due_date")] DateTimeOffset? DueDate,
     [property: JsonPropertyName("acknowledge_target_at")] DateTimeOffset? AcknowledgeTargetAt,
     [property: JsonPropertyName("sla_target_at")] DateTimeOffset? SlaTargetAt,
+    [property: JsonPropertyName("sla_paused_at")] DateTimeOffset? SlaPausedAt,
+    [property: JsonPropertyName("sla_total_paused_seconds")] int SlaTotalPausedSeconds,
     [property: JsonPropertyName("sla_breached")] bool SlaBreached,
     [property: JsonPropertyName("sla_amber_warned")] bool SlaAmberWarned,
     [property: JsonPropertyName("escalation_count")] int EscalationCount,
+    [property: JsonPropertyName("resolution_code")] string? ResolutionCode,
+    [property: JsonPropertyName("root_cause_category")] string? RootCauseCategory,
+    [property: JsonPropertyName("root_cause_summary")] string? RootCauseSummary,
+    [property: JsonPropertyName("signature_action")] string? SignatureAction,
+    [property: JsonPropertyName("signature_token")] string? SignatureToken,
+    [property: JsonPropertyName("signature_meaning")] string? SignatureMeaning,
+    [property: JsonPropertyName("signature_timestamp")] DateTimeOffset? SignatureTimestamp,
+    [property: JsonPropertyName("signature_user")] string? SignatureUser,
     [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
     [property: JsonPropertyName("version_index")] int VersionIndex);
+
+public sealed record CreateTicketCommentRequestDto(
+    [property: JsonPropertyName("body")] string Body,
+    [property: JsonPropertyName("visibility")] string? Visibility = "PUBLIC");
+
+public sealed record TicketCommentResponseDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("ticket_id")] string TicketId,
+    [property: JsonPropertyName("body")] string Body,
+    [property: JsonPropertyName("visibility")] string Visibility,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("created_by")] string CreatedBy,
+    [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
+    [property: JsonPropertyName("version_index")] int VersionIndex);
+
+public sealed record TransitionTicketRequestDto(
+    [property: JsonPropertyName("target_status")] string TargetStatus,
+    [property: JsonPropertyName("resolution_code")] string? ResolutionCode = null,
+    [property: JsonPropertyName("root_cause_summary")] string? RootCauseSummary = null,
+    [property: JsonPropertyName("root_cause_category")] string? RootCauseCategory = null,
+    [property: JsonPropertyName("assignee_user")] string? AssigneeUser = null);
+
+public sealed record SignTicketRequestDto(
+    [property: JsonPropertyName("signature_meaning")] string SignatureMeaning,
+    [property: JsonPropertyName("signature_action")] string? SignatureAction = "SIGN_CLOSURE");
+
+public sealed record TicketAuditEntryDto(
+    [property: JsonPropertyName("id")] Guid Id,
+    [property: JsonPropertyName("entity_name")] string EntityName,
+    [property: JsonPropertyName("entity_id")] string EntityId,
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("timestamp")] DateTime Timestamp,
+    [property: JsonPropertyName("user_id")] string UserId,
+    [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
+    [property: JsonPropertyName("version_index")] long VersionIndex,
+    [property: JsonPropertyName("changes_json")] string? ChangesJson,
+    [property: JsonPropertyName("predecessor_hash")] string PredecessorHash,
+    [property: JsonPropertyName("block_hash")] string BlockHash);
 
 internal sealed record StoredTicketContext(
     [property: JsonPropertyName("assigned_queue")] string? AssignedQueue,
@@ -93,14 +143,79 @@ internal sealed record StoredTicketContext(
     [property: JsonPropertyName("subject_code")] string? SubjectCode);
 
 /// <summary>
-/// Minimal API endpoints for audited support ticket creation, scoped listing, and reference lookup
-/// (PRD-TCK-001, PRD-TCK-002, ADR-2610).
+/// Minimal API endpoints for audited support ticket creation, scoped listing, reference lookup,
+/// comments, workflow transitions, 21 CFR Part 11 electronic signatures, and audit trails
+/// (PRD-TCK-001, PRD-TCK-002, ADR-2610, SRS-SYS-005).
 /// @req:PRD-TCK-001
 /// @req:PRD-TCK-002
 /// @req:PRD-SYS-192
+/// @req:SRS-SYS-005
 /// </summary>
-public static class TicketEndpoints
+public static partial class TicketEndpoints
 {
+    public const string SignTicketSemanticAction = "tickets.ticket.sign";
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^[A-Z0-9][A-Z0-9_-]{1,99}$")]
+    private static partial System.Text.RegularExpressions.Regex ResolutionCodeRegex();
+
+    private static readonly HashSet<string> ValidCommentVisibilities = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "PUBLIC",
+        "INTERNAL_SPONSOR",
+    };
+
+    private static readonly HashSet<string> ValidRootCauseCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "PROCESS_WORKFLOW_DEFICIT",
+        "SITE_TRAINING_GAP",
+        "DATA_ENTRY_ERROR",
+        "SYSTEM_CONFIGURATION",
+        "EQUIPMENT_CALIBRATION",
+        "HUMAN_ERROR",
+        "SYSTEM_DEFECT",
+        "DATA_DISCREPANCY",
+        "PROTOCOL_CLARIFICATION",
+        "ACCESS_PROVISIONING",
+        "INTEGRATION_LATENCY",
+        "TRAINING_GAP",
+        "NOT_APPLICABLE",
+    };
+
+    private static readonly HashSet<TicketStatus> SlaPausedStatuses =
+    [
+        TicketStatus.WAITING_ON_SITE,
+        TicketStatus.WAITING_ON_SPONSOR,
+        TicketStatus.PENDING_REGULATORY_REVIEW,
+    ];
+
+    private static readonly HashSet<string> SiteCommentRestrictedRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        RoleNormalization.ROLE_CRC,
+        RoleNormalization.ROLE_INVESTIGATOR,
+        RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR,
+        RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
+        RoleNormalization.ROLE_LEAD_INVESTIGATOR,
+        RoleNormalization.ROLE_PHARMACIST,
+    };
+
+    private static readonly HashSet<string> SponsorCommentCapableRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        RoleNormalization.ROLE_SYSADMIN,
+        RoleNormalization.ROLE_SPONSOR_DESIGNER,
+        RoleNormalization.ROLE_SPONSOR_DM,
+        RoleNormalization.ROLE_SPONSOR_MM,
+        RoleNormalization.ROLE_SPONSOR_STATISTICIAN,
+        RoleNormalization.ROLE_CRA_CANONICAL,
+        "monitor",
+        RoleNormalization.ROLE_EXTERNAL_MONITOR,
+        RoleNormalization.ROLE_REVIEWER,
+        RoleNormalization.ROLE_FINANCE_OFFICER,
+        RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        RoleNormalization.ROLE_UNBLINDED_STATISTICIAN,
+        RoleNormalization.ROLE_IDMC,
+        RoleNormalization.ROLE_EMERGENCY_UNBLINDER,
+    };
+
     public static IEndpointRouteBuilder MapTicketEndpoints(this IEndpointRouteBuilder app)
     {
         RouteGroupBuilder group = app.MapGroup("/api/v1/tickets")
@@ -142,8 +257,62 @@ public static class TicketEndpoints
             .RequirePermission("tickets:create")
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
+        group.MapGet("/{ticket_id}/comments", ListTicketCommentsAsync)
+            .WithName("ListTicketComments")
+            .Produces<IReadOnlyList<TicketCommentResponseDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("tickets:read");
+
+        group.MapPost("/{ticket_id}/comments", CreateTicketCommentAsync)
+            .WithName("CreateTicketComment")
+            .Produces<TicketCommentResponseDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission("tickets:comment")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPost("/{ticket_id}/transitions", TransitionTicketAsync)
+            .WithName("TransitionTicket")
+            .Produces<TicketResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission("tickets:transition")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPost("/{ticket_id}/sign", SignTicketAsync)
+            .WithName("SignTicket")
+            .Produces<TicketResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission("tickets:sign")
+            .RequireElectronicSignature(SignTicketSemanticAction, SignTicketActionFor)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapGet("/{ticket_id}/audit-trail", GetTicketAuditTrailAsync)
+            .WithName("GetTicketAuditTrail")
+            .Produces<IReadOnlyList<TicketAuditEntryDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("tickets:read");
         return app;
     }
+
+    public static string SignTicketAction(string ticketId) => $"/api/v1/tickets/{ticketId}/sign";
+
+    private static string SignTicketActionFor(HttpContext httpContext) =>
+        SignTicketAction(httpContext.Request.RouteValues["ticket_id"]?.ToString() ?? string.Empty);
 
     private static async Task<IResult> CreateTicketAsync(
         CreateTicketRequestDto request,
@@ -568,6 +737,14 @@ public static class TicketEndpoints
                 statusCode: StatusCodes.Status403Forbidden);
         }
 
+        if (ticket.SignatureTimestamp is not null)
+        {
+            return Results.Problem(
+                title: "Ticket locked by 21 CFR Part 11 signature",
+                detail: "This support ticket has been electronically signed and locked against further amendments.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
         string nextTitle = request.Title is null ? ticket.Title : request.Title.Trim();
         string nextDescription = request.Description is null ? ticket.Description : request.Description.Trim();
         if (nextTitle.Length == 0 || nextDescription.Length == 0)
@@ -665,6 +842,558 @@ public static class TicketEndpoints
         return TypedResults.Ok(ToResponseDto(ticket));
     }
 
+    private static async Task<IResult> ListTicketCommentsAsync(
+        string ticket_id,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        CancellationToken ct)
+    {
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: true,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
+        {
+            return errorResult!;
+        }
+
+        bool restrictInternal = IsSiteRestrictedCommentCaller(principal);
+
+        var rawComments = await db.TicketComments
+            .AsNoTracking()
+            .Where(c => c.TicketId == ticket.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var comments = rawComments
+            .Where(c => !restrictInternal || string.Equals(c.Visibility, "PUBLIC", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.CreatedAt)
+            .ThenBy(c => c.Id, StringComparer.Ordinal)
+            .Select(ToCommentDto)
+            .ToList();
+
+        return TypedResults.Ok<IReadOnlyList<TicketCommentResponseDto>>(comments);
+    }
+
+    private static async Task<IResult> CreateTicketCommentAsync(
+        string ticket_id,
+        CreateTicketCommentRequestDto request,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        IClock clock,
+        CancellationToken ct)
+    {
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: false,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
+        {
+            return errorResult!;
+        }
+
+        if (ticket.SignatureTimestamp is not null)
+        {
+            return Results.Problem(
+                title: "Ticket locked by 21 CFR Part 11 signature",
+                detail: "This support ticket has been electronically signed and locked against further comments or amendments.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        string changeReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter must guarantee a non-empty X-Change-Reason.");
+
+        string body = (request.Body ?? string.Empty).Trim();
+        if (body.Length == 0)
+        {
+            return Results.Problem(
+                title: "Invalid comment payload",
+                detail: "Comment 'body' is required.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (body.Length > 4000)
+        {
+            return Results.Problem(
+                title: "Invalid comment payload",
+                detail: "Comment 'body' must not exceed 4000 characters.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string visibility = string.IsNullOrWhiteSpace(request.Visibility)
+            ? "PUBLIC"
+            : request.Visibility.Trim().ToUpperInvariant();
+        if (!ValidCommentVisibilities.Contains(visibility))
+        {
+            return Results.Problem(
+                title: "Invalid comment visibility",
+                detail: $"Unsupported comment visibility '{visibility}'. Expected PUBLIC or INTERNAL_SPONSOR.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (string.Equals(visibility, "INTERNAL_SPONSOR", StringComparison.OrdinalIgnoreCase)
+            && IsSiteRestrictedCommentCaller(principal))
+        {
+            return Results.Problem(
+                title: "Internal sponsor comment forbidden",
+                detail: "Site-bound clinical personnel may read and post PUBLIC comments only.",
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        string? piiViolation = TicketPiiValidator.ValidateCommentNoDirectParticipantPii(body, changeReason);
+        if (piiViolation is not null)
+        {
+            return Results.Problem(
+                title: "Direct participant PII rejected",
+                detail: piiViolation,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        var comment = new TicketComment
+        {
+            Id = Guid.NewGuid().ToString("D"),
+            TicketId = ticket.Id,
+            Body = body,
+            Visibility = visibility,
+            CreatedAt = now,
+            CreatedBy = principal.UserId,
+            ReasonForChange = changeReason,
+            VersionIndex = 1,
+        };
+
+        db.TicketComments.Add(comment);
+        AuditActions.Record(db, new AuditAction(
+            EntityName: nameof(TicketComment),
+            EntityId: comment.Id,
+            Action: "TICKET_COMMENT_ADDED",
+            UserId: principal.UserId,
+            ReasonForChange: changeReason,
+            ChangesJson: JsonSerializer.Serialize(new
+            {
+                ticket_id = ticket.Id,
+                reference = ticket.Reference,
+                comment_id = comment.Id,
+                visibility = comment.Visibility,
+            })));
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return TypedResults.Created(
+            $"/api/v1/tickets/{ticket.Id}/comments/{comment.Id}",
+            ToCommentDto(comment));
+    }
+
+    private static async Task<IResult> TransitionTicketAsync(
+        string ticket_id,
+        TransitionTicketRequestDto request,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        IClock clock,
+        CancellationToken ct)
+    {
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: false,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
+        {
+            return errorResult!;
+        }
+
+        if (ticket.SignatureTimestamp is not null)
+        {
+            return Results.Problem(
+                title: "Ticket locked by 21 CFR Part 11 signature",
+                detail: "This support ticket has been electronically signed and locked against further status transitions.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        string changeReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter must guarantee a non-empty X-Change-Reason.");
+
+        string targetStatusRaw = (request.TargetStatus ?? string.Empty).Trim();
+        if (targetStatusRaw.Length == 0)
+        {
+            return Results.Problem(
+                title: "Invalid transition payload",
+                detail: "'target_status' is required.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? normalizedResolutionCode = NormalizeOptional(request.ResolutionCode)?.ToUpperInvariant();
+        if (normalizedResolutionCode is not null && !ResolutionCodeRegex().IsMatch(normalizedResolutionCode))
+        {
+            return Results.Problem(
+                title: "Invalid resolution code",
+                detail: $"Unsupported resolution_code '{normalizedResolutionCode}'. Use an uppercase code identifier (2-100 characters).",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? normalizedRootCauseCategory = NormalizeOptional(request.RootCauseCategory)?.ToUpperInvariant();
+        if (normalizedRootCauseCategory is not null && !ValidRootCauseCategories.Contains(normalizedRootCauseCategory))
+        {
+            return Results.Problem(
+                title: "Invalid root cause category",
+                detail: $"Unsupported root_cause_category '{normalizedRootCauseCategory}'.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? normalizedRootCauseSummary = NormalizeOptional(request.RootCauseSummary);
+        if (normalizedRootCauseSummary is { Length: > 1000 })
+        {
+            return Results.Problem(
+                title: "Invalid root cause summary",
+                detail: "'root_cause_summary' must not exceed 1000 characters.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? piiViolation = TicketPiiValidator.ValidateTransitionNoDirectParticipantPii(
+            normalizedRootCauseSummary,
+            normalizedResolutionCode,
+            changeReason);
+        if (piiViolation is not null)
+        {
+            return Results.Problem(
+                title: "Direct participant PII rejected",
+                detail: piiViolation,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        TicketStatus previousStatus = ticket.Status;
+        var transitionResult = ticket.TransitionTo(
+            targetStatusRaw,
+            normalizedResolutionCode,
+            normalizedRootCauseSummary,
+            normalizedRootCauseCategory);
+        if (transitionResult.IsFailure)
+        {
+            var err = transitionResult.Error;
+            int statusCode = err?.Type == Cadence.Core.Domain.ErrorType.Conflict
+                             || string.Equals(err?.Code, "INVALID_STATUS_TRANSITION", StringComparison.Ordinal)
+                ? StatusCodes.Status409Conflict
+                : StatusCodes.Status400BadRequest;
+            return Results.Problem(
+                title: err?.Code ?? "INVALID_TRANSITION",
+                detail: err?.Description ?? "Ticket status transition failed validation.",
+                statusCode: statusCode);
+        }
+
+        string? normalizedAssigneeUser = NormalizeOptional(request.AssigneeUser);
+        if (normalizedAssigneeUser is not null)
+        {
+            ticket.AssigneeUser = normalizedAssigneeUser;
+        }
+
+        int baselineVersion = db.Entry(ticket).Property(x => x.VersionIndex).OriginalValue;
+        DateTimeOffset now = clock.UtcNow;
+        ApplySlaPauseAndResume(ticket, previousStatus, ticket.Status, now);
+        ticket.ReasonForChange = changeReason;
+        ticket.VersionIndex = baselineVersion + 1;
+
+        db.TicketRevisions.Add(TicketRevision.FromTicket(ticket, now, principal.UserId));
+
+        AuditActions.Record(db, new AuditAction(
+            EntityName: nameof(Ticket),
+            EntityId: ticket.Id,
+            Action: "TICKET_TRANSITIONED",
+            UserId: principal.UserId,
+            ReasonForChange: changeReason,
+            ChangesJson: JsonSerializer.Serialize(new
+            {
+                reference = ticket.Reference,
+                from_status = previousStatus.ToString(),
+                to_status = ticket.Status.ToString(),
+                resolution_code = ticket.ResolutionCode,
+                root_cause_category = ticket.RootCauseCategory,
+                sla_paused_at = ticket.SlaPausedAt,
+                sla_total_paused_seconds = ticket.SlaTotalPausedSeconds,
+                sla_target_at = ticket.SlaTargetAt,
+                version_index = ticket.VersionIndex,
+            })));
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return TypedResults.Ok(ToResponseDto(ticket));
+    }
+
+    private static async Task<IResult> SignTicketAsync(
+        string ticket_id,
+        SignTicketRequestDto request,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        IClock clock,
+        CancellationToken ct)
+    {
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: false,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
+        {
+            return errorResult!;
+        }
+
+        string changeReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter must guarantee a non-empty X-Change-Reason.");
+
+        string meaning = (request.SignatureMeaning ?? string.Empty).Trim();
+        if (meaning.Length == 0 || meaning.Length > 255)
+        {
+            return Results.Problem(
+                title: "Invalid signature meaning",
+                detail: "A non-empty 21 CFR Part 11 'signature_meaning' (up to 255 characters) is required.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string signatureAction = string.IsNullOrWhiteSpace(request.SignatureAction)
+            ? "SIGN_CLOSURE"
+            : request.SignatureAction.Trim().ToUpperInvariant();
+        if (signatureAction.Length > 255)
+        {
+            return Results.Problem(
+                title: "Invalid signature action",
+                detail: "'signature_action' must not exceed 255 characters.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string? piiViolation = TicketPiiValidator.ValidateSignatureNoDirectParticipantPii(meaning, changeReason);
+        if (piiViolation is not null)
+        {
+            return Results.Problem(
+                title: "Direct participant PII rejected",
+                detail: piiViolation,
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (ticket.Status is not (TicketStatus.RESOLVED or TicketStatus.CLOSED))
+        {
+            return Results.Problem(
+                title: "Ticket not eligible for closure signature",
+                detail: "Only RESOLVED or CLOSED support tickets may be signed under 21 CFR Part 11.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        if (ticket.SignatureTimestamp is not null)
+        {
+            return Results.Problem(
+                title: "Ticket already signed",
+                detail: "This support ticket already carries an immutable 21 CFR Part 11 electronic signature.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        int baselineVersion = db.Entry(ticket).Property(x => x.VersionIndex).OriginalValue;
+        DateTimeOffset now = clock.UtcNow;
+        string? verifiedTokenId = httpContext.VerifiedSigToken()?.Id;
+        ticket.SignatureAction = signatureAction;
+        ticket.SignatureMeaning = meaning;
+        ticket.SignatureToken = string.IsNullOrWhiteSpace(verifiedTokenId) ? "verified" : verifiedTokenId;
+        ticket.SignatureTimestamp = now;
+        ticket.SignatureUser = principal.UserId;
+        ticket.ReasonForChange = changeReason;
+        ticket.VersionIndex = baselineVersion + 1;
+
+        db.TicketRevisions.Add(TicketRevision.FromTicket(ticket, now, principal.UserId));
+
+        AuditActions.Record(db, new AuditAction(
+            EntityName: nameof(Ticket),
+            EntityId: ticket.Id,
+            Action: "TICKET_SIGNED",
+            UserId: principal.UserId,
+            ReasonForChange: changeReason,
+            ChangesJson: JsonSerializer.Serialize(new
+            {
+                reference = ticket.Reference,
+                status = ticket.Status.ToString(),
+                signature_action = ticket.SignatureAction,
+                signature_meaning = ticket.SignatureMeaning,
+                signature_token_jti = ticket.SignatureToken,
+                signature_timestamp = ticket.SignatureTimestamp,
+                signature_user = ticket.SignatureUser,
+                version_index = ticket.VersionIndex,
+            })));
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return TypedResults.Ok(ToResponseDto(ticket));
+    }
+
+    private static async Task<IResult> GetTicketAuditTrailAsync(
+        string ticket_id,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        CancellationToken ct)
+    {
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: true,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
+        {
+            return errorResult!;
+        }
+
+        bool restrictInternal = IsSiteRestrictedCommentCaller(principal);
+
+        var comments = await db.TicketComments
+            .AsNoTracking()
+            .Where(c => c.TicketId == ticket.Id)
+            .Select(c => new { c.Id, c.Visibility })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var visibleCommentIds = comments
+            .Where(c => !restrictInternal || string.Equals(c.Visibility, "PUBLIC", StringComparison.OrdinalIgnoreCase))
+            .Select(c => c.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var rawAuditEntries = await db.AuditLogEntries
+            .AsNoTracking()
+            .Where(e =>
+                (e.EntityName == nameof(Ticket) && e.EntityId == ticket.Id)
+                || (e.EntityName == nameof(TicketComment) && visibleCommentIds.Contains(e.EntityId)))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var ordered = rawAuditEntries
+            .OrderByDescending(e => e.Timestamp)
+            .ThenByDescending(e => e.VersionIndex)
+            .Select(e => new TicketAuditEntryDto(
+                Id: e.Id,
+                EntityName: e.EntityName,
+                EntityId: e.EntityId,
+                Action: e.Action,
+                Timestamp: e.Timestamp,
+                UserId: e.UserId,
+                ReasonForChange: e.ReasonForChange,
+                VersionIndex: e.VersionIndex,
+                ChangesJson: e.ChangesJson,
+                PredecessorHash: e.PredecessorHash,
+                BlockHash: e.BlockHash))
+            .ToList();
+
+        return TypedResults.Ok<IReadOnlyList<TicketAuditEntryDto>>(ordered);
+    }
+
+    private static async Task<(Principal? Principal, Ticket? Ticket, IResult? ErrorResult)> LoadAuthorizedTicketAsync(
+        string rawTicketId,
+        HttpContext httpContext,
+        TicketsDbContext db,
+        bool asNoTracking,
+        CancellationToken ct)
+    {
+        Principal? principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
+        if (principal is null || string.IsNullOrWhiteSpace(principal.UserId))
+        {
+            return (null, null, Results.Problem(
+                title: "Unauthorized caller",
+                detail: "Verified gateway caller identity is required.",
+                statusCode: StatusCodes.Status401Unauthorized));
+        }
+
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
+        {
+            return (null, null, callerScopeDenied);
+        }
+
+        string key = (rawTicketId ?? string.Empty).Trim();
+        IQueryable<Ticket> query = asNoTracking ? db.Tickets.AsNoTracking() : db.Tickets;
+        Ticket? ticket = await query
+            .FirstOrDefaultAsync(t => !t.IsDeleted && (t.Id == key || t.Reference == key), ct)
+            .ConfigureAwait(false);
+
+        if (ticket is null)
+        {
+            return (principal, null, Results.Problem(
+                title: "Ticket not found",
+                detail: $"No support ticket matched '{key}'.",
+                statusCode: StatusCodes.Status404NotFound));
+        }
+
+        if (!IsTicketVisibleToCaller(principal, ticket))
+        {
+            return (principal, null, Results.Problem(
+                title: "Ticket scope forbidden",
+                detail: "Caller is not authorized for this ticket's study or site scope.",
+                statusCode: StatusCodes.Status403Forbidden));
+        }
+
+        return (principal, ticket, null);
+    }
+
+    private static void ApplySlaPauseAndResume(
+        Ticket ticket,
+        TicketStatus previousStatus,
+        TicketStatus nextStatus,
+        DateTimeOffset now)
+    {
+        if (previousStatus == nextStatus)
+        {
+            return;
+        }
+
+        bool wasPaused = SlaPausedStatuses.Contains(previousStatus);
+        bool willPause = SlaPausedStatuses.Contains(nextStatus);
+
+        if (!wasPaused && willPause)
+        {
+            ticket.SlaPausedAt = now;
+        }
+        else if (wasPaused && !willPause)
+        {
+            if (ticket.SlaPausedAt is DateTimeOffset pausedAt)
+            {
+                int pausedSeconds = (int)Math.Max(0, (now - pausedAt).TotalSeconds);
+                ticket.SlaTotalPausedSeconds += pausedSeconds;
+                if (ticket.SlaTargetAt is DateTimeOffset slaTarget)
+                {
+                    ticket.SlaTargetAt = slaTarget.AddSeconds(pausedSeconds);
+                }
+
+                if (ticket.DueDate is DateTimeOffset dueDate)
+                {
+                    ticket.DueDate = dueDate.AddSeconds(pausedSeconds);
+                }
+            }
+
+            ticket.SlaPausedAt = null;
+        }
+
+        if (ticket.SlaTargetAt is DateTimeOffset effectiveTarget && !SlaPausedStatuses.Contains(nextStatus))
+        {
+            ticket.SlaBreached = now > effectiveTarget && !TicketTransitionGraph.TerminalStates.Contains(nextStatus);
+        }
+    }
+
+    private static bool IsSiteRestrictedCommentCaller(Principal principal)
+    {
+        var normalized = RoleNormalization.GetNormalizedRoles(principal.Roles);
+        if (normalized.Any(SponsorCommentCapableRoles.Contains))
+        {
+            return false;
+        }
+
+        return normalized.Any(SiteCommentRestrictedRoles.Contains);
+    }
+
+    private static TicketCommentResponseDto ToCommentDto(TicketComment comment) =>
+        new(
+            Id: comment.Id,
+            TicketId: comment.TicketId,
+            Body: comment.Body,
+            Visibility: comment.Visibility,
+            CreatedAt: comment.CreatedAt,
+            CreatedBy: comment.CreatedBy,
+            ReasonForChange: comment.ReasonForChange,
+            VersionIndex: comment.VersionIndex);
+
     private static bool IsTicketVisibleToCaller(Principal principal, Ticket ticket)
     {
         if (!string.IsNullOrWhiteSpace(ticket.StudyId))
@@ -757,13 +1486,25 @@ public static class TicketEndpoints
             RelatedEntityType: ticket.RelatedEntityType,
             RelatedEntityId: ticket.RelatedEntityId,
             SourceRoute: ctx?.SourceRoute,
+            DueDate: ticket.DueDate,
             AcknowledgeTargetAt: ctx?.AcknowledgeTargetAt,
             SlaTargetAt: ticket.SlaTargetAt,
+            SlaPausedAt: ticket.SlaPausedAt,
+            SlaTotalPausedSeconds: ticket.SlaTotalPausedSeconds,
             SlaBreached: ticket.SlaBreached,
             SlaAmberWarned: ticket.SlaAmberWarned,
             EscalationCount: ticket.EscalationCount,
+            ResolutionCode: ticket.ResolutionCode,
+            RootCauseCategory: ticket.RootCauseCategory,
+            RootCauseSummary: ticket.RootCauseSummary,
+            SignatureAction: ticket.SignatureAction,
+            SignatureToken: ticket.SignatureToken,
+            SignatureMeaning: ticket.SignatureMeaning,
+            SignatureTimestamp: ticket.SignatureTimestamp,
+            SignatureUser: ticket.SignatureUser,
             ReasonForChange: ticket.ReasonForChange,
             CreatedAt: ticket.CreatedAt,
+            UpdatedAt: ticket.SignatureTimestamp ?? ticket.CreatedAt,
             VersionIndex: ticket.VersionIndex);
     }
 

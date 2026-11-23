@@ -30,6 +30,7 @@
         :id="id"
         :query="query"
         :is-open="isQueryOpen"
+        :field-label="label"
         @click="isQueryOpen = !isQueryOpen"
       />
     </div>

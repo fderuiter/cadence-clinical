@@ -4,15 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Org.Infrastructure.Persistence.OrgDbContext`, not from a live database. Unqualified tables live in the `org` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`org.audit_log_entries`](#orgaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`org.delegation_of_authority_periods`](#orgdelegation_of_authority_periods) | `DelegationOfAuthorityPeriod` | 20 |
-| [`org.delegations_of_authority`](#orgdelegations_of_authority) | `DelegationOfAuthority` | 21 |
-| [`org.org_audit_logs`](#orgorg_audit_logs) | `OrgAuditLog` | 10 |
-| [`org.org_training_logs`](#orgorg_training_logs) | `TrainingLog` | 14 |
-| [`org.personnel_assignments`](#orgpersonnel_assignments) | `PersonnelAssignment` | 10 |
-
 ## org.audit_log_entries
 
 Entity: `AuditLogEntry`

@@ -592,9 +592,13 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
 | [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) | Current | - Status: Accepted |
 | [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](adr/2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) | Current | - Status: Accepted |
+| [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](adr/2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) | Current | - Status: Accepted |
 | [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
-| [ADR-2645: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
+| [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
+| [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
+| [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
+| [ADR-2646: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -748,7 +752,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 ## Documentation site
 
 `pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
-`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset), and
+`rtm`, `openapi`, `schema-doc` and `markdown` on every run), and
 `pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
 `docs/.vitepress/dist`. `docs/index.md` serves as the site's home page, sidebar navigation is synthesized from
 this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`,

@@ -61,7 +61,7 @@ public sealed class ExecutionCallerScopeTests : IDisposable
     private const string Site01 = "SITE-01";
     private const string Site02 = "SITE-02";
     private const string SubjectBeta01 = "SUBJ-BETA-01";
-    private const string SecretArm = "ACTIVE_DRUG_100MG";
+    private const string SecretArm = "ACTIVE_DRUG_100MG"; // pragma: allowlist secret
     private const string DeviceSerialBeta = "SN-BETA-001";
     private const string LabRangeBeta = "HGB";
 

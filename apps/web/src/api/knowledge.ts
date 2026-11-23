@@ -1,4 +1,3 @@
-import { encodeChangeReason } from "./changeReason";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { createOpenApiClient, openApiClient, unwrapResponse } from "./client";
 import type { paths as KnowledgePaths } from "./generated/knowledge";
@@ -16,6 +15,8 @@ export const DEFAULT_CATEGORIES = [
     description: "eCRF data capture, subject enrollment, and visit procedures.",
     persona_visibility: [
       "site_crc",
+      "site_investigator",
+      "safety_officer",
       "cra_monitor",
       "data_manager",
       "super_admin",
@@ -43,7 +44,12 @@ export const DEFAULT_CATEGORIES = [
     slug: "site-monitoring-ctms",
     description:
       "CRA monitoring visits, source data verification, and trip reports.",
-    persona_visibility: ["cra_monitor", "site_crc", "super_admin"],
+    persona_visibility: [
+      "cra_monitor",
+      "site_crc",
+      "site_investigator",
+      "super_admin",
+    ],
     parent_id: null,
     is_deleted: false,
     created_at: "2026-01-15T08:00:00Z",
@@ -60,6 +66,8 @@ export const DEFAULT_CATEGORIES = [
       "super_admin",
       "sponsor_designer",
       "data_manager",
+      "safety_officer",
+      "site_investigator",
     ],
     parent_id: null,
     is_deleted: false,
@@ -72,7 +80,12 @@ export const DEFAULT_CATEGORIES = [
     slug: "data-management-coding",
     description:
       "MedDRA / WHODrug coding, query management, and data lock workflows.",
-    persona_visibility: ["data_manager", "sponsor_designer", "super_admin"],
+    persona_visibility: [
+      "data_manager",
+      "safety_officer",
+      "sponsor_designer",
+      "super_admin",
+    ],
     parent_id: null,
     is_deleted: false,
     created_at: "2026-01-15T08:00:00Z",
@@ -512,27 +525,6 @@ export const knowledgeService = {
     return isDemoBuild() ? getFallbackContextualHelp(route, persona) : response;
   },
 
-  async getArticle(articleId: string) {
-    try {
-      return await unwrapResponse(
-        knowledgeClient.GET("/api/v1/knowledge/articles/{article_id}", {
-          params: { path: { article_id: articleId } },
-        })
-      );
-    } catch (err) {
-      if (!isDemoBuild()) throw err;
-      const found = BUNDLED_ARTICLES.find(
-        (a) => a.id === articleId || a.slug === articleId
-      );
-      if (found) {
-        return clone(found);
-      }
-      throw new Error(`Article with id ${articleId} not found`, {
-        cause: err,
-      });
-    }
-  },
-
   async listArticles(
     params: {
       status?: string;
@@ -583,15 +575,6 @@ export const knowledgeService = {
     return await unwrapResponse(
       openApiClient.POST("/api/v1/knowledge/categories", {
         body: payload as never,
-      })
-    );
-  },
-
-  async deleteCategory(categoryId: string, reason = "Soft deleted") {
-    return await unwrapResponse(
-      openApiClient.DELETE("/api/v1/knowledge/categories/{category_id}", {
-        params: { path: { category_id: categoryId } },
-        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
@@ -680,39 +663,20 @@ export const knowledgeService = {
   },
 
   async listArticleVersions(articleId: string) {
-    return await unwrapResponse(
-      openApiClient.GET("/api/v1/knowledge/articles/{article_id}/versions", {
+    const resp = await unwrapResponse(
+      knowledgeClient.GET("/api/v1/knowledge/articles/{article_id}/versions", {
         params: { path: { article_id: articleId } },
       })
     );
+    return Array.isArray(resp) ? resp : [];
   },
 
   async getArticleAuditLog(articleId: string) {
-    return await unwrapResponse(
-      openApiClient.GET("/api/v1/knowledge/articles/{article_id}/audit-log", {
+    const resp = await unwrapResponse(
+      knowledgeClient.GET("/api/v1/knowledge/articles/{article_id}/audit-log", {
         params: { path: { article_id: articleId } },
       })
     );
-  },
-
-  async searchArticles(query: string) {
-    const q = (query || "").trim().toLowerCase();
-    if (!q) return this.listArticles();
-    const all = (await this.listArticles()) as Array<Record<string, unknown>>;
-    return all.filter((art) => {
-      const matchTitle = (art.title as string)?.toLowerCase().includes(q);
-      const matchBody = ((art.body_markdown || art.body_html || "") as string)
-        .toLowerCase()
-        .includes(q);
-      const matchTags = Array.isArray(art.tags)
-        ? art.tags.some((t: string) => t.toLowerCase().includes(q))
-        : typeof art.tags === "string"
-          ? (art.tags as string).toLowerCase().includes(q)
-          : false;
-      const matchCategory = (art.category_name as string)
-        ?.toLowerCase()
-        .includes(q);
-      return matchTitle || matchBody || matchTags || matchCategory;
-    });
+    return Array.isArray(resp) ? resp : [];
   },
 };

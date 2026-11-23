@@ -21,6 +21,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using Npgsql;
+
 namespace Cadence.Kernel.Persistence.Activity;
 
 /// <summary>
@@ -90,9 +92,22 @@ internal sealed class KernelActivityProjector(
     public async Task<int> ProjectAsync(TenantId tenant, CancellationToken cancellationToken)
     {
         var written = 0;
+        var raceRetries = 0;
         while (true)
         {
-            var batch = await ProjectBatchAsync(tenant, cancellationToken).ConfigureAwait(false);
+            var (batch, raced) = await ProjectBatchAsync(tenant, cancellationToken).ConfigureAwait(false);
+            if (raced)
+            {
+                if (++raceRetries <= 8)
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                raceRetries = 0;
+            }
+
             written += batch;
             if (batch < options.ActivityBatchSize)
             {
@@ -101,7 +116,7 @@ internal sealed class KernelActivityProjector(
         }
     }
 
-    private async Task<int> ProjectBatchAsync(TenantId tenant, CancellationToken cancellationToken)
+    private async Task<(int Written, bool Raced)> ProjectBatchAsync(TenantId tenant, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
         var entries = db.Set<ActivityEntryRecord>();
@@ -121,7 +136,7 @@ internal sealed class KernelActivityProjector(
             .ConfigureAwait(false);
         if (pending.Count == 0)
         {
-            return 0;
+            return (0, false);
         }
 
         var paths = new Dictionary<NodeRef, string[]>();
@@ -152,12 +167,19 @@ internal sealed class KernelActivityProjector(
             });
         }
 
-        using (db.PermitPipelineWrites())
+        try
         {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            using (db.PermitPipelineWrites())
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return (0, true);
         }
 
-        return pending.Count;
+        return (pending.Count, false);
     }
 
     /// <summary>The tenant, every object on the subject's zoom path, and the subject itself, unversioned.</summary>
