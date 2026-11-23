@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Identity;
+using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.Validation;
@@ -23,6 +24,7 @@ using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Lineage;
+using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -150,6 +152,8 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
             .AddSingleton<KernelOutboxRelay>()
             .AddKernelPersistence(ConnectionString)
+            .AddKernelScopeGraph()
+            .AddKernelNavigation()
             .AddKernelCommandPipeline()
             .AddDeclaredKernelErrorsCheck()
             .AddKernelStandardsPersistence()
