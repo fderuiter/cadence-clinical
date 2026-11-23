@@ -385,6 +385,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 - [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
 - [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) (2026-11-22)
+- [ADR-2648: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) (2026-11-23)
 
 ### 5. Compliance, Audit & Governance
 
