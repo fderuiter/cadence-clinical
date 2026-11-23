@@ -31,7 +31,7 @@
         <span
           v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
           id="unread-count"
-          class="badge-unread"
+          class="badge-unread tabular-nums"
         >
           {{ inbox.unreadCount }}
         </span>

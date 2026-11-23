@@ -45,7 +45,7 @@
             sync.syncRetryInfo.remainingSeconds > 0
           "
           id="sync-drawer-retry-countdown"
-          class="retry-countdown-banner"
+          class="retry-countdown-banner tabular-nums"
           aria-live="polite"
         >
           Next automatic retry in
@@ -86,7 +86,7 @@
                 {{ getSyncStatusLabel(item) }}
               </span>
             </div>
-            <div class="item-time">
+            <div class="item-time tabular-nums">
               Saved {{ formatTime(item.device_timestamp) }}
             </div>
             <div class="item-details">

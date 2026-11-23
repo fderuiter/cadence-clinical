@@ -104,10 +104,33 @@ defineEmits<{
   (e: "reopen-query"): void;
 }>();
 
+const TABULAR_FIELD_TYPES = new Set([
+  "number",
+  "numeric",
+  "integer",
+  "float",
+  "decimal",
+  "date",
+  "datetime",
+  "datetime-local",
+  "time",
+  "month",
+  "week",
+  "tel",
+]);
+
 const customAttributes = computed(() => {
   const attrs: Record<string, string> = {};
   if (props.field.cdash) {
     attrs["data-cdash"] = props.field.cdash;
+  }
+  if (
+    TABULAR_FIELD_TYPES.has(String(props.field.type || "").toLowerCase()) ||
+    props.field.tabularNums === true ||
+    props.field["data-tabular-nums"] === true ||
+    props.field["data-tabular-nums"] === "true"
+  ) {
+    attrs["data-tabular-nums"] = "true";
   }
   return attrs;
 });

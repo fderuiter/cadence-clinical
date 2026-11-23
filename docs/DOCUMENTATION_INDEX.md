@@ -600,6 +600,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](adr/2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) | Current | - Status: Accepted |
 | [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
 | [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
+| [ADR-2651: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](adr/2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

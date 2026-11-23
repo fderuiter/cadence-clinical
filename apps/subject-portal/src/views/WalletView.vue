@@ -163,6 +163,7 @@
             </div>
             <div
               id="wallet-balance-amount"
+              class="tabular-nums"
               style="font-size: 32px; font-weight: 800; margin: 4px 0 0 0"
             >
               {{ formattedAvailableBalance }}
@@ -214,25 +215,41 @@
         >
           <div>
             <div style="font-weight: 600">Lifetime Stipends</div>
-            <strong id="wallet-lifetime-stipends" style="font-size: 16px">
+            <strong
+              id="wallet-lifetime-stipends"
+              class="tabular-nums"
+              style="font-size: 16px"
+            >
               {{ formatCurrency(wallet.lifetimeStipends) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Lifetime Reimbursements</div>
-            <strong id="wallet-lifetime-reimbursements" style="font-size: 16px">
+            <strong
+              id="wallet-lifetime-reimbursements"
+              class="tabular-nums"
+              style="font-size: 16px"
+            >
               {{ formatCurrency(wallet.lifetimeReimbursements) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Total Paid Out</div>
-            <strong id="wallet-lifetime-disbursements" style="font-size: 16px">
+            <strong
+              id="wallet-lifetime-disbursements"
+              class="tabular-nums"
+              style="font-size: 16px"
+            >
               {{ formatCurrency(wallet.lifetimeDisbursements) }}
             </strong>
           </div>
           <div>
             <div style="font-weight: 600">Taxable YTD (1099)</div>
-            <strong id="wallet-taxable-ytd" style="font-size: 16px">
+            <strong
+              id="wallet-taxable-ytd"
+              class="tabular-nums"
+              style="font-size: 16px"
+            >
               {{ formatCurrency(wallet.taxableYtd) }}
             </strong>
           </div>
@@ -271,7 +288,7 @@
         </h3>
         <p style="margin: 0; font-size: 14px">
           Transferred
-          <strong>{{
+          <strong class="tabular-nums">{{
             formatCurrency(
               wallet.disbursementConfirmation.amount,
               wallet.disbursementConfirmation.currency || wallet.currency
@@ -578,7 +595,7 @@
                   accent-color: var(--semantic-color-primary);
                 "
               />
-              <span
+              <span class="tabular-nums"
                 >Meal Allowance / Per-Diem Cap ({{
                   formatCurrency(wallet.expenseForm.perDiemCap || 75)
                 }}
@@ -775,7 +792,7 @@
               </div>
             </div>
             <div style="text-align: right">
-              <strong style="display: block">
+              <strong class="tabular-nums" style="display: block">
                 {{
                   formatCurrency(
                     claim.netAmount ??
@@ -838,6 +855,7 @@
               </div>
             </div>
             <strong
+              class="tabular-nums"
               :style="{
                 color:
                   Number(tx.amount ?? tx.Amount ?? 0) >= 0
@@ -876,7 +894,9 @@
               <p id="disburse-modal-desc">
                 Choose your payout destination and verify the transfer amount
                 from your available balance of
-                <strong>{{ formattedAvailableBalance }}</strong>.
+                <strong class="tabular-nums">{{
+                  formattedAvailableBalance
+                }}</strong>.
               </p>
 
               <div

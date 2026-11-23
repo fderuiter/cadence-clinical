@@ -60,6 +60,8 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   --font-mono: monospace, Courier New, Courier, monospace;
+  --font-variant-numeric-tabular: tabular-nums;
+  --semantic-font-variant-numeric-tabular: var(--font-variant-numeric-tabular);
 
   /* Named Breakpoints */
   --breakpoint-phone: 576px;
@@ -508,10 +510,44 @@ a:focus-visible,
 table,
 th,
 td,
+time,
+.tabular-nums,
+[data-tabular-nums]:not([data-tabular-nums="false"]),
 .clinical-table,
 .clinical-visit-matrix,
 .data-table {
   font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+}
+
+/* Override browser UA font resets on numeric/date inputs, table controls, and opted-in clinical inputs (keep <textarea> proportional) */
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"],
+input[type="tel"],
+input[type="range"],
+input[inputmode="numeric"],
+input[inputmode="decimal"],
+input.tabular-nums,
+select.tabular-nums,
+input[data-tabular-nums]:not([data-tabular-nums="false"]),
+select[data-tabular-nums]:not([data-tabular-nums="false"]),
+td input:not([type="checkbox"]):not([type="radio"]),
+td select,
+.tabular-nums input:not([type="checkbox"]):not([type="radio"]),
+.tabular-nums select,
+[data-tabular-nums]:not([data-tabular-nums="false"])
+  input:not([type="checkbox"]):not([type="radio"]),
+[data-tabular-nums]:not([data-tabular-nums="false"]) select,
+.clinical-input[data-tabular-nums]:not([data-tabular-nums="false"])
+  .clinical-input-control,
+.clinical-input-control.tabular-nums,
+.clinical-input-control[data-tabular-nums]:not([data-tabular-nums="false"]) {
+  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 /* Centralized Component Styles (Zero duplicate component rules maintained separately) */
@@ -560,6 +596,27 @@ td,
   color: var(--semantic-color-text);
   transition: all 0.2s;
   box-sizing: border-box;
+}
+
+/* Prevent iOS auto-zoom on touch viewports by preserving >= 16px (1rem) font-size on form controls */
+@media (pointer: coarse) {
+  .clinical-input input[type="text"],
+  .clinical-input input[type="number"],
+  .clinical-input input[type="date"],
+  .clinical-input input[type="datetime-local"],
+  .clinical-input input[type="time"],
+  .clinical-input input[type="month"],
+  .clinical-input input[type="week"],
+  .clinical-input input[type="email"],
+  .clinical-input input[type="tel"],
+  .clinical-input select,
+  .clinical-input textarea,
+  .clinical-input .clinical-input-control,
+  td input:not([type="checkbox"]):not([type="radio"]),
+  td select,
+  td textarea {
+    font-size: max(1rem, var(--font-size-md, 16px));
+  }
 }
 
 .clinical-input input[type="text"]:focus,
@@ -683,6 +740,8 @@ textarea[aria-invalid="true"]:focus-visible {
   font-size: var(--font-size-2xs, 11px);
   font-weight: 600;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);

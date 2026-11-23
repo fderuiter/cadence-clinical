@@ -49,25 +49,33 @@
       <!-- Compliance Score Card -->
       <div class="card compliance-score-card">
         <div class="score-radial">
-          <div id="compliance-rate-pct" class="score-value">0%</div>
+          <div id="compliance-rate-pct" class="score-value tabular-nums">
+            0%
+          </div>
           <div class="score-lbl">Compliance Rate</div>
         </div>
         <div class="score-breakdown">
           <div class="breakdown-item">
             <span class="lbl">Completed:</span>
-            <strong id="compliance-completed-count" class="val text-success"
+            <strong
+              id="compliance-completed-count"
+              class="val text-success tabular-nums"
               >0</strong
             >
           </div>
           <div class="breakdown-item">
             <span class="lbl">Pending:</span>
-            <strong id="compliance-pending-count" class="val text-warning"
+            <strong
+              id="compliance-pending-count"
+              class="val text-warning tabular-nums"
               >0</strong
             >
           </div>
           <div class="breakdown-item">
             <span class="lbl">Overdue:</span>
-            <strong id="compliance-overdue-count" class="val text-danger"
+            <strong
+              id="compliance-overdue-count"
+              class="val text-danger tabular-nums"
               >0</strong
             >
           </div>
