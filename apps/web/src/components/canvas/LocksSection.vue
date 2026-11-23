@@ -318,23 +318,18 @@
                 class="readiness-counts"
                 data-testid="study-locks-readiness-counts"
               >
-                {{ readiness.open_query_count }} open
-                {{ readiness.open_query_count === 1 ? "query" : "queries" }} ·
-                {{ readiness.missing_required_item_count }} missing required
-                {{
-                  readiness.missing_required_item_count === 1
-                    ? "item"
-                    : "items"
-                }}<template
-                  v-if="Number(readiness.open_error_finding_count ?? 0) > 0"
-                >
-                  · {{ readiness.open_error_finding_count }} error
-                  {{
-                    Number(readiness.open_error_finding_count) === 1
-                      ? "finding"
-                      : "findings"
-                  }}
+                {{ openQueryCount }} open
+                {{ openQueryCount === 1 ? "query" : "queries" }} ·
+                {{ missingRequiredItemCount }} missing required
+                {{ missingRequiredItemCount === 1 ? "item" : "items"
+                }}<template v-if="openErrorFindingCount > 0">
+                  · {{ openErrorFindingCount }} error
+                  {{ openErrorFindingCount === 1 ? "finding" : "findings" }}
                 </template>
+                · {{ unverifiedRevisionCount }} unverified
+                {{ unverifiedRevisionCount === 1 ? "revision" : "revisions" }} ·
+                {{ missingSignatureCount }} missing
+                {{ missingSignatureCount === 1 ? "signature" : "signatures" }}
               </span>
             </div>
 
@@ -345,7 +340,7 @@
             >
               <li
                 v-for="(blocker, bIdx) in readiness.blockers"
-                :key="`${blocker.kind}-${blocker.target_ref ?? bIdx}`"
+                :key="`${blocker.kind}-${blocker.target_ref ?? bIdx}-${blocker.item_id ?? ''}`"
                 class="readiness-blocker-item"
               >
                 <template v-if="blocker.masked">
@@ -986,6 +981,27 @@ const applyScopeRef = computed(() => {
   }
 });
 
+function numericCount(value: number | string | null | undefined): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+const openQueryCount = computed(() =>
+  numericCount(readiness.value?.open_query_count)
+);
+const missingRequiredItemCount = computed(() =>
+  numericCount(readiness.value?.missing_required_item_count)
+);
+const openErrorFindingCount = computed(() =>
+  numericCount(readiness.value?.open_error_finding_count)
+);
+const unverifiedRevisionCount = computed(() =>
+  numericCount(readiness.value?.unverified_revision_count)
+);
+const missingSignatureCount = computed(() =>
+  numericCount(readiness.value?.missing_signature_count)
+);
+
 const isLockedBlockedByReadiness = computed(
   () => applyKind.value === "Locked" && isLockBlockedByReadiness.value
 );
@@ -1375,6 +1391,11 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .blocker-owner {
   color: var(--semantic-color-text-dark);
+}
+
+.blocker-detail {
+  color: var(--semantic-color-text-dark);
+  font-weight: 500;
 }
 
 .blocker-action {

@@ -95,15 +95,25 @@ export interface KernelCasebookExportQuery {
 /** Formats a concise context summary for a visible `KernelLockBlocker` item. */
 export function formatLockBlockerDetail(blocker: KernelLockBlocker): string {
   if (blocker.masked) return "";
-  if (blocker.detail) return blocker.detail;
-  const parts: string[] = [];
-  if (blocker.subject_code) parts.push(blocker.subject_code);
-  if (blocker.collection_title) parts.push(blocker.collection_title);
-  const item = blocker.item_label || blocker.item_id;
-  if (item) parts.push(item);
-  if (blocker.rule_id) parts.push(`[${blocker.rule_id}]`);
-  if (blocker.query_text) parts.push(blocker.query_text);
-  return parts.join(" · ");
+  const detailText =
+    typeof blocker.detail === "string" ? blocker.detail.trim() : "";
+  const ruleText =
+    typeof blocker.rule_id === "string" ? blocker.rule_id.trim() : "";
+  const itemText = blocker.item_label || blocker.item_id || null;
+  const parts = [
+    blocker.subject_code,
+    blocker.collection_title,
+    itemText && itemText !== blocker.collection_title ? itemText : null,
+    ruleText && !detailText.includes(ruleText) ? `[${ruleText}]` : null,
+    detailText &&
+    detailText !== itemText &&
+    detailText !== blocker.collection_title &&
+    detailText !== blocker.query_text
+      ? detailText
+      : null,
+    blocker.query_text ? `"${blocker.query_text}"` : null,
+  ].filter((part): part is string => Boolean(part && part.trim()));
+  return parts.join(" · ") || detailText;
 }
 
 /** Actionable user-facing explanation when a lock apply or release call fails. */
@@ -120,38 +130,26 @@ export function describeLockError(error: unknown): string {
       (error && typeof error === "object"
         ? (error as Record<string, unknown>)
         : undefined);
-    const detail =
-      typeof data?.detail === "string" && data.detail.trim()
-        ? data.detail.trim()
-        : "";
+    const detail = typeof data?.detail === "string" ? data.detail.trim() : "";
     const explanation = extractKernelExplanation(error);
-    const conditionDetails = Array.isArray(explanation?.conditions)
-      ? explanation.conditions
-          .filter((item) => item && item.met === false)
-          .map((item) => item.description?.trim())
-          .filter((item): item is string => Boolean(item))
-      : [];
-    const nextActions = Array.isArray(explanation?.next_actions)
-      ? explanation.next_actions
-          .map((item) => item?.description?.trim())
-          .filter((item): item is string => Boolean(item))
-      : [];
-    const parts: string[] = [];
-    if (detail) {
-      parts.push(detail);
-    } else if (explanation?.claim) {
-      parts.push(explanation.claim);
-    }
-    if (conditionDetails.length > 0) {
-      parts.push(conditionDetails.slice(0, 3).join(" · "));
-    }
-    if (nextActions.length > 0) {
-      parts.push(`Next actions: ${nextActions.slice(0, 3).join(" · ")}`);
-    }
-    if (parts.length > 0) {
-      return parts.join(" ");
-    }
-    return "This scope has open queries, missing required items, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
+    const pick = (items?: Array<{ description?: string | null }>) =>
+      (items ?? [])
+        .map((item) => item?.description?.trim())
+        .filter((item): item is string => Boolean(item))
+        .slice(0, 3);
+    const conditionDetails = pick(
+      explanation?.conditions?.filter((item) => item?.met === false)
+    );
+    const nextActions = pick(explanation?.next_actions);
+    const parts = [
+      detail || explanation?.claim || "",
+      conditionDetails.join(" · "),
+      nextActions.length ? `Next actions: ${nextActions.join(" · ")}` : "",
+    ].filter(Boolean);
+    return (
+      parts.join(" ") ||
+      "Resolve open queries, missing items, error findings, unverified revisions, and unsigned forms before locking. Freeze remains available."
+    );
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -213,7 +211,7 @@ export const kernelLocksApi = {
     );
   },
 
-  /** Evaluates lock readiness (open queries, missing required items, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  /** Evaluates lock readiness (open queries, missing required items, error findings, unverified revisions, and missing signatures) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
   getStudyLockReadiness(
     studyRef: string,
     scopeRef?: string

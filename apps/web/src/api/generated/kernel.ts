@@ -782,6 +782,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/locks/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Checks whether any active Frozen or Locked assertion covers a study, study site, or subject enrollment. */
+    get: operations["KernelCheckActiveLock"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/locks": {
     parameters: {
       query?: never;
@@ -806,7 +823,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. */
+    /** Evaluates lock readiness (open queries, missing required items, unresolved Error validation findings, unverified revisions, and missing signatures) for a study or child lock scope. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -1653,6 +1670,12 @@ export interface components {
       rule_id?: null | string;
       detail?: null | string;
     };
+    Kernel_KernelLockCheckResponse: {
+      locked: boolean;
+      study_code: string;
+      kind: null | string;
+      scope_kind: null | string;
+    };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
       study_code: string;
@@ -1666,6 +1689,10 @@ export interface components {
       missing_required_item_count: number | string;
       /** Format: int32 */
       open_error_finding_count: number | string;
+      /** Format: int32 */
+      unverified_revision_count: number | string;
+      /** Format: int32 */
+      missing_signature_count: number | string;
       /** Format: int32 */
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
@@ -5288,6 +5315,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Observation.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
     };
   };
   KernelApplyLock: {
@@ -5440,6 +5476,48 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelCheckActiveLock: {
+    parameters: {
+      query?: {
+        study_code?: string;
+        site_code?: string;
+        subject_code?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelLockCheckResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Locked */
+      423: {
         headers: {
           [name: string]: unknown;
         };
@@ -6570,9 +6648,10 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody: {
+    requestBody?: {
       content: {
-        "application/json": components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
+        "application/json":
+          null | components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
       };
     };
     responses: {

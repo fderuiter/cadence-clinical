@@ -455,9 +455,11 @@ internal static class CollectionSpecs
 
 /// <summary>
 /// Handles <see cref="SignCollectionInstance"/> (spec §9.5, #5463): under the form instance's advisory lock, so no save
-/// interleaves, it hashes the instance's current revisions and records the signature only when that is the hash the signer
-/// read. The attestation then names exactly those revisions; a later correction leaves it as it is. A form with no
-/// values has nothing to sign. Locks do not refuse a signature: signing a locked form is how an investigator signs off.
+/// interleaves, it checks that no study-scope <see cref="AssertionKind.Locked"/> assertion holds, hashes the instance's
+/// current revisions and records the signature only when that is the hash the signer read. The attestation then names
+/// exactly those revisions; a later correction leaves it as it is. A form with no values has nothing to sign. Child-scope
+/// locks and <see cref="AssertionKind.Frozen"/> locks do not refuse a signature: signing a frozen or site/participant/form
+/// locked form is how an investigator signs off prior to final study lock.
 /// </summary>
 internal sealed class SignCollectionInstanceHandler(IValidationFindings? findings = null) : ICommandHandler<SignCollectionInstance, AttestationId>
 {
@@ -483,6 +485,15 @@ internal sealed class SignCollectionInstanceHandler(IValidationFindings? finding
         {
             // A form of another enrollment is reported as missing: the caller was authorized for this one only.
             return KernelErrors.NotFound;
+        }
+
+        if (await LocksInForce.AnyAsync(
+                work,
+                [NodeRef.For(instance.StudyId)],
+                LocksInForce.DenyingAssertions,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return AssertionErrors.Locked;
         }
 
         if (instance.Members.Count == 0)

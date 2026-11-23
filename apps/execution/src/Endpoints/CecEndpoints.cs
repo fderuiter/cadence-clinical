@@ -71,6 +71,17 @@ public static class CecEndpoints
             return scopeDenied;
         }
 
+        if (existing is not null
+            && await ExecutionScopeGuard.RequireUnlockedAsync(
+                httpContext,
+                existing.StudyId,
+                existing.SiteId,
+                existing.SubjectId,
+                cancellationToken).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         var caller = httpContext.User.ToAuthenticatedCaller();
         var result = await cecService.ChairAdjudicateAsync(id, request, caller, cancellationToken);
         return result.IsSuccess

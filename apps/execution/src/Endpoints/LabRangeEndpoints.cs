@@ -190,6 +190,11 @@ public static class LabRangeEndpoints
             return denied;
         }
 
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, request.StudyId, request.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         string createdBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
@@ -363,6 +368,11 @@ public static class LabRangeEndpoints
             return scopeDenied;
         }
 
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, request.StudyId, request.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         string submittedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
         string? headerChangeReason = ChangeReasonHeader.Read(httpContext.Request);
         if (!string.IsNullOrWhiteSpace(headerChangeReason))
@@ -458,9 +468,18 @@ public static class LabRangeEndpoints
         CancellationToken ct)
     {
         var existing = await labRangeImportService.GetReferenceRangeByIdAsync(id, ct).ConfigureAwait(false);
-        return existing is not null
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing.StudyId, existing.SiteId)
-            : (ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-                ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _));
+        if (existing is null)
+        {
+            return ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
+                ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _);
+        }
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing.StudyId, existing.SiteId) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        return await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, existing.StudyId, existing.SiteId, cancellationToken: ct)
+            .ConfigureAwait(false);
     }
 }

@@ -8,6 +8,7 @@ using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Design;
@@ -163,6 +164,121 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
 
         var readiness = await EvaluateReadinessAsync(db, foundStudy.Id, foundStudy.StudyCode, scope, cancellationToken).ConfigureAwait(false);
         return new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: false, Readiness: readiness);
+    }
+
+    public async Task<ActiveCoveringLock?> CheckCoveringLocksAsync(
+        TenantId tenant,
+        string studyCode,
+        string? siteCode,
+        string? subjectCode,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode))
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        var normalizedStudyCode = studyCode.Trim();
+        var foundStudy = await db.Studies.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.StudyCode == normalizedStudyCode, cancellationToken)
+            .ConfigureAwait(false);
+        if (foundStudy is null)
+        {
+            return null;
+        }
+
+        StudySiteId? resolvedStudySiteId = null;
+        string? resolvedSiteCode = null;
+        if (!string.IsNullOrWhiteSpace(siteCode))
+        {
+            var normalizedSiteCode = siteCode.Trim();
+            var siteMatch = await db.StudySites.AsNoTracking()
+                .Where(ss => ss.StudyId == foundStudy.Id)
+                .Join(
+                    db.Sites.AsNoTracking(),
+                    ss => ss.SiteId,
+                    site => site.Id,
+                    (ss, site) => new { ss.Id, site.SiteCode })
+                .SingleOrDefaultAsync(x => x.SiteCode == normalizedSiteCode, cancellationToken)
+                .ConfigureAwait(false);
+            if (siteMatch is not null)
+            {
+                resolvedStudySiteId = siteMatch.Id;
+                resolvedSiteCode = siteMatch.SiteCode;
+            }
+        }
+
+        EnrollmentId? resolvedEnrollmentId = null;
+        string? resolvedSubjectCode = null;
+        if (!string.IsNullOrWhiteSpace(subjectCode) && SubjectCode.TryFrom(subjectCode.Trim(), out var parsedSubjectCode))
+        {
+            var enrollment = await db.Enrollments.AsNoTracking()
+                .SingleOrDefaultAsync(e => e.StudyId == foundStudy.Id && e.SubjectCode == parsedSubjectCode, cancellationToken)
+                .ConfigureAwait(false);
+            if (enrollment is not null)
+            {
+                resolvedEnrollmentId = enrollment.Id;
+                resolvedSubjectCode = enrollment.SubjectCode.Value;
+                resolvedStudySiteId ??= enrollment.StudySiteId;
+            }
+        }
+
+        var coveringScopes = new List<NodeRef> { NodeRef.For(foundStudy.Id) };
+        if (resolvedStudySiteId is { } ssId)
+        {
+            coveringScopes.Add(NodeRef.For(ssId));
+        }
+
+        if (resolvedEnrollmentId is { } eId)
+        {
+            coveringScopes.Add(NodeRef.For(eId));
+        }
+
+        var targetIds = coveringScopes.Select(s => s.Id).ToList();
+        var candidateLocks = await db.Assertions.AsNoTracking()
+            .Where(a => a.StudyId == foundStudy.Id
+                && (a.Kind == AssertionKind.Frozen || a.Kind == AssertionKind.Locked)
+                && a.RetractsId == null
+                && targetIds.Contains(a.TargetId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var matchingLocks = candidateLocks
+            .Where(a => coveringScopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))
+            .ToList();
+        if (matchingLocks.Count == 0)
+        {
+            return null;
+        }
+
+        var lockIds = matchingLocks.Select(a => a.Id).ToList();
+        var retractedIds = await db.Assertions.AsNoTracking()
+            .Where(a => a.RetractsId != null && lockIds.Contains(a.RetractsId.Value))
+            .Select(a => a.RetractsId!.Value)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var retractedSet = retractedIds.ToHashSet();
+
+        var activeLock = matchingLocks
+            .Where(a => !retractedSet.Contains(a.Id))
+            .OrderBy(a => ScopeOrder(a.TargetKind))
+            .ThenByDescending(a => a.Kind == AssertionKind.Locked ? 1 : 0)
+            .ThenBy(a => a.AssertedAt)
+            .FirstOrDefault();
+        if (activeLock is null)
+        {
+            return null;
+        }
+
+        return new ActiveCoveringLock(
+            activeLock.Id,
+            foundStudy.Id,
+            foundStudy.StudyCode,
+            (LockKind)activeLock.Kind,
+            activeLock.Target,
+            resolvedSiteCode,
+            resolvedSubjectCode);
     }
 
     private static async Task<bool> ScopeExistsInStudyAsync(
@@ -364,10 +480,63 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
         var activeErrorFindings = await KernelValidationStore.LoadActiveErrorFindingsAsync(db, study, cancellationToken)
             .ConfigureAwait(false);
 
+        var verifiedObservationIds = new HashSet<ObservationId>();
+        var recordedObservations = coveredObservations
+            .Where(o => LockReadinessEvaluator.IsRecordedValue(o.Value))
+            .ToList();
+        if (recordedObservations.Count > 0)
+        {
+            var recordedGuids = recordedObservations.Select(o => o.Id.Value).ToList();
+            var candidateVerifications = await db.Assertions.AsNoTracking()
+                .Where(a => a.StudyId == study
+                    && a.Kind == AssertionKind.Verified
+                    && a.RetractsId == null
+                    && a.TargetKind == NodeKinds.Observation
+                    && recordedGuids.Contains(a.TargetId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (candidateVerifications.Count > 0)
+            {
+                var verificationIds = candidateVerifications.Select(v => v.Id).ToList();
+                var retractedVerifications = await db.Assertions.AsNoTracking()
+                    .Where(a => a.RetractsId != null && verificationIds.Contains(a.RetractsId.Value))
+                    .Select(a => a.RetractsId!.Value)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var retractedVerificationSet = retractedVerifications.ToHashSet();
+                var revisionByObs = recordedObservations.ToDictionary(o => o.Id, o => o.Revision);
+                foreach (var verification in candidateVerifications.Where(v => !retractedVerificationSet.Contains(v.Id)))
+                {
+                    var verifiedObsId = ObservationId.FromGuid(verification.TargetId);
+                    if (revisionByObs.TryGetValue(verifiedObsId, out var currentRev) && verification.TargetRevision == currentRev)
+                    {
+                        verifiedObservationIds.Add(verifiedObsId);
+                    }
+                }
+            }
+        }
+
+        var signedCollectionHashes = new HashSet<(CollectionInstanceId InstanceId, string ContentHash)>();
+        if (instances.Count > 0)
+        {
+            var instanceGuids = instances.Select(i => i.Id.Value).ToList();
+            var signatures = await db.Attestations.AsNoTracking()
+                .Where(a => a.TargetKind == NodeKinds.CollectionInstance
+                    && instanceGuids.Contains(a.TargetId)
+                    && (a.Meaning == AttestationMeaning.Approved || a.Meaning == AttestationMeaning.Responsibility))
+                .Select(a => new { a.TargetId, a.TargetContentHash })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var signature in signatures)
+            {
+                signedCollectionHashes.Add((CollectionInstanceId.FromGuid(signature.TargetId), signature.TargetContentHash));
+            }
+        }
+
         // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation
         // or a single form referencing cross-form edit checks), load the enrollment's CollectionInstances so blockers and blinding resolve accurately.
         IReadOnlyList<CollectionInstance>? containingInstances = null;
-        if (scope.Kind == NodeKinds.Observation && (openQueries.Count > 0 || activeErrorFindings.Count > 0))
+        if (scope.Kind == NodeKinds.Observation && (coveredObservations.Count > 0 || openQueries.Count > 0 || activeErrorFindings.Count > 0))
         {
             var singleObsId = ObservationId.FromGuid(scope.Id);
             var containing = await db.CollectionInstances.AsNoTracking()
@@ -445,6 +614,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
                 : [])
             .Where(obsById.ContainsKey)
             .Select(id => obsById[id])
+            .Concat(recordedObservations.Where(o => !verifiedObservationIds.Contains(o.Id)))
             .DistinctBy(o => o.Id)
             .ToList();
         var blindedObservations = candidateBlindedObservations.Count == 0
@@ -463,6 +633,9 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             answeredQueryIds,
             blindedObservations,
             containingInstances,
+            coveredObservations,
+            verifiedObservationIds,
+            signedCollectionHashes,
             activeErrorFindings);
     }
 

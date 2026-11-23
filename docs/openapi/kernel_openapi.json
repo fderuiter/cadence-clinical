@@ -4841,6 +4841,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Observation.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
           }
         },
         "x-kernel-errors": [
@@ -4907,6 +4917,10 @@
           {
             "code": "K.Execution.TransitionTimeInvalid",
             "status": 422
+          },
+          {
+            "code": "K.Observation.Locked",
+            "status": 423
           }
         ]
       }
@@ -5249,6 +5263,70 @@
         ]
       }
     },
+    "/api/v1/kernel/locks/check": {
+      "get": {
+        "tags": [
+          "Kernel locks"
+        ],
+        "summary": "Checks whether any active Frozen or Locked assertion covers a study, study site, or subject enrollment.",
+        "operationId": "KernelCheckActiveLock",
+        "parameters": [
+          {
+            "name": "study_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelLockCheckResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/locks": {
       "get": {
         "tags": [
@@ -5346,7 +5424,7 @@
         "tags": [
           "Kernel locks"
         ],
-        "summary": "Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope.",
+        "summary": "Evaluates lock readiness (open queries, missing required items, unresolved Error validation findings, unverified revisions, and missing signatures) for a study or child lock scope.",
         "operationId": "KernelGetStudyLockReadiness",
         "parameters": [
           {
@@ -7297,11 +7375,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                  }
+                ]
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -10072,6 +10156,35 @@
           }
         }
       },
+      "Kernel_KernelLockCheckResponse": {
+        "required": [
+          "locked",
+          "study_code",
+          "kind",
+          "scope_kind"
+        ],
+        "type": "object",
+        "properties": {
+          "locked": {
+            "type": "boolean"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_KernelLockReadinessResponse": {
         "required": [
           "study_ref",
@@ -10083,6 +10196,8 @@
           "open_query_count",
           "missing_required_item_count",
           "open_error_finding_count",
+          "unverified_revision_count",
+          "missing_signature_count",
           "blocker_count",
           "blockers",
           "explanation"
@@ -10124,6 +10239,22 @@
             "format": "int32"
           },
           "open_error_finding_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unverified_revision_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "missing_signature_count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

@@ -107,6 +107,11 @@ public static class RandomizationEndpoints
             return scopeDenied;
         }
 
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(http, request.StudyId.Value, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         var result = await svc.DraftSchemeAsync(request, ct).ConfigureAwait(false);
         return result.Match(
             onSuccess: r => Results.Created($"/api/v1/execution/randomization/schemes?study_id={Uri.EscapeDataString(r.StudyId.Value)}", r),
@@ -129,6 +134,12 @@ public static class RandomizationEndpoints
         if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (schemeStudy is { } unlockedStudy
+            && await ExecutionScopeGuard.RequireUnlockedAsync(http, unlockedStudy.Value, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
         }
 
         var result = await svc.ApproveSchemeAsync(schemeId, changeReason, ct).ConfigureAwait(false);
@@ -182,6 +193,17 @@ public static class RandomizationEndpoints
         if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (subjectScope is { } unlockedSubject
+            && await ExecutionScopeGuard.RequireUnlockedAsync(
+                http,
+                unlockedSubject.StudyId.Value,
+                unlockedSubject.SiteId?.Value,
+                subjectId,
+                ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
         }
 
         var result = await svc.RandomizeAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);

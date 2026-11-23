@@ -7,6 +7,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
@@ -49,6 +50,7 @@ public static class KernelExecutionEndpoints
         KernelScreenEnrollmentRequest request,
         HttpContext context,
         IEnrollmentDirectory enrollments,
+        ILockRecords locks,
         IAuthorizationProbe probe,
         KernelCommandCatalog catalog,
         IKernelCommandSender sender,
@@ -92,6 +94,11 @@ public static class KernelExecutionEndpoints
                 new ScreenParticipant(tenant, enrollmentId, participantId, studySiteId, subjectCode, request.ScreenedAt, key, reason),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return KernelErrorEndpoints.Problem(denied.Error!);
+        }
+
+        if (await locks.CheckCoveringLocksAsync(tenant, request.StudyCode.Trim(), request.SiteCode.Trim(), subjectCode.Value, cancellationToken).ConfigureAwait(false) is not null)
+        {
+            return KernelErrorEndpoints.Problem(ObservationErrors.Locked);
         }
 
         if (await enrollments.ResolveParticipantAsync(tenant, studyId, subjectCode, cancellationToken).ConfigureAwait(false) is { } existing

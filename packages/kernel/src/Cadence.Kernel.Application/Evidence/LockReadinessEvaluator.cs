@@ -11,6 +11,7 @@ using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
 
 namespace Cadence.Kernel.Application.Evidence;
@@ -19,9 +20,12 @@ namespace Cadence.Kernel.Application.Evidence;
 /// Evaluates whether a target lock scope is ready for a <see cref="LockKind.Locked"/> assertion (#5466, spec §10.5):
 /// every <see cref="AssertionKind.Queried"/> assertion in the scope must be retracted (closed), every required
 /// <see cref="CollectionItem"/> on opened <see cref="CollectionInstance"/>s in the scope must hold a recorded value
-/// (a reasoned <see cref="MissingValue"/> other than <see cref="NullFlavor.NotAsked"/> included), and every active
-/// <see cref="ValidationSeverity.Error"/> validation finding in the scope must be resolved, accepted, or explained.
-/// <see cref="LockKind.Frozen"/> commits skip this gate so sites can still answer and close queries before hard lock.
+/// (a reasoned <see cref="MissingValue"/> other than <see cref="NullFlavor.NotAsked"/> included), every active
+/// <see cref="ValidationSeverity.Error"/> validation finding in the scope must be resolved, accepted, or explained,
+/// every recorded observation's current revision must hold an unretracted <see cref="AssertionKind.Verified"/>
+/// assertion, and every opened <see cref="CollectionInstance"/> with recorded values must hold a current investigator
+/// signature. <see cref="LockKind.Frozen"/> commits skip this gate so sites can still answer queries and complete
+/// source review before hard lock.
 /// </summary>
 public static class LockReadinessEvaluator
 {
@@ -29,17 +33,23 @@ public static class LockReadinessEvaluator
     public const string QueriesClosedCondition = "lock.queries_closed";
     public const string RequiredItemsCompleteCondition = "lock.required_items_complete";
     public const string ErrorFindingsResolvedCondition = "lock.error_findings_resolved";
+    public const string RevisionsVerifiedCondition = "lock.revisions_verified";
+    public const string SignaturesCompleteCondition = "lock.forms_signed";
     public const string OpenQueryBlockerCondition = "lock.open_query";
     public const string MissingRequiredItemBlockerCondition = "lock.missing_required_item";
     public const string ErrorFindingBlockerCondition = "lock.error_finding";
+    public const string UnverifiedRevisionBlockerCondition = "lock.unverified_revision";
+    public const string MissingSignatureBlockerCondition = "lock.missing_signature";
 
     public const string SiteOwner = "Site coordinator / investigator";
     public const string MonitorOwner = "Clinical research associate / data manager";
+    public const string InvestigatorOwner = "Principal investigator";
 
     /// <summary>
     /// Evaluates lock readiness of <paramref name="scope"/> inside <paramref name="study"/> over <paramref name="work"/>
     /// and returns <see cref="AssertionErrors.ScopeNotReady"/> with its structured <see cref="Explanation"/> when any
-    /// open query, missing required item, or unresolved Error validation finding blocks <see cref="LockKind.Locked"/>;
+    /// open query, missing required item, unresolved Error validation finding, unverified revision, or missing signature
+    /// blocks <see cref="LockKind.Locked"/>;
     /// returns null when ready.
     /// </summary>
     internal static Task<KernelError?> CheckAsync(
@@ -168,9 +178,11 @@ public static class LockReadinessEvaluator
 
         var openQueries = await ReadOpenQueriesAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
         var activeErrorFindings = await ReadActiveErrorFindingsAsync(tenant, study, findings, cancellationToken).ConfigureAwait(false);
+        var verifiedRevisions = await ReadVerifiedObservationsAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
+        var signedInstanceHashes = await ReadSignedCollectionHashesAsync(work, instances, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<CollectionInstance>? membershipInstances = null;
-        if (scope.Kind == NodeKinds.Observation && (openQueries.Queries.Count > 0 || activeErrorFindings.Count > 0))
+        if (scope.Kind == NodeKinds.Observation && (coveredObservations.Count > 0 || openQueries.Queries.Count > 0 || activeErrorFindings.Count > 0))
         {
             var targetObsId = ObservationId.FromGuid(scope.Id);
             var containing = await work.ReadAllAsync<CollectionInstance>(
@@ -203,6 +215,9 @@ public static class LockReadinessEvaluator
             openQueries.AnsweredQueryIds,
             blindedObservationIds: new HashSet<ObservationId>(),
             membershipInstances,
+            coveredObservations,
+            verifiedRevisions,
+            signedInstanceHashes,
             activeErrorFindings);
     }
 
@@ -222,6 +237,9 @@ public static class LockReadinessEvaluator
         IReadOnlySet<AssertionId> answeredQueryIds,
         IReadOnlySet<ObservationId> blindedObservationIds,
         IReadOnlyList<CollectionInstance>? membershipInstances = null,
+        IReadOnlyList<Observation>? coveredObservations = null,
+        IReadOnlySet<ObservationId>? verifiedObservationIds = null,
+        IReadOnlySet<(CollectionInstanceId InstanceId, string ContentHash)>? signedCollectionHashes = null,
         IReadOnlyList<ValidationFindingView>? activeErrorFindings = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
@@ -232,6 +250,10 @@ public static class LockReadinessEvaluator
         ArgumentNullException.ThrowIfNull(openQueries);
         ArgumentNullException.ThrowIfNull(answeredQueryIds);
         ArgumentNullException.ThrowIfNull(blindedObservationIds);
+
+        var effectiveCoveredObservations = coveredObservations ?? observationsById.Values.ToList();
+        var effectiveVerifiedIds = verifiedObservationIds ?? new HashSet<ObservationId>();
+        var effectiveSignedHashes = signedCollectionHashes ?? new HashSet<(CollectionInstanceId InstanceId, string ContentHash)>();
 
         var parsedDesigns = versionsById.ToDictionary(
             kvp => kvp.Key,
@@ -311,7 +333,7 @@ public static class LockReadinessEvaluator
 
             var recordedItems = instance.Members
                 .Where(m => observationsById.TryGetValue(m.ObservationId, out var obs)
-                    && obs.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+                    && IsRecordedValue(obs.Value))
                 .Select(m => m.ItemId)
                 .ToHashSet(StringComparer.Ordinal);
 
@@ -416,11 +438,119 @@ public static class LockReadinessEvaluator
             }
         }
 
+        foreach (var obs in effectiveCoveredObservations
+            .Where(o => IsRecordedValue(o.Value) && !effectiveVerifiedIds.Contains(o.Id))
+            .OrderBy(o => o.ObservedAt)
+            .ThenBy(o => o.Id))
+        {
+            enrollmentsById.TryGetValue(obs.EnrollmentId, out var enrollment);
+            membershipByObservation.TryGetValue(obs.Id, out var memberInfo);
+
+            var targetRef = NodeRef.For(obs.Id);
+            var collectionTitle = string.IsNullOrWhiteSpace(memberInfo.Spec?.Name) ? memberInfo.Instance?.CollectionSpecId : memberInfo.Spec!.Name;
+            var itemLabel = !string.IsNullOrWhiteSpace(memberInfo.Item?.Prompt)
+                ? memberInfo.Item!.Prompt
+                : memberInfo.Item?.Id ?? obs.Concept.ToString();
+            var nextAction = $"{MonitorOwner}: verify revision {obs.Revision} of '{itemLabel}' ({targetRef}) against source records.";
+
+            blockers.Add(new LockReadinessBlocker(
+                LockBlockerKind.UnverifiedRevision,
+                MonitorOwner,
+                targetRef,
+                enrollment?.StudySiteId ?? memberInfo.Instance?.StudySiteId,
+                obs.EnrollmentId,
+                memberInfo.Instance?.Id,
+                obs.Id,
+                QueryAssertionId: null,
+                enrollment?.SubjectCode.Value,
+                memberInfo.Instance?.CollectionSpecId,
+                collectionTitle,
+                memberInfo.Item?.Id,
+                itemLabel,
+                QueryText: null,
+                Answered: false,
+                blindedObservationIds.Contains(obs.Id),
+                nextAction,
+                NextCapability: "observation.verify",
+                NextTarget: targetRef));
+        }
+
+        foreach (var instance in instances.OrderBy(i => i.OpenedAt).ThenBy(i => i.Id))
+        {
+            if (instance.Members.Count == 0)
+            {
+                continue;
+            }
+
+            var memberObservations = new List<Observation>(instance.Members.Count);
+            var hasRecordedMember = false;
+            foreach (var member in instance.Members)
+            {
+                if (observationsById.TryGetValue(member.ObservationId, out var memberObs))
+                {
+                    memberObservations.Add(memberObs);
+                    if (IsRecordedValue(memberObs.Value))
+                    {
+                        hasRecordedMember = true;
+                    }
+                }
+            }
+
+            if (!hasRecordedMember)
+            {
+                continue;
+            }
+
+            var contentHash = CollectionInstance.ContentHashOf(
+                memberObservations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+            if (effectiveSignedHashes.Contains((instance.Id, contentHash)))
+            {
+                continue;
+            }
+
+            var specs = specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [];
+            var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
+            var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? instance.CollectionSpecId : spec!.Name;
+            enrollmentsById.TryGetValue(instance.EnrollmentId, out var enrollment);
+            var targetRef = NodeRef.For(instance.Id);
+            var nextAction = $"{InvestigatorOwner}: sign form '{collectionTitle}' ({targetRef}) at its current content revision.";
+
+            blockers.Add(new LockReadinessBlocker(
+                LockBlockerKind.MissingSignature,
+                InvestigatorOwner,
+                targetRef,
+                instance.StudySiteId,
+                instance.EnrollmentId,
+                instance.Id,
+                ObservationId: null,
+                QueryAssertionId: null,
+                enrollment?.SubjectCode.Value,
+                instance.CollectionSpecId,
+                collectionTitle,
+                ItemId: null,
+                ItemLabel: collectionTitle,
+                QueryText: null,
+                Answered: false,
+                Blinded: false,
+                nextAction,
+                NextCapability: "collection.sign",
+                NextTarget: targetRef));
+        }
+
         var openQueryCount = blockers.Count(b => b.Kind == LockBlockerKind.OpenQuery);
         var missingRequiredCount = blockers.Count(b => b.Kind == LockBlockerKind.MissingRequiredItem);
         var openErrorFindingCount = blockers.Count(b => b.Kind == LockBlockerKind.ErrorFinding);
+        var unverifiedRevisionCount = blockers.Count(b => b.Kind == LockBlockerKind.UnverifiedRevision);
+        var missingSignatureCount = blockers.Count(b => b.Kind == LockBlockerKind.MissingSignature);
         var ready = blockers.Count == 0;
-        var explanation = BuildExplanation(scope, openQueryCount, missingRequiredCount, openErrorFindingCount, blockers);
+        var explanation = BuildExplanation(
+            scope,
+            openQueryCount,
+            missingRequiredCount,
+            blockers,
+            unverifiedRevisionCount,
+            missingSignatureCount,
+            openErrorFindingCount);
 
         return new LockReadinessSnapshot(
             study,
@@ -432,30 +562,40 @@ public static class LockReadinessEvaluator
             missingRequiredCount,
             blockers,
             explanation,
-            openErrorFindingCount);
+            openErrorFindingCount,
+            unverifiedRevisionCount,
+            missingSignatureCount);
     }
 
     public static Explanation BuildExplanation(
         NodeRef scope,
         int openQueryCount,
         int missingRequiredCount,
+        int openErrorFindingCount,
         IReadOnlyList<LockReadinessBlocker> blockers) =>
         BuildExplanation(
             scope,
             openQueryCount,
             missingRequiredCount,
-            blockers?.Count(b => b.Kind == LockBlockerKind.ErrorFinding) ?? 0,
-            blockers!);
+            blockers,
+            blockers?.Count(b => b.Kind == LockBlockerKind.UnverifiedRevision) ?? 0,
+            blockers?.Count(b => b.Kind == LockBlockerKind.MissingSignature) ?? 0,
+            openErrorFindingCount);
 
     public static Explanation BuildExplanation(
         NodeRef scope,
         int openQueryCount,
         int missingRequiredCount,
-        int openErrorFindingCount,
-        IReadOnlyList<LockReadinessBlocker> blockers)
+        IReadOnlyList<LockReadinessBlocker> blockers,
+        int unverifiedRevisionCount = 0,
+        int missingSignatureCount = 0,
+        int? openErrorFindingCount = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(blockers);
+
+        var effectiveErrorFindingCount = openErrorFindingCount
+            ?? blockers.Count(b => b.Kind == LockBlockerKind.ErrorFinding);
 
         var queryEvidence = blockers
             .Where(b => b.Kind == LockBlockerKind.OpenQuery)
@@ -472,10 +612,22 @@ public static class LockReadinessEvaluator
             .Select(b => b.FindingId is { } fid ? NodeRef.For(fid) : b.Target)
             .Distinct()
             .ToArray();
+        var unverifiedEvidence = blockers
+            .Where(b => b.Kind == LockBlockerKind.UnverifiedRevision)
+            .Select(b => b.Target)
+            .Distinct()
+            .ToArray();
+        var unsignedEvidence = blockers
+            .Where(b => b.Kind == LockBlockerKind.MissingSignature)
+            .Select(b => b.Target)
+            .Distinct()
+            .ToArray();
 
         var queryNoun = openQueryCount == 1 ? "query" : "queries";
         var itemNoun = missingRequiredCount == 1 ? "item" : "items";
-        var findingNoun = openErrorFindingCount == 1 ? "finding" : "findings";
+        var findingNoun = effectiveErrorFindingCount == 1 ? "finding" : "findings";
+        var revisionNoun = unverifiedRevisionCount == 1 ? "revision" : "revisions";
+        var signatureNoun = missingSignatureCount == 1 ? "signature" : "signatures";
 
         var queriesCondition = openQueryCount == 0
             ? EvaluatedCondition.Satisfied(QueriesClosedCondition, "All queries in the lock scope are closed.")
@@ -491,14 +643,35 @@ public static class LockReadinessEvaluator
                 $"Complete {missingRequiredCount} missing required {itemNoun} in {scope} before applying a Locked assertion.",
                 missingEvidence);
 
-        var findingsCondition = openErrorFindingCount == 0
+        var findingsCondition = effectiveErrorFindingCount == 0
             ? EvaluatedCondition.Satisfied(ErrorFindingsResolvedCondition, "All Error validation findings in the lock scope are resolved, accepted, or explained.")
             : EvaluatedCondition.Unsatisfied(
                 ErrorFindingsResolvedCondition,
-                $"Resolve, accept, or explain {openErrorFindingCount} Error validation {findingNoun} in {scope} before applying a Locked assertion.",
+                $"Resolve, accept, or explain {effectiveErrorFindingCount} Error validation {findingNoun} in {scope} before applying a Locked assertion.",
                 errorFindingEvidence);
 
-        var conditions = new List<EvaluatedCondition> { queriesCondition, itemsCondition, findingsCondition };
+        var verifiedCondition = unverifiedRevisionCount == 0
+            ? EvaluatedCondition.Satisfied(RevisionsVerifiedCondition, "All recorded observation revisions in the lock scope are source-verified.")
+            : EvaluatedCondition.Unsatisfied(
+                RevisionsVerifiedCondition,
+                $"Verify {unverifiedRevisionCount} unverified observation {revisionNoun} in {scope} before applying a Locked assertion.",
+                unverifiedEvidence);
+
+        var signaturesCondition = missingSignatureCount == 0
+            ? EvaluatedCondition.Satisfied(SignaturesCompleteCondition, "All opened forms with recorded values in the lock scope are signed at their current revision.")
+            : EvaluatedCondition.Unsatisfied(
+                SignaturesCompleteCondition,
+                $"Capture {missingSignatureCount} missing investigator {signatureNoun} in {scope} before applying a Locked assertion.",
+                unsignedEvidence);
+
+        var conditions = new List<EvaluatedCondition>
+        {
+            queriesCondition,
+            itemsCondition,
+            findingsCondition,
+            verifiedCondition,
+            signaturesCondition,
+        };
 
         var steps = new List<ExplanationStep>();
         var nextActions = new List<NextAction>();
@@ -518,22 +691,22 @@ public static class LockReadinessEvaluator
             {
                 evidence = [blocker.Target];
             }
-            var conditionCode = blocker.Kind switch
-            {
-                LockBlockerKind.OpenQuery => OpenQueryBlockerCondition,
-                LockBlockerKind.ErrorFinding => ErrorFindingBlockerCondition,
-                _ => MissingRequiredItemBlockerCondition,
-            };
+
+            var conditionCode = BlockerConditionCode(blocker.Kind);
             var queryLabel = blocker.QueryAssertionId is { } q ? NodeRef.For(q).ToString() : "query";
             var findingLabel = blocker.FindingId is { } f ? NodeRef.For(f).ToString() : "finding";
             var claim = blocker.Kind switch
             {
                 LockBlockerKind.OpenQuery =>
                     $"{blocker.Owner} owns open query {queryLabel} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
+                LockBlockerKind.MissingRequiredItem =>
+                    $"{blocker.Owner} owns missing required item '{blocker.ItemLabel ?? blocker.ItemId}' on {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).",
                 LockBlockerKind.ErrorFinding =>
                     $"{blocker.Owner} owns Error validation finding {findingLabel} ({blocker.RuleId ?? "rule"}) on {blocker.Target}.",
+                LockBlockerKind.UnverifiedRevision =>
+                    $"{blocker.Owner} owns unverified observation {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
                 _ =>
-                    $"{blocker.Owner} owns missing required item '{blocker.ItemLabel ?? blocker.ItemId}' on {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).",
+                    $"{blocker.Owner} owns unsigned form {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).",
             };
 
             conditions.Add(EvaluatedCondition.Unsatisfied(conditionCode, blocker.NextAction, evidence));
@@ -543,21 +716,23 @@ public static class LockReadinessEvaluator
 
         if (steps.Count == 0)
         {
-            steps.Add(new ExplanationStep($"Checked queries, opened form instances, and validation findings under {scope}; no blockers remain.", [scope]));
+            steps.Add(new ExplanationStep(
+                $"Checked queries, required items, validation findings, source verification, and form signatures under {scope}; no blockers remain.",
+                [scope]));
         }
 
         string headline;
         if (blockers.Count == 0)
         {
-            headline = $"Scope {scope} is ready for a Locked assertion: 0 open queries, 0 missing required items, and 0 open Error validation findings.";
+            headline = $"Scope {scope} is ready for a Locked assertion: 0 open queries, 0 missing required items, 0 open Error validation findings, 0 unverified revisions, and 0 missing signatures.";
         }
-        else if (openErrorFindingCount > 0)
+        else if (effectiveErrorFindingCount > 0)
         {
-            headline = $"Locking {scope} is blocked by {openQueryCount} open {queryNoun}, {missingRequiredCount} missing required {itemNoun}, and {openErrorFindingCount} open Error validation {findingNoun}; Frozen remains available while blockers are resolved.";
+            headline = $"Locking {scope} is blocked by {openQueryCount} open {queryNoun}, {missingRequiredCount} missing required {itemNoun}, {effectiveErrorFindingCount} open Error validation {findingNoun}, {unverifiedRevisionCount} unverified {revisionNoun}, and {missingSignatureCount} missing {signatureNoun}; Frozen remains available while blockers are resolved.";
         }
         else
         {
-            headline = $"Locking {scope} is blocked by {openQueryCount} open {queryNoun} and {missingRequiredCount} missing required {itemNoun}; Frozen remains available while blockers are resolved.";
+            headline = $"Locking {scope} is blocked by {openQueryCount} open {queryNoun}, {missingRequiredCount} missing required {itemNoun}, {unverifiedRevisionCount} unverified {revisionNoun}, and {missingSignatureCount} missing {signatureNoun}; Frozen remains available while blockers are resolved.";
         }
 
         return new Explanation(scope, headline, Producer, steps, conditions, nextActions);
@@ -809,6 +984,19 @@ public static class LockReadinessEvaluator
         return page.Findings;
     }
 
+    public static string BlockerConditionCode(LockBlockerKind kind) =>
+        kind switch
+        {
+            LockBlockerKind.OpenQuery => OpenQueryBlockerCondition,
+            LockBlockerKind.MissingRequiredItem => MissingRequiredItemBlockerCondition,
+            LockBlockerKind.ErrorFinding => ErrorFindingBlockerCondition,
+            LockBlockerKind.UnverifiedRevision => UnverifiedRevisionBlockerCondition,
+            _ => MissingSignatureBlockerCondition,
+        };
+
+    public static bool IsRecordedValue(ObservationValue value) =>
+        value is not MissingValue { Reason: NullFlavor.NotAsked };
+
     private static async Task<(IReadOnlyList<Assertion> Queries, IReadOnlySet<AssertionId> AnsweredQueryIds)> ReadOpenQueriesAsync(
         IKernelUnitOfWork work,
         StudyId study,
@@ -860,5 +1048,71 @@ public static class LockReadinessEvaluator
             .Select(a => AssertionId.FromGuid(a.TargetId))
             .ToHashSet();
         return (openQueries, answeredIds);
+    }
+
+    private static async Task<IReadOnlySet<ObservationId>> ReadVerifiedObservationsAsync(
+        IKernelUnitOfWork work,
+        StudyId study,
+        IReadOnlyList<Observation> coveredObservations,
+        CancellationToken cancellationToken)
+    {
+        var recordedObservations = coveredObservations.Where(o => IsRecordedValue(o.Value)).ToList();
+        if (recordedObservations.Count == 0)
+        {
+            return new HashSet<ObservationId>();
+        }
+
+        var targetGuids = recordedObservations.Select(o => o.Id.Value).ToList();
+        var candidateVerifications = await work.ReadAllAsync<Assertion>(
+            a => a.StudyId == study
+                && a.Kind == AssertionKind.Verified
+                && a.RetractsId == null
+                && a.TargetKind == NodeKinds.Observation
+                && targetGuids.Contains(a.TargetId),
+            cancellationToken).ConfigureAwait(false);
+        if (candidateVerifications.Count == 0)
+        {
+            return new HashSet<ObservationId>();
+        }
+
+        var retractedIds = await LocksInForce.RetractedAsync(
+            work,
+            candidateVerifications.Select(v => v.Id).ToList(),
+            cancellationToken).ConfigureAwait(false);
+        var revisionByObservation = recordedObservations.ToDictionary(o => o.Id, o => o.Revision);
+
+        var verified = new HashSet<ObservationId>();
+        foreach (var verification in candidateVerifications.Where(v => !retractedIds.Contains(v.Id)))
+        {
+            var obsId = ObservationId.FromGuid(verification.TargetId);
+            if (revisionByObservation.TryGetValue(obsId, out var currentRevision) && verification.TargetRevision == currentRevision)
+            {
+                verified.Add(obsId);
+            }
+        }
+
+        return verified;
+    }
+
+    private static async Task<IReadOnlySet<(CollectionInstanceId InstanceId, string ContentHash)>> ReadSignedCollectionHashesAsync(
+        IKernelUnitOfWork work,
+        IReadOnlyList<CollectionInstance> instances,
+        CancellationToken cancellationToken)
+    {
+        if (instances.Count == 0)
+        {
+            return new HashSet<(CollectionInstanceId InstanceId, string ContentHash)>();
+        }
+
+        var instanceGuids = instances.Select(i => i.Id.Value).ToList();
+        var attestations = await work.ReadAllAsync<Attestation>(
+            a => a.TargetKind == NodeKinds.CollectionInstance
+                && instanceGuids.Contains(a.TargetId)
+                && (a.Meaning == AttestationMeaning.Approved || a.Meaning == AttestationMeaning.Responsibility),
+            cancellationToken).ConfigureAwait(false);
+
+        return attestations
+            .Select(a => (CollectionInstanceId.FromGuid(a.TargetId), a.TargetContentHash))
+            .ToHashSet();
     }
 }

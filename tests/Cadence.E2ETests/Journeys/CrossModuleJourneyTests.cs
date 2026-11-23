@@ -67,6 +67,7 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         var ct = TestContext.Current.CancellationToken;
         var study = await JourneyStudy.ArrangeAsync(fixture, ct);
         using var crc = fixture.Caller(study.TenantCode, JourneyStudy.Coordinator);
+        using var investigator = fixture.Caller(study.TenantCode, JourneyStudy.Investigator);
         using var cra = fixture.Caller(study.TenantCode, JourneyStudy.Monitor);
         using var dm = fixture.Caller(study.TenantCode, JourneyStudy.DataManager);
         var written = new List<(string AggregateId, string Caller)>();
@@ -92,9 +93,29 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         form.Complete.Should().BeTrue();
         form.Items.Should().ContainSingle().Which.Value.Should().Be(new QuantityValue(128m, "mm[Hg]"));
 
-        // TODO(2026-10-20): the investigator signs the form here, an Attestation over the form instance's member revisions
-        // (spec §9.5, ADR-2622). The kernel's Attest command does not accept a CollectionInstance target yet, so there is
-        // no form signature to give (#5463).
+        // Investigator signs the form instance over the live form signature route (#5463, spec §9.5, ADR-2622).
+        using (var signReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormsRoute}/{opened.FormId:D}/signatures", UriKind.Relative)))
+        {
+            signReq.Headers.Add(KernelObservationEndpoints.IdempotencyKeyHeader, $"journey-form-sign-{Guid.NewGuid():N}");
+            signReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Investigator reviewed and approved vital signs"));
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(
+                    JourneyStudy.Investigator,
+                    $"{FormsRoute}/{opened.FormId:D}/signatures",
+                    "execution.form.sign"));
+            signReq.Content = System.Net.Http.Json.JsonContent.Create(new
+            {
+                meaning = "approved",
+                content_hash = form.ContentHash,
+            });
+            using var signRes = await investigator.SendAsync(signReq, ct);
+            var signBody = await signRes.Content.ReadAsStringAsync(ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, signBody);
+            using var signJson = JsonDocument.Parse(signBody);
+            var sigAttestationId = signJson.RootElement.GetProperty("attestation_id").GetGuid();
+            written.Add((sigAttestationId.ToString(), JourneyStudy.Investigator));
+        }
 
         // Query raised, answered and closed. TODO(2026-10-20): replace the relay with the query routes (#5461).
         var query = await fixture.OkThroughHostAsync(cra, "Source shows a different reading", w => new RaiseQuery(

@@ -66,21 +66,21 @@
     >
       <span :data-testid="`${prefix}-readiness-summary`">
         <template v-if="readiness.ready_for_lock">
-          Ready for Locked (0 open queries · 0 missing required items).
+          Ready for Locked (0 open queries · 0 missing required items · 0
+          unverified revisions · 0 missing signatures).
         </template>
         <template v-else>
-          Locked blocked: {{ readiness.open_query_count }} open
-          {{ readiness.open_query_count === 1 ? "query" : "queries" }},
-          {{ readiness.missing_required_item_count }} missing required
-          {{ readiness.missing_required_item_count === 1 ? "item" : "items"
-          }}<template v-if="Number(readiness.open_error_finding_count ?? 0) > 0"
-            >, {{ readiness.open_error_finding_count }} error
-            {{
-              Number(readiness.open_error_finding_count) === 1
-                ? "finding"
-                : "findings"
-            }}</template
-          >
+          Locked blocked: {{ openQueryCount }} open
+          {{ openQueryCount === 1 ? "query" : "queries" }},
+          {{ missingRequiredItemCount }} missing required
+          {{ missingRequiredItemCount === 1 ? "item" : "items"
+          }}<template v-if="openErrorFindingCount > 0"
+            >, {{ openErrorFindingCount }} error
+            {{ openErrorFindingCount === 1 ? "finding" : "findings" }}</template
+          >, {{ unverifiedRevisionCount }} unverified
+          {{ unverifiedRevisionCount === 1 ? "revision" : "revisions" }},
+          {{ missingSignatureCount }} missing
+          {{ missingSignatureCount === 1 ? "signature" : "signatures" }}
           (Freeze {{ scopeLabel }} remains available).
         </template>
       </span>
@@ -91,7 +91,7 @@
       >
         <li
           v-for="(blocker, idx) in readiness.blockers"
-          :key="`${blocker.kind}-${blocker.target_ref ?? idx}`"
+          :key="`${blocker.kind}-${blocker.target_ref ?? idx}-${blocker.item_id ?? ''}`"
         >
           <template v-if="blocker.masked">
             Masked ({{ blocker.mask ?? "Restricted" }})
@@ -104,9 +104,9 @@
               :node-ref="blocker.target_ref"
               include-kind
             />
-            <span v-if="formatLockBlockerDetail(blocker)">{{
-              formatLockBlockerDetail(blocker)
-            }}</span>
+            <span v-if="formatLockBlockerDetail(blocker)">
+              {{ formatLockBlockerDetail(blocker) }}
+            </span>
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
         </li>
@@ -208,6 +208,27 @@ const {
 const hasDirectLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Locked")
 );
+
+function numericCount(value: number | string | null | undefined): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+const openQueryCount = computed(() =>
+  numericCount(readiness.value?.open_query_count)
+);
+const missingRequiredItemCount = computed(() =>
+  numericCount(readiness.value?.missing_required_item_count)
+);
+const openErrorFindingCount = computed(() =>
+  numericCount(readiness.value?.open_error_finding_count)
+);
+const unverifiedRevisionCount = computed(() =>
+  numericCount(readiness.value?.unverified_revision_count)
+);
+const missingSignatureCount = computed(() =>
+  numericCount(readiness.value?.missing_signature_count)
+);
 const hasDirectFrozenOrLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
 );
@@ -308,6 +329,7 @@ function openRelease(lockRef: string, lockKind: string) {
   border-radius: 4px;
   font-size: 0.82rem;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .scope-lock-readiness--ready {

@@ -99,6 +99,11 @@ public static class SiteComplianceEndpoints
             return denied;
         }
 
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(http, payload.StudyId, payload.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         var result = await svc.ApplyEtmfWebhookAsync(payload, ct).ConfigureAwait(false);
         return result.Match(
             onSuccess: _ => Results.Ok(new OperationEnvelopeResponse("success", "Compliance cache updated successfully.")),
@@ -124,6 +129,11 @@ public static class SiteComplianceEndpoints
         if (ExecutionScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId) is { } denied)
         {
             return denied;
+        }
+
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(http, request.StudyId, siteId, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
         }
 
         var result = await svc.ActivateSiteAsync(siteId, request, ct).ConfigureAwait(false);

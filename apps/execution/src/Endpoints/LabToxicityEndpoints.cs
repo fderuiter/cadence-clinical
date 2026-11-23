@@ -108,6 +108,17 @@ public static class LabToxicityEndpoints
             return scopeDenied;
         }
 
+        if (existing is not null
+            && await ExecutionScopeGuard.RequireUnlockedAsync(
+                httpContext,
+                existing.StudyId,
+                existing.SiteId,
+                existing.SubjectId,
+                ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         var result = await svc.ExecuteActionAsync(reviewId, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }

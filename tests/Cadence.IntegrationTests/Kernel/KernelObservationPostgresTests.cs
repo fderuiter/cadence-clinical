@@ -199,20 +199,25 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
 
-        // 1. The correction is mid-commit when the lock arrives.
+        // 1. The correction is mid-commit when a Freeze arrives (and a racing Locked refuses the newly unverified revision).
         var subject = await _observations.NewEnrollmentAsync(ct);
         var recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
-        var lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
+        await _observations.MakeScopeReadyForLockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
+        var racingHardLock = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct, LockKind.Locked);
+        var lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct, LockKind.Frozen);
         using (var paused = new KernelCommitPause(fixture))
         {
             var correction = paused.HoldAsync(() => fixture.Sender.SendAsync(Correct(subject.Tenant, recorded, Mmhg(128)), cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
+            var hardLocking = fixture.Sender.SendAsync(racingHardLock, cancellationToken: ct);
             var locking = fixture.Sender.SendAsync(lockCommand, cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+            hardLocking.IsCompleted.Should().BeFalse("Locked waits for the correction's shared scope lock ({0})", Describe(hardLocking));
             locking.IsCompleted.Should().BeFalse("the lock waits for the correction's shared scope lock ({0})", Describe(locking));
             paused.Release();
 
             (await correction).IsSuccess.Should().BeTrue();
+            (await hardLocking).Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
             (await locking).IsSuccess.Should().BeTrue();
         }
 
@@ -221,9 +226,10 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         after.Error.HttpStatus.Should().Be(423);
         await AssertNoCorrectionAfterLockAsync(subject.Tenant, recorded.ObservationId, lockCommand.AssertionId, expectedCorrections: 1, ct);
 
-        // 2. The lock is mid-commit when the correction arrives.
+        // 2. The Locked assertion is mid-commit when the correction arrives.
         subject = await _observations.NewEnrollmentAsync(ct);
         recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+        await _observations.MakeScopeReadyForLockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
         lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
         using (var paused = new KernelCommitPause(fixture))
         {

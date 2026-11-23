@@ -17,9 +17,9 @@ eCRF queries no longer live here either. A query is raised on a form value (or o
 - `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
 - `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
 - `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
-- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer`, synchronizing newly registered subjects with kernel `RegisterParticipant` and `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen` over gateway-signed HTTP (`KERNEL_SERVICE_URL`).
+- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer` (synchronizing newly registered subjects with kernel `RegisterParticipant` and `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen`) and `HttpKernelLockGuard` (`IKernelLockGuard`, checking live kernel `Study`, `StudySite`, and `Enrollment` `Frozen`/`Locked` assertions via `GET /api/v1/kernel/locks/check`) over gateway-signed HTTP (`KERNEL_SERVICE_URL`).
 - `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM normalization service, demographics normalization and AES-GCM encryption.
-- `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site scope enforcement), and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
+- `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site scope enforcement plus fail-closed `RequireUnlockedAsync` kernel lock guards across mutating routes), and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
 
 ## HTTP surface
 

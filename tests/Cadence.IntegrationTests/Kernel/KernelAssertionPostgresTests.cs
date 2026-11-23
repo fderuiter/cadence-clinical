@@ -45,6 +45,7 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         var subject = await _observations.NewEnrollmentAsync(ct);
         var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
 
+        await _observations.MakeScopeReadyForLockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct);
         var locked = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct), ct);
 
         locked.Released.Should().BeFalse();
@@ -65,7 +66,10 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         (await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct))!.Locks.Should().BeEmpty();
         await using var db = fixture.CreateContext(subject.Tenant);
         var stored = await db.Assertions.AsNoTracking().Where(a => a.StudyId == subject.Study).OrderBy(a => a.AssertedAt).ToListAsync(ct);
-        stored.Select(a => (a.Kind, a.RetractsId)).Should().Equal((AssertionKind.Locked, (AssertionId?)null), (AssertionKind.Locked, locked.LockId));
+        stored.Select(a => (a.Kind, a.RetractsId)).Should().Equal(
+            (AssertionKind.Verified, (AssertionId?)null),
+            (AssertionKind.Locked, (AssertionId?)null),
+            (AssertionKind.Locked, locked.LockId));
         var events = await db.DomainEvents.AsNoTracking().Where(e => e.Type == "LockApplied" || e.Type == "LockReleased").Select(e => e.Type).ToListAsync(ct);
         events.Should().BeEquivalentTo("LockApplied", "LockReleased");
         (await db.LineageEdges.AsNoTracking()
@@ -117,6 +121,7 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, second, Mmhg(130)), ct);
         await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(120), ct);
 
+        await _observations.MakeScopeReadyForLockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Enrollment), ct);
         await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Enrollment), ct), ct);
 
         (await fixture.Sender.SendAsync(_observations.Record(subject.Tenant, subject.Enrollment, Mmhg(120)), cancellationToken: ct)).Error!.Code

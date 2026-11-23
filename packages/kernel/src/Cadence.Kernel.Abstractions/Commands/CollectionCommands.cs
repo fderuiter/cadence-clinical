@@ -85,6 +85,7 @@ public sealed record RecordCollectedValues(
 [BaselineKernelCommand]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
 [RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid), nameof(CollectionErrors.NotReadyToSign))]
+[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 [RaisesKernelErrors(
     typeof(TrustErrors),
     nameof(TrustErrors.PersonRequired),

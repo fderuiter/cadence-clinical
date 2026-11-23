@@ -4868,6 +4868,8 @@ export function createWebDemoStore() {
       const blockers = [];
       let openQueryCount = 0;
       let missingRequiredItemCount = 0;
+      let unverifiedRevisionCount = 0;
+      let missingSignatureCount = 0;
 
       for (const q of state.queries.values()) {
         const status = String(q.status || "").toLowerCase();
@@ -4876,8 +4878,8 @@ export function createWebDemoStore() {
         openQueryCount += 1;
         const answered = status === "answered";
         const owner = answered
-          ? "Monitor / Data Management"
-          : "Site Coordinator";
+          ? "Clinical research associate / data manager"
+          : "Site coordinator / investigator";
         const targetRef = q.observation_id
           ? `observation:${q.observation_id}`
           : `collection_instance:${q.form_id}`;
@@ -4901,7 +4903,9 @@ export function createWebDemoStore() {
           query_text: q.text || null,
           answered,
           next_action: nextAction,
-          next_capability: answered ? "query.close" : "query.answer",
+          next_capability: answered
+            ? "assertion.retract"
+            : "observation.query.answer",
           masked: false,
           mask: null,
         });
@@ -4911,6 +4915,10 @@ export function createWebDemoStore() {
         for (const f of state.forms.values()) {
           if (!matchesScope(f)) continue;
           const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+          const collectionTitle =
+            f.collection_title ||
+            resolveCollectionTitle(f.collection_spec_id) ||
+            null;
           const missingIds = Array.isArray(f.missing_required)
             ? f.missing_required
             : [];
@@ -4923,22 +4931,178 @@ export function createWebDemoStore() {
             const label = itemObj?.concept || missingId;
             blockers.push({
               kind: "MissingRequiredItem",
-              owner: "Site Coordinator",
+              owner: "Site coordinator / investigator",
               target_ref: targetRef,
               target_kind: "collection_instance",
               subject_code: subj?.subject_id || null,
               collection_spec_id: f.collection_spec_id || null,
-              collection_title:
-                f.collection_title ||
-                resolveCollectionTitle(f.collection_spec_id) ||
-                null,
+              collection_title: collectionTitle,
               item_id: missingId,
               item_label: label,
               query_ref: null,
               query_text: null,
               answered: false,
-              next_action: `Site Coordinator: record required item '${label}' on ${targetRef} (${subj?.subject_id || "participant"}) before locking.`,
-              next_capability: "observation.record",
+              next_action: `Site coordinator / investigator: record required item '${label}' on ${targetRef} (${subj?.subject_id || "participant"}) before locking.`,
+              next_capability: "collection.record",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
+      const checkedObservationRefs = new Set();
+      for (const f of state.forms.values()) {
+        if (scopeKind !== "observation" && !matchesScope(f)) continue;
+        const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+        const collectionTitle =
+          f.collection_title ||
+          resolveCollectionTitle(f.collection_spec_id) ||
+          null;
+        const formAssertions = Array.isArray(f.assertions) ? f.assertions : [];
+        const activeFormVerified = formAssertions.some(
+          (a) =>
+            !a.retracted_at &&
+            String(a.kind).toLowerCase() === "verified" &&
+            !String(a.target || "").startsWith("observation:")
+        );
+        const itemsList = Array.isArray(f.items) ? f.items : [];
+        let recordedItemCount = 0;
+
+        for (const it of itemsList) {
+          if (
+            !it.observation_id ||
+            it.value === null ||
+            it.value === undefined
+          ) {
+            continue;
+          }
+          if (
+            scopeKind === "observation" &&
+            String(it.observation_id) !== scopeUuid
+          ) {
+            continue;
+          }
+          recordedItemCount += 1;
+          const obsRef = `observation:${it.observation_id}`;
+          checkedObservationRefs.add(obsRef);
+          if (activeFormVerified) continue;
+
+          const obs = state.observations.get(obsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const currentRevision = Number(it.revision ?? obs?.version ?? 1);
+          const isObsVerified =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                a.target === obsRef &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            );
+          if (!isObsVerified) {
+            unverifiedRevisionCount += 1;
+            const itemLabel = it.concept || it.item_id || obsRef;
+            blockers.push({
+              kind: "UnverifiedRevision",
+              owner: "Clinical research associate / data manager",
+              target_ref: obsRef,
+              target_kind: "observation",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: it.item_id || null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              next_action: `Clinical research associate / data manager: verify revision ${currentRevision} of '${itemLabel}' (${obsRef}) against source records.`,
+              next_capability: "observation.verify",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+
+        if (scopeKind !== "observation" && recordedItemCount > 0) {
+          const sigs = Array.isArray(f.signatures) ? f.signatures : [];
+          const signed =
+            sigs.length > 0 &&
+            sigs.some(
+              (s) => !s.superseded && s.content_hash === f.content_hash
+            );
+          if (!signed) {
+            missingSignatureCount += 1;
+            const formRef = `collection_instance:${f.form_id}`;
+            const titleLabel =
+              collectionTitle || f.collection_spec_id || formRef;
+            blockers.push({
+              kind: "MissingSignature",
+              owner: "Principal investigator",
+              target_ref: formRef,
+              target_kind: "collection_instance",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: null,
+              item_label: titleLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              next_action: `Principal investigator: sign form '${titleLabel}' (${formRef}) at its current content revision.`,
+              next_capability: "collection.sign",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
+      if (scopeKind === "observation") {
+        const singleObsRef = `observation:${scopeUuid}`;
+        if (
+          !checkedObservationRefs.has(singleObsRef) &&
+          state.observations.has(singleObsRef)
+        ) {
+          const obs = state.observations.get(singleObsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const currentRevision = Number(obs?.version ?? 1);
+          const isObsVerified = obsAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "verified" &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          );
+          if (!isObsVerified) {
+            unverifiedRevisionCount += 1;
+            const itemLabel = obs?.concept || singleObsRef;
+            blockers.push({
+              kind: "UnverifiedRevision",
+              owner: "Clinical research associate / data manager",
+              target_ref: singleObsRef,
+              target_kind: "observation",
+              subject_code: null,
+              collection_spec_id: null,
+              collection_title: null,
+              item_id: null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              next_action: `Clinical research associate / data manager: verify revision ${currentRevision} of '${itemLabel}' (${singleObsRef}) against source records.`,
+              next_capability: "observation.verify",
               masked: false,
               mask: null,
             });
@@ -4948,8 +5112,8 @@ export function createWebDemoStore() {
 
       const readyForLock = blockers.length === 0;
       const claim = readyForLock
-        ? `Scope ${cleanScopeRef} has 0 open queries and 0 missing required items and is ready for Locked.`
-        : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"} and ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"} remain unresolved (Frozen remains available).`;
+        ? `Scope ${cleanScopeRef} has 0 open queries, 0 missing required items, 0 unverified revisions, and 0 missing signatures and is ready for Locked.`
+        : `Locking ${cleanScopeRef} is blocked by ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"}, ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"}, ${unverifiedRevisionCount} unverified ${unverifiedRevisionCount === 1 ? "revision" : "revisions"}, and ${missingSignatureCount} missing ${missingSignatureCount === 1 ? "signature" : "signatures"}; Frozen remains available while blockers are resolved.`;
 
       return {
         study_ref: cleanStudyRef,
@@ -4961,37 +5125,57 @@ export function createWebDemoStore() {
         open_query_count: openQueryCount,
         missing_required_item_count: missingRequiredItemCount,
         open_error_finding_count: 0,
+        unverified_revision_count: unverifiedRevisionCount,
+        missing_signature_count: missingSignatureCount,
         blocker_count: blockers.length,
         blockers,
         explanation: {
           subject: cleanScopeRef,
           claim,
-          producer: "kernel/locks/readiness",
+          producer: "kernel.lock_readiness",
           steps: blockers.map((b) => ({
             claim: b.next_action,
             evidence: [b.query_ref, b.target_ref].filter(Boolean),
           })),
           conditions: [
             {
-              code: "NO_OPEN_QUERIES",
-              description: "Zero open queries remain in target scope.",
+              code: "lock.queries_closed",
+              description: "All queries in the lock scope are closed.",
               met: openQueryCount === 0,
               evidence: blockers
                 .filter((b) => b.kind === "OpenQuery" && b.target_ref)
                 .map((b) => b.target_ref),
             },
             {
-              code: "REQUIRED_ITEMS_COMPLETE",
+              code: "lock.required_items_complete",
               description:
-                "All required collection items are recorded in target scope.",
+                "All required items on opened forms in the lock scope are recorded.",
               met: missingRequiredItemCount === 0,
               evidence: blockers
                 .filter((b) => b.kind === "MissingRequiredItem" && b.target_ref)
                 .map((b) => b.target_ref),
             },
+            {
+              code: "lock.revisions_verified",
+              description:
+                "All recorded observation revisions in the lock scope are source-verified.",
+              met: unverifiedRevisionCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "UnverifiedRevision" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
+            {
+              code: "lock.forms_signed",
+              description:
+                "All opened forms with recorded values in the lock scope are signed at their current revision.",
+              met: missingSignatureCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "MissingSignature" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
           ],
           next_actions: blockers.map((b) => ({
-            action: b.next_action,
+            description: b.next_action,
             capability: b.next_capability,
             target: b.target_ref,
           })),

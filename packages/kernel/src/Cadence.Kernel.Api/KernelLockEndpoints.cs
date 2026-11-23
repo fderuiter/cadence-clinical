@@ -84,6 +84,14 @@ public static class KernelLockEndpoints
                 ReleaseLockSemanticAction,
                 ctx => ReleaseLockAction(ctx.Request.RouteValues["lockRef"]?.ToString() ?? string.Empty));
 
+        locks.MapGet("/check", CheckActiveLockAsync)
+            .AllowBaselineProductFamily()
+            .WithName("KernelCheckActiveLock")
+            .WithSummary("Checks whether any active Frozen or Locked assertion covers a study, study site, or subject enrollment.")
+            .Produces<KernelLockCheckResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status423Locked);
+
         var studies = kernel.MapGroup("/studies").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel locks");
         studies.MapGet("/{studyRef}/locks", ListByStudyAsync)
             .WithName("KernelListStudyLocks")
@@ -95,7 +103,7 @@ public static class KernelLockEndpoints
         studies.MapGet("/{studyRef}/locks/readiness", GetReadinessAsync)
             .AllowBaselineProductFamily()
             .WithName("KernelGetStudyLockReadiness")
-            .WithSummary("Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope.")
+            .WithSummary("Evaluates lock readiness (open queries, missing required items, unresolved Error validation findings, unverified revisions, and missing signatures) for a study or child lock scope.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -108,6 +116,9 @@ public static class KernelLockEndpoints
         HttpContext context,
         IKernelCommandSender sender,
         ILockRecords locks,
+        INodeVisibility visibility,
+        IAuthorizationProbe probe,
+        ICurrentActor actor,
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
     {
@@ -178,17 +189,19 @@ public static class KernelLockEndpoints
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (applyResult.Error is { } applyError)
         {
-            if (string.Equals(applyError.Code, AssertionErrors.ScopeNotReady.Code, StringComparison.Ordinal))
+            if (string.Equals(applyError.Code, AssertionErrors.ScopeNotReady.Code, StringComparison.Ordinal)
+                && await locks.ReadReadinessAsync(tenant, studyId, scope, cancellationToken).ConfigureAwait(false) is { } readinessSnapshot)
             {
-                applyError = await MaskScopeNotReadyErrorAsync(
-                    context,
-                    tenant,
-                    studyId,
+                var (_, maskedExplanation) = await MaskReadinessSnapshotAsync(
+                    readinessSnapshot,
                     studyNode,
-                    scope,
-                    locks,
-                    applyError,
+                    tenant,
+                    visibility,
+                    probe,
+                    actor,
                     cancellationToken).ConfigureAwait(false);
+                return KernelErrorEndpoints.Problem(
+                    applyError.WithMessage(maskedExplanation.Claim) with { Explanation = maskedExplanation });
             }
 
             return KernelErrorEndpoints.Problem(applyError);
@@ -468,16 +481,14 @@ public static class KernelLockEndpoints
             return KernelProblems.NotFound(targetScope);
         }
 
-        var (items, maskedEvidenceRefs) = await MaskReadinessBlockersAsync(
+        var (items, maskedExplanation) = await MaskReadinessSnapshotAsync(
             snapshot,
-            tenant,
             studyNode,
+            tenant,
             visibility,
             probe,
             actor,
             cancellationToken).ConfigureAwait(false);
-
-        var explanationResponse = BuildMaskedExplanationResponse(snapshot.Explanation, items, maskedEvidenceRefs);
         return TypedResults.Ok(new KernelLockReadinessResponse(
             studyNode.ToString(),
             snapshot.StudyCode,
@@ -488,15 +499,41 @@ public static class KernelLockEndpoints
             snapshot.OpenQueryCount,
             snapshot.MissingRequiredItemCount,
             snapshot.OpenErrorFindingCount,
+            snapshot.UnverifiedRevisionCount,
+            snapshot.MissingSignatureCount,
             items.Count,
             items,
-            explanationResponse));
+            KernelExplanationResponse.From(maskedExplanation)));
     }
 
-    private static async Task<(IReadOnlyList<KernelLockBlockerResponse> Items, HashSet<string> MaskedEvidenceRefs)> MaskReadinessBlockersAsync(
+    internal static async Task<Results<Ok<KernelLockCheckResponse>, ProblemHttpResult>> CheckActiveLockAsync(
+        [FromQuery(Name = "study_code")] string? studyCode,
+        [FromQuery(Name = "site_code")] string? siteCode,
+        [FromQuery(Name = "subject_code")] string? subjectCode,
+        HttpContext context,
+        ILockRecords locks,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode))
+        {
+            return KernelProblems.BadRequest("Study code required", "Supply a non-empty study_code query parameter.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var active = await locks.CheckCoveringLocksAsync(tenant, studyCode, siteCode, subjectCode, cancellationToken).ConfigureAwait(false);
+        if (active is null)
+        {
+            return TypedResults.Ok(new KernelLockCheckResponse(false, studyCode.Trim(), null, null));
+        }
+
+        var message = $"An active {active.Kind} assertion on {active.Scope.Kind} scope refuses writes for study '{active.StudyCode}' until that lock is released.";
+        return KernelErrorEndpoints.Problem(ObservationErrors.Locked.WithMessage(message));
+    }
+
+    private static async Task<(IReadOnlyList<KernelLockBlockerResponse> Items, Explanation MaskedExplanation)> MaskReadinessSnapshotAsync(
         LockReadinessSnapshot snapshot,
-        TenantId tenant,
         NodeRef studyNode,
+        TenantId tenant,
         INodeVisibility visibility,
         IAuthorizationProbe probe,
         ICurrentActor actor,
@@ -535,7 +572,7 @@ public static class KernelLockEndpoints
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, nodesToCheck, cancellationToken).ConfigureAwait(false);
         var unblindByTarget = new Dictionary<NodeRef, bool>();
         var items = new List<KernelLockBlockerResponse>(snapshot.Blockers.Count);
-        var maskedEvidenceRefs = new HashSet<string>(StringComparer.Ordinal);
+        var maskedRefs = new HashSet<NodeRef>();
 
         foreach (var blocker in snapshot.Blockers)
         {
@@ -568,22 +605,22 @@ public static class KernelLockEndpoints
             {
                 if (blocker.Target != snapshot.Scope)
                 {
-                    maskedEvidenceRefs.Add(blocker.Target.ToString());
+                    maskedRefs.Add(blocker.Target);
                 }
 
                 if (blocker.ObservationId is { } oid)
                 {
-                    maskedEvidenceRefs.Add(NodeRef.For(oid).ToString());
+                    maskedRefs.Add(NodeRef.For(oid));
                 }
 
                 if (blocker.QueryAssertionId is { } qid)
                 {
-                    maskedEvidenceRefs.Add(NodeRef.For(qid).ToString());
+                    maskedRefs.Add(NodeRef.For(qid));
                 }
 
                 if (blocker.FindingId is { } fid)
                 {
-                    maskedEvidenceRefs.Add(NodeRef.For(fid).ToString());
+                    maskedRefs.Add(NodeRef.For(fid));
                 }
 
                 items.Add(KernelLockBlockerResponse.FromMasked(blocker, reason));
@@ -594,123 +631,67 @@ public static class KernelLockEndpoints
             }
         }
 
-        return (items, maskedEvidenceRefs);
+        var maskedExplanation = BuildMaskedExplanation(snapshot.Explanation, items, maskedRefs);
+        return (items, maskedExplanation);
     }
 
-    private static async Task<KernelError> MaskScopeNotReadyErrorAsync(
-        HttpContext context,
-        TenantId tenant,
-        StudyId studyId,
-        NodeRef studyNode,
-        NodeRef targetScope,
-        ILockRecords locks,
-        KernelError applyError,
-        CancellationToken cancellationToken)
-    {
-        if (applyError.Explanation is null
-            || context.RequestServices.GetService<INodeVisibility>() is not { } visibility
-            || context.RequestServices.GetService<IAuthorizationProbe>() is not { } probe
-            || context.RequestServices.GetService<ICurrentActor>() is not { } actor)
-        {
-            return applyError;
-        }
-
-        var snapshot = await locks.ReadReadinessAsync(tenant, studyId, targetScope, cancellationToken).ConfigureAwait(false);
-        if (snapshot is null)
-        {
-            return applyError;
-        }
-
-        var (items, maskedEvidenceRefs) = await MaskReadinessBlockersAsync(
-            snapshot,
-            tenant,
-            studyNode,
-            visibility,
-            probe,
-            actor,
-            cancellationToken).ConfigureAwait(false);
-        if (!items.Any(b => b.Masked))
-        {
-            return applyError;
-        }
-
-        var maskedResponse = BuildMaskedExplanationResponse(snapshot.Explanation, items, maskedEvidenceRefs);
-        static NodeRef[] ParseRefs(IEnumerable<string> refs) =>
-            [.. refs.Select(r => NodeRef.TryParse(r, out var parsed) ? parsed : null).Where(r => r is not null).Select(r => r!)];
-
-        var maskedExplanation = new Explanation(
-            snapshot.Explanation.Subject,
-            snapshot.Explanation.Claim,
-            snapshot.Explanation.Producer,
-            [.. maskedResponse.Steps.Select(s => new ExplanationStep(s.Claim, ParseRefs(s.Evidence)))],
-            [.. maskedResponse.Conditions.Select(c =>
-                c.Met
-                    ? EvaluatedCondition.Satisfied(c.Code, c.Description, ParseRefs(c.Evidence))
-                    : EvaluatedCondition.Unsatisfied(c.Code, c.Description, ParseRefs(c.Evidence)))],
-            [.. maskedResponse.NextActions.Select(a =>
-                new NextAction(
-                    a.Description,
-                    a.Capability,
-                    a.Target is not null && NodeRef.TryParse(a.Target, out var parsedTarget) ? parsedTarget : null))]);
-
-        return applyError with { Explanation = maskedExplanation };
-    }
-
-    private static KernelExplanationResponse BuildMaskedExplanationResponse(
+    private static Explanation BuildMaskedExplanation(
         Explanation explanation,
         IReadOnlyList<KernelLockBlockerResponse> blockerItems,
-        IReadOnlySet<string> maskedRefs)
+        IReadOnlySet<NodeRef> maskedRefs)
     {
         if (maskedRefs.Count == 0)
         {
-            return KernelExplanationResponse.From(explanation);
+            return explanation;
         }
 
-        IReadOnlyList<string> Scrub(IEnumerable<NodeRef> refs) =>
-            [.. refs.Select(r => r.ToString()).Where(r => !maskedRefs.Contains(r))];
+        IReadOnlyList<NodeRef> Scrub(IEnumerable<NodeRef> refs) =>
+            [.. refs.Where(r => !maskedRefs.Contains(r))];
 
         var summaryConditions = explanation.Conditions
             .Where(c => c.Code is LockReadinessEvaluator.QueriesClosedCondition
                 or LockReadinessEvaluator.RequiredItemsCompleteCondition
-                or LockReadinessEvaluator.ErrorFindingsResolvedCondition)
-            .Select(c => new KernelConditionResponse(c.Code, c.Description, c.Met, Scrub(c.Evidence)))
+                or LockReadinessEvaluator.ErrorFindingsResolvedCondition
+                or LockReadinessEvaluator.RevisionsVerifiedCondition
+                or LockReadinessEvaluator.SignaturesCompleteCondition)
+            .Select(c => new EvaluatedCondition(c.Code, c.Description, c.Met, Scrub(c.Evidence)))
             .ToList();
 
-        static IReadOnlyList<string> BlockerEvidence(KernelLockBlockerResponse blocker)
+        static IReadOnlyList<NodeRef> BlockerEvidence(KernelLockBlockerResponse blocker)
         {
-            if (blocker.Masked || blocker.TargetRef is null)
+            if (blocker.Masked || blocker.TargetRef is null || !NodeRef.TryParse(blocker.TargetRef, out var target))
             {
                 return [];
             }
 
-            if (blocker.QueryRef is not null)
+            if (blocker.QueryRef is not null && NodeRef.TryParse(blocker.QueryRef, out var query))
             {
-                return [blocker.QueryRef, blocker.TargetRef];
+                return [query, target];
             }
 
-            if (blocker.FindingRef is not null)
+            if (blocker.FindingRef is not null && NodeRef.TryParse(blocker.FindingRef, out var finding))
             {
-                return [blocker.FindingRef, blocker.TargetRef];
+                return [finding, target];
             }
 
-            return [blocker.TargetRef];
+            return [target];
         }
 
+        static string ConditionCodeForKind(string kind) =>
+            Enum.TryParse<LockBlockerKind>(kind, out var parsed)
+                ? LockReadinessEvaluator.BlockerConditionCode(parsed)
+                : LockReadinessEvaluator.MissingRequiredItemBlockerCondition;
+
         var blockerConditions = blockerItems
-            .Select(b => new KernelConditionResponse(
-                b.Kind switch
-                {
-                    nameof(LockBlockerKind.OpenQuery) => LockReadinessEvaluator.OpenQueryBlockerCondition,
-                    nameof(LockBlockerKind.ErrorFinding) => LockReadinessEvaluator.ErrorFindingBlockerCondition,
-                    _ => LockReadinessEvaluator.MissingRequiredItemBlockerCondition,
-                },
+            .Select(b => new EvaluatedCondition(
+                ConditionCodeForKind(b.Kind),
                 b.NextAction,
                 Met: false,
                 BlockerEvidence(b)))
             .ToList();
 
         var steps = blockerItems
-            .Select(b => new KernelExplanationStepResponse(
+            .Select(b => new ExplanationStep(
                 b.Masked
                     ? $"{b.Owner} owns a masked {b.Kind} blocker ({b.Mask})."
                     : b.NextAction,
@@ -718,14 +699,14 @@ public static class KernelLockEndpoints
             .ToList();
 
         var nextActions = blockerItems
-            .Select(b => new KernelNextActionResponse(
+            .Select(b => new NextAction(
                 b.NextAction,
                 b.NextCapability,
-                b.Masked ? null : b.FindingRef ?? b.TargetRef))
+                !b.Masked && (b.FindingRef ?? b.TargetRef) is { } targetText && NodeRef.TryParse(targetText, out var target) ? target : null))
             .ToList();
 
-        return new KernelExplanationResponse(
-            explanation.Subject?.ToString(),
+        return new Explanation(
+            explanation.Subject,
             explanation.Claim,
             explanation.Producer,
             steps,
@@ -933,6 +914,13 @@ public sealed record KernelLockResponse(
             Mask: null);
 }
 
+/// <summary>Response returned by <c>GET /api/v1/kernel/locks/check</c> when no covering lock blocks writes.</summary>
+public sealed record KernelLockCheckResponse(
+    bool Locked,
+    string StudyCode,
+    string? Kind,
+    string? ScopeKind);
+
 /// <summary>Readiness of a lock scope for a <c>Locked</c> assertion (<c>GET /studies/{studyRef}/locks/readiness</c>).</summary>
 public sealed record KernelLockReadinessResponse(
     string StudyRef,
@@ -944,6 +932,8 @@ public sealed record KernelLockReadinessResponse(
     int OpenQueryCount,
     int MissingRequiredItemCount,
     int OpenErrorFindingCount,
+    int UnverifiedRevisionCount,
+    int MissingSignatureCount,
     int BlockerCount,
     IReadOnlyList<KernelLockBlockerResponse> Blockers,
     KernelExplanationResponse Explanation);
@@ -998,7 +988,9 @@ public sealed record KernelLockBlockerResponse(
         {
             LockBlockerKind.OpenQuery => "open query",
             LockBlockerKind.ErrorFinding => "Error validation finding",
-            _ => "missing required item",
+            LockBlockerKind.MissingRequiredItem => "missing required item",
+            LockBlockerKind.UnverifiedRevision => "unverified observation revision",
+            _ => "missing form signature",
         };
         var maskedAction = reason == MaskReason.Blinded
             ? $"{blocker.Owner}: resolve blinded {blockerLabel} before locking."

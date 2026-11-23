@@ -163,6 +163,12 @@ public static class SynonymEndpoints
             return scopeDenied;
         }
 
+        if (!IsGlobalScope(scope)
+            && await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, cancellationToken: cancellationToken).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         string? changeReason = form["reason_for_change"].FirstOrDefault() ?? form["change_reason"].FirstOrDefault();
 
         if (string.IsNullOrWhiteSpace(changeReason) && httpContext.Request.Headers.TryGetValue("X-Change-Reason", out var headerVal))
@@ -262,6 +268,13 @@ public static class SynonymEndpoints
         if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (existing is not null
+            && !IsGlobalScope(existing.Scope)
+            && await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, existing.StudyId, cancellationToken: cancellationToken).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
         }
 
         string? changeReason = httpContext.Request.Query["reason_for_change"].FirstOrDefault() ??

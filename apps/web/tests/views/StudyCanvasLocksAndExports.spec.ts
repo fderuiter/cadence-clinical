@@ -163,6 +163,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       ready_for_lock: true,
       open_query_count: 0,
       missing_required_item_count: 0,
+      unverified_revision_count: 0,
+      missing_signature_count: 0,
       blockers: [],
       valid_at: "2026-06-01T10:00:00Z",
       known_at: "2026-06-01T10:00:00Z",
@@ -457,6 +459,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       ready_for_lock: false,
       open_query_count: 1,
       missing_required_item_count: 1,
+      unverified_revision_count: 1,
+      missing_signature_count: 1,
       blockers: [
         {
           kind: "open_query",
@@ -464,6 +468,24 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
           target_ref: OBS_REF,
           detail: "Open discrepancy query on systolic BP.",
           next_action: `Answer and close open query on ${OBS_REF} before applying Locked.`,
+          masked: false,
+          mask: null,
+        },
+        {
+          kind: "unverified_revision",
+          owner: "Monitor (CRA)",
+          target_ref: OBS_REF,
+          detail: "Revision 1 awaits source data verification.",
+          next_action: `Verify observation ${OBS_REF} against source documentation.`,
+          masked: false,
+          mask: null,
+        },
+        {
+          kind: "missing_signature",
+          owner: "Principal Investigator",
+          target_ref: FORM_REF,
+          detail: "Vital Signs form lacks an active investigator signature.",
+          next_action: `Sign form ${FORM_REF} over current recorded content.`,
           masked: false,
           mask: null,
         },
@@ -544,9 +566,13 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(readinessPanel.exists()).toBe(true);
     expect(readinessPanel.text()).toContain("1 open query");
     expect(readinessPanel.text()).toContain("1 missing required item");
+    expect(readinessPanel.text()).toContain("1 unverified revision");
+    expect(readinessPanel.text()).toContain("1 missing signature");
     expect(readinessPanel.text()).toContain(
       "Site SITE-01 investigator or coordinator"
     );
+    expect(readinessPanel.text()).toContain("Monitor (CRA)");
+    expect(readinessPanel.text()).toContain("Principal Investigator");
     expect(readinessPanel.text()).toContain("Masked (NotPermitted)");
 
     await wrapper
@@ -802,6 +828,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       ready_for_lock: false,
       open_query_count: 0,
       missing_required_item_count: 2,
+      unverified_revision_count: 1,
+      missing_signature_count: 1,
       blockers: [
         {
           kind: "missing_required_item",
@@ -809,6 +837,15 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
           target_ref: FORM_REF,
           detail: "Required item HR missing on Vital Signs.",
           next_action: `Record required item HR on ${FORM_REF}.`,
+          masked: false,
+          mask: null,
+        },
+        {
+          kind: "missing_signature",
+          owner: "Principal Investigator",
+          target_ref: FORM_REF,
+          detail: "Current form hash requires investigator signature.",
+          next_action: `Sign form ${FORM_REF}.`,
           masked: false,
           mask: null,
         },
@@ -838,9 +875,13 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       (formLockWrapper.find("#ecrf-lock-lock").element as HTMLButtonElement)
         .disabled
     ).toBe(true);
-    expect(
-      formLockWrapper.find("[data-testid='ecrf-lock-readiness']").text()
-    ).toContain("2 missing required items");
+    const formReadinessText = formLockWrapper
+      .find("[data-testid='ecrf-lock-readiness']")
+      .text();
+    expect(formReadinessText).toContain("2 missing required items");
+    expect(formReadinessText).toContain("1 unverified revision");
+    expect(formReadinessText).toContain("1 missing signature");
+    expect(formReadinessText).toContain("Principal Investigator");
     formLockWrapper.unmount();
   });
 

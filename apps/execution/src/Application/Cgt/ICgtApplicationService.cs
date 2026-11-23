@@ -20,6 +20,8 @@ public interface ICgtApplicationService
     Task<List<CgtVialReturnReconciliationResponse>> ListVialReconciliationsAsync(string studyId, CancellationToken cancellationToken = default);
     Task<(string StudyId, string SiteId)?> GetChainOfCustodyScopeAsync(Guid chainOfCustodyId, CancellationToken cancellationToken = default) =>
         Task.FromResult<(string StudyId, string SiteId)?>(null);
+    Task<string?> GetChainOfCustodySubjectAsync(Guid chainOfCustodyId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
     Task<(string StudyId, string SiteId)?> GetSubjectChainOfCustodyScopeAsync(string studyId, string subjectId, CancellationToken cancellationToken = default) =>
         Task.FromResult<(string StudyId, string SiteId)?>(null);
 }

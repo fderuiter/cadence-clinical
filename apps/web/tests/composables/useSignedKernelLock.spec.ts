@@ -313,7 +313,9 @@ describe("useSignedKernelLock", () => {
       open_query_count: 1,
       missing_required_item_count: 0,
       open_error_finding_count: 0,
-      blocker_count: 1,
+      unverified_revision_count: 1,
+      missing_signature_count: 1,
+      blocker_count: 3,
       blockers: [],
       explanation: {
         subject: SCOPE_REF,
@@ -328,6 +330,8 @@ describe("useSignedKernelLock", () => {
       ...blockedReadiness,
       ready_for_lock: true,
       open_query_count: 0,
+      unverified_revision_count: 0,
+      missing_signature_count: 0,
       blocker_count: 0,
     };
     mockGetStudyLockReadiness

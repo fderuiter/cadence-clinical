@@ -37,8 +37,9 @@ public interface ILockRecords
 
     /// <summary>
     /// Evaluates whether <paramref name="scope"/> in <paramref name="study"/> is ready for a <see cref="LockKind.Locked"/>
-    /// assertion, listing open queries, missing required collection items, and unresolved Error validation findings.
-    /// Returns null when <paramref name="study"/> or <paramref name="scope"/> does not exist in <paramref name="study"/>.
+    /// assertion, listing open queries, missing required collection items, unresolved Error validation findings,
+    /// unverified observation revisions, and unsigned form instances. Returns null when <paramref name="study"/> or
+    /// <paramref name="scope"/> does not exist in <paramref name="study"/>.
     /// </summary>
     Task<LockReadinessSnapshot?> ReadReadinessAsync(
         TenantId tenant,
@@ -59,7 +60,31 @@ public interface ILockRecords
         LockKind kind,
         CancellationToken cancellationToken) =>
         Task.FromResult(new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: false, Readiness: null));
+
+    /// <summary>
+    /// Checks whether any active <see cref="LockKind.Frozen"/> or <see cref="LockKind.Locked"/> assertion in
+    /// <paramref name="tenant"/> covers <paramref name="studyCode"/>, optional <paramref name="siteCode"/>, or optional
+    /// <paramref name="subjectCode"/> (ordered from widest scope to narrowest). Returns null when the study is not
+    /// registered in the kernel or when no covering lock is active.
+    /// </summary>
+    Task<ActiveCoveringLock?> CheckCoveringLocksAsync(
+        TenantId tenant,
+        string studyCode,
+        string? siteCode,
+        string? subjectCode,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<ActiveCoveringLock?>(null);
 }
+
+/// <summary>Summary of an active <see cref="LockKind.Frozen"/> or <see cref="LockKind.Locked"/> assertion covering a write target.</summary>
+public sealed record ActiveCoveringLock(
+    AssertionId LockId,
+    StudyId StudyId,
+    string StudyCode,
+    LockKind Kind,
+    NodeRef Scope,
+    string? SiteCode,
+    string? SubjectCode);
 
 /// <summary>What blocks a <see cref="LockKind.Locked"/> assertion at a target scope.</summary>
 public enum LockBlockerKind
@@ -72,6 +97,12 @@ public enum LockBlockerKind
 
     /// <summary>An active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> validation finding in scope.</summary>
     ErrorFinding,
+
+    /// <summary>A recorded observation in scope whose current revision has no active <see cref="AssertionKind.Verified"/> assertion.</summary>
+    UnverifiedRevision,
+
+    /// <summary>An opened <c>CollectionInstance</c> with recorded values whose current content hash lacks an investigator signature.</summary>
+    MissingSignature,
 }
 
 /// <summary>One unresolved blocker preventing a <see cref="LockKind.Locked"/> assertion at a scope.</summary>
@@ -110,7 +141,9 @@ public sealed record LockReadinessSnapshot(
     int MissingRequiredItemCount,
     IReadOnlyList<LockReadinessBlocker> Blockers,
     Explanation Explanation,
-    int OpenErrorFindingCount = 0);
+    int OpenErrorFindingCount = 0,
+    int UnverifiedRevisionCount = 0,
+    int MissingSignatureCount = 0);
 
 /// <summary>Pre-check result evaluated before recording an electronic signature for <c>ApplyLock</c>.</summary>
 public sealed record LockApplyPrecheck(

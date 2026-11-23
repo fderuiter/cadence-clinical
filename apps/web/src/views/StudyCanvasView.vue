@@ -1205,7 +1205,7 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
-    el.closest?.(".canvas")?.style?.setProperty(
+    el.closest?.<HTMLElement>(".canvas")?.style?.setProperty(
       "--canvas-topbar-height",
       `${measured}px`
     );

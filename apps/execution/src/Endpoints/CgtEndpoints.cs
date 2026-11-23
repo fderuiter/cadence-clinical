@@ -32,6 +32,16 @@ public static class CgtEndpoints
                 return denied;
             }
 
+            if (await ExecutionScopeGuard.RequireUnlockedAsync(
+                    httpContext,
+                    request.StudyId,
+                    request.CollectionSiteId,
+                    request.SubjectId,
+                    ct).ConfigureAwait(false) is { } lockDenied)
+            {
+                return lockDenied;
+            }
+
             try
             {
                 var result = await service.InitializeApheresisAsync(request, ct);
@@ -101,9 +111,15 @@ public static class CgtEndpoints
                 return requestDenied;
             }
 
-            if (GuardCocScope(httpContext, await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct)) is { } cocDenied)
+            var cocScope = await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct);
+            if (GuardCocScope(httpContext, cocScope) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            if (await GuardCocMutationLocksAsync(httpContext, request.StudyId, request.SiteId, request.SubjectId, cocScope, ct).ConfigureAwait(false) is { } lockDenied)
+            {
+                return lockDenied;
             }
 
             try
@@ -133,9 +149,22 @@ public static class CgtEndpoints
                 return requestDenied;
             }
 
-            if (GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(request.ChainOfCustodyId, ct)) is { } cocDenied)
+            var cocScope = await service.GetChainOfCustodyScopeAsync(request.ChainOfCustodyId, ct);
+            if (GuardCocScope(httpContext, cocScope) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            string? cocSubjectId = await service.GetChainOfCustodySubjectAsync(request.ChainOfCustodyId, ct);
+            if (await GuardCocMutationLocksAsync(
+                    httpContext,
+                    request.StudyId,
+                    request.SiteId,
+                    cocSubjectId ?? request.SubjectId,
+                    cocScope,
+                    ct).ConfigureAwait(false) is { } lockDenied)
+            {
+                return lockDenied;
             }
 
             try
@@ -165,9 +194,15 @@ public static class CgtEndpoints
                 return requestDenied;
             }
 
-            if (GuardCocScope(httpContext, await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct)) is { } cocDenied)
+            var cocScope = await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct);
+            if (GuardCocScope(httpContext, cocScope) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            if (await GuardCocMutationLocksAsync(httpContext, request.StudyId, request.SiteId, request.SubjectId, cocScope, ct).ConfigureAwait(false) is { } lockDenied)
+            {
+                return lockDenied;
             }
 
             var result = await service.LogVialReturnAsync(request, ct);
@@ -186,10 +221,28 @@ public static class CgtEndpoints
                 return requestDenied;
             }
 
-            if (request.CocId is { } cocId
-                && GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(cocId, ct)) is { } cocDenied)
+            (string StudyId, string SiteId)? cocScope = null;
+            string? cocSubjectId = null;
+            if (request.CocId is { } cocId)
             {
-                return cocDenied;
+                cocScope = await service.GetChainOfCustodyScopeAsync(cocId, ct);
+                if (GuardCocScope(httpContext, cocScope) is { } cocDenied)
+                {
+                    return cocDenied;
+                }
+
+                cocSubjectId = await service.GetChainOfCustodySubjectAsync(cocId, ct);
+            }
+
+            if (await GuardCocMutationLocksAsync(
+                    httpContext,
+                    request.StudyId,
+                    request.SiteId,
+                    cocSubjectId ?? request.SubjectId,
+                    cocScope,
+                    ct).ConfigureAwait(false) is { } lockDenied)
+            {
+                return lockDenied;
             }
 
             try
@@ -310,7 +363,37 @@ public static class CgtEndpoints
             return callerDenied;
         }
 
-        return GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(chainOfCustodyId, ct).ConfigureAwait(false));
+        var cocScope = await service.GetChainOfCustodyScopeAsync(chainOfCustodyId, ct).ConfigureAwait(false);
+        if (GuardCocScope(httpContext, cocScope) is { } cocDenied)
+        {
+            return cocDenied;
+        }
+
+        string? cocSubjectId = await service.GetChainOfCustodySubjectAsync(chainOfCustodyId, ct).ConfigureAwait(false);
+        return await GuardCocMutationLocksAsync(httpContext, studyId, cocScope?.SiteId, cocSubjectId, cocScope, ct).ConfigureAwait(false);
+    }
+
+    private static async Task<IResult?> GuardCocMutationLocksAsync(
+        HttpContext httpContext,
+        string studyId,
+        string? siteId,
+        string? subjectId,
+        (string StudyId, string SiteId)? cocScope,
+        CancellationToken ct)
+    {
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, siteId, subjectId, ct).ConfigureAwait(false) is { } requestLockDenied)
+        {
+            return requestLockDenied;
+        }
+
+        if (cocScope is { } s
+            && (!string.Equals(s.StudyId, studyId, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(s.SiteId, siteId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, s.StudyId, s.SiteId, subjectId, ct).ConfigureAwait(false);
+        }
+
+        return null;
     }
 
     private static IResult? GuardCocScope(HttpContext httpContext, (string StudyId, string SiteId)? scope) =>

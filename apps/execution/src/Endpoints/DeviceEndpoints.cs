@@ -145,6 +145,11 @@ public static class DeviceEndpoints
             return denied;
         }
 
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, request.StudyId, request.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         var result = await deviceService.RegisterInventoryAsync(request, ct).ConfigureAwait(false);
         return TypedResults.Created("/api/v1/execution/devices/inventory", result);
     }
@@ -175,7 +180,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, request.ScannedBarcode, ct) is { } denied)
+        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.SubjectId, request.DeviceInventoryId, request.ScannedBarcode, ct) is { } denied)
         {
             return denied;
         }
@@ -201,7 +206,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, null, ct) is { } denied)
+        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.SubjectId, request.DeviceInventoryId, null, ct) is { } denied)
         {
             return denied;
         }
@@ -264,7 +269,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, null, ct) is { } denied)
+        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, null, request.DeviceInventoryId, null, ct) is { } denied)
         {
             return denied;
         }
@@ -303,10 +308,17 @@ public static class DeviceEndpoints
         }
 
         if (Guid.TryParse(request.QuarantineId, out var qGuid)
-            && await deviceService.GetQuarantineByIdAsync(qGuid, ct).ConfigureAwait(false) is { } quarantine
-            && ExecutionScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId) is { } recordDenied)
+            && await deviceService.GetQuarantineByIdAsync(qGuid, ct).ConfigureAwait(false) is { } quarantine)
         {
-            return recordDenied;
+            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId) is { } recordDenied)
+            {
+                return recordDenied;
+            }
+
+            if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, quarantine.StudyId, quarantine.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+            {
+                return lockDenied;
+            }
         }
 
         try
@@ -343,6 +355,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         string studyId,
         string siteId,
+        string? subjectId,
         string? deviceInventoryId,
         string? scannedBarcode,
         CancellationToken ct)
@@ -353,8 +366,24 @@ public static class DeviceEndpoints
         }
 
         var storedScope = await deviceService.GetInventoryScopeAsync(studyId, deviceInventoryId, scannedBarcode, ct).ConfigureAwait(false);
-        return storedScope is { } s
-            ? ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId)
-            : null;
+        if (storedScope is { } s
+            && ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId) is { } storedDenied)
+        {
+            return storedDenied;
+        }
+
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, siteId, subjectId, ct).ConfigureAwait(false) is { } requestLockDenied)
+        {
+            return requestLockDenied;
+        }
+
+        if (storedScope is { } stored
+            && (!string.Equals(stored.StudyId, studyId, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(stored.SiteId, siteId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, stored.StudyId, stored.SiteId, subjectId, ct).ConfigureAwait(false);
+        }
+
+        return null;
     }
 }

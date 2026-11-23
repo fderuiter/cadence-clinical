@@ -102,6 +102,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         // Database lock, signed by the data manager through the kernel (ADR-2621); its HTTP surface is #5466.
         var observations = new KernelObservationScenario(fixture);
         var study = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation.Id), ct))!.StudyId;
+        await observations.MakeScopeReadyForLockAsync(tenant, study, NodeRef.For(study), ct);
         var locked = await _scenario.OkAsync(await observations.LockAsync(tenant, study, NodeRef.For(study), ct), ct);
         (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 129, 2), ct))
             .Should().Be(((HttpStatusCode)423, ObservationErrors.Locked.Code));

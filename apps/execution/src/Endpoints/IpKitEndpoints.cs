@@ -44,8 +44,8 @@ public static class IpKitEndpoints
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            var kitNumbers = (request.Items ?? []).Select(i => i.KitNumber);
-            if (await GuardKitSitesAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
+            var kitNumbers = (request.Items ?? []).Select(i => i.KitNumber).ToList();
+            if (await GuardKitMutationAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
             {
                 return denied;
             }
@@ -114,8 +114,8 @@ public static class IpKitEndpoints
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            var kitNumbers = (request.Kits ?? []).Select(k => k.KitNumber);
-            if (await GuardKitSitesAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
+            var kitNumbers = (request.Kits ?? []).Select(k => k.KitNumber).ToList();
+            if (await GuardKitMutationAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
             {
                 return denied;
             }
@@ -146,6 +146,36 @@ public static class IpKitEndpoints
             if (ExecutionScopeGuard.RequireSite(httpContext, existingSite) is { } existingDenied)
             {
                 return existingDenied;
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<IResult?> GuardKitMutationAsync(
+        HttpContext httpContext,
+        IIpKitApplicationService service,
+        string studyId,
+        IReadOnlyCollection<string> kitNumbers,
+        string siteId,
+        CancellationToken ct)
+    {
+        if (await GuardKitSitesAsync(httpContext, service, studyId, kitNumbers, siteId, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, siteId, cancellationToken: ct).ConfigureAwait(false) is { } requestLockDenied)
+        {
+            return requestLockDenied;
+        }
+
+        foreach (string existingSite in await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false))
+        {
+            if (!string.Equals(existingSite, siteId, StringComparison.OrdinalIgnoreCase)
+                && await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, existingSite, cancellationToken: ct).ConfigureAwait(false) is { } existingLockDenied)
+            {
+                return existingLockDenied;
             }
         }
 

@@ -227,6 +227,16 @@ public static partial class SubjectEndpoints
             return scopeDenied;
         }
 
+        if (await ExecutionScopeGuard.RequireUnlockedAsync(
+                http,
+                request.StudyId,
+                request.SiteId,
+                request.SubjectId,
+                ct).ConfigureAwait(false) is { } lockDenied)
+        {
+            return lockDenied;
+        }
+
         if (logger != null)
         {
             logger.LogCreatingSubject(request.SubjectId, request.StudyId);
@@ -259,13 +269,25 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (!string.IsNullOrWhiteSpace(request.ProtocolVersion?.StudyId)
-            && ExecutionScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId) is { } requestStudyDenied)
+        if (!string.IsNullOrWhiteSpace(request.ProtocolVersion?.StudyId))
         {
-            return requestStudyDenied;
+            if (ExecutionScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId) is { } requestStudyDenied)
+            {
+                return requestStudyDenied;
+            }
+
+            if (await ExecutionScopeGuard.RequireUnlockedAsync(
+                    http,
+                    request.ProtocolVersion.StudyId,
+                    null,
+                    subjectId,
+                    ct).ConfigureAwait(false) is { } requestLockDenied)
+            {
+                return requestLockDenied;
+            }
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        if (await GuardSubjectMutationAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -303,7 +325,7 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        if (await GuardSubjectMutationAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -356,6 +378,28 @@ public static partial class SubjectEndpoints
                     allowUnassignedSiteForScopedCaller: false) is { } targetScopeDenied)
             {
                 return targetScopeDenied;
+            }
+
+            if (await ExecutionScopeGuard.RequireUnlockedAsync(
+                    http,
+                    s.StudyId.Value,
+                    s.SiteId?.Value,
+                    subjectId,
+                    ct).ConfigureAwait(false) is { } existingLockDenied)
+            {
+                return existingLockDenied;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.SiteCode)
+                && !string.Equals(s.SiteId?.Value, request.SiteCode.Trim(), StringComparison.OrdinalIgnoreCase)
+                && await ExecutionScopeGuard.RequireUnlockedAsync(
+                    http,
+                    s.StudyId.Value,
+                    request.SiteCode.Trim(),
+                    subjectId,
+                    ct).ConfigureAwait(false) is { } targetLockDenied)
+            {
+                return targetLockDenied;
             }
         }
         else
@@ -530,7 +574,7 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        if (await GuardSubjectMutationAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -562,7 +606,7 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        if (await GuardSubjectMutationAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -576,17 +620,31 @@ public static partial class SubjectEndpoints
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 
-    private static async Task<IResult?> GuardSubjectScopeAsync(
+    private static async Task<IResult?> GuardSubjectMutationAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
     {
         var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
-        return scope is { } s
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+        if (scope is not { } s)
+        {
+            return GuardMissingRecordScope(http);
+        }
+
+        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
                 http,
                 s.StudyId.Value,
                 s.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true)
-            : GuardMissingRecordScope(http);
+                allowUnassignedSiteForScopedCaller: true) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        return await ExecutionScopeGuard.RequireUnlockedAsync(
+                http,
+                s.StudyId.Value,
+                s.SiteId?.Value,
+                subjectId,
+                ct)
+            .ConfigureAwait(false);
     }
 
     private static IResult? GuardMissingRecordScope(HttpContext http) =>
