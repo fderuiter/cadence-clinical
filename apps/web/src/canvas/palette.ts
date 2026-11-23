@@ -179,6 +179,7 @@ export function resolveCanvasParticipantContext(
   canvasStore: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
   }
 ): { subjectCode: string; enrollmentId: string } {
@@ -189,18 +190,29 @@ export function resolveCanvasParticipantContext(
   const participantRef =
     parseNodeRef(routeQuery?.participant) ?? parseNodeRef(routeQuery?.node);
   const participantNode =
-    participantRef?.kind === "participant" ? participantRef : null;
+    participantRef?.kind === "enrollment" ||
+    participantRef?.kind === "participant"
+      ? participantRef
+      : null;
   const known = participantNode
-    ? canvasStore.knownParticipants?.[participantNode.id]
+    ? participantNode.kind === "enrollment"
+      ? (canvasStore.knownParticipantsByEnrollmentId?.[participantNode.id] ??
+        canvasStore.knownParticipants?.[participantNode.id])
+      : canvasStore.knownParticipants?.[participantNode.id]
     : undefined;
   const subjectCode =
     known?.subject_id || canvasStore.record?.subjectCode || "";
+  const persistedEnrollment = parseNodeRef(known?.enrollment_ref);
   const enrollmentId =
-    subjectCode &&
+    (persistedEnrollment?.kind === "enrollment"
+      ? persistedEnrollment.id
+      : "") ||
+    (participantNode?.kind === "enrollment" ? participantNode.id : "") ||
+    (subjectCode &&
     canvasStore.record?.subjectCode === subjectCode &&
     canvasStore.record?.enrollmentId
       ? canvasStore.record.enrollmentId
-      : "";
+      : "");
   return { subjectCode, enrollmentId };
 }
 
@@ -219,6 +231,7 @@ export function resolveActiveWorkspaceScope(
   canvasStore?: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
     participantsFilter?: { siteId?: string };
   } | null,
@@ -255,7 +268,12 @@ export function resolveActiveWorkspaceScope(
     const participantRef =
       parseNodeRef(route?.query?.participant) ??
       parseNodeRef(route?.query?.node);
-    if (participantRef?.kind === "participant") {
+    if (participantRef?.kind === "enrollment") {
+      const known =
+        canvasStore.knownParticipantsByEnrollmentId?.[participantRef.id] ??
+        canvasStore.knownParticipants?.[participantRef.id];
+      participantSite = cleanQueryString(known?.site_id);
+    } else if (participantRef?.kind === "participant") {
       participantSite = cleanQueryString(
         canvasStore.knownParticipants?.[participantRef.id]?.site_id
       );
@@ -533,7 +551,11 @@ export function executePaletteTarget(
   if (target.stage) query.stage = target.stage;
   if (target.section) query.section = target.section;
   if (target.participant) {
-    const node = tryNodeRef("participant", target.participant.id);
+    const enrollment = parseNodeRef(target.participant.enrollment_ref);
+    const node =
+      enrollment?.kind === "enrollment"
+        ? { kind: "enrollment" as const, id: enrollment.id }
+        : tryNodeRef("participant", target.participant.id);
     if (node) query.node = formatNodeRef(node);
   }
   context.router.push({

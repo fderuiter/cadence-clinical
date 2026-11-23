@@ -6,6 +6,7 @@ import {
   type SubjectList,
   type SubjectSummary,
 } from "../api/executionApi";
+import { kernelApi } from "../api/kernelApi";
 import {
   clearKernelStudyCache,
   findKernelEnrollmentRef,
@@ -14,6 +15,7 @@ import {
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
+import { formatNodeRef, parseNodeRef, tryNodeRef } from "../canvas/nodeRef";
 import {
   clearNodeResolutionCache,
   resetNodeResolutionSession,
@@ -22,6 +24,39 @@ import {
 import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
+/** Extracts the unversioned `enrollment:<uuid>` reference from a participant summary when present. */
+export function enrollmentNodeRefFromParticipant(
+  participant: Pick<SubjectSummary, "enrollment_ref"> | null | undefined
+): string | null {
+  const parsed = parseNodeRef(participant?.enrollment_ref);
+  return parsed?.kind === "enrollment"
+    ? formatNodeRef({ kind: "enrollment", id: parsed.id })
+    : null;
+}
+
+/** Extracts the lower-case enrollment UUID from `participant.enrollment_ref`, or null when absent. */
+export function enrollmentIdFromParticipant(
+  participant: Pick<SubjectSummary, "enrollment_ref"> | null | undefined
+): string | null {
+  const parsed = parseNodeRef(participant?.enrollment_ref);
+  return parsed?.kind === "enrollment" ? parsed.id : null;
+}
+
+/**
+ * Canonical Clinical Canvas `NodeRef` for a participant: `enrollment:<uuid>` when Execution has persisted
+ * `KernelEnrollmentId`, falling back to `participant:<uuid>` for legacy or unlinked Execution rows.
+ */
+export function participantNodeRef(
+  participant: Pick<SubjectSummary, "id" | "enrollment_ref"> | null | undefined
+): string {
+  const enrollmentRef = enrollmentNodeRefFromParticipant(participant);
+  if (enrollmentRef) return enrollmentRef;
+  const fallback = participant
+    ? tryNodeRef("participant", participant.id)
+    : null;
+  return fallback ? formatNodeRef(fallback) : "";
+}
+
 function seedParticipantNode(participant: SubjectSummary): void {
   seedNodeSummary(`participant:${participant.id}`, {
     kind: "participant",
@@ -29,6 +64,15 @@ function seedParticipantNode(participant: SubjectSummary): void {
     title: participant.subject_id,
     status: participant.status,
   });
+  const enrollmentRef = enrollmentNodeRefFromParticipant(participant);
+  if (enrollmentRef) {
+    seedNodeSummary(enrollmentRef, {
+      kind: "enrollment",
+      code: participant.subject_id,
+      title: `Enrollment ${participant.subject_id}`,
+      status: participant.status,
+    });
+  }
 }
 
 /** Participants shown per page in the Participants section. */
@@ -78,6 +122,9 @@ function detailToSummary(
     status: detail.status,
     active_protocol_version: detail.active_protocol_version ?? "",
     enrollment_index: detail.enrollment_index ?? 0,
+    ...(detail.enrollment_ref !== undefined
+      ? { enrollment_ref: detail.enrollment_ref }
+      : {}),
   };
 }
 
@@ -88,6 +135,10 @@ let scheduleRequest = 0;
 let lookupEpoch = 0;
 const inFlightPages = new Map<string, Promise<SubjectList>>();
 const inFlightById = new Map<string, Promise<SubjectSummary | null>>();
+const inFlightByEnrollmentId = new Map<
+  string,
+  Promise<SubjectSummary | null>
+>();
 const inFlightByCode = new Map<string, Promise<SubjectSummary | null>>();
 const inFlightSchedules = new WeakMap<
   object,
@@ -167,10 +218,16 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     unfilteredLoadedCount: 0,
     /** Every participant read for this study by id, so a selection survives changing the list's filter. */
     knownParticipants: {} as Record<string, SubjectSummary>,
+    /** Participants indexed by canonical kernel enrollment UUID (`enrollment:<uuid>`). */
+    knownParticipantsByEnrollmentId: {} as Record<string, SubjectSummary>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
+    /** Enrollment UUIDs currently being hydrated for cold `enrollment:<uuid>` links or inspector selections. */
+    enrollmentLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
+    /** Enrollment UUIDs confirmed absent or inaccessible for the active study. */
+    failedEnrollmentIds: {} as Record<string, boolean>,
     participantsTotal: 0,
     participantsFilter: {} as ParticipantFilter,
     participantsLoading: false,
@@ -210,6 +267,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       lookupEpoch++;
       inFlightPages.clear();
       inFlightById.clear();
+      inFlightByEnrollmentId.clear();
       inFlightByCode.clear();
       palettePromise = null;
       palettePromiseKey = "";
@@ -329,6 +387,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       for (const participant of items) {
         if (participant.study_id && participant.study_id !== studyId) continue;
         this.knownParticipants[participant.id] = participant;
+        const enrollmentId = enrollmentIdFromParticipant(participant);
+        if (enrollmentId) {
+          this.knownParticipantsByEnrollmentId[enrollmentId] = participant;
+          delete this.failedEnrollmentIds[enrollmentId];
+        }
         seedParticipantNode(participant);
         delete this.failedParticipantIds[participant.id];
         changed = true;
@@ -336,6 +399,24 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       if (changed) {
         this.paletteParticipants = sortByEnrollment(this.knownParticipants);
       }
+    },
+
+    /** Finds a participant already loaded in memory from either an `enrollment:<uuid>` or `participant:<uuid>` node. */
+    findKnownParticipant(
+      node: { kind: string; id: string } | null | undefined
+    ): SubjectSummary | null {
+      if (!node?.id) return null;
+      if (node.kind === "enrollment") {
+        return (
+          this.knownParticipantsByEnrollmentId[node.id] ??
+          this.knownParticipants[node.id] ??
+          null
+        );
+      }
+      if (node.kind === "participant") {
+        return this.knownParticipants[node.id] ?? null;
+      }
+      return null;
     },
 
     /** Loads up to 200 study participants for the ⌘K command palette, once per open study. */
@@ -481,6 +562,174 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         }
       })();
       inFlightById.set(key, run);
+      return run;
+    },
+
+    /**
+     * Resolves a canonical `enrollment:<uuid>` reference for cold links or `NodeRefChip` clicks via Execution's
+     * `GetSubjectDetail("enrollment:<uuid>")`, falling back to Kernel node/zoom-path subject code lookup or paging
+     * `listSubjects` when `GetSubjectDetail` is unavailable.
+     */
+    async ensureParticipantByEnrollmentId(
+      enrollmentId: string
+    ): Promise<SubjectSummary | null> {
+      const studyId = this.studyCode;
+      if (!studyId || !enrollmentId) return null;
+      const existingKnown =
+        this.knownParticipantsByEnrollmentId[enrollmentId] ??
+        this.knownParticipants[enrollmentId];
+      if (existingKnown) {
+        return existingKnown;
+      }
+      if (this.failedEnrollmentIds[enrollmentId]) {
+        return null;
+      }
+
+      const epoch = lookupEpoch;
+      const key = `${epoch}:${studyId}:${enrollmentId}`;
+      const existing = inFlightByEnrollmentId.get(key);
+      if (existing) return existing;
+
+      this.enrollmentLookups[enrollmentId] = true;
+      const canonicalRef = `enrollment:${enrollmentId}`;
+      const bindEnrollmentSummary = (
+        summary: SubjectSummary
+      ): SubjectSummary => {
+        const bound: SubjectSummary = summary.enrollment_ref
+          ? summary
+          : { ...summary, enrollment_ref: canonicalRef };
+        this.rememberParticipants([bound]);
+        this.knownParticipantsByEnrollmentId[enrollmentId] = bound;
+        return bound;
+      };
+
+      const run = (async (): Promise<SubjectSummary | null> => {
+        try {
+          if (typeof executionApi.getSubjectDetail === "function") {
+            try {
+              const detail = await executionApi.getSubjectDetail(canonicalRef);
+              if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+                return null;
+              }
+              if (detail && typeof detail === "object") {
+                if (detail.study_id && detail.study_id !== studyId) {
+                  this.failedEnrollmentIds[enrollmentId] = true;
+                  return null;
+                }
+                const summary = detailToSummary(detail);
+                if (summary) {
+                  return bindEnrollmentSummary(summary);
+                }
+              }
+            } catch {
+              // Fall through to kernel node / subject-list resolution when Execution detail returns 404 or is unmocked.
+            }
+          }
+
+          if (typeof kernelApi.getNode === "function") {
+            try {
+              const node = await kernelApi.getNode(canonicalRef);
+              if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+                return null;
+              }
+              if (node && node.mask === null && node.code) {
+                const byCode = await this.resolveParticipantByCode(
+                  node.code,
+                  studyId
+                );
+                if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+                  return null;
+                }
+                if (byCode) {
+                  return bindEnrollmentSummary(byCode);
+                }
+              }
+            } catch {
+              // Fall through to zoom-path or list scan.
+            }
+          }
+
+          if (typeof kernelApi.getZoomPath === "function") {
+            try {
+              const steps = await kernelApi.getZoomPath(canonicalRef);
+              if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+                return null;
+              }
+              const enrollmentStep = steps.find(
+                (s) => s.level === "enrollment" && s.mask === null && s.label
+              );
+              if (enrollmentStep?.label) {
+                const byCode = await this.resolveParticipantByCode(
+                  enrollmentStep.label,
+                  studyId
+                );
+                if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+                  return null;
+                }
+                if (byCode) {
+                  return bindEnrollmentSummary(byCode);
+                }
+              }
+            } catch {
+              // Fall through to subject list scan.
+            }
+          }
+
+          if (!(
+            this.paletteLoaded &&
+            this.unfilteredLoadedCount >= this.paletteTotal
+          )) {
+            let offset = this.paletteLoaded ? this.unfilteredLoadedCount : 0;
+            while (true) {
+              const page = await fetchStudyPage(studyId, epoch, offset);
+              if (epoch !== lookupEpoch || this.studyCode !== studyId) {
+                return null;
+              }
+              this.rememberParticipants(page.items);
+              const total = toCount(page.total);
+              this.paletteTotal = total;
+              const nextOffset = offset + page.items.length;
+              if (offset === 0 || this.paletteLoaded) {
+                this.paletteLoaded = true;
+                this.unfilteredLoadedCount = Math.max(
+                  this.unfilteredLoadedCount,
+                  nextOffset
+                );
+              }
+              const matched =
+                this.knownParticipantsByEnrollmentId[enrollmentId] ??
+                this.knownParticipants[enrollmentId];
+              if (matched) return matched;
+              offset = nextOffset;
+              if (page.items.length === 0 || offset >= total) {
+                this.unfilteredLoadedCount = Math.max(
+                  this.unfilteredLoadedCount,
+                  total
+                );
+                break;
+              }
+            }
+          }
+
+          const finalMatch =
+            this.knownParticipantsByEnrollmentId[enrollmentId] ??
+            this.knownParticipants[enrollmentId];
+          if (finalMatch) return finalMatch;
+          this.failedEnrollmentIds[enrollmentId] = true;
+          return null;
+        } catch {
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            this.failedEnrollmentIds[enrollmentId] = true;
+          }
+          return null;
+        } finally {
+          inFlightByEnrollmentId.delete(key);
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            delete this.enrollmentLookups[enrollmentId];
+          }
+        }
+      })();
+      inFlightByEnrollmentId.set(key, run);
       return run;
     },
 
@@ -801,7 +1050,13 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           state,
           reason
         );
-        const changed = { ...participant, status: updated.status };
+        const changed: SubjectSummary = {
+          ...participant,
+          status: updated.status,
+          ...(updated.enrollment_ref !== undefined
+            ? { enrollment_ref: updated.enrollment_ref }
+            : {}),
+        };
         this.rememberParticipants([changed]);
         const index = this.participants.findIndex(
           (p) => p.id === participant.id
@@ -841,6 +1096,23 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const studyId = this.studyCode;
       const subjectCode = participant.subject_id;
       if (!studyId || !subjectCode) return false;
+      const persistedEnrollmentId = enrollmentIdFromParticipant(participant);
+      if (persistedEnrollmentId) {
+        recordRequest++;
+        this.record = {
+          subjectCode,
+          enrollmentId: persistedEnrollmentId,
+          loading: false,
+          error: false,
+        };
+        seedNodeSummary(`enrollment:${persistedEnrollmentId}`, {
+          kind: "enrollment",
+          code: subjectCode,
+          title: `Enrollment ${subjectCode}`,
+          status: participant.status,
+        });
+        return true;
+      }
       const request = ++recordRequest;
       this.record = {
         subjectCode,
@@ -857,6 +1129,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         if (request !== recordRequest) return false;
         this.record.enrollmentId = enrollment?.id ?? null;
         if (enrollment?.id) {
+          this.knownParticipantsByEnrollmentId[enrollment.id] =
+            this.knownParticipants[participant.id] ?? participant;
           seedNodeSummary(`enrollment:${enrollment.id}`, {
             kind: "enrollment",
             code: subjectCode,

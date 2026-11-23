@@ -331,7 +331,10 @@
             :status="statusFilter"
             :site-id="siteFilter"
             :query="participantSearchFilter"
-            :selected-id="selectedNode?.id ?? ''"
+            :selected-id="
+              selectedParticipant?.id ??
+              (selectedNode?.kind === 'participant' ? selectedNode.id : '')
+            "
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
             @filter="applyParticipantFilter"
@@ -941,10 +944,9 @@ import {
 import {
   collectionInstanceId,
   collectionInstanceRef,
-  formatNodeRef,
   observationNodeRef,
   parseNodeRef,
-  tryNodeRef,
+  type NodeRef,
 } from "../canvas/nodeRef";
 import {
   ETMF_READ_ROLE_REASON,
@@ -960,8 +962,12 @@ import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import {
+  enrollmentIdFromParticipant,
+  participantNodeRef,
+  useStudyCanvasStore,
+} from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1476,11 +1482,15 @@ const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
 const resolvedParticipantId = ref("");
 let lineageRequest = 0;
 
-function isParticipantPending(id: string | undefined): boolean {
-  if (!studyCode.value || !id) return false;
-  if (canvas.knownParticipants[id]) return false;
-  if (canvas.participantLookups[id]) return true;
-  return !canvas.failedParticipantIds[id];
+function isParticipantNodePending(node: NodeRef | null | undefined): boolean {
+  if (!studyCode.value || !node) return false;
+  if (canvas.findKnownParticipant(node)) return false;
+  if (node.kind === "enrollment") {
+    if (canvas.enrollmentLookups[node.id]) return true;
+    return !canvas.failedEnrollmentIds[node.id];
+  }
+  if (canvas.participantLookups[node.id]) return true;
+  return !canvas.failedParticipantIds[node.id];
 }
 
 const loadedFormParticipant = computed<SubjectSummary | null>(() => {
@@ -1513,9 +1523,10 @@ const {
 } = useCanvasSelection({
   query: () => route.query,
   knownParticipants: () => canvas.knownParticipants,
+  findParticipant: (node) => canvas.findKnownParticipant(node),
   loadedFormParticipant,
   lineageParticipant,
-  isParticipantPending,
+  isParticipantNodePending,
   canResolveRemotely: canResolveNodesRemotely,
 });
 
@@ -1534,7 +1545,7 @@ const hasOpenForm = computed(
 const askText = computed(() => single(route.query.ask).trim());
 
 const isRecordParticipantLoading = computed(() =>
-  isParticipantPending(recordRef.value?.id)
+  isParticipantNodePending(recordRef.value)
 );
 
 // The protocol version in the inspector, read from the kernel whenever the URL names one.
@@ -1612,12 +1623,16 @@ const isSelectedParticipantMissing = computed(
 );
 
 const activeEnrollmentId = computed(() => {
+  const persisted = enrollmentIdFromParticipant(activeFormParticipant.value);
+  if (persisted) return persisted;
   if (
     activeFormParticipant.value &&
-    canvas.record.subjectCode === activeFormParticipant.value.subject_id
+    canvas.record.subjectCode === activeFormParticipant.value.subject_id &&
+    canvas.record.enrollmentId
   ) {
     return canvas.record.enrollmentId;
   }
+  if (recordRef.value?.kind === "enrollment") return recordRef.value.id;
   if (loadedForm.value?.enrollment_id) return loadedForm.value.enrollment_id;
   return null;
 });
@@ -1716,8 +1731,8 @@ function studyLocation(query: StudyQuery = {}, code = studyCode.value) {
 }
 
 function selectParticipant(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  if (!node) return;
+  const text = participantNodeRef(participant);
+  if (!text) return;
   inspectorRef.value?.expand();
   router.push(
     studyLocation({
@@ -1726,7 +1741,7 @@ function selectParticipant(participant: SubjectSummary) {
       status: statusFilter.value,
       site: siteFilter.value,
       q: participantSearchFilter.value,
-      node: formatNodeRef(node),
+      node: text,
     })
   );
   // Stacked panes on a narrow screen: bring the inspector into view (§2.4).
@@ -1739,14 +1754,12 @@ function selectParticipant(participant: SubjectSummary) {
 
 /** The participant's data, opened at the participant zoom level with the participant in the inspector. */
 function recordLocationFor(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  const text = node ? formatNodeRef(node) : "";
+  const text = participantNodeRef(participant);
   return studyLocation({ stage: "conduct", participant: text });
 }
 
 function newFormLocationFor(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  const text = node ? formatNodeRef(node) : "";
+  const text = participantNodeRef(participant);
   return studyLocation({ stage: "conduct", participant: text, form: "new" });
 }
 
@@ -1755,8 +1768,7 @@ function newFormCellLocationFor(
   specId: string,
   visitId?: string | null
 ) {
-  const node = tryNodeRef("participant", participant.id);
-  const text = node ? formatNodeRef(node) : "";
+  const text = participantNodeRef(participant);
   return studyLocation({
     stage: "conduct",
     participant: text,
@@ -1783,11 +1795,12 @@ function ecrfHandoffLocationFor(participant: SubjectSummary) {
     query.siteId = siteIdForHandoff;
   }
   const enrollmentForParticipant =
-    canvas.record.subjectCode === participant.subject_id
+    enrollmentIdFromParticipant(participant) ??
+    (canvas.record.subjectCode === participant.subject_id
       ? canvas.record.enrollmentId
       : loadedForm.value?.participant_id === participant.id
         ? loadedForm.value.enrollment_id
-        : null;
+        : null);
   if (enrollmentForParticipant) {
     query.enrollmentId = enrollmentForParticipant;
   }
@@ -2187,15 +2200,15 @@ function goToPaletteTarget(target: PaletteTarget) {
     canvas.rememberParticipants([target.participant]);
     inspectorRef.value?.expand();
   }
-  const node = target.participant
-    ? tryNodeRef("participant", target.participant.id)
-    : null;
+  const nodeText = target.participant
+    ? participantNodeRef(target.participant)
+    : "";
   router.push(
     studyLocation(
       {
         stage: target.stage,
         section: target.section,
-        node: node ? formatNodeRef(node) : "",
+        node: nodeText,
       },
       target.studyCode
     )
@@ -2241,21 +2254,26 @@ watch(
 watch(
   [
     studyCode,
-    () => recordRef.value?.id,
-    () => selectedNode.value?.id,
+    () =>
+      recordRef.value ? `${recordRef.value.kind}:${recordRef.value.id}` : "",
+    () =>
+      selectedNode.value
+        ? `${selectedNode.value.kind}:${selectedNode.value.id}`
+        : "",
     () => loadedForm.value?.participant_id,
   ],
-  ([code, recordId, selectedId, formParticipantId]) => {
+  ([code, , , formParticipantId]) => {
     if (!code) return;
-    const ids = new Set(
-      [recordId, selectedId, formParticipantId].filter((id): id is string =>
-        Boolean(id)
-      )
-    );
-    for (const id of ids) {
-      if (!canvas.knownParticipants[id]) {
-        void canvas.ensureParticipantById(id);
+    for (const node of [recordRef.value, selectedNode.value]) {
+      if (!node || canvas.findKnownParticipant(node)) continue;
+      if (node.kind === "enrollment") {
+        void canvas.ensureParticipantByEnrollmentId(node.id);
+      } else {
+        void canvas.ensureParticipantById(node.id);
       }
+    }
+    if (formParticipantId && !canvas.knownParticipants[formParticipantId]) {
+      void canvas.ensureParticipantById(formParticipantId);
     }
   },
   { immediate: true }

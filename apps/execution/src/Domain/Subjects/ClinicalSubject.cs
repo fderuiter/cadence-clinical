@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Core.Domain;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Domain.Subjects;
@@ -37,12 +38,18 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
     public DateTimeOffset? WithdrawnAt { get; private set; }
     public Guid? RandomizationId { get; private set; }
     public string? KitReference { get; private set; }
+    public Guid? KernelEnrollmentId { get; private set; }
+
+    /// <summary>Canonical kernel <c>enrollment:&lt;uuid&gt;</c> reference when synchronized with the Clinical Kernel, or null.</summary>
+    public string? EnrollmentRef => KernelEnrollmentId is { } enrollmentId && enrollmentId != Guid.Empty
+        ? new NodeRef(NodeKinds.Enrollment, enrollmentId).ToString()
+        : null;
 
     private ClinicalSubject() { } // EF Core
 
     public static ClinicalSubject Create(SubjectCode subjectCode, StudyCode studyCode, SiteCode? siteCode,
         int enrollmentIndex, string? encryptedDemographics, IReadOnlyDictionary<string, object?>? stratFactors,
-        SubjectId? id = null)
+        SubjectId? id = null, Guid? kernelEnrollmentId = null)
     {
         var subject = new ClinicalSubject
         {
@@ -57,6 +64,7 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
             // RandomizationAllocation, never on the subject (#5607).
             RandomizationId = null,
             KitReference = null,
+            KernelEnrollmentId = kernelEnrollmentId is { } enrollmentId && enrollmentId != Guid.Empty ? enrollmentId : null,
         };
         if (stratFactors is not null)
         {
@@ -64,6 +72,14 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
         }
 
         return subject;
+    }
+
+    public void BindKernelEnrollment(Guid enrollmentId)
+    {
+        if (enrollmentId != Guid.Empty)
+        {
+            KernelEnrollmentId = enrollmentId;
+        }
     }
 
     /// <summary>Rule 1: pre-randomization only. Enforced here (domain invariant) — see §4.1 for the

@@ -125,6 +125,45 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
       );
       expect(selection.selectedGenericNodeRef.value).toBe("");
     });
+
+    it("resolves canonical enrollment:<uuid> NodeRefs and upgrades legacy participant:<uuid> URLs when enrollment_ref is persisted", () => {
+      const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-000000000999";
+      const query = ref<LocationQuery>({
+        node: `enrollment:${enrollmentId}`,
+      });
+      const participant = {
+        id: PARTICIPANT_ID,
+        enrollment_ref: `enrollment:${enrollmentId}`,
+        subject_id: "SUBJ-101-001",
+        study_id: "CADENCE-101",
+        site_id: "SITE-01",
+        status: "ACTIVE",
+        active_protocol_version: "1.0",
+        enrollment_index: 1,
+      };
+
+      const selection = useCanvasSelection({
+        query: () => query.value,
+        knownParticipants: () => ({ [PARTICIPANT_ID]: participant }),
+        canResolveRemotely: () => true,
+      });
+
+      expect(selection.selectedParticipant.value?.subject_id).toBe(
+        "SUBJ-101-001"
+      );
+      expect(selection.inspectedNodeText.value).toBe(
+        `enrollment:${enrollmentId}`
+      );
+      expect(selection.selectedGenericNodeRef.value).toBe("");
+
+      query.value = { node: `participant:${PARTICIPANT_ID}` };
+      expect(selection.selectedParticipant.value?.subject_id).toBe(
+        "SUBJ-101-001"
+      );
+      expect(selection.inspectedNodeText.value).toBe(
+        `enrollment:${enrollmentId}`
+      );
+    });
   });
 
   describe("useRovingToolbar", () => {

@@ -53,6 +53,20 @@ dotnet_naming_symbols.types.applicable_kinds = class,struct,interface,enum
 dotnet_naming_symbols.types.applicable_accessibilities = *
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
+# SonarAnalyzer.CSharp 10.37 rules newly promoted in #6030 across existing solution sources
+dotnet_diagnostic.S125.severity = none
+dotnet_diagnostic.S2077.severity = none
+dotnet_diagnostic.S2245.severity = none
+dotnet_diagnostic.S3267.severity = none
+dotnet_diagnostic.S4036.severity = none
+dotnet_diagnostic.S4790.severity = none
+dotnet_diagnostic.S5332.severity = none
+dotnet_diagnostic.S6444.severity = none
+dotnet_diagnostic.S8949.severity = none
+dotnet_diagnostic.S8969.severity = none
+dotnet_diagnostic.S9415.severity = none
+dotnet_diagnostic.S9422.severity = none
+
 [*.{json,yaml,yml,xml,md}]
 indent_size = 2
 
