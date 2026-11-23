@@ -113,60 +113,49 @@
     <!-- Main Learning & Governance Workspace -->
     <div v-if="activeCurriculum" class="training-workspace">
       <!-- Navigation Tabs: Live .NET routes only (Modules | Batch Assignments | Delegation Bulk Sign-Off) -->
-      <div class="tab-bar">
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'modules' }"
-          @click="activeTab = 'modules'"
-        >
-          <ClinicalIcon name="book-open" :size="16" /> Procedural Modules ({{
-            activeCurriculum.modules?.length || 0
-          }})
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'batch' }"
-          @click="activeTab = 'batch'"
-        >
-          <ClinicalIcon name="users" :size="16" /> Batch Assignments
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'delegations' }"
-          @click="
-            loadDelegations();
-            activeTab = 'delegations';
-          "
-        >
-          <ClinicalIcon name="pen-tool" :size="16" /> Delegation Bulk Sign-Off
-        </button>
-      </div>
+      <ClinicalTabs
+        :model-value="activeTab"
+        :tabs="trainingTabs"
+        aria-label="Protocol training workspace sections"
+        id-prefix="training-console"
+        list-class="tab-bar"
+        tab-class="tab-btn"
+        @update:model-value="handleTrainingTabChange"
+      />
 
       <!-- TAB 1: MODULES -->
-      <div v-if="activeTab === 'modules'" class="tab-content modules-layout">
+      <div
+        v-if="activeTab === 'modules'"
+        id="training-console-panel-modules"
+        role="tabpanel"
+        aria-labelledby="training-console-tab-modules"
+        class="tab-content modules-layout"
+      >
         <div class="module-sidebar">
           <h4 class="sidebar-heading">Curriculum Sections</h4>
           <ul class="module-list">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <li
-              v-for="(mod, idx) in activeCurriculum.modules"
-              :key="mod.id"
-              class="module-item"
-              :class="{ active: selectedModuleIndex === idx }"
-              @click="selectModule(idx)"
-            >
-              <span class="module-num">{{ idx + 1 }}</span>
-              <div class="module-meta">
-                <span class="module-title">{{ mod.title }}</span>
-                <span
-                  class="badge badge-sm"
-                  :class="
-                    'badge-mod-' + (mod.module_type || 'default').toLowerCase()
-                  "
-                >
-                  {{ formatClinicalEnum(mod.module_type) }}
+            <li v-for="(mod, idx) in activeCurriculum.modules" :key="mod.id">
+              <button
+                type="button"
+                class="module-item"
+                :class="{ active: selectedModuleIndex === idx }"
+                :aria-current="selectedModuleIndex === idx ? 'true' : undefined"
+                @click="selectModule(idx)"
+              >
+                <span class="module-num">{{ idx + 1 }}</span>
+                <span class="module-meta">
+                  <span class="module-title">{{ mod.title }}</span>
+                  <span
+                    class="badge badge-sm"
+                    :class="
+                      'badge-mod-' +
+                      (mod.module_type || 'default').toLowerCase()
+                    "
+                  >
+                    {{ formatClinicalEnum(mod.module_type) }}
+                  </span>
                 </span>
-              </div>
+              </button>
             </li>
           </ul>
         </div>
@@ -236,7 +225,13 @@
       </div>
 
       <!-- TAB 2: BATCH ASSIGNMENT WORKSPACE -->
-      <div v-if="activeTab === 'batch'" class="tab-content batch-layout">
+      <div
+        v-if="activeTab === 'batch'"
+        id="training-console-panel-batch"
+        role="tabpanel"
+        aria-labelledby="training-console-tab-batch"
+        class="tab-content batch-layout"
+      >
         <div class="batch-card card">
           <div class="batch-header">
             <h3>Multi-Site &amp; Role Batch Curriculum Assignment</h3>
@@ -257,8 +252,8 @@
           </p>
 
           <div v-else class="batch-filter-grid">
-            <div class="filter-col">
-              <div class="filter-title">Target Sites (Multi-Select):</div>
+            <fieldset class="filter-col form-fieldset">
+              <legend class="filter-title">Target Sites (Multi-Select):</legend>
               <div class="checkbox-group">
                 <label
                   v-for="site in availableSites"
@@ -273,10 +268,12 @@
                   <span>{{ site }}</span>
                 </label>
               </div>
-            </div>
+            </fieldset>
 
-            <div class="filter-col">
-              <div class="filter-title">Clinical Roles (Multi-Select):</div>
+            <fieldset class="filter-col form-fieldset">
+              <legend class="filter-title">
+                Clinical Roles (Multi-Select):
+              </legend>
               <div class="checkbox-group">
                 <label
                   v-for="role in availableRoles"
@@ -291,7 +288,7 @@
                   <span>{{ formatRoleLabel(role) }}</span>
                 </label>
               </div>
-            </div>
+            </fieldset>
           </div>
 
           <p
@@ -402,6 +399,9 @@
       <!-- TAB 3: DELEGATION BULK SIGN-OFF WORKSPACE -->
       <div
         v-if="activeTab === 'delegations'"
+        id="training-console-panel-delegations"
+        role="tabpanel"
+        aria-labelledby="training-console-tab-delegations"
         class="tab-content delegations-layout"
       >
         <div class="delegations-card card">
@@ -702,7 +702,7 @@
 </template>
 
 <script setup>
-import { ClinicalIcon, ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal, ClinicalTabs } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
@@ -769,6 +769,22 @@ const currentModule = computed(() => {
   if (!activeCurriculum.value?.modules) return null;
   return activeCurriculum.value.modules[selectedModuleIndex.value] || null;
 });
+
+const trainingTabs = computed(() => [
+  {
+    id: "modules",
+    label: `Procedural Modules (${activeCurriculum.value?.modules?.length || 0})`,
+  },
+  { id: "batch", label: "Batch Assignments" },
+  { id: "delegations", label: "Delegation Bulk Sign-Off" },
+]);
+
+function handleTrainingTabChange(tabId) {
+  if (tabId === "delegations") {
+    loadDelegations();
+  }
+  activeTab.value = tabId;
+}
 
 async function refreshData() {
   loading.value = true;
@@ -1218,6 +1234,11 @@ async function handleExecuteBulkSignOff() {
 }
 
 .module-item {
+  width: 100%;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1226,6 +1247,13 @@ async function handleExecuteBulkSignOff() {
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
+}
+
+.form-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .module-item:hover {

@@ -5,6 +5,7 @@ import {
   demoNowIso,
   demoNowMs,
   demoRandomToken,
+  isDemoBuild,
   nextDemoStep,
 } from "../utils/demoMode";
 
@@ -41,16 +42,21 @@ export function hasRequiredRole(userRoles, requiredRoles) {
 }
 
 function effectiveRolesForStore(personaKey) {
+  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
   try {
     const authStore = useAuthStore();
     if (authStore?.rawRoles?.length > 0) {
-      return authStore.normalizedRoles || [];
+      const roles = authStore.normalizedRoles || [];
+      return preset &&
+        personaKey !== "super_admin" &&
+        roles.includes("sponsor_admin")
+        ? preset.requires
+        : roles;
     }
   } catch {
     // Pinia or auth store may not be initialized yet
   }
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+  return preset?.requires || ["sponsor_admin"];
 }
 
 function normalizeTaskRouteName(task) {
@@ -79,9 +85,15 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
     return isScreenAvailable("overview") ? "/overview" : null;
   }
   if (routeName === "ecrf") {
-    return isScreenAvailable("ecrf") &&
+    if (isDemoBuild()) {
+      return isScreenAvailable("ecrf") &&
+        hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+        ? "/ecrf"
+        : null;
+    }
+    return isScreenAvailable("study") &&
       hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/ecrf"
+      ? "/studies"
       : null;
   }
   if (routeName === "site-readiness") {
@@ -794,11 +806,11 @@ function getSequenceForPersona(personaKey) {
     baseSequence = ROLE_STEP_SEQUENCES[personaKey];
   } else if (personaKey === "designer" || personaKey === "study_designer") {
     baseSequence = ROLE_STEP_SEQUENCES.sponsor_designer;
-  } else if (personaKey === "crc") {
+  } else if (personaKey === "crc" || personaKey === "site_investigator") {
     baseSequence = ROLE_STEP_SEQUENCES.site_crc;
   } else if (personaKey === "cra" || personaKey === "monitor") {
     baseSequence = ROLE_STEP_SEQUENCES.cra_monitor;
-  } else if (personaKey === "tmf_auditor") {
+  } else if (personaKey === "tmf_auditor" || personaKey === "safety_officer") {
     baseSequence = ROLE_STEP_SEQUENCES.auditor;
   } else if (personaKey === "sponsor_admin") {
     baseSequence = ROLE_STEP_SEQUENCES.super_admin;
@@ -829,10 +841,7 @@ function getSequenceForPersona(personaKey) {
       ROLE_STEP_SEQUENCES.sponsor_designer;
   }
 
-  const effectiveRoles =
-    authStore?.rawRoles?.length > 0
-      ? roles
-      : effectiveRolesForStore(personaKey);
+  const effectiveRoles = effectiveRolesForStore(personaKey);
   const filtered = baseSequence
     .filter((step) => isTourRouteAuthorized(step.routeName, effectiveRoles))
     .map((step, idx) => ({ ...step, step: idx + 1 }));

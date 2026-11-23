@@ -141,7 +141,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
-    public void SecretsBaselineCleaner_WritesCanonicalExcludeFilter_AndDeletesLegacyExcludeObject()
+    public void SecretsBaselineCleaner_SplitsIntoConfigAndPerUnitShards_AndDeletesLegacyMonolithicBaseline()
     {
         string baselinePath = Write(".secrets.baseline",
             """
@@ -157,7 +157,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
               ],
               "results": {
                 "pnpm-lock.yaml": [{ "type": "Hex High Entropy String", "hashed_secret": "abc", "line_number": 10 }],
-                "src/Sample.cs": [{ "type": "Hex High Entropy String", "hashed_secret": "def", "line_number": 42 }]
+                "apps/web/src/Sample.ts": [{ "type": "Hex High Entropy String", "hashed_secret": "def", "line_number": 42 }],
+                "src/RootSample.cs": [{ "type": "Hex High Entropy String", "hashed_secret": "ghi", "line_number": 7 }]
               },
               "exclude": {
                 "files": "legacy",
@@ -167,26 +168,34 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             """);
 
         SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir).Should().Be(0);
+        File.Exists(baselinePath).Should().BeFalse("legacy .secrets.baseline must be deleted after splitting into shards");
 
-        var parsed = JsonNode.Parse(File.ReadAllText(baselinePath))!.AsObject();
-        parsed.ContainsKey("generated_at").Should().BeFalse();
-        parsed.ContainsKey("exclude").Should().BeFalse("detect-secrets v1.5.0 ignores the legacy top-level exclude key");
+        string configPath = Path.Combine(_tempDir, SecretsBaselineCleanerService.ConfigFile);
+        var parsedConfig = JsonNode.Parse(File.ReadAllText(configPath))!.AsObject();
+        parsedConfig.ContainsKey("generated_at").Should().BeFalse();
+        parsedConfig.ContainsKey("exclude").Should().BeFalse("detect-secrets v1.5.0 ignores the legacy top-level exclude key");
+        parsedConfig.ContainsKey("results").Should().BeFalse("config.json stores shared metadata only");
 
-        var filter = parsed["filters_used"]!.AsArray()
+        var filter = parsedConfig["filters_used"]!.AsArray()
             .Select(n => n!.AsObject())
             .Single(o => o["path"]?.GetValue<string>() == "detect_secrets.filters.regex.should_exclude_file");
         filter["pattern"]!.AsArray().Select(p => p!.GetValue<string>())
             .Should().Equal(SecretsBaselineCleanerService.CanonicalExcludePattern);
 
-        var results = parsed["results"]!.AsObject();
-        results.ContainsKey("pnpm-lock.yaml").Should().BeFalse();
-        results["src/Sample.cs"]!.AsArray()[0]!.AsObject().ContainsKey("line_number").Should().BeFalse();
+        var webShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/apps/web.secrets.baseline.json")))!.AsObject();
+        webShard["results"]!.AsObject()["apps/web/src/Sample.ts"]!.AsArray()[0]!.AsObject().ContainsKey("line_number").Should().BeFalse();
+
+        var rootShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/root.secrets.baseline.json")))!.AsObject();
+        rootShard["results"]!.AsObject().ContainsKey("pnpm-lock.yaml").Should().BeFalse();
+        rootShard["results"]!.AsObject().ContainsKey("src/RootSample.cs").Should().BeTrue();
+
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(0);
     }
 
     [Fact]
     public void DetectSecretsGate_FailsClosedWhenToolIsUnavailable()
     {
-        Write(".secrets.baseline", "{ \"version\": \"1.5.0\", \"plugins_used\": [], \"filters_used\": [], \"results\": {} }\n");
+        Write(SecretsBaselineCleanerService.ConfigFile, "{ \"version\": \"1.5.0\", \"plugins_used\": [], \"filters_used\": [] }\n");
         Write("README.md", "# Clean\n");
 
         var env = new Dictionary<string, string?>(StringComparer.Ordinal)
@@ -201,12 +210,12 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
-    public void DetectSecretsGate_BlocksUnbaselinedSecret_AndLeavesBaselineUnchanged()
+    public void DetectSecretsGate_BlocksUnbaselinedSecret_AndLeavesShardsUnchanged()
     {
         InitGitRepo();
-        string baselineContent =
-            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n";
-        string baselinePath = Write(".secrets.baseline", baselineContent);
+        string configContent =
+            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [\n    {\n      \"name\": \"PrivateKeyDetector\"\n    }\n  ],\n  \"filters_used\": []\n}\n";
+        string baselinePath = Write(SecretsBaselineCleanerService.ConfigFile, configContent);
         Write("clean.txt", "nothing sensitive here\n");
         Write("secret.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
 
@@ -219,10 +228,10 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         };
 
         DetectSecretsGateService.Scan(_tempDir, ["clean.txt"], preCommit: true, key => stubEnv.GetValueOrDefault(key)).Should().Be(0);
-        File.ReadAllText(baselinePath).Should().Be(baselineContent);
+        File.ReadAllText(baselinePath).Should().Be(configContent);
 
         DetectSecretsGateService.Scan(_tempDir, ["secret.txt"], preCommit: true, key => stubEnv.GetValueOrDefault(key)).Should().Be(1);
-        File.ReadAllText(baselinePath).Should().Be(baselineContent);
+        File.ReadAllText(baselinePath).Should().Be(configContent);
 
         var realTool = DetectSecretsGateService.ResolveTool(
             QualityGateOrchestrator.FindRepoRoot(),
@@ -236,15 +245,15 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             };
 
             DetectSecretsGateService.Scan(_tempDir, ["clean.txt"], preCommit: true, key => realEnv.GetValueOrDefault(key)).Should().Be(0);
-            File.ReadAllText(baselinePath).Should().Be(baselineContent);
+            File.ReadAllText(baselinePath).Should().Be(configContent);
 
             DetectSecretsGateService.Scan(_tempDir, ["secret.txt"], preCommit: true, key => realEnv.GetValueOrDefault(key)).Should().Be(1);
-            File.ReadAllText(baselinePath).Should().Be(baselineContent);
+            File.ReadAllText(baselinePath).Should().Be(configContent);
         }
     }
 
     [Fact]
-    public void CiPlan_DetectSecretsStep_DelegatesToCadenceCli_AndBaselineRetainsCanonicalExcludeFilter()
+    public void CiPlan_DetectSecretsStep_DelegatesToCadenceCli_AndBaselineConfigRetainsCanonicalExcludeFilter()
     {
         var securityJob = CiPlan.Jobs.Single(j => j.Key == "security");
         var step = securityJob.Steps.Single(s => s.Name == "Run detect-secrets against the baseline");
@@ -255,8 +264,10 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         cmd.Arguments.Should().Equal("scripts/run-cli.js", "check", "detect-secrets");
         cmd.ForwardsBaseRef.Should().BeTrue();
 
-        string repoBaselinePath = Path.Combine(QualityGateOrchestrator.FindRepoRoot(), ".secrets.baseline");
-        var repoBaseline = JsonNode.Parse(File.ReadAllText(repoBaselinePath))!.AsObject();
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        File.Exists(Path.Combine(repoRoot, ".secrets.baseline")).Should().BeFalse();
+        string repoConfigPath = Path.Combine(repoRoot, SecretsBaselineCleanerService.ConfigFile);
+        var repoBaseline = JsonNode.Parse(File.ReadAllText(repoConfigPath))!.AsObject();
         repoBaseline.ContainsKey("exclude").Should().BeFalse();
         var filter = repoBaseline["filters_used"]!.AsArray()
             .Select(n => n!.AsObject())
@@ -305,8 +316,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     {
         InitGitRepo();
         Write(".gitignore", "stub-bin/\n");
-        Write(".secrets.baseline",
-            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n");
+        Write(SecretsBaselineCleanerService.ConfigFile,
+            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": []\n}\n");
         Write("apps/leak.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
         RunGit("add", ".");
         RunGit("commit", "-q", "-m", "initial main with leaked secret");
@@ -358,19 +369,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
-    }
-
-    [Fact]
-    public void VulnerabilityAuditor_BuildPipAuditCandidates_ChecksCadenceVenvBeforeLegacyVenv()
-    {
-        string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        string exeName = OperatingSystem.IsWindows() ? "pip-audit.exe" : "pip-audit";
-        string cadenceVenvExe = Write(Path.Combine(".cadence", "venv", binSubdir, exeName), "");
-        string legacyVenvExe = Write(Path.Combine(".venv", binSubdir, exeName), "");
-
-        var candidates = VulnerabilityAuditorService.BuildPipAuditCandidates(_tempDir);
-
-        candidates.Select(c => c.FileName).Take(2).Should().Equal(cadenceVenvExe, legacyVenvExe);
     }
 
     [Fact]
@@ -515,12 +513,12 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         InitGitRepo();
 
         const string baselineJson =
-            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n";
+            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": []\n}\n";
         string dupBody = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"        int item{i} = Calculate({i}, {i + 3});"));
         string boolLiteralExpr = "== " + "true";
 
-        Write(".secrets.baseline", baselineJson);
-        Write(".deid-baseline.txt", "# empty baseline\n");
+        Write(SecretsBaselineCleanerService.ConfigFile, baselineJson);
+        Write("baselines/deid/root.baseline.txt", "# header\nREADME.md|dates|0123456789abcdef\n");
         Write("docs/trailing.txt", "staged trailing space   \n");
         Write("docs/no-eof.txt", "staged missing newline");
         Write(".github/workflows/ci.yml",
@@ -1150,7 +1148,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string venvBin = Path.Combine(wizardRepo, ".cadence", "venv", "bin");
         Directory.CreateDirectory(venvBin);
         WriteExecutable(Path.Combine(venvBin, "detect-secrets-hook"), "#!/bin/sh\necho '1.5.0'\n");
-        WriteExecutable(Path.Combine(venvBin, "pip-audit"), "#!/bin/sh\necho 'pip-audit 2.10.1'\n");
 
         string wizardHome = Path.Combine(_tempDir, "wizard-home");
         Directory.CreateDirectory(wizardHome);
@@ -1457,24 +1454,130 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     [Fact]
     public void PreCommitOpenApiService_ClassifiesBackendContractAndEfCoreSchemaPaths()
     {
-        var none = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/web/src/App.vue", "docs/cli.md"]);
+        string realRepoRoot = PreCommitOpenApiService.FindRepoRoot();
+
+        var none = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/web/src/App.vue", "docs/cli.md"], realRepoRoot);
         none.ShouldExport.Should().BeFalse();
         none.HasCsharpFiles.Should().BeFalse();
 
-        var serviceOnly = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/execution/src/Endpoints/FormEndpoints.cs"]);
+        var serviceOnly = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/execution/src/Endpoints/FormEndpoints.cs"], realRepoRoot);
         serviceOnly.ShouldExport.Should().BeTrue();
         serviceOnly.TargetServices.Should().Equal("execution");
         serviceOnly.HasCsharpFiles.Should().BeTrue();
 
-        var shared = PreCommitOpenApiService.AnalyzeBackendContractChanges(["packages/contracts/src/StudyDto.cs"]);
-        shared.ShouldExport.Should().BeTrue();
-        shared.TargetServices.Should().BeNull("shared contract changes export all backend services");
-        shared.HasCsharpFiles.Should().BeTrue();
+        var kernelDomain = PreCommitOpenApiService.AnalyzeBackendContractChanges(
+            ["packages/kernel/src/Cadence.Kernel.Domain/Entities/Study.cs"],
+            realRepoRoot);
+        kernelDomain.ShouldExport.Should().BeTrue();
+        kernelDomain.TargetServices.Should().Equal("kernel");
+        kernelDomain.HasCsharpFiles.Should().BeTrue();
+
+        var executionModule = PreCommitOpenApiService.AnalyzeBackendContractChanges(
+            ["apps/execution/module/ExecutionModule.cs"],
+            realRepoRoot);
+        executionModule.ShouldExport.Should().BeTrue();
+        executionModule.TargetServices.Should().Equal("execution_forms");
+        executionModule.HasCsharpFiles.Should().BeTrue();
+
+        var sharedContracts = PreCommitOpenApiService.AnalyzeBackendContractChanges(["packages/contracts/src/StudyDto.cs"], realRepoRoot);
+        sharedContracts.ShouldExport.Should().BeTrue();
+        sharedContracts.TargetServices.Should().Equal("ctms", "econsent", "etmf", "execution", "notifications", "payments");
+        sharedContracts.HasCsharpFiles.Should().BeTrue();
+
+        var nonExporterProjects = PreCommitOpenApiService.AnalyzeBackendContractChanges(
+            ["packages/testing/src/FakeClock.cs", "apps/gateway/src/Program.cs"],
+            realRepoRoot);
+        nonExporterProjects.ShouldExport.Should().BeFalse("neither packages/testing nor apps/gateway is referenced by an OpenAPI-exporting host");
+        nonExporterProjects.TargetServices.Should().BeNull();
+        nonExporterProjects.HasCsharpFiles.Should().BeTrue();
+
+        foreach (string globalBuildFile in new[]
+        {
+            "Cadence.sln",
+            "global.json",
+            "Directory.Build.props",
+            "Directory.Build.targets",
+            "Directory.Packages.props",
+        })
+        {
+            var globalChange = PreCommitOpenApiService.AnalyzeBackendContractChanges([globalBuildFile], realRepoRoot);
+            globalChange.ShouldExport.Should().BeTrue($"{globalBuildFile} can alter all backend OpenAPI contracts");
+            globalChange.TargetServices.Should().BeNull($"{globalBuildFile} triggers an unscoped all-service export");
+            globalChange.HasCsharpFiles.Should().BeTrue();
+        }
 
         PreCommitOpenApiService.AffectsEfCoreSchema("apps/web/src/models/FormModel.ts").Should().BeFalse();
         PreCommitOpenApiService.AffectsEfCoreSchema("docs/schema/index.md").Should().BeFalse();
         PreCommitOpenApiService.AffectsEfCoreSchema("apps/econsent/src/Domain/ConsentEntity.cs").Should().BeTrue();
         PreCommitOpenApiService.AffectsEfCoreSchema("packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20260101_Init.cs").Should().BeTrue();
+    }
+
+    [Fact]
+    public void ApiClientValidatorService_ScopesPreCommitRunsToOpenApiFrontendAndCanvasContractInputs()
+    {
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "README.md").Should().BeFalse();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/kernel/src/Cadence.Kernel.Domain/Study.cs").Should().BeFalse();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/testing/src/FakeClock.cs").Should().BeFalse();
+
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "docs/openapi/ctms_openapi.json").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/web/src/App.vue").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/subject-portal/src/main.ts").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/ui/src/index.ts").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-api-types.js").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-canvas-contracts.js").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/kernel/src/Cadence.Kernel.Abstractions/References/NodeKinds.cs").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/security/src/Rbac/PermissionMatrix.cs").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "pnpm-lock.yaml").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "package.json").Should().BeTrue();
+
+        // Fixture _tempDir has no apps/web/tsconfig.json: irrelevant pre-commit paths skip cleanly (0),
+        // whereas relevant paths or unscoped runs fail closed (1).
+        ApiClientValidatorService.ValidateApiClients(_tempDir, targetFiles: ["README.md"], preCommit: true).Should().Be(0);
+        ApiClientValidatorService.ValidateApiClients(_tempDir, targetFiles: ["docs/openapi/ctms_openapi.json"], preCommit: true).Should().Be(1);
+        ApiClientValidatorService.ValidateApiClients(_tempDir).Should().Be(1);
+    }
+
+    [Fact]
+    public void ReadmeOnlyPreCommit_SkipsPackageAuditsTypecheckAndOpenApiExporterOffline()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        Write("README.md", "# Cadence Clinical\n");
+        Write("docs/SDLC/vulnerability_exclusions_ledger.json", "[]\n");
+        Directory.CreateDirectory(Path.Combine(_tempDir, "docs", "openapi"));
+        ApiDocsGeneratorService.GenerateApiDocs(repoRoot: _tempDir).Should().Be(0);
+
+        string sentinelBin = Path.Combine(_tempDir, "sentinel-bin");
+        string invocationsLog = Path.Combine(_tempDir, "forbidden-tools.log");
+        Directory.CreateDirectory(sentinelBin);
+
+        foreach (string tool in new[] { "dotnet", "pnpm", "pip-audit", "tsc" })
+        {
+            string scriptPath = Path.Combine(sentinelBin, tool);
+            File.WriteAllText(scriptPath, $"#!/bin/sh\necho {tool} >> \"{invocationsLog}\"\nexit 99\n");
+            File.SetUnixFileMode(scriptPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
+        string originalPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{sentinelBin}:/usr/bin:/bin");
+
+            var context = new GateContext(_tempDir, ["README.md"], PreCommit: true);
+            QualityGates.Find("vulnerabilities")!.Run(context).Should().BeTrue();
+            QualityGates.Find("api-clients")!.Run(context).Should().BeTrue();
+            QualityGates.Find("openapi")!.Run(context).Should().BeTrue();
+
+            File.Exists(invocationsLog).Should().BeFalse(
+                "staging only README.md must complete vulnerabilities, api-clients, and openapi offline without invoking dotnet, pnpm, pip-audit, or tsc");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+        }
     }
 
     private (int ExitCode, string Stderr) RunHook(
@@ -1948,7 +2051,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             """;
         string baselinePath = Write(".secrets.baseline", baselineJson);
         SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: false).Should().Be(0);
-        string committedBaseline = File.ReadAllText(baselinePath);
+        string configPath = Path.Combine(_tempDir, SecretsBaselineCleanerService.ConfigFile);
+        string committedConfig = File.ReadAllText(configPath);
 
         string[] files = new string[215];
         for (int i = 0; i < files.Length; i++)
@@ -1968,12 +2072,82 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         DetectSecretsGateService.Scan(_tempDir, files, preCommit: false, key => stubEnv.GetValueOrDefault(key))
             .Should().Be(0, "215 clean files across parallel 200-file batches must exit 0 even when detect-secrets-hook mutates its temp baseline and exits 3");
-        File.ReadAllText(baselinePath).Should().Be(committedBaseline, "committed .secrets.baseline must never be mutated");
+        File.ReadAllText(configPath).Should().Be(committedConfig, "committed baselines/secrets/config.json must never be mutated");
 
         Write("src/batch_item_205.txt", $"{PrivateKeyHeader}\nMIIB\n");
         DetectSecretsGateService.Scan(_tempDir, files, preCommit: false, key => stubEnv.GetValueOrDefault(key))
             .Should().Be(1, "an unbaselined secret in any parallel batch must fail closed");
-        File.ReadAllText(baselinePath).Should().Be(committedBaseline);
+        File.ReadAllText(configPath).Should().Be(committedConfig);
+    }
+
+    [Fact]
+    public void ConcurrentShardPaydowns_AcrossAssembliesRuleAreasDeidUnitsAndSecretsUnits_MergeCleanlyViaGitMergeFileAndMergeTree()
+    {
+        InitGitRepo();
+
+        // Seed initial per-owner shards across all four baseline gates with zero .gitattributes merge drivers.
+        Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Execution.baseline.txt",
+            "# boundary\nK-MOD-1|Cadence.Apps.Execution|ExecEntity.StudyId\nK-XS-1|Cadence.Apps.Execution|ExecDto.StudyId\n");
+        Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Ctms.baseline.txt",
+            "# boundary\nK-MOD-1|Cadence.Apps.Ctms|CtmsEntity.SiteId\n");
+        Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/MOD.baseline.txt",
+            "# coverage\nK-MOD-2\nK-MOD-3\n");
+        Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/SIM.baseline.txt",
+            "# coverage\nK-SIM-1\n");
+        Write("baselines/deid/apps/web.baseline.txt",
+            "# deid\napps/web/src/View.vue|dates|0011223344556677\napps/web/src/Store.ts|dates|8899aabbccddeeff\n");
+        Write("baselines/deid/packages/ui.baseline.txt",
+            "# deid\npackages/ui/src/Badge.vue|dates|fedcba9876543210\n");
+        Write(SecretsBaselineCleanerService.ConfigFile,
+            "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [],\n  \"filters_used\": []\n}\n");
+        Write("baselines/secrets/apps/execution.secrets.baseline.json",
+            "{\n  \"results\": {\n    \"apps/execution/src/Auth.cs\": [\n      {\n        \"hashed_secret\": \"aaa\",\n        \"type\": \"Secret Keyword\"\n      },\n      {\n        \"hashed_secret\": \"bbb\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
+        Write("baselines/secrets/packages/auth.secrets.baseline.json",
+            "{\n  \"results\": {\n    \"packages/auth/src/Jwt.cs\": [\n      {\n        \"hashed_secret\": \"ccc\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
+
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "seed sharded baselines");
+
+        // Verify git merge-file directly on disjoint shard updates vs base (Branch A updates its shards while Branch B leaves them at base, and vice versa).
+        string mergeSimDir = Path.Combine(_tempDir, "merge-file-sim");
+        Directory.CreateDirectory(mergeSimDir);
+        string baseFile = Path.Combine(mergeSimDir, "base.txt");
+        string oursFile = Path.Combine(mergeSimDir, "ours.txt");
+        string theirsFile = Path.Combine(mergeSimDir, "theirs.txt");
+        File.WriteAllText(baseFile, "# boundary\nK-MOD-1|Cadence.Apps.Execution|ExecEntity.StudyId\nK-XS-1|Cadence.Apps.Execution|ExecDto.StudyId\n");
+        File.WriteAllText(oursFile, "# boundary\nK-XS-1|Cadence.Apps.Execution|ExecDto.StudyId\n");
+        File.WriteAllText(theirsFile, File.ReadAllText(baseFile));
+        RunGit("merge-file", "-p", oursFile, baseFile, theirsFile);
+        Directory.Delete(mergeSimDir, recursive: true);
+
+        // Branch A pays down Execution boundary, MOD rule, apps/web DEID, and apps/execution secret.
+        RunGit("checkout", "-q", "-b", "branch-a");
+        Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Execution.baseline.txt",
+            "# boundary\nK-XS-1|Cadence.Apps.Execution|ExecDto.StudyId\n");
+        Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/MOD.baseline.txt",
+            "# coverage\nK-MOD-3\n");
+        Write("baselines/deid/apps/web.baseline.txt",
+            "# deid\napps/web/src/Store.ts|dates|8899aabbccddeeff\n");
+        Write("baselines/secrets/apps/execution.secrets.baseline.json",
+            "{\n  \"results\": {\n    \"apps/execution/src/Auth.cs\": [\n      {\n        \"hashed_secret\": \"bbb\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
+        RunGit("add", "-A");
+        RunGit("commit", "-q", "-m", "branch A paydown");
+
+        // Branch B concurrently deletes empty Ctms boundary shard, SIM rule shard, packages/ui DEID shard, and packages/auth secret shard!
+        RunGit("checkout", "-q", "main");
+        RunGit("checkout", "-q", "-b", "branch-b");
+        File.Delete(Path.Combine(_tempDir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Ctms.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/SIM.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "baselines/deid/packages/ui.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "baselines/secrets/packages/auth.secrets.baseline.json"));
+        RunGit("add", "-A");
+        RunGit("commit", "-q", "-m", "branch B paydown");
+
+        // Merge Branch A and Branch B with standard Git 3-way merge (zero custom merge drivers): must succeed with exit code 0!
+        var mergeResult = GitRevisionScopeService.PreviewMergeTree(_tempDir, "branch-a");
+        mergeResult.Succeeded.Should().BeTrue();
+        mergeResult.HasConflicts.Should().BeFalse();
+        mergeResult.ConflictingFiles.Should().BeEmpty();
     }
 
     private static (int ExitCode, string CombinedOutput) RunWizardWithCustomPath(

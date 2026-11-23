@@ -749,6 +749,8 @@ export interface components {
       subjectId?: null | string;
       walletId?: null | string;
       idempotencyKey?: null | string;
+      ocrToken?: null | string;
+      receiptImageBase64?: null | string;
     };
     Payments_SignRemittanceRequest: {
       signature_reason?: null | string;
@@ -770,6 +772,8 @@ export interface components {
       receiptOcrData?: unknown;
       /** Format: double */
       ocrConfidence?: null | number | string;
+      ocrToken?: null | string;
+      receiptImageBase64?: null | string;
     };
     Payments_SubmitW9RequestDto: {
       fullLegalName: string;

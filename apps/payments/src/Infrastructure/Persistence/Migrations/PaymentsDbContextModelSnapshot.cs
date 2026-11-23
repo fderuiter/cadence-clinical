@@ -91,6 +91,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<decimal>("WithholdingPercentage")
@@ -165,6 +166,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -249,6 +251,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VisitCode")
@@ -356,6 +359,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -447,6 +451,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VisitCode")
@@ -521,6 +526,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("WalletId")
@@ -646,6 +652,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("WalletId")
@@ -741,6 +748,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VisitCode")
@@ -789,6 +797,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<string>("ReferenceId")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -814,6 +826,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("WalletId")
@@ -834,6 +847,12 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("TransactionType");
 
                     b.HasIndex("WalletId");
+
+                    b.HasIndex("WalletId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("WalletId", "TransactionType", "ReferenceId")
+                        .IsUnique();
 
                     b.ToTable("payments_participant_transactions", (string)null);
                 });
@@ -943,6 +962,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VirtualCardExpiry")
@@ -981,6 +1001,9 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.HasIndex("W9Status");
+
+                    b.HasIndex("TenantId", "SubjectId", "StudyId")
+                        .IsUnique();
 
                     b.ToTable("payments_participant_wallets", (string)null);
                 });
@@ -1096,6 +1119,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VisitCode")
@@ -1205,6 +1229,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<decimal>("WithholdingShare")
@@ -1279,6 +1304,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1401,6 +1427,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1555,6 +1582,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1644,6 +1672,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1707,13 +1736,17 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("EntityName", "Timestamp");
+                    b.HasIndex("EntityName", "PredecessorHash");
+
+                    b.HasIndex("EntityName", "Timestamp", "VersionIndex", "Id")
+                        .IsDescending(false, true, true, true);
 
                     b.ToTable("audit_log_entries", (string)null);
                 });

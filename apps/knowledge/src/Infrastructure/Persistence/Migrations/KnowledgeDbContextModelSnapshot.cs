@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using NpgsqlTypes;
 
 #nullable disable
 
@@ -70,6 +71,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -145,11 +147,119 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
 
                     b.ToTable("DelegationRecords");
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.DelegationRecordPeriod", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("BatchTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DelegationRecordId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Duties")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("PiApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PiSignatureHash")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<NpgsqlRange<DateTimeOffset>>("RecordedPeriod")
+                        .HasColumnType("tstzrange")
+                        .HasColumnName("recorded_period");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("SignedOff")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SiteCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StaffName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StaffUserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("TaskCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<NpgsqlRange<DateTimeOffset>>("ValidPeriod")
+                        .HasColumnType("tstzrange")
+                        .HasColumnName("valid_period");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DelegationRecordId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudyCode", "SiteCode");
+
+                    b.ToTable("delegation_record_periods", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.KnowledgeArticle", b =>
@@ -219,6 +329,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VersionLabel")
@@ -294,6 +405,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -355,6 +467,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.Property<string>("VersionLabel")
@@ -369,6 +482,9 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.HasIndex("VersionIndex");
+
+                    b.HasIndex("ArticleId", "VersionIndex")
+                        .IsUnique();
 
                     b.ToTable("knowledge_article_versions", (string)null);
                 });
@@ -421,6 +537,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -475,6 +592,12 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("Timestamp")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
 
                     b.HasKey("Id");
 
@@ -555,6 +678,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -632,6 +756,12 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
@@ -678,6 +808,12 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
@@ -722,6 +858,12 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
 
                     b.HasKey("Id");
 
@@ -782,13 +924,17 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("EntityName", "Timestamp");
+                    b.HasIndex("EntityName", "PredecessorHash");
+
+                    b.HasIndex("EntityName", "Timestamp", "VersionIndex", "Id")
+                        .IsDescending(false, true, true, true);
 
                     b.ToTable("audit_log_entries", (string)null);
                 });
@@ -810,6 +956,24 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.HasIndex("RetainUntil");
 
                     b.ToTable("consumed_signature_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.DelegationRecordPeriod", b =>
+                {
+                    b.HasOne("Cadence.Apps.Knowledge.Domain.DelegationRecord", null)
+                        .WithMany()
+                        .HasForeignKey("DelegationRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.KnowledgeArticleVersion", b =>
+                {
+                    b.HasOne("Cadence.Apps.Knowledge.Domain.KnowledgeArticle", null)
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

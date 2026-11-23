@@ -33,6 +33,7 @@
             {{ $t("ecrf.form.schemaBadge", { version: activeSubjectVersion }) }}
           </span>
           <button
+            v-if="canEnroll"
             id="btn-enroll-subject"
             type="button"
             class="btn btn-secondary"
@@ -461,13 +462,24 @@
                 :query="store.formQueries[field.id]"
                 :error="getValidationError(field)"
                 :lookup-status="lookupStatuses[field.id]"
-                :can-manage-queries="store.canManageQueries"
+                :can-manage-queries="
+                  canManageQueries !== undefined
+                    ? canManageQueries
+                    : store.canManageQueries
+                "
                 :query-label="store.getQueryLabel(store.formQueries[field.id])"
+                :disabled="!canEditForm"
                 @update:model-value="updateFieldValue(field.id, $event)"
-                @input="$emit('handle-lookup-input', field, $event)"
+                @input="
+                  canEditForm
+                    ? $emit('handle-lookup-input', field, $event)
+                    : undefined
+                "
                 @change="
                   (val, target) =>
-                    $emit('handle-field-change', field, val, target)
+                    canEditForm
+                      ? $emit('handle-field-change', field, val, target)
+                      : undefined
                 "
                 @create-query="$emit('create-query', field.id, $event)"
                 @respond-query="$emit('respond-query', field.id, $event)"
@@ -591,19 +603,20 @@
         <button
           id="btn-clear-ecrf"
           class="btn"
-          :disabled="isReconsentGated"
-          @click="$emit('clear-form')"
+          :disabled="isReconsentGated || !canEditForm"
+          @click="canEditForm ? $emit('clear-form') : undefined"
         >
           {{ $t("ecrf.form.clearForm") }}
         </button>
         <button
           id="btn-submit-ecrf"
           class="btn btn-primary"
+          :disabled="!canEditForm"
           :style="{
             backgroundColor: isReconsentGated
               ? 'var(--semantic-color-error)'
               : undefined,
-            opacity: isReconsentGated ? 0.9 : 1,
+            opacity: isReconsentGated || !canEditForm ? 0.9 : 1,
           }"
           @click="handleSubmitClick"
         >
@@ -956,6 +969,9 @@ const props = defineProps({
   dirtyFields: { type: Object, default: () => ({}) },
   isDirty: { type: Boolean, default: false },
   draftRestored: { type: Boolean, default: false },
+  canEnroll: { type: Boolean, default: true },
+  canEditForm: { type: Boolean, default: true },
+  canManageQueries: { type: Boolean, default: undefined },
 });
 
 const emit = defineEmits([
@@ -1113,6 +1129,7 @@ function handleFieldsetInteraction() {
 }
 
 function handleSubmitClick() {
+  if (!props.canEditForm) return;
   if (props.isReconsentGated) {
     showReconsentGateModal.value = true;
     return;
@@ -1146,6 +1163,7 @@ async function handleEnrollSubmit() {
 }
 
 function updateFieldValue(fieldId, val) {
+  if (!props.canEditForm) return;
   const storeInstance = props.store || clinicalStore;
   storeInstance.formValues[fieldId] = val;
 }

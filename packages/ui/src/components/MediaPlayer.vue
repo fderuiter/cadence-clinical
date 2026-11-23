@@ -61,6 +61,7 @@ const rotation = ref(0);
 const panOffset = ref({ x: 0, y: 0 });
 const isDragging = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
+const imageViewportRef = ref(null);
 
 const zoomIn = () => {
   zoomLevel.value = Math.min(zoomLevel.value + 0.25, 4.0);
@@ -103,6 +104,24 @@ const handleMouseMove = (e) => {
 const handleMouseUp = () => {
   isDragging.value = false;
 };
+
+const panBy = (dx, dy) => {
+  panOffset.value = {
+    x: panOffset.value.x + dx,
+    y: panOffset.value.y + dy,
+  };
+};
+
+watch(imageViewportRef, (el, prevEl) => {
+  if (prevEl && typeof prevEl.removeEventListener === "function") {
+    prevEl.removeEventListener("mousedown", handleMouseDown);
+    prevEl.removeEventListener("mousemove", handleMouseMove);
+  }
+  if (el && typeof el.addEventListener === "function") {
+    el.addEventListener("mousedown", handleMouseDown);
+    el.addEventListener("mousemove", handleMouseMove);
+  }
+});
 
 // Audio & Video player states
 const audioRef = ref(null);
@@ -264,6 +283,26 @@ onUnmounted(() => {
             <ClinicalIcon name="rotate-cw" :size="16" />
           </button>
           <button
+            v-if="mediaCategory === 'image'"
+            type="button"
+            class="control-btn"
+            aria-label="Pan image left"
+            title="Pan Left"
+            @click="panBy(-24, 0)"
+          >
+            <span aria-hidden="true">&larr;</span>
+          </button>
+          <button
+            v-if="mediaCategory === 'image'"
+            type="button"
+            class="control-btn"
+            aria-label="Pan image right"
+            title="Pan Right"
+            @click="panBy(24, 0)"
+          >
+            <span aria-hidden="true">&rarr;</span>
+          </button>
+          <button
             type="button"
             class="control-btn"
             aria-label="Reset View"
@@ -277,14 +316,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Media Viewport Container -->
-    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
     <div
       class="player-viewport"
       role="region"
       aria-label="Media preview viewport"
-      tabindex="0"
-      @mousedown="handleMouseDown"
-      @mousemove="handleMouseMove"
     >
       <!-- Watermark Overlay (GxP Compliance Policy) -->
       <div
@@ -343,6 +378,7 @@ onUnmounted(() => {
       <!-- 2. Pan & Zoom Image Viewer -->
       <div
         v-else-if="mediaCategory === 'image'"
+        ref="imageViewportRef"
         class="image-viewer-container"
         data-testid="image-viewer"
       >

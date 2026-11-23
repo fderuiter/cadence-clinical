@@ -1,6 +1,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Database.Concurrency;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -81,31 +83,6 @@ public sealed class ConcurrencyTokenIncrementInterceptor : SaveChangesIntercepto
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
-    private static void IncrementConcurrencyTokens(DbContext? context)
-    {
-        if (context is null)
-        {
-            return;
-        }
-
-        foreach (var entry in context.ChangeTracker.Entries())
-        {
-            if (entry.State != EntityState.Modified)
-            {
-                continue;
-            }
-
-            foreach (var property in entry.Metadata.GetProperties())
-            {
-                if (!property.IsConcurrencyToken || property.ClrType != typeof(long))
-                {
-                    continue;
-                }
-
-                var propertyEntry = entry.Property(property.Name);
-                long baseline = (long)(propertyEntry.OriginalValue ?? 0L);
-                propertyEntry.CurrentValue = baseline + 1;
-            }
-        }
-    }
+    private static void IncrementConcurrencyTokens(DbContext? context) =>
+        StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
 }

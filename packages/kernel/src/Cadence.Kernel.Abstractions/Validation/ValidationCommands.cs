@@ -31,6 +31,12 @@ namespace Cadence.Kernel.Validation;
 /// <param name="IdempotencyKey">The command's idempotency key.</param>
 /// <param name="ReasonForChange">Why the run is recorded.</param>
 [KernelCapability("validation_run.record", VerbClass.Execute, Resource = nameof(StudyId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(ValidationErrors),
+    nameof(ValidationErrors.RunInvalid),
+    nameof(ValidationErrors.RulePackNotUsable),
+    nameof(ValidationErrors.StudyUnknown))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RecordValidationRun(
     TenantId TenantId,
@@ -69,6 +75,7 @@ public sealed record ValidationRunOutcome(ValidationRunId RunId, int Detected, i
 
 /// <summary>Marks an open finding as being investigated.</summary>
 [KernelCapability("validation_finding.investigate", VerbClass.Execute, Resource = nameof(FindingId))]
+[RaisesKernelErrors(typeof(ValidationErrors), nameof(ValidationErrors.FindingUnknown), nameof(ValidationErrors.InvalidTransition))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record InvestigateFinding(
     TenantId TenantId,
@@ -78,6 +85,7 @@ public sealed record InvestigateFinding(
 
 /// <summary>Records what kind of problem a finding is. Allowed while the finding is detected, whatever its status.</summary>
 [KernelCapability("validation_finding.classify", VerbClass.Execute, Resource = nameof(FindingId))]
+[RaisesKernelErrors(typeof(ValidationErrors), nameof(ValidationErrors.FindingUnknown), nameof(ValidationErrors.InvalidTransition))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ClassifyFinding(
     TenantId TenantId,
@@ -92,6 +100,12 @@ public sealed record ClassifyFinding(
 /// run that last detected the finding and <see cref="Rationale"/>.
 /// </summary>
 [KernelCapability("validation_finding.accept", VerbClass.Approve, Resource = nameof(FindingId))]
+[RaisesKernelErrors(
+    typeof(ValidationErrors),
+    nameof(ValidationErrors.FindingUnknown),
+    nameof(ValidationErrors.InvalidTransition),
+    nameof(ValidationErrors.DecisionTextInvalid),
+    nameof(ValidationErrors.AttestationRejected))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record AcceptFinding(
     TenantId TenantId,
@@ -107,6 +121,12 @@ public sealed record AcceptFinding(
 /// with the run that last detected the finding and <see cref="Explanation"/>.
 /// </summary>
 [KernelCapability("validation_finding.explain", VerbClass.Approve, Resource = nameof(FindingId))]
+[RaisesKernelErrors(
+    typeof(ValidationErrors),
+    nameof(ValidationErrors.FindingUnknown),
+    nameof(ValidationErrors.InvalidTransition),
+    nameof(ValidationErrors.DecisionTextInvalid),
+    nameof(ValidationErrors.AttestationRejected))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ExplainFinding(
     TenantId TenantId,
@@ -118,6 +138,7 @@ public sealed record ExplainFinding(
 
 /// <summary>Withdraws an investigation, acceptance or explanation, so a detected finding is open again.</summary>
 [KernelCapability("validation_finding.reopen", VerbClass.Execute, Resource = nameof(FindingId))]
+[RaisesKernelErrors(typeof(ValidationErrors), nameof(ValidationErrors.FindingUnknown), nameof(ValidationErrors.InvalidTransition))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record ReopenFinding(
     TenantId TenantId,

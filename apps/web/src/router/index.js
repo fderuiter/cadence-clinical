@@ -1,3 +1,4 @@
+import { getActivePinia } from "pinia";
 import {
   createRouter,
   createWebHashHistory,
@@ -6,7 +7,6 @@ import {
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -18,36 +18,65 @@ import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 // Helper to check if user has required roles, mapping UI roles to Keycloak roles
 export function hasRequiredRole(userRoles, requiredRoles) {
-  return userRoles.some((uRole) => {
+  return (userRoles || []).some((uRole) => {
     if (requiredRoles.includes(uRole)) return true;
     const aliases = ROLE_ALIASES[uRole] || [];
     return aliases.some((alias) => requiredRoles.includes(alias));
   });
 }
 
+export function getRouteRequiredRoles(routeOrTarget) {
+  const matched = routeOrTarget?.matched;
+  const roles = matched?.length
+    ? matched.flatMap((r) => r.meta?.requiresRole || [])
+    : [];
+  return roles.length ? roles : routeOrTarget?.meta?.requiresRole || [];
+}
+
+export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
+  const req = getRouteRequiredRoles(routeOrTarget);
+  return !req.length || hasRequiredRole(userRoles || [], req);
+}
+
 // The screen each role lands on when opening "/".
 function landingRouteFor(roles) {
   if (roles.includes("sponsor_designer")) return "mdr";
-  if (roles.includes("site_investigator") || roles.includes("crc")) {
-    return "ecrf";
+  if (
+    roles.includes("site_investigator") ||
+    roles.includes("crc") ||
+    roles.includes("trial_coordinator")
+  ) {
+    return isDemoBuild() ? "ecrf" : "study";
   }
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
+  if (
+    roles.includes("safety_officer") ||
+    roles.includes("safety_physician") ||
+    roles.includes("qppv")
+  ) {
+    return "safety";
+  }
   if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
     return "audit";
   }
   return "mdr";
 }
 
-const PRIMARY_FALLBACK_SCREENS = new Set(["ecrf", "ctms", "ssu"]);
+function primaryFallbackScreens() {
+  return isDemoBuild()
+    ? new Set(["ecrf", "ctms", "ssu"])
+    : new Set(["study", "ctms", "ssu"]);
+}
 
 function redirectToCanvasSection(stage, section) {
   return (to) => {
-    const canvasStore = useStudyCanvasStore();
+    const canvasStudyCode =
+      getActivePinia()?.state.value?.studyCanvas?.studyCode;
     const rawCode =
       (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
       (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
-      canvasStore.studyCode?.trim() ||
+      (typeof canvasStudyCode === "string" && canvasStudyCode.trim()) ||
       "";
     const nextQuery = { ...to.query, stage, section };
     if (
@@ -98,9 +127,10 @@ const routes = [
       // The preferred screen has no .NET backend yet: land on the first
       // role-authorized primary workflow screen that does, or open the study
       // workspace so every authenticated persona lands on a live screen.
+      const fallbackScreens = primaryFallbackScreens();
       const fallback = routes.find(
         (route) =>
-          PRIMARY_FALLBACK_SCREENS.has(route.name) &&
+          fallbackScreens.has(route.name) &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
@@ -234,6 +264,14 @@ const routes = [
     path: "/ecrf",
     name: "ecrf",
     component: () => import("../views/EcrfView.vue"),
+    beforeEnter: async (to) => {
+      if (!isDemoBuild()) {
+        const { buildCanvasLocationFromEcrfQuery } =
+          await import("../canvas/ecrfRedirect");
+        return buildCanvasLocationFromEcrfQuery(to.query);
+      }
+      return true;
+    },
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -682,8 +720,8 @@ router.beforeEach(async (to) => {
     }
 
     // Role-based authorization guard
-    const requiredRoles = to.meta.requiresRole;
-    if (requiredRoles && requiredRoles.length > 0) {
+    const requiredRoles = getRouteRequiredRoles(to);
+    if (requiredRoles.length > 0) {
       const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
       if (!hasRole) {
         console.warn(

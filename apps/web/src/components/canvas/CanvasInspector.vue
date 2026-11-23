@@ -163,50 +163,206 @@
             @explain="openExplain()"
           />
           <div v-else-if="simulationResult" class="simulation-details">
-            <h4 style="margin-top: 4px; margin-bottom: 6px">
-              Schedule findings
-            </h4>
             <div
-              v-if="
-                simulationResult.matrix_gaps &&
-                simulationResult.matrix_gaps.length
-              "
-              id="kernel-simulate-gaps"
-              class="gaps-list"
+              v-if="simulationResult.masked && simulationResult.masked.length"
+              id="kernel-simulate-masked"
+              class="simulation-masked"
+              role="status"
             >
-              <div
-                v-for="(gap, idx) in simulationResult.matrix_gaps"
-                :key="idx"
-                class="gap-card reasoning-modal-s-2"
-              >
-                <div style="font-weight: 600; font-size: 0.85rem">
-                  <span class="gap-badge">{{ gap.severity }}</span>
-                  {{ formatCommandTitle(String(gap.kind || "Finding")) }}
-                  <span v-if="gap.json_pointer_path">
-                    ({{ formatFieldPath(String(gap.json_pointer_path)) }})
-                  </span>
-                </div>
-                <div style="font-size: 0.8rem; margin-top: 2px">
-                  {{ gap.description }}
-                </div>
-                <div
-                  v-if="gap.recommendation"
-                  style="
-                    font-size: 0.75rem;
-                    color: var(--semantic-color-text-secondary);
-                    margin-top: 2px;
-                  "
+              <h4 class="simulation-subheading">Withheld sections</h4>
+              <ul class="simulation-list">
+                <li
+                  v-for="maskedPart in simulationResult.masked"
+                  :key="maskedPart.part"
+                  class="simulation-item"
                 >
-                  <em>Recommended next step: {{ gap.recommendation }}</em>
+                  {{ formatSimulationPart(maskedPart.part) }} withheld ({{
+                    maskReasonWords(maskedPart.reason)
+                  }})
+                </li>
+              </ul>
+            </div>
+
+            <template v-if="!isSimulationPartMasked('structural_diff')">
+              <h4 class="simulation-subheading">Protocol element changes</h4>
+              <ul
+                v-if="
+                  simulationResult.structural_diff &&
+                  simulationResult.structural_diff.length
+                "
+                id="kernel-simulate-diff"
+                class="simulation-list"
+              >
+                <li
+                  v-for="change in simulationResult.structural_diff"
+                  :key="change.element_id"
+                  class="simulation-item"
+                  :data-change="change.change"
+                >
+                  <span class="simulation-change-kind">{{
+                    change.change
+                  }}</span>
+                  {{
+                    change.instance_type
+                      ? plainWords(change.instance_type)
+                      : "element"
+                  }}
+                  <code>{{ change.element_id }}</code>
+                  <span
+                    v-if="change.properties && change.properties.length"
+                    class="simulation-meta"
+                  >
+                    ({{ change.properties.map(formatFieldPath).join(", ") }})
+                  </span>
+                </li>
+              </ul>
+              <p v-else id="kernel-simulate-diff-empty" class="simulation-note">
+                No protocol element changes detected.
+              </p>
+            </template>
+
+            <template v-if="!isSimulationPartMasked('schedule_changes')">
+              <h4 class="simulation-subheading">Visit schedule changes</h4>
+              <ul
+                v-if="
+                  simulationResult.schedule_changes &&
+                  simulationResult.schedule_changes.length
+                "
+                id="kernel-simulate-schedule"
+                class="simulation-list"
+              >
+                <li
+                  v-for="change in simulationResult.schedule_changes"
+                  :key="change.activity_id"
+                  class="simulation-item"
+                  :data-change="change.change"
+                >
+                  <span class="simulation-change-kind">{{
+                    change.change
+                  }}</span>
+                  <code>{{ change.activity_id }}</code>
+                  <span class="simulation-meta numeric">
+                    {{ formatScheduleChange(change) }}
+                  </span>
+                </li>
+              </ul>
+              <p
+                v-else
+                id="kernel-simulate-schedule-empty"
+                class="simulation-note"
+              >
+                No timed visit schedule changes detected.
+              </p>
+            </template>
+
+            <template v-if="!isSimulationPartMasked('dependents')">
+              <h4 class="simulation-subheading">Downstream impact</h4>
+              <div
+                v-if="
+                  simulationResult.dependents &&
+                  simulationResult.dependents.groups &&
+                  simulationResult.dependents.groups.length
+                "
+                id="kernel-simulate-dependents"
+                class="simulation-dependents"
+              >
+                <p
+                  id="kernel-simulate-dependents-total"
+                  class="simulation-total numeric"
+                >
+                  {{ simulationResult.dependents.truncated ? "At least " : ""
+                  }}{{ simulationResult.dependents.total }} dependent
+                  {{
+                    Number(simulationResult.dependents.total) === 1
+                      ? "object"
+                      : "objects"
+                  }}
+                </p>
+                <ul class="simulation-list">
+                  <li
+                    v-for="group in simulationResult.dependents.groups"
+                    :key="group.kind"
+                    class="simulation-group"
+                    :data-kind="group.kind"
+                  >
+                    <details>
+                      <summary>
+                        {{ plainWords(group.kind) }}:
+                        <span class="numeric">{{ group.count }}</span>
+                      </summary>
+                      <ul class="simulation-objects">
+                        <li
+                          v-for="object in group.objects"
+                          :key="object.handle"
+                        >
+                          <span v-if="isMasked(object)" class="noderef-masked">
+                            {{ formatMaskedNode(object.kind, object.mask) }}
+                          </span>
+                          <NodeRefChip
+                            v-else-if="object.ref"
+                            :node-ref="object.ref"
+                          />
+                          <template v-else>{{ object.handle }}</template>
+                        </li>
+                      </ul>
+                    </details>
+                  </li>
+                </ul>
+              </div>
+              <p
+                v-else
+                id="kernel-simulate-dependents-empty"
+                class="simulation-note"
+              >
+                No downstream records affected.
+              </p>
+            </template>
+
+            <template v-if="!isSimulationPartMasked('matrix_gaps')">
+              <h4 class="simulation-subheading">Schedule findings</h4>
+              <div
+                v-if="
+                  simulationResult.matrix_gaps &&
+                  simulationResult.matrix_gaps.length
+                "
+                id="kernel-simulate-gaps"
+                class="gaps-list"
+              >
+                <div
+                  v-for="(gap, idx) in simulationResult.matrix_gaps"
+                  :key="idx"
+                  class="gap-card reasoning-modal-s-2"
+                >
+                  <div style="font-weight: 600; font-size: 0.85rem">
+                    <span class="gap-badge">{{ gap.severity }}</span>
+                    {{ formatCommandTitle(String(gap.kind || "Finding")) }}
+                    <span v-if="gap.json_pointer_path">
+                      ({{ formatFieldPath(String(gap.json_pointer_path)) }})
+                    </span>
+                  </div>
+                  <div style="font-size: 0.8rem; margin-top: 2px">
+                    {{ gap.description }}
+                  </div>
+                  <div
+                    v-if="gap.recommendation"
+                    style="
+                      font-size: 0.75rem;
+                      color: var(--semantic-color-text-secondary);
+                      margin-top: 2px;
+                    "
+                  >
+                    <em>Recommended next step: {{ gap.recommendation }}</em>
+                  </div>
                 </div>
               </div>
-            </div>
-            <p
-              v-else
-              style="font-size: 0.85rem; color: var(--semantic-color-success)"
-            >
-              ✓ No schedule matrix gaps detected.
-            </p>
+              <p
+                v-else
+                id="kernel-simulate-gaps-empty"
+                class="simulation-success"
+              >
+                No schedule matrix gaps detected.
+              </p>
+            </template>
             <details
               v-if="simulationResult.input_hash || simulationResult.result_hash"
               id="kernel-simulate-hashes"
@@ -310,11 +466,104 @@
             <dd class="numeric">
               {{ participant.enrollment_index }}
             </dd>
+            <template v-if="assignedKitDisplay">
+              <dt>Assigned kit</dt>
+              <dd id="inspector-assigned-kit">
+                {{ assignedKitDisplay }}
+              </dd>
+            </template>
+            <template v-if="participant.treatment_group">
+              <dt>Treatment arm</dt>
+              <dd id="inspector-treatment-group">
+                {{ participant.treatment_group }}
+              </dd>
+            </template>
           </dl>
 
-          <ParticipantStateChange
-            v-if="canManageParticipants"
+          <ParticipantSiteAssignment
+            v-if="canManageParticipants && !participant.site_id"
             :participant="participant"
+            :study-code="studyCode"
+          />
+
+          <section
+            v-if="canManageParticipants"
+            id="inspector-consent"
+            class="consent-panel"
+            aria-labelledby="inspector-consent-title"
+          >
+            <div class="consent-header">
+              <h3 id="inspector-consent-title">Informed consent</h3>
+              <button
+                id="btn-toggle-consent-form"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="consentFormOpen = !consentFormOpen"
+              >
+                {{ consentFormOpen ? "Cancel" : "Record consent" }}
+              </button>
+            </div>
+            <form
+              v-if="consentFormOpen"
+              id="inspector-consent-form"
+              class="consent-form"
+              @submit.prevent="submitConsent"
+            >
+              <label for="consent-version-tag">Protocol version</label>
+              <input
+                id="consent-version-tag"
+                v-model="consentVersionTag"
+                type="text"
+                placeholder="1.0"
+              />
+              <label for="consent-version-index">Version number</label>
+              <input
+                id="consent-version-index"
+                v-model.number="consentVersionIndex"
+                type="number"
+                min="1"
+              />
+              <label for="consent-signed-date">Signed date</label>
+              <input
+                id="consent-signed-date"
+                v-model="consentSignedDate"
+                type="date"
+              />
+              <label class="consent-checkbox" for="consent-paper-override">
+                <input
+                  id="consent-paper-override"
+                  v-model="consentPaperOverride"
+                  type="checkbox"
+                />
+                Verified paper ICF override
+              </label>
+              <label for="consent-reason">Reason</label>
+              <textarea
+                id="consent-reason"
+                v-model="consentReason"
+                rows="2"
+                placeholder="Why consent is recorded (recorded in the audit trail)"
+              />
+              <button
+                id="btn-record-consent"
+                type="submit"
+                class="btn btn-primary"
+                :disabled="
+                  consentBusy ||
+                  !consentVersionTag.trim() ||
+                  (!consentSignedDate && !consentPaperOverride) ||
+                  !consentReason.trim()
+                "
+              >
+                Save informed consent
+              </button>
+            </form>
+          </section>
+
+          <ParticipantStateChange
+            v-if="showParticipantStateActions"
+            :participant="participant"
+            :can-manage-participants="Boolean(canManageParticipants)"
           />
 
           <router-link
@@ -334,7 +583,7 @@
             Open in data entry
           </router-link>
           <router-link
-            v-if="handoffLocation"
+            v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
@@ -402,7 +651,7 @@
             Open in data entry
           </router-link>
           <router-link
-            v-if="handoffLocation"
+            v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
@@ -491,8 +740,17 @@ import {
   watch,
 } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type { SubjectSummary } from "../../api/executionApi";
-import { participantStateLabel } from "../../canvas/lifecycle";
+import {
+  participantStateChanges,
+  participantStateLabel,
+} from "../../canvas/lifecycle";
+import { canUnblindParticipant } from "../../canvas/authority";
+import { useAuthStore } from "../../stores/auth";
+import {
+  useStudyCanvasStore,
+  type CanvasParticipant,
+} from "../../stores/studyCanvas";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import KernelActPanel from "./KernelActPanel.vue";
@@ -500,23 +758,30 @@ import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import {
+  isMasked,
   kernelApi,
   type KernelCommand,
   type KernelNode,
+  type KernelPlannedVisit,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
+  type KernelScheduleChange,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import {
+  ensureNodesResolved,
   formatCommandTitle,
   formatFieldPath,
+  formatMaskedNode,
   getNodeDisplay,
+  maskReasonWords,
 } from "../../canvas/nodeResolver";
 import { useAiAssistance } from "../../ai/aiAssistance";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useRovingToolbar } from "../../composables/useRovingToolbar";
-import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { recordParticipantConsentMutation } from "../../stores/studyCanvasParticipantMutations";
+import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
@@ -527,7 +792,7 @@ import AssistPanel from "../ai/AssistPanel.vue";
 const props = defineProps<{
   studyCode: string;
   /** The selected participant, when the canvas has loaded it. */
-  participant: SubjectSummary | null;
+  participant: CanvasParticipant | null;
   /** The canonical node reference of the selection. */
   nodeRef: string;
   /** True when a participant is selected but the canvas has not loaded it. */
@@ -550,6 +815,8 @@ const props = defineProps<{
   handoffLocation?: RouteLocationRaw | null;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
+  /** Whether the caller holds emergency unblinding authority (SubjectAuthority.CanUnblind). */
+  canUnblindParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
   assistPrompt?: string;
 }>();
@@ -560,9 +827,131 @@ const emit = defineEmits<{
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
-const canvasStore = useStudyCanvasStore();
+const authStore = useAuthStore();
+const canvas = useStudyCanvasStore();
 const versionErrorCanI = useKernelCanI();
 const forceExplainOpen = ref(false);
+
+const effectiveCanUnblind = computed(
+  () => props.canUnblindParticipants ?? canUnblindParticipant(authStore)
+);
+const showParticipantStateActions = computed(() => {
+  if (!props.participant) return false;
+  if (props.canManageParticipants) return true;
+  return (
+    effectiveCanUnblind.value &&
+    participantStateChanges(props.participant.status).unblindingWithheld
+  );
+});
+
+const assignedKitDisplay = computed(
+  () =>
+    props.participant?.investigational_product_id ||
+    props.participant?.kit_number ||
+    ""
+);
+
+const consentFormOpen = ref(false);
+const consentVersionTag = ref("1.0");
+const consentVersionIndex = ref(1);
+const consentSignedDate = ref(new Date().toISOString().slice(0, 10));
+const consentPaperOverride = ref(false);
+const consentReason = ref("");
+const consentBusy = ref(false);
+
+watch(
+  () => [props.participant?.id, props.participant?.active_protocol_version],
+  () => {
+    consentFormOpen.value = false;
+    consentVersionTag.value =
+      props.participant?.active_protocol_version || "1.0";
+    consentVersionIndex.value = 1;
+    consentSignedDate.value = new Date().toISOString().slice(0, 10);
+    consentPaperOverride.value = false;
+    consentReason.value = "";
+  },
+  { immediate: true }
+);
+
+async function submitConsent() {
+  if (!props.participant) return;
+  const tag = consentVersionTag.value.trim();
+  const reason = consentReason.value.trim();
+  if (
+    !tag ||
+    (!consentSignedDate.value && !consentPaperOverride.value) ||
+    !reason
+  ) {
+    return;
+  }
+  consentBusy.value = true;
+  try {
+    const ok = await recordParticipantConsentMutation(
+      canvas,
+      props.participant,
+      {
+        versionTag: tag,
+        versionIndex: Math.max(1, Number(consentVersionIndex.value) || 1),
+        icfSignedDate: consentSignedDate.value
+          ? `${consentSignedDate.value}T00:00:00Z`
+          : null,
+        isPaperOverride: consentPaperOverride.value,
+        reason,
+      }
+    );
+    if (ok) {
+      consentFormOpen.value = false;
+      consentReason.value = "";
+    }
+  } finally {
+    consentBusy.value = false;
+  }
+}
+
+const SIMULATION_PART_LABELS: Record<string, string> = {
+  structural_diff: "Protocol element changes",
+  schedule_changes: "Visit schedule changes",
+  dependents: "Downstream impact",
+  matrix_gaps: "Schedule findings",
+};
+
+function plainWords(name: string): string {
+  return name
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase();
+}
+
+function formatSimulationPart(part: string): string {
+  return SIMULATION_PART_LABELS[part] ?? formatCommandTitle(part);
+}
+
+function isSimulationPartMasked(part: string): boolean {
+  return Boolean(
+    simulationResult.value?.masked?.some((entry) => entry.part === part)
+  );
+}
+
+function formatPlannedVisit(visit: KernelPlannedVisit): string {
+  const window =
+    visit.window_before || visit.window_after
+      ? ` (-${visit.window_before}/+${visit.window_after}d)`
+      : "";
+  return `Day ${visit.study_day}${window} in ${visit.epoch_id}`;
+}
+
+function formatScheduleChange(change: KernelScheduleChange): string {
+  if (change.before && change.after) {
+    return `${formatPlannedVisit(change.before)} -> ${formatPlannedVisit(change.after)}`;
+  }
+  if (change.after) {
+    return formatPlannedVisit(change.after);
+  }
+  if (change.before) {
+    return `was ${formatPlannedVisit(change.before)}`;
+  }
+  return "";
+}
 
 const genericDisplay = computed(() => {
   if (!props.genericNodeRef || props.missing) return null;
@@ -769,6 +1158,13 @@ async function runSimulation() {
     });
     if (request !== simulationRequest) return;
     simulationResult.value = result;
+    if (result.dependents?.groups?.length) {
+      ensureNodesResolved(
+        result.dependents.groups.flatMap((group) =>
+          group.objects.filter((obj) => !isMasked(obj)).map((obj) => obj.ref)
+        )
+      );
+    }
   } catch (e: unknown) {
     if (request !== simulationRequest) return;
     simulationError.value = e instanceof Error ? e.message : String(e);
@@ -854,7 +1250,7 @@ function openExplain(options?: {
 
 let unregisterExplain: (() => void) | null = null;
 onMounted(() => {
-  unregisterExplain = canvasStore.registerExplainCoordinator((options) =>
+  unregisterExplain = canvas.registerExplainCoordinator((options) =>
     openExplain(options)
   );
 });
@@ -942,6 +1338,81 @@ watch(aiEnabled, (on) => {
   padding: 6px 8px;
   margin-bottom: 8px;
   background: var(--semantic-color-warning-bg-soft);
+}
+
+.simulation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simulation-subheading {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.simulation-list,
+.simulation-objects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+.simulation-item {
+  overflow-wrap: anywhere;
+}
+
+.simulation-change-kind {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.simulation-meta,
+.simulation-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--neutral-dark);
+}
+
+.simulation-total {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.simulation-dependents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.simulation-group summary {
+  min-height: var(--semantic-control-target-min, 24px);
+  padding-block: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.simulation-group .simulation-objects {
+  margin-top: 4px;
+}
+
+.simulation-masked {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--border);
+  background: var(--neutral-light);
+}
+
+.simulation-success {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-success);
 }
 
 .inspector {
@@ -1150,5 +1621,47 @@ watch(aiEnabled, (on) => {
 
 .sdv button {
   align-self: flex-start;
+}
+
+.consent-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.consent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.consent-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.consent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.consent-form input[type="text"],
+.consent-form input[type="number"],
+.consent-form input[type="date"],
+.consent-form textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.consent-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
 }
 </style>

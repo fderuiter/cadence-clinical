@@ -2191,8 +2191,8 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background-color: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  background-color: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .badge-gxp {

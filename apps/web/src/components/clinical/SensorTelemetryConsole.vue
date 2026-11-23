@@ -1333,7 +1333,7 @@ onMounted(() => {
   background: var(--semantic-color-success-bg-soft);
 }
 .bg-purple {
-  background: var(--semantic-color-ai-bg);
+  background: var(--semantic-color-purple-bg);
 }
 .bg-red {
   background: var(--semantic-color-error-bg-soft);
@@ -1474,7 +1474,7 @@ onMounted(() => {
   background: var(--semantic-color-warning-action);
 }
 .tar2 {
-  background: var(--semantic-color-ai);
+  background: var(--semantic-color-error-dark);
 }
 
 .tir-legend {
@@ -1509,7 +1509,7 @@ onMounted(() => {
   background: var(--semantic-color-warning-action);
 }
 .dot-tar2 {
-  background: var(--semantic-color-ai);
+  background: var(--semantic-color-error-dark);
 }
 
 .metric-subgrid {
@@ -1607,7 +1607,7 @@ onMounted(() => {
   color: var(--semantic-color-primary);
 }
 .badge-stream {
-  background: var(--semantic-color-ai-bg);
+  background: var(--semantic-color-purple-bg);
   color: var(--semantic-color-purple-text);
 }
 .badge-success {
@@ -1688,8 +1688,8 @@ onMounted(() => {
   color: var(--semantic-color-text);
 }
 .btn-accent {
-  background: var(--semantic-color-ai);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 .btn-danger {
   background: var(--semantic-color-error);

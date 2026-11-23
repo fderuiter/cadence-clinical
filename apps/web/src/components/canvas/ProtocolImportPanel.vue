@@ -72,7 +72,7 @@
             type="button"
             class="btn btn-link"
             :disabled="importing"
-            @click="clearSelectedFile"
+            @click="onClearFileClick"
           >
             Clear file
           </button>
@@ -194,7 +194,11 @@
             Version {{ draftSummary.version.number }} ·
             <span class="status-pill">{{ draftSummary.version.status }}</span>
           </span>
-          <h3 :id="`${idPrefix}-summary-title`" class="summary-title">
+          <h3
+            :id="`${idPrefix}-summary-title`"
+            class="summary-title"
+            tabindex="-1"
+          >
             {{ draftSummary.title }}
           </h3>
         </div>
@@ -309,6 +313,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import {
   describeKernelError,
   kernelApi,
@@ -399,6 +404,11 @@ function clearSelectedFile() {
   if (fileInputRef.value) {
     fileInputRef.value.value = "";
   }
+}
+
+function onClearFileClick() {
+  clearSelectedFile();
+  void handoffFocus(`#${props.idPrefix}-choose-file`);
 }
 
 function onFileSelected(event: Event) {
@@ -520,6 +530,10 @@ async function submitImport() {
     replaceForms.value = false;
     pendingIdempotencyKey.value = "";
     emit("imported", summary);
+    void handoffFocus([
+      `#${props.idPrefix}-summary-title`,
+      `#${props.idPrefix}-choose-file`,
+    ]);
   } catch (err) {
     errorMessage.value = describeKernelError(err);
   } finally {

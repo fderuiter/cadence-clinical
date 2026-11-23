@@ -6,10 +6,13 @@
     :title="store.activeRequest.title"
     :size="store.activeRequest.size || 'md'"
     role="alertdialog"
+    :aria-describedby="
+      store.activeRequest.message ? 'confirm-dialog-message' : undefined
+    "
     :initial-focus="
       store.activeRequest.mode === 'prompt'
         ? '#confirm-dialog-prompt-input'
-        : '.btn-confirm'
+        : '.btn-cancel'
     "
     @close="handleCancel"
   >
@@ -29,20 +32,27 @@
           v-else-if="store.activeRequest.variant === 'warning'"
           class="dialog-icon icon-warning"
         >
-          <ClinicalIcon name="zap" :size="20" />
+          <ClinicalIcon name="alert-circle" :size="20" />
         </span>
         <span v-else class="dialog-icon icon-info">
           <ClinicalIcon name="info" :size="20" />
         </span>
       </div>
       <div class="confirmation-body-stack">
-        <p v-if="store.activeRequest.message" class="confirmation-message">
+        <p
+          v-if="store.activeRequest.message"
+          id="confirm-dialog-message"
+          class="confirmation-message"
+        >
           {{ store.activeRequest.message }}
         </p>
 
-        <div
+        <form
           v-if="store.activeRequest.mode === 'prompt'"
+          id="confirm-dialog-prompt-form"
           class="confirmation-prompt-field"
+          novalidate
+          @submit.prevent="handleConfirm"
         >
           <label
             for="confirm-dialog-prompt-input"
@@ -52,6 +62,7 @@
           </label>
           <input
             id="confirm-dialog-prompt-input"
+            ref="promptInputRef"
             type="text"
             class="confirmation-prompt-input"
             :value="store.activeRequest.inputValue"
@@ -75,7 +86,7 @@
           >
             {{ store.activeRequest.validationError }}
           </p>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -88,10 +99,15 @@
         {{ store.activeRequest.cancelLabel }}
       </button>
       <button
-        type="button"
+        :type="store.activeRequest.mode === 'prompt' ? 'submit' : 'button'"
+        :form="
+          store.activeRequest.mode === 'prompt'
+            ? 'confirm-dialog-prompt-form'
+            : undefined
+        "
         :class="['btn', `btn-${store.activeRequest.variant}`]"
         class="btn-confirm"
-        @click="handleConfirm"
+        @click.prevent="handleConfirm"
       >
         {{ store.activeRequest.confirmLabel }}
       </button>
@@ -100,19 +116,26 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { ClinicalIcon, ClinicalModal } from "ui";
 import { useConfirmStore } from "../stores/confirm.js";
 
 const store = useConfirmStore();
 const hostContentRef = ref(null);
+const promptInputRef = ref(null);
 
 const handlePromptInput = (event) => {
   store.setInputValue(event.target.value);
 };
 
 const handleConfirm = () => {
-  store.resolveConfirm();
+  const isPrompt = store.activeRequest?.mode === "prompt";
+  const resolved = store.resolveConfirm();
+  if (!resolved && isPrompt) {
+    nextTick(() => {
+      promptInputRef.value?.focus?.();
+    });
+  }
 };
 
 const handleCancel = () => {
@@ -185,7 +208,7 @@ const handleCancel = () => {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: 1rem;
   font-family: var(--semantic-font-family, sans-serif);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);

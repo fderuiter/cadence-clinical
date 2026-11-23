@@ -13,7 +13,7 @@ import {
 const props = defineProps({
   name: {
     type: String,
-    required: true,
+    default: "info",
   },
   size: {
     type: [Number, String],

@@ -44,6 +44,9 @@ public sealed record BatchValidationRequest(
 
     /// <summary>The target agency.</summary>
     public string? Agency { get; init; }
+
+    /// <summary>Loaded rule packs with canonical Metadata Registry keys for <see cref="ValidationFindingId"/> parity.</summary>
+    public IReadOnlyList<LoadedRulePack>? LoadedRulePacks { get; init; }
 }
 
 /// <summary>

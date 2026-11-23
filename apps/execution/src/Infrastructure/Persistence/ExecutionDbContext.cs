@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
@@ -59,6 +60,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
 
     public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
+
+    public DbSet<SiteActivationPeriod> SiteActivationPeriods => Set<SiteActivationPeriod>();
 
 
     public DbSet<StagedAdverseEventReview> StagedAdverseEventReviews => Set<StagedAdverseEventReview>();
@@ -115,6 +118,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new RandomizationListSlotConfiguration());
         modelBuilder.ApplyConfiguration(new RandomizationAllocationConfiguration());
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
+        modelBuilder.ApplyConfiguration(new SiteActivationPeriodConfiguration(this));
         modelBuilder.ApplyConfiguration(new StagedAdverseEventReviewConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
         modelBuilder.ApplyConfiguration(new CecChairAdjudicationConfiguration());
@@ -134,6 +138,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
+        AuditLogEntryConfiguration.ConfigureChainIndexes(modelBuilder.Entity<AuditLogEntry>());
 
         modelBuilder.AddTransactionalOutboxEntities();
 

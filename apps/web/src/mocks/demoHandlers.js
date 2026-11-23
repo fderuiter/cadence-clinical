@@ -1,6 +1,12 @@
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
 import { demoNowIso, demoNowMs, nextDemoStep } from "../utils/demoMode.js";
+import {
+  evaluateCapabilityDecision,
+  evaluateDemoRequestPolicy,
+  evaluateNodeCommands,
+  resolveDemoCaller,
+} from "./demoPolicy.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
 
@@ -39,7 +45,7 @@ async function readJsonBody(request) {
 }
 
 export function createWebDemoHandlers(store = webDemoStore) {
-  const etmfDocuments = [
+  const createInitialEtmfDocuments = () => [
     {
       id: "doc-demo-01",
       filename: "DEMO-01-Protocol-v2.0.pdf",
@@ -53,7 +59,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       uploaded_at: "2026-07-01T10:00:00Z", // deid-ignore
     },
   ];
-  const etmfAuditLogs = [
+  const createInitialEtmfAuditLogs = () => [
     {
       id: "elog-seed-01",
       timestamp: "2026-07-01T10:00:00Z", // deid-ignore
@@ -67,7 +73,27 @@ export function createWebDemoHandlers(store = webDemoStore) {
       reason_for_change: "Initial protocol eTMF baseline registration",
     },
   ];
+  const etmfDocuments = createInitialEtmfDocuments();
+  const etmfAuditLogs = createInitialEtmfAuditLogs();
   let demoLocks = Array.isArray(store.locks) ? [...store.locks] : [];
+  let resetSoaState = () => {};
+
+  if (store && typeof store.onReset === "function") {
+    store.onReset(() => {
+      etmfDocuments.splice(
+        0,
+        etmfDocuments.length,
+        ...createInitialEtmfDocuments()
+      );
+      etmfAuditLogs.splice(
+        0,
+        etmfAuditLogs.length,
+        ...createInitialEtmfAuditLogs()
+      );
+      demoLocks = Array.isArray(store.locks) ? [...store.locks] : [];
+      resetSoaState();
+    });
+  }
 
   return [
     // Health & identity
@@ -84,6 +110,16 @@ export function createWebDemoHandlers(store = webDemoStore) {
         version: "1.0.0",
       })
     ),
+    http.all("*/api/*", async ({ request }) => {
+      const denied = await evaluateDemoRequestPolicy(request, store);
+      if (denied) {
+        return HttpResponse.json(denied.problem, {
+          status: denied.status,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return undefined;
+    }),
     http.post("*/api/v1/auth/signature-verification", async ({ request }) => {
       const body = await readJsonBody(request);
       if (
@@ -294,29 +330,91 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
     http.get("*/api/v1/kernel/authorization/can-i", ({ request }) => {
       const url = new URL(request.url);
-      const capability = url.searchParams.get("capability") || "kernel.read";
-      const resource = url.searchParams.get("resource") || "study:demo";
-      return HttpResponse.json(store.buildDecision(capability, resource, true));
+      const capability =
+        url.searchParams.get("capability") ||
+        url.searchParams.get("action") ||
+        "kernel.read";
+      const resource =
+        url.searchParams.get("resource") ||
+        url.searchParams.get("scope") ||
+        "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
+    }),
+    http.get("*/api/v1/kernel/capabilities/can-i", ({ request }) => {
+      const url = new URL(request.url);
+      const capability =
+        url.searchParams.get("capability") ||
+        url.searchParams.get("action") ||
+        "kernel.read";
+      const resource =
+        url.searchParams.get("resource") ||
+        url.searchParams.get("scope") ||
+        "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
     }),
     http.post("*/api/v1/kernel/authorization/can-i", async ({ request }) => {
       const body = await readJsonBody(request);
-      const capability = body?.capability || "kernel.read";
-      const resource = body?.resource || "study:demo";
-      return HttpResponse.json(store.buildDecision(capability, resource, true));
+      const capability = body?.capability || body?.action || "kernel.read";
+      const resource = body?.resource || body?.scope || "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
     }),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/path", ({ params }) =>
+    http.post("*/api/v1/kernel/capabilities/can-i", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const capability = body?.capability || body?.action || "kernel.read";
+      const resource = body?.resource || body?.scope || "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
+    }),
+    http.get("*/api/v1/kernel/nodes/:nodeRef/path", ({ params, request }) =>
       HttpResponse.json(
-        store.getZoomPath(decodeURIComponent(String(params.nodeRef)))
+        store.getZoomPath(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/children", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef/children", ({ params, request }) =>
       HttpResponse.json(
-        store.getChildren(decodeURIComponent(String(params.nodeRef)))
+        store.getChildren(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/commands", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef/commands", ({ params, request }) =>
       HttpResponse.json(
-        store.getCommands(decodeURIComponent(String(params.nodeRef)))
+        evaluateNodeCommands(
+          resolveDemoCaller(request),
+          decodeURIComponent(String(params.nodeRef)),
+          store
+        )
       )
     ),
     http.get(
@@ -327,7 +425,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
           store.getLineage(
             decodeURIComponent(String(params.nodeRef)),
             url.searchParams.get("direction") || "upstream",
-            Number(url.searchParams.get("depth") || 3)
+            Number(url.searchParams.get("depth") || 3),
+            resolveDemoCaller(request)
           )
         );
       }
@@ -339,14 +438,18 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(
           store.getDependents(
             decodeURIComponent(String(params.nodeRef)),
-            Number(url.searchParams.get("depth") || 3)
+            Number(url.searchParams.get("depth") || 3),
+            resolveDemoCaller(request)
           )
         );
       }
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params, request }) =>
       HttpResponse.json(
-        store.getNode(decodeURIComponent(String(params.nodeRef)))
+        store.getNode(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
 
@@ -377,7 +480,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/organizations", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createOrganization(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createOrganization(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -391,7 +498,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/sites", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createSite(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createSite(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -399,27 +510,42 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
       return HttpResponse.json(result.data, { status: 201 });
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) =>
-      HttpResponse.json(
-        store.listStudySites(decodeURIComponent(String(params.studyRef)))
-      )
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) => {
+      const result = store.listStudySites(
+        decodeURIComponent(String(params.studyRef))
+      );
+      if (Array.isArray(result)) {
+        return HttpResponse.json(result);
+      }
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.post(
       "*/api/v1/kernel/studies/:studyRef/sites",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         const reason = readRequiredReasonHeader(request);
+        const idempotencyKey =
+          request.headers.get("Idempotency-Key") ||
+          request.headers.get("idempotency-key") ||
+          "";
         const result = store.linkSiteToStudy(
           decodeURIComponent(String(params.studyRef)),
           body,
-          { reason }
+          { reason, idempotencyKey }
         );
         if (result.error) {
           return HttpResponse.json(result.error.problem, {
             status: result.error.status,
           });
         }
-        return HttpResponse.json(result.data, { status: 201 });
+        return HttpResponse.json(result.data, {
+          status: result.replayed ? 200 : 201,
+        });
       }
     ),
     http.get("*/api/v1/kernel/protocol-templates", () =>
@@ -618,6 +744,33 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(updated);
       }
     ),
+    http.get("*/api/v1/kernel/work-queues", () => {
+      return HttpResponse.json({
+        queues: [],
+      });
+    }),
+    http.post("*/api/v1/kernel/work-queues", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          definition:
+            "work_queue_definition:01960000-0000-7000-8000-000000000900",
+          code: body?.code || "custom_queue",
+          version: 1,
+          title: body?.title || "Custom Queue",
+          capability: body?.capability || "observation.verify",
+          verb_class: body?.verb_class || "Execute",
+          source: body?.source || "observation.awaiting_verification",
+        },
+        { status: 201 }
+      );
+    }),
+    http.get("*/api/v1/kernel/studies/:studyRef/validation/findings", () => {
+      return HttpResponse.json({
+        total: 0,
+        findings: [],
+      });
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
       ({ params, request }) => {
@@ -751,16 +904,22 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const targetRef =
         body?.stored_version_ref || body?.base_version_ref || DEFAULT_STUDY_REF;
       return HttpResponse.json({
-        scope: targetRef,
+        scope: DEFAULT_STUDY_REF,
         as_of: { valid_at: now, known_at: now },
-        candidate: body?.stored_version_ref
-          ? { source: "stored", version_ref: body.stored_version_ref }
-          : {
-              title: "Candidate Protocol Simulation",
-              content_hash: "sha256-demo-sim-cand",
-              element_count: 14,
-            },
-        engine_versions: [{ component: "demo-simulator", version: "1.0.0" }],
+        candidate: {
+          kind: "ProtocolVersion",
+          version: body?.stored_version_ref || null,
+          base_version: body?.base_version_ref || null,
+          content_hash: "sha256:demo-sim-cand",
+          base_content_hash: body?.base_version_ref
+            ? "sha256:demo-sim-base"
+            : null,
+        },
+        engine_versions: [
+          { name: "protocol.expected_schedule", version: "1" },
+          { name: "protocol.matrix_gap", version: "1" },
+          { name: "protocol.structural_diff", version: "1" },
+        ],
         input_hash: "sha256-demo-sim-in",
         result_hash: "sha256-demo-sim-out",
         structural_diff: [],
@@ -875,9 +1034,12 @@ export function createWebDemoHandlers(store = webDemoStore) {
         })
       );
     }),
-    http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
+    http.get("*/api/v1/execution/subjects/:subjectId", ({ params, request }) =>
       HttpResponse.json(
-        store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
+        store.getSubjectDetail(
+          decodeURIComponent(String(params.subjectId)),
+          resolveDemoCaller(request)
+        )
       )
     ),
     http.patch(
@@ -1062,7 +1224,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
             site_id: body?.site_id || "SITE-101",
             kit_number: kit.kit_number || "KIT-DEMO-99",
             lot_number: kit.lot_number || "LOT-DEMO",
-            status: "AVAILABLE",
+            status:
+              kit.status === "AVAILABLE" || !kit.status
+                ? "ACTIVE_AT_SITE"
+                : kit.status,
+            treatment_arm: kit.treatment_arm || null,
             expiration_date: kit.expiration_date || null,
           });
         }
@@ -1132,14 +1298,124 @@ export function createWebDemoHandlers(store = webDemoStore) {
           id: "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5",
           study_id: studyId,
           version: 1,
-          method: "PERMUTED_BLOCK",
+          method: "permuted_block",
           status: "APPROVED",
+          arms: { PLACEBO: 1, ACTIVE: 1 },
+          stratification_factors: {},
+          block_sizes: [4],
+          slots_per_stratum: 8,
+          preferred_arm_probability: 0,
           requires_kit: true,
-          approved_by: "usr-stat-01",
-          approved_at: "2026-07-10T12:00:00Z",
+          list_size: 8,
+          configuration_hash: "demo-hash",
+          drafted_by: "stat.author",
+          drafted_at: demoNowIso(),
+          approved_by: "stat.approver",
+          approved_at: demoNowIso(),
+          retired_at: null,
         },
       ]);
     }),
+    http.post(
+      "*/api/v1/execution/randomization/schemes",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(
+          {
+            id: `b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6`,
+            study_id: body?.study_id || "DEMO-01",
+            version: 2,
+            method: body?.method || "permuted_block",
+            status: "DRAFT",
+            arms: body?.arms || { PLACEBO: 1, ACTIVE: 1 },
+            stratification_factors: body?.stratification_factors || {},
+            block_sizes: body?.block_sizes || [4],
+            slots_per_stratum: body?.slots_per_stratum || 8,
+            preferred_arm_probability: body?.preferred_arm_probability || 0,
+            requires_kit: Boolean(body?.requires_kit ?? true),
+            list_size: 0,
+            configuration_hash: "demo-draft-hash",
+            drafted_by: "stat.author",
+            drafted_at: demoNowIso(),
+            approved_by: null,
+            approved_at: null,
+            retired_at: null,
+          },
+          { status: 201 }
+        );
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/randomization/schemes/:schemeId/approve",
+      ({ params }) =>
+        HttpResponse.json({
+          id: String(params.schemeId),
+          study_id: "DEMO-01",
+          version: 2,
+          method: "permuted_block",
+          status: "APPROVED",
+          arms: { PLACEBO: 1, ACTIVE: 1 },
+          stratification_factors: {},
+          block_sizes: [4],
+          slots_per_stratum: 8,
+          preferred_arm_probability: 0,
+          requires_kit: true,
+          list_size: 8,
+          configuration_hash: "demo-approved-hash",
+          drafted_by: "stat.author",
+          drafted_at: demoNowIso(),
+          approved_by: "stat.approver",
+          approved_at: demoNowIso(),
+          retired_at: null,
+        })
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/consent",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json({
+          id: `consent-${demoNowMs()}`,
+          subject_id: String(params.subjectId),
+          study_id: body?.protocol_version?.study_id || "DEMO-01",
+          version_tag: body?.protocol_version?.version_tag || "1.0",
+          version_index: body?.protocol_version?.version_index || 1,
+          icf_signed: Boolean(body?.icf_signed ?? true),
+          icf_signed_date: body?.icf_signed_date || demoNowIso(),
+          requires_reconsent: Boolean(body?.requires_reconsent ?? false),
+          is_paper_override: Boolean(body?.is_paper_override ?? false),
+          version: 1,
+        });
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/randomize",
+      ({ params }) => {
+        const subjectKey = decodeURIComponent(String(params.subjectId));
+        const updated = store.updateSubjectState(subjectKey, {
+          status: "RANDOMIZED",
+        });
+        const found = store.state.subjects.find(
+          (s) =>
+            s.id === updated.id ||
+            s.subject_id.toUpperCase() === subjectKey.toUpperCase()
+        );
+        if (found) {
+          found.treatment_group = null;
+          found.unblinded_treatment_group = "ACTIVE";
+          found.investigational_product_id = null;
+        }
+        return HttpResponse.json({
+          randomization_id: `rand-${demoNowMs()}`,
+          subject_id: updated?.subject_id || subjectKey,
+          study_id: updated?.study_id || "DEMO-01",
+          scheme_version: 1,
+          stratum_key: "UNSTRATIFIED",
+          kit_number: "KIT-1001",
+          status: "RANDOMIZED",
+          randomized_at: demoNowIso(),
+        });
+      }
+    ),
     http.get(
       "*/api/v1/execution/rtsm/cgt/chain-of-custody/:studyId/:subjectId",
       ({ params }) =>
@@ -2193,6 +2469,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           category: "TRANSIT",
           confidence_score: 0.95,
           raw_text: rawText,
+          ocr_token: `demo_ocr_token_${Date.now()}`,
           warning: null,
         });
       }
@@ -2200,18 +2477,31 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/payments/participant/expenses", async ({ request }) => {
       const body = await readJsonBody(request);
       const gross = Number(body?.gross_amount ?? body?.grossAmount ?? 0);
-      const conf = Number(body?.ocr_confidence ?? body?.ocrConfidence ?? 0);
-      const autoApproved = gross > 0 && gross <= 100 && conf >= 0.9;
+      const category = String(body?.category || "TRANSIT").toUpperCase();
+      const isMeal = Boolean(
+        body?.is_meal_allowance ?? body?.isMealAllowance ?? category === "MEAL"
+      );
+      const taxDeduction =
+        isMeal && gross > 75 ? Number(((gross - 75) * 0.15).toFixed(2)) : 0;
+      const netAmount = Number((gross - taxDeduction).toFixed(2));
+      const hasServerScan = Boolean(
+        body?.ocr_token ||
+        body?.ocrToken ||
+        body?.receipt_image_base64 ||
+        body?.receiptImageBase64
+      );
+      const autoApproved =
+        gross > 0 && gross <= 100 && (!isMeal || gross <= 75) && hasServerScan;
       const created = {
         id: `exp-${Date.now()}`,
         subject_id: body?.subject_id || body?.subjectId || "SUBJ-1001",
         expense_date: body?.expense_date || body?.expenseDate || "2026-08-01", // deid-ignore
-        category: body?.category || "TRANSIT",
+        category,
         merchant_name:
           body?.merchant_name || body?.merchantName || "Demo Receipt",
         gross_amount: gross,
-        tax_deduction: 0,
-        net_amount: gross,
+        tax_deduction: taxDeduction,
+        net_amount: netAmount,
         status: autoApproved ? "APPROVED" : "PENDING_REVIEW",
         auto_approved: autoApproved,
         receipt_image_name:
@@ -2299,7 +2589,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
 
     // USDM Interactive SoA Builder Mutations (stateful in-memory demo projection)
     ...(() => {
-      const soaState = {
+      const createInitialSoaState = () => ({
         arms: [
           { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
           { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
@@ -2383,6 +2673,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
             ],
           },
         ],
+      });
+
+      let soaState = createInitialSoaState();
+      resetSoaState = () => {
+        soaState = createInitialSoaState();
       };
 
       const upsertArm = (armId, props) => {

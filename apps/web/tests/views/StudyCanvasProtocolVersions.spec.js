@@ -4,8 +4,19 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
 import { kernelApi } from "../../src/api/kernelApi";
+import { kernelGovernanceApi } from "../../src/api/kernelGovernanceApi";
+import { etmfService } from "../../src/api/etmf";
 import { ApiError } from "../../src/api/client";
+import { useAuthStore } from "../../src/stores/auth";
+import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
+
+vi.mock("../../src/api/etmf", () => ({
+  etmfService: {
+    verifySignature: vi.fn(),
+    signDocument: vi.fn(),
+  },
+}));
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
@@ -27,8 +38,30 @@ vi.mock("../../src/api/kernelApi", () => ({
     dependents: vi.fn(),
     amendmentImpact: vi.fn(),
     simulate: vi.fn(),
+    listProtocolTemplates: vi.fn(async () => []),
+    getProtocolDesignSummary: vi.fn(async () => null),
   },
   isMasked: (object) => object.mask !== null,
+  describeKernelError: (err) => err?.message ?? String(err),
+}));
+
+vi.mock("../../src/api/kernelGovernanceApi", () => ({
+  kernelGovernanceApi: {
+    submitProtocolVersionForReview: vi.fn(),
+    returnProtocolVersionToDraft: vi.fn(),
+    approveProtocolVersion: vi.fn(),
+    listStudyArtifacts: vi.fn(async () => []),
+    registerStudyArtifact: vi.fn(),
+    listStudyEffectivities: vi.fn(async () => []),
+    declareProtocolEffectivity: vi.fn(),
+    changeEffectivityStatus: vi.fn(),
+    listStudySites: vi.fn(async () => []),
+  },
+  PROTOCOL_APPROVE_SEMANTIC_ACTION: "kernel.protocol_version.approve",
+  protocolVersionApproveAction: (versionRef) => {
+    const clean = String(versionRef ?? "").split("@")[0];
+    return `/api/v1/kernel/protocol-versions/${clean}/approve`;
+  },
 }));
 
 const STUDY = "study:0192f3c4-5e6a-7b8c-9d0e-0000000000a1@2";
@@ -99,6 +132,12 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     });
     for (const method of Object.values(kernelApi))
       vi.mocked(method).mockReset();
+    vi.mocked(kernelApi.listProposals).mockResolvedValue([]);
+    vi.mocked(kernelApi.listProtocolTemplates).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
+    vi.mocked(etmfService.verifySignature).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([
       {
         ref: STUDY,
@@ -207,6 +246,67 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
           properties: ["/window/upper"],
         },
       ],
+      schedule: {
+        directives: [
+          {
+            kind: "VisitMoved",
+            element_id: "visit.week12",
+            impacted_elements: ["visit.week12"],
+            impacted_concepts: [
+              "concept:0192f3c4-5e6a-7b8c-9d0e-0000000000f1@1",
+            ],
+            before: {
+              epoch_id: "ep.treatment",
+              study_day: 84,
+              window_before: 3,
+              window_after: 3,
+              locations: ["Site"],
+            },
+            after: {
+              epoch_id: "ep.treatment",
+              study_day: 91,
+              window_before: 3,
+              window_after: 5,
+              locations: ["Site"],
+            },
+            frequency_before: null,
+            frequency_after: null,
+            collected_at_added: [],
+            collected_at_removed: [],
+          },
+          {
+            kind: "ActivityFrequencyChanged",
+            element_id: "act.pk",
+            impacted_elements: ["act.pk", "cs.pk"],
+            impacted_concepts: [
+              "concept:0192f3c4-5e6a-7b8c-9d0e-0000000000f1@1",
+            ],
+            before: null,
+            after: null,
+            frequency_before: 4,
+            frequency_after: 5,
+            collected_at_added: ["cs.pk"],
+            collected_at_removed: [],
+          },
+          {
+            kind: "CriterionChanged",
+            element_id: "ic.sbp",
+            impacted_elements: ["ic.sbp"],
+            impacted_concepts: [],
+            before: null,
+            after: null,
+            frequency_before: null,
+            frequency_after: null,
+            collected_at_added: [],
+            collected_at_removed: [],
+          },
+        ],
+        impacted_elements: ["visit.week12", "act.pk", "cs.pk", "ic.sbp"],
+        undeclared: ["visit.week12"],
+        impacted_concepts: ["concept:0192f3c4-5e6a-7b8c-9d0e-0000000000f1@1"],
+        changes_schedule: true,
+        changes_eligibility: true,
+      },
       dependents: {
         start: V1,
         depth: 10,
@@ -259,6 +359,30 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     expect(wrapper.find("#kernel-impact").text()).toContain(
       "Hidden participant (not permitted)"
     );
+    expect(wrapper.find("#kernel-amendment-schedule-flags").text()).toContain(
+      "Changes on-study visit schedule"
+    );
+    expect(wrapper.find("#kernel-amendment-schedule-flags").text()).toContain(
+      "Changes entry eligibility"
+    );
+    expect(wrapper.find("#kernel-amendment-directives").text()).toContain(
+      "visit.week12"
+    );
+    expect(wrapper.find("#kernel-amendment-directives").text()).toContain(
+      "Day 84 (-3/+3d) in ep.treatment, Site -> Day 91 (-3/+5d) in ep.treatment, Site"
+    );
+    expect(wrapper.find("#kernel-amendment-directives").text()).toContain(
+      "4 -> 5 visits; +cs.pk"
+    );
+    expect(
+      wrapper
+        .find("#kernel-amendment-directives")
+        .findComponent({ name: "NodeRefChip" })
+        .exists()
+    ).toBe(true);
+    expect(wrapper.find("#kernel-amendment-undeclared").text()).toContain(
+      "visit.week12"
+    );
   });
 
   it("uses the plain dependents read for a study's first version, which amends nothing", async () => {
@@ -310,22 +434,96 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     );
   });
 
-  it("enables Simulate on protocol versions, renders hash seals and matrix gap findings, and resets on version switch", async () => {
+  it("enables Simulate on protocol versions, renders structural diffs, schedule changes, dependents, hash seals, and matrix gap findings, and resets on version switch", async () => {
+    const PARTICIPANT_REF =
+      "participant:0192f3c4-5e6a-7b8c-9d0e-0000000000d9@1";
     vi.mocked(kernelApi.simulate).mockResolvedValue({
       scope: STUDY,
       as_of: {
         valid_at: "2027-03-14T10:00:00Z",
         known_at: "2027-03-14T10:00:00Z",
       },
-      candidate: { source: "stored", version_ref: V2 },
-      engine_versions: [],
+      candidate: {
+        kind: "ProtocolVersion",
+        version: V2,
+        base_version: V1,
+        content_hash: "sha256:cand-v2",
+        base_content_hash: "sha256:base-v1",
+      },
+      engine_versions: [
+        { name: "lineage.dependents", version: "2" },
+        { name: "protocol.expected_schedule", version: "1" },
+        { name: "protocol.matrix_gap", version: "1" },
+        { name: "protocol.structural_diff", version: "1" },
+      ],
       input_hash: "sha256:input-v2",
       result_hash: "sha256:result-v2",
-      structural_diff: [],
-      schedule_changes: [],
+      structural_diff: [
+        {
+          element_id: "arm.A",
+          instance_type: "StudyArm",
+          change: "Changed",
+          properties: ["/name"],
+        },
+      ],
+      schedule_changes: [
+        {
+          activity_id: "act.week4",
+          change: "Changed",
+          before: {
+            activity_id: "act.week4",
+            activity_name: "Week 4",
+            epoch_id: "ep.treatment",
+            epoch_order: 2,
+            study_day: 28,
+            window_before: 2,
+            window_after: 2,
+          },
+          after: {
+            activity_id: "act.week4",
+            activity_name: "Week 4",
+            epoch_id: "ep.treatment",
+            epoch_order: 2,
+            study_day: 29,
+            window_before: 2,
+            window_after: 3,
+          },
+        },
+      ],
       masked: [],
+      dependents: {
+        start: V1,
+        depth: 10,
+        valid_at: "2027-03-14T10:00:00Z",
+        known_at: "2027-03-14T10:00:00Z",
+        groups: [
+          {
+            kind: "participant",
+            count: 2,
+            objects: [
+              {
+                handle: PARTICIPANT_REF,
+                kind: "participant",
+                ref: PARTICIPANT_REF,
+                mask: null,
+                distance: 1,
+              },
+              {
+                handle: "masked:1",
+                kind: "participant",
+                ref: null,
+                mask: "Blinded",
+                distance: 1,
+              },
+            ],
+          },
+        ],
+        total: 2,
+        truncated: false,
+      },
       matrix_gaps: [
         {
+          element_id: "act.pk",
           kind: "UnboundCollection",
           severity: "Warning",
           json_pointer_path: "/schedule/activities/2",
@@ -352,6 +550,24 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     expect(wrapper.find("#kernel-simulate-hashes").text()).toContain(
       "sha256:result-v2"
     );
+    expect(wrapper.find("#kernel-simulate-diff").text()).toContain(
+      "Changed study arm arm.A (Name)"
+    );
+    expect(wrapper.find("#kernel-simulate-schedule").text()).toContain(
+      "Day 28 (-2/+2d) in ep.treatment -> Day 29 (-2/+3d) in ep.treatment"
+    );
+    expect(wrapper.find("#kernel-simulate-dependents").text()).toContain(
+      "2 dependent objects"
+    );
+    expect(wrapper.find("#kernel-simulate-dependents").text()).toContain(
+      "Hidden participant (blinded)"
+    );
+    expect(
+      wrapper
+        .find("#kernel-simulate-dependents")
+        .findComponent({ name: "NodeRefChip" })
+        .exists()
+    ).toBe(true);
     expect(wrapper.find("#kernel-simulate-gaps").text()).toContain(
       "PK Blood Draw has no scheduled visit window."
     );
@@ -365,6 +581,51 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       "true"
     );
     expect(wrapper.find("#kernel-simulate").exists()).toBe(false);
+  });
+
+  it("renders withheld simulation sections explicitly when masked by visibility rules", async () => {
+    vi.mocked(kernelApi.simulate).mockResolvedValue({
+      scope: STUDY,
+      as_of: {
+        valid_at: "2027-03-14T10:00:00Z",
+        known_at: "2027-03-14T10:00:00Z",
+      },
+      candidate: {
+        kind: "ProtocolVersion",
+        version: null,
+        base_version: null,
+        content_hash: null,
+        base_content_hash: null,
+      },
+      engine_versions: [],
+      input_hash: "sha256:masked-in",
+      result_hash: "sha256:masked-out",
+      structural_diff: [],
+      schedule_changes: [],
+      masked: [
+        { part: "dependents", reason: "Blinded" },
+        { part: "matrix_gaps", reason: "Blinded" },
+        { part: "schedule_changes", reason: "Blinded" },
+        { part: "structural_diff", reason: "Blinded" },
+      ],
+      dependents: null,
+      matrix_gaps: [],
+    });
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+    await wrapper.find("#verb-simulate").trigger("click");
+    await flushPromises();
+
+    const maskedText = wrapper.find("#kernel-simulate-masked").text();
+    expect(maskedText).toContain("Downstream impact withheld (blinded)");
+    expect(maskedText).toContain("Schedule findings withheld (blinded)");
+    expect(maskedText).toContain("Visit schedule changes withheld (blinded)");
+    expect(maskedText).toContain("Protocol element changes withheld (blinded)");
+    expect(wrapper.find("#kernel-simulate-gaps").exists()).toBe(false);
+    expect(wrapper.find("#kernel-simulate-gaps-empty").exists()).toBe(false);
+    expect(wrapper.find("#kernel-simulate-diff").exists()).toBe(false);
+    expect(wrapper.find("#kernel-simulate-schedule").exists()).toBe(false);
+    expect(wrapper.find("#kernel-simulate-dependents").exists()).toBe(false);
   });
 
   it("ignores stale in-flight simulation responses when switching versions and surfaces kernel simulation errors", async () => {
@@ -472,5 +733,253 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     await flushPromises();
     expect(wrapper.find("#inspector-version-error").exists()).toBe(false);
     expect(wrapper.find("#canvas-inspector-title").text()).toBe("Version 1");
+  });
+
+  it("drives Draft -> InReview -> Part 11 Approved -> Artifact registration -> Effectivity Effective and refreshes study schedule options", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.user = { username: "designer.lead", fullName: "Dr. Elena Vance" };
+    auth.rawRoles = ["Sponsor Designer"];
+
+    const FROZEN_HASH =
+      "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    const IRB_HASH =
+      "sha256:fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+    const ARTIFACT_VER_ID = "0192f3c4-5e6a-7b8c-9d0e-0000000000c1";
+    const EFFECTIVITY_ID = "0192f3c4-5e6a-7b8c-9d0e-0000000000d1";
+
+    let currentV2 = { ...AMENDMENT };
+    const artifactsState = [];
+    const effectivitiesState = [];
+
+    vi.mocked(kernelApi.listProtocolVersions).mockImplementation(async () => [
+      currentV2,
+      FIRST,
+    ]);
+    vi.mocked(kernelApi.getProtocolVersion).mockImplementation(async (ref) =>
+      String(ref).startsWith(`protocol_version:${V2_ID}`) ? currentV2 : FIRST
+    );
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockImplementation(
+      async () => [...artifactsState]
+    );
+    vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockImplementation(
+      async () => [...effectivitiesState]
+    );
+
+    vi.mocked(
+      kernelGovernanceApi.submitProtocolVersionForReview
+    ).mockImplementation(async () => {
+      currentV2 = {
+        ...currentV2,
+        status: "InReview",
+        content_hash: FROZEN_HASH,
+      };
+      return currentV2;
+    });
+    vi.mocked(
+      kernelGovernanceApi.returnProtocolVersionToDraft
+    ).mockImplementation(async () => {
+      currentV2 = { ...currentV2, status: "Draft", content_hash: null };
+      return currentV2;
+    });
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "step-up-sig-token-60s",
+    });
+    vi.mocked(kernelGovernanceApi.approveProtocolVersion).mockImplementation(
+      async () => {
+        currentV2 = {
+          ...currentV2,
+          status: "Approved",
+          approval_attestation:
+            "attestation:0192f3c4-5e6a-7b8c-9d0e-0000000000e1",
+        };
+        return currentV2;
+      }
+    );
+    vi.mocked(kernelGovernanceApi.registerStudyArtifact).mockImplementation(
+      async (payload) => {
+        const created = {
+          artifact_ref: "artifact:0192f3c4-5e6a-7b8c-9d0e-0000000000c0",
+          artifact_id: "0192f3c4-5e6a-7b8c-9d0e-0000000000c0",
+          artifact_version_ref: `artifact_version:${ARTIFACT_VER_ID}`,
+          artifact_version_id: ARTIFACT_VER_ID,
+          study_ref: STUDY,
+          kind: payload.kind,
+          title: payload.title,
+          version_number: 1,
+          content_hash: payload.contentHash,
+          size_bytes: 1,
+          media_type: "application/pdf",
+          storage_ref: payload.storageRef,
+          created_at: "2026-10-15T10:00:00Z",
+        };
+        artifactsState.push(created);
+        return created;
+      }
+    );
+    vi.mocked(
+      kernelGovernanceApi.declareProtocolEffectivity
+    ).mockImplementation(async (payload) => {
+      const declared = {
+        effectivity_ref: `effectivity:${EFFECTIVITY_ID}`,
+        effectivity_id: EFFECTIVITY_ID,
+        study_ref: STUDY,
+        protocol_version_ref: `protocol_version:${V2_ID}`,
+        protocol_version_number: 2,
+        scope_level: payload.scopeLevel,
+        country: null,
+        study_site_ref: null,
+        status: "Pending",
+        status_since: "2026-10-15T10:01:00Z",
+        evidence_artifact_version_refs: [],
+      };
+      effectivitiesState.push(declared);
+      return declared;
+    });
+    vi.mocked(kernelGovernanceApi.changeEffectivityStatus).mockImplementation(
+      async (payload) => {
+        effectivitiesState[0] = {
+          ...effectivitiesState[0],
+          status: payload.status,
+          evidence_artifact_version_refs: payload.evidenceRefs,
+        };
+        return effectivitiesState[0];
+      }
+    );
+
+    const canvasStore = useStudyCanvasStore();
+    const loadScheduleSpy = vi
+      .spyOn(canvasStore, "loadScheduleOptions")
+      .mockResolvedValue(null);
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V2}`);
+
+    // 1. Submit Draft v2 for review -> InReview
+    await wrapper
+      .find("#protocol-governance-reason")
+      .setValue("Freeze amendment v2 for QA review");
+    await wrapper.find("#btn-submit-protocol-review").trigger("click");
+    await flushPromises();
+
+    expect(
+      kernelGovernanceApi.submitProtocolVersionForReview
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V2,
+        reason: "Freeze amendment v2 for QA review",
+      })
+    );
+    expect(wrapper.find("#btn-approve-protocol-version").exists()).toBe(true);
+    expect(wrapper.find("#btn-return-protocol-draft").exists()).toBe(true);
+
+    // 2. Return to Draft and re-submit for review to verify both transitions
+    await wrapper
+      .find("#protocol-governance-reason")
+      .setValue("Revise visit window wording");
+    await wrapper.find("#btn-return-protocol-draft").trigger("click");
+    await flushPromises();
+    expect(
+      kernelGovernanceApi.returnProtocolVersionToDraft
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V2,
+        reason: "Revise visit window wording",
+      })
+    );
+
+    await wrapper
+      .find("#protocol-governance-reason")
+      .setValue("Re-freeze amendment v2 for approval");
+    await wrapper.find("#btn-submit-protocol-review").trigger("click");
+    await flushPromises();
+
+    // 3. Sign & approve protocol version via 21 CFR Part 11 step-up modal
+    await wrapper.find("#btn-approve-protocol-version").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#signature-capture-modal").exists()).toBe(true);
+    await wrapper.find("#sig-password").setValue("ClinicalPass!123");
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Approve frozen protocol version for clinical conduct");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: "designer.lead",
+        action: `/api/v1/kernel/protocol-versions/protocol_version:${V2_ID}/approve`,
+        semanticAction: "kernel.protocol_version.approve",
+      })
+    );
+    expect(kernelGovernanceApi.approveProtocolVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V2,
+        sigToken: "step-up-sig-token-60s",
+        expectedContentHash: FROZEN_HASH,
+      })
+    );
+
+    // 4. Register EthicsApproval evidence artifact
+    await wrapper.find("#protocol-artifact-kind").setValue("EthicsApproval");
+    await wrapper
+      .find("#protocol-artifact-title")
+      .setValue("Central IRB Approval v2.0");
+    await wrapper.find("#protocol-artifact-hash").setValue(IRB_HASH);
+    await wrapper
+      .find("#protocol-artifact-storage")
+      .setValue("s3://cadence-etmf/irb-v2.pdf");
+    await wrapper
+      .find("#protocol-artifact-reason")
+      .setValue("Record central IRB approval letter");
+    await wrapper.find("#protocol-artifact-form").trigger("submit");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.registerStudyArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: STUDY,
+        kind: "EthicsApproval",
+        title: "Central IRB Approval v2.0",
+        contentHash: IRB_HASH,
+      })
+    );
+
+    // 5. Declare study-wide effectivity and transition to Effective with IRB evidence
+    await wrapper
+      .find("#effectivity-declare-reason")
+      .setValue("Declare study-wide effectivity for approved v2");
+    await wrapper.find("#protocol-declare-effectivity-form").trigger("submit");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.declareProtocolEffectivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V2,
+        scopeLevel: "Study",
+        reason: "Declare study-wide effectivity for approved v2",
+      })
+    );
+
+    const evidenceCheckbox = wrapper.find(
+      `#protocol-effectivity-card input[type="checkbox"][value="artifact_version:${ARTIFACT_VER_ID}"]`
+    );
+    expect(evidenceCheckbox.exists()).toBe(true);
+    await evidenceCheckbox.setValue(true);
+    await wrapper
+      .find(`#effectivity-reason-${EFFECTIVITY_ID}`)
+      .setValue("Go live study-wide with IRB approval");
+    await wrapper
+      .find(`[id="btn-transition-effectivity-${EFFECTIVITY_ID}"]`)
+      .trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.changeEffectivityStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        effectivityRef: `effectivity:${EFFECTIVITY_ID}`,
+        status: "Effective",
+        evidenceRefs: [`artifact_version:${ARTIFACT_VER_ID}`],
+        reason: "Go live study-wide with IRB approval",
+      })
+    );
+    expect(loadScheduleSpy).toHaveBeenCalledWith("CAD-101", { force: true });
   });
 });

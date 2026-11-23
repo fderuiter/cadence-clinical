@@ -389,7 +389,7 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: var(--semantic-color-ai);
+                color: var(--semantic-color-primary);
                 margin-bottom: 6px;
               "
             >
@@ -3472,5 +3472,52 @@ function navigateToSoa() {
 .metric-panel:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background: var(--semantic-color-surface);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  border: 1px solid var(--semantic-color-border);
+  box-shadow: var(--semantic-shadow-xl);
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  padding: 16px 20px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  background-color: var(--neutral-light);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>

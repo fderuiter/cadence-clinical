@@ -1661,4 +1661,65 @@ async function acceptAllSuggestions() {
   border-radius: 6px;
   background: var(--semantic-color-surface);
 }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background: var(--semantic-color-surface);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid var(--semantic-color-border);
+  box-shadow: var(--semantic-shadow-xl);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  padding: 14px 20px;
+  font-weight: 700;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: inherit;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  background-color: var(--neutral-light);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
 </style>

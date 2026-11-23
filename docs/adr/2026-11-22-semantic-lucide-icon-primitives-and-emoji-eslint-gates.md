@@ -1,4 +1,4 @@
-# ADR-2823: Semantic Lucide Icon Primitives and Zero-Emoji ESLint Gates
+# ADR-2824: Semantic Lucide Icon Primitives and Zero-Emoji ESLint Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

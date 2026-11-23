@@ -144,6 +144,8 @@
             id="btn-onboarding-checklist-trigger"
             type="button"
             class="shell-control-btn"
+            :aria-expanded="onboardingStore.isDrawerOpen ? 'true' : 'false'"
+            aria-controls="onboarding-checklist-drawer"
             title="Open workspace orientation and setup checklist"
             @click="onboardingStore.toggleDrawer()"
           >
@@ -170,6 +172,11 @@
             <span class="user-badge">
               {{ authStore.identity?.username || "Signed in" }}
             </span>
+            <component
+              :is="DemoResetBtn"
+              v-if="DemoResetBtn"
+              @reset="statusAnnouncement = $event"
+            />
             <button
               id="btn-logout"
               type="button"
@@ -222,11 +229,12 @@
         </button>
       </div>
 
-      <div
+      <nav
         v-if="authStore.isAuthenticated"
         id="mobile-nav-menu"
         class="mobile-nav-drawer"
         :class="{ 'is-open': isMobileMenuOpen }"
+        :hidden="!isMobileMenuOpen || undefined"
         aria-label="Mobile navigation"
       >
         <router-link
@@ -269,7 +277,7 @@
         >
           Knowledge
         </router-link>
-      </div>
+      </nav>
 
       <div
         class="sr-only-status-alerts"
@@ -326,7 +334,7 @@
     <main
       id="main-content"
       class="shell-main"
-      :class="{ 'shell-main-canvas': isStudiesRoute }"
+      :class="{ 'shell-main-canvas': isCanvasRoute }"
       tabindex="-1"
     >
       <slot />
@@ -350,6 +358,7 @@
 <script setup>
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -358,7 +367,13 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ClinicalContextBar, SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  ClinicalContextBar,
+  SignOutConfirmModal,
+  hasActiveModalFocusTrap,
+  useEscapeClose,
+  useSignOutGuard,
+} from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -367,6 +382,8 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
+import { isRouteAuthorizedForRoles } from "../router";
+import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
   buildScopedWorkflowPath,
@@ -380,6 +397,10 @@ import {
 import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const DemoResetBtn = isDemoBuild()
+  ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
+  : null;
 
 provide("inAppShell", true);
 
@@ -437,6 +458,7 @@ const dataCollectionPath = computed(() =>
   buildDataCollectionPath({
     studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.explicitSiteId,
+    participantRef: workspaceScope.value.participantRef,
     subjectCode: workspaceScope.value.subjectCode,
     enrollmentId: workspaceScope.value.enrollmentId,
   })
@@ -472,6 +494,25 @@ const showSupportNav = computed(() =>
 );
 const showKnowledgeNav = computed(() =>
   canAccessKnowledgeHub(normalizedRoles.value)
+);
+
+const isCanvasRoute = computed(
+  () =>
+    route?.name === "study" ||
+    Boolean(route?.path && route.path.startsWith("/studies"))
+);
+const hasStudyWorkspace = computed(
+  () =>
+    route?.name === "study" &&
+    typeof route?.params?.studyCode === "string" &&
+    Boolean(route.params.studyCode.trim())
+);
+const isConductCanvasRoute = computed(
+  () =>
+    !isDemoBuild() && isCanvasRoute.value && route?.query?.stage === "conduct"
+);
+const isStudiesRoute = computed(
+  () => isCanvasRoute.value && !isConductCanvasRoute.value
 );
 
 const NON_WORKFLOW_ROUTE_NAMES = new Set([
@@ -529,7 +570,7 @@ const WORKFLOW_CONTEXT_LABELS = Object.freeze({
 });
 
 const showContextBar = computed(() => {
-  if (!authStore.isAuthenticated || isStudiesRoute.value) {
+  if (!authStore.isAuthenticated || isCanvasRoute.value) {
     return false;
   }
   const routeName = String(route?.name || "");
@@ -591,23 +632,12 @@ const contextParticipantTo = computed(() => {
     },
   };
 });
-
-const isStudiesRoute = computed(
-  () =>
-    route?.name === "study" ||
-    Boolean(route?.path && route.path.startsWith("/studies"))
-);
-const hasStudyWorkspace = computed(
-  () =>
-    route?.name === "study" &&
-    typeof route?.params?.studyCode === "string" &&
-    Boolean(route.params.studyCode.trim())
-);
 const isDataCollectionRoute = computed(
   () =>
     route?.name === "ecrf" ||
     route?.name === "observation" ||
-    route?.path === "/ecrf"
+    route?.path === "/ecrf" ||
+    isConductCanvasRoute.value
 );
 const isSiteReadinessRoute = computed(
   () =>
@@ -644,12 +674,21 @@ const showOnboardingTour = computed(
     route?.path !== "/unavailable"
 );
 
-function handlePersonaChange(event) {
+const checkActiveRouteAuth = () =>
+  authStore.isAuthenticated &&
+  route?.path !== "/forbidden" &&
+  route?.path !== "/login" &&
+  !isRouteAuthorizedForRoles(route, normalizedRoles.value) &&
+  router?.replace?.("/forbidden");
+
+async function handlePersonaChange(event) {
   const nextPersona = event?.target?.value;
   if (nextPersona) {
     authStore.switchPersona(nextPersona);
+    onboardingStore.loadPersonaState(authStore.currentPersona || nextPersona);
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
     statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
+    await checkActiveRouteAuth();
   }
 }
 
@@ -681,7 +720,24 @@ const {
   hasExternalDrafts: () => hasUserScopedDrafts(),
   onConfirmSignOut: async () => {
     await authStore.logout();
+    if (route?.path !== "/login") {
+      await router?.replace?.("/login");
+    }
   },
+});
+
+function closeMobileMenu({ restoreFocus = false } = {}) {
+  if (!isMobileMenuOpen.value) return;
+  isMobileMenuOpen.value = false;
+  if (restoreFocus && typeof document !== "undefined") {
+    nextTick(() => {
+      document.getElementById("btn-mobile-menu-toggle")?.focus?.();
+    });
+  }
+}
+
+useEscapeClose(() => closeMobileMenu({ restoreFocus: true }), {
+  isOpen: () => isMobileMenuOpen.value,
 });
 
 function handleGlobalKeydown(event) {
@@ -692,16 +748,33 @@ function handleGlobalKeydown(event) {
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     isCommandPaletteOpen.value = !isCommandPaletteOpen.value;
   }
 }
 
 watch(
   () => [authStore.isAuthenticated, authStore.identity?.tenantId],
-  ([authenticated]) => {
+  ([authenticated], [wasAuthenticated] = []) => {
     if (authenticated && typeof authStore.loadEntitlements === "function") {
       authStore.loadEntitlements();
+    } else if (
+      !authenticated &&
+      wasAuthenticated &&
+      (route?.meta?.requiresAuth ||
+        route?.matched?.some((r) => r.meta?.requiresAuth))
+    ) {
+      router?.replace?.("/login");
     }
+  }
+);
+
+watch(
+  () => [authStore.currentPersona, normalizedRoles.value],
+  () => {
+    void checkActiveRouteAuth();
   }
 );
 

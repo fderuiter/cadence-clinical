@@ -25,7 +25,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
-- `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_audit_log_entries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## imaging.imaging_adjudication_sessions
@@ -97,6 +98,7 @@ Entity: `ImagingAuditLog`
 | `DetailsJson` | `jsonb` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -181,6 +183,7 @@ Entity: `DeidentificationCertificate`
 | `SubjectId` | `character varying(255)` | no |  |  |
 | `TargetSha256` | `character varying(64)` | no |  |  |
 | `Timestamp` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -219,6 +222,7 @@ Entity: `ImagingInstanceEnvelope`
 | `SopInstanceUid` | `character varying(64)` | no |  |  |
 | `WindowCenter` | `double precision` | yes |  |  |
 | `WindowWidth` | `double precision` | yes |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -247,6 +251,7 @@ Entity: `ImagingSeriesEnvelope`
 | `SeriesInstanceUid` | `character varying(64)` | no |  |  |
 | `SeriesNumber` | `integer` | yes |  |  |
 | `StudyEnvelopeId` | `character varying(36)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

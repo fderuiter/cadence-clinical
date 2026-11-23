@@ -274,7 +274,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     );
 
     // Outside demo mode, authenticated participants land on /wallet and see only My Wallet
-    await expect(page).toHaveURL(/\/subject-portal\/wallet$/);
+    await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     await expect(page.locator("#view-wallet")).toBeVisible();
     await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
     await expect(page.locator("#btn-tab-btn-wallet")).toBeVisible();
@@ -449,7 +449,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(unavailableAudit.violations).toEqual([]);
       await page.click("#btn-unavailable-return-tasks");
       await expect(page.locator("#view-wallet")).toBeVisible();
-      await expect(page).toHaveURL(/\/subject-portal\/wallet$/);
+      await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     }
 
     // 4. Form wrappers and numeric input attributes in demo mode
@@ -1075,6 +1075,77 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.animationIterationCount).toBe("1");
     expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
+  });
+
+  test("should focus visible view headings on tab activation, render #inbox-container visibly with Enter/Space actions, and preserve #portal-ledger-timeline focus", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_PORTAL_SCREENSHOTS === "1";
+
+    await page.route("**/notifications/*/acknowledge", async (route) => {
+      const url = route.request().url();
+      const idMatch = url.match(/notifications\/([^/]+)\/acknowledge/);
+      const id = idMatch ? idMatch[1] : "notif_01";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id,
+          subject_id: "subject_mocked_001",
+          message: "Acknowledged reminder",
+          channel: "IN_APP",
+          is_read: true,
+          read_at: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    // Clicking Inbox tab focuses visible #inbox-view-heading and renders #inbox-container visibly
+    await page.locator("#btn-tab-btn-inbox").click();
+    await expect(page.locator("#view-inbox")).toBeVisible();
+    await expect(page.locator("#inbox-view-heading")).toBeFocused();
+
+    const inboxContainer = page.locator("#inbox-container");
+    await expect(inboxContainer).toBeVisible();
+
+    const inboxAudit = await new AxeBuilder({ page })
+      .include("#view-inbox")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(inboxAudit.violations).toEqual([]);
+
+    const firstAck = page.locator("#notif-card-notif_01 .btn-acknowledge");
+    await expect(firstAck).toBeVisible();
+    await firstAck.focus();
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/subject-portal-inbox-and-ledger-focus.png",
+      });
+    }
+    await page.keyboard.press("Enter");
+
+    const secondAck = page.locator("#notif-card-notif_02 .btn-acknowledge");
+    await expect(secondAck).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(page.locator("#notif-card-notif_02")).toBeFocused();
+
+    // Clicking Compliance tab focuses #compliance-view-heading and passes scrollable-region-focusable on #portal-ledger-timeline
+    await page.locator("#btn-tab-btn-compliance").click();
+    await expect(page.locator("#view-compliance")).toBeVisible();
+    await expect(page.locator("#compliance-view-heading")).toBeFocused();
+    await expect(page.locator("#portal-ledger-timeline")).toHaveAttribute(
+      "tabindex",
+      "0"
+    );
+
+    const complianceAudit = await new AxeBuilder({ page })
+      .include("#view-compliance")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(complianceAudit.violations).toEqual([]);
   });
 
   test("should guard untouched VAS sliders, allow deliberate 0 scores, wire view-questionnaire tabpanel ARIA, and flush drafts on tab switch", async ({

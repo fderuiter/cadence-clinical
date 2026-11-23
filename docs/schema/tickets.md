@@ -25,7 +25,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
-- `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_audit_log_entries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## tickets.consumed_signature_tokens
@@ -111,6 +112,47 @@ Indexes:
 
 - `IX_ticket_comments_TicketId`: (`TicketId`)
 - `IX_ticket_comments_tenant_id`: (`tenant_id`)
+
+## tickets.ticket_revisions
+
+Entity: `TicketRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `AssigneeRole` | `character varying(255)` | yes |  |  |
+| `AssigneeUser` | `character varying(255)` | yes |  |  |
+| `Category` | `character varying(50)` | no |  |  |
+| `ContextPayload` | `text` | yes |  |  |
+| `Description` | `text` | no |  |  |
+| `GxpSeverity` | `character varying(50)` | no |  |  |
+| `Priority` | `character varying(50)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecordedAt` | `timestamp with time zone` | no |  |  |
+| `RecordedBy` | `character varying(255)` | no |  |  |
+| `Reference` | `character varying(50)` | no |  |  |
+| `ResolutionCode` | `character varying(50)` | yes |  |  |
+| `RevisionNumber` | `integer` | no |  |  |
+| `RootCauseCategory` | `character varying(50)` | yes |  |  |
+| `RootCauseSummary` | `character varying(1000)` | yes |  |  |
+| `SiteCode` | `character varying(255)` | yes |  |  |
+| `SlaTargetAt` | `timestamp with time zone` | yes |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyCode` | `character varying(255)` | yes |  |  |
+| `TicketId` | `character varying(36)` | no |  |  |
+| `Title` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_ticket_revisions_tickets_TicketId`: (`TicketId`) references `tickets.tickets` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_ticket_revisions_TicketId`: (`TicketId`)
+- `IX_ticket_revisions_TicketId_RevisionNumber`: unique (`TicketId`, `RevisionNumber`)
+- `IX_ticket_revisions_tenant_id`: (`tenant_id`)
 
 ## tickets.tickets
 

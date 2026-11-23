@@ -11,7 +11,9 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Informed Consent Review</h2>
+      <h2 id="consent-view-heading" tabindex="-1">
+        My Informed Consent Review
+      </h2>
       <p>
         Please read the study details below, complete the comprehension check,
         and submit your digital signature.
@@ -38,6 +40,7 @@
         >
         <select
           id="consent-lang-selector"
+          :value="consent.consentLanguage"
           style="
             min-height: var(--touch-target-min);
             padding: var(--spacing-xs) var(--spacing-sm);
@@ -45,7 +48,7 @@
             border: 1px solid var(--semantic-color-border-control);
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text);
-            font-size: var(--font-size-sm);
+            font-size: var(--font-size-md);
             cursor: pointer;
           "
         >
@@ -112,6 +115,7 @@
         </div>
         <div
           id="consent-clauses-container"
+          tabindex="-1"
           style="
             line-height: 1.6;
             display: flex;
@@ -127,10 +131,11 @@
       <div
         id="consent-comprehension-card"
         class="card"
+        tabindex="-1"
         style="margin-bottom: 24px"
       >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <ClinicalIcon name="brain" :size="20" />
+          <ClinicalIcon name="book-open" :size="20" />
           <span>Step 1: Quick Understanding Check</span>
         </h3>
         <p
@@ -174,7 +179,12 @@
 
       <!-- Signature Section -->
       <!-- Camera Identity Check Section -->
-      <div id="consent-liveness-card" class="card" style="margin-bottom: 24px">
+      <div
+        id="consent-liveness-card"
+        class="card"
+        tabindex="-1"
+        style="margin-bottom: 24px"
+      >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
           <ClinicalIcon name="video" :size="20" />
           <span>Step 2: Quick Camera Check</span>
@@ -215,7 +225,7 @@
             margin-bottom: 16px;
           "
         >
-          <div style="margin-bottom: 8px" aria-hidden="true">
+          <div style="margin-bottom: 8px">
             <ClinicalIcon name="camera" :size="20" />
           </div>
           <p style="margin: 0; font-size: 14px; font-weight: 500">
@@ -257,25 +267,80 @@
       <!-- Signature Section -->
       <div id="consent-signature-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <ClinicalIcon name="pen-tool" :size="20" />
+          <ClinicalIcon name="file-signature" :size="20" />
           <span>Step 3: Electronic Signature</span>
         </h3>
         <p
-          style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
+          style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px"
         >
           By signing this document, you confirm that you have read this informed
           consent, have passed the verification, and agree to participate.
         </p>
+        <div
+          id="consent-sign-readiness-hint"
+          class="consent-readiness-hint"
+          role="status"
+          aria-live="polite"
+        >
+          Before you can sign, please finish
+          <a
+            id="link-jump-comprehension"
+            href="#consent-comprehension-card"
+            class="consent-step-link"
+            >Step 1: Quick Understanding Check</a
+          >
+          and
+          <a
+            id="link-jump-liveness"
+            href="#consent-liveness-card"
+            class="consent-step-link"
+            >Step 2: Quick Camera Check</a
+          >.
+        </div>
         <div class="form-actions">
           <button
             id="btn-trigger-consent-sign"
             type="button"
             class="btn btn-primary"
+            aria-describedby="consent-sign-readiness-hint"
             disabled
           >
             Sign Consent Form
           </button>
         </div>
+      </div>
+
+      <!-- Signed Confirmation Card -->
+      <div
+        id="consent-signed-card"
+        class="card"
+        style="
+          display: none;
+          margin-bottom: 24px;
+          background: var(--semantic-color-success-bg);
+          border: 1px solid var(--semantic-color-success);
+        "
+      >
+        <h3
+          id="consent-signed-heading"
+          tabindex="-1"
+          style="
+            margin-top: 0;
+            color: var(--semantic-color-success);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <ClinicalIcon name="check-circle" :size="20" />
+          <span>Informed Consent Signed &amp; Archived</span>
+        </h3>
+        <p
+          style="margin: 0; font-size: 14px; color: var(--semantic-color-text)"
+        >
+          Your electronic signature has been verified and recorded for this
+          study consent version.
+        </p>
       </div>
     </div>
   </section>
@@ -284,12 +349,15 @@
 <script setup>
 import { computed } from "vue";
 import { ClinicalIcon } from "ui";
+
 import { isScreenAvailable } from "../router/availability.js";
+import { useConsentStore } from "../stores/consent.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
+const consent = useConsentStore();
 const session = useSessionStore();
 
 const hasConsentTab = computed(() => {

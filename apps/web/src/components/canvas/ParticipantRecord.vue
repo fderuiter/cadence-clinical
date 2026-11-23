@@ -6,7 +6,7 @@
     :aria-busy="record.loading"
   >
     <header class="record-header">
-      <h2 id="participant-record-title">
+      <h2 id="participant-record-title" tabindex="-1">
         {{ participant.subject_id }}
       </h2>
       <span class="record-meta">
@@ -31,6 +31,17 @@
       <p v-if="record.loading" class="status-line" role="status">
         Loading {{ participant.subject_id }}'s data...
       </p>
+
+      <ParticipantSiteAssignment
+        v-if="
+          canManage &&
+          !participant.site_id &&
+          !record.loading &&
+          !record.enrollmentId
+        "
+        :participant="participant"
+        :study-code="canvas.studyCode"
+      />
 
       <div
         v-if="!record.loading && record.enrollmentId"
@@ -182,6 +193,7 @@ import { parseNodeRef } from "../../canvas/nodeRef";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 import ScopeLockControls from "./ScopeLockControls.vue";
 

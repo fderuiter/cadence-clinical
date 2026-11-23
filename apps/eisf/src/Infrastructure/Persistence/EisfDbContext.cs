@@ -23,6 +23,7 @@ public sealed class EisfDbContext(DbContextOptions<EisfDbContext> options) : DbC
     public DbSet<IsfAuditLog> IsfAuditLogs => Set<IsfAuditLog>();
     public DbSet<EisfSectionTaxonomy> EisfSectionTaxonomies => Set<EisfSectionTaxonomy>();
     public DbSet<EisfDocumentRecord> EisfDocumentRecords => Set<EisfDocumentRecord>();
+    public DbSet<EisfDocumentRevision> EisfDocumentRevisions => Set<EisfDocumentRevision>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -33,6 +34,7 @@ public sealed class EisfDbContext(DbContextOptions<EisfDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new IsfAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new EisfSectionTaxonomyConfiguration());
         modelBuilder.ApplyConfiguration(new EisfDocumentRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new EisfDocumentRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }

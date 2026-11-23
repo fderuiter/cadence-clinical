@@ -11,6 +11,12 @@ export const CONDUCT_STAGE: Stage = {
       description: "The study's participants in enrollment order",
     },
     {
+      id: "sites",
+      label: "Sites",
+      description:
+        "Clinical sites registered in your workspace and linked to this study",
+    },
+    {
       id: "monitoring-visits",
       label: "Monitoring visits",
       description:

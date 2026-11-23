@@ -491,6 +491,7 @@ function addFilesToQueue(files) {
     batchError.value =
       "Maximum limit of 50 documents per batch transaction exceeded.";
     toastStore.push({
+      title: "Batch Limit Exceeded",
       message:
         "Batch limit exceeded: Maximum 50 documents per transaction permitted.",
       tone: "error",
@@ -510,6 +511,7 @@ function addFilesToQueue(files) {
     if (file.size > MAX_FILE_SIZE) {
       batchError.value = `File '${file.name}' exceeds the 100 MB maximum size limit.`;
       toastStore.push({
+        title: "File Size Limit Exceeded",
         message: `File '${file.name}' exceeds 100 MB limit.`,
         tone: "error",
       });
@@ -519,6 +521,7 @@ function addFilesToQueue(files) {
     if (currentBatchSize + file.size > MAX_BATCH_SIZE) {
       batchError.value = "Total batch size exceeds 500 MB limit.";
       toastStore.push({
+        title: "Batch Size Limit Exceeded",
         message: "Total batch transaction size cannot exceed 500 MB.",
         tone: "error",
       });
@@ -662,6 +665,7 @@ async function startBatchUpload() {
   for (let i = 0; i < queue.value.length; i++) {
     if (cancelRequested.value) {
       toastStore.push({
+        title: "Batch Upload Cancelled",
         message: "Batch processing cancelled by user.",
         tone: "warning",
       });
@@ -699,6 +703,7 @@ async function startBatchUpload() {
       item.status = "FAILED";
       item.error = err.message || "Failed to classify/stage document";
       toastStore.push({
+        title: "Document Staging Failed",
         message: `Failed to stage '${item.file.name}': ${item.error}`,
         tone: "error",
       });
@@ -707,6 +712,7 @@ async function startBatchUpload() {
 
   isProcessing.value = false;
   toastStore.push({
+    title: "Batch Ingestion Complete",
     message: `Batch Ingestion complete: ${completedCount.value} / ${queue.value.length} documents staged for CRA QC.`,
     tone: "success",
   });

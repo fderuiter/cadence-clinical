@@ -65,6 +65,7 @@
         </div>
 
         <button
+          id="ticket-drawer-close-btn"
           type="button"
           class="drawer-close"
           aria-label="Close"
@@ -243,54 +244,25 @@
       </div>
 
       <!-- Drawer Tabs -->
-      <div class="drawer-tabs">
-        <button
-          class="tab-item"
-          :class="{ active: activeTab === 'overview' }"
-          @click="activeTab = 'overview'"
-        >
-          <ClinicalIcon name="clipboard-list" :size="16" /> Overview &amp;
-          Context
-        </button>
-        <button
-          class="tab-item"
-          :class="{ active: activeTab === 'discussion' }"
-          @click="activeTab = 'discussion'"
-        >
-          <ClinicalIcon name="message-square" :size="16" /> Discussion ({{
-            visibleComments.length
-          }})
-        </button>
-        <button
-          v-if="demoBuild"
-          class="tab-item"
-          :class="{ active: activeTab === 'attachments' }"
-          @click="activeTab = 'attachments'"
-        >
-          <ClinicalIcon name="paperclip" :size="16" /> Evidence ({{
-            attachments.length
-          }})
-        </button>
-        <button
-          class="tab-item"
-          :class="{ active: activeTab === 'signatures' }"
-          @click="activeTab = 'signatures'"
-        >
-          <ClinicalIcon name="pen-tool" :size="16" /> eSignatures
-        </button>
-        <button
-          class="tab-item"
-          :class="{ active: activeTab === 'audit' }"
-          @click="activeTab = 'audit'"
-        >
-          <ClinicalIcon name="lock" :size="16" /> Audit Trail
-        </button>
-      </div>
+      <ClinicalTabs
+        v-model="activeTab"
+        :tabs="drawerTabs"
+        aria-label="Ticket detail sections"
+        id-prefix="ticket-drawer"
+        list-class="drawer-tabs"
+        tab-class="tab-item"
+      />
 
       <!-- Drawer Content -->
       <div class="drawer-body">
         <!-- TAB 1: OVERVIEW -->
-        <div v-if="activeTab === 'overview'" class="tab-pane">
+        <div
+          v-if="activeTab === 'overview'"
+          id="ticket-drawer-panel-overview"
+          role="tabpanel"
+          aria-labelledby="ticket-drawer-tab-overview"
+          class="tab-pane"
+        >
           <div class="section-card">
             <h4 class="card-title">Clinical Narrative</h4>
             <p class="narrative-text">
@@ -460,7 +432,13 @@
         </div>
 
         <!-- TAB 2: DISCUSSION -->
-        <div v-if="activeTab === 'discussion'" class="tab-pane">
+        <div
+          v-if="activeTab === 'discussion'"
+          id="ticket-drawer-panel-discussion"
+          role="tabpanel"
+          aria-labelledby="ticket-drawer-tab-discussion"
+          class="tab-pane"
+        >
           <div class="comments-filter-bar">
             <button
               class="filter-chip"
@@ -596,7 +574,13 @@
         </div>
 
         <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
-        <div v-if="demoBuild && activeTab === 'attachments'" class="tab-pane">
+        <div
+          v-if="demoBuild && activeTab === 'attachments'"
+          id="ticket-drawer-panel-attachments"
+          role="tabpanel"
+          aria-labelledby="ticket-drawer-tab-attachments"
+          class="tab-pane"
+        >
           <div class="attachment-upload-box">
             <h4 class="card-title">Upload Audited Evidence Blob</h4>
             <p class="upload-hint">
@@ -672,7 +656,13 @@
         </div>
 
         <!-- TAB 4: SIGNATURES -->
-        <div v-if="activeTab === 'signatures'" class="tab-pane">
+        <div
+          v-if="activeTab === 'signatures'"
+          id="ticket-drawer-panel-signatures"
+          role="tabpanel"
+          aria-labelledby="ticket-drawer-tab-signatures"
+          class="tab-pane"
+        >
           <div v-if="ticket.signature_token" class="signature-record-card">
             <div class="sig-card-header">
               <ClinicalIcon
@@ -739,7 +729,13 @@
         </div>
 
         <!-- TAB 5: AUDIT TRAIL -->
-        <div v-if="activeTab === 'audit'" class="tab-pane">
+        <div
+          v-if="activeTab === 'audit'"
+          id="ticket-drawer-panel-audit"
+          role="tabpanel"
+          aria-labelledby="ticket-drawer-tab-audit"
+          class="tab-pane"
+        >
           <div class="audit-timeline">
             <template v-if="isAuditLoading">
               <SkeletonLoader type="timeline" :count="3" />
@@ -869,6 +865,7 @@
     <TicketSignModal
       :is-open="isSignModalOpen"
       :ticket="ticket"
+      fallback-focus="#ticket-drawer-close-btn"
       @close="isSignModalOpen = false"
       @signed="onTicketSigned"
     />
@@ -877,7 +874,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { ClinicalIcon, EmptyState, useFocusTrap } from "ui";
+import { ClinicalIcon, ClinicalTabs, EmptyState, useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore, normalizeRole } from "../../stores/auth";
@@ -1081,11 +1078,13 @@ const close = () => {
 useFocusTrap(drawerRef, {
   isOpen: () => props.isOpen,
   onEscape: close,
+  fallbackFocus: "#btn-create-ticket",
 });
 
 useFocusTrap(citationModalRef, {
   isOpen: () => Boolean(isCitationViewerOpen.value && activeCitation.value),
   onEscape: closeCitationViewer,
+  fallbackFocus: "#ticket-drawer-close-btn",
 });
 
 // SLA calculations
@@ -1185,6 +1184,27 @@ watch(
 const visibleComments = computed(() => {
   if (canViewInternalSponsorNotes.value) return props.comments;
   return props.comments.filter((c) => c.visibility !== "INTERNAL_SPONSOR");
+});
+
+const drawerTabs = computed(() => {
+  const tabs = [
+    { id: "overview", label: "Overview & Context" },
+    {
+      id: "discussion",
+      label: `Discussion (${visibleComments.value.length})`,
+    },
+  ];
+  if (demoBuild) {
+    tabs.push({
+      id: "attachments",
+      label: `Evidence (${props.attachments.length})`,
+    });
+  }
+  tabs.push(
+    { id: "signatures", label: "eSignatures" },
+    { id: "audit", label: "Audit Trail" }
+  );
+  return tabs;
 });
 
 const filteredComments = computed(() => {
@@ -1342,7 +1362,7 @@ const onTicketSigned = (sigPayload) => {
   background: rgba(255, 255, 255, 0.15);
   padding: 3px 8px;
   border-radius: 4px;
-  color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
 }
 
 .badge {
@@ -1374,8 +1394,9 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .badge-status-in_progress {
-  background: var(--semantic-color-ai);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
+  border: 1px solid var(--semantic-color-info-border);
 }
 
 .badge-status-waiting_on_site,
@@ -1412,7 +1433,7 @@ const onTicketSigned = (sigPayload) => {
   right: 16px;
   background: none;
   border: none;
-  color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 1.3rem;
   cursor: pointer;
   padding: 4px 8px;

@@ -13,7 +13,7 @@ import {
   resetKernelStudySession,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
-import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
+import { PARTICIPANT_STATES } from "../canvas/lifecycle";
 import {
   clearNodeResolutionCache,
   resetNodeResolutionSession,
@@ -49,19 +49,44 @@ export interface PulseCount {
   count: number;
 }
 
+/** Participant summary augmented with blind-safe kit and (when authorized) unblinded treatment allocation details. */
+export type CanvasParticipant = SubjectSummary & {
+  kit_number?: string | null;
+  treatment_group?: string | null;
+  investigational_product_id?: string | null;
+};
+
+export interface RecordParticipantConsentInput {
+  versionTag: string;
+  versionIndex: number;
+  icfSignedDate: string | null;
+  isPaperOverride?: boolean;
+  requiresReconsent?: boolean;
+  reason: string;
+}
+
 // Execution may send int32 values as strings (its OpenAPI allows both).
 const toCount = (value: number | string): number => Number(value) || 0;
 
 const sortByEnrollment = (
-  known: Record<string, SubjectSummary>
-): SubjectSummary[] =>
+  known: Record<string, CanvasParticipant>
+): CanvasParticipant[] =>
   Object.values(known).sort(
     (a, b) => toCount(a.enrollment_index) - toCount(b.enrollment_index)
   );
 
-function detailToSummary(
+function isNotFoundError(err: unknown): boolean {
+  return Boolean(
+    err &&
+    typeof err === "object" &&
+    "status" in err &&
+    Number((err as { status?: unknown }).status) === 404
+  );
+}
+
+export function detailToSummary(
   detail: SubjectDetail | null | undefined
-): SubjectSummary | null {
+): CanvasParticipant | null {
   if (
     !detail ||
     typeof detail !== "object" ||
@@ -78,6 +103,8 @@ function detailToSummary(
     status: detail.status,
     active_protocol_version: detail.active_protocol_version ?? "",
     enrollment_index: detail.enrollment_index ?? 0,
+    treatment_group: detail.treatment_group ?? null,
+    investigational_product_id: detail.investigational_product_id ?? null,
   };
 }
 
@@ -158,17 +185,20 @@ function fetchStudyPage(
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
     studyCode: getSyncedStudyScope(),
-    participants: [] as SubjectSummary[],
+    participants: [] as CanvasParticipant[],
     /** Study participants available to the ⌘K command palette across all views. */
-    paletteParticipants: [] as SubjectSummary[],
+    paletteParticipants: [] as CanvasParticipant[],
     paletteTotal: 0,
     paletteLoaded: false,
     paletteLoading: false,
+    paletteError: null as string | null,
     unfilteredLoadedCount: 0,
     /** Every participant read for this study by id, so a selection survives changing the list's filter. */
-    knownParticipants: {} as Record<string, SubjectSummary>,
+    knownParticipants: {} as Record<string, CanvasParticipant>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
+    /** Participant subject codes currently being resolved for cold `?participant=<code>` links. */
+    participantCodeLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
     participantsTotal: 0,
@@ -230,6 +260,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
 
     /** Clears per-study cached schedules and kernel lookup caches across auth, tenant, account, or persona transitions. */
     clearSessionCaches() {
+      this.clearParticipantAllocationCache();
       scheduleRequest++;
       inFlightSchedules.delete(this);
       this.scheduleOptionsByStudy = {};
@@ -323,17 +354,76 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     },
 
     /** Records participants for the active study and keeps `paletteParticipants` ordered. */
-    rememberParticipants(items: SubjectSummary[]) {
+    rememberParticipants(items: CanvasParticipant[]) {
       const studyId = this.studyCode;
       let changed = false;
       for (const participant of items) {
         if (participant.study_id && participant.study_id !== studyId) continue;
-        this.knownParticipants[participant.id] = participant;
-        seedParticipantNode(participant);
+        const prev = this.knownParticipants[participant.id];
+        const becameUnblinded =
+          prev?.status !== "UNBLINDED" && participant.status === "UNBLINDED";
+        const carryPrevTreatment =
+          prev?.treatment_group !== undefined &&
+          !(becameUnblinded && prev.treatment_group === null);
+        const carryPrevProduct =
+          prev?.investigational_product_id !== undefined &&
+          !(becameUnblinded && prev.investigational_product_id === null);
+        const merged: CanvasParticipant = {
+          ...prev,
+          ...participant,
+          ...(participant.kit_number !== undefined
+            ? { kit_number: participant.kit_number }
+            : prev?.kit_number !== undefined
+              ? { kit_number: prev.kit_number }
+              : {}),
+          ...(participant.treatment_group !== undefined
+            ? { treatment_group: participant.treatment_group }
+            : carryPrevTreatment
+              ? { treatment_group: prev.treatment_group }
+              : {}),
+          ...(participant.investigational_product_id !== undefined
+            ? {
+                investigational_product_id:
+                  participant.investigational_product_id,
+              }
+            : carryPrevProduct
+              ? { investigational_product_id: prev.investigational_product_id }
+              : {}),
+        };
+        this.knownParticipants[participant.id] = merged;
+        seedParticipantNode(merged);
         delete this.failedParticipantIds[participant.id];
         changed = true;
       }
       if (changed) {
+        this.paletteParticipants = sortByEnrollment(this.knownParticipants);
+      }
+    },
+
+    /** Clears caller-scoped kit and unblinded allocation fields when the signed-in identity or role set changes. */
+    clearParticipantAllocationCache() {
+      let changed = false;
+      for (const id of Object.keys(this.knownParticipants)) {
+        const existing = this.knownParticipants[id];
+        if (
+          !existing ||
+          (existing.treatment_group === undefined &&
+            existing.investigational_product_id === undefined &&
+            existing.kit_number === undefined)
+        ) {
+          continue;
+        }
+        const stripped: CanvasParticipant = { ...existing };
+        delete stripped.treatment_group;
+        delete stripped.investigational_product_id;
+        delete stripped.kit_number;
+        this.knownParticipants[id] = stripped;
+        changed = true;
+      }
+      if (changed) {
+        this.participants = this.participants.map(
+          (p) => this.knownParticipants[p.id] ?? p
+        );
         this.paletteParticipants = sortByEnrollment(this.knownParticipants);
       }
     },
@@ -354,6 +444,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       }
 
       this.paletteLoading = true;
+      this.paletteError = null;
       const run = (async () => {
         try {
           const page = await fetchStudyPage(studyId, epoch, 0);
@@ -367,8 +458,17 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
             page.items.length
           );
           this.paletteLoaded = true;
+          this.paletteError = null;
           return true;
-        } catch {
+        } catch (err) {
+          if (
+            epoch === lookupEpoch &&
+            this.studyCode === studyId &&
+            !isNotFoundError(err)
+          ) {
+            this.paletteError =
+              err instanceof Error ? err.message : String(err);
+          }
           return false;
         } finally {
           if (epoch === lookupEpoch && this.studyCode === studyId) {
@@ -514,6 +614,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       if (existing) return existing;
 
       const run = (async (): Promise<SubjectSummary | null> => {
+        this.participantCodeLookups[code] = true;
         try {
           if (palettePromise && palettePromiseKey === `${epoch}:${studyId}`) {
             await palettePromise;
@@ -552,7 +653,15 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
                 filterSiteId = detail.site_id || undefined;
                 filterStatus = detail.status || undefined;
               }
-            } catch {
+            } catch (err) {
+              if (
+                epoch === lookupEpoch &&
+                this.studyCode === studyId &&
+                !isNotFoundError(err)
+              ) {
+                this.paletteError =
+                  err instanceof Error ? err.message : String(err);
+              }
               return null;
             }
           }
@@ -607,10 +716,21 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
               return null;
             }
           }
-        } catch {
+        } catch (err) {
+          if (
+            epoch === lookupEpoch &&
+            this.studyCode === studyId &&
+            !isNotFoundError(err)
+          ) {
+            this.paletteError =
+              err instanceof Error ? err.message : String(err);
+          }
           return null;
         } finally {
           inFlightByCode.delete(key);
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            delete this.participantCodeLookups[code];
+          }
         }
       })();
 
@@ -644,12 +764,15 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           offset,
         });
         if (request !== participantsRequest) return false;
+        this.rememberParticipants(page.items);
+        const hydratedItems = page.items.map(
+          (item) => this.knownParticipants[item.id] ?? item
+        );
         this.participants = append
-          ? [...this.participants, ...page.items]
-          : page.items;
+          ? [...this.participants, ...hydratedItems]
+          : hydratedItems;
         const total = toCount(page.total);
         this.participantsTotal = total;
-        this.rememberParticipants(page.items);
         if (!filter.status && !filter.siteId && !filter.q) {
           this.unfilteredLoadedCount = Math.max(
             this.unfilteredLoadedCount,
@@ -708,119 +831,6 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } finally {
         if (request === pulseRequest) this.pulseLoading = false;
       }
-    },
-
-    /**
-     * Adds a participant to the study in screening, then refreshes the list and the counts. `participant` is
-     * the new participant as the list reports it, or null when the list can't place it yet.
-     */
-    async addParticipant(
-      subjectCode: string,
-      siteId: string,
-      reason: string
-    ): Promise<{ added: boolean; participant: SubjectSummary | null }> {
-      const studyId = this.studyCode;
-      const toasts = useToastStore();
-      if (!studyId) return { added: false, participant: null };
-      try {
-        await executionApi.addSubject({
-          studyId,
-          subjectCode,
-          siteId,
-          reason,
-        });
-      } catch (err) {
-        toasts.apiError(`${subjectCode} was not added`, err);
-        return { added: false, participant: null };
-      }
-      toasts.push({
-        tone: "success",
-        title: `${subjectCode} added in screening`,
-        message: "",
-      });
-      const [participant] = await Promise.all([
-        this.findNewestParticipant(studyId, subjectCode),
-        // Added from the participant list, which may have been empty until now.
-        this.refreshAfterChange({ list: true }),
-      ]);
-      return { added: true, participant };
-    },
-
-    /**
-     * The participant just added, read back from the list: Execution lists in enrollment order, so it is the
-     * last one unless someone else added a participant in between, in which case this returns null.
-     */
-    async findNewestParticipant(
-      studyId: string,
-      subjectCode: string
-    ): Promise<SubjectSummary | null> {
-      try {
-        const { total } = await executionApi.listSubjects({
-          studyId,
-          limit: 1,
-        });
-        const last = toCount(total) - 1;
-        if (last < 0) return null;
-        const page = await executionApi.listSubjects({
-          studyId,
-          limit: 1,
-          offset: last,
-        });
-        const newest = page.items[0];
-        if (studyId !== this.studyCode || newest?.subject_id !== subjectCode) {
-          return null;
-        }
-        this.rememberParticipants([newest]);
-        if (this.paletteLoaded) {
-          this.paletteTotal = Math.max(this.paletteTotal, toCount(total));
-          this.unfilteredLoadedCount = Math.max(
-            this.unfilteredLoadedCount,
-            this.paletteParticipants.length
-          );
-        }
-        return newest;
-      } catch {
-        return null;
-      }
-    },
-
-    /**
-     * Moves a participant to another state with the reason given. On success the participant shows its new
-     * state everywhere the canvas lists it, and the list and counts are read again.
-     */
-    async changeParticipantState(
-      participant: SubjectSummary,
-      state: string,
-      reason: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      const label = participantStateLabel(state);
-      try {
-        const updated = await executionApi.changeSubjectState(
-          participant.id,
-          state,
-          reason
-        );
-        const changed = { ...participant, status: updated.status };
-        this.rememberParticipants([changed]);
-        const index = this.participants.findIndex(
-          (p) => p.id === participant.id
-        );
-        if (index >= 0) this.participants.splice(index, 1, changed);
-        toasts.push({
-          tone: "success",
-          title: `${participant.subject_id} is now ${label.toLowerCase()}`,
-          message: "",
-        });
-      } catch (err) {
-        toasts.apiError(
-          `${participant.subject_id} was not moved to ${label.toLowerCase()}`,
-          err
-        );
-        return false;
-      }
-      await this.refreshAfterChange();
-      return true;
     },
 
     /** Reads the participant list and the counts again, where the canvas has already read them. */

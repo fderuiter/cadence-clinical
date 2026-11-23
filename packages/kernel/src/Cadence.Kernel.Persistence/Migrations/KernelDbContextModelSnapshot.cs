@@ -3805,6 +3805,8 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.HasIndex("TenantId", "Sequence")
                         .IsUnique();
 
+                    b.HasIndex("TenantId", "AggregateType", "AggregateId", "Sequence");
+
                     b.ToTable("audit_entries", "kernel");
                 });
 

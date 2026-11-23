@@ -11,7 +11,9 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>Participant Financial Wallet &amp; Stipends</h2>
+      <h2 id="wallet-view-heading" tabindex="-1">
+        Participant Financial Wallet &amp; Stipends
+      </h2>
       <p>
         Track your study stipends, upload travel or meal receipts for
         reimbursement, and transfer your available balance to your linked payout
@@ -65,13 +67,13 @@
       aria-busy="true"
       style="margin-bottom: 20px"
     >
-      <div class="wallet-skeleton-line wallet-skeleton-title" />
-      <div class="wallet-skeleton-line wallet-skeleton-balance" />
+      <div class="wallet-skeleton-line wallet-skeleton-title"></div>
+      <div class="wallet-skeleton-line wallet-skeleton-balance"></div>
       <div class="wallet-skeleton-grid">
-        <div class="wallet-skeleton-tile" />
-        <div class="wallet-skeleton-tile" />
-        <div class="wallet-skeleton-tile" />
-        <div class="wallet-skeleton-tile" />
+        <div class="wallet-skeleton-tile"></div>
+        <div class="wallet-skeleton-tile"></div>
+        <div class="wallet-skeleton-tile"></div>
+        <div class="wallet-skeleton-tile"></div>
       </div>
       <span class="sr-only">Loading participant wallet balances...</span>
     </div>
@@ -95,13 +97,13 @@
       >
         <strong
           style="
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 4px;
           "
         >
-          <ClinicalIcon name="alert-triangle" :size="16" />
+          <ClinicalIcon name="alert-circle" :size="16" />
           <span>IRS $600.00 Form W-9 Verification Hold Active</span>
         </strong>
         <span>
@@ -114,6 +116,30 @@
           }}</strong>. On-demand payouts and automated expense disbursements are
           paused until site staff verify your Form W-9.
         </span>
+        <div class="w9-resolution-links">
+          <a
+            id="link-w9-coordinator-support"
+            href="#wallet-w9-support"
+            class="w9-banner-link"
+            @click.prevent="jumpToW9Support"
+          >
+            Contact Study Coordinator to Verify Form W-9
+          </a>
+          <a
+            id="link-w9-email-coordinator"
+            :href="siteContact.emailHref"
+            class="w9-banner-link"
+          >
+            Email Coordinator ({{ siteContact.emailDisplay }})
+          </a>
+          <a
+            id="link-w9-call-coordinator"
+            :href="siteContact.phoneHref"
+            class="w9-banner-link"
+          >
+            Call Coordinator ({{ siteContact.phoneDisplay }})
+          </a>
+        </div>
       </div>
 
       <div
@@ -132,12 +158,26 @@
           font-weight: 600;
         "
       >
-        <ClinicalIcon name="info" :size="16" />
-        Year-to-date taxable compensation ({{
-          formatCurrency(wallet.taxableYtd)
-        }}) is approaching the $600.00 IRS Form W-9 threshold (current status:
-        {{ formatEnumLabel(wallet.w9Status || "NOT_REQUIRED") }}). Submit Form
-        W-9 with your study coordinator to avoid payout holds.
+        <div style="display: flex; align-items: flex-start; gap: 8px">
+          <ClinicalIcon name="info" :size="16" />
+          <span>
+            Year-to-date taxable compensation ({{
+              formatCurrency(wallet.taxableYtd)
+            }}) is approaching the $600.00 IRS Form W-9 threshold (current
+            status: {{ formatEnumLabel(wallet.w9Status || "NOT_REQUIRED") }}).
+            Submit Form W-9 with your study coordinator to avoid payout holds.
+          </span>
+        </div>
+        <div class="w9-resolution-links">
+          <a
+            id="link-w9-warning-support"
+            href="#wallet-w9-support"
+            class="w9-banner-link"
+            @click.prevent="jumpToW9Support"
+          >
+            Contact Study Coordinator for Form W-9
+          </a>
+        </div>
       </div>
 
       <!-- Wallet Summary & On-Demand Balance Disbursement Card -->
@@ -172,6 +212,7 @@
             </div>
             <div
               id="wallet-balance-amount"
+              class="tabular-nums"
               style="font-size: 32px; font-weight: 800; margin: 4px 0 0 0"
             >
               {{ formattedAvailableBalance }}
@@ -188,6 +229,7 @@
               isW9HoldActive
             "
             :aria-busy="wallet.disbursingBalance ? 'true' : 'false'"
+            :aria-describedby="disburseDescribedBy"
             aria-haspopup="dialog"
             style="
               background: var(--semantic-color-surface);
@@ -211,6 +253,7 @@
         </div>
 
         <div
+          class="tabular-nums"
           style="
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -270,11 +313,13 @@
         "
       >
         <h3
+          id="wallet-disbursement-heading"
+          tabindex="-1"
           style="
             margin: 0 0 4px 0;
             font-size: 16px;
             color: var(--semantic-color-success);
-            display: inline-flex;
+            display: flex;
             align-items: center;
             gap: 8px;
           "
@@ -367,14 +412,7 @@
 
       <!-- Receipt OCR & Expense Claim Card -->
       <div class="card">
-        <h3
-          style="
-            margin-top: 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-          "
-        >
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
           <ClinicalIcon name="camera" :size="20" />
           <span>Travel &amp; Meal Receipt Reimbursement</span>
         </h3>
@@ -389,7 +427,6 @@
           input-id="receipt-file-input"
           accept="image/*,application/pdf,.svg"
           described-by="receipt-upload-hint"
-          icon="camera"
           button-label="Upload receipt image for travel reimbursement"
           input-aria-label="Upload receipt image for travel reimbursement"
           :has-selection="Boolean(wallet.expenseForm.receiptImageName)"
@@ -399,6 +436,9 @@
           @file-selected="handleReceiptSelectedFile"
           @remove="handleClearReceiptSelection"
         >
+          <template #icon>
+            <ClinicalIcon name="camera" :size="20" />
+          </template>
           <template #selected>
             <p
               v-if="wallet.expenseForm.receiptImageName"
@@ -506,7 +546,11 @@
               flex-wrap: wrap;
             "
           >
-            <h4 style="margin: 0; font-size: 16px">
+            <h4
+              id="ocr-review-heading"
+              tabindex="-1"
+              style="margin: 0; font-size: 16px"
+            >
               {{
                 wallet.expenseManualEntry && !wallet.expenseOcr?.data
                   ? "Enter Receipt Details"
@@ -617,12 +661,12 @@
             type="button"
             class="btn btn-primary"
             :disabled="wallet.expenseSubmitting"
-            style="width: 100%; margin-top: 12px"
+            style="width: 100%; margin-top: 12px; gap: 8px"
             @click="handleConfirmReimburse"
           >
             <ClinicalIcon
               v-if="!wallet.expenseSubmitting"
-              name="rocket"
+              name="check"
               :size="16"
             />
             <span>{{
@@ -658,11 +702,13 @@
             "
           >
             <h4
+              id="expense-auto-approved-heading"
+              tabindex="-1"
               style="
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-success);
                 font-size: 16px;
-                display: inline-flex;
+                display: flex;
                 align-items: center;
                 gap: 8px;
               "
@@ -707,23 +753,26 @@
             "
           >
             <h4
+              id="expense-pending-review-heading"
+              tabindex="-1"
               style="
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-warning-text-dark);
                 font-size: 16px;
-                display: inline-flex;
+                display: flex;
                 align-items: center;
                 gap: 8px;
               "
             >
-              <ClinicalIcon name="alert-triangle" :size="16" />
+              <ClinicalIcon name="alert-circle" :size="16" />
               <span>Expense Claim Held for Manual Review</span>
             </h4>
             <p id="pending-review-notes" style="margin: 0; font-size: 14px">
               {{
-                wallet.expenseResult.review_notes ||
-                wallet.expenseResult.reviewNotes ||
-                "Expense claim exceeds auto-approval policy and has been routed to your study coordinator."
+                formatPlainReviewNotes(
+                  wallet.expenseResult.review_notes ||
+                    wallet.expenseResult.reviewNotes
+                ) || "Your study coordinator will check this receipt for you."
               }}
             </p>
           </div>
@@ -748,6 +797,7 @@
         <ul v-else style="list-style: none; padding: 0; margin: 0">
           <li
             v-for="claim in wallet.expenseClaims"
+            :id="`wallet-claim-row-${claim.id || claim.Id || claim.claim_id}`"
             :key="claim.id || claim.Id || claim.claim_id"
             class="wallet-expense-claim-row"
             style="
@@ -770,7 +820,10 @@
                   "Expense Claim"
                 }}
               </div>
-              <div style="font-size: 12px; color: var(--text-muted)">
+              <div
+                class="tabular-nums"
+                style="font-size: 12px; color: var(--text-muted)"
+              >
                 {{
                   formatEnumLabel(claim.category || claim.Category || "TRAVEL")
                 }}
@@ -808,12 +861,24 @@
                 "
               >
                 {{
-                  claim.reviewNotes || claim.review_notes || claim.ReviewNotes
+                  formatPlainReviewNotes(
+                    claim.reviewNotes || claim.review_notes || claim.ReviewNotes
+                  )
                 }}
+              </div>
+              <div style="margin-top: 4px">
+                <EntityLink
+                  :id="`btn-peek-claim-${claim.id || claim.Id || claim.claim_id}`"
+                  label="View details"
+                  :sr-context="claimDisplayTitle(claim)"
+                  @peek="
+                    ({ triggerEl }) => openExpenseClaimPeek(claim, triggerEl)
+                  "
+                />
               </div>
             </div>
             <div style="text-align: right">
-              <strong style="display: block">
+              <strong class="tabular-nums" style="display: block">
                 {{
                   formatCurrency(
                     claim.netAmount ??
@@ -852,7 +917,9 @@
         <ul style="list-style: none; padding: 0; margin: 0">
           <li
             v-for="tx in wallet.recentTransactions"
-            :key="tx.id || tx.Id"
+            :id="`wallet-tx-row-${tx.id || tx.Id || tx.referenceId}`"
+            :key="tx.id || tx.Id || tx.referenceId"
+            class="wallet-tx-row"
             style="
               display: flex;
               justify-content: space-between;
@@ -861,6 +928,7 @@
               border-bottom: 1px solid var(--semantic-color-border);
               font-size: 14px;
               gap: 12px;
+              flex-wrap: wrap;
             "
           >
             <div>
@@ -874,8 +942,17 @@
               <div style="font-size: 12px; color: var(--text-muted)">
                 {{ formatEnumLabel(tx.transactionType || tx.TransactionType) }}
               </div>
+              <div style="margin-top: 4px">
+                <EntityLink
+                  :id="`btn-peek-tx-${tx.id || tx.Id || tx.referenceId}`"
+                  label="View details"
+                  :sr-context="txDisplayTitle(tx)"
+                  @peek="({ triggerEl }) => openTransactionPeek(tx, triggerEl)"
+                />
+              </div>
             </div>
             <strong
+              class="tabular-nums"
               :style="{
                 color:
                   Number(tx.amount ?? tx.Amount ?? 0) >= 0
@@ -888,6 +965,15 @@
           </li>
         </ul>
       </div>
+
+      <!-- Form W-9 & Payment Coordinator Support -->
+      <SiteContactLinks
+        id="wallet-w9-support"
+        tabindex="-1"
+        heading="Form W-9 & Payment Coordinator Support"
+        region-label="Form W-9 and payment coordinator contact options"
+        style="margin-top: 20px"
+      />
 
       <!-- Accessible Focus-Trapped Payout Confirmation Modal -->
       <div
@@ -1062,8 +1148,17 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalDropzone, ClinicalIcon, useFocusTrap } from "ui";
+import {
+  ClinicalDropzone,
+  ClinicalIcon,
+  EntityLink,
+  handoffFocus,
+  useFocusTrap,
+} from "ui";
 
+import SiteContactLinks from "../components/SiteContactLinks.vue";
+import { openExpenseClaimPeek, openTransactionPeek } from "../features/peek.js";
+import { getSiteSupportContact } from "../features/site-support.js";
 import {
   closeDisburseModal,
   disburseAvailableBalance,
@@ -1084,6 +1179,7 @@ import {
   normalizeCurrencyCode,
 } from "../utils/currency.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+import { humanizeExpenseReviewNotes } from "../utils/participantCopy.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
@@ -1100,7 +1196,23 @@ useFocusTrap(disburseModalRef, {
   restoreFocus: () => {
     const target = state.initiatingButton;
     state.initiatingButton = null;
-    return target || "#btn-disburse-balance";
+    const hasPositiveBalance = Number(wallet.walletBalance || 0) > 0;
+    if (target && !target.disabled && hasPositiveBalance) {
+      return target;
+    }
+    const disburseBtn =
+      typeof document !== "undefined"
+        ? document.getElementById("btn-disburse-balance")
+        : null;
+    if (disburseBtn && !disburseBtn.disabled && hasPositiveBalance) {
+      return disburseBtn;
+    }
+    return (
+      (typeof document !== "undefined" &&
+        (document.getElementById("wallet-disbursement-heading") ||
+          document.getElementById("wallet-view-heading"))) ||
+      "#wallet-view-heading"
+    );
   },
 });
 
@@ -1191,6 +1303,44 @@ const isApproachingW9Threshold = computed(() => {
   return !isW9HoldActive.value && ytd >= 450 && ytd < 600 && !verified;
 });
 
+const disburseDescribedBy = computed(() => {
+  if (isW9HoldActive.value) return "wallet-w9-hold-banner";
+  if (isApproachingW9Threshold.value) return "wallet-w9-warning-banner";
+  return undefined;
+});
+
+const siteContact = computed(
+  () => ui.siteSupportContact || getSiteSupportContact()
+);
+
+function jumpToW9Support() {
+  const supportEl = document.getElementById("wallet-w9-support");
+  supportEl?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  supportEl?.focus?.();
+}
+
+function formatPlainReviewNotes(rawNotes) {
+  return humanizeExpenseReviewNotes(rawNotes);
+}
+
+function claimDisplayTitle(claim) {
+  return (
+    claim?.merchantName ||
+    claim?.merchant_name ||
+    claim?.MerchantName ||
+    "Expense Claim"
+  );
+}
+
+function txDisplayTitle(tx) {
+  return (
+    tx?.description ||
+    tx?.Description ||
+    formatEnumLabel(tx?.transactionType || tx?.TransactionType) ||
+    "Wallet Activity"
+  );
+}
+
 const showExpenseReviewCard = computed(() =>
   Boolean(
     wallet.expenseManualEntry ||
@@ -1198,6 +1348,14 @@ const showExpenseReviewCard = computed(() =>
     wallet.expenseForm?.merchantName
   )
 );
+
+watch(showExpenseReviewCard, (isOpen, wasOpen) => {
+  if (isOpen && !wasOpen && ui.currentView === "view-wallet") {
+    void handoffFocus(["#ocr-category", "#ocr-review-heading"], {
+      scrollIfOffscreen: true,
+    });
+  }
+});
 
 const walletError = computed(
   () => wallet.expenseOcr?.error || wallet.expenseError || ""
@@ -1246,6 +1404,42 @@ watch(
   }
 );
 
+watch(
+  () => wallet.expenseResult,
+  (nextResult, prevResult) => {
+    if (
+      nextResult &&
+      nextResult !== prevResult &&
+      ui.currentView === "view-wallet"
+    ) {
+      void handoffFocus([
+        "#expense-auto-approved-heading",
+        "#expense-pending-review-heading",
+        "#btn-manual-expense-entry",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
+  }
+);
+
+watch(
+  () => wallet.disbursementConfirmation,
+  (nextConfirm, prevConfirm) => {
+    if (
+      nextConfirm &&
+      nextConfirm !== prevConfirm &&
+      ui.currentView === "view-wallet"
+    ) {
+      void handoffFocus([
+        "#wallet-disbursement-heading",
+        "#btn-disburse-balance",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
+  }
+);
 function handleOpenManualEntry() {
   openManualExpenseEntry();
 }
@@ -1271,11 +1465,25 @@ async function handleReceiptSelectedFile(file) {
 async function handleConfirmReimburse() {
   try {
     await submitExpenseClaim();
+    if (wallet.expenseResult) {
+      void handoffFocus([
+        "#expense-auto-approved-heading",
+        "#expense-pending-review-heading",
+        "#btn-manual-expense-entry",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
   } catch (err) {
     const msg =
       err?.message ||
       "Unable to submit travel expense claim right now. Please try again later.";
     wallet.expenseError = msg;
+    void handoffFocus([
+      "#wallet-error-banner",
+      "#btn-confirm-reimburse",
+      "#wallet-view-heading",
+    ]);
   }
 }
 
@@ -1314,6 +1522,14 @@ async function handleConfirmDisburse() {
     await disburseAvailableBalance(wallet.disburseForm.disbursementType, {
       amount: numericAmount,
     });
+    if (wallet.disbursementConfirmation) {
+      void handoffFocus([
+        "#wallet-disbursement-heading",
+        "#btn-disburse-balance",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
   } catch (err) {
     const msg =
       err?.message ||

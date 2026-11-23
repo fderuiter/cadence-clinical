@@ -63,6 +63,7 @@
         "collection.open",
         "collection.record",
         "collection.sign",
+        "attestation.sign",
         "execution.query.answer",
         "enrollment.export"
       ]
@@ -74,6 +75,7 @@
         "validation_finding.investigate",
         "validation_finding.classify",
         "validation_finding.explain",
+        "attestation.sign",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
@@ -88,16 +90,29 @@
       "name": "Data manager",
       "capabilities": [
         "validation_run.record",
+        "validation_finding.investigate",
+        "validation_finding.classify",
         "validation_finding.accept",
         "validation_finding.reopen",
         "lock.apply",
         "lock.release",
+        "attestation.sign",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
         "execution.query.raise",
         "execution.query.manage",
         "study.declare_standards",
+        "artifact.register",
+        "artifact.add_version",
+        "effectivity.declare",
+        "effectivity.change_status",
+        "site.register",
+        "study_site.link",
+        "study_site.activate",
+        "proposal.approve",
+        "proposal.reject",
+        "simulation.run",
         "study.export",
         "enrollment.export"
       ]
@@ -108,19 +123,31 @@
       "capabilities": [
         "organization.register",
         "study.register",
+        "site.register",
+        "study_site.link",
+        "study_site.activate",
         "concept.define",
         "protocol.draft",
         "protocol.revise_draft",
         "protocol.submit_for_review",
+        "protocol.return_to_draft",
         "protocol.approve",
         "protocol.amend",
+        "simulation.run",
+        "artifact.register",
+        "artifact.add_version",
+        "effectivity.declare",
+        "effectivity.change_status",
         "standard.register",
         "standard.approve",
         "library_item.draft",
         "library_item.approve",
         "study.declare_standards",
         "validation_run.record",
-        "attestation.sign"
+        "attestation.sign",
+        "work_queue.define",
+        "proposal.approve",
+        "proposal.reject"
       ]
     },
     {
@@ -139,6 +166,16 @@
         "study.export",
         "enrollment.export"
       ]
+    },
+    {
+      "code": "DEMO_STATISTICIAN",
+      "name": "Unblinded statistician",
+      "capabilities": ["validation_finding.investigate"]
+    },
+    {
+      "code": "DEMO_PHARMACIST",
+      "name": "Site pharmacist",
+      "capabilities": ["validation_finding.investigate"]
     }
   ],
   "users": [
@@ -189,6 +226,24 @@
       "subject": "d43095eb-1912-40dd-a528-fa04335a2342",
       "role": "DEMO_AUDITOR",
       "site": null
+    },
+    {
+      "username": "stat.author",
+      "subject": "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6",
+      "role": "DEMO_STATISTICIAN",
+      "site": null
+    },
+    {
+      "username": "stat.approver",
+      "subject": "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7",
+      "role": "DEMO_STATISTICIAN",
+      "site": null
+    },
+    {
+      "username": "pharmacist.site101",
+      "subject": "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8",
+      "role": "DEMO_PHARMACIST",
+      "site": "SITE-101"
     }
   ]
 }

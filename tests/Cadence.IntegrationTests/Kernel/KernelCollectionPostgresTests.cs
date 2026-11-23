@@ -7,10 +7,15 @@ using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -48,8 +53,10 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
     /// <summary>
     /// A form opens under the protocol version effective at the participant's site when the values were collected, and
-    /// records a GovernedBy edge from that version. It is refused before any version is effective, for a CollectionSpec
-    /// the version lacks or a visit that does not collect it, for an unknown enrollment and for a time in the future.
+    /// records <see cref="LineageEdgeKind.CollectedBy"/> edges from its governing CollectionSpec and PlannedActivity
+    /// <c>protocol_element</c> nodes (or from CollectionSpec only when unscheduled). It is refused before any version is
+    /// effective, for a CollectionSpec the version lacks or a visit that does not collect it, for an unknown enrollment
+    /// and for a time in the future.
     /// </summary>
     [Fact(DisplayName = "Open_ResolvesTheGoverningVersion_AndRefusesWhatItDoesNotGovern")]
     public async Task OpenResolvesTheGoverningVersionAndRefusesWhatItDoesNotGovern()
@@ -72,20 +79,177 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
         var collectedAt = Tick();
         var opened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), collectedAt), ct);
+        var unscheduled = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), Tick(), visit: null), ct);
 
         opened.Should().BeEquivalentTo(new CollectionInstanceState(opened.CollectionInstanceId, subject.Enrollment, version, SpecId, VisitId, collectedAt, 1));
+        opened.VisitTimingAssessment.Should().BeNull("a screening enrollment without an Enrolled period has no reference start");
         await using var db = fixture.CreateContext(tenant);
         (await db.LineageEdges.AsNoTracking().CountAsync(
-            e => e.Kind == LineageEdgeKind.GovernedBy && e.FromId == version.Value && e.ToId == opened.CollectionInstanceId.Value, ct))
-            .Should().Be(1);
+            e => e.Kind == LineageEdgeKind.GovernedBy && e.ToKind == NodeKinds.CollectionInstance, ct))
+            .Should().Be(0);
+        var specElement = ProtocolElementId.For(study, SpecId).Value;
+        var visitElement = ProtocolElementId.For(study, VisitId).Value;
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.CollectionInstance && e.ToId == opened.CollectionInstanceId.Value)
+            .Select(e => new { e.FromKind, e.FromId, e.FromVersion, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.ProtocolElement, FromId = specElement, FromVersion = 1L, Kind = LineageEdgeKind.CollectedBy },
+                new { FromKind = NodeKinds.ProtocolElement, FromId = visitElement, FromVersion = 1L, Kind = LineageEdgeKind.CollectedBy },
+            ]);
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.CollectionInstance && e.ToId == unscheduled.CollectionInstanceId.Value)
+            .Select(e => new { e.FromKind, e.FromId, e.FromVersion, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.ProtocolElement, FromId = specElement, FromVersion = 1L, Kind = LineageEdgeKind.CollectedBy },
+            ]);
         (await SendAsync(Open(subject, opened.CollectionInstanceId, Tick()), ct)).Error.Should().Be(KernelErrors.AlreadyExists);
+    }
+
+    /// <summary>
+    /// Opening a timed visit for an enrolled participant returns an optional <see cref="VisitTimingAssessment"/> derived
+    /// purely from <c>CollectedAt</c> and the <c>Enrolled</c> period start (ADR-2487, ADR-2507, K-TIME-3, K-TIME-7),
+    /// normalizing legacy Day 0 timings to StudyDay 1, preserving the assessment on idempotent replay, never blocking
+    /// early or late capture, and returning <c>null</c> for unscheduled forms, untimed activities and screening subjects.
+    /// </summary>
+    [Fact(DisplayName = "Open_EvaluatesVisitTimingForEnrolledParticipants_WithoutBlockingOrPersistingSchedule")]
+    [KernelRule("K-TIME-3")]
+    [KernelRule("K-TIME-7")]
+    public async Task OpenEvaluatesVisitTimingForEnrolledParticipantsWithoutBlockingOrPersistingSchedule()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _forms.Protocol.NewStudyAsync(ct);
+        var systolic = await _forms.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Test concept"),
+            ct);
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.baseline", "Day 0 Baseline", "ep.treatment", [ActivityLocation.Site], [SpecId], new ActivityTiming(0, 0, 1)),
+                new PlannedActivity(VisitId, "Week 12 visit", "ep.treatment", [ActivityLocation.Site], [SpecId], new ActivityTiming(84, 3, 3)),
+                new PlannedActivity("act.ae", "Adverse event follow-up", "ep.treatment", [ActivityLocation.Site], [SpecId], Timing: null),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(SpecId, "Vital signs", [new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true)]),
+            ],
+        };
+        var version = ProtocolVersionId.New();
+        (await _forms.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
+        var inReview = await _forms.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var signature = await _forms.Protocol.OkAsync(_forms.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        await _forms.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        var effectivity = EffectivityId.New();
+        await _forms.Protocol.OkAsync(new DeclareEffectivity(tenant, effectivity, version, EffectivityScope.Study(), Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
+        var ethicsBytes = System.Text.Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
+        var ethicsVersion = ArtifactVersionId.New();
+        await _forms.Protocol.OkAsync(
+            new RegisterArtifact(
+                tenant,
+                ArtifactId.New(),
+                ethicsVersion,
+                ArtifactKind.EthicsApproval,
+                study,
+                "Ethics approval",
+                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://ethics/timing"),
+                KernelProtocolScenario.Key(),
+                "Filed"),
+            ct);
+        await _forms.Protocol.OkAsync(
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"),
+            ct);
+
+        var studySite = await _forms.Observations.AddStudySiteAsync(tenant, study, ct);
+        var screeningSubject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
+        var subject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
+
+        var enrolledAt = new DateTimeOffset(DateOnly.FromDateTime(Tick().UtcDateTime).AddDays(1), new TimeOnly(9, 30), TimeSpan.Zero);
+        fixture.Clock.Set(enrolledAt.AddHours(3));
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Enrolled, enrolledAt, KernelProtocolScenario.Key(), "Eligible and enrolled"),
+            ct);
+        Tick();
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Randomized, enrolledAt.AddHours(1), KernelProtocolScenario.Key(), "Randomized"),
+            ct);
+        Tick();
+        await _forms.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Active, enrolledAt.AddHours(2), KernelProtocolScenario.Key(), "First dose"),
+            ct);
+
+        var day1 = DateOnly.FromDateTime(enrolledAt.UtcDateTime);
+        fixture.Clock.Advance(TimeSpan.FromDays(95));
+
+        // Legacy raw Day 0 baseline visit normalizes to SDTM StudyDay 1 (target == day1).
+        var baselineOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), enrolledAt, visit: "act.baseline"), ct);
+        baselineOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(
+                new PlannedVisit("act.baseline", "Day 0 Baseline", "ep.treatment", 1, 1, 0, 1),
+                day1,
+                day1,
+                day1.AddDays(1),
+                VisitWindowStatus.Open),
+            day1,
+            0,
+            VisitTiming.InWindow,
+            0));
+
+        // Timed Week 12 visit (StudyDay 84 -> offset 83 days, window ±3): Early, InWindow (with replay), and Late all succeed without blocking capture.
+        var targetWeek12 = day1.AddDays(83);
+        var expectedWeek12 = new PlannedVisit(VisitId, "Week 12 visit", "ep.treatment", 1, 84, 3, 3);
+
+        var earlyAt = new DateTimeOffset(targetWeek12.AddDays(-5), new TimeOnly(10, 0), TimeSpan.Zero);
+        var earlyOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), earlyAt), ct);
+        earlyOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.NotYetOpen),
+            targetWeek12.AddDays(-5),
+            -5,
+            VisitTiming.Early,
+            2));
+
+        var inWindowAt = new DateTimeOffset(targetWeek12.AddDays(2), new TimeOnly(14, 15), TimeSpan.Zero);
+        var replayCommand = Open(subject, CollectionInstanceId.New(), inWindowAt);
+        var inWindowOpened = await _forms.Protocol.OkAsync(replayCommand, ct);
+        var replayed = await SendAsync(replayCommand, ct);
+        inWindowOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.Open),
+            targetWeek12.AddDays(2),
+            2,
+            VisitTiming.InWindow,
+            0));
+        replayed.Replayed.Should().BeTrue();
+        replayed.Value.Should().BeEquivalentTo(inWindowOpened);
+
+        var lateAt = new DateTimeOffset(targetWeek12.AddDays(7), new TimeOnly(16, 45), TimeSpan.Zero);
+        var lateOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), lateAt), ct);
+        lateOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
+            new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.Closed),
+            targetWeek12.AddDays(7),
+            7,
+            VisitTiming.Late,
+            4));
+
+        // Unscheduled forms, untimed event-driven activities, and screening enrollments return null VisitTimingAssessment.
+        (await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), inWindowAt, visit: null), ct))
+            .VisitTimingAssessment.Should().BeNull();
+        (await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), inWindowAt, visit: "act.ae"), ct))
+            .VisitTimingAssessment.Should().BeNull();
+        (await _forms.Protocol.OkAsync(Open(screeningSubject, CollectionInstanceId.New(), inWindowAt), ct))
+            .VisitTimingAssessment.Should().BeNull();
     }
 
     /// <summary>
     /// A first page records two values and a second records a third and corrects one, leaving one unchanged: each save
     /// is one activity that writes the form, its changed observations, their audit links and events together; every new
-    /// observation version has a GovernedBy edge from the protocol version; and the result and the form read return
-    /// every value at its current revision, with the specification's items in their order.
+    /// observation version has a <see cref="LineageEdgeKind.CollectedBy"/> edge from its governing CollectionItem
+    /// <c>protocol_element</c> node only; and the result and the form read return every value at its current revision,
+    /// with the specification's items in their order.
     /// </summary>
     [Fact(DisplayName = "Save_RecordsAndCorrectsAPage_AsOneActivity")]
     [KernelRule("K-FACT-6")]
@@ -129,17 +293,35 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
             .Should().BeEquivalentTo("ObservationCorrected", "ObservationRecorded", "CollectedValuesSaved");
         (await db.ProvenanceActivities.AsNoTracking().SingleAsync(p => p.Id == secondActivity, ct)).Outcome.Should().Be("Committed");
 
-        var versionId = form.Version.Value;
-        var governed = await db.LineageEdges.AsNoTracking()
-            .Where(e => e.Kind == LineageEdgeKind.GovernedBy && e.FromId == versionId && e.ToKind == NodeKinds.Observation)
-            .Select(e => new { e.ToId, e.ToVersion })
+        var study = form.Subject.Study;
+        (await db.LineageEdges.AsNoTracking().CountAsync(
+            e => e.Kind == LineageEdgeKind.GovernedBy && (e.ToKind == NodeKinds.CollectionInstance || e.ToKind == NodeKinds.Observation), ct))
+            .Should().Be(0);
+        var collectedObservations = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.Kind == LineageEdgeKind.CollectedBy && e.ToKind == NodeKinds.Observation)
+            .Select(e => new { e.FromId, e.FromVersion, e.ToId, e.ToVersion })
             .ToListAsync(ct);
-        governed.Select(e => (e.ToId, e.ToVersion)).Should().BeEquivalentTo(
+        collectedObservations.Select(e => (e.FromId, e.FromVersion, e.ToId, e.ToVersion)).Should().BeEquivalentTo(
             [
-                (first.Values[0].ObservationId.Value, 1L), (first.Values[1].ObservationId.Value, 1L),
-                (second.Values[2].ObservationId.Value, 2L), (second.Values[0].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Diastolic).Value, 1L, first.Values[0].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Systolic).Value, 1L, first.Values[1].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Comment).Value, 1L, second.Values[0].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Systolic).Value, 1L, second.Values[2].ObservationId.Value, 2L),
             ],
-            "every observation version a save writes is governed by the form's protocol version");
+            "each observation version a save writes is collected only by its own CollectionItem protocol_element");
+        var collectedInstance = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.Kind == LineageEdgeKind.CollectedBy && e.ToKind == NodeKinds.CollectionInstance && e.ToId == form.Instance.Value)
+            .Select(e => new { e.FromId, e.FromVersion, e.ToVersion })
+            .ToListAsync(ct);
+        collectedInstance.Select(e => (e.FromId, e.FromVersion, e.ToVersion)).Should().BeEquivalentTo(
+            [
+                (ProtocolElementId.For(study, SpecId).Value, 1L, 1L),
+                (ProtocolElementId.For(study, VisitId).Value, 1L, 1L),
+                (ProtocolElementId.For(study, SpecId).Value, 1L, 2L),
+                (ProtocolElementId.For(study, VisitId).Value, 1L, 2L),
+                (ProtocolElementId.For(study, SpecId).Value, 1L, 3L),
+                (ProtocolElementId.For(study, VisitId).Value, 1L, 3L),
+            ]);
     }
 
     /// <summary>
@@ -373,6 +555,96 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         twice.Error!.Code.Should().Be(KernelErrors.CommandInvalid.Code);
         elsewhere.Error.Should().Be(KernelErrors.NotFound, "a form of another enrollment is reported as missing");
         (await CountsAsync(form, ct)).Should().Be(before);
+    }
+
+    /// <summary>
+    /// Coded items hydrate their governed codelist options on form and observation reads, validate membership against
+    /// <c>IConceptRegistry.GetGroupAsync</c> (when <c>Codelist</c> is set) or <c>LookupAsync</c> (when <c>Codelist</c>
+    /// is null) before commit with HTTP 422, and still permit <see cref="MissingValue"/> reasons under K-FACT-3.
+    /// </summary>
+    [Fact(DisplayName = "CodedItems_HydrateCodelists_ValidateMembership_AndAllowMissingValues")]
+    public async Task CodedItemsHydrateCodelistsValidateMembershipAndAllowMissingValues()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (form, csVersion) = await _forms.NewCodedFormAsync(ct);
+        var tenant = form.Subject.Tenant;
+        var before = await CountsAsync(form, ct);
+
+        var loaded = await fixture.CollectionInstanceRecords.FindAsync(tenant, form.Instance, ct);
+        loaded.Should().NotBeNull();
+        loaded!.ItemCodelists.Should().NotBeNull();
+        loaded.ItemCodelists!.Keys.Should().Equal(Position);
+        loaded.ItemCodelists[Position].Should().Equal(
+            new CodelistOptionView("SITTING", "Sitting", "SITTING"),
+            new CodelistOptionView("SUPINE", "Supine", "SUPINE"));
+
+        var batchLoaded = await fixture.CollectionInstanceRecords.ListRecordsForEnrollmentAsync(tenant, form.Subject.Enrollment, ct);
+        batchLoaded.Should().ContainSingle().Which.ItemCodelists![Position].Select(o => o.Code).Should().Equal("SITTING", "SUPINE");
+
+        // Rejects a code that belongs to another group in the same CodeSystemVersion, and an unknown code on a Codelist-null item.
+        var rejected = await fixture.Sender.SendAsync(
+            Save(
+                form,
+                Value(Position, new CodedValue(csVersion, "Y")),
+                Value(AdverseTerm, new CodedValue(csVersion, "NOT_IN_SYSTEM"))),
+            cancellationToken: ct);
+
+        rejected.Error!.Code.Should().Be(CollectionErrors.ValuesInvalid.Code);
+        rejected.Error.HttpStatus.Should().Be(422);
+        rejected.Error.Errors!.Keys.Should().BeEquivalentTo(Position, AdverseTerm);
+        (await CountsAsync(form, ct)).Should().Be(before, "a rejected coded save writes nothing");
+
+        // Accepts a valid codelist member and a valid code-system member (null Codelist).
+        var saved = await _forms.Protocol.OkAsync(
+            Save(
+                form,
+                Value(Systolic, Mmhg(118)),
+                Value(Position, new CodedValue(csVersion, "SITTING")),
+                Value(AdverseTerm, new CodedValue(csVersion, "LLT_HEADACHE"))),
+            ct);
+        var posObservationId = saved.Values.Single(v => v.ItemId == Position).ObservationId;
+
+        var obsRecord = await fixture.ObservationRecords.FindAsync(tenant, posObservationId, ct);
+        obsRecord.Should().NotBeNull();
+        obsRecord!.ExpectedCodeSystemVersionId.Should().Be(csVersion);
+        obsRecord.ExpectedCodelist.Should().Be(PositionCodelist);
+        obsRecord.ExpectedCodelistOptions.Should().Equal(
+            new CodelistOptionView("SITTING", "Sitting", "SITTING"),
+            new CodelistOptionView("SUPINE", "Supine", "SUPINE"));
+
+        // Observation correction rejects out-of-codelist code with 422 and accepts a valid codelist code.
+        var badCorrection = await fixture.Sender.SendAsync(
+            new CorrectObservation(
+                tenant,
+                posObservationId,
+                form.Subject.Enrollment,
+                new CodedValue(csVersion, "Y"),
+                obsRecord.Version,
+                KernelProtocolScenario.Key(),
+                "Attempt invalid position code"),
+            cancellationToken: ct);
+        badCorrection.Error!.Code.Should().Be(CollectionErrors.ValuesInvalid.Code);
+        badCorrection.Error.HttpStatus.Should().Be(422);
+        badCorrection.Error.Errors!.Keys.Should().Equal(Position);
+
+        var corrected = await _forms.Protocol.OkAsync(
+            new CorrectObservation(
+                tenant,
+                posObservationId,
+                form.Subject.Enrollment,
+                new CodedValue(csVersion, "SUPINE"),
+                obsRecord.Version,
+                KernelProtocolScenario.Key(),
+                "Corrected position from source worksheet"),
+            ct);
+        corrected.Revision.Should().Be(2);
+
+        // MissingValue still bypasses codelist checks under K-FACT-3.
+        var missingSaved = await _forms.Protocol.OkAsync(
+            Save(form, Value(Position, new MissingValue(NullFlavor.NotDone, "Measured standing"), expectedRevision: 2)),
+            ct);
+        missingSaved.Values.Single(v => v.ItemId == Position).Revision.Should().Be(3);
     }
 
     /// <summary>Saves one value on a new form in a new tenant, for tests of the form tables.</summary>

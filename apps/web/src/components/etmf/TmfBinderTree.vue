@@ -1,5 +1,4 @@
 <template>
-  <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="tmf-binder-tree-container">
     <div class="binder-export-header">
       <button
@@ -14,6 +13,43 @@
         /></span>
         Export Complete Study Binder<span class="sr-only"> (eTMF)</span>
       </button>
+      <div
+        v-if="activeZone || activeSection"
+        class="binder-scoped-exports"
+        role="group"
+        aria-label="Scoped folder export actions"
+      >
+        <button
+          v-if="activeZone"
+          type="button"
+          class="btn-node-export"
+          :disabled="!canExport"
+          :title="
+            !canExport
+              ? ETMF_EXPORT_ROLE_REASON
+              : 'Export Zone ' + activeZone.code + ' documents'
+          "
+          @click="exportZone(activeZone)"
+        >
+          Export Zone {{ activeZone.code
+          }}<span class="sr-only"> documents</span>
+        </button>
+        <button
+          v-if="activeSection"
+          type="button"
+          class="btn-node-export"
+          :disabled="!canExport"
+          :title="
+            !canExport
+              ? ETMF_EXPORT_ROLE_REASON
+              : 'Export Section ' + activeSection.code + ' documents'
+          "
+          @click="exportSection(activeSection)"
+        >
+          Export Section {{ activeSection.code
+          }}<span class="sr-only"> documents</span>
+        </button>
+      </div>
       <p
         v-if="!canExport"
         id="etmf-export-role-note"
@@ -60,26 +96,31 @@
         v-for="zone in filteredTree"
         :key="zone.id"
         class="tree-node zone-node"
+        role="none"
       >
-        <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
-        <div
+        <button
           :id="'tree-node-' + zone.id"
           :ref="(el) => setNodeRef(zone.id, el)"
+          type="button"
           class="node-header zone-header"
           role="treeitem"
           :aria-expanded="isExpanded(zone.id)"
-          :aria-selected="false"
+          :aria-selected="selectedNodeId === zone.id"
           :tabindex="activeFocusedNodeId === zone.id ? 0 : -1"
-          :class="{ 'is-expanded': isExpanded(zone.id) }"
+          :class="{
+            'is-expanded': isExpanded(zone.id),
+            'is-selected': selectedNodeId === zone.id,
+          }"
           @click="clickZone(zone)"
+          @keydown="handleTreeKeyDown"
           @focus="activeFocusedNodeId = zone.id"
         >
-          <span class="toggle-icon"
+          <span class="toggle-icon" aria-hidden="true"
             ><ClinicalIcon
               :name="isExpanded(zone.id) ? 'chevron-down' : 'chevron-right'"
               :size="16"
           /></span>
-          <span class="folder-icon"
+          <span class="folder-icon" aria-hidden="true"
             ><ClinicalIcon name="folder-open" :size="16"
           /></span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
@@ -90,19 +131,7 @@
           >
             {{ getDocumentCount(zone) }}
           </span>
-          <button
-            type="button"
-            class="btn-node-export"
-            :disabled="!canExport"
-            :title="
-              !canExport ? ETMF_EXPORT_ROLE_REASON : 'Export Zone documents'
-            "
-            :aria-label="'Export Zone ' + zone.code + ' documents'"
-            @click.stop="exportZone(zone)"
-          >
-            <ClinicalIcon name="download" :size="16" />
-          </button>
-        </div>
+        </button>
 
         <div
           v-if="isExpanded(zone.id)"
@@ -113,28 +142,33 @@
             v-for="section in zone.children"
             :key="section.id"
             class="tree-node section-node"
+            role="none"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
-            <div
+            <button
               :id="'tree-node-' + section.id"
               :ref="(el) => setNodeRef(section.id, el)"
+              type="button"
               class="node-header section-header"
               role="treeitem"
               :aria-expanded="isExpanded(section.id)"
-              :aria-selected="false"
+              :aria-selected="selectedNodeId === section.id"
               :tabindex="activeFocusedNodeId === section.id ? 0 : -1"
-              :class="{ 'is-expanded': isExpanded(section.id) }"
+              :class="{
+                'is-expanded': isExpanded(section.id),
+                'is-selected': selectedNodeId === section.id,
+              }"
               @click="clickSection(section)"
+              @keydown="handleTreeKeyDown"
               @focus="activeFocusedNodeId = section.id"
             >
-              <span class="toggle-icon"
+              <span class="toggle-icon" aria-hidden="true"
                 ><ClinicalIcon
                   :name="
                     isExpanded(section.id) ? 'chevron-down' : 'chevron-right'
                   "
                   :size="16"
               /></span>
-              <span class="folder-icon"
+              <span class="folder-icon" aria-hidden="true"
                 ><ClinicalIcon name="folder" :size="16"
               /></span>
               <span class="section-label">Section {{ section.code }}:</span>
@@ -145,43 +179,30 @@
               >
                 {{ getDocumentCount(section) }}
               </span>
-              <button
-                type="button"
-                class="btn-node-export"
-                :disabled="!canExport"
-                :title="
-                  !canExport
-                    ? ETMF_EXPORT_ROLE_REASON
-                    : 'Export Section documents'
-                "
-                :aria-label="'Export Section ' + section.code + ' documents'"
-                @click.stop="exportSection(section)"
-              >
-                <ClinicalIcon name="download" :size="16" />
-              </button>
-            </div>
+            </button>
 
             <div
               v-if="isExpanded(section.id)"
               class="node-children section-children"
               role="group"
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
-              <div
+              <button
                 v-for="artifact in section.children"
                 :id="'tree-node-' + artifact.id"
                 :ref="(el) => setNodeRef(artifact.id, el)"
                 :key="artifact.id"
+                type="button"
                 class="tree-node artifact-node"
                 role="treeitem"
                 :aria-selected="selectedArtifactId === artifact.code"
                 :tabindex="activeFocusedNodeId === artifact.id ? 0 : -1"
                 :class="{ 'is-selected': selectedArtifactId === artifact.code }"
                 @click="clickArtifact(artifact)"
+                @keydown="handleTreeKeyDown"
                 @focus="activeFocusedNodeId = artifact.id"
               >
-                <div class="node-header artifact-header">
-                  <span class="file-icon"
+                <span class="node-header artifact-header">
+                  <span class="file-icon" aria-hidden="true"
                     ><ClinicalIcon name="file-text" :size="16"
                   /></span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
@@ -192,8 +213,8 @@
                   >
                     {{ getDocumentCount(artifact) }}
                   </span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -250,6 +271,7 @@ const canExport = computed(() => {
 async function runExport(exportPayload) {
   if (!canExport.value) {
     getToastStore()?.push({
+      title: "eTMF Export Restricted",
       message: ETMF_EXPORT_ROLE_REASON,
       tone: "warning",
     });
@@ -296,6 +318,7 @@ const emit = defineEmits(["select-artifact"]);
 const searchQuery = ref("");
 const selectedZoneFilter = ref("");
 const selectedArtifactId = ref(null);
+const selectedNodeId = ref(null);
 
 const nodeRefs = ref({});
 function setNodeRef(id, el) {
@@ -400,21 +423,11 @@ function isExpanded(nodeId) {
 
 function selectArtifact(artifact) {
   selectedArtifactId.value = artifact.code;
+  selectedNodeId.value = artifact.id;
   emit("select-artifact", artifact.code);
 }
 
 const activeFocusedNodeId = ref(null);
-
-// Initialize activeFocusedNodeId if not set
-watch(
-  filteredTree,
-  (newVal) => {
-    if (newVal && newVal.length > 0 && !activeFocusedNodeId.value) {
-      activeFocusedNodeId.value = newVal[0].id;
-    }
-  },
-  { immediate: true }
-);
 
 // Flat visible list
 const visibleNodesList = computed(() => {
@@ -447,6 +460,50 @@ const visibleNodesList = computed(() => {
   return list;
 });
 
+// Clamp activeFocusedNodeId whenever visibleNodesList changes (including zone/search filters)
+watch(
+  visibleNodesList,
+  (list) => {
+    if (!list || list.length === 0) {
+      activeFocusedNodeId.value = null;
+      return;
+    }
+    const stillVisible = list.some(
+      (item) => item.id === activeFocusedNodeId.value
+    );
+    if (!stillVisible) {
+      activeFocusedNodeId.value = list[0].id;
+    }
+  },
+  { immediate: true }
+);
+
+const activeTreeContext = computed(() => {
+  const targetId = selectedNodeId.value || activeFocusedNodeId.value;
+  for (const zone of filteredTree.value) {
+    if (zone.id === targetId) {
+      return { zone, section: null };
+    }
+    for (const section of zone.children || []) {
+      if (section.id === targetId) {
+        return { zone, section };
+      }
+      for (const artifact of section.children || []) {
+        if (artifact.id === targetId) {
+          return { zone, section };
+        }
+      }
+    }
+  }
+  return {
+    zone: filteredTree.value[0] || null,
+    section: null,
+  };
+});
+
+const activeZone = computed(() => activeTreeContext.value.zone);
+const activeSection = computed(() => activeTreeContext.value.section);
+
 // Focus helper
 function focusNodeId(nodeId) {
   activeFocusedNodeId.value = nodeId;
@@ -460,11 +517,13 @@ function focusNodeId(nodeId) {
 
 function clickZone(zone) {
   activeFocusedNodeId.value = zone.id;
+  selectedNodeId.value = zone.id;
   toggleNode(zone.id);
 }
 
 function clickSection(section) {
   activeFocusedNodeId.value = section.id;
+  selectedNodeId.value = section.id;
   toggleNode(section.id);
 }
 
@@ -473,8 +532,14 @@ function clickArtifact(artifact) {
   selectArtifact(artifact);
 }
 
+const handledTreeEvents = new WeakSet();
+
 // Master Keydown Handler for W3C ARIA Tree conformance
 function handleTreeKeyDown(e) {
+  if (e && typeof e === "object") {
+    if (handledTreeEvents.has(e)) return;
+    handledTreeEvents.add(e);
+  }
   const list = visibleNodesList.value;
   if (list.length === 0) return;
 
@@ -490,6 +555,16 @@ function handleTreeKeyDown(e) {
   const currentItem = list[currentIndex];
 
   switch (e.key) {
+    case "Home":
+      e.preventDefault();
+      focusNodeId(list[0].id);
+      break;
+
+    case "End":
+      e.preventDefault();
+      focusNodeId(list[list.length - 1].id);
+      break;
+
     case "ArrowDown":
       e.preventDefault();
       if (currentIndex < list.length - 1) {
@@ -538,6 +613,7 @@ function handleTreeKeyDown(e) {
     case "Space":
     case " ":
       e.preventDefault();
+      selectedNodeId.value = currentItem.id;
       if (currentItem.type === "artifact") {
         selectArtifact(currentItem.node);
       } else {
@@ -579,6 +655,8 @@ function getDocumentCount(node) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
   background-color: var(--semantic-color-surface);
   border-right: 1px solid var(--semantic-color-border);
   padding: 16px;
@@ -591,9 +669,11 @@ function getDocumentCount(node) {
 
 .btn-export-full-binder {
   width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 10px 12px;
   background-color: var(--semantic-color-interactive-primary);
@@ -610,27 +690,33 @@ function getDocumentCount(node) {
   background-color: var(--semantic-color-interactive-primary);
 }
 
+.binder-scoped-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 .btn-node-export {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
-  background: transparent;
-  border: none;
-  font-size: 0.85rem;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
-  opacity: 0.6;
-  padding: 2px 4px;
-  border-radius: 4px;
-  margin-left: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
   box-sizing: border-box;
 }
 
-.btn-node-export:hover,
+.btn-node-export:hover:not(:disabled),
 .btn-node-export:focus-visible {
-  opacity: 1;
-  background-color: var(--semantic-color-border-muted);
+  background-color: var(--semantic-color-surface-header);
 }
 
 .tree-search-bar {
@@ -638,10 +724,12 @@ function getDocumentCount(node) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .search-input {
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -656,6 +744,7 @@ function getDocumentCount(node) {
 
 .zone-filter-select {
   width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -682,10 +771,29 @@ function getDocumentCount(node) {
   margin-bottom: 4px;
 }
 
+.node-header-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.node-header-row .node-header {
+  flex: 1;
+  min-width: 0;
+}
+
 .node-header {
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
@@ -774,6 +882,14 @@ function getDocumentCount(node) {
 }
 
 .artifact-node {
+  display: block;
+  width: calc(100% - 12px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   border-radius: 6px;
   margin-left: 12px;
 }

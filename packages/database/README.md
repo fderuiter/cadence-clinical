@@ -49,7 +49,12 @@ migration application.
   banned everywhere else (`BannedSymbols.txt`, ADR-2523). A single `SaveChangesAsync` needs no explicit transaction.
 - `GxPAuditInterceptor`: stamps `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11), and is
   the only writer of audit entries: one Merkle-chained `AuditLogEntry` per changed entity, one chain per aggregate type
-  (ADR-2446). Audited changes must be saved with `SaveChangesAsync`; a synchronous save of them throws.
+  ([ADR-2446](../../docs/adr/2026-09-29-single-audit-writer-and-one-chain-per-aggregate.md)). Before appending entries in
+  `SavingChangesAsync`, it prefetches all distinct modified `EntityName` chain tips in one batched `AsNoTracking()` query
+  backed by `AuditLogEntryConfiguration.ConfigureChainIndexes` (`(EntityName ASC, Timestamp DESC, VersionIndex DESC, Id DESC)`
+  and `(EntityName, PredecessorHash)`, [ADR-2649](../../docs/adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md))
+  and chains subsequent entries for the same `EntityName` in memory. Audited changes must be saved with `SaveChangesAsync`;
+  a synchronous save of them throws.
 - `SchemaDocumentation`: renders a DbContext's EF Core model as Markdown (tables, columns, keys, foreign keys, indexes,
   check constraints) without a database. `Cadence.SchemaDocExporter` uses it to generate [docs/schema](../../docs/schema/README.md).
 - `AuditActions`: lets application code label the next save with a semantic action, actor and reason; the interceptor
@@ -86,3 +91,9 @@ After changing an entity or its configuration, run `pnpm cadence migrations add 
 ```bash
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages"
 ```
+
+## Standalone Concurrency, Bitemporal Intervals, and Insert-Only Revisions
+
+- `StandaloneTenantModelExtensions` automatically configures `VersionIndex` or a shadow `_version` concurrency token on every tenant-scoped standalone entity.
+- `StandaloneConcurrencyTokenInterceptor` advances `int` and `long` concurrency tokens from `OriginalValue + 1` once per committed mutation, and `StandaloneConcurrencyExceptionHandler` maps `DbUpdateConcurrencyException` to HTTP `409` ProblemDetails (`CONCURRENCY_CONFLICT`).
+- `StandaloneTemporalSql`, `StandaloneBitemporalModelExtensions`, and `StandaloneInsertOnlySql` install `K-XS-2`-compliant PostgreSQL `tstzrange` + `btree_gist` exclusion constraints (`KT001`), `as_of(valid_at, known_at)` queries, and `enforce_insert_only` triggers (`KA001`) across standalone schemas.

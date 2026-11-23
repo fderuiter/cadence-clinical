@@ -28,6 +28,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
         }
 
         DbContext context = eventData.Context;
+        Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
         if (!HasAuditedWork(context))
         {
             // Nothing audited in this save (e.g. outbox bookkeeping), so there is no actor to resolve.
@@ -46,10 +47,24 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 addedAgg.CreatedBy = string.IsNullOrWhiteSpace(addedAgg.CreatedBy) ? currentUser : addedAgg.CreatedBy;
                 addedAgg.VersionIndex = 1;
             }
-            else if (entry.State == EntityState.Modified && entry.Entity is AggregateRootBase modifiedAgg)
+            else if (entry.State == EntityState.Modified)
             {
                 // From the loaded value, not the current one, so a retried save does not count twice.
-                modifiedAgg.VersionIndex = (long)(entry.Property(nameof(IGxPAuditable.VersionIndex)).OriginalValue ?? 0L) + 1;
+                var versionProp = entry.Metadata.FindProperty(nameof(IGxPAuditable.VersionIndex));
+                if (versionProp is not null)
+                {
+                    var propEntry = entry.Property(versionProp.Name);
+                    if (versionProp.ClrType == typeof(long))
+                    {
+                        long baseline = propEntry.OriginalValue is long orig ? orig : 0L;
+                        propEntry.CurrentValue = baseline + 1L;
+                    }
+                    else if (versionProp.ClrType == typeof(int))
+                    {
+                        int baseline = propEntry.OriginalValue is int orig ? orig : 0;
+                        propEntry.CurrentValue = baseline + 1;
+                    }
+                }
             }
         }
 
@@ -88,6 +103,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
             }
         }
 
+        var drafts = new List<AuditLogEntryDraft>(auditableEntries.Count + actions.Count);
         foreach (var entry in auditableEntries)
         {
             string entityName = entry.Metadata.ClrType.Name;
@@ -96,7 +112,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue));
 
             AuditAction? action = TakeAction(actions, entityName, entityId);
-            await chain.AppendAsync(new AuditLogEntryDraft(
+            drafts.Add(new AuditLogEntryDraft(
                 entityName,
                 entityId,
                 action?.Action ?? entry.State.ToString(),
@@ -104,14 +120,14 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 action?.UserId ?? currentUser,
                 action?.ReasonForChange ?? entry.Entity.ReasonForChange,
                 entry.Entity.VersionIndex,
-                changesJson), cancellationToken).ConfigureAwait(false);
+                changesJson));
         }
 
         // Actions with no changed entity (a blocked attempt, an activation that changes no row) are still
         // audit events: they join the same entity-name chain with version index 0.
         foreach (AuditAction action in actions)
         {
-            await chain.AppendAsync(new AuditLogEntryDraft(
+            drafts.Add(new AuditLogEntryDraft(
                 action.EntityName,
                 action.EntityId,
                 action.Action,
@@ -119,7 +135,13 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 action.UserId,
                 action.ReasonForChange,
                 0,
-                action.ChangesJson), cancellationToken).ConfigureAwait(false);
+                action.ChangesJson));
+        }
+
+        await chain.PrefetchTipsAsync(drafts.Select(d => d.EntityName), cancellationToken).ConfigureAwait(false);
+        foreach (AuditLogEntryDraft draft in drafts)
+        {
+            chain.Append(draft);
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
@@ -216,6 +238,8 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
         long VersionIndex,
         string? ChangesJson);
 
+    private sealed record ChainTipRow(string EntityName, string BlockHash);
+
     /// <summary>
     /// Appends entries to their EntityName chain: the predecessor is the latest entry added in this save for that
     /// name, otherwise the persisted chain tip (the entry no other entry names as its predecessor).
@@ -226,20 +250,44 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
 
         public List<AuditLogEntry> Added { get; } = [];
 
-        public async Task AppendAsync(AuditLogEntryDraft draft, CancellationToken cancellationToken)
+        public async Task PrefetchTipsAsync(IEnumerable<string> entityNames, CancellationToken cancellationToken)
         {
-            if (!_tips.TryGetValue(draft.EntityName, out string? predecessorHash))
+            var missingNames = entityNames
+                .Where(n => !_tips.ContainsKey(n))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .ToList();
+            if (missingNames.Count == 0)
             {
-                string name = draft.EntityName;
-                predecessorHash = await context.Set<AuditLogEntry>()
-                    .Where(e => e.EntityName == name)
-                    .Where(e => !context.Set<AuditLogEntry>().Any(sub => sub.EntityName == name && sub.PredecessorHash == e.BlockHash))
-                    .OrderByDescending(e => e.Timestamp)
-                    .ThenByDescending(e => e.VersionIndex)
-                    .ThenByDescending(e => e.Id)
-                    .Select(e => e.BlockHash)
-                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false) ?? string.Empty;
+                return;
             }
+
+            foreach (string name in missingNames)
+            {
+                _tips[name] = string.Empty;
+            }
+
+            IQueryable<AuditLogEntry> combined = BuildTipSubquery(context, missingNames[0]);
+            for (int i = 1; i < missingNames.Count; i++)
+            {
+                combined = combined.Concat(BuildTipSubquery(context, missingNames[i]));
+            }
+
+            List<ChainTipRow> persistedTips = await combined
+                .Select(e => new ChainTipRow(e.EntityName, e.BlockHash))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (ChainTipRow tip in persistedTips)
+            {
+                _tips[tip.EntityName] = tip.BlockHash;
+            }
+        }
+
+        public void Append(AuditLogEntryDraft draft)
+        {
+            string predecessorHash = _tips.TryGetValue(draft.EntityName, out string? cachedTip)
+                ? cachedTip
+                : string.Empty;
 
             string blockHash = AuditLogEntry.ComputeBlockHash(
                 draft.EntityName, draft.EntityId, draft.Action, draft.Timestamp, draft.UserId,
@@ -262,6 +310,19 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
 
             _tips[draft.EntityName] = blockHash;
             Added.Add(logEntry);
+        }
+
+        private static IQueryable<AuditLogEntry> BuildTipSubquery(DbContext context, string entityName)
+        {
+            string name = entityName;
+            IQueryable<AuditLogEntry> entries = context.Set<AuditLogEntry>().AsNoTracking();
+            return entries
+                .Where(e => e.EntityName == name)
+                .Where(e => !entries.Any(sub => sub.EntityName == name && sub.PredecessorHash == e.BlockHash))
+                .OrderByDescending(e => e.Timestamp)
+                .ThenByDescending(e => e.VersionIndex)
+                .ThenByDescending(e => e.Id)
+                .Take(1);
         }
     }
 

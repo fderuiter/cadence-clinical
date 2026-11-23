@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
@@ -19,6 +20,7 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
@@ -47,7 +49,7 @@ internal static partial class DevelopmentDemoData
     private const string EmbeddedSeedResourceName = "Cadence.Kernel.Host.demo-seed.json";
     private const string Reason = "Seed the local development stack's demo study (ADR-2543)";
 
-    private static readonly DevelopmentDemoSeed Seed = LoadCanonicalSeed();
+    internal static readonly DevelopmentDemoSeed Seed = LoadCanonicalSeed();
 
     private static readonly DateTimeOffset SeedEpoch = DateTimeOffset.ParseExact(
         Seed.Epoch,
@@ -62,6 +64,9 @@ internal static partial class DevelopmentDemoData
     /// <summary>The demo study's code: the study the Execution service seeds (<c>ExecutionDbSeeder</c>).</summary>
     public static string StudyCode => Seed.Study.Code;
 
+    /// <summary>The canonical demo roles loaded from <c>packages/demo-fixtures/demo-seed.json</c>.</summary>
+    internal static IReadOnlyList<DevelopmentDemoRoleSeed> Roles => Seed.Roles;
+
     /// <summary>When the demo world's records take effect in valid time; fixed so every start sends the same payload.</summary>
     internal static DateTimeOffset Epoch => SeedEpoch;
 
@@ -72,7 +77,7 @@ internal static partial class DevelopmentDemoData
     /// across the tenant: opening its side of every form the kernel opens, registering pseudonymous participant ids on
     /// site screening, and stating each query step as a kernel assertion. Production grants for module service accounts are #5566.
     /// </summary>
-    private static readonly (string Consumer, string Role, string Name, string[] Capabilities)[] ModuleServiceAccounts =
+    internal static readonly (string Consumer, string Role, string Name, string[] Capabilities)[] ModuleServiceAccounts =
     [
         ("execution-forms", "DEMO_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "DEMO_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
@@ -80,7 +85,7 @@ internal static partial class DevelopmentDemoData
     ];
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
-    private static readonly string[] SeederCapabilities =
+    internal static readonly string[] SeederCapabilities =
     [
         "organization.register",
         "study.register",
@@ -98,8 +103,21 @@ internal static partial class DevelopmentDemoData
         "standard.register",
         "library_item.draft",
         "study.declare_standards",
+        "work_queue.define",
         "person.register",
         "tenant.enroll_member",
+    ];
+
+    /// <summary>Default capability-keyed work queues seeded idempotently for every tenant.</summary>
+    internal static readonly (string Code, string Title, string Capability, VerbClass VerbClass, string Source)[] DefaultWorkQueues =
+    [
+        ("pending_queries", "Pending queries to answer", "execution.query.answer", VerbClass.Execute, KernelWorkItemSources.QueriesOpen),
+        ("answered_queries", "Answered queries to review", "execution.query.manage", VerbClass.Execute, KernelWorkItemSources.QueriesAnswered),
+        ("validation_findings", "Validation findings to review", "validation_finding.investigate", VerbClass.Execute, KernelWorkItemSources.ValidationFindingsOpen),
+        ("form_signatures", "Forms awaiting signature", "collection.sign", VerbClass.Execute, KernelWorkItemSources.FormsAwaitingSignature),
+        ("source_verifications", "Source data verifications due", "observation.verify", VerbClass.Execute, KernelWorkItemSources.ObservationsAwaitingVerification),
+        ("protocol_reviews", "Protocol versions in review", "protocol.approve", VerbClass.Approve, KernelWorkItemSources.ProtocolVersionsInReview),
+        ("ai_proposals", "Proposals awaiting approval", "proposal.approve", VerbClass.Approve, KernelWorkItemSources.ProposalsPending),
     ];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
@@ -134,11 +152,13 @@ internal static partial class DevelopmentDemoData
                 new LinkSiteToStudy(tenant, ids.StudySite(siteSeed.Code), study, site, Key($"study-site:{siteSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false);
         }
 
-        var roles = new Dictionary<string, RoleId>(StringComparer.Ordinal);
+        var roles = new Dictionary<string, (RoleId RoleId, bool CoversSimulationRun)>(StringComparer.Ordinal);
+        var roleSeedsByCode = Seed.Roles.ToDictionary(r => r.Code, StringComparer.Ordinal);
         foreach (var roleSeed in Seed.Roles)
         {
-            roles[roleSeed.Code] = (await seeder.SendAsync(
-                new DefineRole(tenant, ids.Role(roleSeed.Code), roleSeed.Code, roleSeed.Name, roleSeed.Capabilities, Key($"role:{roleSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false)).RoleId;
+            roles[roleSeed.Code] = await seeder.EnsureRoleAsync(
+                new DefineRole(tenant, ids.Role(roleSeed.Code), roleSeed.Code, roleSeed.Name, roleSeed.Capabilities, Key($"role:{roleSeed.Code}"), Reason),
+                cancellationToken).ConfigureAwait(false);
         }
 
         foreach (var (consumer, code, name, capabilities) in ModuleServiceAccounts)
@@ -174,11 +194,32 @@ internal static partial class DevelopmentDemoData
                 scope = AuthorityScope.Study(study);
             }
 
-            await seeder.SendAsync(
-                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, roles[userSeed.Role], scope, Epoch, null, false, Key($"grant:{userSeed.Username}"), Reason),
+            var assignedRole = roles[userSeed.Role];
+            await seeder.EnsureGrantAsync(
+                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, assignedRole.RoleId, scope, Epoch, null, false, Key($"grant:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
+
+            if (!assignedRole.CoversSimulationRun
+                && roleSeedsByCode[userSeed.Role].Capabilities.Contains(SimulationCapabilities.Run.Token, StringComparer.Ordinal))
+            {
+                await seeder.EnsureGrantAsync(
+                    new IssueGrant(
+                        tenant,
+                        ids.Grant($"{userSeed.Username}:simulation.run"),
+                        Actor.Person(userSeed.Subject),
+                        SimulationCapabilities.Run.Token,
+                        null,
+                        scope,
+                        Epoch,
+                        null,
+                        false,
+                        Key($"grant:{userSeed.Username}:simulation.run"),
+                        Reason),
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
 
+        await SeedDefaultWorkQueuesAsync(tenant, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
         await SeedEffectiveProtocolAsync(tenant, study, studySites.Values, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
         await SeedPinnedEditCheckRulePackAsync(tenant, study, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
 
@@ -190,6 +231,45 @@ internal static partial class DevelopmentDemoData
             SubjectCode.TryFrom(participantSeed.SubjectCode, out var code);
             await seeder.SendAsync(
                 new ScreenParticipant(tenant, ids.Enrollment(participantSeed.SubjectCode), participant, studySites[participantSeed.SiteCode], code, Epoch.AddDays(7 + i), Key($"enrollment:{participantSeed.SubjectCode}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task SeedDefaultWorkQueuesAsync(
+        TenantId tenant,
+        DemoIds ids,
+        Sender seeder,
+        IServiceScopeFactory scopes,
+        CancellationToken cancellationToken)
+    {
+        HashSet<string> existingCodes = [];
+        await using (var scope = scopes.CreateAsyncScope())
+        {
+            if (scope.ServiceProvider.GetService<IWorkQueueDefinitions>() is { } definitions)
+            {
+                var current = await definitions.CurrentAsync(tenant, cancellationToken).ConfigureAwait(false);
+                existingCodes = current.Select(d => d.Code).ToHashSet(StringComparer.Ordinal);
+            }
+        }
+
+        foreach (var (code, title, capability, verbClass, source) in DefaultWorkQueues)
+        {
+            if (existingCodes.Contains(code))
+            {
+                continue;
+            }
+
+            await seeder.SendAsync(
+                new DefineWorkQueue(
+                    tenant,
+                    ids.WorkQueueDefinition(code),
+                    code,
+                    title,
+                    capability,
+                    verbClass,
+                    source,
+                    Key($"work-queue:{code}"),
+                    Reason),
                 cancellationToken).ConfigureAwait(false);
         }
     }
@@ -678,19 +758,62 @@ internal static partial class DevelopmentDemoData
     /// <summary>Sends each command in its own scope as the bootstrap's service account; a refusal stops the host.</summary>
     private sealed class Sender(TenantId tenant, IServiceScopeFactory scopes)
     {
+        public async Task<(RoleId RoleId, bool CoversSimulationRun)> EnsureRoleAsync(DefineRole command, CancellationToken cancellationToken)
+        {
+            var result = await TrySendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
+            if (result.IsSuccess)
+            {
+                return (
+                    result.Value!.RoleId,
+                    result.Value.Capabilities.Contains(SimulationCapabilities.Run.Token, StringComparer.Ordinal));
+            }
+
+            if (result.Error?.Code == KernelErrors.AlreadyExists.Code
+                || result.Error?.Code == AuthorityErrors.RoleCodeTaken.Code
+                || result.Error?.Code == KernelErrors.IdempotencyConflict.Code)
+            {
+                return (command.RoleId, false);
+            }
+
+            throw new InvalidOperationException(
+                $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+        }
+
+        public async Task EnsureGrantAsync(IssueGrant command, CancellationToken cancellationToken)
+        {
+            var result = await TrySendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
+            if (result.IsSuccess
+                || result.Error?.Code == KernelErrors.AlreadyExists.Code
+                || result.Error?.Code == KernelErrors.IdempotencyConflict.Code)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+        }
+
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
         {
-            await using var scope = scopes.CreateAsyncScope();
-            var services = scope.ServiceProvider;
-            services.GetRequiredService<ServiceActorScope>().Actor = actor;
-            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var result = await TrySendAsAsync(actor, command, cancellationToken).ConfigureAwait(false);
             return result.IsSuccess
                 ? result.Value!
                 : throw new InvalidOperationException(
                     $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+        }
+
+        private Task<CommandResult<TResult>> TrySendAsOperatorAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
+            TrySendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
+
+        private async Task<CommandResult<TResult>> TrySendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            var services = scope.ServiceProvider;
+            services.GetRequiredService<ServiceActorScope>().Actor = actor;
+            return await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -733,6 +856,8 @@ internal static partial class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public WorkQueueDefinitionId WorkQueueDefinition(string name) => WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", name));
 
         public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 

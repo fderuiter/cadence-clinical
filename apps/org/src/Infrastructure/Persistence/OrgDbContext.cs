@@ -21,6 +21,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
 
     public DbSet<PersonnelAssignment> PersonnelAssignments => Set<PersonnelAssignment>();
     public DbSet<DelegationOfAuthority> DelegationsOfAuthority => Set<DelegationOfAuthority>();
+    public DbSet<DelegationOfAuthorityPeriod> DelegationOfAuthorityPeriods => Set<DelegationOfAuthorityPeriod>();
     public DbSet<TrainingLog> TrainingLogs => Set<TrainingLog>();
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
@@ -31,6 +32,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
 
         modelBuilder.ApplyConfiguration(new PersonnelAssignmentConfiguration());
         modelBuilder.ApplyConfiguration(new DelegationOfAuthorityConfiguration());
+        modelBuilder.ApplyConfiguration(new DelegationOfAuthorityPeriodConfiguration(this));
         modelBuilder.ApplyConfiguration(new TrainingLogConfiguration());
         modelBuilder.ApplyConfiguration(new OrgAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());

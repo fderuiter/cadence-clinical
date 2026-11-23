@@ -1,9 +1,20 @@
 import { getResponse, isPassthroughResponse } from "msw";
 import { setupWorker } from "msw/browser";
-import { normalizeMswBasePath, waitForMswController } from "ui/testing";
-import { getBearerToken, isGatewayRequest } from "../api/authorization.js";
+import {
+  createMswWorkerStarter,
+  ensureServiceWorkerController,
+  normalizeMswBasePath,
+  resolveMswServiceWorkerOptions,
+} from "ui/testing";
+import {
+  applyDemoIdentityHeaders,
+  getBearerToken,
+  isGatewayRequest,
+} from "../api/authorization.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { gatewayHandlers } from "./handlers.js";
+
+export { ensureServiceWorkerController };
 
 export function normalizeBasePath(baseUrl = import.meta.env?.BASE_URL) {
   return normalizeMswBasePath(baseUrl, "/");
@@ -12,11 +23,10 @@ export function normalizeBasePath(baseUrl = import.meta.env?.BASE_URL) {
 export function resolveWebServiceWorkerOptions(
   baseUrl = import.meta.env?.BASE_URL
 ) {
-  const scope = normalizeBasePath(baseUrl);
-  return {
-    url: `${scope}mockServiceWorker.js`,
-    options: { scope },
-  };
+  return resolveMswServiceWorkerOptions(baseUrl, {
+    workerScript: "mockServiceWorker.js",
+    fallbackBase: "/",
+  });
 }
 
 let workerInstance = null;
@@ -29,8 +39,6 @@ if (typeof window !== "undefined" && import.meta.env?.MODE !== "test") {
 }
 
 export const worker = workerInstance;
-
-let startPromise = null;
 
 export function installInProcessMswFallback(target = window) {
   if (
@@ -53,13 +61,15 @@ export function installInProcessMswFallback(target = window) {
         ? new Request(resolvedUrl, input)
         : new Request(resolvedUrl, init);
     const headers = new Headers(init?.headers || baseReq.headers);
-    if (
-      isGatewayRequest(resolvedUrl, target.location) &&
-      !headers.has("Authorization")
-    ) {
-      const token = await getBearerToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
+    if (isGatewayRequest(resolvedUrl, target.location)) {
+      if (!headers.has("Authorization")) {
+        const token = await getBearerToken();
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+      }
+      if (isDemoBuild()) {
+        applyDemoIdentityHeaders(headers);
       }
     }
     const hasBody = baseReq.method !== "GET" && baseReq.method !== "HEAD";
@@ -90,76 +100,23 @@ export function installInProcessMswFallback(target = window) {
   target.fetch = wrappedFetch;
 }
 
-export async function ensureServiceWorkerController(timeoutMs = 1500) {
-  if (
-    typeof navigator === "undefined" ||
-    !("serviceWorker" in navigator) ||
-    typeof navigator.serviceWorker?.addEventListener !== "function" ||
-    navigator.serviceWorker.controller
-  ) {
-    return;
-  }
-  await new Promise((resolve) => {
-    let timer = null;
-    const done = () => {
-      if (timer !== null) {
-        clearTimeout(timer);
-      }
-      navigator.serviceWorker?.removeEventListener?.("controllerchange", done);
-      resolve();
-    };
-    navigator.serviceWorker.addEventListener("controllerchange", done, {
-      once: true,
-    });
-    if (navigator.serviceWorker.controller) {
-      done();
-      return;
+export const startMswWorker = createMswWorkerStarter({
+  getWorker: () => worker,
+  resolveServiceWorkerOptions: resolveWebServiceWorkerOptions,
+  isDemoBuild,
+  beforeStart(customOptions = {}) {
+    const env = customOptions.env ?? import.meta.env;
+    if (
+      typeof window !== "undefined" &&
+      !customOptions.worker &&
+      env?.VITE_E2E_IN_PROCESS_MSW === "true"
+    ) {
+      installInProcessMswFallback(window);
+      return { scope: normalizeBasePath(customOptions.baseUrl) };
     }
-    timer = setTimeout(done, timeoutMs);
-  });
-}
-
-export async function startMswWorker(customOptions = {}) {
-  const env = customOptions.env ?? import.meta.env;
-  if (
-    typeof window !== "undefined" &&
-    !customOptions.worker &&
-    env?.VITE_E2E_IN_PROCESS_MSW === "true"
-  ) {
-    installInProcessMswFallback(window);
-    return { scope: normalizeBasePath(customOptions.baseUrl) };
-  }
-
-  const activeWorker = customOptions.worker ?? worker;
-  if (typeof window === "undefined" || !activeWorker) return null;
-  if (startPromise && !customOptions.worker) return startPromise;
-
-  const serviceWorker = resolveWebServiceWorkerOptions(customOptions.baseUrl);
-  const onUnhandledFrame = isDemoBuild(customOptions.env) ? "error" : "warn";
-
-  const runWebWorkerStart = async () => {
-    try {
-      const registration = await activeWorker.start({
-        onUnhandledFrame,
-        quiet: Boolean(customOptions.quiet),
-        serviceWorker,
-      });
-      await waitForMswController();
-      await ensureServiceWorkerController();
-      console.log(
-        "[MSW] Mock Service Worker started for Web App API Gateway simulation."
-      );
-      return registration;
-    } catch (err) {
-      startPromise = null;
-      if (import.meta.env?.MODE !== "test") {
-        console.warn("[MSW] Web app service worker startup warning:", err);
-      }
-      return null;
-    }
-  };
-
-  if (customOptions.worker) return runWebWorkerStart();
-  startPromise = runWebWorkerStart();
-  return startPromise;
-}
+    return undefined;
+  },
+  startedLogMessage:
+    "[MSW] Mock Service Worker started for Web App API Gateway simulation.",
+  warningLogPrefix: "[MSW] Web app service worker startup warning:",
+});

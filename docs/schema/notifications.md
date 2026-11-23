@@ -105,7 +105,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
-- `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_audit_log_entries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## notifications.notification_audit_logs
@@ -120,6 +121,7 @@ Entity: `NotificationAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -143,6 +145,7 @@ Entity: `NotificationDelivery`
 | `NotificationId` | `character varying(36)` | no |  |  |
 | `RetryEligible` | `boolean` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

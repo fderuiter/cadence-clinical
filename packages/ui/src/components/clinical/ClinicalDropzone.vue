@@ -211,9 +211,15 @@ defineExpose({
     />
 
     <div class="clinical-dropzone-body">
-      <span v-if="icon" class="clinical-dropzone-icon" aria-hidden="true">
-        <ClinicalIcon v-if="isSemanticIcon" :name="icon" :size="20" />
-        <template v-else>{{ icon }}</template>
+      <span
+        v-if="$slots.icon || icon"
+        class="clinical-dropzone-icon"
+        aria-hidden="true"
+      >
+        <slot name="icon">
+          <ClinicalIcon v-if="isSemanticIcon" :name="icon" :size="20" />
+          <template v-else>{{ icon }}</template>
+        </slot>
       </span>
 
       <div v-if="$slots.prompt || promptText" class="clinical-dropzone-prompt">

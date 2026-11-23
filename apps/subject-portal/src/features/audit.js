@@ -1,8 +1,10 @@
 // Local audit ledger: hash-chained blocks rendered into the footer timeline.
-import { buildLedgerBlock } from "ui";
+import { buildLedgerBlock, createSrOnlyActionButton } from "ui";
 
 import { state } from "../stores/state.js";
 import { demoNowIso } from "../utils/demoMode.js";
+import { humanizeExpenseReviewNotes } from "../utils/participantCopy.js";
+import { openLedgerPeek } from "./peek.js";
 import { getInstrumentDisplayName } from "./site-support.js";
 
 function escapeHtml(value) {
@@ -82,7 +84,7 @@ function describeLedgerBlock(block) {
       return {
         title: "Travel expense sent for review",
         summary:
-          details.review_notes ||
+          humanizeExpenseReviewNotes(details.review_notes) ||
           "Your study coordinator will review this receipt.",
       };
     case "DIGITAL_DISBURSEMENT_DISPATCHED":
@@ -143,38 +145,155 @@ export async function logAuditRecord(
   return block;
 }
 
+function getLedgerBlockKey(block, fallbackIndex) {
+  if (block?.hash) return String(block.hash);
+  const idx = block?.index ?? fallbackIndex;
+  return `${idx}-${block?.timestamp ?? ""}-${block?.action ?? ""}`;
+}
+
+function createOrPatchLedgerItem(doc, existingEl, block, key) {
+  const { title, summary } = describeLedgerBlock(block);
+  const formattedTime = formatLedgerTime(block.timestamp);
+  const hashText = String(block?.hash ?? "");
+  const blockIndex = String(block?.index ?? 0);
+
+  if (existingEl) {
+    const desiredRowId = `ledger-row-${blockIndex}`;
+    if (existingEl.id !== desiredRowId) {
+      existingEl.id = desiredRowId;
+    }
+    if (existingEl.getAttribute("data-ledger-index") !== blockIndex) {
+      existingEl.setAttribute("data-ledger-index", blockIndex);
+    }
+    const titleEl = existingEl.querySelector("[data-ledger-title]");
+    if (titleEl && titleEl.textContent !== title) {
+      titleEl.textContent = title;
+    }
+    const timeEl = existingEl.querySelector("[data-ledger-time]");
+    if (timeEl && timeEl.textContent !== formattedTime) {
+      timeEl.textContent = formattedTime;
+    }
+    const summaryEl = existingEl.querySelector("[data-ledger-summary]");
+    if (summaryEl && summaryEl.textContent !== summary) {
+      summaryEl.textContent = summary;
+    }
+    const hashEl = existingEl.querySelector("[data-ledger-hash]");
+    if (hashEl && hashEl.textContent !== hashText) {
+      hashEl.textContent = hashText;
+    }
+    const peekBtn = existingEl.querySelector(".btn-peek-ledger");
+    if (peekBtn) {
+      const desiredBtnId = `btn-peek-ledger-${blockIndex}`;
+      if (peekBtn.id !== desiredBtnId) {
+        peekBtn.id = desiredBtnId;
+      }
+      if (peekBtn.getAttribute("data-id") !== blockIndex) {
+        peekBtn.setAttribute("data-id", blockIndex);
+      }
+    }
+    return existingEl;
+  }
+
+  const peekBtnHtml = createSrOnlyActionButton({
+    id: `btn-peek-ledger-${blockIndex}`,
+    label: "View Details",
+    srContext: title,
+    className: "btn btn-secondary btn-peek-ledger",
+    dataId: blockIndex,
+  });
+
+  const itemEl = doc.createElement("div");
+  itemEl.className = "ledger-item";
+  itemEl.id = `ledger-row-${blockIndex}`;
+  itemEl.setAttribute("data-ledger-key", key);
+  itemEl.setAttribute("data-ledger-index", blockIndex);
+  itemEl.innerHTML = `
+        <div class="ledger-item-header">
+          <span><strong data-ledger-title>${escapeHtml(title)}</strong></span>
+          <span class="ledger-header-meta">
+            <span class="tabular-nums" data-ledger-time>${escapeHtml(formattedTime)}</span>
+            ${peekBtnHtml}
+          </span>
+        </div>
+        <div class="ledger-item-details">
+          <span data-ledger-summary>${escapeHtml(summary)}</span>
+        </div>
+        <details class="ledger-verification-details">
+          <summary>Verification code</summary>
+          <div class="ledger-hash">
+            <code data-ledger-hash>${escapeHtml(hashText)}</code>
+          </div>
+        </details>
+      `;
+
+  const peekBtn = itemEl.querySelector(".btn-peek-ledger");
+  if (peekBtn) {
+    peekBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const idx = Number(peekBtn.getAttribute("data-id"));
+      const targetBlock = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
+      if (targetBlock) {
+        openLedgerPeek(targetBlock, idx, peekBtn);
+      }
+    });
+  }
+
+  itemEl.addEventListener("click", (event) => {
+    if (event.target?.closest?.("button, a, details, summary")) return;
+    const idx = Number(itemEl.getAttribute("data-ledger-index"));
+    const targetBlock = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
+    const triggerEl = itemEl.querySelector(".btn-peek-ledger") || itemEl;
+    if (targetBlock) {
+      openLedgerPeek(targetBlock, idx, triggerEl);
+    }
+  });
+
+  return itemEl;
+}
+
 export function renderLedger() {
   const container = document.getElementById("portal-ledger-timeline");
   if (!container) return;
 
   if (state.ledgerBlocks.length === 0) {
-    container.innerHTML = `<div class="loading-state">No recent activity yet.</div>`;
+    container.innerHTML = `<div class="loading-state" data-ledger-empty="true">No recent activity yet.</div>`;
     return;
   }
 
-  container.innerHTML = state.ledgerBlocks
-    .slice()
-    .reverse()
-    .map((block) => {
-      const { title, summary } = describeLedgerBlock(block);
-      const formattedTime = formatLedgerTime(block.timestamp);
-      return `
-      <div class="ledger-item">
-        <div class="ledger-item-header">
-          <span><strong>${escapeHtml(title)}</strong></span>
-          <span>${escapeHtml(formattedTime)}</span>
-        </div>
-        <div class="ledger-item-details">
-          <span>${escapeHtml(summary)}</span>
-        </div>
-        <details class="ledger-verification-details">
-          <summary>Verification code</summary>
-          <div class="ledger-hash">
-            <code>${escapeHtml(block.hash)}</code>
-          </div>
-        </details>
-      </div>
-    `;
-    })
-    .join("");
+  const doc = container.ownerDocument || document;
+  const existingByKey = new Map();
+  Array.from(
+    container.querySelectorAll(".ledger-item[data-ledger-key]")
+  ).forEach((el) => {
+    const key = el.getAttribute("data-ledger-key");
+    if (key && !existingByKey.has(key)) {
+      existingByKey.set(key, el);
+    }
+  });
+
+  Array.from(container.children).forEach((child) => {
+    if (!child.hasAttribute("data-ledger-key")) {
+      child.remove();
+    }
+  });
+
+  const orderedBlocks = state.ledgerBlocks.slice().reverse();
+  const activeKeys = new Set();
+
+  orderedBlocks.forEach((block, idx) => {
+    const key = getLedgerBlockKey(block, orderedBlocks.length - 1 - idx);
+    activeKeys.add(key);
+    const existingEl = existingByKey.get(key) || null;
+    const itemEl = createOrPatchLedgerItem(doc, existingEl, block, key);
+    const currentAtIdx = container.children[idx] || null;
+    if (currentAtIdx !== itemEl) {
+      container.insertBefore(itemEl, currentAtIdx);
+    }
+  });
+
+  existingByKey.forEach((el, key) => {
+    if (!activeKeys.has(key)) {
+      el.remove();
+    }
+  });
 }

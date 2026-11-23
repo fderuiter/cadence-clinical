@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 
 using Cadence.Rules.Evaluation;
@@ -152,6 +153,111 @@ public class RuleExpressionTests
     public void ExpressionVariablesListsEachReadOnceInOrder() =>
         RuleExpressionJson.Variables(Parse("""{"op":"and","args":[{"op":"<","args":[{"var":"SYS"},{"var":"DIA"}]},{"op":"is_empty","args":[{"var":"SYS"}]},{"var":"FLAG"}]}"""))
             .Should().Equal("SYS", "DIA", "FLAG");
+
+    [Fact(DisplayName = "Expression_Length_CountsRunesWithoutEnumeratorBoxing")]
+    [Trait("Category", "Unit")]
+    public void ExpressionLengthCountsRunesWithoutEnumeratorBoxing()
+    {
+        var record = new RuleRecord("X", "1", new Dictionary<string, RuleValue>(StringComparer.Ordinal)
+        {
+            ["UNICODE"] = RuleValue.FromText("Ω😀é"),
+        });
+        var cold = RuleExpressionCompiler.Compile(Parse("""{"op":"length","args":[{"var":"UNICODE"}]}"""));
+
+        var beforeCold = GC.GetAllocatedBytesForCurrentThread();
+        var coldResult = cold(record);
+        var coldAllocated = GC.GetAllocatedBytesForCurrentThread() - beforeCold;
+
+        var beforeLoop = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 1_000; i++)
+        {
+            _ = cold(record);
+        }
+
+        var loopAllocated = GC.GetAllocatedBytesForCurrentThread() - beforeLoop;
+
+        coldResult.Should().Be(RuleValue.FromNumber(3m));
+        coldAllocated.Should().Be(0);
+        loopAllocated.Should().Be(0);
+    }
+
+    [Theory(DisplayName = "Expression_LiteralAndDynamicComparisons_PreserveSemanticsAcrossOperandShapes")]
+    [Trait("Category", "Unit")]
+    [InlineData("""{"op":"==","args":["SITTING",{"var":"TEXTNUM"}]}""", false)]
+    [InlineData("""{"op":"!=","args":[{"var":"TEXTNUM"},"SITTING"]}""", true)]
+    [InlineData("""{"op":"<","args":[{"var":"SYS"},"SITTING"]}""", true)]
+    [InlineData("""{"op":">","args":["SITTING",{"var":"SYS"}]}""", true)]
+    [InlineData("""{"op":"==","args":[{"var":"FLAG"},"true"]}""", true)]
+    [InlineData("""{"op":"==","args":["true",{"var":"FLAG"}]}""", true)]
+    [InlineData("""{"op":"==","args":[120,{"var":"TEXTNUM"}]}""", true)]
+    [InlineData("""{"op":"<","args":["1.50",{"var":"NAME"}]}""", true)]
+    [InlineData("""{"op":"==","args":[null,{"var":"NOTHING"}]}""", true)]
+    [InlineData("""{"op":"<","args":[null,{"var":"SYS"}]}""", false)]
+    [InlineData("""{"op":"in","args":[{"var":"TEXTNUM"},"SITTING","STANDING","SUPINE"]}""", false)]
+    [InlineData("""{"op":"in","args":[{"var":"FLAG"},"false","true"]}""", true)]
+    [InlineData("""{"op":"in","args":[{"var":"TEXTNUM"},"SITTING",120.0,"SUPINE"]}""", true)]
+    [InlineData("""{"op":"not_in","args":[{"var":"SYS"},"SITTING","STANDING"]}""", true)]
+    [InlineData("""{"op":"in","args":[{"var":"TEXTNUM"},{"var":"NAME"},{"var":"SYS"}]}""", true)]
+    public void ExpressionLiteralAndDynamicComparisonsPreserveSemanticsAcrossOperandShapes(string json, bool expected) =>
+        Evaluate(json).Should().Be(RuleValue.FromBoolean(expected));
+
+    [Theory(DisplayName = "RuleValue_TryGetNumber_MatchesInvariantFloatParsingRules")]
+    [Trait("Category", "Unit")]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("SITTING", false)]
+    [InlineData("mm[Hg]", false)]
+    [InlineData("2026-09-30", false)]
+    [InlineData("120/80", false)]
+    [InlineData("001-0042", false)]
+    [InlineData("37.5C", false)]
+    [InlineData(".", false)]
+    [InlineData("+.", false)]
+    [InlineData("1e", false)]
+    [InlineData("1e+", false)]
+    [InlineData("120", true)]
+    [InlineData(" -42.5 ", true)]
+    [InlineData("+.25", true)]
+    [InlineData("5.", true)]
+    [InlineData("1.5e2", true)]
+    [InlineData("-3E-4", true)]
+    [InlineData("120\0", true)]
+    public void RuleValueTryGetNumberMatchesInvariantFloatParsingRules(string text, bool expected)
+    {
+        var value = RuleValue.FromText(text);
+
+        value.TryGetNumber(out var parsed).Should().Be(expected);
+        if (!expected)
+        {
+            RuleValue.MayBeInvariantDecimal(text).Should().BeFalse();
+            parsed.Should().Be(0m);
+        }
+    }
+
+    [Theory(DisplayName = "Expression_Evaluation_IsInvariantAcrossCultures")]
+    [Trait("Category", "Unit")]
+    [InlineData("tr-TR")]
+    [InlineData("de-DE")]
+    [InlineData("ar-SA")]
+    [InlineData("ja-JP")]
+    public void ExpressionEvaluationIsInvariantAcrossCultures(string cultureName)
+    {
+        var previous = (CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture);
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(cultureName);
+
+            Evaluate("""{"op":"==","args":["120.0",{"var":"SYS"}]}""").Should().Be(RuleValue.True);
+            Evaluate("""{"op":">","args":["1.5e2",{"var":"SYS"}]}""").Should().Be(RuleValue.True);
+            Evaluate("""{"op":"in","args":[{"var":"NAME"},"sitting","SITTING","SUPINE"]}""").Should().Be(RuleValue.True);
+            Evaluate("""{"op":"in","args":["i","I"]}""").Should().Be(RuleValue.False);
+            Evaluate("""{"op":"==","args":[{"op":"length","args":["Ω😀"]},2]}""").Should().Be(RuleValue.True);
+        }
+        finally
+        {
+            (CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture) = previous;
+        }
+    }
 
     private static RuleExpression Parse(string json)
     {

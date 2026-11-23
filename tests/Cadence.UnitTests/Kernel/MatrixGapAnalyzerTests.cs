@@ -132,6 +132,33 @@ public sealed class MatrixGapAnalyzerTests
         Assert.Equal("/plannedActivities/1/timing/day", cyclicGap.JsonPointerPath);
     }
 
+    [Fact]
+    public void Analyze_DayZeroAndDayOneEpochBoundaries_UsesNormalizedSdtmOffsets()
+    {
+        static ProtocolDesign EpochDesign(int firstEpochDay, int secondEpochDay) => new()
+        {
+            Title = "Epoch Normalization Test",
+            Objectives = [new Objective("obj.1", ObjectiveLevel.Primary, "Primary Objective")],
+            Endpoints = [new Endpoint("ep.1", "obj.1", ObjectiveLevel.Primary, "Primary Endpoint")],
+            Arms = [new Arm("arm.1", "Arm 1", ArmType.Experimental, [])],
+            Epochs = [new Epoch("ep.1", "Screening", 1), new Epoch("ep.2", "Treatment", 2)],
+            EligibilityCriteria = [new EligibilityCriterion("crit.1", CriterionCategory.Inclusion, "Inclusion 1", [])],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.1", "Screening Baseline", "ep.1", [ActivityLocation.Site], [], Timing: new ActivityTiming(firstEpochDay, 0, 0), Purpose: new DataPurpose { EndpointIds = ["ep.1"] }),
+                new PlannedActivity("act.2", "Treatment Day 1", "ep.2", [ActivityLocation.Site], [], Timing: new ActivityTiming(secondEpochDay, 0, 0), Purpose: new DataPurpose { EndpointIds = ["ep.1"] }),
+            ],
+        };
+
+        Assert.DoesNotContain(MatrixGapAnalyzer.Analyze(EpochDesign(1, 0)), g => g.Kind == MatrixGapKind.CyclicEpochTransition);
+        Assert.DoesNotContain(MatrixGapAnalyzer.Analyze(EpochDesign(0, 1)), g => g.Kind == MatrixGapKind.CyclicEpochTransition);
+
+        var regressionGap = Assert.Single(MatrixGapAnalyzer.Analyze(EpochDesign(2, 0)), g => g.Kind == MatrixGapKind.CyclicEpochTransition);
+        Assert.Equal("/plannedActivities/1/timing/day", regressionGap.JsonPointerPath);
+        Assert.Contains("(day 1)", regressionGap.Description, StringComparison.Ordinal);
+        Assert.Contains("(day 2)", regressionGap.Description, StringComparison.Ordinal);
+    }
+
     /// <summary>A two-arm design whose every activity, collection item and endpoint is linked, so it has no gaps.</summary>
     private static ProtocolDesign CompleteDesign()
     {

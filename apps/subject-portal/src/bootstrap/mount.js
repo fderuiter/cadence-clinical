@@ -3,7 +3,10 @@ import { createApp } from "vue";
 import { enablePortalClinicalIcons } from "ui";
 
 import App from "../App.vue";
-import { getPortalRouter, setPortalRouterMounted } from "../router/index.js";
+import {
+  preparePortalRouterForMount,
+  setPortalRouterMounted,
+} from "../router/index.js";
 import { pinia } from "../stores/pinia.js";
 
 enablePortalClinicalIcons();
@@ -13,9 +16,10 @@ let mountedApp = null;
 // Mounts (or re-mounts) the portal into `el`.
 export function mountPortal(el) {
   unmountApp();
+  const portalRouter = preparePortalRouterForMount();
   mountedApp = createApp(App);
   mountedApp.use(pinia);
-  mountedApp.use(getPortalRouter());
+  mountedApp.use(portalRouter);
   mountedApp.mount(el);
   setPortalRouterMounted(true);
   return mountedApp;

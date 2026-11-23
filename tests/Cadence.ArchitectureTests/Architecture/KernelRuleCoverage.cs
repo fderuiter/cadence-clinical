@@ -15,9 +15,9 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// <c>tests/</c> carries <c>[KernelRule("K-FACT-1")]</c>, found by the same source scan the RTM uses
 /// (<see cref="RequirementTagScanner"/>). A K-ID in a test name or doc comment does not count.
 ///
-/// Rules not covered yet are listed, one ID per line, in
-/// <c>tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt</c>. The list may only
-/// shrink: a rule outside it needs a tagged test, and a listed rule that gains one must leave it.
+/// Rules not covered yet are listed, one ID per line, in per-area shards under
+/// <c>tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/&lt;AREA&gt;.baseline.txt</c>. The shards may only
+/// shrink: a rule outside them needs a tagged test, and a listed rule that gains one must leave its shard (deleting empty shards).
 /// <c>CADENCE_UPDATE_BASELINE=1</c> deletes the covered and unknown lines; it never adds one, so accepting a new
 /// untested rule is a reviewed hand edit.
 /// </summary>
@@ -25,14 +25,31 @@ public static partial class KernelRuleCoverage
 {
     public const string SpecificationPath = "docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md";
 
-    public const string BaselinePath = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt";
+    public const string BaselineDirectory = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage";
+
+    private const string ShardExtension = ".baseline.txt";
 
     private static readonly string[] Header =
     [
         "# Kernel rules with no test that names them yet (#5467) - " + SpecificationPath + ".",
-        "# One rule ID per line, sorted ordinally. The list may only shrink: tag a test that proves the rule with",
+        "# One rule ID per line, sorted ordinally. Shards may only shrink: tag a test that proves the rule with",
         "# [KernelRule(\"K-AREA-N\")] (docs/TESTING.md) and delete its line. CADENCE_UPDATE_BASELINE=1 deletes covered lines only.",
     ];
+
+    public static string ShardRelativePath(string area) => $"{BaselineDirectory}/{area}{ShardExtension}";
+
+    public static string ExtractArea(string ruleId)
+    {
+        ArgumentNullException.ThrowIfNull(ruleId);
+        int firstDash = ruleId.IndexOf('-', StringComparison.Ordinal);
+        int lastDash = ruleId.LastIndexOf('-');
+        if (firstDash <= 0 || lastDash <= firstDash + 1)
+        {
+            throw new FormatException($"Expected 'K-<AREA>-<N>' rule ID, got '{ruleId}'.");
+        }
+
+        return ruleId[(firstDash + 1)..lastDash];
+    }
 
     [GeneratedRegex(@"^[ \t]*(?:[-*+]|>)[ \t]+\*\*(K-[A-Z]+-[0-9]+)\*\*", RegexOptions.Multiline)]
     private static partial Regex RuleDefinitionRegex();
@@ -67,23 +84,23 @@ public static partial class KernelRuleCoverage
 
             if (CoveredButInBaseline.Count > 0)
             {
-                lines.Add($"{CoveredButInBaseline.Count} rule(s) now have a tagged test. Delete these lines from {BaselinePath}:");
+                lines.Add($"{CoveredButInBaseline.Count} rule(s) now have a tagged test. Delete these lines from {BaselineDirectory}/:");
                 lines.AddRange(CoveredButInBaseline.Select(r => "  - " + r));
             }
 
             if (BaselineNotInSpecification.Count > 0)
             {
-                lines.Add($"{BaselineNotInSpecification.Count} line(s) of {BaselinePath} name no rule {SpecificationPath} defines. Delete them:");
+                lines.Add($"{BaselineNotInSpecification.Count} line(s) under {BaselineDirectory}/ name no rule {SpecificationPath} defines. Delete them:");
                 lines.AddRange(BaselineNotInSpecification.Select(r => "  - " + r));
             }
 
             if (DuplicateBaselineEntries.Count > 0)
             {
-                lines.Add($"{BaselinePath} lists these rules more than once:");
+                lines.Add($"{BaselineDirectory}/ lists these rules more than once:");
                 lines.AddRange(DuplicateBaselineEntries.Select(r => "  - " + r));
             }
 
-            lines.Add($"CADENCE_UPDATE_BASELINE=1 deletes covered and unknown lines from {BaselinePath}; it never adds one.");
+            lines.Add($"CADENCE_UPDATE_BASELINE=1 deletes covered and unknown lines under {BaselineDirectory}/; it never adds one.");
             return string.Join(Environment.NewLine, lines);
         }
     }
@@ -130,36 +147,118 @@ public static partial class KernelRuleCoverage
     public static IReadOnlyList<DiscoveredTest> ScanTests() =>
         RequirementTagScanner.ScanDirectories(KernelBoundaryBaseline.RepositoryRoot(), ["tests"]);
 
-    /// <summary>The baseline entries, in file order.</summary>
-    public static IReadOnlyList<string> ReadBaseline()
+    /// <summary>The baseline entries across all area shards, ordered by <c>K-&lt;AREA&gt;-</c> prefix and shard line order.</summary>
+    public static IReadOnlyList<string> ReadBaseline(string? baselineDirectory = null)
     {
-        var path = Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), BaselinePath);
-        return File.Exists(path)
-            ? File.ReadAllLines(path).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#')).ToList()
-            : [];
+        string dir = baselineDirectory ?? Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), BaselineDirectory);
+        if (!Directory.Exists(dir))
+        {
+            return [];
+        }
+
+        return Directory.EnumerateFiles(dir, "*" + ShardExtension, SearchOption.TopDirectoryOnly)
+            .OrderBy(path => GetAreaName(path) + "-", StringComparer.Ordinal)
+            .SelectMany(ReadShardLines)
+            .ToList();
+    }
+
+    /// <summary>Writes per-area shards and deletes empty shards.</summary>
+    public static void WriteShards(IEnumerable<string> ruleIds, string? baselineDirectory = null)
+    {
+        string dir = baselineDirectory ?? Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), BaselineDirectory);
+        var grouped = ruleIds
+            .Distinct(StringComparer.Ordinal)
+            .GroupBy(ExtractArea, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Order(StringComparer.Ordinal).ToList(),
+                StringComparer.Ordinal);
+
+        if (Directory.Exists(dir))
+        {
+            foreach (string existingShard in Directory.GetFiles(dir, "*" + ShardExtension, SearchOption.TopDirectoryOnly))
+            {
+                string area = GetAreaName(existingShard);
+                if (!grouped.TryGetValue(area, out var areaRules) || areaRules.Count == 0)
+                {
+                    File.Delete(existingShard);
+                }
+            }
+        }
+
+        foreach (var (area, areaRules) in grouped.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (areaRules.Count == 0)
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(
+                Path.Combine(dir, area + ShardExtension),
+                string.Join("\n", Header.Concat(areaRules)) + "\n");
+        }
     }
 
     /// <summary>
-    /// Compares the repository's specification, tests and baseline. With <c>CADENCE_UPDATE_BASELINE=1</c> it first
-    /// rewrites the baseline without its covered, unknown and duplicate lines, and never adds a line.
+    /// Compares the repository's specification, tests and baseline shards. With <c>CADENCE_UPDATE_BASELINE=1</c> (or
+    /// <paramref name="updateOverride"/>) it subtracts covered, unknown and duplicate lines from touched shards, deletes
+    /// any shard that reaches zero entries, and never adds a line.
     /// </summary>
-    public static Coverage Verify(IReadOnlyList<string> definedRules, IEnumerable<string> taggedRules)
+    public static Coverage Verify(
+        IReadOnlyList<string> definedRules,
+        IEnumerable<string> taggedRules,
+        string? baselineDirectory = null,
+        bool? updateOverride = null)
     {
         var tagged = taggedRules.ToList();
-        var baseline = ReadBaseline();
+        string dir = baselineDirectory ?? Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), BaselineDirectory);
+        var baseline = ReadBaseline(dir);
         var coverage = Compare(definedRules, tagged, baseline);
-        if (!KernelBoundaryBaseline.UpdateRequested)
+        bool shouldUpdate = updateOverride ?? KernelBoundaryBaseline.UpdateRequested;
+        if (!shouldUpdate)
         {
             return coverage;
         }
 
-        var kept = baseline
-            .Except(coverage.CoveredButInBaseline.Concat(coverage.BaselineNotInSpecification), StringComparer.Ordinal)
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal);
-        File.WriteAllText(
-            Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), BaselinePath),
-            string.Join("\n", Header.Concat(kept)) + "\n");
-        return Compare(definedRules, tagged, ReadBaseline());
+        if (Directory.Exists(dir))
+        {
+            var removed = coverage.CoveredButInBaseline
+                .Concat(coverage.BaselineNotInSpecification)
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (string shardPath in Directory.GetFiles(dir, "*" + ShardExtension, SearchOption.TopDirectoryOnly))
+            {
+                var existing = ReadShardLines(shardPath);
+                var kept = existing
+                    .Except(removed, StringComparer.Ordinal)
+                    .Distinct(StringComparer.Ordinal)
+                    .Order(StringComparer.Ordinal)
+                    .ToList();
+
+                if (kept.Count == 0)
+                {
+                    File.Delete(shardPath);
+                }
+                else if (!existing.SequenceEqual(kept, StringComparer.Ordinal))
+                {
+                    File.WriteAllText(shardPath, string.Join("\n", Header.Concat(kept)) + "\n");
+                }
+            }
+        }
+
+        return Compare(definedRules, tagged, ReadBaseline(dir));
     }
+
+    private static string GetAreaName(string shardPath)
+    {
+        string fileName = Path.GetFileName(shardPath);
+        return fileName[..^ShardExtension.Length];
+    }
+
+    private static List<string> ReadShardLines(string shardPath) =>
+        File.ReadAllLines(shardPath)
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0 && !l.StartsWith('#'))
+            .ToList();
 }

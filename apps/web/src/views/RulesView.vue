@@ -653,20 +653,20 @@
             <tr v-for="q in filteredQueries" :key="q.id">
               <td>
                 <strong style="font-family: monospace">{{ q.id }}</strong>
+                <div v-if="q.origin === 'AI_ASSISTED'" style="margin-top: 4px">
+                  <AiLabel label="AI-assisted" />
+                </div>
                 <div
-                  v-if="
+                  v-else-if="
                     q.origin === 'ANOMALY_DETECTOR' ||
-                    q.origin === 'AI_ASSISTED' ||
                     q.query_type === 'CROSS_DOMAIN_ANOMALY'
                   "
-                  style="
-                    font-size: 0.65rem;
-                    color: var(--semantic-color-ai);
-                    font-weight: bold;
-                    margin-top: 2px;
-                  "
+                  style="margin-top: 4px"
                 >
-                  <ClinicalIcon name="zap" :size="16" /> CROSS-DOMAIN
+                  <span class="clinical-badge clinical-badge--warning">
+                    <ClinicalIcon name="alert-triangle" :size="16" />
+                    CROSS-DOMAIN
+                  </span>
                 </div>
               </td>
               <td>
@@ -788,6 +788,7 @@
 <script setup>
 import { encodeChangeReason } from "../api/changeReason";
 import { ref, computed, onMounted, watch } from "vue";
+import AiLabel from "../components/ai/AiLabel.vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useCodingStore } from "../stores/coding";

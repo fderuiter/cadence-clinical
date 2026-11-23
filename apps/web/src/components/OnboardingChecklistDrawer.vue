@@ -167,7 +167,7 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import { ClinicalDrawer, ClinicalIcon, useEscapeClose } from "ui";
+import { ClinicalDrawer, ClinicalIcon } from "ui";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
@@ -179,10 +179,6 @@ import { hasRequiredRole } from "../router";
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
-
-useEscapeClose(() => onboardingStore.closeDrawer(), {
-  isOpen: () => onboardingStore.isDrawerOpen,
-});
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -517,5 +513,18 @@ function startGuidedTour() {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :deep(.drawer-panel) {
+    animation: none;
+  }
+
+  .btn-close,
+  .progress-bar-fill,
+  .task-card,
+  .btn-navigate-task {
+    transition: none;
+  }
 }
 </style>

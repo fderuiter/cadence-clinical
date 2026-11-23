@@ -10,12 +10,34 @@ const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
 const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
-const CONTROL_CHARS_RE = /[\u0000-\u001f]/g;
+export const EXCLUDED_PORTAL_DOCS = Object.freeze([
+  "SDLC/03_API_Integration_Specification.md",
+]);
+
+export function isExcludedPortalDocFile(filePath, docsDir) {
+  if (!filePath || !docsDir) return false;
+  const rel = path.relative(docsDir, filePath).replace(/\\/g, "/");
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return false;
+  return EXCLUDED_PORTAL_DOCS.some(
+    (excluded) => excluded.toLowerCase() === rel.toLowerCase()
+  );
+}
+
 const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
 const SPECIAL_CHARS_RE = /[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'<>,.?/]+/g;
 const HTML_ID_ATTR_RE = /\b(?:id|name)\s*=\s*["']([^"']+)["']/gi;
 
 const anchorCache = new Map();
+
+function stripAsciiControlChars(value) {
+  let result = "";
+  for (let i = 0; i < value.length; i += 1) {
+    if (value.charCodeAt(i) > 0x1f) {
+      result += value[i];
+    }
+  }
+  return result;
+}
 
 /**
  * Strips inline Markdown syntax and HTML tags from a heading line to compute its text.
@@ -47,10 +69,9 @@ export function stripInlineMarkdown(rawHeading) {
  * @returns {string}
  */
 export function vitepressSlugify(text) {
-  return stripInlineMarkdown(text)
-    .normalize("NFKD")
-    .replace(COMBINING_MARKS_RE, "")
-    .replace(CONTROL_CHARS_RE, "")
+  return stripAsciiControlChars(
+    stripInlineMarkdown(text).normalize("NFKD").replace(COMBINING_MARKS_RE, "")
+  )
     .replace(SPECIAL_CHARS_RE, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "")
@@ -172,6 +193,24 @@ function escapeHtmlAttr(value) {
  *
  * @param {import("markdown-it")} md
  */
+export function mermaidFencePlugin(md) {
+  const defaultFence =
+    md.renderer.rules.fence ??
+    ((tokens, idx, _options, _env, self) =>
+      `<pre><code${self.renderAttrs(tokens[idx])}>${md.utils.escapeHtml(tokens[idx].content)}</code></pre>\n`);
+
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const info = token.info ? md.utils.unescapeAll(token.info).trim() : "";
+    const lang = info.split(/\s+/)[0]?.toLowerCase();
+    if (lang === "mermaid" || lang === "mmd") {
+      const encoded = encodeURIComponent(token.content);
+      return `<div class="mermaid" v-pre data-mermaid-code="${encoded}"></div>\n`;
+    }
+    return defaultFence(tokens, idx, options, env, self);
+  };
+}
+
 export function dualHeadingAnchorsPlugin(md) {
   const defaultCodeInline =
     md.renderer.rules.code_inline ??
@@ -372,7 +411,25 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
         samePage: false,
       };
     }
-    const [, rawAnchor] = splitAnchor(href);
+    const [cleanRootPath, rawAnchor] = splitAnchor(href);
+    const normalizedPage = cleanRootPath
+      .split("?")[0]
+      .replace(/^\//, "")
+      .replace(/\.(html|md)$/i, "");
+    if (normalizedPage) {
+      const excludedCandidate = path.join(docsDir, `${normalizedPage}.md`);
+      if (isExcludedPortalDocFile(excludedCandidate, docsDir)) {
+        const excludedRelToRepo = path
+          .relative(repoRoot, excludedCandidate)
+          .replace(/\\/g, "/");
+        return {
+          rewrittenHref: `${REPO_URL}/blob/${BRANCH}/${excludedRelToRepo}${rawAnchor}`,
+          portalTargetFile: null,
+          anchor: "",
+          samePage: false,
+        };
+      }
+    }
     return {
       rewrittenHref: null,
       portalTargetFile: resolveThemePagePath(docsDir, href),
@@ -443,16 +500,27 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
     }
     const mdCandidate =
       exists && !isDir
-        ? absolute
+        ? /\.html$/i.test(absolute) &&
+          fs.existsSync(absolute.replace(/\.html$/i, ".md"))
+          ? absolute.replace(/\.html$/i, ".md")
+          : absolute
         : !exists && fs.existsSync(`${absolute}.md`)
           ? `${absolute}.md`
-          : null;
-    if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
-      const draftRelToRepo = path
+          : !exists &&
+              /\.html$/i.test(absolute) &&
+              fs.existsSync(absolute.replace(/\.html$/i, ".md"))
+            ? absolute.replace(/\.html$/i, ".md")
+            : null;
+    if (
+      mdCandidate &&
+      (isDraftBlogPostFile(mdCandidate) ||
+        isExcludedPortalDocFile(mdCandidate, docsDir))
+    ) {
+      const excludedRelToRepo = path
         .relative(repoRoot, mdCandidate)
         .replace(/\\/g, "/");
       return {
-        rewrittenHref: `${REPO_URL}/blob/${BRANCH}/${draftRelToRepo}${anchor}`,
+        rewrittenHref: `${REPO_URL}/blob/${BRANCH}/${excludedRelToRepo}${anchor}`,
         portalTargetFile: null,
         anchor: "",
         samePage: false,
@@ -554,6 +622,7 @@ export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
     options.cohostedSubpaths ?? COHOSTED_SUBPATH_PREFIXES;
   const missingPages = [];
   const missingAnchors = [];
+  const validatedLinks = new Set();
 
   const visit = (items) => {
     for (const item of items ?? []) {
@@ -561,8 +630,10 @@ export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
       if (
         link &&
         link.startsWith("/") &&
-        !isCohostedSubpathLink(link, cohostedSubpaths)
+        !isCohostedSubpathLink(link, cohostedSubpaths) &&
+        !validatedLinks.has(link)
       ) {
+        validatedLinks.add(link);
         const [cleanLink, rawAnchor] = splitAnchor(link);
         if (GENERATED_STATIC_ENDPOINTS.has(cleanLink)) {
           visit(item.items);
@@ -586,7 +657,17 @@ export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
   };
 
   visit(themeConfig.nav);
-  visit(themeConfig.sidebar);
+  if (Array.isArray(themeConfig.sidebar)) {
+    visit(themeConfig.sidebar);
+  } else if (themeConfig.sidebar && typeof themeConfig.sidebar === "object") {
+    for (const sectionSidebar of Object.values(themeConfig.sidebar)) {
+      if (Array.isArray(sectionSidebar)) {
+        visit(sectionSidebar);
+      } else if (sectionSidebar && Array.isArray(sectionSidebar.items)) {
+        visit(sectionSidebar.items);
+      }
+    }
+  }
 
   if (missingPages.length > 0 || missingAnchors.length > 0) {
     const details = [];
@@ -606,10 +687,13 @@ function resolveThemePagePath(docsDir, link) {
     .replace(/\.(html|md)$/, "");
   if (page === "" || page.endsWith("/")) {
     const indexCandidate = path.join(docsDir, page, "index.md");
+    if (isExcludedPortalDocFile(indexCandidate, docsDir)) return null;
     return fs.existsSync(indexCandidate) ? indexCandidate : null;
   }
   const mdCandidate = path.join(docsDir, `${page}.md`);
+  if (isExcludedPortalDocFile(mdCandidate, docsDir)) return null;
   if (fs.existsSync(mdCandidate)) return mdCandidate;
   const dirIndexCandidate = path.join(docsDir, page, "index.md");
+  if (isExcludedPortalDocFile(dirIndexCandidate, docsDir)) return null;
   return fs.existsSync(dirIndexCandidate) ? dirIndexCandidate : null;
 }

@@ -50,7 +50,52 @@
                 </div>
               </th>
               <td>
+                <select
+                  v-if="item.codelist_options?.length"
+                  :id="`ecrf-item-${item.item_id}`"
+                  :value="formState.entries[item.item_id]?.text ?? ''"
+                  :disabled="
+                    formState.locked ||
+                    formState.saving ||
+                    !!formState.entries[item.item_id]?.missing
+                  "
+                  :aria-invalid="!!formState.itemErrors[item.item_id]"
+                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  @change="
+                    emit(
+                      'entry-text',
+                      item.item_id,
+                      ($event.target as HTMLSelectElement).value
+                    )
+                  "
+                >
+                  <option value="">Select…</option>
+                  <option
+                    v-if="
+                      formState.entries[item.item_id]?.text &&
+                      !item.codelist_options.some(
+                        (option) =>
+                          option.code === formState.entries[item.item_id]?.text
+                      )
+                    "
+                    :value="formState.entries[item.item_id]?.text"
+                  >
+                    {{ formState.entries[item.item_id]?.text }}
+                  </option>
+                  <option
+                    v-for="option in item.codelist_options"
+                    :key="option.code"
+                    :value="option.code"
+                  >
+                    {{
+                      option.display && option.display !== option.code
+                        ? `${option.display} (${option.code})`
+                        : option.code
+                    }}
+                  </option>
+                </select>
                 <input
+                  v-else
                   :id="`ecrf-item-${item.item_id}`"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
@@ -143,21 +188,21 @@
                 <div class="ecrf-item-sdv">
                   <span
                     v-if="sdv.activeVerification(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--verified"
+                    class="clinical-badge clinical-badge--verified ecrf-sdv-badge ecrf-sdv-badge--verified"
                     :data-testid="`ecrf-sdv-status-${item.item_id}`"
                   >
                     Verified (rev {{ item.revision }})
                   </span>
                   <span
                     v-else-if="sdv.needsReverification(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--reverify"
+                    class="clinical-badge clinical-badge--warning ecrf-sdv-badge ecrf-sdv-badge--reverify"
                     :data-testid="`ecrf-sdv-status-${item.item_id}`"
                   >
                     Needs re-verification
                   </span>
                   <span
                     v-else-if="hasRecordedValue(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--unverified"
+                    class="clinical-badge clinical-badge--draft ecrf-sdv-badge ecrf-sdv-badge--unverified"
                     :data-testid="`ecrf-sdv-status-${item.item_id}`"
                   >
                     Unverified
@@ -219,7 +264,7 @@
                 <div class="ecrf-item-queries">
                   <span
                     v-if="liveOn(item).length"
-                    class="ecrf-query-badge"
+                    class="clinical-badge clinical-badge--queried ecrf-query-badge"
                     :data-testid="`ecrf-query-badge-${item.item_id}`"
                   >
                     {{ liveOn(item).length }} unresolved
@@ -298,7 +343,7 @@
                     class="btn btn-secondary"
                     type="button"
                     :disabled="sdv.sdvBusy"
-                    @click="sdv.cancelPendingSdv()"
+                    @click="sdv.cancelPendingSdv(true)"
                   >
                     Back
                   </button>
@@ -350,9 +395,10 @@
                     Raise query
                   </button>
                   <button
+                    id="ecrf-raise-cancel"
                     class="btn btn-secondary"
                     type="button"
-                    @click="raising = null"
+                    @click="cancelRaise"
                   >
                     Back
                   </button>
@@ -480,6 +526,7 @@ import {
   watch,
   type UnwrapNestedRefs,
 } from "vue";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
@@ -554,12 +601,31 @@ watch(
   }
 );
 
+const EMPTY_LIVE_QUERIES: FormQueryResponse[] = Object.freeze(
+  []
+) as unknown as FormQueryResponse[];
+
+const liveQueriesByItemId = computed(() => {
+  const byItem = new Map<string, FormQueryResponse[]>();
+  const currentForm = props.formState.form;
+  if (!currentForm) return byItem;
+  for (const item of props.formState.items) {
+    if (byItem.has(item.item_id)) continue;
+    const itemQueries = props.queries.forItem(
+      currentForm.form_id,
+      item.item_id
+    );
+    if (itemQueries.length === 0) continue;
+    const live = itemQueries.filter(isLiveQuery);
+    if (live.length > 0) {
+      byItem.set(item.item_id, live);
+    }
+  }
+  return byItem;
+});
+
 function liveOn(item: EcrfFormItem): FormQueryResponse[] {
-  return props.formState.form
-    ? props.queries
-        .forItem(props.formState.form.form_id, item.item_id)
-        .filter(isLiveQuery)
-    : [];
+  return liveQueriesByItemId.value.get(item.item_id) ?? EMPTY_LIVE_QUERIES;
 }
 
 function beginRaise(item: EcrfFormItem) {
@@ -573,6 +639,20 @@ function beginRaise(item: EcrfFormItem) {
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
+}
+
+function cancelRaise() {
+  const itemId = raising.value?.item_id ?? null;
+  raising.value = null;
+  raiseText.value = "";
+  raiseReason.value = "";
+  void handoffFocus([
+    itemId ? `#ecrf-raise-${itemId}` : null,
+    itemId ? `#ecrf-item-${itemId}` : null,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function confirmRaise() {
@@ -603,6 +683,13 @@ async function confirmRaise() {
   if (raised) {
     raising.value = null;
     if (wasUnasked) await props.formState.reload();
+    void handoffFocus([
+      `#ecrf-raise-${target.item_id}`,
+      `#ecrf-item-${target.item_id}`,
+      "#ecrf-form-queries-title",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ]);
   }
 }
 
@@ -706,14 +793,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   align-items: flex-start;
   gap: 4px;
 }
-.ecrf-query-badge {
-  padding: 0 8px;
-  border-radius: 999px;
-  background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
 .ecrf-query-changed {
   color: var(--semantic-color-interactive-primary);
   font-size: 0.75rem;
@@ -736,24 +815,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-.ecrf-sdv-badge {
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.ecrf-sdv-badge--verified {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-sdv-badge--reverify {
-  background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
-}
-.ecrf-sdv-badge--unverified {
-  background-color: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-secondary);
 }
 .ecrf-sdv-none {
   color: var(--semantic-color-text-secondary);

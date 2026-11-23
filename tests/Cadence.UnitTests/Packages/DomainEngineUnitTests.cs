@@ -223,6 +223,44 @@ public class DomainEngineUnitTests
         }
     }
 
+    [Fact]
+    public void DuplicationDetectorService_RejectsJavaScriptDuplicates_OverFifteenNormalizedLines()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-js-{Guid.NewGuid():N}");
+        try
+        {
+            string webUtilsDir = Path.Combine(tempRoot, "apps", "web", "src", "utils");
+            string portalUtilsDir = Path.Combine(tempRoot, "apps", "subject-portal", "src", "utils");
+            Directory.CreateDirectory(webUtilsDir);
+            Directory.CreateDirectory(portalUtilsDir);
+
+            string webFile = Path.Combine(webUtilsDir, "demoProbe.js");
+            string portalFile = Path.Combine(portalUtilsDir, "demoProbe.js");
+
+            File.WriteAllText(webFile, "export function webOnly() {\n  return 'web';\n}\n");
+            File.WriteAllText(portalFile, "export function portalOnly() {\n  return 'portal';\n}\n");
+
+            DuplicationDetectorService.DetectDuplication([webFile, portalFile], tempRoot).Should().Be(0);
+
+            string dupJsBody = string.Join(
+                "\n",
+                Enumerable.Range(1, 18).Select(i => $"  const stepValue{i} = (seed + {i}) * 2654435761;"));
+            string dupJsFn = $"\nexport function computeDeterministicProbe(seed) {{\n{dupJsBody}\n  return stepValue18;\n}}\n";
+
+            File.AppendAllText(webFile, dupJsFn);
+            File.AppendAllText(portalFile, dupJsFn);
+
+            DuplicationDetectorService.DetectDuplication([webFile, portalFile], tempRoot).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         string? dir = AppContext.BaseDirectory;

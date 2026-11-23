@@ -5,16 +5,20 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using FluentValidation;
 
@@ -25,8 +29,9 @@ namespace Cadence.Kernel.Application.Evidence;
 /// <summary>
 /// Handles <see cref="OpenCollectionInstance"/> (K-FACT-6, K-TIME-8): it resolves the protocol version governing the
 /// enrollment's study site at the collection time, checks that its design has the CollectionSpec (and that the planned
-/// activity collects it), and opens the form instance with a <see cref="LineageEdgeKind.GovernedBy"/> edge from that
-/// version. A withdrawn participant gets no new form (<see cref="CaptureConditions"/>).
+/// activity collects it), and opens the form instance with <see cref="LineageEdgeKind.CollectedBy"/> edges from its
+/// governing <c>protocol_element</c> spec and planned activity. A withdrawn participant gets no new form
+/// (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollectionInstance, CollectionInstanceState>
 {
@@ -67,22 +72,51 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return CollectionErrors.NoGoverningVersion;
         }
 
-        if (CollectionSpecs.Find(version, command.CollectionSpecId, command.PlannedActivityId) is { } problem)
+        if (CollectionSpecs.Find(version, command.CollectionSpecId, command.PlannedActivityId, out var design) is { } problem)
         {
             return CollectionErrors.SpecUnknown.WithMessage(problem);
         }
 
+        var elements = await ProtocolElementLineage.ElementsAsync(context.Work, version, cancellationToken).ConfigureAwait(false);
         var instance = CollectionInstance.Open(
             command.CollectionInstanceId, enrollment, version.Id, command.CollectionSpecId, command.PlannedActivityId, collectedAt,
             context.Actor.Id, context.RecordedAt);
         context.Work.Add(instance);
-        context.Work.LinkInput(NodeRef.For(version.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, collectedAt);
+        CollectionLineage.LinkInstance(context.Work, instance, elements);
         context.Work.Raise(
             new CollectionInstanceOpened(
                 instance.TenantId, instance.Id, instance.EnrollmentId, instance.ParticipantId, instance.StudyId, version.Id,
                 instance.CollectionSpecId, instance.PlannedActivityId, instance.CollectedAt),
             instance.CollectedAt);
-        return CommandResult<CollectionInstanceState>.Success(CollectionStates.Of(instance, version: 1));
+        var assessment = AssessVisit(design!, enrollment, command.PlannedActivityId, collectedAt, context.RecordedAt);
+        return CommandResult<CollectionInstanceState>.Success(CollectionStates.Of(instance, version: 1, assessment));
+    }
+
+    private static VisitTimingAssessment? AssessVisit(
+        ProtocolDesign design,
+        Enrollment enrollment,
+        string? plannedActivityId,
+        DateTimeOffset collectedAt,
+        DateTimeOffset knownAt)
+    {
+        if (plannedActivityId is null)
+        {
+            return null;
+        }
+
+        if (enrollment.Periods
+            .Where(p => p.Status == EnrollmentStatus.Enrolled && p.Period.Recorded.Contains(knownAt))
+            .OrderBy(p => p.Period.Valid.Start)
+            .FirstOrDefault() is not { } enrolled)
+        {
+            return null;
+        }
+
+        var referenceStart = DateOnly.FromDateTime(enrolled.Period.Valid.Start.UtcDateTime);
+        var actual = DateOnly.FromDateTime(collectedAt.UtcDateTime);
+        var expected = ExpectedSchedule.Compute(design, referenceStart, actual)
+            .FirstOrDefault(v => string.Equals(v.Visit.ActivityId, plannedActivityId, StringComparison.Ordinal));
+        return expected is null ? null : ExpectedSchedule.Assess(expected, actual);
     }
 }
 
@@ -92,7 +126,8 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
 /// revision, and only then records and corrects the values together. Any failure changes nothing. After the participant's
 /// withdrawal, a save with a value for an item that has none is refused whole (<see cref="CaptureConditions"/>).
 /// </summary>
-internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordCollectedValues, CollectedValuesState>
+internal sealed class RecordCollectedValuesHandler(IConceptRegistry? concepts = null)
+    : ICommandHandler<RecordCollectedValues, CollectedValuesState>
 {
     public async Task<CommandResult<CollectedValuesState>> HandleAsync(
         RecordCollectedValues command, ICommandContext context, CancellationToken cancellationToken)
@@ -114,7 +149,7 @@ internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordColle
             throw new InvalidOperationException($"Form instance {instance.Id} names CollectionSpec {instance.CollectionSpecId}, which its protocol version does not have.");
         }
 
-        if (CheckValues(values, spec) is { } invalid)
+        if (await CheckValuesAsync(command.TenantId, values, spec, cancellationToken).ConfigureAwait(false) is { } invalid)
         {
             return invalid;
         }
@@ -216,9 +251,15 @@ internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordColle
         var instanceVersion = instance.VersionIndex;
         if (changes.Count > 0)
         {
+            var elements = await ProtocolElementLineage.ElementsAsync(work, version!, cancellationToken).ConfigureAwait(false);
             instance.Saved(context.RecordedAt);
             instanceVersion++;
-            work.LinkInput(NodeRef.For(version!.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, instance.CollectedAt);
+            CollectionLineage.LinkInstance(work, instance, elements);
+            foreach (var change in changes)
+            {
+                CollectionLineage.LinkItem(work, current[change.ItemId], change.ItemId, elements);
+            }
+
             work.Raise(new CollectedValuesSaved(
                 instance.TenantId, instance.Id, instance.EnrollmentId, instance.StudyId, instance.ProtocolVersionId, instance.CollectionSpecId,
                 instanceVersion, changes));
@@ -228,12 +269,19 @@ internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordColle
     }
 
     /// <summary>
-    /// The structural checks that need the CollectionSpec (ADR-2622 §4.4): every value names an item of the spec and fits
-    /// it. <see cref="RecordCollectedValuesValidator"/> has already checked the save's shape.
+    /// The structural and controlled-terminology checks that need the CollectionSpec (ADR-2622 §4.4, spec §1037-1039):
+    /// every value names an item of the spec, fits its shape, and when coded belongs to its governed codelist or code
+    /// system version. <see cref="RecordCollectedValuesValidator"/> has already checked the save's shape.
     /// </summary>
-    private static KernelError? CheckValues(IReadOnlyList<CollectedValue> values, CollectionSpec spec)
+    private async Task<KernelError?> CheckValuesAsync(
+        TenantId tenant,
+        IReadOnlyList<CollectedValue> values,
+        CollectionSpec spec,
+        CancellationToken cancellationToken)
     {
         var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        Dictionary<(CodeSystemVersionId Version, string GroupCode), IReadOnlyList<CodeSystemEntryView>>? groupCache = null;
+
         foreach (var value in values)
         {
             if (spec.Items.FirstOrDefault(i => string.Equals(i.Id, value.ItemId, StringComparison.Ordinal)) is not { } item)
@@ -243,6 +291,42 @@ internal sealed class RecordCollectedValuesHandler : ICommandHandler<RecordColle
             else if (item.Admits(value.Value) is { } problem)
             {
                 errors[value.ItemId] = [problem];
+            }
+            else if (concepts is not null && item.Terminology is { } terminology && value.Value is CodedValue coded)
+            {
+                if (!string.IsNullOrWhiteSpace(terminology.Codelist))
+                {
+                    groupCache ??= [];
+                    var key = (terminology.CodeSystemVersionId, terminology.Codelist);
+                    if (!groupCache.TryGetValue(key, out var groupEntries))
+                    {
+                        groupEntries = await concepts
+                            .GetGroupAsync(tenant, terminology.CodeSystemVersionId, terminology.Codelist, cancellationToken)
+                            .ConfigureAwait(false);
+                        groupCache[key] = groupEntries;
+                    }
+
+                    if (!groupEntries.Any(e => string.Equals(e.Code, coded.Code, StringComparison.Ordinal)))
+                    {
+                        errors[value.ItemId] =
+                        [
+                            $"Item {item.Id} rejects code '{coded.Code}': it is not in codelist '{terminology.Codelist}' of code system version {terminology.CodeSystemVersionId}.",
+                        ];
+                    }
+                }
+                else
+                {
+                    var foundEntries = await concepts
+                        .LookupAsync(tenant, new Coding(terminology.CodeSystemVersionId, coded.Code), cancellationToken)
+                        .ConfigureAwait(false);
+                    if (foundEntries.Count == 0)
+                    {
+                        errors[value.ItemId] =
+                        [
+                            $"Item {item.Id} rejects code '{coded.Code}': it is not in code system version {terminology.CodeSystemVersionId}.",
+                        ];
+                    }
+                }
             }
         }
 
@@ -340,15 +424,20 @@ internal static class CollectionSpecs
             .FirstOrDefault(s => string.Equals(s.Id, specId, StringComparison.Ordinal));
 
     /// <summary>Why <paramref name="version"/> cannot govern a form of <paramref name="specId"/> at <paramref name="activityId"/>, or null.</summary>
-    public static string? Find(ProtocolVersion version, string? specId, string? activityId)
+    public static string? Find(ProtocolVersion version, string? specId, string? activityId) =>
+        Find(version, specId, activityId, out _);
+
+    /// <summary>Why <paramref name="version"/> cannot govern a form of <paramref name="specId"/> at <paramref name="activityId"/>, or null.</summary>
+    public static string? Find(ProtocolVersion version, string? specId, string? activityId, out ProtocolDesign? design)
     {
+        design = null;
         if (string.IsNullOrWhiteSpace(specId) || specId.Length > CollectionInstance.ElementIdMaxLength
             || (activityId is not null && (string.IsNullOrWhiteSpace(activityId) || activityId.Length > CollectionInstance.ElementIdMaxLength)))
         {
             return "Name the CollectionSpec, and the planned activity when there is one, by their ids in the protocol design.";
         }
 
-        var design = ProtocolDesignDocument.Read(version.Content).Design;
+        design = ProtocolDesignDocument.Read(version.Content).Design;
         if (design?.CollectionSpecs.Any(s => string.Equals(s.Id, specId, StringComparison.Ordinal)) != true)
         {
             return $"Protocol version {version.Number} has no CollectionSpec {specId}.";
@@ -370,7 +459,7 @@ internal static class CollectionSpecs
 /// read. The attestation then names exactly those revisions; a later correction leaves it as it is. A form with no
 /// values has nothing to sign. Locks do not refuse a signature: signing a locked form is how an investigator signs off.
 /// </summary>
-internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollectionInstance, AttestationId>
+internal sealed class SignCollectionInstanceHandler(IValidationFindings? findings = null) : ICommandHandler<SignCollectionInstance, AttestationId>
 {
     public async Task<CommandResult<AttestationId>> HandleAsync(
         SignCollectionInstance command, ICommandContext context, CancellationToken cancellationToken)
@@ -401,10 +490,21 @@ internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollec
             return TrustErrors.TargetNotSignable;
         }
 
-        var current = await CollectionContent.HashAsync(work, instance, cancellationToken).ConfigureAwait(false);
+        var (current, observations) = await CollectionContent.ReadAsync(work, instance, cancellationToken).ConfigureAwait(false);
         if (!string.Equals(current, command.ContentHash, StringComparison.Ordinal))
         {
             return TrustErrors.TargetContentChanged;
+        }
+
+        if (await EvidenceReadiness.CheckCollectionSignableAsync(
+                command.TenantId,
+                instance,
+                observations,
+                work,
+                findings,
+                cancellationToken).ConfigureAwait(false) is { } notReady)
+        {
+            return notReady;
         }
 
         var signed = Attestation.Sign(
@@ -423,6 +523,13 @@ internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollec
         }
 
         work.Add(attestation);
+        var attestationTarget = NodeRef.For(attestation.Id);
+        work.LinkInput(NodeRef.For(instance.Id, Math.Max(1L, instance.VersionIndex)), LineageEdgeKind.AttestedBy, target: attestationTarget);
+        foreach (var observation in observations.OrderBy(o => o.Id))
+        {
+            work.LinkInput(NodeRef.For(observation.Id, Math.Max(1L, observation.VersionIndex)), LineageEdgeKind.AttestedBy, target: attestationTarget);
+        }
+
         work.Raise(new AttestationRecorded(attestation.TenantId, attestation.Id, attestation.ActorId, attestation.Meaning, attestation.Target));
         return CommandResult<AttestationId>.Success(attestation.Id);
     }
@@ -432,19 +539,52 @@ internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollec
 internal static class CollectionContent
 {
     /// <summary>The content hash of <paramref name="instance"/>'s current revisions (<see cref="CollectionInstance.ContentHashOf"/>).</summary>
-    public static async Task<string> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
+    public static async Task<string> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken) =>
+        (await ReadAsync(work, instance, cancellationToken).ConfigureAwait(false)).Hash;
+
+    /// <summary>Reads <paramref name="instance"/>'s member observations and computes their current content hash.</summary>
+    public static async Task<(string Hash, IReadOnlyList<Observation> Observations)> ReadAsync(
+        IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
     {
         var members = instance.Members.Select(m => m.ObservationId).ToList();
         var observations = await work.ReadAllAsync<Observation>(o => members.Contains(o.Id), cancellationToken).ConfigureAwait(false);
-        return CollectionInstance.ContentHashOf(observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+        var hash = CollectionInstance.ContentHashOf(observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+        return (hash, observations);
     }
+}
+
+/// <summary>Links a form instance and its saved item observations to their governing <c>protocol_element</c> nodes (ADR-2474).</summary>
+internal static class CollectionLineage
+{
+    public static void LinkInstance(
+        IKernelUnitOfWork work, CollectionInstance instance, IReadOnlyDictionary<string, NodeRef> elements)
+    {
+        var target = NodeRef.For(instance.Id);
+        work.LinkInput(elements[instance.CollectionSpecId], LineageEdgeKind.CollectedBy, instance.CollectedAt, target);
+        if (instance.PlannedActivityId is { } activityId && elements.TryGetValue(activityId, out var activity))
+        {
+            work.LinkInput(activity, LineageEdgeKind.CollectedBy, instance.CollectedAt, target);
+        }
+    }
+
+    public static void LinkItem(
+        IKernelUnitOfWork work, Observation observation, string itemId, IReadOnlyDictionary<string, NodeRef> elements) =>
+        work.LinkInput(elements[itemId], LineageEdgeKind.CollectedBy, observation.ObservedAt, NodeRef.For(observation.Id));
 }
 
 /// <summary>Shared steps of the form instance handlers.</summary>
 internal static class CollectionStates
 {
-    public static CollectionInstanceState Of(CollectionInstance instance, long version) =>
-        new(instance.Id, instance.EnrollmentId, instance.ProtocolVersionId, instance.CollectionSpecId, instance.PlannedActivityId, instance.CollectedAt, version);
+    public static CollectionInstanceState Of(CollectionInstance instance, long version, VisitTimingAssessment? visitTimingAssessment = null) =>
+        new(
+            instance.Id,
+            instance.EnrollmentId,
+            instance.ProtocolVersionId,
+            instance.CollectionSpecId,
+            instance.PlannedActivityId,
+            instance.CollectedAt,
+            version,
+            visitTimingAssessment);
 
     /// <summary>Every value of <paramref name="instance"/> after a save, reading the members the save did not load.</summary>
     public static async Task<CommandResult<CollectedValuesState>> ValuesAsync(
@@ -553,11 +693,13 @@ internal sealed class RecordUnaskedCollectionItemHandler : ICommandHandler<Recor
             return recorded.Error!;
         }
 
+        var elements = await ProtocolElementLineage.ElementsAsync(work, version!, cancellationToken).ConfigureAwait(false);
         work.Add(added);
         instance.Join(command.ItemId, added.Id, context.RecordedAt);
         instance.Saved(context.RecordedAt);
         var instanceVersion = instance.VersionIndex + 1;
-        work.LinkInput(NodeRef.For(version!.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, instance.CollectedAt);
+        CollectionLineage.LinkInstance(work, instance, elements);
+        CollectionLineage.LinkItem(work, added, item.Id, elements);
         work.Raise(
             new ObservationRecorded(
                 added.TenantId, added.Id, added.EnrollmentId, added.ParticipantId, added.StudyId, added.Concept, added.Value, added.ObservedAt),

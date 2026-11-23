@@ -3,7 +3,11 @@
   <div class="qc-queue-container">
     <div class="qc-queue-header">
       <div>
-        <h3 style="margin: 0; font-size: 16px; font-weight: 700">
+        <h3
+          id="cra-qc-queue-heading"
+          tabindex="-1"
+          style="margin: 0; font-size: 16px; font-weight: 700"
+        >
           <ClinicalIcon name="shield-check" :size="20" /> CRA Quality Control
           Review Queue
         </h3>
@@ -21,6 +25,8 @@
 
       <div style="display: flex; gap: 8px">
         <button
+          id="btn-refresh-qc-queue"
+          type="button"
           class="btn btn-secondary btn-sm btn-refresh-qc"
           style="font-size: 12px"
           @click="loadQueue"
@@ -607,6 +613,7 @@ const inspectModalRef = ref(null);
 
 useFocusTrap(batchModalRef, {
   isOpen: () => showBatchModal.value,
+  fallbackFocus: "#btn-refresh-qc-queue",
   onEscape: () => {
     showBatchModal.value = false;
   },
@@ -614,6 +621,7 @@ useFocusTrap(batchModalRef, {
 
 useFocusTrap(inspectModalRef, {
   isOpen: () => Boolean(inspectedItem.value),
+  fallbackFocus: "#btn-refresh-qc-queue",
   onEscape: () => {
     inspectedItem.value = null;
   },
@@ -683,6 +691,7 @@ function getConfidenceClass(tier) {
 function openBatchAcceptModal() {
   if (!canReviewQc.value) {
     toastStore.push({
+      title: "QC Review Restricted",
       message: ETMF_QC_REVIEW_ROLE_REASON,
       tone: "warning",
     });
@@ -708,6 +717,7 @@ async function executeBatchAccept() {
     showBatchModal.value = false;
     selectedItemIds.value = [];
     toastStore.push({
+      title: "Batch QC Accepted",
       message: `Batch Accepted: Approved classifications for ${count} documents.`,
       tone: "success",
     });
@@ -739,6 +749,7 @@ async function submitDecision(decision) {
 
     inspectedItem.value = null;
     toastStore.push({
+      title: "QC Adjudication Submitted",
       message: `QC Adjudication submitted for '${currentFilename || "document"}': ${decision}`,
       tone: "success",
     });

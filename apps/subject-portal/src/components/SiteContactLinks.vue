@@ -17,9 +17,7 @@
         class="site-contact-link site-contact-phone touch-target-interactive"
         :aria-label="phoneAriaLabel"
       >
-        <span aria-hidden="true">
-          <ClinicalIcon name="phone" :size="16" />
-        </span>
+        <ClinicalIcon name="phone" :size="16" />
         <span>{{ phoneVisibleLabel }}</span>
       </a>
       <a
@@ -27,9 +25,7 @@
         class="site-contact-link site-contact-email touch-target-interactive"
         :aria-label="emailAriaLabel"
       >
-        <span aria-hidden="true">
-          <ClinicalIcon name="mail" :size="16" />
-        </span>
+        <ClinicalIcon name="mail" :size="16" />
         <span>{{ emailVisibleLabel }}</span>
       </a>
     </div>
