@@ -545,6 +545,94 @@ export function useFocusTrap(
     }
   };
 
+  const resolveExternalFocusTarget = (source) => {
+    if (!source || source === true || typeof document === "undefined") {
+      return null;
+    }
+    const raw = resolveOption(source);
+    if (!raw || raw === true) return null;
+    const unwrapped = isRef(raw) ? raw.value : raw;
+    if (!unwrapped) return null;
+    if (typeof unwrapped === "string") {
+      const queryRoot =
+        typeof document.querySelector === "function" ? document : document.body;
+      return typeof queryRoot?.querySelector === "function"
+        ? queryRoot.querySelector(unwrapped)
+        : null;
+    }
+    return unwrapped;
+  };
+
+  const isValidRestoreTarget = (el) => {
+    if (
+      !el ||
+      typeof el.focus !== "function" ||
+      typeof document === "undefined"
+    ) {
+      return false;
+    }
+    if (typeof document.contains === "function" && !document.contains(el)) {
+      return false;
+    }
+    if (el.disabled || el.getAttribute?.("aria-disabled") === "true") {
+      return false;
+    }
+    if (isElementInertOrHidden(el, null)) {
+      return false;
+    }
+    return true;
+  };
+
+  const resolveParentTrapFocusTarget = (parentTrap) => {
+    if (!parentTrap) return null;
+    const parentContainer = parentTrap.getContainer?.();
+    if (!parentContainer || typeof document === "undefined") return null;
+    if (
+      typeof document.contains === "function" &&
+      !document.contains(parentContainer)
+    ) {
+      return null;
+    }
+    const focusables = getFocusableElements(parentContainer);
+    if (focusables.length > 0) {
+      return focusables[0];
+    }
+    if (
+      !isElementInertOrHidden(parentContainer, null) &&
+      typeof parentContainer.focus === "function"
+    ) {
+      return parentContainer;
+    }
+    return null;
+  };
+
+  const restoreFocusWithFallback = (capturedPrev, fallbackParentTrap) => {
+    if (options.restoreFocus === false || typeof document === "undefined") {
+      return false;
+    }
+    const activeParentTrap =
+      activeTrapStack.length > 0
+        ? activeTrapStack[activeTrapStack.length - 1]
+        : fallbackParentTrap;
+
+    const candidates = [
+      resolveExternalFocusTarget(options.restoreFocus),
+      capturedPrev,
+      resolveExternalFocusTarget(options.fallbackFocus),
+      resolveParentTrapFocusTarget(activeParentTrap),
+    ];
+
+    for (const candidate of candidates) {
+      if (isValidRestoreTarget(candidate)) {
+        candidate.focus();
+        if (document.activeElement === candidate) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const deactivate = () => {
     if (!isActive) return;
     isActive = false;
@@ -563,21 +651,27 @@ export function useFocusTrap(
 
     reconcileBackgroundInert();
 
-    if (options.restoreFocus !== false && typeof document !== "undefined") {
-      const customRestore =
-        typeof options.restoreFocus === "function"
-          ? options.restoreFocus()
-          : null;
-      const targetToFocus = customRestore || previousActiveElement;
-      if (
-        targetToFocus &&
-        typeof targetToFocus.focus === "function" &&
-        document.contains(targetToFocus)
-      ) {
-        targetToFocus.focus();
-      }
-    }
+    const capturedPrev = previousActiveElement;
+    const parentTrapSnapshot =
+      activeTrapStack.length > 0
+        ? activeTrapStack[activeTrapStack.length - 1]
+        : null;
     previousActiveElement = null;
+
+    if (options.restoreFocus !== false && typeof document !== "undefined") {
+      restoreFocusWithFallback(capturedPrev, parentTrapSnapshot);
+      nextTick(() => {
+        if (isActive || typeof document === "undefined") return;
+        const current = document.activeElement;
+        const lostToBodyOrInvalid =
+          !current ||
+          current === document.body ||
+          !isValidRestoreTarget(current);
+        if (lostToBodyOrInvalid) {
+          restoreFocusWithFallback(capturedPrev, parentTrapSnapshot);
+        }
+      });
+    }
   };
 
   let stopOpenWatch = null;
