@@ -9,6 +9,9 @@ schema docs).
 - `packages/tooling_core/src/Cadence.ToolingCore.csproj` (assembly
   `Cadence.ToolingCore`):
   - `Cadence.ToolingCore.Services`: one static service per tool, plus
+    `PosixProcessLauncher` (cross-platform `UseShellExecute = false` process
+    launcher resolving Windows `.exe`/`.cmd`/`.bat` shims in `PATH` directory
+    order with custom `PATH` overrides and POSIX `/bin/sh` `ENOEXEC` fallback),
     `GitRevisionScopeService` (centralized staged, branch `--base`, push
     `--push-before`, and `git ls-files -z` tracked-file diff scoping),
     `GitIndexReader` and `StagedBlobWorkspace` (lock-free staged Git index blob
@@ -35,15 +38,19 @@ schema docs).
     `.NET`, `pnpm` and `pip-audit` CVE auditing against
     `docs/SDLC/vulnerability_exclusions_ledger.json`),
     `DemoManifestGeneratorService` (exports and verifies
-    `packages/demo-fixtures` from the canonical kernel, Execution, and Keycloak
-    realm demo seeds), `SyncGxPService`, `ScaffoldServiceService`,
+    `packages/demo-fixtures` from `packages/demo-fixtures/demo-seed.json`,
+    `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` via source-generated
+    `System.Text.Json`), `SyncGxPService`, `ScaffoldServiceService`,
     `SelfHealService` (subdirectory-safe `cadence fix` pipeline with diff-based
-    schema, OpenAPI, and web client type regeneration), `OpenApiSyncService`,
-    `SchemaDocGeneratorService`, `PublicBundleValidatorService` (the
-    zero-exemption `public-bundle` gate over compiled static portal and demo
-    bundles), and `DeidComplianceService` (the `deid` gate: the full
-    `DeidDetector` over changed or tracked candidate files, ratcheted by
-    `.deid-baseline.txt`).
+    schema, OpenAPI, and web client type regeneration, plus canonical demo
+    manifest sync), `OpenApiSyncService`, `PersistenceModuleCatalog` and
+    `MigrationToolingService` (canonical 18-module persistence catalog and
+    `cadence migrations add|script|list|verify` workflow writing SQL scripts to
+    `TestResults/migrations/`), `SchemaDocGeneratorService`,
+    `PublicBundleValidatorService` (the zero-exemption `public-bundle` gate over
+    compiled static portal and demo bundles), and `DeidComplianceService` (the
+    `deid` gate: the full `DeidDetector` over changed or tracked candidate
+    files, ratcheted by `.deid-baseline.txt`).
   - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link and
     `#anchor` heading fragment checking, and paths into .NET test project
     folders that no longer exist; `docs/migration/` and the generated RTM and
@@ -60,13 +67,18 @@ schema docs).
   and writes their OpenAPI documents (default `docs/openapi`, override with
   `--output-dir` / `-o`).
 - `packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj`:
-  console app that creates each module's DbContext through its design-time
-  factory (the kernel and 15 apps), renders the EF Core model with
-  `SchemaDocumentation` from [packages/database](../database/README.md) and
+  console app that creates each of the 18 persistence modules' DbContexts
+  (`PersistenceModuleCatalog.All`: `kernel`, `intelligence`, `executionmodule`,
+  and 15 standalone apps) through its design-time factory, verifies
+  `HasPendingModelChanges()`, `[DbContext]`, `[Migration]`, `.Designer.cs`
+  companions, and `CreateTable`/`AddColumn` uniqueness
+  (`SchemaMigrationValidator`), renders count-free Markdown with
+  `SchemaDocumentation` from [packages/database](../database/README.md), and
   writes `docs/schema/<module>.md` plus `README.md` (default `docs/schema`,
-  override with `--output-dir` / `-o`). It never opens a database connection.
-  `SchemaDocGeneratorService` runs it for `generate-schema-doc` and the
-  `schema-doc` gate.
+  override with `--output-dir` / `-o`, or `--verify-only [--module <name>]`). It
+  never opens a database connection. `SchemaDocGeneratorService` and
+  `MigrationToolingService` run it for `generate-schema-doc`,
+  `check schema-doc`, and `migrations verify`.
 - Time (K-TIME-3): all three projects ban `DateTime.Now/UtcNow`.
   `CreateAdrService.CreateAdr` takes the date.
 
@@ -77,8 +89,9 @@ schema docs).
   `Microsoft.EntityFrameworkCore`, `Spectre.Console`.
 - `Cadence.OpenApiExporter`: `Cadence.ToolingCore`, the execution, designer and
   gateway service projects, `Microsoft.AspNetCore.Mvc.Testing`.
-- `Cadence.SchemaDocExporter`: `Cadence.Database`, `Cadence.Kernel.Persistence`
-  and the 15 app projects that own a DbContext.
+- `Cadence.SchemaDocExporter`: `Cadence.Database`, `Cadence.ToolingCore`,
+  `Cadence.Kernel.Persistence`, `Cadence.Modules.Intelligence`,
+  `Cadence.Modules.Execution`, and the 15 app projects that own a DbContext.
 
 ## Referenced by
 

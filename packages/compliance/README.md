@@ -1,8 +1,8 @@
 # Cadence.Compliance
 
 Part 11 support library: audit digest calculation and hash-chain verification,
-e-signature and PKCS#7 signing and verification, PHI redaction, protocol RAG
-helpers, and requirements traceability matrix generation.
+e-signature and PKCS#7 signing and verification, and requirements traceability
+matrix generation.
 
 ## Project
 
@@ -10,9 +10,8 @@ helpers, and requirements traceability matrix generation.
   `Cadence.Compliance`, namespace `Cadence.Compliance`).
 - Main types: `AuditDigestCalculator`, `AuditChainVerifier`,
   `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`,
-  `GxpSnapshotPolicy`, `PhiRedactorService`, `ProtocolRagService`,
-  `RequirementTagScanner`, `RtmGeneratorService`, and the exceptions
-  `TamperDetectedException` and `UnapprovedAIRecordException`.
+  `GxpSnapshotPolicy`, `RequirementTagScanner`, `RtmGeneratorService`, and the
+  exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
 - No Python reference sources remain; `ESignatureVerifierTests` pins the
   verifier to the deleted `services/esignature_verifier.py` (#4789).
 
@@ -62,8 +61,7 @@ kernel specification (#5467).
 
 ## Key dependencies
 
-- Project references: `Cadence.CoreModels`, `Cadence.Deid`, `Cadence.Security`,
-  `Cadence.Kernel.Abstractions`.
+- Project references: `Cadence.Security`, `Cadence.Kernel.Abstractions`.
 - Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`.
   `GxPSigner.SignGxpMarkdown`, `Pkcs7Signer.GenerateSigningCredentials` and
   `RtmGeneratorService.GenerateRtm` take an `IClock` (default

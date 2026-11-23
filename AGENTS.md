@@ -99,7 +99,7 @@ Neo4j is retired (ADR-2245); do not add Neo4j code.
 | Data capture / EDC                                         | `apps/execution/`                                                             |
 | Other product services (until dispositioned under #4787)   | `apps/<service>/`                                                             |
 | OIDC gateway                                               | `apps/gateway/`                                                               |
-| Shared domain utilities                                    | `packages/engine_core/`, `packages/core-models/`                              |
+| Shared domain utilities                                    | `packages/engine_core/`                                                       |
 | Cross-service contracts                                    | `packages/contracts/`                                                         |
 | Security, signing, gateway authentication                  | `packages/security/`                                                          |
 | Database helpers, audit interceptor                        | `packages/database/`                                                          |
@@ -261,17 +261,19 @@ and the kernel rules above.
 
 ### 10. Database migrations
 
-- Add a migration:
-  `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` (or
-  `scripts/manage_migrations.sh`). Migrations go to
-  `Infrastructure/Persistence/Migrations/`.
-- Generate an idempotent SQL script for review:
-  `pwsh scripts/manage_migrations.ps1 script <service>`.
-- Verify migrations against real PostgreSQL (see pattern 7).
+- Add a migration across any of the 18 persistence modules:
+  `pnpm cadence migrations add <module> <MigrationName>` (or
+  `scripts/manage_migrations.sh` / `pwsh scripts/manage_migrations.ps1`).
+- Generate an idempotent SQL script for review (written to
+  `TestResults/migrations/<module>.sql`):
+  `pnpm cadence migrations script <module|all>`.
+- Verify snapshots, `.Designer.cs` companions, attributes, and DDL uniqueness
+  offline: `pnpm cadence migrations verify` — and verify migrations against real
+  PostgreSQL (see pattern 7).
 - Regenerate the schema reference after a model change:
   `pnpm cadence generate-schema-doc` rewrites
   [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it
-  is stale.
+  is stale or any module has pending model changes.
 
 ### 11. Porting Python reference sources
 
@@ -326,15 +328,26 @@ or `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
 - **Build and format:** `dotnet build Cadence.sln`,
   `dotnet format Cadence.sln --verify-no-changes`, and `pnpm build`
   (`pnpm build:demo` for demo bundles).
-- **Tests:** `pnpm cadence test --fast` (.NET unit/architecture/consumer tests),
-  `pnpm cadence test --integration` (needs PostgreSQL), and `pnpm test`
-  (frontend unit + portal tests; Playwright E2E via `pnpm --filter web test:e2e`
-  and `pnpm --filter subject-portal test:e2e`).
-- **Quality gates and auto-fix:** `pnpm cadence check` (all gates;
-  `--pre-commit` for staged blobs, `--base <ref>` for branch diffs, or `<gate>`
-  for one gate such as `markdown`, `deid`, `adrs`, or `rulesets`),
-  `pnpm cadence fix`, and `./scripts/setup_wizard.sh --minimal` (provisions
-  `detect-secrets`, `pip-audit`, `actionlint`, `hadolint`, and `shellcheck`).
+- **Tests:** `pnpm cadence test --fast` (.NET unit, architecture, and kernel SDK
+  consumer tests), `pnpm cadence test --integration` (needs PostgreSQL; add
+  `CADENCE_TEST_BROWSER=1` for the browser correction test), and `pnpm test`
+  (frontend unit + portal tests; Playwright E2E via
+  `pnpm --filter subject-portal test:e2e`, `pnpm --filter web test:e2e`, and
+  `pnpm --filter web test:e2e:workflows`).
+- **Quality gates and auto-fix:**
+  `dotnet restore Cadence.sln && pnpm cadence check` (all 42 gates, including
+  `public-bundle`, `branch-freshness`, `architecture-tests`, `unit-tests`, and
+  `demo-manifest`; `--pre-commit` for staged blobs, `--base <ref>` or
+  `--push-before <sha>` for scoped diffs, `--exclude <gate>` to skip specific
+  gates, or `<gate>` for one gate such as `markdown`, `deid`, `adrs`,
+  `workflow-security`, or `rulesets`), `pnpm cadence fix [--full] [--openapi]`,
+  `pnpm cadence rulesets [--dry-run]`, and `./scripts/setup_wizard.sh --minimal`
+  (provisions `detect-secrets`, `pip-audit`, `actionlint`, `hadolint`, and
+  `shellcheck`).
+- **Database and migrations:** `pnpm cadence db reset`,
+  `pnpm cadence db migrate`, and
+  `pnpm cadence migrations <add|script|list|verify>` across all 18 persistence
+  modules.
 
 - **Compliance and diagnostics:** `pnpm cadence gxp sync` (branch validation),
   `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (integration owner only),
@@ -374,9 +387,14 @@ Active pull-request and release jobs in `.github/workflows/ci.yml` and
 `.github/workflows/conflict-check.yml` back two required GitHub Actions
 (`integration_id: 15368`) branch ruleset checks on `main` and `release/*`
 (`strict_required_status_checks_policy: true`): `CI Gate` and
-`Check for Merge Conflicts`. See [docs/CI.md](docs/CI.md) for the full job
-inventory and failure runbook, and verify or reconcile rulesets with
-`pnpm cadence check rulesets` and `pnpm cadence rulesets [--dry-run]`.
+`Check for Merge Conflicts`. `.github/rulesets/version_tags.json` enforces
+`creation`, `required_signatures`, `deletion`, and `non_fast_forward` on
+`refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole`
+`5`, `bypass_mode: "always"`), and `.github/workflows/production-pipeline.yml`
+and `.github/workflows/deploy-docs.yml` accept `on: workflow_call` only from
+`ci.yml`. See [docs/CI.md](docs/CI.md) for the full job inventory and failure
+runbook, and verify or reconcile rulesets with `pnpm cadence check rulesets` and
+`pnpm cadence rulesets [--dry-run]`.
 
 ## GxP compliance sync
 

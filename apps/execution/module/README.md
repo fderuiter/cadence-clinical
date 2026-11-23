@@ -37,26 +37,54 @@ Edit checks (#5368) and lock management (#5466) over the HTTP surface come next.
   redelivered event changes nothing twice. A kernel form the module cannot find,
   or that names another enrollment, is
   `M.Execution.Form.CollectionInstanceUnknown`.
-- `Domain/FormQuery`: a data query about one revision of one value, targeting
-  the kernel `(ObservationId, Revision)` (spec §11: the query workflow is
-  EDC's). Status `open`, `answered`, `closed` or `cancelled`, with its
-  conversation as `messages`. Raising refuses anything but the value's current
-  revision (`M.Execution.Query.RevisionStale`) and a value of another form
-  (`M.Execution.Query.ObservationUnknown`); a step its status does not allow is
-  `M.Execution.Query.InvalidTransition`. Every query command shares the form's
-  lock scopes first (ADR-2621) and is refused with 423 `K.Assertion.Locked`
-  while a Locked lock covers the value; a Frozen lock stops data entry, not
-  queries.
+- `Domain/FormQuery`: a bitemporal data query aggregate
+  (`AggregateRoot<FormQueryId>`,
+  [ADR-2625](../../../docs/adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md),
+  `PRD-QRY-001`, `PRD-QRY-002`) about one revision of one value, targeting the
+  kernel `(ObservationId, Revision)` (spec §11: the query workflow is EDC's).
+  Tracks status (`open`, `answered`, `closed` or `cancelled`), `origin`
+  (`manual` or `system`), `owner_role` (`site`, `monitor` or `data_manager`),
+  optional `assignee`, `priority` (`low`, `normal` or `high`), `opened_at`,
+  `status_since`, 14-day `due_at` while open, `escalated_at`,
+  `last_answered_by`, bitemporal state intervals
+  (`execution.form_query_periods`, `KT001` +
+  `ex_form_query_periods_bitemporal`), and insert-only `messages`
+  (`execution.form_query_messages`, `KA001`) carrying both conversational text
+  and verbatim `reason_for_change`. Raising refuses anything but the value's
+  current revision (`M.Execution.Query.RevisionStale`) and a value of another
+  form (`M.Execution.Query.ObservationUnknown`); closing an `open` manual query
+  is refused (`M.Execution.Query.InvalidTransition`), and closing an `answered`
+  manual query by `LastAnsweredBy` is refused with 409
+  `M.Execution.Query.SeparationOfDuties`. Every query command links
+  `form_query:{id}` to its governing `Enrollment` and `Observation` in kernel
+  lineage, shares the form's lock scopes first (ADR-2621), and is refused with
+  423 `K.Assertion.Locked` while a Locked lock covers the value; a Frozen lock
+  stops data entry, not queries.
+- `Application/EvaluateEditChecksOnCollectionChanged` and
+  `Application/FormQueryEscalationService`: post-commit outbox validation opens
+  and closes deterministic `system` queries (`ADR-2624`) and automatically
+  answers `open` `manual` queries (`AutoAnswerFormQuery`) when
+  `RecordCollectedValues` or `CorrectObservation` advances the queried
+  observation's revision, preserving the human editor and verbatim
+  `ReasonForChange`. `FormQueryEscalationService`
+  (`FormQueryEscalationHostedService`) evaluates open queries past their 14-day
+  `DueAt` via `IClock`, dispatches `EscalateFormQuery` (`Priority = High`,
+  `EscalatedAt = now`), and writes PII-free daily aging digests
+  (`execution.form_query_aging_digests`, `KA001`) for
+  `site_principal_investigator` and `sponsor_lead_cra`.
 - `Application/MirrorFormQueryToKernel`: each query step raises
-  `execution.FormQueryChanged` with the kernel assertion commands it stands for,
-  and this consumer sends them as `svc:execution-queries`, keyed by the
-  delivery: raising states a kernel `Queried` assertion about the observation,
-  answering a `QueryAnswered`, closing or cancelling retracts the kernel query,
-  reopening an answered query retracts the answer, and reopening a closed one
-  raises a new kernel query (spec §8.2). The query chooses the assertion ids, so
-  a redelivered event writes nothing twice; other applications count open
-  queries from the kernel. A step refused because a Locked lock now covers the
-  value is retried until the lock is released (#5586).
+  `execution.FormQueryChanged` with the target `Revision`, human `ActorId`,
+  verbatim `ReasonForChange`, and kernel assertion commands it stands for, and
+  this consumer sends them as `svc:execution-queries`, keyed by the delivery:
+  raising states a kernel `Queried` assertion at the exact queried revision,
+  answering a `QueryAnswered` at the current revision, closing or cancelling
+  retracts the kernel query, reopening an answered query retracts the answer,
+  and reopening a closed one raises a new kernel query (spec §8.2), preserving
+  the human actor (`AssertedBy`) and verbatim `ReasonForChange`. The query
+  chooses the assertion ids, so a redelivered event writes nothing twice; other
+  applications count open queries from the kernel. A step refused because a
+  Locked lock now covers the value is retried until the lock is released
+  (#5586).
 - `Endpoints/FormSignatureEndpoints`: the signing route. It verifies and spends
   the caller's step-up token, then sends the kernel's `SignCollectionInstance`,
   which records an `Attestation` over the form's content hash (ADR-2622 §4.5,
@@ -66,16 +94,19 @@ Edit checks (#5368) and lock management (#5466) over the HTTP surface come next.
   `execution.consumed_signature_tokens`, shared by every host instance so a
   token is spent once across them. It has no tenant column and no Row-Level
   Security: a token id is a random `jti`, and the store keeps nothing clinical.
-- `Infrastructure/ExecutionModuleDbContext`: tables `execution.form_instances`
-  and `execution.form_queries` with Row-Level Security on `tenant_id`
-  (`ModuleTenantIsolationSql`), and the signature token table.
+- `Infrastructure/ExecutionModuleDbContext`: tables `execution.form_instances`,
+  `execution.form_queries`, `execution.form_query_periods`,
+  `execution.form_query_messages`, and `execution.form_query_aging_digests` with
+  forced Row-Level Security on `tenant_id` (`ModuleTenantIsolationSql`),
+  bitemporal triggers/GiST exclusion (`ModuleBitemporalSql`), and insert-only
+  triggers (`ModuleInsertOnlySql`), plus the signature token table.
   `AddModuleMigrations` registers its migrations, which the host's
   `KernelMigrationHostedService` applies after the kernel's, and
   `ExecutionModuleDatabase.GrantAppRoleSql(role)` grants read, insert and update
-  to the application role, and delete on the signature token table only, so
-  expired tokens can be pruned. Reads outside commands use
-  `AddModuleTenantContext` (a no-tracking context scoped to the caller's
-  tenant).
+  on mutable/period tables, read and insert only on insert-only message and
+  digest tables, and delete on the signature token table only, so expired tokens
+  can be pruned. Reads outside commands use `AddModuleTenantContext` (a
+  no-tracking context scoped to the caller's tenant).
 
 ## HTTP surface
 
@@ -117,31 +148,45 @@ Routes under `/api/v1/execution/forms`:
   otherwise. 409 `K.Trust.TargetContentChanged` when the form changed since it
   was read. 201 with the signature.
 - `GET /{formId}/queries`: lists the form's queries, oldest first, each with
-  `current_revision` and `value_changed` (a correction moved the value past the
-  queried revision, so the monitor can close it). 403 when the caller may not
-  see the enrollment.
-- `GET /queries?enrollment_id=`: lists the queries on every form of an
-  enrollment, for the participant record. 403 when the caller may not see the
+  `current_revision`, `value_changed`, `origin`, `owner_role`, `priority`,
+  `due_at`, `escalated_at`, `last_answered_by`, and optional bitemporal `as_of`
+  / `valid_at` / `known_at` inspection. 403 when the caller may not see the
   enrollment.
+- `GET /queries?enrollment_id=`: lists the queries on every form of an
+  enrollment (with optional `as_of` / `valid_at` / `known_at`), for the
+  participant record. 403 when the caller may not see the enrollment.
 - `GET /queries?study_id=`: study-wide query worklist across enrollments the
   caller may see (`IKernelReadAccess.CanSeeAsync`) under tenant RLS, enriched
   with `site_code`, `subject_code`, `collection_spec_id` and
-  `planned_activity_id`, and filterable by `status`, `site`, `participant` and
-  `value_changed`. 403 when the caller may not see the study; 404 when unknown.
+  `planned_activity_id`, and filterable by `status`, `owner`, `origin`,
+  `priority`, `escalated`, `site`, `participant`, `value_changed`, and `as_of` /
+  `valid_at` / `known_at`. 403 when the caller may not see the study; 404 when
+  unknown.
+- `GET /queries/digests?study_id=`: daily PII-free aging escalation digests
+  (`execution.query.read`) for `site_principal_investigator` and
+  `sponsor_lead_cra`, filterable by `site` and `recipient_role`.
+- `POST /queries/escalate?study_id=`: evaluates overdue open queries
+  (`now >= due_at`) across the study (`execution.query.manage`), escalating them
+  to `high` priority and recording daily aging digests.
 - `POST /{formId}/queries`: raises a query (`RaiseFormQuery`,
   `execution.query.raise`) on `observation_id` at its current `revision`, or on
   a blank `item_id` (first materializing `MissingValue(NullFlavor.NotAsked)` at
   revision 1 via `RecordUnaskedCollectionItem`, `collection.record_unasked`),
-  with `text`. 201.
+  with `text` and optional `owner_role`, `priority`, and `assignee`. 201.
 - `POST /{formId}/queries/{queryId}/answer`: answers an open query
-  (`AnswerFormQuery`, `execution.query.answer`) with `text`.
+  (`AnswerFormQuery`, `execution.query.answer`) with `text` and signed
+  `X-Change-Reason`.
 - `POST /{formId}/queries/{queryId}/reopen`: reopens an answered or closed query
-  (`ReopenFormQuery`, `execution.query.manage`) with `text`.
-- `POST /{formId}/queries/{queryId}/close`: closes an open or answered query
-  (`CloseFormQuery`, `execution.query.manage`); the reason for change is the
-  closing note.
+  (`ReopenFormQuery`, `execution.query.manage`) with `text` and signed
+  `X-Change-Reason`.
+- `POST /{formId}/queries/{queryId}/close`: closes an answered manual query or
+  an open/answered system query (`CloseFormQuery`, `execution.query.manage`)
+  with optional closing note `text` and signed `X-Change-Reason`; refuses open
+  manual queries (`M.Execution.Query.InvalidTransition`) and self-closure by
+  `last_answered_by` (`M.Execution.Query.SeparationOfDuties`).
 - `POST /{formId}/queries/{queryId}/cancel`: cancels an open or answered query
-  raised in error (`CancelFormQuery`, `execution.query.manage`).
+  raised in error (`CancelFormQuery`, `execution.query.manage`) with optional
+  cancellation note `text` and signed `X-Change-Reason`.
 
 There are no batch routes: a client acting on several queries sends one command
 per query.

@@ -23,7 +23,7 @@ design system in `ui` (`packages/ui`).
 
 ## Component & Composable Catalog
 
-All 20 Vue components and interaction helpers are exported directly from the
+All 22 Vue components and interaction helpers are exported directly from the
 root `ui` package:
 
 - [`ClinicalDataTable`](./data-table.md) (`table`, `region`, `columnheader`):
@@ -33,6 +33,11 @@ root `ui` package:
   modal dialog with focus trap and backdrop blur.
 - [`ClinicalDrawer`](./modal.md) (`dialog`, `aria-modal="true"`): Accessible
   slide-over drawer with reactive focus containment.
+- `ClinicalDropzone` (`button`, `status`): Accessible drag-and-drop and native
+  `<button type="button">` file selector with live selected-file status and
+  sibling remove.
+- `ClinicalIconButton` (`button`): Accessible glyph-only `<button>` requiring a
+  non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot.
 - `SignOutConfirmModal` (`dialog`, `aria-modal="true"`): Draft-safe voluntary
   sign-out confirmation dialog with focus containment and unsaved-work warning.
 - [`PersonaSwitcher`](./persona-switcher.md) (`menu`, `menuitem`): Top-bar
@@ -63,6 +68,8 @@ root `ui` package:
   video viewer with GxP watermark support.
 - `ModalErrorAlert` (`alert`): Accessible error banner with retry and dismiss
   actions.
+- `createSrOnlyActionButton` (`button` helper): Imperative DOM `<button>`
+  builder appending `.sr-only` target context after the visible verb.
 - `useFocusTrap` / `getFocusableElements` (Keyboard helper): Reactive keyboard
   focus containment and focusable element discovery.
 - `useEscapeClose` (Keyboard helper): Stack-aware `Escape` dismissal composable.

@@ -2177,11 +2177,10 @@ date math across client views
 
 A pure evaluator of standard clinical formulas (BMI, BSA Mosteller/DuBois, eGFR
 CKD-EPI 2021 race-free and MDRD, QTc Fridericia/Bazett, Mean Arterial Pressure,
-Cockcroft-Gault) with unit conversion and range gating: `DerivedVariableEngine`
-in `Cadence.Core.Domain.Derived` (ADR-2522). Custom formulas are written in the
-one rule language (`Cadence.Rules`, K-RULE-3), and a stored derived value is a
-derived Observation with provenance (K-FACT-2). _Avoid_: Ad-hoc procedural
-calculations embedded directly in API route handlers
+Cockcroft-Gault) with unit conversion and range gating (ADR-2522). Custom
+formulas are written in the one rule language (`Cadence.Rules`, K-RULE-3), and a
+stored derived value is a derived Observation with provenance (K-FACT-2).
+_Avoid_: Ad-hoc procedural calculations embedded directly in API route handlers
 
 ### Declarative CTCAE & DAIDS Lab Toxicity Grading Engine
 

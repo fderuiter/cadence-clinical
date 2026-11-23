@@ -88,6 +88,86 @@ internal sealed class KernelEnrollmentDirectory(KernelTenantDbContextFactory con
         return (highest ?? 0) + 1;
     }
 
+    public async Task<EnrollmentCodeLookupResult?> LookupByCodeAsync(
+        TenantId tenant,
+        string studyCode,
+        SubjectCode subjectCode,
+        string? siteCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode) || !subjectCode.IsValid)
+        {
+            return null;
+        }
+
+        var trimmedStudyCode = studyCode.Trim();
+        var trimmedSiteCode = string.IsNullOrWhiteSpace(siteCode) ? null : siteCode.Trim();
+
+        await using var db = contexts.Create(tenant);
+
+        // Fast path hits IX_studies_tenant_id_study_code and IX_enrollments_tenant_id_study_id_subject_code directly.
+        var match = await QueryEnrollmentByStudyPredicateAsync(
+                db,
+                tenant,
+                db.Studies.AsNoTracking().Where(s => s.TenantId == tenant && s.StudyCode == trimmedStudyCode),
+                subjectCode,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (match is null)
+        {
+            var normalizedStudyCode = trimmedStudyCode.ToUpperInvariant();
+            match = await QueryEnrollmentByStudyPredicateAsync(
+                    db,
+                    tenant,
+                    db.Studies.AsNoTracking().Where(s => s.TenantId == tenant && s.StudyCode.ToUpper() == normalizedStudyCode),
+                    subjectCode,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (match is null)
+        {
+            return null;
+        }
+
+        if (trimmedSiteCode is not null && !string.Equals(match.SiteCode, trimmedSiteCode, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return match;
+    }
+
+    private static Task<EnrollmentCodeLookupResult?> QueryEnrollmentByStudyPredicateAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        IQueryable<Study> studies,
+        SubjectCode subjectCode,
+        CancellationToken cancellationToken) =>
+        (from study in studies
+         join enrollment in db.Enrollments.AsNoTracking()
+             on new { study.TenantId, StudyId = study.Id } equals new { enrollment.TenantId, enrollment.StudyId }
+         join studySite in db.StudySites.AsNoTracking()
+             on new { enrollment.TenantId, Id = enrollment.StudySiteId } equals new { studySite.TenantId, studySite.Id }
+         join site in db.Sites.AsNoTracking()
+             on new { studySite.TenantId, Id = studySite.SiteId } equals new { site.TenantId, site.Id }
+         where enrollment.TenantId == tenant && enrollment.SubjectCode == subjectCode
+         select new EnrollmentCodeLookupResult(
+             study.Id,
+             study.VersionIndex,
+             study.StudyCode,
+             study.Title,
+             studySite.Id,
+             studySite.VersionIndex,
+             site.SiteCode,
+             site.Name,
+             enrollment.Id,
+             enrollment.VersionIndex,
+             enrollment.SubjectCode,
+             enrollment.Status))
+        .SingleOrDefaultAsync(cancellationToken);
+
     private static EnrollmentState StateOf(Enrollment e) =>
         new(e.Id, e.ParticipantId, e.StudyId, e.StudySiteId, e.SubjectCode, e.Status, e.StatusSince, e.EnrollmentNumber, e.ContentHash);
 }

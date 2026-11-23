@@ -39,13 +39,20 @@ request and response shapes match.
   (`GET .../doa/sites/{site_id}/log`, `POST .../doa/delegate`, `/revoke`,
   `/sign-off`, `GET .../export-pdf`), study/site scope-isolated via
   `CallerScope` (`ADR-2642`, `ADR-2643`).
-- **eTMF (`Core: true`, `etmf.ts`):** document metadata vault
-  (`GET /api/v1/etmf/documents`, `GET /api/v1/etmf/documents/{documentId}`),
-  intelligence classification (`POST /api/v1/etmf/intelligence/classify`), and
-  QC staging and clinical QC review (`POST /api/v1/etmf/intelligence/stage-qc`,
+- **eTMF (`Core: true`, `etmf.ts`):** document vault and binary object storage
+  (`GET /api/v1/etmf/documents`, `GET /api/v1/etmf/documents/{documentId}`,
+  `GET /api/v1/etmf/documents/{documentId}/content`,
+  `POST /api/v1/etmf/ingest`), `DRAFT`-to-`TECHNICAL_QC` submission and DIA
+  taxonomy updates (`POST /api/v1/etmf/documents/{documentId}/submit-qc`,
+  `PATCH /api/v1/etmf/documents/{documentId}/taxonomy`), intelligence
+  classification (`POST /api/v1/etmf/intelligence/classify`), QC staging and
+  clinical QC review (`POST /api/v1/etmf/intelligence/stage-qc`,
   `GET /api/v1/etmf/intelligence/qc-queue`,
   `POST /api/v1/etmf/intelligence/qc-review/{docId}` — signs and posts
-  completeness updates to Execution, `ADR-2643`).
+  completeness updates to Execution, `ADR-2643`), and study binder ZIP exports
+  (`POST /api/v1/etmf/documents/export`, `GET /api/v1/etmf/export-jobs`,
+  `GET /api/v1/etmf/export-jobs/{jobId}`,
+  `GET /api/v1/etmf/export-jobs/{jobId}/download`).
 - **Knowledge (`Core: true`, `knowledgeApi.ts`, `training.ts`):** contextual SOP
   resolution (`GET /api/v1/knowledge/contextual-help`), published SOP search and
   detail (`GET /api/v1/knowledge/articles`,
@@ -90,8 +97,10 @@ service serves.
   greenlight, milestones, monitoring, compiled visit letters, delegation, and
   RTSM supply are live; financials, CRA allocation, recruitment updates, and
   adaptive dose escalation are gated (#4829).
-- **Data Lock Console (`/data-lock`):** 3 calls, 3 missing (execution 3).
-  Missing (lock endpoints).
+- **Data Lock Console (`/data-lock`):** 0 calls (redirects), 0 missing.
+  Consolidated into Clinical Canvas `Data → Locks` (`stage=data&section=locks`,
+  `kernelApi.listStudyLocks`, `getStudyLockReadiness`, `applyLock`,
+  `releaseLock`).
 - **Lab Governance (`/labs`):** 9 calls, 9 missing (execution 9). Missing.
 - **Medical Coding (`/coding`):** 11 calls, 11 missing (execution 5,
   dictionaries 2, notifications 4). Missing.
@@ -104,9 +113,11 @@ service serves.
 - **eConsent authoring, ICF builder (`/econsent-authoring`, `/icf-builder`):**
   33 / 19 calls, 29 / 19 missing (econsent, etmf, execution). Missing (subject
   consent POST exists; authoring does not).
-- **eTMF Document Vault (`/etmf`):** 4 calls, 0 missing. Live on `etmf.ts`
-  (`generated/etmf.ts`): document listing, AI classification, QC staging, and
-  clinical QC review (`ADR-2643`).
+- **eTMF Document Vault (`/etmf`):** 13 calls, 0 missing. Live on `etmf.ts`
+  (`generated/etmf.ts`): scoped document listing, binary ingestion and preview
+  streaming (`IStoragePort<byte[]>`), `DRAFT`-to-`TECHNICAL_QC` submission,
+  inline taxonomy updates, AI classification, QC staging, clinical QC review,
+  and authenticated ZIP binder exports (`ADR-2643`).
 - **Part 11 Audit Ledger, Auditor (`/audit`, `/auditor`):** 22 / 7 calls, 22 / 7
   missing (etmf, execution, quality). Missing (no audit read API).
 - **Quality & RBQM Cockpit (`/quality`):** 7 calls, 7 missing (quality 7).
@@ -126,9 +137,10 @@ service serves.
   Missing.
 - **Participant Wallet, Lay Summaries (`/participant-wallet`,
   `/lay-summaries`):** 11 / 3 calls, all missing (payments). Missing.
-- **DICOM viewer, Device & IVD, CEC adjudication, Export Wizard (`/imaging`,
-  `/devices`, `/cec`, `/exports`):** 0 calls, 0 missing. No API at all:
-  hardcoded demo data.
+- **DICOM viewer, Device & IVD, CEC adjudication (`/imaging`, `/devices`,
+  `/cec`):** 0 calls, 0 missing. No API at all: hardcoded demo data (`/exports`
+  consolidated into Clinical Canvas `Submit → Exports` via
+  `kernelApi.streamStudyExport` and `streamEnrollmentCasebook`).
 
 Result: no screen works end to end against the .NET backend. The eCRF, query,
 SDV and site activation parts are the only ones with a real backend behind them.
@@ -173,15 +185,21 @@ SDV and site activation parts are the only ones with a real backend behind them.
 
 ### eTMF (`/etmf`) and Study Training (`/training`)
 
-- **eTMF document vault, AI classification & clinical QC review (`ADR-2643`)**
-  (`etmfService.getDocuments`, `etmfService.classifyIntelligence`,
-  `etmfService.stageQcDocument`, `etmfService.getQcQueue`,
-  `etmfService.submitQcReview`): `DocumentManagerView.vue` lists eTMF documents,
-  runs TMF Reference Model classification, and dispatches live clinical QC
-  approvals (`POST /api/v1/etmf/intelligence/qc-review/{docId}`). eTMF signs and
-  forwards site document completeness snapshots to Execution
-  (`POST /api/v1/execution/webhooks/etmf`) as `etmf_service`, keeping
-  `SITE_ACTIVATION` compliance synchronized end-to-end.
+- **eTMF document vault, binary storage, taxonomy, exports & clinical QC
+  (`ADR-2643`)** (`etmfService.getDocuments`, `ingestDocument`,
+  `downloadDocumentContent`, `submitDocumentForQc`, `tagDocument`,
+  `classifyIntelligence`, `stageQcDocument`, `getQcQueue`, `submitQcReview`,
+  `exportDocuments`, `listExportJobs`, `getExportJob`, `downloadExportJob`):
+  `DocumentManagerView.vue` provides a standalone study/site scope picker on
+  `/etmf` (and inherits `:study-id` / `:site-id` inside Clinical Canvas),
+  renders UX-9 scope-assignment guidance on HTTP `403` (`FORBIDDEN_SCOPE`),
+  streams verified `SHA-256` document bytes in `PdfPreviewModal.vue`, downloads
+  ZIP exports via authenticated `Blob` requests in `ExportJobDrawer.vue`,
+  persists `DRAFT` -> `TECHNICAL_QC` submissions and inline DIA taxonomy edits,
+  and enforces `authority.ts` role gates (`canReadEtmf`, `canStageEtmfQc`,
+  `canTagEtmf`, `canReviewEtmfQc`, `canExportEtmf`). eTMF signs and forwards
+  site document completeness snapshots to Execution
+  (`POST /api/v1/execution/webhooks/etmf`) as `etmf_service`.
 - **Study Training curricula, staff assignments & PI delegation bulk sign-off
   (`ADR-2643`)** (`trainingApi.listCurricula`, `getCurriculum`,
   `batchAssignCurriculum`, `listAssignments`, `getAssignmentDetail`,
@@ -190,7 +208,7 @@ SDV and site activation parts are the only ones with a real backend behind them.
   `protocol_version` on curriculum queries and dropping unmounted Python-era
   progress/quiz/sign-off/certificate endpoints.
 
-### Clinical Canvas (`/studies/:studyCode`)
+### Clinical Canvas (`/studies/:studyCode`, `/data-lock`, `/exports`)
 
 - **Start & Conduct operational sections (`ADR-2642`, `ADR-2643`)**
   (`ctmsApi.*`, `etmfService.*`, `trainingApi.*`, `executionApi.*`): **Start**
@@ -300,6 +318,19 @@ SDV and site activation parts are the only ones with a real backend behind them.
   place as hidden with the reason. A study the reader may not see is refused by
   the kernel, and the refusal is shown as it is. Entries appear a few seconds
   after the event (the kernel host's projector).
+- **Scoped locks, readiness & streaming exports (#5466, #5592)**
+  (`kernelApi.listStudyLocks`, `kernelApi.getStudyLockReadiness`,
+  `kernelApi.applyLock`, `kernelApi.releaseLock`, `kernelApi.streamStudyExport`,
+  `kernelApi.streamEnrollmentCasebook`): `/data-lock` and `/exports` are enabled
+  in `AVAILABLE_SCREENS` (admitting `auditor` and `tmf_auditor` on `/exports`)
+  and redirect into Clinical Canvas (`stage=data&section=locks` and
+  `stage=submit&section=exports`). `LocksSection.vue` uses cascading
+  site/enrollment/form/observation pickers (`kernelApi.getChildren`) with
+  `K-AUTH-4` masked placeholders and live readiness blocker counts before Part
+  11 step-up signing. `ExportsSection.vue` streams CSV, ODM v1.3.2 XML,
+  Dataset-JSON v1.1.0, `sas_bundle` ZIP, `r_bundle` ZIP, and `study_archive` ZIP
+  packages; `ParticipantRecord.vue` streams JSON, ODM XML, HTML, and certified
+  `%PDF-1.7` casebooks.
 
 ### Help & SOPs drawer (all live screens)
 
@@ -379,7 +410,6 @@ their API call fails.
   `components/clinical/CecAdjudicationConsole.vue`.
 - **Consent signature, publish an ICF version:** `stores/econsent.js`,
   `views/ICFBuilderView.vue`.
-- **Export study data:** `views/ExportWizardView.vue`.
 - **Commit a digitized protocol:** `views/ProtocolDigitizationView.vue`.
 - **MedDRA/WHODrug code suggestions:**
   `components/crf/widgets/MedicalAutocodeWidget.vue` (no suggestions; the

@@ -66,8 +66,8 @@ port 5174.
 - **Views stay mounted.** The feature modules render tasks, compliance, the
   inbox, consent and the sync queue into elements by id (`tasks-list-container`,
   `compliance-history-tbody`, ...), so all views are always in the DOM;
-  `state.currentView` decides which one has the `active` class and which tab is
-  selected.
+  `state.currentView` decides which one has the `active` class, toggles `hidden`
+  and `inert` on inactive `.portal-view` sections, and selects the active tab.
 - **Router & availability guards.** `vue-router` uses
   `createWebHistory(ROUTER_BASE)` in standard and production builds and
   `createWebHashHistory(ROUTER_BASE)` in static `demo` builds (`ROUTER_BASE`
@@ -97,10 +97,12 @@ port 5174.
   submit individually via `/api/v1/interop/epro/submit` while invalid surveys
   are marked `LOCAL_QUARANTINED` with plain-language guidance and coordinator
   next steps. Transient network errors schedule automatic exponential retries
-  with a live second-by-second countdown. Navigating back from an active survey
-  saves partial encrypted answers (`Resume Survey`), canceling prompts
-  confirmation before discarding, and offline-cached coordinator `tel:` and
-  `mailto:` links (`SiteContactLinks`) appear in `ParticipantCard`,
+  with a live second-by-second countdown. Required visual analog scale (VAS)
+  sliders stay `"Not answered"` until touched so untouched surveys cannot submit
+  a default zero. Navigating back or switching tabs/routes from an active survey
+  immediately flushes partial encrypted answers (`Resume Survey`), canceling
+  prompts confirmation before discarding, and offline-cached coordinator `tel:`
+  and `mailto:` links (`SiteContactLinks`) appear in `ParticipantCard`,
   `SyncDrawer`, `PinUnlockModal`, and `InboxView`.
 
 ## Backend and authentication

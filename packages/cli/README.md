@@ -45,8 +45,9 @@ Common commands:
   `--push-before`, or skipping `--exclude` gates), or one gate such as
   `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`,
   `rulesets`, `yaml`, `detect-secrets`, `readmes`, `markdown`, `adrs`,
-  `demo-manifest`, `arch-drift`, `imports`, `dependencies`, `gxp-snapshot`, or
-  `baseline-ratchet`.
+  `demo-manifest`, `arch-drift`, `imports`, `dependencies`, `gxp-snapshot`,
+  `baseline-ratchet`, `public-bundle`, `branch-freshness`, `architecture-tests`,
+  or `unit-tests`.
 - `fix [--full] [--openapi]`: runs the self-healing pipeline from any
   subdirectory (`SelfHealService`): C# and Prettier formatting,
   `.secrets.baseline` normalization, doc/ADR/CLI/demo index sync, and diff-based
@@ -64,12 +65,16 @@ Common commands:
 - `doctor`: checks the local toolchain and environment (`.NET 10 SDK`, `pnpm`
   pin, `detect-secrets`, `actionlint`, `hadolint`, `shellcheck`, PostgreSQL).
 - `db reset`, `db migrate`: database utilities.
+- `migrations add`, `migrations script`, `migrations list`, `migrations verify`:
+  unified EF Core migration tooling across all 18 persistence modules
+  (`PersistenceModuleCatalog`, `MigrationToolingService`), writing SQL review
+  scripts to `TestResults/migrations/`.
 - `gxp sync`, `gxp snapshot`, `gxp validate`, `gxp diff`, `generate-rtm`:
   requirements traceability and GxP reports (`--results-dir <dir>` reuses
   verified TRX + `*.database.txt` evidence). `gxp sync` validates a branch and
   writes a preview; only `gxp snapshot` writes `docs/SDLC` (ADR-2532).
 - `generate-demo-manifest [--check]`: exports `packages/demo-fixtures` from
-  `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs`, and
+  `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs`, and
   `docker/cadence-realm.json` (`DemoManifestGeneratorService`), or verifies
   parity with `--check`.
 - `scaffold service`, `scaffold adr`, `scaffold post`: scaffolding.

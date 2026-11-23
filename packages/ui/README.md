@@ -6,7 +6,9 @@ by the web client and the subject portal.
 ## Contents
 
 - `index.js` (main entry, built to `dist/` as an ES and CJS library): helpers
-  such as `debounce`, HTML builders for lookup inputs, rule editors and
+  such as `debounce`, `createSrOnlyActionButton` (accessible DOM button builder
+  appending `.sr-only` context while preserving leading visible verbs per WCAG
+  2.2 SC 2.5.3), HTML builders for lookup inputs, rule editors and
   schedule-of-activities matrices, condition-tree serialisation,
   `initHoverDetection`, and re-exports of the modules and components below.
 - `signing.js`: browser-side hashing, canonical serialisation, AES-GCM helpers
@@ -29,14 +31,14 @@ by the web client and the subject portal.
 - `econsent.js`: consent normalisation and comprehension-check helpers.
 - `accessibility-matcher.js`: `toBeAccessible` Vitest matcher built on
   `axe-core`.
-- `src/components/`: 20 shared Vue components re-exported from the root `ui`
+- `src/components/`: 22 shared Vue components re-exported from the root `ui`
   entry (`FileUploadModal`, `MediaPlayer`, `ModalErrorAlert`,
   `common/EmptyState`, and `clinical/` components `AiActionButton`,
   `AiSuggestionDrawer`, `AuditLogViewer`, `ClinicalDataTable`, `ClinicalDrawer`,
-  `ClinicalFieldLayout`, `ClinicalFormField`, `ClinicalInput`,
-  `ClinicalLookupInput`, `ClinicalModal`, `ClinicalQueryFlag`,
-  `ClinicalQueryPanel`, `ClinicalRadioGroup`, `ConfidenceBadge`,
-  `PersonaSwitcher`, `SignOutConfirmModal`).
+  `ClinicalDropzone`, `ClinicalFieldLayout`, `ClinicalFormField`,
+  `ClinicalIconButton`, `ClinicalInput`, `ClinicalLookupInput`, `ClinicalModal`,
+  `ClinicalQueryFlag`, `ClinicalQueryPanel`, `ClinicalRadioGroup`,
+  `ConfidenceBadge`, `PersonaSwitcher`, `SignOutConfirmModal`).
 - `src/composables/`: reactive `useFocusTrap(targetRef, options)` (focus
   containment, LIFO nested overlay stack, background sibling
   `inert`/`aria-hidden="true"` reconciliation with
@@ -60,11 +62,11 @@ by the web client and the subject portal.
   [640px], `--drawer-width-xl` [920px] and semantic mappings
   `--semantic-drawer-width-*`, the AI output colour `--semantic-color-ai`,
   `--semantic-color-ai-bg` and `--semantic-color-ai-border` reserved exclusively
-  for agent output per UX-8 and ADR-2635, global
-  `font-variant-numeric: tabular-nums` table rules, and global
-  `@media (prefers-reduced-motion: reduce)` rules) and responsive utilities
-  (`.drawer-mobile-full` and `.drawer-panel-mobile-full` for <=640px viewports)
-  (exported as `ui/tokens.css`, `ui/responsive.css`).
+  for agent output per UX-8 and ADR-2635, global `.sr-only` visually hidden
+  screen-reader utility class, global `font-variant-numeric: tabular-nums` table
+  rules, and global `@media (prefers-reduced-motion: reduce)` rules) and
+  responsive utilities (`.drawer-mobile-full` and `.drawer-panel-mobile-full`
+  for <=640px viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
 - `index.d.ts`: type declarations; `scripts/generate-types.js` runs before the
   build.
 

@@ -164,11 +164,14 @@ gate against a fixture that must make it fail.
 | `vulnerabilities`     | `validate-vulnerabilities`                                             |                 | Runs                                                                           |
 | `dependencies`        | `validate-dependencies`                                                |                 | Runs                                                                           |
 | `doc-index`           | `validate-doc-index`                                                   |                 | Runs                                                                           |
-| `demo-manifest`       | `validate-demo-manifest`                                               |                 | Runs                                                                           |
+| `demo-manifest`       | `validate-demo-manifest`                                               | yes             | Quick: runs only when staged files touch demo seed or `packages/demo-fixtures` |
 | `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                           |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                           |
 | `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files vs `HEAD` (`CADENCE_BASELINE_GROWTH` admits growth) |
 | `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: post-build gate; runs fail-closed in `docs-build` and `deploy-docs`   |
+| `branch-freshness`    | `check-branch-freshness`, `validate-branch-freshness`                  |                 | Skipped: keeps local WIP commits offline; run by `cadence check` before push   |
+| `architecture-tests`  | `arch-tests`                                                           |                 | Skipped: full xUnit architecture suite; run by `cadence check` and CI          |
+| `unit-tests`          | `dotnet-unit-tests`                                                    |                 | Skipped: full xUnit unit test suite; run by `cadence check` and CI             |
 
 <!-- quality-gates:end -->
 
@@ -232,6 +235,17 @@ external assets, executable local backend URLs, and missing or permissive
 is skipped by unscoped `cadence check` only when all three `dist/` folders are
 absent (partial `dist/` output fails closed), and always fails closed on direct
 `cadence check public-bundle` calls in `docs-build` and `deploy-docs.yml`.
+
+The `branch-freshness`, `architecture-tests` and `unit-tests` gates are also
+skipped by `--pre-commit` so local commits stay fast and offline, and run in
+full during `pnpm cadence check`: `branch-freshness` fails when `origin/main`
+(or `--base <ref>`) is missing or not an ancestor of `HEAD` (skipping post-push
+`--push-before` runs), `architecture-tests` runs
+`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, and
+`unit-tests` runs `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`. The
+`demo-manifest` gate runs in `--pre-commit` only when staged files touch
+`packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` or
+`docker/cadence-realm.json`.
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
@@ -300,7 +314,9 @@ Where it differs from CI:
   `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and
   `api-clients`, `dotnet-quality` runs `cadence check` excluding `prettier`,
   `eslint`, `actionlint`, `hadolint`, `detect-secrets`, `api-clients`,
-  `vulnerabilities` and `public-bundle`, `docs-build` builds the VitePress
+  `vulnerabilities`, `public-bundle`, `architecture-tests` and `unit-tests`
+  (followed by its dedicated `Cadence.ArchitectureTests` step, while
+  `Cadence.UnitTests` runs in `dotnet-tests`), `docs-build` builds the VitePress
   portal and co-hosted interactive demos and runs `public-bundle`, and
   `security` runs `detect-secrets` and `vulnerabilities`. Steps in `security`
   whose gate already ran inside `Run Cadence quality sentinels` (the static
@@ -308,11 +324,9 @@ Where it differs from CI:
   `Run Cadence quality sentinels` passed; if that step failed, each runs on its
   own so the summary shows which gate failed. The Node install and UI build in
   later jobs are covered by earlier jobs. The documentation build
-  (`pnpm docs:build`) also runs the read-only `openapi`, `schema-doc`,
-  `markdown` and `rtm` checks; after `Run Cadence quality sentinels` passed it
-  runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips the duplicate `openapi`,
-  `schema-doc` and `markdown` gates while keeping `check rtm`, saving several
-  minutes without touching `docs/SDLC` or `docs/schema`.
+  (`pnpm docs:build`) runs the read-only `openapi`, `schema-doc`, `markdown` and
+  `rtm` checks unconditionally on every build without touching `docs/SDLC` or
+  `docs/schema`.
 - **The tests run once.** The .NET test step writes its TRX files to
   `TestResults/gxp`, and the compliance job's `Generate Compliance Reports` step
   builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`,
@@ -457,8 +471,8 @@ command calls in `packages/tooling_core/src/Services` unless noted otherwise.
   (`WorkflowSecurityValidatorService.ValidateWorkflowSecurity`): Validates
   `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}`
   for 40-hex commit SHAs with version comments, `sha256:` digests on `docker://`
-  refs, `persist-credentials: false` on `actions/checkout`, and least-privilege
-  permissions.
+  refs, `persist-credentials: false` on `actions/checkout`, ref-guarded typed
+  `workflow_dispatch` inputs, and least-privilege permissions.
 - `validate-markdown` (`MarkdownValidatorService.ValidateMarkdown`): Checks
   workspace links, `#` heading spacing, prose line width (120 characters), and
   table row width (200 characters).
@@ -510,11 +524,12 @@ command calls in `packages/tooling_core/src/Services` unless noted otherwise.
   no spec. Option: `--validate` (compare only; exits `1` on drift).
 - `generate-schema-doc`
   (`SchemaDocGeneratorService.GenerateSchemaDocumentation`): Runs
-  `Cadence.SchemaDocExporter`, which builds every module's EF Core design-time
-  model (no database needed) and writes one Markdown page per module plus
-  `README.md` to `docs/schema/`, deleting files no module produces. Option:
-  `--validate` (compare only; exits `1` on drift). This is the `schema-doc`
-  gate.
+  `Cadence.SchemaDocExporter`, which verifies `HasPendingModelChanges()`,
+  `[DbContext]`, `[Migration]`, `.Designer.cs` companions, and
+  `CreateTable`/`AddColumn` uniqueness across all 18 persistence modules (no
+  database needed) and writes one Markdown page per module plus `README.md` to
+  `docs/schema/`, deleting files no module produces. Option: `--validate`
+  (compare only; exits `1` on drift). This is the `schema-doc` gate.
 - `pre-commit-openapi` (`PreCommitOpenApiService.ExecutePreCommitOpenApi`): Same
   as `validate-openapi-drift`. This is the `openapi` gate. It does not stage
   anything.
@@ -537,10 +552,10 @@ command calls in `packages/tooling_core/src/Services` unless noted otherwise.
 - `generate-demo-manifest`
   (`DemoManifestGeneratorService.GenerateDemoManifest`): Exports the canonical
   synthetic demo study manifest (`CADENCE-101`, sites, participants, RFC 9562
-  UUIDv8 identifiers, and eight realm personas) from `DevelopmentDemoData.cs`,
-  `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` into
-  `packages/demo-fixtures`. Option: `--check` (verify parity without modifying
-  files). This is the `demo-manifest` gate.
+  UUIDv8 identifiers, and eight realm personas) from
+  `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs`, and
+  `docker/cadence-realm.json` into `packages/demo-fixtures`. Option: `--check`
+  (verify parity without modifying files). This is the `demo-manifest` gate.
 - `generate-rtm` (`RtmGeneratorService.GenerateRtm` in
   `packages/compliance/src`): Builds the traceability matrix from requirements
   in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes
@@ -661,7 +676,53 @@ even when a reset step fails.
 Runs
 `dotnet ef database update --project apps/execution/src/Cadence.Apps.Execution.csproj`
 in the current directory. Only the execution service is migrated. Use
-`scripts/manage_migrations.ps1` to add migrations.
+`pnpm cadence migrations add <module> <Name>` to add migrations across any of
+the 18 persistence modules.
+
+### `cadence migrations`
+
+Unified EF Core migration tooling across all 18 persistence modules in
+`PersistenceModuleCatalog` (`ctms`, `econsent`, `eisf`, `etmf`, `execution`,
+`executionmodule`, `fileshare`, `imaging`, `intelligence`, `interop`, `kernel`,
+`knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`;
+[ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)).
+`scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` delegate
+`add`, `script`, `list`, and `verify` to these subcommands.
+
+#### `cadence migrations add <module> <name>`
+
+Scaffolds a new EF Core migration in the module's configured `Migrations`
+directory (`MigrationToolingService.Add`). When `POSTGRES_CONNECTION_STRING` is
+unset, passes a credential-free design-time placeholder after `--` so
+fail-closed design-time factories build the model offline. Rejects `all` or
+unknown module names with exit code `1`.
+
+#### `cadence migrations script [module|all]`
+
+Generates idempotent SQL review scripts
+(`dotnet ef migrations script --idempotent`) for one module or all 18 modules
+(`MigrationToolingService.Script`), writing `<module>.sql` into untracked
+`TestResults/migrations/` by default instead of committing SQL dumps under
+`Migrations/`.
+
+| Option                   | Description                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| `-o\|--output-dir <dir>` | Destination directory for `<module>.sql` artifacts. Default: `TestResults/migrations`. |
+
+#### `cadence migrations list [module|all]`
+
+Lists migrations for one module or all 18 modules
+(`MigrationToolingService.List`). Uses live PostgreSQL state when
+`POSTGRES_CONNECTION_STRING` is set, or offline `--no-connect` / `.Designer.cs`
+inspection when unset.
+
+#### `cadence migrations verify [module|all]`
+
+Runs `Cadence.SchemaDocExporter --verify-only`
+(`MigrationToolingService.Verify`) to verify `HasPendingModelChanges()`,
+`[DbContext]`, `[Migration]`, `.Designer.cs` companions, and unique
+`CreateTable`/`AddColumn` DDL targets across one module or all 18 modules
+without opening a database connection or rewriting `docs/schema`.
 
 ### `cadence settings`
 

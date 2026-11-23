@@ -41,9 +41,12 @@ object masked. Blinding and the IdentityVault (#4782) are not decided yet.
   compose and the AppHost set `cadence-local`, the code the local realm's users
   sign in with (ADR-2514). The host refuses to start with the setting in any
   other environment.
-- `DevelopmentDemoData` (ADR-2543): with `Kernel:DevelopmentTenant:DemoData`
-  also true, the bootstrap then writes the demo study `CADENCE-101` into that
-  tenant through the pipeline (a sponsor, `SITE-101` and `SITE-102` with their
+- `DevelopmentDemoData` (ADR-2543, ADR-2549): with
+  `Kernel:DevelopmentTenant:DemoData` also true, the bootstrap loads the
+  canonical study, sponsor, sites, participants, roles and user grants from
+  embedded `packages/demo-fixtures/demo-seed.json` via source-generated
+  `System.Text.Json` and writes the demo study `CADENCE-101` into that tenant
+  through the pipeline (a sponsor, `SITE-101` and `SITE-102` with their
   institutions, an approved and effective protocol v1 with scheduled and
   unscheduled `CollectionSpec`s and activated study sites, and three screened
   participants) and grants each user of `docker/cadence-realm.json` a role by
@@ -229,29 +232,41 @@ from the gateway-signed identity (`X-Change-Reason`, ADR-2495;
 
 Applying or releasing a clinical lock requires an `Idempotency-Key`, a signed
 `X-Change-Reason`, and a fresh single-use 60-second `X-Sig-Token` (21 CFR Part
-11). Each lock write records an `Attest` over the canonical `LockStatement`
-before dispatching `ApplyLock` or `ReleaseLock`. Study exports and participant
-casebooks project canonical bitemporal kernel state at
+11). `POST locks` validates `!IsReadOnly`, target existence, duplicate locks,
+and lock readiness before recording `Attest` over the canonical `LockStatement`
+and dispatching `ApplyLock` or `ReleaseLock`, leaving zero orphan `Attestation`
+rows on rejected writes. `Locked` assertions require zero open `Queried`
+assertions and zero missing required `CollectionItem`s
+(`409 K.Assertion.ScopeNotReady` with a structured `Explanation`); `Frozen`
+remains available while sites answer and monitors close queries. Study exports
+and participant casebooks project canonical bitemporal kernel state at
 `as_of(valid_at, known_at)` (`K-TRUTH-1`), exclude `IdentityVault` direct
 identifiers, and emit explicit `masked` placeholders for unauthorized sites or
 blinded treatment values (`K-AUTH-4`).
 
 - `POST locks`: applies a `Frozen` or `Locked` assertion (`lock.apply`) across
   `study`, `study_site`, `enrollment`, `collection_instance` or `observation`
-  after verifying `X-Sig-Token` and recording `Attest`.
+  after preflighting readiness, verifying `X-Sig-Token`, and recording `Attest`.
 - `POST locks/{lockRef}/release`: releases an active lock (`lock.release`) with
   a step-up signed retracting assertion and `Attest`.
 - `GET studies/{studyRef}/locks?as_of=&active_only=`: lists locks recorded for a
   study at an optional bitemporal `as_of` coordinate, masking unauthorized or
   blinded scopes in place.
+- `GET studies/{studyRef}/locks/readiness?scope_ref=`: evaluates whether a
+  target scope is ready for `Locked`, returning open-query and
+  missing-required-item counts, masked per-blocker ownership/next actions
+  (`K-AUTH-4`), and a structured `Explanation`.
 - `GET studies/{studyRef}/exports?format=&lock_filter=&as_of=`: streams a
   bitemporal study snapshot as `csv`, `odm_xml` (ODM v1.3.2 `MetaDataVersion` +
-  `ClinicalData`), or `dataset_json` (Dataset-JSON v1.1.0), filtered by lock
-  state and masked per caller visibility.
+  `ClinicalData`), `dataset_json` (Dataset-JSON v1.1.0), `sas_bundle` (ZIP with
+  CSV + `.sas` + `manifest.json`), `r_bundle` (ZIP with CSV + `.R` +
+  `manifest.json`), or `study_archive` (ZIP regulatory archive with
+  per-enrollment `%PDF-1.7` eCRFs), filtered by lock state and masked per caller
+  visibility.
 - `GET enrollments/{enrollmentRef}/casebook?format=&as_of=`: streams a
-  participant casebook (`json`, `odm_xml`, or printable `html`) with revisions,
-  queries, verifications, `Attestation` signatures, and `X-Content-Sha256`
-  digests.
+  participant casebook (`json`, `odm_xml`, printable `html`, or certified
+  `%PDF-1.7` `pdf`) with revisions, queries, verifications, `Attestation`
+  signatures, and `X-Content-Sha256` digests.
 
 ### Execution forms (ADR-2622)
 

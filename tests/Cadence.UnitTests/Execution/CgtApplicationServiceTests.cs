@@ -6,6 +6,7 @@ using Cadence.Apps.Execution.Domain.Cgt.Errors;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Supply;
 using Cadence.Kernel.Time;
+using Cadence.UnitTests.Fixtures;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -148,7 +149,7 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
             CollectionSiteId: "SITE-101",
             SubjectId: "SUB-1001"), ct);
 
-        var barcode = CgtBarcodeEngine.GenerateCryptoBarcode(
+        string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STUDY-CGT-001",
             siteId: "SITE-101",
             subjectId: "SUB-1001",
@@ -161,7 +162,7 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
             SubjectId: "SUB-1001",
             Din: cocResponse.Din,
             BatchId: "BATCH-88",
-            BagBarcodePayload: barcode.BarcodePayload,
+            BagBarcodePayload: barcodePayload,
             PatientWristbandId: "SUB-1001",
             PrimaryVerifierId: "NURSE-01",
             PrimarySignatureToken: "SIG-01",
@@ -190,7 +191,7 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
             CollectionSiteId: "SITE-101",
             SubjectId: "SUB-1001"), ct);
 
-        var barcode = CgtBarcodeEngine.GenerateCryptoBarcode(
+        string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STUDY-CGT-001",
             siteId: "SITE-101",
             subjectId: "SUB-1001",
@@ -203,7 +204,7 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
             SubjectId: "SUB-1001",
             Din: cocResponse.Din,
             BatchId: "BATCH-88",
-            BagBarcodePayload: barcode.BarcodePayload,
+            BagBarcodePayload: barcodePayload,
             PatientWristbandId: "SUB-1001",
             PrimaryVerifierId: "NURSE-01",
             SecondaryVerifierId: "NURSE-02"), ct);

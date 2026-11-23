@@ -1,9 +1,10 @@
 # eTMF service
 
 Electronic trial master file service. It hosts TMF document ingestion,
-intelligence classification, CRA/Sponsor QC staging and review, study binder
-export jobs, taxonomy lookup, and signed `SITE_ACTIVATION` completeness webhook
-notifications to `apps/execution`.
+`Cadence.Storage` (`IStoragePort<byte[]>`) binary persistence and SHA-256
+verified streaming, intelligence classification, CRA/Sponsor QC staging and
+review, study binder export jobs, taxonomy lookup and updates, and signed
+`SITE_ACTIVATION` completeness webhook notifications to `apps/execution`.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under
 [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md)
@@ -43,11 +44,17 @@ clinical kernel. The disposition of the scaffold services is tracked in issue
   `HttpEtmfCompletenessWebhookPublisher` evaluates `SITE_ACTIVATION`
   completeness and posts a gateway-signed `svc:etmf` (`etmf_service`) webhook to
   `EXECUTION_SERVICE_URL` (`POST /api/v1/execution/webhooks/etmf`).
-- `GET /api/v1/etmf/documents`, `GET /api/v1/etmf/documents/{document_id}`,
-  `POST /api/v1/etmf/documents/export`, `GET /api/v1/etmf/export-jobs`,
-  `GET /api/v1/etmf/export-jobs/{job_id}`,
-  `GET /api/v1/etmf/export-jobs/{job_id}/download`, `POST /api/v1/etmf/ingest`,
-  `GET /api/v1/etmf/taxonomy`.
+- `GET /api/v1/etmf/documents` (`study_id`, `site_id`, `artifact_code`),
+  `GET /api/v1/etmf/documents/{document_id}`,
+  `GET /api/v1/etmf/documents/{document_id}/content` (streams stored document
+  bytes with `X-Content-SHA256` integrity verification),
+  `POST /api/v1/etmf/documents/{document_id}/submit-qc` (`DRAFT` ->
+  `TECHNICAL_QC` transition + completeness webhook),
+  `PATCH /api/v1/etmf/documents/{document_id}/taxonomy` (DIA TMF taxonomy update
+  - completeness webhook), `POST /api/v1/etmf/documents/export`,
+    `GET /api/v1/etmf/export-jobs`, `GET /api/v1/etmf/export-jobs/{job_id}`,
+    `GET /api/v1/etmf/export-jobs/{job_id}/download`,
+    `POST /api/v1/etmf/ingest`, `GET /api/v1/etmf/taxonomy`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment
   only.
 - The gateway forwards `/api/v1/etmf/**` to this service. Compose publishes host
@@ -64,9 +71,11 @@ least 32 characters) is required at startup; see
 eTMF routes need an `etmf_document` or `etmf_taxonomy` permission
 (`PermissionMatrix.Etmf.cs`). Exporting a binder needs `etmf_document:export`
 (sponsor data management, CRAs, monitors, auditors) and a `study_id` the caller
-is assigned to; document and export-job lists are narrowed to the caller's
-studies, and a document or job outside them answers `404`. Audit entries record
-the signed caller and roles
+is assigned to; document, QC queue, and export-job lists are narrowed to the
+caller's studies and sites, explicit unassigned `study_id` or `site_id` queries
+return `403` ProblemDetails (`code: "FORBIDDEN_SCOPE"`), and a document or job
+outside the caller's scope answers `404` or `403` (`FORBIDDEN_SCOPE`). Audit
+entries record the signed caller and roles
 ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 
 ## Persistence
@@ -92,7 +101,7 @@ of erasing it. Retire or soft-delete regulated records; never hard-delete them
 
 - Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`,
   `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`,
-  `Cadence.Database`.
+  `Cadence.Database`, `Cadence.Storage`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`,
   `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`,
   `FluentValidation` (versions in `Directory.Packages.props`).

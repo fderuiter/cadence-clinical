@@ -394,9 +394,10 @@ the old host's gateway cluster, AppHost entry and compose service together.
 
 Other runtime pieces:
 
-- **Web client** (`apps/web`): Vue 3 + Vite (port 5173); signs in through
-  Keycloak.
-- **Subject portal** (`apps/subject-portal`): Participant PWA (port 5174).
+- **Web client** (`apps/web`): Vue 3 + Vite (port 3000, compose `web`); signs in
+  through Keycloak.
+- **Subject portal** (`apps/subject-portal`): Participant PWA (port 5174,
+  compose `subject-portal`).
 - **Aspire AppHost** (`apps/apphost`): Local orchestration of PostgreSQL
   (database `cadence`), MinIO, Keycloak, every .NET service and the web app; a
   `core` profile runs the gateway, kernel API, execution and web only,
@@ -409,8 +410,8 @@ Other runtime pieces:
   through `packages/storage`) and upload scanning (no service calls ClamAV yet).
 - **Front proxy** (compose `front-proxy`, nginx): Port 8000; forwards the web
   apps' API calls to the gateway.
-- **Other compose services** (`docker/docker-compose.yml`): `dotnet-dev` (SDK
-  container).
+- **Other compose services** (`docker/docker-compose.yml`): `dotnet-dev`
+  (profile `dotnet` SDK container with isolated NuGet and MSBuild volumes).
 
 ## 4. Request path and security
 
@@ -498,7 +499,7 @@ role strings.
   set to its own module schema (`ctms`, `execution`, …). The kernel owns the
   `kernel` schema.
 - **Migrations** live in each service's `Infrastructure/Persistence/Migrations/`
-  and are managed with `scripts/manage_migrations.ps1` (see
+  and are managed with `pnpm cadence migrations` (see
   [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true` applies them at
   startup; `Database__MigrateOnly=true` runs them as a deployment job and exits.
   See the [database runbook](docs/OPERATIONAL_DATABASE.md).

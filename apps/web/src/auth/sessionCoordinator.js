@@ -12,8 +12,29 @@ import { getKeycloakClient } from "./keycloak.js";
 export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
 
 let authSessionBridge = null;
+let clinicalSessionBridge = null;
 let sessionEndedHandler = null;
+const sessionCacheClearHandlers = new Set();
 const logoutCleanupHandlers = new Set();
+
+export function registerSessionCacheClearHandler(handler) {
+  if (typeof handler === "function") {
+    sessionCacheClearHandlers.add(handler);
+  }
+  return () => {
+    sessionCacheClearHandlers.delete(handler);
+  };
+}
+
+export function notifySessionCacheCleared(context = {}) {
+  for (const handler of sessionCacheClearHandlers) {
+    try {
+      handler(context);
+    } catch {
+      // Cache clear listener failed or Pinia store not active yet
+    }
+  }
+}
 
 export function registerLogoutCleanup(handler) {
   if (typeof handler === "function") {
@@ -71,6 +92,19 @@ export function resolveWebRedirectUri(targetPathOrUrl) {
 
 export function registerAuthSessionBridge(bridge) {
   authSessionBridge = bridge || null;
+}
+
+export function registerClinicalSessionBridge(bridge) {
+  clinicalSessionBridge = bridge || null;
+}
+
+export function rehydrateClinicalPersona(personaKey, pinia) {
+  if (!personaKey) return;
+  clinicalSessionBridge?.onRehydratePersona?.(personaKey, pinia);
+}
+
+export function resetClinicalSession(pinia) {
+  clinicalSessionBridge?.onReset?.(pinia);
 }
 
 export function setSessionEndedHandler(handler) {

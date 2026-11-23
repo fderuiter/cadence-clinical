@@ -3,15 +3,18 @@ using System;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Consumers;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Apps.Etmf.Security;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
+using Cadence.Storage;
 using Cadence.Telemetry;
 
 using MassTransit;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,7 +22,9 @@ using Microsoft.Extensions.Hosting;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, EtmfScopeAuthorizationResultHandler>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddCadenceStorage(builder.Configuration, builder.Environment);
 builder.AddCadencePostgresDbContext<EtmfDbContext>();
 builder.Services.AddSingleton<EtmfExportQueue>();
 builder.Services.AddHostedService<EtmfExportWorker>();

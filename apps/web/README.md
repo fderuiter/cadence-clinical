@@ -149,8 +149,8 @@ queries and SDV from the eCRF (Execution serves queries and SDV, and the
 Clinical Canvas uses them, but the eCRF's belong to its sample form until real
 form definitions exist, #4828), query transitions in the rules screen, ticket
 workflow and signatures, safety and CEC sign-offs, eConsent signing and ICF
-publishing, exports, protocol commit, medical coding suggestions, and quality
-actions. Each one starts with `allowUnbackedAction("<what it does>")` from
+publishing, protocol commit, medical coding suggestions, and quality actions.
+Each one starts with `allowUnbackedAction("<what it does>")` from
 `src/utils/unbackedActions.js`. Outside a demo build that refuses the action,
 tells the user nothing was saved, and returns `false` so the caller changes
 nothing (#4827). Actions whose outcome only a service can produce (subject
@@ -189,17 +189,21 @@ multi-item dispatching one command per item) or withdraw an active verification
 forms with kernel step-up attestations (#5463). Each item shows its unresolved
 queries and whether its value changed since it was queried; a monitor raises a
 query on a recorded value at the revision read or raises a missing-data query on
-a blank item (`item_id`, without marking the form complete), and queries are
+a blank item (`item_id`, without marking the form complete) with a dedicated
+`X-Change-Reason` distinct from the conversational query text, and queries are
 answered, reopened, closed and cancelled one request per query (single or
-multi-select) (`src/api/ecrfQueriesApi.ts`, `src/composables/useFormQueries.ts`,
-`src/components/ecrf/FormQueryList.vue`, #5461). A raise or verification against
-a value someone has since corrected (409) asks the user to reload the form.
-Legacy persona panels on `/ecrf` (sample vitals form, subject enrolment card,
-CDASH rules card, protocol schema ingestion, EHR reconciliation drawer, and role
-switcher) have no backend and appear only in a demo build. CTMS outside a demo
-build is site activation only (eTMF status and activation,
-`src/components/clinical/SiteActivationPanel.vue`); its other tabs have no
-backend and run only in a demo build. The Clinical Canvas
+multi-select) with origin/owner/priority/due-date/escalation badges and
+separation-of-duties guards that prevent closing open manual queries or
+self-closing a query answered by the current user (`src/api/ecrfQueriesApi.ts`,
+`src/composables/useFormQueries.ts`, `src/components/ecrf/FormQueryList.vue`,
+[ADR-2625](../../docs/adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md),
+#5461). A raise or verification against a value someone has since corrected
+(409) asks the user to reload the form. Legacy persona panels on `/ecrf` (sample
+vitals form, subject enrolment card, CDASH rules card, protocol schema
+ingestion, EHR reconciliation drawer, and role switcher) have no backend and
+appear only in a demo build. CTMS outside a demo build is site activation only
+(eTMF status and activation, `src/components/clinical/SiteActivationPanel.vue`);
+its other tabs have no backend and run only in a demo build. The Clinical Canvas
 (`/studies/:studyCode`, opened from **Studies** in the header) is the
 study-centric workspace these screens move into
 ([CLINICAL_CANVAS.md](../../docs/ux/CLINICAL_CANVAS.md)). It renders without the
@@ -211,31 +215,32 @@ O(1) cold participant deep-link resolution by surrogate UUID or subject code,
 adding a participant and changing a participant's state, site activation, the
 study-wide `Data -> Queries` worklist across visible enrollments at
 `GET /api/v1/execution/forms/queries?study_id=` with debounced
-status/site/participant/value-changed URL filters synced via `router.replace` in
-`src/components/canvas/QueriesSection.vue` that keep `FormQueryList.vue` mounted
-across refreshes, and each participant's eCRF queries read by kernel enrollment,
-with direct links to the target eCRF form and highlighted item), offers Trace,
-Impact, Act and Explain on a participant from the kernel's lineage, dependents,
-command catalogue and explanations, lists the study's protocol versions with
-Trace, Impact and Simulate on each (an amendment's Impact names the elements it
-changes, K-PROT-2; Simulate runs evaluate-only simulation and schedule matrix
-gap checks while participant simulation stays disabled naming #4888), shows the
-study's recent activity and the open proposals (Needs attention) on study home
-from the kernel, reviews a proposal at `?proposal=` (its sources opened in
-place, rejection with a reason, approval shown disabled until #5552) with the
-inspector's Assist verb and the palette's "Ask AI" behind a per-viewer AI
-assistance switch (ADR-2635, `src/components/ai/`), shows the study's recent
-activity on study home from the kernel's activity stream and finds studies (with
-kernel search, read only, `kernelApi.ts`) and unloaded participants (with
-Execution subject search) in the ⌘K palette, and leaves every other stage and
-verb empty or disabled with the issue it waits on. Every other screen is hidden
-from the sidebar and command palette, and its route shows a "not available yet"
-page, until its module serves the endpoints it needs. `AVAILABLE_SCREENS` in
-`src/router/availability.js` lists the visible screens. Every visible screen
-must have a view test: `tests/available_screen_tests.test.js` fails when a route
-in `AVAILABLE_SCREENS` has no test that imports its view. Hidden screens get
-tests when they move onto a real API, not before, because most will be rewritten
-(#4529). [`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the
+status/owner/origin/priority/site/participant/value-changed URL filters synced
+via `router.replace` in `src/components/canvas/QueriesSection.vue` that keep
+`FormQueryList.vue` mounted across refreshes, and each participant's eCRF
+queries read by kernel enrollment, with direct links to the target eCRF form and
+highlighted item), offers Trace, Impact, Act and Explain on a participant from
+the kernel's lineage, dependents, command catalogue and explanations, lists the
+study's protocol versions with Trace, Impact and Simulate on each (an
+amendment's Impact names the elements it changes, K-PROT-2; Simulate runs
+evaluate-only simulation and schedule matrix gap checks while participant
+simulation stays disabled naming #4888), shows the study's recent activity and
+the open proposals (Needs attention) on study home from the kernel, reviews a
+proposal at `?proposal=` (its sources opened in place, rejection with a reason,
+approval shown disabled until #5552) with the inspector's Assist verb and the
+palette's "Ask AI" behind a per-viewer AI assistance switch (ADR-2635,
+`src/components/ai/`), shows the study's recent activity on study home from the
+kernel's activity stream and finds studies (with kernel search, read only,
+`kernelApi.ts`) and unloaded participants (with Execution subject search) in the
+⌘K palette, and leaves every other stage and verb empty or disabled with the
+issue it waits on. Every other screen is hidden from the sidebar and command
+palette, and its route shows a "not available yet" page, until its module serves
+the endpoints it needs. `AVAILABLE_SCREENS` in `src/router/availability.js`
+lists the visible screens. Every visible screen must have a view test:
+`tests/available_screen_tests.test.js` fails when a route in `AVAILABLE_SCREENS`
+has no test that imports its view. Hidden screens get tests when they move onto
+a real API, not before, because most will be rewritten (#4529).
+[`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the
 screen-by-screen inventory and the steps for moving a screen over, and epic
 #4833 has the plan.
 
@@ -270,12 +275,17 @@ Run from the repository root with pnpm (the workspace is defined in
 - `pnpm --filter web build:demo`: Build in `demo` mode (MSW enabled).
 - `pnpm --filter web test`: Vitest with coverage.
 - `pnpm --filter web test:e2e`: Playwright accessibility suite against the
-  isolated demo preview server (`--project=accessibility`).
+  isolated demo preview server on `127.0.0.1:3001` (`--project=accessibility`).
 - `pnpm --filter web test:e2e:stack`: Full Playwright suite across all
-  configured projects (`accessibility`, `setup`, and `chromium`).
+  registered projects (`setup`, `chromium`, and `accessibility`), starting the
+  demo preview (`127.0.0.1:3001`) and `subject-portal` (`127.0.0.1:5174`)
+  servers (plus `pnpm --filter web dev` on `localhost:3000` when
+  `E2E_KEYCLOAK=true`).
 - `pnpm --filter web test:e2e:workflows`: Playwright end-to-end clinical
-  workflow suite (`--project=setup --project=chromium`); starts the web, demo,
-  and subject-portal servers against Keycloak and the backend.
+  workflow suite (`--project=setup --project=chromium`) against the demo preview
+  (`127.0.0.1:3001`) and `subject-portal` (`127.0.0.1:5174`) servers
+  (`DEMO_MODE=false` in CI; `E2E_KEYCLOAK=true` adds `pnpm --filter web dev` on
+  `localhost:3000` for OIDC).
 - `pnpm --filter web lint` / `typecheck`: ESLint / `tsc --noEmit`.
 - `pnpm --filter web generate:api`: Regenerates `src/api/generated/` from the
   .NET services' specs in `docs/openapi/`.

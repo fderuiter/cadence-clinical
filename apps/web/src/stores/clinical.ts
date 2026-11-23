@@ -18,6 +18,7 @@ import {
   getDemoPersonaByWorkflow,
 } from "demo-fixtures";
 import { useAuthStore } from "./auth.js";
+import { registerClinicalSessionBridge } from "../auth/sessionCoordinator.js";
 import { useToastStore } from "./toasts.js";
 import {
   allowUnbackedAction,
@@ -546,12 +547,13 @@ async function assertValidUsdmGraph(
       (e) => e.code === "CYCLE_DETECTED"
     );
     const errorMsg = graphValidation.errors.map((e) => e.message).join("; ");
-    if (
-      cycleError &&
-      typeof window !== "undefined" &&
-      typeof window.alert === "function"
-    ) {
-      window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+    if (cycleError) {
+      useToastStore().push({
+        tone: "error",
+        title: "Skip-Logic Cycle Alert",
+        message: cycleError.message,
+        timeoutMs: 0,
+      });
     }
     const fullMessage = `${errorPrefix}: ${errorMsg}`;
     console.error(fullMessage);
@@ -1605,6 +1607,11 @@ const useClinicalStoreInner = defineStore("clinical", {
   },
 });
 
+const mountedClinicalStores = new WeakMap<
+  object,
+  ReturnType<typeof useClinicalStoreInner>
+>();
+
 export const useClinicalStore = (pinia?: unknown) => {
   const activePinia = (pinia as any) || getActivePinia();
   if (
@@ -1621,5 +1628,32 @@ export const useClinicalStore = (pinia?: unknown) => {
     }
     (activePinia as Record<string, unknown>)._hasStateTrackingPlugin = true;
   }
-  return useClinicalStoreInner(activePinia);
+  const store = useClinicalStoreInner(activePinia);
+  if (activePinia && typeof activePinia === "object") {
+    mountedClinicalStores.set(activePinia, store);
+  }
+  return store;
 };
+
+registerClinicalSessionBridge({
+  onRehydratePersona: (personaKey: string, pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.loadPersonaState === "function") {
+      store.loadPersonaState(personaKey);
+    }
+  },
+  onReset: (pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.$reset === "function") {
+      store.$reset();
+    }
+  },
+});

@@ -82,9 +82,12 @@ docker compose -f docker/docker-compose.yml ps     # every .NET service should b
 
 This starts PostgreSQL (one `cadence` database, a schema per service), Keycloak
 with the `cadence` realm imported from `docker/cadence-realm.json`, the gateway
-behind an nginx front proxy on port 8000, and every .NET microservice unprofiled
-by default. The compose file sets its own local `GATEWAY_SECRET` and OIDC
-settings, so no `.env` is needed; those values are for local use only.
+behind an nginx front proxy on port 8000, the `web`
+(`http://localhost:3000/cadence-clinical/`) and `subject-portal`
+(`http://localhost:5174/subject-portal/`) Vite dev servers with isolated
+container `node_modules` volumes, and every .NET microservice unprofiled by
+default. The compose file sets its own local `GATEWAY_SECRET` and OIDC settings,
+so no `.env` is needed; those values are for local use only.
 
 - **Migrations:** each service applies its own migrations when it starts
   (`Database__MigrateOnStartup=true`) and reports healthy only once
@@ -97,6 +100,9 @@ settings, so no `.env` is needed; those values are for local use only.
   passing `--profile storage` (for example,
   `docker compose -f docker/docker-compose.yml --profile storage up -d`); no
   primary core service requires them to boot.
+- **SDK container:** `dotnet-dev` runs only when passing `--profile dotnet` and
+  mounts isolated NuGet and MSBuild intermediate volumes so container restores
+  and builds do not overwrite host `obj/` files.
 - **Pinned images:** `docker/Dockerfile.dotnet` and the compose file pin every
   image to a version and a `sha256` digest, so builds are reproducible.
   Dependabot (`.github/dependabot.yml`) opens weekly pull requests to update
@@ -185,7 +191,7 @@ listens on 8080 in its own container.
 | notifications                 | 8006      | `notifications` | payments                   | 8016        | `payments`               |
 | ctms                          | 8007      | `ctms`          | kernel (`apps/kernel-api`) | 8018        | `kernel`, `intelligence` |
 | safety                        | 8008      | `safety`        | Keycloak                   | 8080        | (own store)              |
-| tickets                       | 8009      | `tickets`       | web / subject portal       | 5173 / 5174 | none                     |
+| tickets                       | 8009      | `tickets`       | web / subject portal       | 3000 / 5174 | none                     |
 
 PostgreSQL listens on 5432 (database `cadence`). What each service does and how
 mature it is: [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today).
@@ -202,11 +208,12 @@ deterministic answers in Development; see
 
 ## 5. Database tasks
 
-| Task                             | Command                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
-| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
-| Reset local databases            | `pnpm cadence db reset`                                            |
+| Task                             | Command                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| Add a migration                  | `pnpm cadence migrations add <module> <MigrationName>` |
+| Idempotent SQL script for review | `pnpm cadence migrations script <module\|all>`         |
+| Verify migrations & snapshots    | `pnpm cadence migrations verify`                       |
+| Reset local databases            | `pnpm cadence db reset`                                |
 
 ## 6. Quality gates and GxP sync
 

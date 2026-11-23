@@ -15,13 +15,17 @@ realm personas (`crc.site101`, `pi.site101`, `cra.monitor`, `dm.lead`,
 ## Generation and Drift Verification
 
 `src/manifest.js` and `src/manifest.d.ts` are generated from the authoritative
-backend seed sources:
+demo seed sources:
 
-- `apps/kernel-api/src/DevelopmentDemoData.cs` (ADR-2543, ADR-2549)
+- `packages/demo-fixtures/demo-seed.json` (canonical `CADENCE-101` study,
+  sponsor, sites, participants, roles, and user grants loaded via
+  source-generated `System.Text.Json` by
+  `apps/kernel-api/src/DevelopmentDemoData.cs`; ADR-2543, ADR-2549)
 - `apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs`
 - `docker/cadence-realm.json`
 
-Regenerate after modifying any of those seed files:
+Regenerate after modifying any of those seed files (also run automatically by
+`pnpm cadence fix`):
 
 ```bash
 pnpm cadence generate-demo-manifest

@@ -1,9 +1,9 @@
 # Cadence.Core.Domain
 
-Shared domain library (folder `engine_core`): aggregate root base types, the
-`IGxPAuditable` contract and `AuditLogEntry`, a `Result`/`DomainError` type, and
-pure calculation engines for derived variables, randomisation, SLAs, supply and
-toxicity grading.
+Shared domain library (folder `engine_core`): aggregate root and state machine
+base types, the `IGxPAuditable` contract, `AuditLogEntry` and
+`AuditLogChainVerifier`, a `Result`/`DomainError` type, and pure domain engines
+for randomisation, CGT supply verification and toxicity grading.
 
 ## Project
 
@@ -12,33 +12,26 @@ toxicity grading.
 - `Cadence.Core.Domain`: `AggregateRoot`, `AggregateRootBase`, `IGxPAuditable`,
   `Result`, `DomainError`.
 - `Cadence.Core.Domain.Audit`: `AuditLogEntry` (the hash-chained audit row
-  written by `Cadence.Database.GxPAuditInterceptor`).
-- `Cadence.Core.Domain.Derived`: `DerivedVariableEngine` (BMI, BSA, eGFR, QTc,
-  MAP and Cockcroft-Gault with unit normalisation and plausibility bounds) and
-  `DerivedFormulaDefinition` with its checksum
-  ([ADR-2522](../../docs/adr/2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md)).
-  Custom formulas are `Cadence.Rules` expressions.
+  written by `Cadence.Database.GxPAuditInterceptor`) and
+  `AuditLogChainVerifier`.
+- `Cadence.Core.Domain.StateMachine`: `StatefulAggregateRoot`,
+  `StateMachineDefinition`, transition records and transactional outbox message
+  types.
 - `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`,
   `MinimizationEngine`, `ResponseAdaptiveEngine`,
   `StochasticRandomizationEngine`, `BoinEngine`, internal `RandomizationMath`
   helpers and their models.
-- `Cadence.Core.Domain.Supply`: `DTPLogisticsEngine`,
-  `MultiEchelonHierarchyEngine`, `PredictiveDemandForecastingEngine` and supply
-  models. The emergency unblinding shapes are `[Obsolete]`: Execution's
-  `UNBLINDED` state change is the only unblinding path (ADR-2520).
-- `Cadence.Core.Domain.Sla`: `SlaEngine` (due dates around the clock or in
-  business hours, countdown clocks, escalation tiers) and `SlaPolicy` with its
-  checksum.
+- `Cadence.Core.Domain.Supply`: `CgtBarcodeEngine.VerifyCryptoBarcode`,
+  `Isbt128Engine` and `TemperatureZoneClassifier.ClassifyZone`
+  (`TemperatureZone`).
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading
   models.
 - Time (K-TIME-3, #4784): nothing here reads the wall clock, and the build fails
   on `DateTime.Now/UtcNow` (`CadenceBanWallClock`). The caller passes the
-  instant: `EvaluateObservation(..., evaluatedAt)`,
-  `EvaluateHysLaw(..., evaluatedAt)`, `EvaluateDtpDispatch(..., authorizedAt)`,
-  `SlaEngine.ComputeCountdownClock(..., asOf)` and
-  `DerivedVariableEngine.Calculate(..., evaluatedAt)`.
-  `AggregateRootBase.CreatedAt` has no default, because the save path stamps it.
-  `AuditLogEntry.Timestamp` is `required`.
+  instant: `EvaluateObservation(..., evaluatedAt)` and
+  `EvaluateHysLaw(..., evaluatedAt)`. `AggregateRootBase.CreatedAt` has no
+  default, because the save path stamps it. `AuditLogEntry.Timestamp` is
+  `required`.
 - Python reference sources remain for behaviour the C# port lacks or does not
   test yet: `operations/engine.py`, `operations/evaluator.py`,
   `operations/models.py`, `timeline/engine.py` and `timeline/models.py`. They
@@ -59,28 +52,11 @@ test projects.
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DomainEngineUnitTests|FullyQualifiedName~BoinEngineTests|FullyQualifiedName~PredictiveDemandForecastingEngineTests|FullyQualifiedName~SlaEngineTests|FullyQualifiedName~DerivedVariableEngineTests|FullyQualifiedName~MultiEchelonHierarchyEngineTests|FullyQualifiedName~Cadence.UnitTests.SecurityAndDomainTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DomainEngineUnitTests|FullyQualifiedName~BoinEngineTests|FullyQualifiedName~ResponseAdaptiveEngineTests|FullyQualifiedName~CgtEngineTests|FullyQualifiedName~StateMachineTests|FullyQualifiedName~Cadence.UnitTests.SecurityAndDomainTests"
 ```
 
-`BoinEngineTests` and `PredictiveDemandForecastingEngineTests` pin the ports to
-the deleted `randomization/boin.py` and `supply/forecasting.py` (#4789).
-`SlaEngineTests` pins the port of `sla/` (#5048), and
-`DerivedVariableEngineTests` the port of `derived/` (#5043). Known differences
-they pin rather than hide:
+`BoinEngineTests` pins the port to the deleted `randomization/boin.py` (#4789),
+including a known difference it pins rather than hides:
 
 - `BoinEngine`: a configured boundary of `0.0` is kept (the Python replaced it
   with the calculated one).
-- `PredictiveDemandForecastingEngine`: parameters are validated when the engine
-  runs, with the Python model's limits; a null schedule or lot list falls back
-  to the defaults.
-- `SlaEngine`: the caller passes the instant a clock is read at, dates are
-  `DateTimeOffset` rather than parsed strings, and a business-hours schedule
-  with no work day or with hours that end before they start is refused (the
-  Python loop never ended on one).
-- `MultiEchelonHierarchyEngine` (`MultiEchelonHierarchyEngineTests`, pinned to
-  `supply/hierarchy.py` with the same error messages): node capacity and
-  quantities are validated when the engine runs, with the Python model's limits.
-- `DerivedVariableEngine`: a missing sex, or one other than F, FEMALE, M or
-  MALE, is an error (the Python read it as female or male); input defaults reach
-  the formula; non-numeric or boolean inputs and non-finite results are invalid
-  results rather than exceptions (ADR-2522).

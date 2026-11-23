@@ -306,8 +306,9 @@ Under the Aspire AppHost, set them as the `field-encryption-key` and
 ## Object storage
 
 Read by `AddCadenceStorage` in
-`packages/storage/src/StorageServiceCollectionExtensions.cs`. No service calls
-it yet; a service that does fails at startup when a required key is missing.
+`packages/storage/src/StorageServiceCollectionExtensions.cs`, called by
+`apps/etmf/src/Program.cs`. A service that calls it fails at startup when a
+required key is missing.
 
 - `Storage__Provider` — Read by `AddCadenceStorage`. Default: none. Required:
   `s3`, `minio`, `filesystem`, or `memory` (in-process, Development only).
@@ -500,11 +501,6 @@ otherwise.
   `apps/web/playwright.correction-check.config.ts` (path to a preinstalled
   Chromium for the browser-to-database check; set to `/opt/pw-browsers/chromium`
   by the test when that file exists). Default: Playwright's bundled Chromium.
-- `CADENCE_DOCS_SKIP_CHECKS` — Read by `scripts/build-docs.js` (`1` skips
-  duplicate `openapi`, `schema-doc` and `markdown` gates while still running
-  `check rtm`; `cadence ci`, `ci.yml`, and non-dispatch `push` runs of
-  `deploy-docs.yml` set it to `1` when quality sentinels already passed, while
-  `workflow_dispatch` runs of `deploy-docs.yml` set it to `0`). Default: unset.
 - `CADENCE_UPDATE_GOLDEN` — Read by
   `tests/Cadence.UnitTests/Packages/UsdmDesignImporterTests.cs` (`1` rewrites
   the expected design of the USDM import golden test; review the diff before

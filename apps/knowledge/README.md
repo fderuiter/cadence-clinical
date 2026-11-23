@@ -3,7 +3,10 @@
 Knowledge base and training service. It serves controlled SOP resolution
 (`GET /api/v1/knowledge/contextual-help`), published article search and detail
 (`GET /api/v1/knowledge/articles`,
-`GET /api/v1/knowledge/articles/{article_id}`), category taxonomy
+`GET /api/v1/knowledge/articles/{article_id}`), immutable version snapshots and
+Merkle-chained audit trails
+(`GET /api/v1/knowledge/articles/{article_id}/versions`,
+`GET /api/v1/knowledge/articles/{article_id}/audit-log`), category taxonomy
 (`GET /api/v1/knowledge/categories`), and study training/delegation endpoints.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under
