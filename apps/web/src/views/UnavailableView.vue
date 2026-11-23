@@ -116,11 +116,12 @@ const heading = computed(() =>
 .unavailable {
   max-width: 760px;
   margin: 36px auto;
-  padding: 0 16px;
+  padding: 0 12px;
+  box-sizing: border-box;
 }
 
 .unavailable-card {
-  padding: 28px;
+  padding: clamp(16px, 5vw, 28px);
   text-align: left;
 }
 
@@ -146,7 +147,7 @@ const heading = computed(() =>
 
 .unavailable-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -156,6 +157,7 @@ const heading = computed(() =>
   background: var(--semantic-color-surface-muted);
   border-radius: 10px;
   padding: 16px;
+  min-width: 0;
 }
 
 .info-card-label {
@@ -206,5 +208,11 @@ const heading = computed(() =>
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.unavailable-actions .btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
 }
 </style>
