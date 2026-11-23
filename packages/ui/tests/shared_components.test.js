@@ -12,6 +12,7 @@ import {
   ClinicalIconButton,
   ClinicalModal,
   ClinicalQueryFlag,
+  ClinicalToastHost,
   EmptyState,
   MediaPlayer,
   PersonaSwitcher,
@@ -495,10 +496,16 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
                 teleport: false,
                 overlayId: "enroll-subject-modal",
                 title: "Enroll Subject",
+                ariaDescribedby: "enroll-subject-description",
                 showFooter: false,
               },
               {
-                default: () => h("p", "Enrollment payload"),
+                default: () =>
+                  h(
+                    "p",
+                    { id: "enroll-subject-description" },
+                    "Enrollment payload"
+                  ),
               }
             ),
         })
@@ -506,6 +513,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(html).toContain('id="enroll-subject-modal"');
       expect(html).toContain('role="dialog"');
       expect(html).toContain('aria-modal="true"');
+      expect(html).toContain('aria-describedby="enroll-subject-description"');
       expect(html).toContain("Enroll Subject");
       expect(html).toContain("Enrollment payload");
       expect(html).not.toContain("modal-footer");
@@ -756,6 +764,83 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(btnHtml).toBe(
         '<button type="button" class="btn-primary btn-start-task" data-id="assign_01">Start Survey<span class="sr-only">: Daily Health &amp; Vital &lt;Diary&gt;</span></button>'
       );
+    });
+
+    it("renders ClinicalToastHost with split alert/status live roles, v-if title guard, persistent errors, and hover/focus timer pause/resume", async () => {
+      vi.useFakeTimers();
+      try {
+        const toasts = [
+          {
+            id: 1,
+            tone: "error",
+            title: "Submission rejected",
+            message: "Missing investigator signature",
+            timeoutMs: 3500,
+          },
+          {
+            id: 2,
+            tone: "info",
+            title: "",
+            message: "Draft saved locally",
+            timeoutMs: 2000,
+            action: { label: "Open form", to: "/ecrf" },
+          },
+        ];
+
+        const html = await renderToString(
+          createSSRApp({
+            render: () =>
+              h(ClinicalToastHost, {
+                toasts,
+                latestToastId: "toast-container",
+              }),
+          })
+        );
+
+        expect(html).toContain('data-focus-trap-exempt="true"');
+        expect(html).toContain('role="region"');
+        expect(html).toContain('role="alert"');
+        expect(html).toContain('aria-live="assertive"');
+        expect(html).toContain('role="status"');
+        expect(html).toContain('aria-live="polite"');
+        expect(html).toContain('id="toast-container"');
+        // Error toast renders <strong class="toast-title">, untitled info toast omits empty <strong>
+        const titleMatches = html.match(/class="toast-title"/g) || [];
+        expect(titleMatches).toHaveLength(1);
+        expect(html).toContain("Open form");
+
+        const emit = vi.fn();
+        const { state } = await mountSetupSSR(
+          ClinicalToastHost,
+          { toasts, manageTimers: true },
+          emit
+        );
+
+        // Advance past 3500ms while hovered: error toast (id 1) persists, timed info toast (id 2) pauses
+        vi.advanceTimersByTime(1200);
+        state.onMouseEnter(2);
+        expect(emit).toHaveBeenCalledWith("pause", 2);
+        vi.advanceTimersByTime(5000);
+        expect(emit).not.toHaveBeenCalledWith("dismiss", 1);
+        expect(emit).not.toHaveBeenCalledWith("dismiss", 2);
+
+        // Resume hover: remaining ~800ms elapses and dismisses id 2 while id 1 stays open
+        state.onMouseLeave(2);
+        expect(emit).toHaveBeenCalledWith("resume", 2);
+        vi.advanceTimersByTime(700);
+        expect(emit).not.toHaveBeenCalledWith("dismiss", 2);
+        vi.advanceTimersByTime(200);
+        expect(emit).toHaveBeenCalledWith("dismiss", 2);
+        expect(emit).not.toHaveBeenCalledWith("dismiss", 1);
+
+        state.handleActionClick(state.normalizedToasts.value[1]);
+        expect(emit).toHaveBeenCalledWith("action", toasts[1]);
+
+        state.handleDismissClick(1);
+        expect(emit).toHaveBeenCalledWith("dismiss", 1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

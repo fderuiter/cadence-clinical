@@ -70,7 +70,7 @@
   --touch-target-min: 48px;
   --control-target-min: 24px;
 
-  /* Form Grid Reflow & Sticky Action Bar Custom Properties (ADR-2655) */
+  /* Form Grid Reflow & Sticky Action Bar Custom Properties (ADR-2656) */
   --field-grid-span: 12;
   --form-action-bar-bottom: 0px;
   --form-action-bar-target-min: 44px;
