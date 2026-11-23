@@ -78,22 +78,26 @@ const props = defineProps<{
   enrollmentId: string | null;
   canManage: boolean;
   formTitles?: Record<string, string>;
-  formLocation?: (formId: string) => RouteLocationRaw | null;
+  formLocation?: (
+    formId: string,
+    itemId?: string | null
+  ) => RouteLocationRaw | null;
   observationLocation?: (
     observationId: string,
-    formId: string
+    formId: string,
+    itemId?: string | null
   ) => RouteLocationRaw | null;
 }>();
 
 const formTo = computed(() =>
   props.formLocation
-    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id, q.item_id)
     : undefined
 );
 const observationTo = computed(() =>
   props.observationLocation
     ? (q: FormQueryResponse) =>
-        props.observationLocation!(q.observation_id, q.form_id)
+        props.observationLocation!(q.observation_id, q.form_id, q.item_id)
     : undefined
 );
 

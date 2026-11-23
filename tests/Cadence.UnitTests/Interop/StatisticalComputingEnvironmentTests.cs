@@ -184,7 +184,7 @@ version = ""1.0.0""
                 FilePath: "output_table.csv",
                 MimeType: "text/csv",
                 SizeBytes: 42,
-                Sha256Digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                Sha256Digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
                 ContentPreview: "ARM,SUBJECT_COUNT\nARM_A,50\nARM_B,50\n"
             )
         };
@@ -198,7 +198,7 @@ version = ""1.0.0""
                 DurationMs: 150,
                 ContainerImageDigest: "sha256:11223344556677889900aabbccddeeff",
                 Artifacts: mockArtifacts,
-                OutputArtifactsDigest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                OutputArtifactsDigest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" // pragma: allowlist secret
             )));
 
         var result = await mockDriver.ExecuteInSandboxAsync(request, ct);
@@ -278,8 +278,8 @@ version = ""1.0.0""
         string studyId = "STUDY-001";
         string programId = "prog-001";
         string snapshotId = "snap-2026-Q3";
-        string scriptDigest = "a1b2c3d4e5f6";
-        string lockDigest = "f6e5d4c3b2a1";
+        string scriptDigest = "a1b2c3d4e5f6"; // pragma: allowlist secret
+        string lockDigest = "f6e5d4c3b2a1"; // pragma: allowlist secret
         string containerImageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026";
         string artifactsDigest = "112233445566";
         string executedBy = "user:biostat";

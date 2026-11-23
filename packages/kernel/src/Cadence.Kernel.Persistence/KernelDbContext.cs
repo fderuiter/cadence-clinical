@@ -97,6 +97,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
+    public DbSet<SubscriptionPeriod> SubscriptionPeriods => Set<SubscriptionPeriod>();
+
     public DbSet<ProductEntitlement> ProductEntitlements => Set<ProductEntitlement>();
 
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();

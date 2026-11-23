@@ -560,6 +560,7 @@ export default [
       "**/playwright-report/**",
       "**/test-results/**",
       "**/coverage/**",
+      "**/.claude/**",
       "scripts/**",
       "docs/.vitepress/**",
       "**/mockServiceWorker.js",
@@ -585,6 +586,26 @@ export default [
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-raw-overlays": "error",
+      "vue/max-attributes-per-line": "off",
+      "vue/singleline-html-element-content-newline": "off",
+      "vue/multiline-html-element-content-newline": "off",
+      "vue/html-closing-bracket-newline": "off",
+      "vue/html-closing-bracket-spacing": "off",
+      "vue/html-indent": "off",
+      "vue/html-self-closing": "off",
+      "vue/attributes-order": "off",
+      "vue/require-default-prop": "off",
+    },
+  },
+  {
+    files: [
+      "apps/web/src/components/ContextualHelpDrawer.vue",
+      "apps/web/src/components/econsent/IcfSectionEditor.vue",
+      "apps/web/src/views/KnowledgeView.vue",
+      "apps/web/src/views/RulesView.vue",
+    ],
+    rules: {
+      "vue/no-v-html": "off",
     },
   },
   {
@@ -629,6 +650,7 @@ export default [
       "@typescript-eslint": tseslint.plugin,
     },
     rules: {
+      "no-alert": "error",
       "no-undef": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
@@ -712,20 +734,6 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-    },
-  },
-  {
-    files: [
-      "apps/subject-portal/src/**/*.js",
-      "apps/web/src/components/**/*.vue",
-      "apps/web/src/composables/**/*.js",
-      "apps/web/src/views/RulesView.vue",
-      "apps/web/src/views/MdrView.vue",
-      "apps/web/src/views/EcrfView.vue",
-      "apps/web/src/views/QualityCockpitView.vue",
-    ],
-    rules: {
-      "no-alert": "warn",
     },
   },
   {

@@ -3,6 +3,8 @@
     id="view-tasks"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-tasks' }"
+    :hidden="ui.currentView !== 'view-tasks'"
+    :inert="ui.currentView !== 'view-tasks' || undefined"
     role="tabpanel"
     aria-labelledby="btn-tab-btn-tasks"
     tabindex="0"

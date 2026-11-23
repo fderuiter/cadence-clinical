@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -155,62 +157,169 @@ public static class DetectSecretsGateService
                 ? BuildGitContextEnvironment(repoRoot)
                 : null;
 
-            string tempBaseline = Path.Combine(Path.GetTempPath(), $"cadence-secrets-baseline-{Guid.NewGuid():N}.json");
+            int maxParallelism = Math.Clamp(Environment.ProcessorCount, 1, 8);
+            string[][] batches = BuildBalancedBatches(scanWorkingDirectory, filesToScan, MaxFilesPerBatch, maxParallelism);
+            var batchResults = new (int ExitCode, string Stdout, string Stderr)[batches.Length];
+            var batchPartitioner = Partitioner.Create(
+                Enumerable.Range(0, batches.Length),
+                EnumerablePartitionerOptions.NoBuffering);
+
+            Parallel.ForEach(
+                batchPartitioner,
+                new ParallelOptions { MaxDegreeOfParallelism = maxParallelism },
+                batchIndex =>
+                {
+                    string tempBaseline = Path.Combine(Path.GetTempPath(), $"cadence-secrets-baseline-{Guid.NewGuid():N}.json");
+                    try
+                    {
+                        // Seed an isolated temporary baseline per batch because detect-secrets-hook trims baseline entries to the scanned batch.
+                        File.WriteAllText(tempBaseline, baselineContent);
+
+                        var args = new List<string>(tool.PrefixArguments)
+                        {
+                            "--baseline",
+                            tempBaseline,
+                            "--exclude-files",
+                            SecretsBaselineCleanerService.CanonicalExcludePattern,
+                        };
+                        args.AddRange(batches[batchIndex]);
+
+                        batchResults[batchIndex] = RunCaptured(
+                            scanWorkingDirectory,
+                            tool.FileName,
+                            args,
+                            getEnvironmentVariable,
+                            gitContextEnv);
+                    }
+                    finally
+                    {
+                        if (File.Exists(tempBaseline))
+                        {
+                            File.Delete(tempBaseline);
+                        }
+                    }
+                });
+
+            bool anyFailed = false;
+            foreach (var (exitCode, stdout, stderr) in batchResults)
+            {
+                // Exit code 0: clean.
+                // Exit code 3: detect_secrets.pre_commit_hook returns 3 strictly when new_secrets is empty and only
+                // baseline line_number / trim metadata changed (SecretsBaselineCleanerService strips line_number).
+                if (exitCode is 0 or 3)
+                {
+                    continue;
+                }
+
+                anyFailed = true;
+                if (!string.IsNullOrWhiteSpace(stdout))
+                {
+                    Console.WriteLine(stdout.TrimEnd());
+                }
+
+                if (!string.IsNullOrWhiteSpace(stderr))
+                {
+                    Console.WriteLine(stderr.TrimEnd());
+                }
+            }
+
+            if (anyFailed)
+            {
+                Console.WriteLine("[ERROR] detect-secrets blocked unbaselined secret(s). Remove the secret, or mark a reviewed false positive with an inline '# pragma: allowlist secret' comment.");
+                return 1;
+            }
+
+            return 0;
+        }
+    }
+
+    private static string[][] BuildBalancedBatches(
+        string rootDirectory,
+        IReadOnlyList<string> filesToScan,
+        int maxFilesPerBatch,
+        int maxParallelism)
+    {
+        if (filesToScan.Count <= 1)
+        {
+            return [[.. filesToScan]];
+        }
+
+        var weightedFiles = new (string Path, long Weight)[filesToScan.Count];
+        long totalWeight = 0;
+        for (int i = 0; i < filesToScan.Count; i++)
+        {
+            string rel = filesToScan[i];
+            long byteLength = 1024;
             try
             {
-                foreach (string[] batch in filesToScan.Chunk(MaxFilesPerBatch))
+                var info = new FileInfo(Path.Combine(rootDirectory, rel));
+                if (info.Exists)
                 {
-                    // Re-seed temp baseline on each batch because detect-secrets-hook trims baseline entries to the scanned batch.
-                    File.WriteAllText(tempBaseline, baselineContent);
-
-                    var args = new List<string>(tool.PrefixArguments)
-                    {
-                        "--baseline",
-                        tempBaseline,
-                        "--exclude-files",
-                        SecretsBaselineCleanerService.CanonicalExcludePattern,
-                    };
-                    args.AddRange(batch);
-
-                    (int exitCode, string stdout, string stderr) = RunCaptured(
-                        scanWorkingDirectory,
-                        tool.FileName,
-                        args,
-                        getEnvironmentVariable,
-                        gitContextEnv);
-
-                    // Exit code 0: clean.
-                    // Exit code 3: detect_secrets.pre_commit_hook returns 3 strictly when new_secrets is empty and only
-                    // baseline line_number / trim metadata changed (SecretsBaselineCleanerService strips line_number).
-                    if (exitCode is 0 or 3)
-                    {
-                        continue;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(stdout))
-                    {
-                        Console.WriteLine(stdout.TrimEnd());
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(stderr))
-                    {
-                        Console.WriteLine(stderr.TrimEnd());
-                    }
-
-                    Console.WriteLine("[ERROR] detect-secrets blocked unbaselined secret(s). Remove the secret, or mark a reviewed false positive with an inline '# pragma: allowlist secret' comment.");
-                    return 1;
+                    byteLength = Math.Max(1L, info.Length);
                 }
-
-                return 0;
             }
-            finally
+            catch
             {
-                if (File.Exists(tempBaseline))
+                // Fall back to default weight when file metadata cannot be read.
+            }
+
+            // Markdown tables trigger ~50-100x heavier regex evaluation per byte inside detect-secrets' indirect-reference filter.
+            long multiplier = rel.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ? 50L : 1L;
+            long weight = byteLength * multiplier;
+            weightedFiles[i] = (rel, weight);
+            totalWeight += weight;
+        }
+
+        const long parallelSplitThreshold = 512_000L;
+        if (filesToScan.Count <= maxFilesPerBatch && (maxParallelism <= 1 || totalWeight < parallelSplitThreshold))
+        {
+            return [[.. filesToScan]];
+        }
+
+        Array.Sort(
+            weightedFiles,
+            static (a, b) =>
+            {
+                int cmp = b.Weight.CompareTo(a.Weight);
+                return cmp != 0 ? cmp : StringComparer.Ordinal.Compare(a.Path, b.Path);
+            });
+
+        // Cap heavy Markdown batches (~6M weight = ~120 KB Markdown) so multi-minute files start alone at t=0 while 200-file code batches absorb tail slack.
+        const long hardMaxBatchWeight = 6_000_000L;
+        long maxBatchWeight = Math.Clamp(totalWeight / (Math.Max(1, maxParallelism) * 10L), parallelSplitThreshold, hardMaxBatchWeight);
+        var buckets = new List<List<string>>();
+        var bucketWeights = new List<long>();
+
+        foreach (var (filePath, weight) in weightedFiles)
+        {
+            int chosen = -1;
+            for (int b = 0; b < buckets.Count; b++)
+            {
+                if (buckets[b].Count < maxFilesPerBatch && bucketWeights[b] + weight <= maxBatchWeight)
                 {
-                    File.Delete(tempBaseline);
+                    chosen = b;
+                    break;
                 }
+            }
+
+            if (chosen < 0)
+            {
+                buckets.Add(new List<string>(Math.Min(maxFilesPerBatch, filesToScan.Count)) { filePath });
+                bucketWeights.Add(weight);
+            }
+            else
+            {
+                buckets[chosen].Add(filePath);
+                bucketWeights[chosen] += weight;
             }
         }
+
+        return buckets
+            .Select((b, idx) => (Files: b.ToArray(), Weight: bucketWeights[idx]))
+            .Where(x => x.Files.Length > 0)
+            .OrderByDescending(x => x.Weight)
+            .Select(x => x.Files)
+            .ToArray();
     }
 
     public static List<string> ResolveFilesToScan(
