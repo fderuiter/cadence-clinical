@@ -6,6 +6,8 @@ Generated from `docs/openapi/knowledge_openapi.json` by `pnpm cadence generate-a
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/knowledge/articles` | ListKnowledgeArticles |  |
 | `GET` | `/api/v1/knowledge/articles/{article_id}` | GetKnowledgeArticle |  |
+| `GET` | `/api/v1/knowledge/articles/{article_id}/audit-log` | GetKnowledgeArticleAuditLog |  |
+| `GET` | `/api/v1/knowledge/articles/{article_id}/versions` | ListKnowledgeArticleVersions |  |
 | `GET` | `/api/v1/knowledge/categories` | ListKnowledgeCategories |  |
 | `GET` | `/api/v1/knowledge/contextual-help` | ResolveContextualHelp |  |
 | `GET` | `/api/v1/knowledge/status` | KnowledgeStatus | Returns Knowledge base operational status. |

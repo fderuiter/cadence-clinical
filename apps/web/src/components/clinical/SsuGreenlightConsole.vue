@@ -295,13 +295,14 @@
               11 audit records written.
             </p>
           </div>
-          <button
+          <ClinicalIconButton
             class="btn-icon-only"
+            label="Dismiss batch greenlight certification banner"
             title="Dismiss"
             @click="batchSuccessData = null"
           >
             ✖
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="banner-tokens-list">
           <div
@@ -777,9 +778,14 @@
               gateData.greenlight_token.slice(-8)
             }}
           </code>
-          <button class="btn-icon-only" title="Copy Token" @click="copyToken">
+          <ClinicalIconButton
+            class="btn-icon-only"
+            label="Copy HMAC-SHA256 greenlight token"
+            title="Copy Token"
+            @click="copyToken"
+          >
             📋
-          </button>
+          </ClinicalIconButton>
         </div>
       </div>
 
@@ -1050,7 +1056,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";

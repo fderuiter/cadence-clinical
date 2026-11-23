@@ -1,6 +1,6 @@
 # Knowledge service
 
-Knowledge base and training service. It serves controlled SOP resolution (`GET /api/v1/knowledge/contextual-help`), published article search and detail (`GET /api/v1/knowledge/articles`, `GET /api/v1/knowledge/articles/{article_id}`), category taxonomy (`GET /api/v1/knowledge/categories`), and study training/delegation endpoints.
+Knowledge base and training service. It serves controlled SOP resolution (`GET /api/v1/knowledge/contextual-help`), published article search and detail (`GET /api/v1/knowledge/articles`, `GET /api/v1/knowledge/articles/{article_id}`), immutable version snapshots and Merkle-chained audit trails (`GET /api/v1/knowledge/articles/{article_id}/versions`, `GET /api/v1/knowledge/articles/{article_id}/audit-log`), category taxonomy (`GET /api/v1/knowledge/categories`), and study training/delegation endpoints.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 

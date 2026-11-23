@@ -4,23 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persistence.KnowledgeDbContext`, not from a live database. Unqualified tables live in the `knowledge` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`knowledge.DelegationRecords`](#knowledgedelegationrecords) | `DelegationRecord` | 16 |
-| [`knowledge.OrgAuditLogs`](#knowledgeorgauditlogs) | `OrgAuditLog` | 10 |
-| [`knowledge.TrainingAssignments`](#knowledgetrainingassignments) | `TrainingAssignment` | 16 |
-| [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 10 |
-| [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 10 |
-| [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`knowledge.consumed_signature_tokens`](#knowledgeconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 13 |
-| [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 12 |
-| [`knowledge.knowledge_articles`](#knowledgeknowledge_articles) | `KnowledgeArticle` | 17 |
-| [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 12 |
-| [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 12 |
-| [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 18 |
-| [`knowledge.training_curriculum_modules`](#knowledgetraining_curriculum_modules) | `TrainingCurriculumModule` | 12 |
-
 ## knowledge.DelegationRecords
 
 Entity: `DelegationRecord`

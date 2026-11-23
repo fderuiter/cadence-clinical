@@ -1,4 +1,4 @@
-# ADR-2822: Unify CTMS, eTMF, and Study Training Contracts and Enforce Vue Template Typechecks
+# ADR-2823: Unify CTMS, eTMF, and Study Training Contracts and Enforce Vue Template Typechecks
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
@@ -56,5 +56,5 @@ Following the initial wiring of the CTMS, eTMF, and Study Training workspaces (A
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `packages/core-models`, `packages/security`, `packages/tooling_core`, `packages/ui`, `apps/ctms`, `apps/etmf`, `apps/knowledge`, `apps/web`, `docs/openapi`, `docs/api`, `docs/schema`.
+- **Affected Repositories / Services:** `packages/contracts`, `packages/security`, `packages/tooling_core`, `packages/ui`, `apps/ctms`, `apps/etmf`, `apps/knowledge`, `apps/web`, `docs/openapi`, `docs/api`, `docs/schema`.
 - **Verification Plan:** Verified via `dotnet build Cadence.sln`, `Cadence.ArchitectureTests`, `Cadence.UnitTests`, `pnpm --filter web typecheck` (`vue-tsc --noEmit`), `pnpm -r lint`, `pnpm -r test`, `pnpm -r build`, and `Cadence.Cli check`.

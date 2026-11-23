@@ -123,6 +123,7 @@ export interface paths {
       parameters: {
         query?: {
           study_id?: string;
+          site_id?: string;
         };
         header?: never;
         path?: never;
@@ -258,6 +259,80 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/etmf/documents/{document_id}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          document_id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/etmf/documents/{document_id}/submit-qc": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          document_id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Etmf_SubmitDocumentForQcRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/etmf/documents/{document_id}/stage-qc": {
     parameters: {
       query?: never;
@@ -272,6 +347,45 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  "/api/v1/etmf/documents/{document_id}/taxonomy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          document_id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Etmf_UpdateDocumentTaxonomyRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
     trace?: never;
   };
   "/api/v1/etmf/documents/export": {
@@ -534,9 +648,10 @@ export interface components {
       artifactType: null | string;
       taxonomyVersion: null | string;
       reasonForChange: null | string;
+      contentBase64?: null | string;
     };
     Etmf_StageDocumentQCRequest: {
-      content: string;
+      content: null | string;
       filename: string;
       studyId: string;
       siteId?: null | string;
@@ -548,10 +663,23 @@ export interface components {
       /** @default Batch upload AI auto-classification staging for CRA QC */
       reasonForChange: string;
       assignedCra?: null | string;
+      contentBase64?: null | string;
     };
     Etmf_StageExistingDocumentQcRequest: {
       reason_for_change?: null | string;
       assigned_cra?: null | string;
+    };
+    Etmf_SubmitDocumentForQcRequest: {
+      reasonForChange?: null | string;
+      assignedCra?: null | string;
+    };
+    Etmf_UpdateDocumentTaxonomyRequest: {
+      /** Format: int32 */
+      zone?: null | number | string;
+      section?: null | string;
+      artifactCode?: null | string;
+      artifactType?: null | string;
+      reasonForChange?: null | string;
     };
   };
   responses: never;

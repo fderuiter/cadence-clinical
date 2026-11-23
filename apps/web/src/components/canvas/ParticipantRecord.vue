@@ -15,15 +15,7 @@
       </span>
     </header>
 
-    <p v-if="record.loading" class="status-line" role="status">
-      Loading {{ participant.subject_id }}'s data...
-    </p>
-    <p
-      v-else-if="record.error"
-      id="record-error"
-      class="status-line"
-      role="status"
-    >
+    <p v-if="record.error" id="record-error" class="status-line" role="status">
       {{ participant.subject_id }}'s data couldn't be loaded.
       <button
         id="btn-retry-record"
@@ -36,8 +28,12 @@
     </p>
 
     <template v-else>
+      <p v-if="record.loading" class="status-line" role="status">
+        Loading {{ participant.subject_id }}'s data...
+      </p>
+
       <div
-        v-if="record.enrollmentId"
+        v-if="!record.loading && record.enrollmentId"
         class="participant-governance"
         data-testid="participant-governance"
       >
@@ -64,6 +60,7 @@
             class="casebook-select"
             :disabled="casebookBusy"
           >
+            <option value="pdf">Certified PDF casebook (.pdf)</option>
             <option value="html">Printable HTML casebook</option>
             <option value="odm_xml">CDISC ODM v1.3.2 XML casebook</option>
             <option value="json">Structured JSON casebook</option>
@@ -104,6 +101,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :form-location="formLocation"
         :new-form-location="newFormLocation"
         :new-form-cell-location="newFormCellLocation"
@@ -115,6 +113,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :can-manage="canManage"
         :form-titles="formTitles"
         :form-location="formLocation"
@@ -151,7 +150,7 @@ import ScopeLockControls, {
 const props = defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
-  formLocation: (formId: string) => RouteLocationRaw;
+  formLocation: (formId: string, itemId?: string | null) => RouteLocationRaw;
   newFormLocation: RouteLocationRaw;
   newFormCellLocation?: (
     collectionSpecId: string,
@@ -160,7 +159,8 @@ const props = defineProps<{
   handoffLocation?: RouteLocationRaw | null;
   observationLocation: (
     observationId: string,
-    formId: string
+    formId: string,
+    itemId?: string | null
   ) => RouteLocationRaw;
 }>();
 const emit = defineEmits<{
@@ -229,8 +229,12 @@ watch(
 );
 
 watch(
-  [() => canvas.studyCode, () => Boolean(props.newFormCellLocation)],
-  async ([code, needsSchedule]) => {
+  [
+    () => canvas.studyCode,
+    () => props.participant.id,
+    () => Boolean(props.newFormCellLocation),
+  ],
+  async ([code, , needsSchedule]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
     if (!code) {
@@ -343,6 +347,9 @@ async function exportCasebook() {
 }
 
 .casebook-select {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -355,6 +362,14 @@ async function exportCasebook() {
   font-size: 0.82rem;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.casebook-outcome code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .casebook-outcome--ok {

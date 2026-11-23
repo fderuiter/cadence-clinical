@@ -274,13 +274,13 @@
             <code>{{ lastVerificationResult.computed_digest }}</code>
           </div>
         </div>
-        <button
-          type="button"
+        <ClinicalIconButton
           class="btn-close"
+          label="Dismiss cryptographic verification result"
           @click="lastVerificationResult = null"
         >
           &times;
-        </button>
+        </ClinicalIconButton>
       </div>
     </div>
 
@@ -654,7 +654,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { computed, onMounted, ref } from "vue";
 import {
   demoNowIso,

@@ -62,8 +62,10 @@ public static class KnowledgeCatalogSeeder
         "super_admin",
         "sponsor_designer",
         "site_crc",
+        "site_investigator",
         "cra_monitor",
         "data_manager",
+        "safety_officer",
         "auditor",
     });
 
@@ -72,8 +74,10 @@ public static class KnowledgeCatalogSeeder
         "super_admin",
         "sponsor_designer",
         "site_crc",
+        "site_investigator",
         "cra_monitor",
         "data_manager",
+        "safety_officer",
         "auditor",
     ];
 
@@ -83,13 +87,13 @@ public static class KnowledgeCatalogSeeder
     public static async Task EnsureSeededAsync(KnowledgeDbContext db, IClock clock, CancellationToken ct = default)
     {
         string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
-        string ssuSentinelId = $"art-ssu-sop{tenantSuffix}";
+        string latestSentinelId = $"art-observations-sop{tenantSuffix}";
         string trainingSentinelId = $"curr-cadence-101-v1{tenantSuffix}";
 
-        // Fast path: once canonical SOPs and CADENCE-101 training curricula exist for this tenant, skip locking and writes entirely.
+        // Fast path: once our complete live-workspace SOP baseline and CADENCE-101 training curricula exist for this tenant, skip locking and writes entirely.
         bool alreadySeeded = await db.KnowledgeArticles
             .AsNoTracking()
-            .AnyAsync(a => a.Id == ssuSentinelId, ct)
+            .AnyAsync(a => a.Id == latestSentinelId, ct)
             .ConfigureAwait(false);
         bool trainingAlreadySeeded = await db.TrainingCurricula
             .AsNoTracking()
@@ -105,7 +109,7 @@ public static class KnowledgeCatalogSeeder
         {
             bool recheckSop = await db.KnowledgeArticles
                 .AsNoTracking()
-                .AnyAsync(a => a.Id == ssuSentinelId, ct)
+                .AnyAsync(a => a.Id == latestSentinelId, ct)
                 .ConfigureAwait(false);
             bool recheckTraining = await db.TrainingCurricula
                 .AsNoTracking()
@@ -122,14 +126,20 @@ public static class KnowledgeCatalogSeeder
             if (!recheckSop)
             {
                 var categories = BuildCategories(seededAt, tenantSuffix);
-                var existingCategoryIds = await db.KnowledgeCategories
-                    .Select(c => c.Id)
-                    .ToHashSetAsync(StringComparer.Ordinal, ct)
+                var existingCategoriesById = await db.KnowledgeCategories
+                    .ToDictionaryAsync(c => c.Id, StringComparer.Ordinal, ct)
                     .ConfigureAwait(false);
 
-                foreach (var category in categories.Where(c => !existingCategoryIds.Contains(c.Id)))
+                foreach (var category in categories)
                 {
-                    db.KnowledgeCategories.Add(category);
+                    if (!existingCategoriesById.TryGetValue(category.Id, out var existingCategory))
+                    {
+                        db.KnowledgeCategories.Add(category);
+                    }
+                    else if (!string.Equals(existingCategory.PersonaVisibility, AllStaffVisibilityJson, StringComparison.Ordinal))
+                    {
+                        existingCategory.PersonaVisibility = AllStaffVisibilityJson;
+                    }
                 }
 
                 var seeds = BuildSopSeeds(seededAt, tenantSuffix);
@@ -530,6 +540,246 @@ public static class KnowledgeCatalogSeeder
                     personaAnchors: new Dictionary<string, string>(),
                     priority: 20,
                     createdAt: baseTime.AddMinutes(-10))),
+
+            // 8. /overview (Clinical Operations Command Center)
+            CreateSop(
+                articleId: "art-overview-sop",
+                versionId: "ver-ops-100",
+                slug: "sop-ops-100-clinical-command-center",
+                title: "SOP-OPS-100: Clinical Operations Command Center & Action Queue Triage",
+                categoryId: "cat-clinical-ops",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["overview", "command-center", "triage", "portfolio"],
+                markdown: """
+                    ## Purpose & Scope
+                    Governs daily review of clinical portfolio KPIs, pending operational tasks, safety escalations, and query backlogs across `/overview`.
+
+                    ## Operational Steps
+                    1. Review high-priority safety, SDV, and query alerts at workspace login.
+                    2. Navigate directly to study, site, or support queues requiring immediate GxP follow-up.
+                    """,
+                html: "<h2>Purpose &amp; Scope</h2><p>Governs daily review of clinical portfolio KPIs, pending operational tasks, safety escalations, and query backlogs across <code>/overview</code>.</p>",
+                createdAt: baseTime.AddMinutes(-9),
+                mappings: BuildRouteMappings(
+                    prefix: "m-ovw",
+                    exactRoute: "/overview",
+                    wildcardRoute: "/overview/*",
+                    articleId: "art-overview-sop",
+                    defaultAnchor: "#clinical-command-center-triage",
+                    personaAnchors: new Dictionary<string, string>
+                    {
+                        ["safety_officer"] = "#pharmacovigilance-signal-overview",
+                        ["site_investigator"] = "#investigator-oversight-summary",
+                    },
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-9))),
+
+            // 9. /plans (Study Execution Plans & Operational Milestones)
+            CreateSop(
+                articleId: "art-plans-sop",
+                versionId: "ver-pln-105",
+                slug: "sop-pln-105-study-execution-plans",
+                title: "SOP-PLN-105: Study Execution Plans, Milestones & Operational Readiness",
+                categoryId: "cat-site-monitoring",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["plans", "milestones", "ctms", "readiness"],
+                markdown: """
+                    ## Study Execution Plan Governance
+                    Defines milestone tracking, enrollment forecasting, and cross-functional study execution plans on `/plans`.
+
+                    ## Key Controls
+                    1. Reconcile country and site activation dates with approved protocol amendments.
+                    2. Escalate milestone slippage with documented root-cause context.
+                    """,
+                html: "<h2>Study Execution Plan Governance</h2><p>Defines milestone tracking, enrollment forecasting, and cross-functional study execution plans on <code>/plans</code>.</p>",
+                createdAt: baseTime.AddMinutes(-8),
+                mappings: BuildRouteMappings(
+                    prefix: "m-pln",
+                    exactRoute: "/plans",
+                    wildcardRoute: "/plans/*",
+                    articleId: "art-plans-sop",
+                    defaultAnchor: "#study-execution-plan-milestones",
+                    personaAnchors: new Dictionary<string, string>(),
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-8))),
+
+            // 10. /onboarding/trial (Clinical Trial Onboarding & Protocol Intake)
+            CreateSop(
+                articleId: "art-onboarding-trial-sop",
+                versionId: "ver-onb-110",
+                slug: "sop-onb-110-clinical-trial-onboarding",
+                title: "SOP-ONB-110: Clinical Trial Onboarding, Protocol Intake & Site Provisioning",
+                categoryId: "cat-site-startup",
+                versionLabel: "1.1",
+                versionIndex: 1,
+                tags: ["onboarding", "trial-setup", "provisioning", "protocol"],
+                markdown: """
+                    ## Clinical Trial Onboarding Procedure
+                    Establishes controlled onboarding steps for new study protocols, organization tenancy bindings, and initial site rosters on `/onboarding/trial`.
+
+                    ## Mandatory Checks
+                    1. Validate sponsor protocol identifier, therapeutic area, and regulatory phase before workspace creation.
+                    2. Verify initial study team RBAC assignments and training curriculum bindings prior to activation.
+                    """,
+                html: "<h2>Clinical Trial Onboarding Procedure</h2><p>Establishes controlled onboarding steps for new study protocols, organization tenancy bindings, and initial site rosters on <code>/onboarding/trial</code>.</p>",
+                createdAt: baseTime.AddMinutes(-7),
+                mappings: BuildOnboardingMappings(
+                    articleId: "art-onboarding-trial-sop",
+                    createdAt: baseTime.AddMinutes(-7))),
+
+            // 11. /etmf (Electronic Trial Master File Artifact Filing & QC)
+            CreateSop(
+                articleId: "art-etmf-sop",
+                versionId: "ver-tmf-301",
+                slug: "sop-tmf-301-etmf-artifact-filing",
+                title: "SOP-TMF-301: Electronic Trial Master File (eTMF) Artifact Filing & QC",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.3",
+                versionIndex: 1,
+                tags: ["etmf", "dia-reference-model", "essential-documents", "qc"],
+                markdown: """
+                    ## eTMF Contemporaneous Filing & Inspection Readiness
+                    Governs DIA Reference Model classification, artifact completeness review, and regulatory inspection readiness across `/etmf`.
+
+                    ## Operational Controls
+                    1. File essential regulatory and ethics artifacts under the matching zone, section, and study/site scope.
+                    2. Verify document legibility, metadata completeness, and immutable hash integrity during QC review.
+                    """,
+                html: "<h2>eTMF Contemporaneous Filing &amp; Inspection Readiness</h2><p>Governs DIA Reference Model classification, artifact completeness review, and regulatory inspection readiness across <code>/etmf</code>.</p>",
+                createdAt: baseTime.AddMinutes(-6),
+                mappings: BuildRouteMappings(
+                    prefix: "m-tmf",
+                    exactRoute: "/etmf",
+                    wildcardRoute: "/etmf/*",
+                    articleId: "art-etmf-sop",
+                    defaultAnchor: "#etmf-artifact-filing-and-qc",
+                    personaAnchors: new Dictionary<string, string>
+                    {
+                        ["auditor"] = "#etmf-inspection-readiness-verification",
+                        ["site_investigator"] = "#investigator-site-file-attestation",
+                    },
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-6))),
+
+            // 12. /training (GxP Training Curriculum & Delegation Readiness)
+            CreateSop(
+                articleId: "art-training-sop",
+                versionId: "ver-trn-202",
+                slug: "sop-trn-202-gxp-training-attestation",
+                title: "SOP-TRN-202: GxP Training Curriculum Completion & Delegation Sign-Off",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.2",
+                versionIndex: 1,
+                tags: ["training", "delegation", "ich-e6", "qualification"],
+                markdown: """
+                    ## GxP Role Qualification & Training Attestation
+                    Defines mandatory SOP read-and-understand training completion and Principal Investigator Delegation of Authority prerequisites on `/training`.
+
+                    ## Qualification Rules
+                    1. Complete assigned protocol and GxP SOP modules prior to performing delegated clinical duties.
+                    2. Maintain current training records across protocol amendments to preserve active write access.
+                    """,
+                html: "<h2>GxP Role Qualification &amp; Training Attestation</h2><p>Defines mandatory SOP read-and-understand training completion and Principal Investigator Delegation of Authority prerequisites on <code>/training</code>.</p>",
+                createdAt: baseTime.AddMinutes(-5),
+                mappings: BuildRouteMappings(
+                    prefix: "m-trn",
+                    exactRoute: "/training",
+                    wildcardRoute: "/training/*",
+                    articleId: "art-training-sop",
+                    defaultAnchor: "#gxp-training-and-delegation",
+                    personaAnchors: new Dictionary<string, string>
+                    {
+                        ["site_investigator"] = "#pi-delegation-log-signoff",
+                        ["site_crc"] = "#site-staff-training-attestation",
+                    },
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-5))),
+
+            // 13. /observations/:observationRef (Clinical Observation Provenance & Query Review)
+            CreateSop(
+                articleId: "art-observations-sop",
+                versionId: "ver-obs-210",
+                slug: "sop-obs-210-clinical-observation-inspection",
+                title: "SOP-OBS-210: Clinical Observation Inspection, Query History & Provenance Review",
+                categoryId: "cat-data-management",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["observations", "provenance", "sdv", "queries", "safety"],
+                markdown: """
+                    ## Clinical Observation Provenance & Discrepancy Review
+                    Standardizes item-level observation inspection, audit provenance verification, medical safety review, and query resolution on `/observations/:observationRef`.
+
+                    ## Key Controls
+                    1. Inspect source provenance, prior amendments, and open queries before updating or verifying an observation.
+                    2. Escalate clinically significant safety abnormalities or MedDRA coding questions with pseudonymous subject codes only.
+                    """,
+                html: "<h2>Clinical Observation Provenance &amp; Discrepancy Review</h2><p>Standardizes item-level observation inspection, audit provenance verification, medical safety review, and query resolution on <code>/observations/:observationRef</code>.</p>",
+                createdAt: baseTime.AddMinutes(-4),
+                mappings: BuildParameterizedObservationMappings(
+                    articleId: "art-observations-sop",
+                    createdAt: baseTime.AddMinutes(-4))),
+
+            // 14. /tickets (GxP Support Ticket Triage & Part 11 Closure)
+            CreateSop(
+                articleId: "art-tickets-sop",
+                versionId: "ver-tck-501",
+                slug: "sop-tck-501-gxp-support-ticket-lifecycle",
+                title: "SOP-TCK-501: GxP Support Ticket Triage, Root-Cause CAPA & Part 11 Closure",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["tickets", "support", "capa", "sla", "part11"],
+                markdown: """
+                    ## GxP Support Ticket Triage & Closure Governance
+                    Defines severity classification, SLA pause/resume tracking, participant de-identification rules, root-cause documentation, and 21 CFR Part 11 electronic signatures on `/tickets`.
+
+                    ## Mandatory Rules
+                    1. Never enter direct participant PII in ticket descriptions, comments, or root-cause summaries; use pseudonymous subject codes (for example `SUBJ-1001`).
+                    2. Record structured resolution codes and root-cause summaries prior to resolving tickets and applying Part 11 closure signatures.
+                    """,
+                html: "<h2>GxP Support Ticket Triage &amp; Closure Governance</h2><p>Defines severity classification, SLA pause/resume tracking, participant de-identification rules, root-cause documentation, and 21 CFR Part 11 electronic signatures on <code>/tickets</code>.</p>",
+                createdAt: baseTime.AddMinutes(-3),
+                mappings: BuildRouteMappings(
+                    prefix: "m-tck",
+                    exactRoute: "/tickets",
+                    wildcardRoute: "/tickets/*",
+                    articleId: "art-tickets-sop",
+                    defaultAnchor: "#gxp-support-ticket-lifecycle",
+                    personaAnchors: new Dictionary<string, string>(),
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-3))),
+
+            // 15. /knowledge (Controlled SOP Knowledge Hub Governance)
+            CreateSop(
+                articleId: "art-knowledge-sop",
+                versionId: "ver-knb-502",
+                slug: "sop-knb-502-controlled-knowledge-hub",
+                title: "SOP-KNB-502: Controlled SOP Knowledge Hub & Regulatory Version Governance",
+                categoryId: "cat-regulatory-compliance",
+                versionLabel: "1.0",
+                versionIndex: 1,
+                tags: ["knowledge", "sop", "versioning", "part11"],
+                markdown: """
+                    ## Controlled SOP Repository Usage
+                    Governs role-scoped SOP lookup, locked snapshot inspection, and 21 CFR Part 11 Merkle audit verification on `/knowledge`.
+
+                    ## Operational Steps
+                    1. Verify that referenced SOP guidance carries `PUBLISHED` status and a locked version snapshot before executing regulated procedures.
+                    2. Inspect the 21 CFR Part 11 audit trail tab to verify cryptographic SHA-256 block hashes during quality or regulatory reviews.
+                    """,
+                html: "<h2>Controlled SOP Repository Usage</h2><p>Governs role-scoped SOP lookup, locked snapshot inspection, and 21 CFR Part 11 Merkle audit verification on <code>/knowledge</code>.</p>",
+                createdAt: baseTime.AddMinutes(-2),
+                mappings: BuildRouteMappings(
+                    prefix: "m-knb",
+                    exactRoute: "/knowledge",
+                    wildcardRoute: "/knowledge/*",
+                    articleId: "art-knowledge-sop",
+                    defaultAnchor: "#controlled-sop-repository-governance",
+                    personaAnchors: new Dictionary<string, string>(),
+                    priority: 25,
+                    createdAt: baseTime.AddMinutes(-2))),
         };
 
         return list;
@@ -620,8 +870,10 @@ public static class KnowledgeCatalogSeeder
             ["super_admin"] = "#study-governance-and-locks",
             ["sponsor_designer"] = "#visit-schedule-and-form-definitions",
             ["site_crc"] = "#subject-enrollment-and-visit-capture",
+            ["site_investigator"] = "#investigator-oversight-and-signoff",
             ["cra_monitor"] = "#study-sdv-and-query-oversight",
             ["data_manager"] = "#study-query-triage-and-cleanliness",
+            ["safety_officer"] = "#study-safety-signal-review",
             ["auditor"] = "#study-audit-trail-inspection",
         };
 
@@ -633,9 +885,64 @@ public static class KnowledgeCatalogSeeder
 
         foreach (string persona in AllStaffPersonas)
         {
-            string anchor = personaAnchors[persona];
+            string anchor = personaAnchors.TryGetValue(persona, out string? custom)
+                ? custom
+                : "#active-study-clinical-canvas";
             list.Add(NewMapping($"m-stp-{persona}", "/studies/:studyCode", persona, articleId, anchor, 35, createdAt));
             list.Add(NewMapping($"m-stps-{persona}", "/studies/:studyCode/*", persona, articleId, anchor, 32, createdAt));
+        }
+
+        return list;
+    }
+
+    private static List<ContextualHelpMapping> BuildOnboardingMappings(string articleId, DateTimeOffset createdAt)
+    {
+        const string defaultAnchor = "#clinical-trial-onboarding";
+        var list = new List<ContextualHelpMapping>
+        {
+            NewMapping("m-onb-ex-any", "/onboarding/trial", null, articleId, defaultAnchor, 25, createdAt),
+            NewMapping("m-onb-wc-any", "/onboarding/trial/*", null, articleId, defaultAnchor, 22, createdAt),
+            NewMapping("m-onb-rt-any", "/onboarding/*", null, articleId, defaultAnchor, 18, createdAt),
+        };
+
+        foreach (string persona in AllStaffPersonas)
+        {
+            list.Add(NewMapping($"m-onb-ex-{persona}", "/onboarding/trial", persona, articleId, defaultAnchor, 30, createdAt));
+            list.Add(NewMapping($"m-onb-wc-{persona}", "/onboarding/trial/*", persona, articleId, defaultAnchor, 26, createdAt));
+            list.Add(NewMapping($"m-onb-rt-{persona}", "/onboarding/*", persona, articleId, defaultAnchor, 20, createdAt));
+        }
+
+        return list;
+    }
+
+    private static List<ContextualHelpMapping> BuildParameterizedObservationMappings(string articleId, DateTimeOffset createdAt)
+    {
+        var personaAnchors = new Dictionary<string, string>
+        {
+            ["safety_officer"] = "#safety-observation-medical-review",
+            ["site_investigator"] = "#investigator-clinical-significance-signoff",
+            ["site_crc"] = "#source-observation-amendment",
+            ["cra_monitor"] = "#observation-sdv-verification",
+            ["data_manager"] = "#observation-discrepancy-query-resolution",
+            ["auditor"] = "#observation-provenance-audit-trail",
+        };
+        const string defaultAnchor = "#clinical-observation-provenance-review";
+
+        var list = new List<ContextualHelpMapping>
+        {
+            NewMapping("m-obs-ex-any", "/observations", null, articleId, defaultAnchor, 25, createdAt),
+            NewMapping("m-obs-p-any", "/observations/:observationRef", null, articleId, defaultAnchor, 30, createdAt),
+            NewMapping("m-obs-ps-any", "/observations/:observationRef/*", null, articleId, defaultAnchor, 28, createdAt),
+            NewMapping("m-obs-wc-any", "/observations/*", null, articleId, defaultAnchor, 20, createdAt),
+        };
+
+        foreach (string persona in AllStaffPersonas)
+        {
+            string anchor = personaAnchors.TryGetValue(persona, out string? custom) ? custom : defaultAnchor;
+            list.Add(NewMapping($"m-obs-ex-{persona}", "/observations", persona, articleId, anchor, 30, createdAt));
+            list.Add(NewMapping($"m-obs-p-{persona}", "/observations/:observationRef", persona, articleId, anchor, 35, createdAt));
+            list.Add(NewMapping($"m-obs-ps-{persona}", "/observations/:observationRef/*", persona, articleId, anchor, 32, createdAt));
+            list.Add(NewMapping($"m-obs-wc-{persona}", "/observations/*", persona, articleId, anchor, 24, createdAt));
         }
 
         return list;

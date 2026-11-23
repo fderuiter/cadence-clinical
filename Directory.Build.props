@@ -14,9 +14,10 @@
     <DotNetServicingVersion>10.0.15</DotNetServicingVersion>
     <AspireHostingVersion>13.6.5</AspireHostingVersion>
     <IdentityModelVersion>8.23.0</IdentityModelVersion>
-    <DotNetAiVersion>10.11.0</DotNetAiVersion>
-    <OpenTelemetryVersion>1.19.1</OpenTelemetryVersion>
-    <OpenTelemetryInstrumentationVersion>1.19.0</OpenTelemetryInstrumentationVersion>
+    <DotNetAiVersion>10.11.1</DotNetAiVersion>
+    <!-- Stay on OpenTelemetry 1.20.x while targeting net10.0; 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0 (#5944, ADR-2233, ADR-2527). -->
+    <OpenTelemetryVersion>1.20.1</OpenTelemetryVersion>
+    <OpenTelemetryInstrumentationVersion>1.20.1</OpenTelemetryInstrumentationVersion>
     <MassTransitVersion>8.5.12</MassTransitVersion>
     <FluentValidationVersion>12.2.0</FluentValidationVersion>
 

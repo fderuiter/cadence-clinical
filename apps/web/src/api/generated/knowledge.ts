@@ -102,6 +102,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/knowledge/articles/{article_id}/versions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ListKnowledgeArticleVersions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/knowledge/articles/{article_id}/audit-log": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetKnowledgeArticleAuditLog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/training/curricula": {
     parameters: {
       query?: never;
@@ -347,6 +379,21 @@ export interface components {
     Knowledge_FailedDelegationItemDto: {
       delegation_id: string;
       reason: string;
+    };
+    Knowledge_KnowledgeArticleAuditEntryDto: {
+      id: string;
+      article_id: string;
+      event_type: string;
+      actor_user_id: string;
+      target_status: null | string;
+      version_label: null | string;
+      /** Format: int64 */
+      version_index: number | string;
+      reason_for_change: string;
+      sha256_hash: string;
+      predecessor_hash: string;
+      /** Format: date-time */
+      created_at: string;
     };
     Knowledge_KnowledgeArticleDto: {
       id: string;
@@ -595,6 +642,68 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Knowledge_KnowledgeArticleDto"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListKnowledgeArticleVersions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_KnowledgeArticleVersionDto"][];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetKnowledgeArticleAuditLog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        article_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_KnowledgeArticleAuditEntryDto"][];
         };
       };
       /** @description Not Found */
