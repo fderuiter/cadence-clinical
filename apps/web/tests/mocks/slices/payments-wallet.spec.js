@@ -22,6 +22,7 @@ describe("MSW domain slice: payments-wallet", () => {
     );
     expect(ocr.status).toBe(200);
     expect(ocr.data.gross_amount).toBe(32.5);
+    expect(ocr.data.ocr_token).toMatch(/^demo_ocr_token_/);
 
     const autoApproved = await api.requestJson(
       "/api/v1/payments/participant/expenses",
@@ -32,6 +33,7 @@ describe("MSW domain slice: payments-wallet", () => {
           category: "PARKING",
           gross_amount: 32.5,
           ocr_confidence: 0.95,
+          ocr_token: ocr.data.ocr_token,
           merchant_name: "City Cab",
         }),
       }

@@ -250,6 +250,9 @@ export function createCtmsSsuSliceStore(ctx) {
               staff_role: "CRC",
               task_codes: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
               status: "ACTIVE",
+              is_active: true,
+              signed_off: true,
+              end_date: null,
               start_date: "2026-07-15", // deid-ignore
               pi_signed_off_by: "usr-pi-01",
               pi_signed_off_at: "2026-07-15T10:00:00Z", // deid-ignore

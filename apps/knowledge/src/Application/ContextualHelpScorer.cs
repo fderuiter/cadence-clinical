@@ -9,10 +9,11 @@ namespace Cadence.Apps.Knowledge.Application;
 /// <summary>
 /// Deterministic Hierarchical Specificity Scoring engine for contextual SOP resolution (CONTEXT.md, PRD-KNB-002).
 /// Ranks active <see cref="ContextualHelpMapping"/> records by:
-/// 1. Route pattern specificity: exact route match &gt; parameterized segment match &gt; longest prefix wildcard &gt; global wildcard.
+/// 1. Route pattern specificity: exact route match &gt; parameterized segment match &gt; longest prefix wildcard &gt; global wildcard,
+///    plus query specificity bonuses for Clinical Canvas <c>stage</c>, <c>section</c>, and entity zoom parameters.
 /// 2. Persona specificity: exact normalized persona match &gt; universal wildcard (<c>null</c> or <c>*</c>).
 /// 3. Explicit <see cref="ContextualHelpMapping.Priority"/> weight (descending).
-/// 4. Recency tie-breaking via <see cref="ContextualHelpMapping.CreatedAt"/> (descending).
+/// 4. Exact query value matches and recency tie-breaking via <see cref="ContextualHelpMapping.CreatedAt"/> (descending).
 /// @req:PRD-KNB-002
 /// </summary>
 public static class ContextualHelpScorer
@@ -21,7 +22,8 @@ public static class ContextualHelpScorer
         ContextualHelpMapping Mapping,
         KnowledgeArticle Article,
         int RouteSpecificityScore,
-        int PersonaSpecificityScore);
+        int PersonaSpecificityScore,
+        int ExactQueryMatchCount = 0);
 
     public sealed record ContextualResolution(
         ContextualHelpMapping? MatchedMapping,
@@ -29,6 +31,14 @@ public static class ContextualHelpScorer
         KnowledgeArticleVersion? PrimaryVersion,
         string? SectionAnchor,
         IReadOnlyList<KnowledgeArticle> RelatedArticles);
+
+    private static readonly Dictionary<string, int> ZoomQuerySpecificityBonuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["participant"] = 700,
+        ["form"] = 750,
+        ["observation"] = 800,
+        ["proposal"] = 850,
+    };
 
     private static readonly Dictionary<string, string> PersonaAliases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -86,28 +96,14 @@ public static class ContextualHelpScorer
         ["regulatory_inspector"] = "auditor",
     };
 
-    /// <summary>Normalizes a UI route path by stripping query/hash fragments and trailing slashes.</summary>
+    /// <summary>
+    /// Normalizes a UI route path by stripping hash fragments, trailing slashes, and non-routing query parameters
+    /// while preserving canonical Clinical Canvas <c>stage</c> and <c>section</c> query parameters.
+    /// </summary>
     public static string NormalizeRoute(string? route)
     {
-        if (string.IsNullOrWhiteSpace(route))
-        {
-            return "/";
-        }
-
-        string clean = route.Trim();
-        int queryIdx = clean.IndexOfAny(['?', '#']);
-        if (queryIdx >= 0)
-        {
-            clean = clean[..queryIdx];
-        }
-
-        if (!clean.StartsWith('/'))
-        {
-            clean = "/" + clean;
-        }
-
-        clean = clean.TrimEnd('/');
-        return clean.Length == 0 ? "/" : clean;
+        var (path, stage, section) = ParseCanonicalRoute(route);
+        return FormatCanonicalRoute(path, stage, section);
     }
 
     /// <summary>Normalizes a persona key or RBAC role into one of the canonical workspace persona identifiers.</summary>
@@ -131,21 +127,56 @@ public static class ContextualHelpScorer
 
     /// <summary>
     /// Computes the route specificity score for <paramref name="rawPattern"/> against <paramref name="route"/>,
+    /// including explicit query-string filter bonuses when present on <paramref name="rawPattern"/>,
     /// or returns <c>-1</c> when the pattern does not match.
     /// </summary>
-    public static int ScoreRoutePattern(string route, string? rawPattern)
+    public static int ScoreRoutePattern(string route, string? rawPattern) =>
+        ScoreRoutePatternDetailed(route, rawPattern).Score;
+
+    private static (int Score, int ExactQueryMatches) ScoreRoutePatternDetailed(string route, string? rawPattern)
     {
         if (string.IsNullOrWhiteSpace(rawPattern))
         {
-            return -1;
+            return (-1, 0);
         }
 
-        string normalizedRoute = NormalizeRoute(route);
-        string pattern = rawPattern.Trim();
+        var (routePath, routeStage, routeSection) = ParseCanonicalRoute(route);
+        string trimmedPattern = rawPattern.Trim();
 
+        if (trimmedPattern is "*" or "/*")
+        {
+            return (1000, 0);
+        }
+
+        int hashIdx = trimmedPattern.IndexOf('#');
+        if (hashIdx >= 0)
+        {
+            trimmedPattern = trimmedPattern[..hashIdx];
+        }
+
+        string patternPathPart = trimmedPattern;
+        string? patternQueryPart = null;
+        int queryIdx = trimmedPattern.IndexOf('?');
+        if (queryIdx >= 0)
+        {
+            patternPathPart = trimmedPattern[..queryIdx];
+            patternQueryPart = trimmedPattern[(queryIdx + 1)..];
+        }
+
+        var (queryBonus, exactQueryMatches, queryMatched) = EvaluatePatternQuery(
+            route,
+            routeStage,
+            routeSection,
+            patternQueryPart);
+        if (!queryMatched)
+        {
+            return (-1, 0);
+        }
+
+        string pattern = patternPathPart.Trim();
         if (pattern is "*" or "/*")
         {
-            return 1000;
+            return (1000 + queryBonus, exactQueryMatches);
         }
 
         if (!pattern.StartsWith('/'))
@@ -153,7 +184,7 @@ public static class ContextualHelpScorer
             pattern = "/" + pattern;
         }
 
-        string[] routeSegments = SplitSegments(normalizedRoute);
+        string[] routeSegments = SplitSegments(routePath);
 
         // Prefix wildcard pattern: e.g. "/studies/*" or "/studies/:studyCode/*"
         if (pattern.EndsWith("/*", StringComparison.Ordinal))
@@ -162,13 +193,13 @@ public static class ContextualHelpScorer
             string normalizedPrefix = prefixPart.Length == 0 ? "/" : prefixPart.TrimEnd('/');
             if (normalizedPrefix.Length == 0)
             {
-                return 1000;
+                return (1000 + queryBonus, exactQueryMatches);
             }
 
             string[] prefixSegments = SplitSegments(normalizedPrefix);
             if (routeSegments.Length < prefixSegments.Length)
             {
-                return -1;
+                return (-1, 0);
             }
 
             int literalMatches = 0;
@@ -180,7 +211,7 @@ public static class ContextualHelpScorer
                 {
                     if (string.IsNullOrWhiteSpace(routeSeg))
                     {
-                        return -1;
+                        return (-1, 0);
                     }
                 }
                 else if (string.Equals(patSeg, routeSeg, StringComparison.OrdinalIgnoreCase))
@@ -189,12 +220,12 @@ public static class ContextualHelpScorer
                 }
                 else
                 {
-                    return -1;
+                    return (-1, 0);
                 }
             }
 
             // Longer prefixes and literal prefix segments outrank shorter prefixes; exact/parameterized full matches stay in 3000+/4000+.
-            return 2000 + (prefixSegments.Length * 25) + (literalMatches * 10);
+            return (2000 + (prefixSegments.Length * 25) + (literalMatches * 10) + queryBonus, exactQueryMatches);
         }
 
         string cleanPattern = pattern.TrimEnd('/');
@@ -208,14 +239,14 @@ public static class ContextualHelpScorer
 
         if (!hasParameter)
         {
-            return string.Equals(normalizedRoute, cleanPattern, StringComparison.OrdinalIgnoreCase)
-                ? 4000 + (routeSegments.Length * 10)
-                : -1;
+            return string.Equals(routePath, cleanPattern, StringComparison.OrdinalIgnoreCase)
+                ? (4000 + (routeSegments.Length * 10) + queryBonus, exactQueryMatches)
+                : (-1, 0);
         }
 
         if (patternSegments.Length != routeSegments.Length)
         {
-            return -1;
+            return (-1, 0);
         }
 
         int literalSegmentCount = 0;
@@ -227,7 +258,7 @@ public static class ContextualHelpScorer
             {
                 if (string.IsNullOrWhiteSpace(routeSeg))
                 {
-                    return -1;
+                    return (-1, 0);
                 }
             }
             else if (string.Equals(patSeg, routeSeg, StringComparison.OrdinalIgnoreCase))
@@ -236,12 +267,160 @@ public static class ContextualHelpScorer
             }
             else
             {
-                return -1;
+                return (-1, 0);
             }
         }
 
-        return 3000 + (literalSegmentCount * 15) + routeSegments.Length;
+        return (3000 + (literalSegmentCount * 15) + routeSegments.Length + queryBonus, exactQueryMatches);
     }
+
+    private static (int Bonus, int ExactMatches, bool IsMatch) EvaluatePatternQuery(
+        string rawRoute,
+        string? routeStage,
+        string? routeSection,
+        string? patternQueryPart)
+    {
+        if (string.IsNullOrWhiteSpace(patternQueryPart))
+        {
+            return (0, 0, true);
+        }
+
+        Dictionary<string, string>? routeQuery = null;
+        int bonus = 0;
+        int exactMatches = 0;
+
+        foreach (string pair in patternQueryPart.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eqIdx = pair.IndexOf('=');
+            string rawKey = eqIdx >= 0 ? pair[..eqIdx] : pair;
+            string rawVal = eqIdx >= 0 ? pair[(eqIdx + 1)..] : "*";
+
+            string key = DecodeQueryPart(rawKey).Trim();
+            string expectedVal = DecodeQueryPart(rawVal).Trim();
+            if (key.Length == 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(key, "stage", StringComparison.OrdinalIgnoreCase))
+            {
+                if (expectedVal.Length == 0)
+                {
+                    return (0, 0, false);
+                }
+
+                if (!IsWildcardOrParameterQueryValue(expectedVal))
+                {
+                    if (!string.Equals(routeStage, expectedVal, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return (0, 0, false);
+                    }
+
+                    exactMatches++;
+                }
+                else if (string.IsNullOrWhiteSpace(routeStage))
+                {
+                    return (0, 0, false);
+                }
+
+                bonus += 200;
+            }
+            else if (string.Equals(key, "section", StringComparison.OrdinalIgnoreCase))
+            {
+                if (expectedVal.Length == 0)
+                {
+                    return (0, 0, false);
+                }
+
+                if (!IsWildcardOrParameterQueryValue(expectedVal))
+                {
+                    if (!string.Equals(routeSection, expectedVal, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return (0, 0, false);
+                    }
+
+                    exactMatches++;
+                }
+                else if (string.IsNullOrWhiteSpace(routeSection))
+                {
+                    return (0, 0, false);
+                }
+
+                bonus += 400;
+            }
+            else if (ZoomQuerySpecificityBonuses.TryGetValue(key, out int zoomBonus))
+            {
+                routeQuery ??= ExtractQueryParameters(rawRoute);
+                if (!routeQuery.TryGetValue(key, out string? actualVal) || string.IsNullOrWhiteSpace(actualVal))
+                {
+                    return (0, 0, false);
+                }
+
+                if (!IsWildcardOrParameterQueryValue(expectedVal))
+                {
+                    if (!string.Equals(actualVal, expectedVal, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return (0, 0, false);
+                    }
+
+                    exactMatches++;
+                }
+
+                bonus += zoomBonus;
+            }
+            else
+            {
+                return (0, 0, false);
+            }
+        }
+
+        return (bonus, exactMatches, true);
+    }
+
+    private static Dictionary<string, string> ExtractQueryParameters(string? rawRoute)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(rawRoute))
+        {
+            return result;
+        }
+
+        string trimmed = rawRoute.Trim();
+        int hashIdx = trimmed.IndexOf('#', StringComparison.Ordinal);
+        if (hashIdx >= 0)
+        {
+            trimmed = trimmed[..hashIdx];
+        }
+
+        int queryIdx = trimmed.IndexOf('?', StringComparison.Ordinal);
+        if (queryIdx < 0 || queryIdx == trimmed.Length - 1)
+        {
+            return result;
+        }
+
+        string queryString = trimmed[(queryIdx + 1)..];
+        foreach (string pair in queryString.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eqIdx = pair.IndexOf('=', StringComparison.Ordinal);
+            string rawKey = eqIdx >= 0 ? pair[..eqIdx] : pair;
+            string rawValue = eqIdx >= 0 ? pair[(eqIdx + 1)..] : string.Empty;
+
+            string key = DecodeQueryPart(rawKey).Trim();
+            if (key.Length == 0)
+            {
+                continue;
+            }
+
+            string value = DecodeQueryPart(rawValue).Trim();
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private static bool IsWildcardOrParameterQueryValue(string expectedValue) =>
+        string.Equals(expectedValue, "*", StringComparison.Ordinal)
+        || IsParameterSegment(expectedValue);
 
     /// <summary>
     /// Computes persona specificity: <c>1</c> for an exact normalized persona match, <c>0</c> for universal wildcard,
@@ -270,7 +449,7 @@ public static class ContextualHelpScorer
         IReadOnlyDictionary<string, KnowledgeArticle> publishedArticlesById,
         IReadOnlyDictionary<string, KnowledgeArticleVersion> versionsById)
     {
-        string normalizedRoute = NormalizeRoute(route);
+        string rawRoute = string.IsNullOrWhiteSpace(route) ? "/" : route.Trim();
         string normalizedPersona = NormalizePersona(persona);
 
         var scored = new List<ScoredMapping>();
@@ -288,7 +467,7 @@ public static class ContextualHelpScorer
                 continue;
             }
 
-            int routeScore = ScoreRoutePattern(normalizedRoute, mapping.RoutePattern);
+            (int routeScore, int exactQueryMatches) = ScoreRoutePatternDetailed(rawRoute, mapping.RoutePattern);
             if (routeScore < 0)
             {
                 continue;
@@ -300,7 +479,7 @@ public static class ContextualHelpScorer
                 continue;
             }
 
-            scored.Add(new ScoredMapping(mapping, article, routeScore, personaScore));
+            scored.Add(new ScoredMapping(mapping, article, routeScore, personaScore, exactQueryMatches));
         }
 
         if (scored.Count == 0)
@@ -312,6 +491,7 @@ public static class ContextualHelpScorer
             .OrderByDescending(s => s.RouteSpecificityScore)
             .ThenByDescending(s => s.PersonaSpecificityScore)
             .ThenByDescending(s => s.Mapping.Priority)
+            .ThenByDescending(s => s.ExactQueryMatchCount)
             .ThenByDescending(s => s.Mapping.CreatedAt)
             .ThenByDescending(s => s.Mapping.Id, StringComparer.Ordinal)
             .ToList();
@@ -360,6 +540,119 @@ public static class ContextualHelpScorer
             primaryVersion,
             winner.Mapping.SectionAnchor,
             related);
+    }
+
+    private static (string Path, string? Stage, string? Section) ParseCanonicalRoute(string? route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return ("/", null, null);
+        }
+
+        string clean = route.Trim();
+        int hashIdx = clean.IndexOf('#');
+        if (hashIdx >= 0)
+        {
+            clean = clean[..hashIdx];
+        }
+
+        string rawPath = clean;
+        string? rawQuery = null;
+        int queryIdx = clean.IndexOf('?');
+        if (queryIdx >= 0)
+        {
+            rawPath = clean[..queryIdx];
+            rawQuery = clean[(queryIdx + 1)..];
+        }
+
+        const char RouteDelimiter = '/';
+        string normalizedPath = rawPath.Trim();
+        if (!normalizedPath.StartsWith(RouteDelimiter))
+        {
+            normalizedPath = string.Concat(RouteDelimiter, normalizedPath);
+        }
+
+        normalizedPath = normalizedPath.TrimEnd(RouteDelimiter);
+        if (normalizedPath.Length == 0)
+        {
+            normalizedPath = RouteDelimiter.ToString();
+        }
+
+        var (stage, section) = ParseQueryStageAndSection(rawQuery);
+        return (normalizedPath, stage, section);
+    }
+
+    private static string FormatCanonicalRoute(string path, string? stage, string? section)
+    {
+        if (stage is not null && section is not null)
+        {
+            return $"{path}?stage={stage}&section={section}";
+        }
+
+        if (stage is not null)
+        {
+            return $"{path}?stage={stage}";
+        }
+
+        if (section is not null)
+        {
+            return $"{path}?section={section}";
+        }
+
+        return path;
+    }
+
+    private static (string? Stage, string? Section) ParseQueryStageAndSection(string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return (null, null);
+        }
+
+        string? stage = null;
+        string? section = null;
+
+        foreach (string pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eqIdx = pair.IndexOf('=');
+            string rawKey = eqIdx >= 0 ? pair[..eqIdx] : pair;
+            string rawVal = eqIdx >= 0 ? pair[(eqIdx + 1)..] : string.Empty;
+
+            string key = DecodeQueryPart(rawKey).Trim();
+            string val = DecodeQueryPart(rawVal).Trim().ToLowerInvariant();
+            if (key.Length == 0 || val.Length == 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(key, "stage", StringComparison.OrdinalIgnoreCase))
+            {
+                stage = val;
+            }
+            else if (string.Equals(key, "section", StringComparison.OrdinalIgnoreCase))
+            {
+                section = val;
+            }
+        }
+
+        return (stage, section);
+    }
+
+    private static string DecodeQueryPart(string value)
+    {
+        if (value.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            return Uri.UnescapeDataString(value.Replace('+', ' '));
+        }
+        catch (UriFormatException)
+        {
+            return value;
+        }
     }
 
     private static string[] SplitSegments(string normalizedPath) =>

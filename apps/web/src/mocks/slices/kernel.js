@@ -15,6 +15,13 @@ import {
 } from "../../catalog/productCatalog.js";
 import { demoNowIso, demoNowMs } from "../../utils/demoMode.js";
 import {
+  evaluateCapabilityDecision,
+  evaluateNodeCommands,
+  isCallerBlinded,
+  isSitePermitted,
+  resolveDemoCaller,
+} from "../demoPolicy.js";
+import {
   DEMO_ORGANIZATIONS,
   createInitialDemoStudyDirectoryEntry,
 } from "../demoStudyImport.js";
@@ -32,6 +39,8 @@ import {
   PROPOSAL_1_REF,
   RULE_PACK_SAFETY_UUID,
   RULE_PACK_VS_UUID,
+  SITE_101_UUID,
+  SITE_102_UUID,
   STUDY_REF,
   VERSION_V1_REF,
   VERSION_V2_REF,
@@ -246,6 +255,102 @@ function createInitialValidationFindings(studyRef) {
 export function createKernelSliceStore(ctx) {
   const { state, nextCounter } = ctx;
 
+  function resolveEnrollmentByIdOrCode(rawId) {
+    const cleanId = String(rawId || "")
+      .replace(/^(enrollment|allocation|randomization|treatment_arm|arm):/, "")
+      .split("@")[0];
+    return (
+      state.subjects.find(
+        (s) =>
+          s.id === cleanId ||
+          String(s.subject_id || "").toUpperCase() === cleanId.toUpperCase()
+      ) || null
+    );
+  }
+
+  function resolveSiteCodeForNodeRef(nodeRef) {
+    const refStr = String(nodeRef || "");
+    if (refStr.startsWith("study_site:")) {
+      return resolveSiteCodeFromRef(refStr, state.subjects, state.studySites);
+    }
+    if (
+      refStr.startsWith("enrollment:") ||
+      refStr.startsWith("allocation:") ||
+      refStr.startsWith("randomization:")
+    ) {
+      const subj = resolveEnrollmentByIdOrCode(refStr);
+      return subj?.site_id || null;
+    }
+    if (refStr.startsWith("collection_instance:")) {
+      const rawFormId = refStr
+        .replace(/^collection_instance:/, "")
+        .split("@")[0];
+      const form = state.forms.get(rawFormId);
+      if (form?.enrollment_id) {
+        const subj = resolveEnrollmentByIdOrCode(form.enrollment_id);
+        return subj?.site_id || null;
+      }
+    }
+    if (refStr.startsWith("observation:")) {
+      const cleanObsId = refStr.replace(/^observation:/, "").split("@")[0];
+      for (const form of state.forms.values()) {
+        if (
+          Array.isArray(form.items) &&
+          form.items.some((it) => it.observation_id === cleanObsId)
+        ) {
+          const subj = resolveEnrollmentByIdOrCode(form.enrollment_id);
+          return subj?.site_id || null;
+        }
+      }
+    }
+    return null;
+  }
+
+  function isAllocationNodeRef(nodeRef) {
+    const kind = String(nodeRef || "")
+      .split(":")[0]
+      .toLowerCase();
+    return (
+      kind === "allocation" ||
+      kind === "treatment_arm" ||
+      kind === "arm" ||
+      kind === "randomization"
+    );
+  }
+
+  function applyNodeVisibilityMask(
+    node,
+    caller = null,
+    { siteCode = null, isAllocation = false, subjectStatus = null } = {}
+  ) {
+    if (!caller || !node) {
+      return node;
+    }
+    const effectiveSite = siteCode || resolveSiteCodeForNodeRef(node.ref);
+    if (effectiveSite && !isSitePermitted(caller, effectiveSite)) {
+      return {
+        ...node,
+        title: null,
+        status: null,
+        mask: "NotPermitted",
+      };
+    }
+    if (
+      (isAllocation || isAllocationNodeRef(node.ref)) &&
+      isCallerBlinded(caller) &&
+      String(subjectStatus || "").toUpperCase() !== "UNBLINDED"
+    ) {
+      return {
+        ...node,
+        title: null,
+        code: null,
+        status: null,
+        mask: "Blinded",
+      };
+    }
+    return node;
+  }
+
   function reset() {
     state.observations = createInitialObservations();
     const demoSiteInstitutions = DEMO_SITES.map((site) => ({
@@ -258,16 +363,17 @@ export function createKernelSliceStore(ctx) {
       ...cloneJson(DEMO_ORGANIZATIONS),
       ...demoSiteInstitutions,
     ];
-    state.sites = DEMO_SITES.map((site) => ({
-      ref: `site:${site.siteUuid}@1`,
-      code: site.code,
-      name: site.name,
-      country: site.country,
-      institution_ref: `organization:${site.institutionUuid}@1`,
-      institution_code: site.institutionCode,
-      institution_name: `${site.name} Institution`,
-    }));
+    if (!state.organizations.some((org) => org.kind === "SiteInstitution")) {
+      state.organizations.push({
+        ref: "organization:00000000-0000-4000-8000-000000000310@1", // deid-ignore
+        code: "US-CLINICAL-INST",
+        name: "US Academic Clinical Research Network",
+        kind: "SiteInstitution",
+      });
+    }
     state.idempotentStudyResponses = new Map();
+    state.idempotentSiteResponses = new Map();
+    state.idempotentStudySiteResponses = new Map();
 
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
     const baseCadenceStudy = createInitialDemoStudyDirectoryEntry();
@@ -319,35 +425,117 @@ export function createKernelSliceStore(ctx) {
       ],
     ]);
 
-    const buildStudySitesForStudy = (studyRef) =>
-      DEMO_SITES.map((site, idx) => {
-        const unversionedStudySiteRef =
-          studyRef === canonicalStudyEntry.ref
-            ? String(site.studySiteRef).split("@")[0]
-            : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
-        return {
-          ref: `${unversionedStudySiteRef}@1`,
-          study_site_id: unversionedStudySiteRef.replace(/^study_site:/, ""),
-          study_site_ref: unversionedStudySiteRef,
-          study_ref: String(studyRef).split("@")[0],
-          site_ref: `site:${site.siteUuid}@1`,
-          site_code: site.code,
-          site_name: site.name,
-          country: site.country,
-          institution_ref: `organization:${site.institutionUuid}@1`,
-          institution_code: site.institutionCode,
-          institution_name: `${site.name} Institution`,
-          status: site.complianceStage === "CONDUCT" ? "Active" : "Selected",
-          effective_versions: [],
-        };
-      });
+    const initialSiteInst =
+      state.organizations.find((o) => o.kind === "SiteInstitution") ||
+      state.organizations[0];
+    state.sites =
+      DEMO_SITES.length > 0
+        ? DEMO_SITES.map((demoSite, idx) => ({
+            ref: demoSite.siteUuid
+              ? `site:${demoSite.siteUuid}@1`
+              : `site:${makeUuidFromIndex("00000210", idx + 1)}@1`,
+            code: demoSite.code,
+            name: demoSite.name || demoSite.code,
+            country: demoSite.country || "US",
+            is_active: true,
+            institution_ref: demoSite.institutionUuid
+              ? `organization:${demoSite.institutionUuid}@1`
+              : initialSiteInst.ref,
+            institution_code: demoSite.institutionCode || initialSiteInst.code,
+            institution_name: demoSite.name
+              ? `${demoSite.name} Institution`
+              : initialSiteInst.name,
+            linked_study_count: state.studies.size,
+          }))
+        : [
+            {
+              ref: `site:${SITE_101_UUID}@1`,
+              code: "SITE-101",
+              name: "US Academic Clinical Research Center (SITE-101)",
+              country: "US",
+              is_active: true,
+              institution_ref: initialSiteInst.ref,
+              institution_code: initialSiteInst.code,
+              institution_name: initialSiteInst.name,
+              linked_study_count: state.studies.size,
+            },
+            {
+              ref: `site:${SITE_102_UUID}@1`,
+              code: "SITE-102",
+              name: "US Regional Trial Unit 2",
+              country: "US",
+              is_active: true,
+              institution_ref: initialSiteInst.ref,
+              institution_code: initialSiteInst.code,
+              institution_name: initialSiteInst.name,
+              linked_study_count: state.studies.size,
+            },
+          ];
+
+    const buildStudySitesForStudy = (studyRef, studyCode) =>
+      DEMO_SITES.length > 0
+        ? DEMO_SITES.map((site, idx) => {
+            const unversionedStudySiteRef =
+              studyRef === canonicalStudyEntry.ref && site.studySiteRef
+                ? String(site.studySiteRef).split("@")[0]
+                : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
+            return {
+              ref: `${unversionedStudySiteRef}@1`,
+              study_site_id: unversionedStudySiteRef.replace(
+                /^study_site:/,
+                ""
+              ),
+              study_site_ref: unversionedStudySiteRef,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              site_ref: `site:${site.siteUuid}@1`,
+              site_code: site.code,
+              site_name: site.name,
+              country: site.country,
+              institution_ref: `organization:${site.institutionUuid}@1`,
+              institution_code: site.institutionCode,
+              institution_name: `${site.name} Institution`,
+              status:
+                site.complianceStage === "CONDUCT" ? "Active" : "Selected",
+              is_active: true,
+              effective_versions: [],
+              mask: null,
+            };
+          })
+        : state.sites.map((site) => {
+            const siteUuid = resolveSiteUuid(site.code);
+            return {
+              ref: `study_site:${siteUuid}@1`,
+              study_site_id: siteUuid,
+              study_site_ref: `study_site:${siteUuid}`,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              site_ref: site.ref,
+              site_code: site.code,
+              site_name: site.name,
+              country: site.country,
+              institution_ref: site.institution_ref,
+              institution_code: site.institution_code,
+              institution_name: site.institution_name,
+              status: "Active",
+              is_active: true,
+              effective_versions: [],
+              mask: null,
+            };
+          });
 
     state.studySites = new Map([
-      [canonicalStudyCode, buildStudySitesForStudy(canonicalStudyEntry.ref)],
-      ["DEMO-01", buildStudySitesForStudy(STUDY_REF)],
+      [
+        canonicalStudyCode.toUpperCase(),
+        buildStudySitesForStudy(canonicalStudyEntry.ref, canonicalStudyCode),
+      ],
+      ["DEMO-01", buildStudySitesForStudy(STUDY_REF, "DEMO-01")],
       [
         "STUDY-USDM-001",
-        buildStudySitesForStudy("study:00000000-0000-0000-0000-000000000002"), // deid-ignore
+        buildStudySitesForStudy(
+          "study:00000000-0000-0000-0000-000000000002", // deid-ignore
+          "STUDY-USDM-001"
+        ),
       ],
     ]);
 
@@ -698,21 +886,42 @@ export function createKernelSliceStore(ctx) {
       };
     },
 
-    getNode(nodeRef) {
+    getNode(nodeRef, caller = null) {
       if (String(nodeRef).startsWith("study:")) {
         return cloneJson(getStudyByRefOrCode(nodeRef));
+      }
+      if (isAllocationNodeRef(nodeRef)) {
+        const subj =
+          resolveEnrollmentByIdOrCode(nodeRef) || state.subjects[0] || null;
+        const armCode = subj?.treatment_group || "ARM-A";
+        const baseNode = {
+          ref: nodeRef,
+          kind: String(nodeRef).split(":")[0] || "allocation",
+          title: `Treatment Allocation · ${armCode}`,
+          code: armCode,
+          status: "ALLOCATED",
+          mask: null,
+        };
+        return applyNodeVisibilityMask(baseNode, caller, {
+          siteCode: subj?.site_id || null,
+          isAllocation: true,
+          subjectStatus: subj?.status || null,
+        });
       }
       if (String(nodeRef).startsWith("observation:")) {
         const obs = state.observations.get(nodeRef);
         if (obs) {
-          return {
-            ref: obs.ref,
-            kind: "observation",
-            title: `Observation ${obs.concept}`,
-            code: obs.concept,
-            status: "RECORDED",
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: obs.ref,
+              kind: "observation",
+              title: `Observation ${obs.concept}`,
+              code: obs.concept,
+              status: "RECORDED",
+              mask: null,
+            },
+            caller
+          );
         }
       }
       if (String(nodeRef).startsWith("protocol_version:")) {
@@ -729,18 +938,26 @@ export function createKernelSliceStore(ctx) {
         };
       }
       if (String(nodeRef).startsWith("study_site:")) {
-        const siteCode = resolveSiteCodeFromRef(nodeRef, state.subjects);
-        return {
-          ref: nodeRef,
-          kind: "study_site",
-          title:
-            siteCode === "SITE-102"
-              ? "US Regional Trial Unit 2"
-              : `US Academic Clinical Research Center (${siteCode})`,
-          code: siteCode,
-          status: "ACTIVE",
-          mask: null,
-        };
+        const siteCode = resolveSiteCodeFromRef(
+          nodeRef,
+          state.subjects,
+          state.studySites
+        );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "study_site",
+            title:
+              siteCode === "SITE-102"
+                ? "US Regional Trial Unit 2"
+                : `US Academic Clinical Research Center (${siteCode})`,
+            code: siteCode,
+            status: "ACTIVE",
+            mask: null,
+          },
+          caller,
+          { siteCode }
+        );
       }
       if (String(nodeRef).startsWith("enrollment:")) {
         const rawId = String(nodeRef)
@@ -748,14 +965,18 @@ export function createKernelSliceStore(ctx) {
           .split("@")[0];
         const subj = state.subjects.find((s) => s.id === rawId);
         if (subj) {
-          return {
-            ref: nodeRef,
-            kind: "enrollment",
-            title: `Participant ${subj.subject_id}`,
-            code: subj.subject_id,
-            status: subj.status,
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "enrollment",
+              title: `Participant ${subj.subject_id}`,
+              code: subj.subject_id,
+              status: subj.status,
+              mask: null,
+            },
+            caller,
+            { siteCode: subj.site_id }
+          );
         }
       }
       if (String(nodeRef).startsWith("collection_instance:")) {
@@ -765,35 +986,42 @@ export function createKernelSliceStore(ctx) {
         const form =
           state.forms.get(rawFormId) || state.forms.get(DEFAULT_FORM_UUID);
         if (form) {
-          return {
-            ref: nodeRef,
-            kind: "collection_instance",
-            title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
-            code: form.collection_spec_id,
-            status: form.complete ? "COMPLETE" : "OPEN",
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "collection_instance",
+              title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
+              code: form.collection_spec_id,
+              status: form.complete ? "COMPLETE" : "OPEN",
+              mask: null,
+            },
+            caller
+          );
         }
       }
-      return {
-        ref: nodeRef,
-        kind: String(nodeRef).split(":")[0] || "node",
-        title: String(nodeRef),
-        code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
-        status: "ACTIVE",
-        mask: null,
-      };
+      return applyNodeVisibilityMask(
+        {
+          ref: nodeRef,
+          kind: String(nodeRef).split(":")[0] || "node",
+          title: String(nodeRef),
+          code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
+          status: "ACTIVE",
+          mask: null,
+        },
+        caller
+      );
     },
 
-    getZoomPath(nodeRef) {
+    getZoomPath(nodeRef, caller = null) {
       const refStr = String(nodeRef || "");
       if (refStr.startsWith("enrollment:")) {
-        const rawId = refStr.replace(/^enrollment:/, "");
+        const rawId = refStr.replace(/^enrollment:/, "").split("@")[0];
         const subj = state.subjects.find((s) => s.id === rawId);
         const study = subj
           ? getStudyByRefOrCode(subj.study_id)
           : state.studies.get("DEMO-01");
         const siteCode = subj?.site_id || "SITE-101";
+        const sitePermitted = !caller || isSitePermitted(caller, siteCode);
         return [
           {
             level: "study",
@@ -803,21 +1031,26 @@ export function createKernelSliceStore(ctx) {
           },
           {
             level: "study_site",
-            label: siteCode,
+            label: sitePermitted ? siteCode : null,
             ref: `study_site:${resolveSiteUuid(siteCode)}`,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
           {
             level: "enrollment",
-            label: subj?.subject_id || rawId.slice(-6),
+            label: sitePermitted ? subj?.subject_id || rawId.slice(-6) : null,
             ref: refStr,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
         ];
       }
       if (refStr.startsWith("study_site:")) {
-        const siteCode = resolveSiteCodeFromRef(refStr, state.subjects);
+        const siteCode = resolveSiteCodeFromRef(
+          refStr,
+          state.subjects,
+          state.studySites
+        );
         const study = state.studies.get("DEMO-01");
+        const sitePermitted = !caller || isSitePermitted(caller, siteCode);
         return [
           {
             level: "study",
@@ -827,9 +1060,9 @@ export function createKernelSliceStore(ctx) {
           },
           {
             level: "study_site",
-            label: siteCode,
+            label: sitePermitted ? siteCode : null,
             ref: refStr,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
         ];
       }
@@ -848,29 +1081,42 @@ export function createKernelSliceStore(ctx) {
         nodeRef !== study.ref &&
         refStr.split("@")[0] !== study.ref.split("@")[0]
       ) {
-        const node = methods.getNode(nodeRef);
+        const node = methods.getNode(nodeRef, caller);
         steps.push({
           level: node.kind,
-          label: node.title || node.code,
+          label: node.mask ? null : node.title || node.code,
           ref: node.ref,
-          mask: null,
+          mask: node.mask ?? null,
         });
       }
       return steps;
     },
 
-    getChildren(nodeRef) {
+    getChildren(nodeRef, caller = null) {
       if (String(nodeRef).startsWith("study:")) {
         const study = getStudyByRefOrCode(nodeRef);
         const studySubjects = state.subjects.filter(
           (s) => s.study_id.toUpperCase() === study.code.toUpperCase()
         );
-        const effectiveSubjects =
-          studySubjects.length > 0 ? studySubjects : state.subjects;
+        const effectiveSubjects = study.isCustomCreated
+          ? studySubjects
+          : studySubjects.length > 0
+            ? studySubjects
+            : state.subjects;
+        const linkedStudySites =
+          state.studySites.get(study.code.toUpperCase()) || [];
+        const linkedByCode = new Map(
+          linkedStudySites
+            .filter((item) => item.site_code)
+            .map((item) => [item.site_code, item])
+        );
+        const defaultCodes = study.isCustomCreated
+          ? []
+          : ["SITE-101", "SITE-102"];
         const siteCodes = [
           ...new Set([
-            "SITE-101",
-            "SITE-102",
+            ...defaultCodes,
+            ...linkedByCode.keys(),
             ...effectiveSubjects.map((s) => s.site_id).filter(Boolean),
           ]),
         ];
@@ -878,18 +1124,26 @@ export function createKernelSliceStore(ctx) {
           const siteSubjects = effectiveSubjects.filter(
             (s) => (s.site_id || "SITE-101") === siteCode
           );
+          const linkedMeta = linkedByCode.get(siteCode);
           return {
-            node: {
-              ref: `study_site:${resolveSiteUuid(siteCode)}`,
-              kind: "study_site",
-              title:
-                siteCode === "SITE-102"
-                  ? "US Regional Trial Unit 2"
-                  : `US Academic Clinical Research Center (${siteCode})`,
-              code: siteCode,
-              status: "ACTIVE",
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: linkedMeta?.ref
+                  ? linkedMeta.ref.split("@")[0]
+                  : `study_site:${resolveSiteUuid(siteCode)}`,
+                kind: "study_site",
+                title:
+                  linkedMeta?.site_name ||
+                  (siteCode === "SITE-102"
+                    ? "US Regional Trial Unit 2"
+                    : `US Academic Clinical Research Center (${siteCode})`),
+                code: siteCode,
+                status: linkedMeta?.status || "ACTIVE",
+                mask: null,
+              },
+              caller,
+              { siteCode }
+            ),
             child_count: siteSubjects.length,
             group: "sites",
           };
@@ -909,7 +1163,37 @@ export function createKernelSliceStore(ctx) {
           },
           ...siteNodes,
           ...effectiveSubjects.map((s) => ({
-            node: {
+            node: applyNodeVisibilityMask(
+              {
+                ref: `enrollment:${s.id}`,
+                kind: "enrollment",
+                title: `Participant ${s.subject_id}`,
+                code: s.subject_id,
+                status: s.status,
+                mask: null,
+              },
+              caller,
+              { siteCode: s.site_id || "SITE-101" }
+            ),
+            child_count: 1,
+            group: "enrollments",
+          })),
+        ];
+      }
+      if (String(nodeRef).startsWith("study_site:")) {
+        const siteCode = resolveSiteCodeFromRef(
+          nodeRef,
+          state.subjects,
+          state.studySites
+        );
+        const siteSubjects = state.subjects.filter(
+          (s) =>
+            String(s.site_id || "SITE-101").toUpperCase() ===
+            siteCode.toUpperCase()
+        );
+        return siteSubjects.map((s) => ({
+          node: applyNodeVisibilityMask(
+            {
               ref: `enrollment:${s.id}`,
               kind: "enrollment",
               title: `Participant ${s.subject_id}`,
@@ -917,27 +1201,9 @@ export function createKernelSliceStore(ctx) {
               status: s.status,
               mask: null,
             },
-            child_count: 1,
-            group: "enrollments",
-          })),
-        ];
-      }
-      if (String(nodeRef).startsWith("study_site:")) {
-        const siteCode = resolveSiteCodeFromRef(nodeRef, state.subjects);
-        const siteSubjects = state.subjects.filter(
-          (s) =>
-            String(s.site_id || "SITE-101").toUpperCase() ===
-            siteCode.toUpperCase()
-        );
-        return siteSubjects.map((s) => ({
-          node: {
-            ref: `enrollment:${s.id}`,
-            kind: "enrollment",
-            title: `Participant ${s.subject_id}`,
-            code: s.subject_id,
-            status: s.status,
-            mask: null,
-          },
+            caller,
+            { siteCode }
+          ),
           child_count: 1,
           group: "enrollments",
         }));
@@ -946,6 +1212,8 @@ export function createKernelSliceStore(ctx) {
         const enrollmentId = String(nodeRef)
           .replace(/^enrollment:/, "")
           .split("@")[0];
+        const subj = state.subjects.find((s) => s.id === enrollmentId) || null;
+        const siteCode = subj?.site_id || null;
         let forms = [...state.forms.values()].filter(
           (f) => f.enrollment_id === enrollmentId
         );
@@ -953,18 +1221,45 @@ export function createKernelSliceStore(ctx) {
           const fallback = state.forms.get(DEFAULT_FORM_UUID);
           if (fallback) forms = [fallback];
         }
-        return forms.map((f) => ({
-          node: {
-            ref: `collection_instance:${f.form_id}`,
-            kind: "collection_instance",
-            title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
-            code: f.collection_spec_id,
-            status: f.complete ? "COMPLETE" : "OPEN",
-            mask: null,
-          },
+        const formChildren = forms.map((f) => ({
+          node: applyNodeVisibilityMask(
+            {
+              ref: `collection_instance:${f.form_id}`,
+              kind: "collection_instance",
+              title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
+              code: f.collection_spec_id,
+              status: f.complete ? "COMPLETE" : "OPEN",
+              mask: null,
+            },
+            caller,
+            { siteCode }
+          ),
           child_count: Array.isArray(f.items) ? f.items.length : 0,
           group: f.planned_activity_id || "forms",
         }));
+        if (subj?.treatment_group) {
+          formChildren.push({
+            node: applyNodeVisibilityMask(
+              {
+                ref: `allocation:${enrollmentId}`,
+                kind: "allocation",
+                title: `Treatment Allocation · ${subj.treatment_group}`,
+                code: subj.treatment_group,
+                status: "ALLOCATED",
+                mask: null,
+              },
+              caller,
+              {
+                siteCode,
+                isAllocation: true,
+                subjectStatus: subj.status,
+              }
+            ),
+            child_count: 0,
+            group: "allocation",
+          });
+        }
+        return formChildren;
       }
       if (String(nodeRef).startsWith("collection_instance:")) {
         const formId = String(nodeRef)
@@ -973,17 +1268,22 @@ export function createKernelSliceStore(ctx) {
         const form =
           state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
         if (!form || !Array.isArray(form.items)) return [];
+        const siteCode = resolveSiteCodeForNodeRef(nodeRef);
         return form.items
           .filter((it) => it.observation_id)
           .map((it) => ({
-            node: {
-              ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
-              kind: "observation",
-              title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
-              code: it.item_id,
-              status: `r${Math.max(1, Number(it.revision || 1))}`,
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
+                kind: "observation",
+                title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
+                code: it.item_id,
+                status: `r${Math.max(1, Number(it.revision || 1))}`,
+                mask: null,
+              },
+              caller,
+              { siteCode }
+            ),
             child_count: 0,
             group: null,
           }));
@@ -1017,7 +1317,7 @@ export function createKernelSliceStore(ctx) {
       }));
     },
 
-    listOrganizations(kind) {
+    listOrganizations(kind = "") {
       const filterKind = String(kind || "").trim();
       const orgs = filterKind
         ? state.organizations.filter(
@@ -1032,11 +1332,11 @@ export function createKernelSliceStore(ctx) {
       if (!String(reason || "").trim()) {
         return {
           error: {
-            status: 400,
+            status: 422,
             problem: {
               title: "Missing X-Change-Reason",
-              status: 400,
-              code: "Kernel.Audit.MissingReasonForChange",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
               detail:
                 "Header 'X-Change-Reason' is required when registering an organization.",
             },
@@ -1047,10 +1347,10 @@ export function createKernelSliceStore(ctx) {
       if (!name) {
         return {
           error: {
-            status: 400,
+            status: 422,
             problem: {
               title: "Invalid organization request",
-              status: 400,
+              status: 422,
               code: "K.Identity.NameRequired",
               detail: "Organization name is required.",
             },
@@ -1102,21 +1402,29 @@ export function createKernelSliceStore(ctx) {
       );
     },
 
-    createSite(body = {}, { reason = "" } = {}) {
+    createSite(body = {}, { reason = "", idempotencyKey = "" } = {}) {
       if (!String(reason || "").trim()) {
         return {
           error: {
-            status: 400,
+            status: 422,
             problem: {
               title: "Missing X-Change-Reason",
-              status: 400,
-              code: "Kernel.Audit.MissingReasonForChange",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
               detail:
                 "Header 'X-Change-Reason' is required when registering a site.",
             },
           },
         };
       }
+      const trimmedKey = String(idempotencyKey || "").trim();
+      if (trimmedKey && state.idempotentSiteResponses?.has(trimmedKey)) {
+        return {
+          data: cloneJson(state.idempotentSiteResponses.get(trimmedKey)),
+          replayed: true,
+        };
+      }
+
       const siteCode = String(body.site_code || "")
         .trim()
         .toUpperCase();
@@ -1131,13 +1439,14 @@ export function createKernelSliceStore(ctx) {
             problem: {
               title: "Invalid site registration request",
               status: 422,
-              code: "K.Site.CountryInvalid",
+              code: "K.Study.CountryInvalid",
               detail:
                 "Site code, name, and a two-letter ISO country code are required.",
             },
           },
         };
       }
+
       if (
         state.sites.some((s) => s.code.toUpperCase() === siteCode.toUpperCase())
       ) {
@@ -1147,13 +1456,14 @@ export function createKernelSliceStore(ctx) {
             problem: {
               title: "Duplicate site code",
               status: 409,
-              code: "K.Node.AlreadyExists",
-              detail: `Site '${siteCode}' already exists.`,
+              code: "K.Study.SiteCodeTaken",
+              detail: `A site with code '${siteCode}' already exists in this tenant.`,
             },
           },
         };
       }
-      let inst = state.organizations.find(
+
+      let org = state.organizations.find(
         (o) =>
           (body.institution_ref &&
             o.ref.split("@")[0] ===
@@ -1162,96 +1472,176 @@ export function createKernelSliceStore(ctx) {
             o.code.toUpperCase() ===
               String(body.institution_code).trim().toUpperCase())
       );
-      if (!inst) {
-        const instRes = methods.createOrganization(
-          {
-            name: String(body.institution_name || `${name} Institution`).trim(),
-            code: body.institution_code || `INST-${siteCode}`,
-            kind: "SiteInstitution",
-          },
-          { reason }
-        );
-        if (instRes.error) return instRes;
-        inst = instRes.data;
+      if (org && org.kind !== "SiteInstitution") {
+        if (body.institution_ref || body.institution_code) {
+          return {
+            error: {
+              status: 422,
+              problem: {
+                title: "Invalid site institution kind",
+                status: 422,
+                code: "K.Study.OrganizationKindMismatch",
+                detail: `Organization '${org.code}' has kind '${org.kind}', expected 'SiteInstitution'.`,
+              },
+            },
+          };
+        }
+        org = null;
       }
+
+      if (!org) {
+        const instName = String(body.institution_name || "").trim();
+        if (!instName && !String(body.institution_code || "").trim()) {
+          return {
+            error: {
+              status: 422,
+              problem: {
+                title: "Missing site institution",
+                status: 422,
+                code: "K.Study.MissingInstitution",
+                detail:
+                  "Select an existing SiteInstitution or provide institution_name.",
+              },
+            },
+          };
+        }
+        const derivedBase = (
+          String(body.institution_code || "").trim() ||
+          instName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+        ).toUpperCase();
+        const codeTaken = state.organizations.some(
+          (o) => o.code.toUpperCase() === derivedBase
+        );
+        const finalOrgCode = codeTaken ? `${derivedBase}-SITE` : derivedBase;
+        const orgIdx = nextCounter();
+        org = {
+          ref: `organization:${makeUuidFromIndex("00000310", orgIdx)}@1`,
+          code: finalOrgCode,
+          name: instName || finalOrgCode,
+          kind: "SiteInstitution",
+        };
+        state.organizations.push(org);
+      }
+
       const idx = nextCounter();
       const created = {
-        ref: `site:${makeUuidFromIndex("00000320", idx)}@1`,
+        ref: `site:${makeUuidFromIndex("00000220", idx)}@1`,
         code: siteCode,
         name,
         country,
-        institution_ref: inst.ref,
-        institution_code: inst.code,
-        institution_name: inst.name,
+        is_active: true,
+        institution_ref: org.ref,
+        institution_code: org.code,
+        institution_name: org.name,
+        linked_study_count: 0,
       };
       state.sites.push(created);
+      if (trimmedKey && state.idempotentSiteResponses) {
+        state.idempotentSiteResponses.set(trimmedKey, cloneJson(created));
+      }
       return { data: cloneJson(created) };
     },
 
-    listStudySites(studyRef) {
-      const normalized = String(studyRef || "").trim();
-      const unpinned = normalized.split("@")[0];
-      let matchedCode = null;
-      for (const [code, study] of state.studies.entries()) {
+    listStudySites(studyRefOrCode = "") {
+      const clean = String(studyRefOrCode || "").trim();
+      const unversioned = clean.split("@")[0];
+      let matchedStudy = null;
+      for (const candidate of state.studies.values()) {
         if (
-          code.toUpperCase() === normalized.toUpperCase() ||
-          String(study.ref).split("@")[0] === unpinned
+          candidate.code.toUpperCase() === clean.toUpperCase() ||
+          String(candidate.ref).split("@")[0] === unversioned
         ) {
-          matchedCode = code;
+          matchedStudy = candidate;
           break;
         }
       }
-      if (!matchedCode) return [];
-      return cloneJson(state.studySites.get(matchedCode) || []);
-    },
-
-    linkSiteToStudy(studyRef, body = {}, { reason = "" } = {}) {
-      if (!String(reason || "").trim()) {
-        return {
-          error: {
-            status: 400,
-            problem: {
-              title: "Missing X-Change-Reason",
-              status: 400,
-              code: "Kernel.Audit.MissingReasonForChange",
-              detail:
-                "Header 'X-Change-Reason' is required when linking a site.",
-            },
-          },
-        };
-      }
-      const normalized = String(studyRef || "").trim();
-      const unpinned = normalized.split("@")[0];
-      let studyEntry = null;
-      for (const study of state.studies.values()) {
-        if (
-          study.code.toUpperCase() === normalized.toUpperCase() ||
-          String(study.ref).split("@")[0] === unpinned
-        ) {
-          studyEntry = study;
-          break;
-        }
-      }
-      if (!studyEntry) {
+      if (!matchedStudy) {
         return {
           error: {
             status: 404,
             problem: {
               title: "Study not found",
               status: 404,
-              code: "K.Node.NotFound",
-              detail: `Study '${studyRef}' was not found.`,
+              code: "K.Study.NotFound",
+              detail: `No visible study '${clean}' exists in this tenant.`,
             },
           },
         };
       }
+      const list =
+        state.studySites.get(matchedStudy.code.toUpperCase()) ||
+        state.studySites.get(matchedStudy.code) ||
+        [];
+      return {
+        data: cloneJson(
+          [...list].sort((a, b) =>
+            String(a.site_code || "").localeCompare(String(b.site_code || ""))
+          )
+        ),
+      };
+    },
+
+    linkSiteToStudy(
+      studyRefOrCode = "",
+      body = {},
+      { reason = "", idempotencyKey = "" } = {}
+    ) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when linking a site to a study.",
+            },
+          },
+        };
+      }
+      const trimmedKey = String(idempotencyKey || "").trim();
+      if (trimmedKey && state.idempotentStudySiteResponses?.has(trimmedKey)) {
+        return {
+          data: cloneJson(state.idempotentStudySiteResponses.get(trimmedKey)),
+          replayed: true,
+        };
+      }
+
+      const clean = String(studyRefOrCode || "").trim();
+      const unversioned = clean.split("@")[0];
+      let matchedStudy = null;
+      for (const candidate of state.studies.values()) {
+        if (
+          candidate.code.toUpperCase() === clean.toUpperCase() ||
+          String(candidate.ref).split("@")[0] === unversioned
+        ) {
+          matchedStudy = candidate;
+          break;
+        }
+      }
+      if (!matchedStudy) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Study not found",
+              status: 404,
+              code: "K.Study.NotFound",
+              detail: `No visible study '${clean}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+
+      const reqRef = String(body.site_ref || "")
+        .trim()
+        .split("@")[0];
+      const reqCode = String(body.site_code || "").trim();
       let site = state.sites.find(
-        (s) =>
-          (body.site_ref &&
-            s.ref.split("@")[0] === String(body.site_ref).split("@")[0]) ||
-          (body.site_code &&
-            s.code.toUpperCase() ===
-              String(body.site_code).trim().toUpperCase())
+        (candidate) =>
+          (reqRef && candidate.ref.split("@")[0] === reqRef) ||
+          (reqCode && candidate.code.toUpperCase() === reqCode.toUpperCase())
       );
       if (
         !site &&
@@ -1268,14 +1658,16 @@ export function createKernelSliceStore(ctx) {
           country: String(body.country || "US")
             .trim()
             .toUpperCase(),
+          is_active: true,
           institution_ref:
             body.institution_ref ||
-            studyEntry.sponsor_ref ||
+            matchedStudy.sponsor_ref ||
             DEMO_ORGANIZATIONS[0].ref,
           institution_code:
-            studyEntry.sponsor_code || DEMO_ORGANIZATIONS[0].code,
+            matchedStudy.sponsor_code || DEMO_ORGANIZATIONS[0].code,
           institution_name:
-            studyEntry.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+            matchedStudy.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+          linked_study_count: 1,
         };
         state.sites.push(site);
       }
@@ -1286,16 +1678,22 @@ export function createKernelSliceStore(ctx) {
             problem: {
               title: "Site not found",
               status: 404,
-              code: "K.Node.NotFound",
-              detail: "Requested investigational site was not found.",
+              code: "K.Study.SiteUnknown",
+              detail:
+                "The specified clinical site was not found in this tenant.",
             },
           },
         };
       }
-      const existingLinks = state.studySites.get(studyEntry.code) || [];
+
+      const key = matchedStudy.code.toUpperCase();
+      const existingList =
+        state.studySites.get(key) ||
+        state.studySites.get(matchedStudy.code) ||
+        [];
       if (
-        existingLinks.some(
-          (l) => l.site_code.toUpperCase() === site.code.toUpperCase()
+        existingList.some(
+          (entry) => entry.site_code?.toUpperCase() === site.code.toUpperCase()
         )
       ) {
         return {
@@ -1304,19 +1702,21 @@ export function createKernelSliceStore(ctx) {
             problem: {
               title: "Site already linked",
               status: 409,
-              code: "K.StudySite.DuplicateSite",
-              detail: `Site '${site.code}' is already linked to '${studyEntry.code}'.`,
+              code: "K.Study.AlreadyLinked",
+              detail: `Site '${site.code}' is already linked to '${matchedStudy.code}'.`,
             },
           },
         };
       }
+
       const idx = nextCounter();
       const studySiteUuid = makeUuidFromIndex("00000410", idx);
-      const linked = {
+      const studySite = {
         ref: `study_site:${studySiteUuid}@1`,
         study_site_id: studySiteUuid,
         study_site_ref: `study_site:${studySiteUuid}`,
-        study_ref: String(studyEntry.ref).split("@")[0],
+        study_ref: String(matchedStudy.ref).split("@")[0],
+        study_code: matchedStudy.code,
         site_ref: site.ref,
         site_code: site.code,
         site_name: site.name,
@@ -1325,14 +1725,22 @@ export function createKernelSliceStore(ctx) {
         institution_code: site.institution_code,
         institution_name: site.institution_name,
         status: "Selected",
+        is_active: true,
         effective_versions: [],
+        mask: null,
       };
-      const nextLinks = [...existingLinks, linked].sort((a, b) =>
-        a.site_code.localeCompare(b.site_code)
+      const nextLinks = [...existingList, studySite].sort((a, b) =>
+        String(a.site_code || "").localeCompare(String(b.site_code || ""))
       );
-      state.studySites.set(studyEntry.code, nextLinks);
-      studyEntry.site_count = nextLinks.length;
-      return { data: cloneJson(linked) };
+      state.studySites.set(key, nextLinks);
+      matchedStudy.site_count = nextLinks.length;
+      if (trimmedKey && state.idempotentStudySiteResponses) {
+        state.idempotentStudySiteResponses.set(
+          trimmedKey,
+          cloneJson(studySite)
+        );
+      }
+      return { data: cloneJson(studySite) };
     },
 
     createStudy(body = {}, { reason = "", idempotencyKey = "" } = {}) {
@@ -1441,7 +1849,7 @@ export function createKernelSliceStore(ctx) {
         isCustomCreated: true,
       };
       state.studies.set(code, created);
-      state.studySites.set(code, []);
+      state.studySites.set(code.toUpperCase(), []);
       let linkedSite = null;
       if (
         body.link_sandbox_site ||
@@ -1494,8 +1902,9 @@ export function createKernelSliceStore(ctx) {
       return { data: response };
     },
 
-    getLineage(nodeRef, direction = "upstream", depth = 3) {
+    getLineage(nodeRef, direction = "upstream", depth = 3, caller = null) {
       const now = new Date().toISOString();
+      const startNode = methods.getNode(nodeRef, caller);
       return {
         start: nodeRef,
         direction,
@@ -1507,7 +1916,7 @@ export function createKernelSliceStore(ctx) {
             handle: "n0",
             kind: String(nodeRef).split(":")[0] || "node",
             ref: nodeRef,
-            mask: null,
+            mask: startNode?.mask ?? null,
             distance: 0,
           },
           {
@@ -1547,27 +1956,60 @@ export function createKernelSliceStore(ctx) {
       };
     },
 
-    getDependents(nodeRef, depth = 3) {
+    getDependents(nodeRef, depth = 3, caller = null) {
       const now = new Date().toISOString();
+      const groups = [
+        {
+          kind: "enrollment",
+          count: state.subjects.length,
+          objects: state.subjects.map((subj, index) => {
+            const sitePermitted =
+              !caller || isSitePermitted(caller, subj.site_id || "SITE-101");
+            return {
+              handle: `dep-${index}`,
+              kind: "enrollment",
+              ref: `enrollment:${subj.id}`,
+              mask: sitePermitted ? null : "NotPermitted",
+              distance: 1,
+            };
+          }),
+        },
+      ];
+      const allocatedSubjects = state.subjects.filter(
+        (subj) => subj.treatment_group
+      );
+      if (allocatedSubjects.length > 0) {
+        groups.push({
+          kind: "allocation",
+          count: allocatedSubjects.length,
+          objects: allocatedSubjects.map((subj, index) => {
+            const sitePermitted =
+              !caller || isSitePermitted(caller, subj.site_id || "SITE-101");
+            const blinded =
+              caller &&
+              isCallerBlinded(caller) &&
+              String(subj.status || "").toUpperCase() !== "UNBLINDED";
+            return {
+              handle: `alloc-${index}`,
+              kind: "allocation",
+              ref: `allocation:${subj.id}`,
+              mask: !sitePermitted
+                ? "NotPermitted"
+                : blinded
+                  ? "Blinded"
+                  : null,
+              distance: 2,
+            };
+          }),
+        });
+      }
       return {
         start: nodeRef,
         depth,
         valid_at: now,
         known_at: now,
-        groups: [
-          {
-            kind: "enrollment",
-            count: state.subjects.length,
-            objects: state.subjects.map((subj, index) => ({
-              handle: `dep-${index}`,
-              kind: "enrollment",
-              ref: `enrollment:${subj.id}`,
-              mask: null,
-              distance: 1,
-            })),
-          },
-        ],
-        total: state.subjects.length,
+        groups,
+        total: groups.reduce((sum, g) => sum + g.count, 0),
         truncated: false,
       };
     },
@@ -2539,29 +2981,91 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
     }),
     http.get("*/api/v1/kernel/authorization/can-i", ({ request }) => {
       const url = new URL(request.url);
-      const capability = url.searchParams.get("capability") || "kernel.read";
-      const resource = url.searchParams.get("resource") || "study:demo";
-      return HttpResponse.json(store.buildDecision(capability, resource, true));
+      const capability =
+        url.searchParams.get("capability") ||
+        url.searchParams.get("action") ||
+        "kernel.read";
+      const resource =
+        url.searchParams.get("resource") ||
+        url.searchParams.get("scope") ||
+        "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
+    }),
+    http.get("*/api/v1/kernel/capabilities/can-i", ({ request }) => {
+      const url = new URL(request.url);
+      const capability =
+        url.searchParams.get("capability") ||
+        url.searchParams.get("action") ||
+        "kernel.read";
+      const resource =
+        url.searchParams.get("resource") ||
+        url.searchParams.get("scope") ||
+        "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
     }),
     http.post("*/api/v1/kernel/authorization/can-i", async ({ request }) => {
       const body = await readJsonBody(request);
-      const capability = body?.capability || "kernel.read";
-      const resource = body?.resource || "study:demo";
-      return HttpResponse.json(store.buildDecision(capability, resource, true));
+      const capability = body?.capability || body?.action || "kernel.read";
+      const resource = body?.resource || body?.scope || "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
     }),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/path", ({ params }) =>
+    http.post("*/api/v1/kernel/capabilities/can-i", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const capability = body?.capability || body?.action || "kernel.read";
+      const resource = body?.resource || body?.scope || "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
+    }),
+    http.get("*/api/v1/kernel/nodes/:nodeRef/path", ({ params, request }) =>
       HttpResponse.json(
-        store.getZoomPath(decodeURIComponent(String(params.nodeRef)))
+        store.getZoomPath(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/children", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef/children", ({ params, request }) =>
       HttpResponse.json(
-        store.getChildren(decodeURIComponent(String(params.nodeRef)))
+        store.getChildren(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/commands", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef/commands", ({ params, request }) =>
       HttpResponse.json(
-        store.getCommands(decodeURIComponent(String(params.nodeRef)))
+        evaluateNodeCommands(
+          resolveDemoCaller(request),
+          decodeURIComponent(String(params.nodeRef)),
+          store
+        )
       )
     ),
     http.get(
@@ -2572,7 +3076,8 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
           store.getLineage(
             decodeURIComponent(String(params.nodeRef)),
             url.searchParams.get("direction") || "upstream",
-            Number(url.searchParams.get("depth") || 3)
+            Number(url.searchParams.get("depth") || 3),
+            resolveDemoCaller(request)
           )
         );
       }
@@ -2584,14 +3089,18 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
         return HttpResponse.json(
           store.getDependents(
             decodeURIComponent(String(params.nodeRef)),
-            Number(url.searchParams.get("depth") || 3)
+            Number(url.searchParams.get("depth") || 3),
+            resolveDemoCaller(request)
           )
         );
       }
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params, request }) =>
       HttpResponse.json(
-        store.getNode(decodeURIComponent(String(params.nodeRef)))
+        store.getNode(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
     http.get("*/api/v1/kernel/studies", () =>
@@ -2617,7 +3126,8 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
     http.post("*/api/v1/kernel/organizations", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createOrganization(body, { reason });
+      const idempotencyKey = readIdempotencyKey(request);
+      const result = store.createOrganization(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -2631,7 +3141,8 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
     http.post("*/api/v1/kernel/sites", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createSite(body, { reason });
+      const idempotencyKey = readIdempotencyKey(request);
+      const result = store.createSite(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -2639,27 +3150,39 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
       }
       return HttpResponse.json(result.data, { status: 201 });
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) =>
-      HttpResponse.json(
-        store.listStudySites(decodeURIComponent(String(params.studyRef)))
-      )
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) => {
+      const result = store.listStudySites(
+        decodeURIComponent(String(params.studyRef))
+      );
+      if (Array.isArray(result)) {
+        return HttpResponse.json(result);
+      }
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.post(
       "*/api/v1/kernel/studies/:studyRef/sites",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         const reason = readRequiredReasonHeader(request);
+        const idempotencyKey = readIdempotencyKey(request);
         const result = store.linkSiteToStudy(
           decodeURIComponent(String(params.studyRef)),
           body,
-          { reason }
+          { reason, idempotencyKey }
         );
         if (result.error) {
           return HttpResponse.json(result.error.problem, {
             status: result.error.status,
           });
         }
-        return HttpResponse.json(result.data, { status: 201 });
+        return HttpResponse.json(result.data, {
+          status: result.replayed ? 200 : 201,
+        });
       }
     ),
     http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
@@ -2729,6 +3252,27 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
         return HttpResponse.json(result.data);
       }
     ),
+    http.get("*/api/v1/kernel/work-queues", () =>
+      HttpResponse.json({
+        queues: [],
+      })
+    ),
+    http.post("*/api/v1/kernel/work-queues", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          definition:
+            "work_queue_definition:01960000-0000-7000-8000-000000000900", // deid-ignore
+          code: body?.code || "custom_queue",
+          version: 1,
+          title: body?.title || "Custom Queue",
+          capability: body?.capability || "observation.verify",
+          verb_class: body?.verb_class || "Execute",
+          source: body?.source || "observation.awaiting_verification",
+        },
+        { status: 201 }
+      );
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/validation/findings",
       ({ params, request }) => {
@@ -2894,16 +3438,22 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
       const targetRef =
         body?.stored_version_ref || body?.base_version_ref || STUDY_REF;
       return HttpResponse.json({
-        scope: targetRef,
+        scope: STUDY_REF,
         as_of: { valid_at: now, known_at: now },
-        candidate: body?.stored_version_ref
-          ? { source: "stored", version_ref: body.stored_version_ref }
-          : {
-              title: "Candidate Protocol Simulation",
-              content_hash: "sha256-demo-sim-cand",
-              element_count: 14,
-            },
-        engine_versions: [{ component: "demo-simulator", version: "1.0.0" }],
+        candidate: {
+          kind: "ProtocolVersion",
+          version: body?.stored_version_ref || null,
+          base_version: body?.base_version_ref || null,
+          content_hash: "sha256:demo-sim-cand",
+          base_content_hash: body?.base_version_ref
+            ? "sha256:demo-sim-base"
+            : null,
+        },
+        engine_versions: [
+          { name: "protocol.expected_schedule", version: "1" },
+          { name: "protocol.matrix_gap", version: "1" },
+          { name: "protocol.structural_diff", version: "1" },
+        ],
         input_hash: "sha256-demo-sim-in",
         result_hash: "sha256-demo-sim-out",
         structural_diff: [],

@@ -1,5 +1,6 @@
 import { DEMO_PARTICIPANTS, DEMO_STUDY } from "demo-fixtures";
 import { demoNowIso, demoNowMs } from "../../utils/demoMode.js";
+import { isCallerBlinded, resolveDemoCaller } from "../demoPolicy.js";
 import {
   DEFAULT_FORM_UUID,
   DEFAULT_QUERY_UUID,
@@ -457,13 +458,17 @@ export function createExecutionEcrfSliceStore(ctx) {
       };
     },
 
-    getSubjectDetail(subjectId) {
+    getSubjectDetail(subjectId, caller = null) {
       const found =
         state.subjects.find(
           (s) =>
             s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
             s.id === subjectId
         ) || state.subjects[0];
+      const shouldBlind =
+        Boolean(caller) &&
+        isCallerBlinded(caller) &&
+        String(found.status || "").toUpperCase() !== "UNBLINDED";
       return {
         id: found.id,
         subject_id: found.subject_id,
@@ -472,9 +477,15 @@ export function createExecutionEcrfSliceStore(ctx) {
         site_id: found.site_id,
         active_protocol_version: found.active_protocol_version || "2.0",
         enrollment_index: found.enrollment_index ?? 0,
-        treatment_group: found.treatment_group ?? null,
+        treatment_group: shouldBlind
+          ? "BLINDED"
+          : (found.treatment_group ?? null),
         randomization_seed: null,
-        investigational_product_id: found.investigational_product_id ?? null,
+        investigational_product_id: shouldBlind
+          ? found.investigational_product_id
+            ? "BLINDED"
+            : null
+          : (found.investigational_product_id ?? null),
       };
     },
 
@@ -1336,9 +1347,12 @@ export function createExecutionEcrfSliceHandlers(
         })
       );
     }),
-    http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
+    http.get("*/api/v1/execution/subjects/:subjectId", ({ params, request }) =>
       HttpResponse.json(
-        store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
+        store.getSubjectDetail(
+          decodeURIComponent(String(params.subjectId)),
+          resolveDemoCaller(request)
+        )
       )
     ),
     http.patch(

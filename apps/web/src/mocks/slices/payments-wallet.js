@@ -239,6 +239,7 @@ export function createPaymentsWalletSliceHandlers(
       { http, HttpResponse },
       {
         fallbackOnPlainText: true,
+        tokenPrefix: "demo_ocr_token_",
         emptyWarning:
           "Receipt text could not be extracted automatically in demo mode; enter claim details below.",
       }
@@ -251,6 +252,7 @@ export function createPaymentsWalletSliceHandlers(
         defaultSubjectId: "SUBJ-1001",
         defaultMerchantName: "Demo Receipt",
         defaultExpenseDate: "2026-08-01", // deid-ignore
+        requireServerScan: true,
         onEvaluated: (created) => {
           store.state.expenseClaims.unshift(created);
         },

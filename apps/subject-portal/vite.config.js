@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
@@ -26,7 +27,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
-      "../../packages/usdm-schemas/src/index.ts",
+      "../../packages/usdm-schemas/src/epro.ts",
     ],
     include: [
       "vue",
@@ -35,7 +36,7 @@ export default defineConfig(({ mode }) => ({
       "keycloak-js",
       "msw",
       "msw/browser",
-      "usdm-schemas > zod",
+      "usdm-schemas > zod/mini",
     ],
   },
   plugins: [
@@ -72,6 +73,7 @@ export default defineConfig(({ mode }) => ({
     },
     (() => {
       let isE2eProd = false;
+      let resolvedOutDir = path.resolve(__dirname, "dist");
       const indexEntry = path.resolve(__dirname, "src/index.js");
       const syncQueueEntry = path.resolve(__dirname, "src/sync-queue.js");
       return {
@@ -79,6 +81,10 @@ export default defineConfig(({ mode }) => ({
         apply: "build",
         configResolved(resolved) {
           const outDir = resolved.build?.outDir;
+          resolvedOutDir = path.resolve(
+            resolved.root || __dirname,
+            outDir || "dist"
+          );
           isE2eProd =
             outDir === "node_modules/.e2e-prod" ||
             outDir === "node_modules/.e2e-demo";
@@ -114,6 +120,38 @@ export default defineConfig(({ mode }) => ({
             source:
               "const m = globalThis.__CADENCE_E2E_SYNC_QUEUE__;\nexport const { queueSubmission, clearSessionKey } = m;\n",
           });
+        },
+        writeBundle(_options, bundle) {
+          const swOutputPath = path.join(resolvedOutDir, "sw.js");
+          if (!fs.existsSync(swOutputPath)) return;
+
+          const emittedBundlePaths = Object.keys(bundle)
+            .map((fileName) => fileName.replace(/^\/+/, ""))
+            .filter(
+              (fileName) =>
+                Boolean(fileName) &&
+                !fileName.endsWith(".map") &&
+                fileName !== "sw.js" &&
+                fileName !== "index.html" &&
+                fileName !== "manifest.json" &&
+                !fileName.endsWith("mockServiceWorker.js")
+            )
+            .sort();
+
+          const injectedEntries = emittedBundlePaths
+            .map((relPath) => `  \`\${SW_BASE}${relPath}\`,`)
+            .join("\n");
+          const replacement =
+            emittedBundlePaths.length > 0
+              ? `const INJECTED_BUNDLE_ASSETS = [\n${injectedEntries}\n];`
+              : "const INJECTED_BUNDLE_ASSETS = [];";
+
+          const currentSwSource = fs.readFileSync(swOutputPath, "utf8");
+          const updatedSwSource = currentSwSource.replace(
+            /const INJECTED_BUNDLE_ASSETS = \[\];/,
+            replacement
+          );
+          fs.writeFileSync(swOutputPath, updatedSwSource, "utf8");
         },
       };
     })(),

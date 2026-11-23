@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { evaluateDemoRequestPolicy } from "./demoPolicy.js";
 import { webDemoStore } from "./demoStore.js";
 import { createCtmsSsuSliceHandlers } from "./slices/ctms-ssu.js";
 import { createEtmfDocumentsSliceHandlers } from "./slices/etmf-documents.js";
@@ -14,6 +15,16 @@ const mswDeps = { http, HttpResponse };
 
 export function createWebDemoHandlers(store = webDemoStore) {
   return [
+    http.all("*/api/*", async ({ request }) => {
+      const denied = await evaluateDemoRequestPolicy(request, store);
+      if (denied) {
+        return HttpResponse.json(denied.problem, {
+          status: denied.status,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return undefined;
+    }),
     ...createKernelSliceHandlers(store, mswDeps),
     ...createTrainingLocksSliceHandlers(store, mswDeps),
     ...createExecutionEcrfSliceHandlers(store, mswDeps),

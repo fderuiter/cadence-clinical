@@ -105,11 +105,13 @@ describe("vite-strip-demo-fixtures plugin", () => {
     expect(demoBuildResolve("demo-fixtures/routes")).toContain(
       "packages/demo-fixtures/src/routes.js"
     );
+    expect(demoBuildResolve("tldts")).toBe("\0virtual:demo-tldts-shim");
 
     const devServeResolve = resolveIdFor("serve", "development");
     expect(
       devServeResolve("./demo/EcrfDemoWorkspace.vue", viewsImporter)
     ).toBeNull();
     expect(devServeResolve("./demo/clinicalUsdm", storesImporter)).toBeNull();
+    expect(devServeResolve("tldts")).toBeNull();
   });
 });

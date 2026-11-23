@@ -1,3 +1,4 @@
+import { registerDemoStoreReset } from "../utils/demoReset.js";
 import { createCtmsSsuSliceStore } from "./slices/ctms-ssu.js";
 import { createEtmfDocumentsSliceStore } from "./slices/etmf-documents.js";
 import { createExecutionEcrfSliceStore } from "./slices/execution-ecrf.js";
@@ -22,6 +23,7 @@ export const WEB_DEMO_SLICE_NAMES = Object.freeze([
 
 export function createWebDemoStore() {
   let sequenceCounter = 10;
+  const resetListeners = new Set();
 
   const nextCounter = () => {
     sequenceCounter += 1;
@@ -52,12 +54,35 @@ export function createWebDemoStore() {
     for (const name of WEB_DEMO_SLICE_NAMES) {
       slices[name].reset();
     }
+    for (const listener of resetListeners) {
+      try {
+        listener();
+      } catch {
+        // Ignore non-fatal reset listener errors.
+      }
+    }
   }
 
   const store = {
+    ...slices.kernel.methods,
+    ...slices["protocol-soa"].methods,
+    ...slices["execution-ecrf"].methods,
+    ...slices["ctms-ssu"].methods,
+    ...slices["etmf-documents"].methods,
+    ...slices["payments-wallet"].methods,
+    ...slices["knowledge-tickets"].methods,
+    ...slices["safety-labs-dct"].methods,
+    ...slices["training-locks"].methods,
     state,
     slices,
     reset,
+    onReset(listener) {
+      if (typeof listener !== "function") return () => {};
+      resetListeners.add(listener);
+      return () => {
+        resetListeners.delete(listener);
+      };
+    },
     get locks() {
       return state.demoLocks;
     },
@@ -66,10 +91,6 @@ export function createWebDemoStore() {
     },
   };
 
-  for (const name of WEB_DEMO_SLICE_NAMES) {
-    Object.assign(store, slices[name].methods);
-  }
-
   ctx.store = store;
   reset();
 
@@ -77,3 +98,4 @@ export function createWebDemoStore() {
 }
 
 export const webDemoStore = createWebDemoStore();
+registerDemoStoreReset(() => webDemoStore.reset());

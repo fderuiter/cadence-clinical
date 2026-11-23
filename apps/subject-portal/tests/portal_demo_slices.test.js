@@ -36,6 +36,21 @@ describe("Subject Portal Instance-Scoped MSW Slices", () => {
         portal: "demo",
       });
 
+      const receiptSvg = `<svg xmlns="http://www.w3.org/2000/svg"><text>Hospital Garage</text><text>Date: 2026-08-01</text><text>Parking Total: $24.00</text></svg>`; // deid-ignore
+      const ocrRes = await fetch(
+        `${origin}/api/v1/payments/participant/me/expenses/ocr-extract`,
+        {
+          method: "POST",
+          headers: PORTAL_HEADERS,
+          body: JSON.stringify({
+            imageBase64: btoa(receiptSvg),
+          }),
+        }
+      );
+      expect(ocrRes.status).toBe(200);
+      const ocrData = await ocrRes.json();
+      expect(ocrData.ocrToken).toMatch(/^mock_ocr_token_/);
+
       const expenseRes = await fetch(
         `${origin}/api/v1/payments/participant/me/expenses`,
         {
@@ -46,7 +61,8 @@ describe("Subject Portal Instance-Scoped MSW Slices", () => {
             category: "PARKING",
             grossAmount: 24,
             merchantName: "Hospital Garage",
-            ocrConfidence: 0.96,
+            expenseDate: "2026-08-01", // deid-ignore
+            ocrToken: ocrData.ocrToken,
           }),
         }
       );

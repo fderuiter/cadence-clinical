@@ -120,9 +120,29 @@ export function resolveSiteUuid(siteCode) {
   return makeUuidFromIndex("00000200", Number(digits));
 }
 
-export function resolveSiteCodeFromRef(nodeRef, subjects = []) {
-  const raw = String(nodeRef || "").replace(/^study_site:/, "");
-  const manifestSite = DEMO_SITES.find((s) => s.studySiteUuid === raw);
+export function resolveSiteCodeFromRef(
+  nodeRef,
+  subjects = [],
+  studySites = null
+) {
+  const unpinned = String(nodeRef || "").split("@")[0];
+  const raw = unpinned.replace(/^study_site:/, "");
+  if (studySites) {
+    for (const links of studySites.values()) {
+      const found = links.find(
+        (item) =>
+          item.study_site_ref === unpinned ||
+          item.study_site_id === raw ||
+          String(item.ref || "").split("@")[0] === unpinned
+      );
+      if (found?.site_code) return found.site_code;
+    }
+  }
+  const manifestSite = DEMO_SITES.find(
+    (s) =>
+      s.studySiteUuid === raw ||
+      String(s.studySiteRef || "").split("@")[0] === unpinned
+  );
   if (manifestSite) return manifestSite.code;
   if (raw === SITE_101_UUID) return "SITE-101";
   if (raw === SITE_102_UUID) return "SITE-102";

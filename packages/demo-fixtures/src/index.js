@@ -114,30 +114,29 @@ function formatUtcIso(ms) {
   return new Date(ms).toISOString().replace(".000Z", "Z");
 }
 
-function synthesizeDemoManifest(seed) {
-  const tenantCode = seed.tenantCode || "cadence-local";
-  const tenantUuid = deriveDemoUuidV8(tenantCode, "tenant", tenantCode);
-  const epochMs = Date.parse(seed.epoch);
-  const epochIso = formatUtcIso(epochMs);
-
-  const sponsor = Object.freeze({
-    code: seed.sponsor.code,
-    name: seed.sponsor.name,
+function buildDemoSponsor(tenantUuid, rawSponsor) {
+  return Object.freeze({
+    code: rawSponsor.code,
+    name: rawSponsor.name,
     organizationUuid: deriveDemoUuidV8(tenantUuid, "organization", "sponsor"),
   });
+}
 
-  const studyUuid = deriveDemoUuidV8(tenantUuid, "study", seed.study.code);
-  const study = Object.freeze({
-    code: seed.study.code,
-    title: seed.study.title,
-    phase: seed.study.phase,
-    sponsorCode: seed.sponsor.code,
+function buildDemoStudy(tenantUuid, sponsorCode, rawStudy) {
+  const studyUuid = deriveDemoUuidV8(tenantUuid, "study", rawStudy.code);
+  return Object.freeze({
+    code: rawStudy.code,
+    title: rawStudy.title,
+    phase: rawStudy.phase,
+    sponsorCode,
     uuid: studyUuid,
     ref: `study:${studyUuid}`,
   });
+}
 
-  const sites = Object.freeze(
-    seed.sites.map((rawSite) => {
+function buildDemoSites(tenantUuid, rawSites) {
+  return Object.freeze(
+    rawSites.map((rawSite) => {
       const institutionUuid = deriveDemoUuidV8(
         tenantUuid,
         "organization",
@@ -162,9 +161,11 @@ function synthesizeDemoManifest(seed) {
       });
     })
   );
+}
 
-  const participants = Object.freeze(
-    seed.participants.map((rawParticipant, idx) => {
+function buildDemoParticipants(tenantUuid, epochMs, rawParticipants) {
+  return Object.freeze(
+    rawParticipants.map((rawParticipant, idx) => {
       const participantUuid = deriveDemoUuidV8(
         tenantUuid,
         "participant",
@@ -187,9 +188,11 @@ function synthesizeDemoManifest(seed) {
       });
     })
   );
+}
 
-  const roles = Object.freeze(
-    seed.roles.map((rawRole) =>
+function buildDemoRoles(tenantUuid, rawRoles) {
+  return Object.freeze(
+    rawRoles.map((rawRole) =>
       Object.freeze({
         code: rawRole.code,
         name: rawRole.name,
@@ -198,9 +201,11 @@ function synthesizeDemoManifest(seed) {
       })
     )
   );
+}
 
-  const personas = Object.freeze(
-    seed.users.map((rawUser) =>
+function buildDemoPersonas(tenantCode, tenantUuid, rawUsers) {
+  return Object.freeze(
+    rawUsers.map((rawUser) =>
       Object.freeze({
         username: rawUser.username,
         id: rawUser.subject,
@@ -217,48 +222,73 @@ function synthesizeDemoManifest(seed) {
       })
     )
   );
-
-  return Object.freeze({
-    tenantCode,
-    tenantUuid,
-    epochIso,
-    epochMs,
-    sponsor,
-    study,
-    sites,
-    participants,
-    roles,
-    personas,
-  });
 }
 
-export const DEMO_MANIFEST = synthesizeDemoManifest(demoSeed);
+export const DEMO_TENANT_CODE = demoSeed.tenantCode || "cadence-local";
+export const DEMO_TENANT_UUID = /* @__PURE__ */ deriveDemoUuidV8(
+  DEMO_TENANT_CODE,
+  "tenant",
+  DEMO_TENANT_CODE
+);
+export const DEMO_EPOCH_MS = /* @__PURE__ */ Date.parse(demoSeed.epoch);
+export const DEMO_EPOCH_ISO = /* @__PURE__ */ formatUtcIso(DEMO_EPOCH_MS);
+export const DEMO_SPONSOR = /* @__PURE__ */ buildDemoSponsor(
+  DEMO_TENANT_UUID,
+  demoSeed.sponsor
+);
+export const DEMO_STUDY = /* @__PURE__ */ buildDemoStudy(
+  DEMO_TENANT_UUID,
+  demoSeed.sponsor.code,
+  demoSeed.study
+);
+export const DEMO_SITES = /* @__PURE__ */ buildDemoSites(
+  DEMO_TENANT_UUID,
+  demoSeed.sites
+);
+export const DEMO_PARTICIPANTS = /* @__PURE__ */ buildDemoParticipants(
+  DEMO_TENANT_UUID,
+  DEMO_EPOCH_MS,
+  demoSeed.participants
+);
+export const DEMO_ROLES = /* @__PURE__ */ buildDemoRoles(
+  DEMO_TENANT_UUID,
+  demoSeed.roles
+);
+export const DEMO_PERSONAS = /* @__PURE__ */ buildDemoPersonas(
+  DEMO_TENANT_CODE,
+  DEMO_TENANT_UUID,
+  demoSeed.users
+);
 
-export const DEMO_TENANT_CODE = DEMO_MANIFEST.tenantCode;
-export const DEMO_TENANT_UUID = DEMO_MANIFEST.tenantUuid;
-export const DEMO_EPOCH_ISO = DEMO_MANIFEST.epochIso;
-export const DEMO_EPOCH_MS = DEMO_MANIFEST.epochMs;
-export const DEMO_SPONSOR = DEMO_MANIFEST.sponsor;
-export const DEMO_STUDY = DEMO_MANIFEST.study;
-export const DEMO_SITES = DEMO_MANIFEST.sites;
-export const DEMO_PARTICIPANTS = DEMO_MANIFEST.participants;
-export const DEMO_ROLES = DEMO_MANIFEST.roles;
-export const DEMO_PERSONAS = DEMO_MANIFEST.personas;
+export const DEMO_MANIFEST = /* @__PURE__ */ Object.freeze({
+  tenantCode: DEMO_TENANT_CODE,
+  tenantUuid: DEMO_TENANT_UUID,
+  epochIso: DEMO_EPOCH_ISO,
+  epochMs: DEMO_EPOCH_MS,
+  sponsor: DEMO_SPONSOR,
+  study: DEMO_STUDY,
+  sites: DEMO_SITES,
+  participants: DEMO_PARTICIPANTS,
+  roles: DEMO_ROLES,
+  personas: DEMO_PERSONAS,
+});
 
 export const DEFAULT_DEMO_SITE = DEMO_SITES[0] || null;
 export const DEFAULT_DEMO_PARTICIPANT = DEMO_PARTICIPANTS[0] || null;
 
-export const DEMO_PERSONA_BY_WORKFLOW = Object.freeze(
-  Object.fromEntries(
-    DEMO_PERSONAS.map((persona) => [persona.workflow, persona])
-  )
-);
+export const DEMO_PERSONA_BY_WORKFLOW = /* @__PURE__ */ (() =>
+  Object.freeze(
+    Object.fromEntries(
+      DEMO_PERSONAS.map((persona) => [persona.workflow, persona])
+    )
+  ))();
 
-export const DEMO_PERSONA_BY_WORKSPACE = Object.freeze(
-  Object.fromEntries(
-    DEMO_PERSONAS.map((persona) => [persona.workspacePersona, persona])
-  )
-);
+export const DEMO_PERSONA_BY_WORKSPACE = /* @__PURE__ */ (() =>
+  Object.freeze(
+    Object.fromEntries(
+      DEMO_PERSONAS.map((persona) => [persona.workspacePersona, persona])
+    )
+  ))();
 
 export function getDemoSiteByCode(siteCode) {
   if (!siteCode) return null;

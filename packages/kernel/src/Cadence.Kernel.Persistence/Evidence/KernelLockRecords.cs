@@ -9,9 +9,11 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -359,20 +361,13 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             }
         }
 
-        var queriedObservations = openQueries
-            .Select(q => ObservationId.FromGuid(q.TargetId))
-            .Where(obsById.ContainsKey)
-            .Select(id => obsById[id])
-            .DistinctBy(o => o.Id)
-            .ToList();
-        var blindedObservations = queriedObservations.Count == 0
-            ? new HashSet<ObservationId>()
-            : await ResolveBlindedObservationsAsync(db, study, queriedObservations, cancellationToken).ConfigureAwait(false);
+        var activeErrorFindings = await KernelValidationStore.LoadActiveErrorFindingsAsync(db, study, cancellationToken)
+            .ConfigureAwait(false);
 
-        // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation),
-        // load its containing CollectionInstance so the query blocker names its form and item prompt when present.
+        // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation
+        // or a single form referencing cross-form edit checks), load the enrollment's CollectionInstances so blockers and blinding resolve accurately.
         IReadOnlyList<CollectionInstance>? containingInstances = null;
-        if (scope.Kind == NodeKinds.Observation && openQueries.Count > 0)
+        if (scope.Kind == NodeKinds.Observation && (openQueries.Count > 0 || activeErrorFindings.Count > 0))
         {
             var singleObsId = ObservationId.FromGuid(scope.Id);
             var containing = await db.CollectionInstances.AsNoTracking()
@@ -397,6 +392,64 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
                 }
             }
         }
+        else if (scope.Kind == NodeKinds.CollectionInstance && activeErrorFindings.Count > 0 && enrollmentIds.Count > 0)
+        {
+            var siblingInstances = await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
+                .Where(c => c.StudyId == study && enrollmentIds.Contains(c.EnrollmentId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (siblingInstances.Count > instances.Count)
+            {
+                containingInstances = siblingInstances;
+                var extraSiblingObsIds = siblingInstances
+                    .SelectMany(c => c.Members.Select(m => m.ObservationId))
+                    .Where(id => !obsById.ContainsKey(id))
+                    .Distinct()
+                    .ToList();
+                if (extraSiblingObsIds.Count > 0)
+                {
+                    var extraSiblingObs = await db.Observations.AsNoTracking()
+                        .Where(o => extraSiblingObsIds.Contains(o.Id))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var extra in extraSiblingObs)
+                    {
+                        obsById[extra.Id] = extra;
+                    }
+                }
+
+                var missingVersions = siblingInstances.Select(c => c.ProtocolVersionId).Where(id => !versionsById.ContainsKey(id)).Distinct().ToList();
+                if (missingVersions.Count > 0)
+                {
+                    var extraVersions = await db.ProtocolVersions.AsNoTracking()
+                        .Where(v => missingVersions.Contains(v.Id))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var v in extraVersions)
+                    {
+                        versionsById[v.Id] = v;
+                    }
+                }
+            }
+        }
+
+        var candidateBlindedObservations = openQueries
+            .Select(q => ObservationId.FromGuid(q.TargetId))
+            .Concat(activeErrorFindings
+                .Select(f => f.Target.Node is { Kind: NodeKinds.Observation } obsNode ? ObservationId.FromGuid(obsNode.Id) : ObservationId.Empty)
+                .Where(id => !id.IsEmpty))
+            .Concat(activeErrorFindings.Count > 0
+                ? coveredObservations.Select(o => o.Id)
+                    .Concat((containingInstances ?? instances).SelectMany(i => i.Members.Select(m => m.ObservationId)))
+                : [])
+            .Where(obsById.ContainsKey)
+            .Select(id => obsById[id])
+            .DistinctBy(o => o.Id)
+            .ToList();
+        var blindedObservations = candidateBlindedObservations.Count == 0
+            ? new HashSet<ObservationId>()
+            : await ResolveBlindedObservationsAsync(db, study, candidateBlindedObservations, cancellationToken).ConfigureAwait(false);
 
         return LockReadinessEvaluator.BuildSnapshot(
             study,
@@ -409,7 +462,8 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             openQueries,
             answeredQueryIds,
             blindedObservations,
-            containingInstances);
+            containingInstances,
+            activeErrorFindings);
     }
 
     internal static async Task<IReadOnlyList<StudyLockEntry>> HydrateAsync(

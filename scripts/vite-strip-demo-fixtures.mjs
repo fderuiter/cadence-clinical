@@ -4,6 +4,7 @@ import path from "path";
 const VIRTUAL_DEMO_FIXTURES_ID = "\0virtual:demo-fixtures-prod-stub";
 const VIRTUAL_DEMO_RUNTIME_ID = "\0virtual:demo-fixtures-runtime-prod-stub";
 const VIRTUAL_DEMO_ROUTES_ID = "\0virtual:demo-fixtures-routes-prod-stub";
+const VIRTUAL_DEMO_TLDTS_SHIM_ID = "\0virtual:demo-tldts-shim";
 const VIRTUAL_DEMO_VIEW_PREFIX = "\0virtual:demo-view-prod-stub:";
 const VIRTUAL_DEMO_STORE_PREFIX = "\0virtual:demo-store-prod-stub:";
 
@@ -171,6 +172,44 @@ export function createDemoParticipantExpenseOcrRoute() {
 }
 export function createDemoParticipantExpenseSubmitRoute() {
   return null;
+}
+`;
+
+const DEMO_TLDTS_SHIM_SOURCE = `
+const MULTI_LABEL_PUBLIC_SUFFIXES = new Set([
+  "co.uk",
+  "org.uk",
+  "gov.uk",
+  "ac.uk",
+  "com.au",
+  "org.au",
+  "gov.au",
+  "co.jp",
+  "co.nz",
+  "com.br",
+]);
+
+export function getDomain(input) {
+  if (!input || typeof input !== "string") {
+    return null;
+  }
+  let host = input.trim().toLowerCase();
+  if (!host || host.startsWith("[") || host.includes(":")) {
+    return null;
+  }
+  host = host.replace(/\\.+$/, "");
+  if (/^\\d+(?:\\.\\d+){3}$/.test(host)) {
+    return null;
+  }
+  const parts = host.split(".");
+  if (parts.length < 2 || parts.some((part) => !part)) {
+    return null;
+  }
+  const tailTwo = parts.slice(-2).join(".");
+  if (MULTI_LABEL_PUBLIC_SUFFIXES.has(tailTwo)) {
+    return parts.length >= 3 ? parts.slice(-3).join(".") : null;
+  }
+  return tailTwo;
 }
 `;
 
@@ -364,6 +403,7 @@ export function isDemoBuildResolved(appDir, resolved) {
 
 export function createDemoFixturesPlugin(appDir) {
   let stripDemoFixtures = false;
+  let isStaticDemoBuild = false;
   const demoFixturesEntry = path.resolve(
     appDir,
     "../../packages/demo-fixtures/src/index.js"
@@ -404,8 +444,12 @@ export function createDemoFixturesPlugin(appDir) {
     configResolved(resolved) {
       const isDemo = isDemoBuildResolved(appDir, resolved);
       stripDemoFixtures = resolved.command === "build" && !isDemo;
+      isStaticDemoBuild = resolved.command === "build" && isDemo;
     },
     resolveId(source, importer) {
+      if (isStaticDemoBuild && source === "tldts") {
+        return VIRTUAL_DEMO_TLDTS_SHIM_ID;
+      }
       if (source === "demo-fixtures") {
         return stripDemoFixtures ? VIRTUAL_DEMO_FIXTURES_ID : demoFixturesEntry;
       }
@@ -443,6 +487,9 @@ export function createDemoFixturesPlugin(appDir) {
       }
       if (id === VIRTUAL_DEMO_ROUTES_ID) {
         return EMPTY_PROD_ROUTES_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_DEMO_TLDTS_SHIM_ID) {
+        return DEMO_TLDTS_SHIM_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
         return EMPTY_DEMO_VIEW_STUB_SOURCE;

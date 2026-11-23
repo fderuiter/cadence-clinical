@@ -23,6 +23,16 @@ export interface DemoMswAdapter {
   };
 }
 
+export interface DemoOcrTokenStore {
+  ocrTokens?: Map<string, Record<string, unknown>>;
+  consumedOcrTokens?: Set<string>;
+  recordedReceiptDigests?: Set<string>;
+}
+
+export declare function computeDemoReceiptDigest(
+  rawBytesText?: string | null
+): string | null;
+
 export declare function decodeReceiptBase64ToText(
   imageBase64?: string | null
 ): string;
@@ -32,6 +42,10 @@ export declare function parseDemoReceiptContent(
   options?: {
     fallbackOnPlainText?: boolean;
     emptyWarning?: string;
+    issueToken?: boolean;
+    tokenStore?: DemoOcrTokenStore | null;
+    tokenPrefix?: string;
+    nextTimestampMs?: () => number;
   }
 ): Record<string, unknown>;
 
@@ -45,6 +59,8 @@ export declare function evaluateDemoExpenseSubmission(
     defaultSubjectId?: string;
     defaultMerchantName?: string;
     defaultExpenseDate?: string;
+    tokenStore?: DemoOcrTokenStore | null;
+    requireServerScan?: boolean;
   }
 ): Record<string, unknown>;
 
@@ -78,6 +94,9 @@ export declare function createDemoParticipantExpenseOcrRoute(
     path?: string;
     fallbackOnPlainText?: boolean;
     emptyWarning?: string;
+    tokenStore?: DemoOcrTokenStore | null;
+    tokenPrefix?: string;
+    nextTimestampMs?: () => number;
   }
 ): unknown;
 
@@ -115,5 +134,7 @@ export declare function createDemoParticipantExpenseSubmitRoute(
     defaultSubjectId?: string;
     defaultMerchantName?: string;
     defaultExpenseDate?: string;
+    tokenStore?: DemoOcrTokenStore | null;
+    requireServerScan?: boolean;
   }
 ): unknown;

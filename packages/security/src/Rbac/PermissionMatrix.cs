@@ -29,6 +29,7 @@ public static partial class PermissionMatrix
         RoleNormalization.ROLE_IDMC,
         RoleNormalization.ROLE_INVESTIGATOR,
         RoleNormalization.ROLE_CRC,
+        RoleNormalization.ROLE_TRIAL_COORDINATOR,
         RoleNormalization.ROLE_CRA_CANONICAL,
         "monitor",
         RoleNormalization.ROLE_EXTERNAL_MONITOR,
@@ -254,6 +255,33 @@ public static partial class PermissionMatrix
             ["ecoa_submission"] = ["create", "read"]
         };
 
+        // trial_coordinator (self-service trial workspace coordinator; write authority restricted to trial-* tenants)
+        _rolePermissions[RoleNormalization.ROLE_TRIAL_COORDINATOR] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["visit_windowing"] = ["read"],
+            ["soa"] = ["read"],
+            ["study_design"] = ["read"],
+            ["subject_enrollment"] = ["create", "read", "update"],
+            ["ecrf_data_entry"] = ["create", "read", "update"],
+            ["lab_range"] = ["read", "alert"],
+            ["system_audit_logs"] = ["read"],
+            ["regulatory_form"] = ["create", "read", "sign"],
+            ["training_log"] = ["create", "read", "sign"],
+            ["ctms_study"] = ["read"],
+            ["ctms_recruitment"] = ["read"],
+            ["ctms_site_milestone"] = ["read"],
+            ["ctms_cra_allocation"] = ["read"],
+            ["ctms_cra_workload"] = ["read"],
+            ["etmf_document"] = ["read"],
+            ["etmf_edl"] = ["read"],
+            ["etmf_taxonomy"] = ["read"],
+            ["quality_event"] = ["read"],
+            ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
+            ["ecoa_schedule"] = ["create", "read"],
+            ["ecoa_diary"] = ["create", "read", "alert"],
+            ["ecoa_submission"] = ["create", "read"]
+        };
+
         // cra
         _rolePermissions[RoleNormalization.ROLE_CRA_CANONICAL] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -410,8 +438,9 @@ public static partial class PermissionMatrix
         var piBase = ClonePermissions(_rolePermissions[RoleNormalization.ROLE_INVESTIGATOR]);
         piBase["rtsm_unblind"] = ["write"];
         piBase["eisf_document"] = ["create", "read", "update", "delete", "sync"];
-        // Only the PI (and those acting as PI) signs the site delegation log; a sub-investigator does not (#5311).
+        // Only the PI (and those acting as PI) signs the site delegation log; a sub-investigator does not (#5311, ADR-2648).
         piBase["delegation_log"] = ["read", "sign"];
+        piBase["ctms_doa"].UnionWith(["sign_off", "sign"]);
 
         _rolePermissions[RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR] = ClonePermissions(piBase);
         _rolePermissions[RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN] = ClonePermissions(piBase);

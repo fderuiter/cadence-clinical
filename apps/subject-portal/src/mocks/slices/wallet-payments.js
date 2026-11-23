@@ -18,6 +18,9 @@ export function createWalletPaymentsSliceStore() {
   const state = {
     walletBalance: 125.0,
     walletLedger: new Map(),
+    ocrTokens: new Map(),
+    consumedOcrTokens: new Set(),
+    recordedReceiptDigests: new Set(),
     walletActionCounter: 0,
   };
 
@@ -66,6 +69,9 @@ export function createWalletPaymentsSliceStore() {
   function reset() {
     state.walletBalance = 125.0;
     state.walletLedger.clear();
+    state.ocrTokens.clear();
+    state.consumedOcrTokens.clear();
+    state.recordedReceiptDigests.clear();
     state.walletActionCounter = 0;
   }
 
@@ -133,15 +139,26 @@ export function createWalletPaymentsSliceHandlers({
 
     createDemoParticipantExpenseOcrRoute(
       { http, HttpResponse },
-      { path: "*/api/v1/payments/participant/me/expenses/ocr-extract" }
+      {
+        path: "*/api/v1/payments/participant/me/expenses/ocr-extract",
+        tokenStore: slice.state,
+        nextTimestampMs: () => slice.nextTimestampMs(),
+      }
     ),
-    createDemoParticipantExpenseOcrRoute({ http, HttpResponse }),
+    createDemoParticipantExpenseOcrRoute(
+      { http, HttpResponse },
+      {
+        tokenStore: slice.state,
+        nextTimestampMs: () => slice.nextTimestampMs(),
+      }
+    ),
 
     createDemoParticipantExpenseSubmitRoute(
       { http, HttpResponse },
       {
         path: "*/api/v1/payments/participant/me/expenses",
         defaultSubjectId: DEFAULT_MOCK_SUBJECT_ID,
+        tokenStore: slice.state,
         nextTimestampMs: () => slice.nextTimestampMs(),
         nextTimestampIso: () => slice.nextTimestampIso(),
         resolveWallet: (body) =>
@@ -181,6 +198,7 @@ export function createWalletPaymentsSliceHandlers({
       { http, HttpResponse },
       {
         defaultSubjectId: DEFAULT_MOCK_SUBJECT_ID,
+        tokenStore: slice.state,
         nextTimestampMs: () => slice.nextTimestampMs(),
         nextTimestampIso: () => slice.nextTimestampIso(),
       }

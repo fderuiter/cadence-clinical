@@ -89,6 +89,8 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
       form_id: formId,
       study_id: "01950000-0000-7000-8000-000000000010",
+      study_site_id: "01950000-0000-7000-8000-000000000015",
+      protocol_version_id: "01950000-0000-7000-8000-000000000016",
       enrollment_id: "01950000-0000-7000-8000-000000000020",
       participant_id: "01950000-0000-7000-8000-000000000030",
       collection_spec_id: "VS",
@@ -117,7 +119,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       locks: [],
       assertions: [],
       signatures: [],
-    });
+    } as unknown as Awaited<ReturnType<typeof ecrfFormsApi.getForm>>);
     vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([]);
     vi.mocked(ecrfFormsApi.previewValues).mockResolvedValue({
       form_id: formId,
@@ -179,7 +181,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
@@ -240,7 +244,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         kind: "study",
         code: "CADENCE-101",
         title: "Demo study",
+        detail: null,
         exact_code: true,
+        rank: 1,
       },
     ]);
     vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({
