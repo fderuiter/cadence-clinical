@@ -166,6 +166,38 @@ public sealed class SubjectRepository(ExecutionDbContext context)
         return new SubjectPage(items, total);
     }
 
+    public async Task<IReadOnlyDictionary<SubjectState, int>> CountByStatusAsync(
+        SubjectCountCriteria criteria,
+        CancellationToken cancellationToken)
+    {
+        Guid? activeTenant = await ResolveActiveTenantIdAsync(cancellationToken).ConfigureAwait(false);
+        var query = Context.ClinicalSubjects.AsNoTracking()
+            .Where(s => s.StudyCode == criteria.StudyCode);
+        if (Context.Database.IsRelational() && activeTenant is { } tenantId)
+        {
+            query = query.Where(s =>
+                EF.Property<Guid>(s, StandaloneTenantModelExtensions.TenantPropertyName) == tenantId);
+        }
+
+        if (criteria.SiteCode is { } siteCode)
+        {
+            query = query.Where(s => s.SiteCode == siteCode);
+        }
+        else if (criteria.AllowedSites is { } allowedSites)
+        {
+            List<SiteCode?> siteValues = allowedSites.Select(s => (SiteCode?)s).ToList();
+            query = query.Where(s => siteValues.Contains(s.SiteCode));
+        }
+
+        var rows = await query
+            .GroupBy(s => s.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.ToDictionary(r => r.Status, r => r.Count);
+    }
+
     private static string EscapeLikePattern(string value) =>
         value
             .Replace("\\", "\\\\", StringComparison.Ordinal)

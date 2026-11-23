@@ -359,6 +359,7 @@ import {
   type KernelSiteSummary,
   type KernelStudySiteSummary,
 } from "../../api/kernelApi";
+import { invalidateStudySitesCache } from "../../canvas/kernelStudy";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const props = withDefaults(
@@ -567,6 +568,7 @@ async function submitLinkExisting() {
       reason: linkReason.value.trim(),
       idempotencyKey: linkExistingIdempotencyKey.value,
     });
+    invalidateStudySitesCache(props.studyCode);
     feedbackBanner.value = `Site ${linked.site_code || ""} linked to ${props.studyCode}.`;
     linkReason.value = "";
     linkExistingIdempotencyKey.value = "";
@@ -636,6 +638,7 @@ async function submitRegisterSite() {
         reason: registerReason.value.trim(),
         idempotencyKey: linkCreatedSiteIdempotencyKey.value,
       });
+      invalidateStudySitesCache(props.studyCode);
       feedbackBanner.value = `Site ${created.code} (${created.name}) registered and linked to ${props.studyCode}.`;
     } else {
       feedbackBanner.value = `Site ${created.code} (${created.name}) registered in your workspace.`;

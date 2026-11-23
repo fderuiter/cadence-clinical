@@ -342,7 +342,10 @@ import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
 import { canActivateSite } from "../../canvas/authority";
-import { findStudySites } from "../../canvas/kernelStudy";
+import {
+  findStudySites,
+  invalidateStudySitesCache,
+} from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { useToastStore } from "../../stores/toasts.js";
@@ -526,6 +529,7 @@ async function submitQuickSite() {
         reason: newSiteReason.value.trim(),
         idempotencyKey: nextQuickSiteKey("site-activation-link"),
       });
+      invalidateStudySitesCache(study);
     }
 
     const label =

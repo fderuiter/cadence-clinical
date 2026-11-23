@@ -167,7 +167,11 @@
 import { computed, onMounted, ref } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
-import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
+import {
+  findStudySites,
+  invalidateStudySitesCache,
+  type StudySiteOption,
+} from "../../canvas/kernelStudy";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
@@ -259,6 +263,7 @@ async function submitInlineSite() {
       reason: inlineSiteReason.value.trim(),
       idempotencyKey: nextInlineKey("inline-study-site"),
     });
+    invalidateStudySitesCache(canvas.studyCode);
 
     const optionLabel =
       created.name && created.name !== created.code
