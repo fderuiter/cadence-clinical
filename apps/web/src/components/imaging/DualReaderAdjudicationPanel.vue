@@ -1047,7 +1047,7 @@ function executeChairSignoff() {
 }
 
 .status-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 999px;
@@ -1082,7 +1082,7 @@ function executeChairSignoff() {
 }
 
 .metric-card-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1154,7 +1154,7 @@ function executeChairSignoff() {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
   outline: none;
   font-family: inherit;
 }
@@ -1337,7 +1337,7 @@ function executeChairSignoff() {
 }
 
 .notes-txt {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   font-style: italic;
   margin-top: 2px;
@@ -1500,7 +1500,7 @@ function executeChairSignoff() {
 }
 
 .json-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--semantic-color-accent-inverse);
   white-space: pre-wrap;
@@ -1509,7 +1509,7 @@ function executeChairSignoff() {
 .badge-target {
   background-color: rgba(52, 211, 153, 0.15);
   color: var(--semantic-color-emerald-inverse-text);
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 3px;
@@ -1520,7 +1520,7 @@ function executeChairSignoff() {
   color: var(--semantic-color-text-inverse);
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
 }
 
@@ -1529,7 +1529,7 @@ function executeChairSignoff() {
   color: var(--semantic-color-text-inverse);
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
 }
 </style>

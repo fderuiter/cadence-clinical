@@ -84,7 +84,7 @@
             padding: 8px;
             border: 1px solid var(--border);
             border-radius: 4px;
-            font-size: 0.85rem;
+            font-size: var(--semantic-font-size-control);
             box-sizing: border-box;
           "
           @input="$emit('update:importChangeReason', $event.target.value)"
@@ -429,7 +429,7 @@
               <div style="display: flex; align-items: center; gap: 6px">
                 <span
                   :class="['badge', getConfidenceClass(item.confidence_level)]"
-                  style="font-size: 0.7rem"
+                  style="font-size: var(--font-size-2xs)"
                   class="item-confidence"
                 >
                   {{ (item.confidence * 100).toFixed(0) }}% ({{
@@ -476,7 +476,7 @@
                     padding: 6px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    font-size: 0.8rem;
+                    font-size: var(--semantic-font-size-control);
                   "
                   class="edit-item-input"
                   @input="$emit('update:editItemValue', $event.target.value)"
@@ -497,7 +497,7 @@
                     padding: 6px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    font-size: 0.8rem;
+                    font-size: var(--semantic-font-size-control);
                   "
                   class="edit-item-reason"
                   @input="$emit('update:editItemReason', $event.target.value)"
@@ -549,7 +549,7 @@
                     padding: 6px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    font-size: 0.8rem;
+                    font-size: var(--semantic-font-size-control);
                   "
                   class="reject-item-reason"
                   @input="$emit('update:rejectItemReason', $event.target.value)"

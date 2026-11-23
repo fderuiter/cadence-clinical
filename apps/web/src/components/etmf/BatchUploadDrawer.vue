@@ -16,18 +16,22 @@
     >
       <div class="drawer-header">
         <div style="display: flex; align-items: center; gap: 10px">
-          <span style="font-size: 24px">📤</span>
+          <span style="font-size: var(--font-size-2xl)">📤</span>
           <div>
             <h3
               id="batch-drawer-title"
-              style="margin: 0; font-size: 18px; font-weight: 700"
+              style="
+                margin: 0;
+                font-size: var(--font-size-lg);
+                font-weight: 700;
+              "
             >
               Batch Ingestion &amp; AI Auto-Classification
             </h3>
             <p
               style="
                 margin: 2px 0 0 0;
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -38,7 +42,11 @@
         </div>
         <button
           class="btn btn-secondary btn-close-batch-drawer"
-          style="padding: 4px 10px; font-size: 14px; cursor: pointer"
+          style="
+            padding: 4px 10px;
+            font-size: var(--font-size-sm);
+            cursor: pointer;
+          "
           aria-label="Close batch upload drawer"
           @click="handleClose"
         >
@@ -85,7 +93,7 @@
           <label
             for="batch-reason-input"
             class="form-label"
-            style="font-size: 12px; font-weight: 600"
+            style="font-size: var(--font-size-2xs); font-weight: 600"
           >
             21 CFR Part 11 Reason for Ingestion <span class="required">*</span>
           </label>
@@ -95,7 +103,7 @@
             type="text"
             class="form-control"
             placeholder="e.g. Site 101 regulatory documents initial filing for CRA review"
-            style="font-size: 12px"
+            style="font-size: var(--semantic-font-size-control)"
           />
         </div>
 
@@ -105,7 +113,7 @@
             style="
               display: flex;
               justify-content: space-between;
-              font-size: 12px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 4px;
             "
@@ -135,14 +143,20 @@
               margin-bottom: 8px;
             "
           >
-            <h4 style="margin: 0; font-size: 13px; font-weight: 600">
+            <h4
+              style="
+                margin: 0;
+                font-size: var(--font-size-xs);
+                font-weight: 600;
+              "
+            >
               Upload Queue ({{ queue.length }} / 50 Files)
             </h4>
             <div style="display: flex; gap: 8px">
               <button
                 v-if="!isProcessing && queue.length > 0"
                 class="btn btn-secondary btn-sm"
-                style="font-size: 11px; padding: 4px 8px"
+                style="font-size: var(--font-size-2xs); padding: 4px 8px"
                 @click="clearQueue"
               >
                 Clear Queue
@@ -216,7 +230,7 @@
                       v-if="item.report"
                       type="button"
                       class="btn btn-secondary btn-xs btn-inspect-item"
-                      style="font-size: 10px; padding: 2px 6px"
+                      style="font-size: var(--font-size-2xs); padding: 2px 6px"
                       @click="inspectItem(item)"
                     >
                       <span aria-hidden="true">📋 </span>Inspect<span
@@ -231,7 +245,7 @@
                       style="
                         min-width: 24px;
                         min-height: 24px;
-                        font-size: 10px;
+                        font-size: var(--font-size-2xs);
                         padding: 2px 6px;
                         margin-left: 4px;
                       "
@@ -252,7 +266,7 @@
       <div class="drawer-footer">
         <button
           class="btn btn-secondary"
-          style="padding: 8px 16px; font-size: 13px"
+          style="padding: 8px 16px; font-size: var(--font-size-xs)"
           :disabled="isProcessing"
           @click="handleClose"
         >
@@ -261,7 +275,11 @@
         <button
           v-if="isProcessing"
           class="btn btn-warning"
-          style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
+          style="
+            padding: 8px 16px;
+            font-size: var(--font-size-xs);
+            margin-left: 8px;
+          "
           @click="cancelProcessing"
         >
           Stop Batch Processing
@@ -269,7 +287,11 @@
         <button
           v-else
           class="btn btn-primary btn-submit-batch"
-          style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
+          style="
+            padding: 8px 16px;
+            font-size: var(--font-size-xs);
+            margin-left: 8px;
+          "
           :disabled="
             !canStage ||
             queue.length === 0 ||
@@ -307,7 +329,10 @@
             margin-bottom: 12px;
           "
         >
-          <h4 id="item-inspection-title" style="margin: 0; font-size: 14px">
+          <h4
+            id="item-inspection-title"
+            style="margin: 0; font-size: var(--font-size-sm)"
+          >
             AI Classification Preview: {{ inspectedItem.file.name }}
           </h4>
           <button
@@ -355,11 +380,11 @@
               background: var(--semantic-color-surface-muted);
               padding: 8px;
               border-radius: 4px;
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
             "
           >
             <strong>AI Provenance Manifest:</strong>
-            <pre style="margin: 4px 0 0 0; font-family: monospace">{{
+            <pre style="margin: 4px 0 0 0; font-family: var(--font-mono)">{{
               JSON.stringify(
                 inspectedItem.report.ai_generation_manifest,
                 null,
@@ -756,14 +781,14 @@ useFocusTrap(inspectionCardRef, {
 }
 
 .dropzone-icon {
-  font-size: 36px;
+  font-size: 2.25rem;
   display: block;
   margin-bottom: 8px;
 }
 
 .dropzone-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -775,7 +800,7 @@ useFocusTrap(inspectionCardRef, {
 
 .dropzone-hint {
   margin: 4px 0 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -819,7 +844,7 @@ useFocusTrap(inspectionCardRef, {
 .queue-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .queue-table th,

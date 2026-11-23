@@ -2329,13 +2329,13 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   background: var(--semantic-color-surface);
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .form-select-sm,
 .form-control-sm {
   padding: 0.35rem 0.6rem;
-  font-size: 0.825rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .version-meta-tags {
@@ -2772,7 +2772,7 @@ onMounted(() => {
 }
 
 .node-type-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   background: var(--semantic-color-surface-header);
@@ -2788,7 +2788,7 @@ onMounted(() => {
 
 .diff-badge {
   margin-left: auto;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.15rem 0.4rem;
   border-radius: 4px;
@@ -3132,7 +3132,7 @@ onMounted(() => {
 
 .subject-tags-inline {
   color: var(--primary);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .margin-top-md {
@@ -3430,7 +3430,7 @@ onMounted(() => {
 
 .form-key-tag {
   font-size: 0.75rem;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--primary);
 }

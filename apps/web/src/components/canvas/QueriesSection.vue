@@ -628,7 +628,7 @@ watch(
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .status-line {

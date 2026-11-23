@@ -40,7 +40,7 @@
         </option>
       </select>
       <span v-if="siteId" id="participants-site-filter" class="filter-chip">
-        Site {{ siteId }}
+        Site <span class="site-code">{{ siteId }}</span>
         <button
           id="btn-clear-site-filter"
           type="button"
@@ -122,7 +122,9 @@
               </button>
             </th>
             <td>{{ participantStateLabel(participant.status) }}</td>
-            <td>{{ participant.site_id || "Not assigned" }}</td>
+            <td :class="{ 'site-code': Boolean(participant.site_id) }">
+              {{ participant.site_id || "Not assigned" }}
+            </td>
             <td class="numeric">
               {{ participant.enrollment_index }}
             </td>
@@ -399,6 +401,7 @@ function onSiteChange(event: Event) {
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  font-size: var(--semantic-font-size-control);
 }
 
 #participants-site {
@@ -468,8 +471,15 @@ function onSiteChange(event: Event) {
   border: 0;
   background: transparent;
   color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-sm);
   cursor: pointer;
+}
+
+.site-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .numeric {

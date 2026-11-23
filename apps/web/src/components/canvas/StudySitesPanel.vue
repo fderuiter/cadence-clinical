@@ -630,7 +630,8 @@ async function submitRegisterSite() {
 }
 
 .linked-site-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .site-country-badge,

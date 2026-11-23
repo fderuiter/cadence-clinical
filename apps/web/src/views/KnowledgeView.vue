@@ -1992,7 +1992,7 @@ export default {
 .badge-persona-filter {
   background-color: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
@@ -2050,7 +2050,7 @@ export default {
 }
 
 .category-desc {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   margin-top: 2px;
   display: -webkit-box;
@@ -2060,7 +2060,7 @@ export default {
 }
 
 .category-count {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   background-color: var(--semantic-color-border-muted);
   color: var(--semantic-color-text-body);
@@ -2127,7 +2127,7 @@ export default {
   padding: 8px 30px 8px 32px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -2161,7 +2161,7 @@ export default {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 2px 8px;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.15s;
@@ -2227,7 +2227,7 @@ export default {
 .article-card-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
 }
 
@@ -2239,7 +2239,7 @@ export default {
 }
 
 .mini-tag {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border);
   border-radius: 4px;
@@ -2311,7 +2311,7 @@ export default {
 }
 
 .crumb-slug {
-  font-family: monospace;
+  font-family: var(--font-mono);
   background-color: var(--semantic-color-surface-header);
   padding: 1px 6px;
   border-radius: 4px;
@@ -2362,7 +2362,7 @@ export default {
 }
 
 .tag-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary);
   border: 1px solid var(--semantic-color-info-border-accent);
@@ -2499,7 +2499,7 @@ export default {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.85em;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .prose-content pre {
@@ -2527,7 +2527,7 @@ export default {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -2586,9 +2586,9 @@ export default {
   border: 1px solid var(--semantic-color-border-control);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .badge-version-lg {
@@ -2628,7 +2628,7 @@ export default {
 }
 
 .hash-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   background-color: var(--semantic-color-surface-header);
   padding: 2px 5px;
@@ -2733,7 +2733,7 @@ export default {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   outline: none;
 }
 
@@ -2743,8 +2743,8 @@ export default {
 }
 
 .code-textarea {
-  font-family: monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--semantic-font-size-control);
   line-height: 1.4;
 }
 

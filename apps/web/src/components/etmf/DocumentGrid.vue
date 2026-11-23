@@ -1194,7 +1194,7 @@ async function submitUpload() {
 }
 
 .taxonomy-pill {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   color: var(--semantic-color-text-secondary);
@@ -1204,7 +1204,7 @@ async function submitUpload() {
 }
 
 .version-tag {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1413,7 +1413,7 @@ async function submitUpload() {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   outline: 2px solid transparent;
   transition: border-color 0.2s;
   background-color: var(--semantic-color-surface);
@@ -1583,13 +1583,13 @@ async function submitUpload() {
 .inline-select {
   width: 100%;
   padding: 4px 8px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   height: auto;
   border-radius: 4px;
 }
 
 .compliance-badge-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);
   padding: 1px 6px;

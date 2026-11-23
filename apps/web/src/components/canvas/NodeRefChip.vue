@@ -128,7 +128,9 @@ function onSelectClick() {
   background: none;
   border: 0;
   padding: 0;
-  font-family: inherit;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: normal;
   font-size: inherit;
   cursor: pointer;
   text-align: left;

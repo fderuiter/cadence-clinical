@@ -295,7 +295,7 @@
                       getFieldQuery(field.id).response_text
                     "
                     style="
-                      font-size: 0.72rem;
+                      font-size: var(--font-size-2xs);
                       color: var(--semantic-color-info);
                       margin-top: 2px;
                     "
@@ -925,7 +925,7 @@ function confirmCloseQuery() {
   padding: 14px 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   color: white;
 }
 

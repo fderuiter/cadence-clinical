@@ -153,7 +153,7 @@
                     style="
                       color: var(--accent);
                       font-size: 0.95rem;
-                      font-family: monospace;
+                      font-family: var(--font-mono);
                     "
                     >{{ rule.id }}</strong
                   >
@@ -204,7 +204,7 @@
                       style="
                         background-color: var(--semantic-color-text-muted);
                         color: var(--semantic-color-text-on-solid);
-                        font-size: 0.7rem;
+                        font-size: var(--font-size-2xs);
                         padding: 2px 6px;
                       "
                       >{{ rule.type }}</span
@@ -231,7 +231,7 @@
                 </div>
                 <div
                   style="
-                    font-family: monospace;
+                    font-family: var(--font-mono);
                     font-size: 0.75rem;
                     color: var(--semantic-color-primary);
                     background-color: rgb(240, 249, 255);
@@ -314,7 +314,7 @@
                   background-color: rgb(241, 245, 249);
                   padding: 12px;
                   border-radius: 8px;
-                  font-family: monospace;
+                  font-family: var(--font-mono);
                   font-size: 0.8rem;
                   border: 1px solid var(--border);
                   line-height: 1.5;
@@ -484,7 +484,7 @@
                 padding: 8px;
                 border: 1px solid var(--border);
                 border-radius: 4px;
-                font-size: 0.85rem;
+                font-size: var(--semantic-font-size-control);
               "
             />
             <button
@@ -642,7 +642,9 @@
           <tbody>
             <tr v-for="q in filteredQueries" :key="q.id">
               <td>
-                <strong style="font-family: monospace">{{ q.id }}</strong>
+                <strong style="font-family: var(--font-mono)">{{
+                  q.id
+                }}</strong>
                 <div
                   v-if="
                     q.origin === 'ANOMALY_DETECTOR' ||
@@ -650,7 +652,7 @@
                     q.query_type === 'CROSS_DOMAIN_ANOMALY'
                   "
                   style="
-                    font-size: 0.65rem;
+                    font-size: var(--font-size-2xs);
                     color: var(--semantic-color-ai);
                     font-weight: bold;
                     margin-top: 2px;

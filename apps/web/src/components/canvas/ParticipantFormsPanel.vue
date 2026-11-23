@@ -1084,7 +1084,7 @@ watch(
 
 .visit-day {
   display: block;
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -1103,7 +1103,7 @@ watch(
 
 .row-spec-code {
   display: block;
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   font-weight: 400;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -1175,7 +1175,7 @@ watch(
   display: inline-block;
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   line-height: 1.4;
 }

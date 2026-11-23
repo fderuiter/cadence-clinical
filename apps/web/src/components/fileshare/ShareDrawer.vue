@@ -864,7 +864,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--semantic-font-size-control);
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -914,7 +914,7 @@ onUnmounted(() => {
 }
 
 .sugg-type {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
@@ -987,14 +987,14 @@ onUnmounted(() => {
 }
 
 .url-input {
-  font-family: monospace;
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface);
 }
 
 .gxp-link-meta {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }

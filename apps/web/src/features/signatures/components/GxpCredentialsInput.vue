@@ -183,7 +183,7 @@ label {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -192,7 +192,7 @@ input {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--semantic-font-size-control);
   background: white;
   box-sizing: border-box;
 }
@@ -213,7 +213,7 @@ input:focus-visible {
   border: 1px solid var(--semantic-color-orange-border);
   background: var(--semantic-color-orange-bg);
   color: var(--semantic-color-orange-text);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 500;
   line-height: 1.4;
 }
@@ -222,7 +222,7 @@ input:focus-visible {
   input {
     min-height: 48px;
     padding: 10px 14px;
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
 }
 </style>

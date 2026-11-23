@@ -1762,7 +1762,7 @@ onMounted(() => {
   padding: 6px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--semantic-font-size-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -1951,7 +1951,7 @@ onMounted(() => {
 }
 
 .facet-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1986,7 +1986,7 @@ onMounted(() => {
 
 .exception-warning {
   display: block;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-error-text-dark);
   font-weight: 600;
   margin-top: 2px;
@@ -2051,7 +2051,7 @@ onMounted(() => {
 }
 
 .token-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--semantic-color-success-dark);
 }
@@ -2164,7 +2164,7 @@ onMounted(() => {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--semantic-font-size-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -2244,7 +2244,7 @@ onMounted(() => {
 }
 
 .facet-status-chip {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   padding: 2px 6px;
   border-radius: 4px;

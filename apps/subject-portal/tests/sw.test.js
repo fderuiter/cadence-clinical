@@ -214,6 +214,36 @@ describe("Subject Portal Service Worker (sw.js)", () => {
     expect(mockCaches.match).toHaveBeenCalledWith(request);
   });
 
+  it("caches same-origin .woff2 font binaries and serves them offline from cache", async () => {
+    const fontUrl =
+      "http://localhost:5174/subject-portal/assets/InterVariable-abc123.woff2";
+    const fontResponse = new globalThis.Response("WOFF2_BINARY", {
+      status: 200,
+      type: "basic",
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(fontResponse);
+
+    const firstRequest = new globalThis.Request(fontUrl, { mode: "cors" });
+    const firstEvent = { request: firstRequest, respondWith: vi.fn() };
+    await listeners["fetch"](firstEvent);
+    const fetched = await firstEvent.respondWith.mock.calls[0][0];
+    expect(fetched).toBe(fontResponse);
+    expect(mockCaches.open).toHaveBeenCalledWith("portal-cache-v1");
+    expect(mockCache.put).toHaveBeenCalledWith(
+      firstRequest,
+      expect.any(globalThis.Response)
+    );
+
+    mockCaches.match.mockResolvedValue(fontResponse);
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Offline"));
+    const offlineRequest = new globalThis.Request(fontUrl, { mode: "cors" });
+    const offlineEvent = { request: offlineRequest, respondWith: vi.fn() };
+    await listeners["fetch"](offlineEvent);
+    const servedOffline = await offlineEvent.respondWith.mock.calls[0][0];
+    expect(servedOffline).toBe(fontResponse);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
   describe("Single-scope MSW coordination mode (?msw=1)", () => {
     let importScriptsSpy;
 

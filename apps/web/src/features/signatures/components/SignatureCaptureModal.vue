@@ -472,7 +472,7 @@ defineExpose({
   padding: 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: white;
 }
 
@@ -482,7 +482,7 @@ defineExpose({
 
 .modal-desc {
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
   line-height: 1.4;
 }
@@ -499,7 +499,7 @@ label {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -507,7 +507,7 @@ select {
   box-sizing: border-box;
   width: 100%;
   padding: 8px;
-  font-size: 13px;
+  font-size: var(--semantic-font-size-control);
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm, 4px);
@@ -524,7 +524,7 @@ select {
 
 .btn {
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   border-radius: var(--radius-sm, 4px);
   font-weight: 500;
@@ -564,7 +564,7 @@ button:focus-visible {
   .btn {
     min-height: 48px;
     padding: 10px 14px;
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
 }
 </style>

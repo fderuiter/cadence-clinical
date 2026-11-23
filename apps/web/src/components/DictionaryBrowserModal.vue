@@ -700,7 +700,7 @@ useFocusTrap(modalRef, {
 }
 
 .soc-flag-pill {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background-color: var(--success-bg);
   color: var(--success);
@@ -816,7 +816,7 @@ useFocusTrap(modalRef, {
 }
 
 .atc-code-pill {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-header);
@@ -895,14 +895,14 @@ useFocusTrap(modalRef, {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--semantic-font-size-control);
   font-family: inherit;
 }
 
 .badge {
   display: inline-block;
   padding: 2px 8px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   border-radius: 12px;
 }

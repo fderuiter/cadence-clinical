@@ -989,14 +989,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--semantic-color-text);
-  font-family: var(
-    --semantic-font-family,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif
-  );
+  font-family: var(--font-sans);
 }
 
 .console-header {
@@ -1170,12 +1163,12 @@ onMounted(() => {
 }
 
 .stream-unit {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .stream-domain-tag {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
 }
@@ -1267,7 +1260,7 @@ onMounted(() => {
 .form-input,
 .form-textarea {
   padding: 6px 10px;
-  font-size: 0.825rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
@@ -1316,7 +1309,7 @@ onMounted(() => {
 }
 
 .cell-num {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
 }
 
@@ -1329,7 +1322,7 @@ onMounted(() => {
 }
 
 .milestone-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1419,18 +1412,18 @@ onMounted(() => {
 }
 
 .badge-unblind-tag {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-primary);
 }
 
 .badge-blinded-tag {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .stream-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1453,7 +1446,7 @@ onMounted(() => {
 }
 
 .item-code {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1520,7 +1513,7 @@ onMounted(() => {
 
 /* Audit Table Specifics */
 .action-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1550,7 +1543,7 @@ onMounted(() => {
 
 .details-json {
   margin: 4px 0 0 0;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-muted);
   padding: 4px 6px;
   border-radius: 4px;
@@ -1559,7 +1552,7 @@ onMounted(() => {
 }
 
 .seal-code {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 4px;
   border-radius: 3px;
@@ -1636,7 +1629,7 @@ onMounted(() => {
 }
 
 .form-help {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

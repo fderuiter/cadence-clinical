@@ -27,14 +27,22 @@
         >
           <button
             class="btn btn-primary btn-batch-upload"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            style="
+              font-size: var(--font-size-xs);
+              font-weight: 600;
+              padding: 6px 14px;
+            "
             @click="isBatchDrawerOpen = true"
           >
             📤 Batch Ingestion
           </button>
           <button
             class="btn btn-outline-secondary btn-qc-queue"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            style="
+              font-size: var(--font-size-xs);
+              font-weight: 600;
+              padding: 6px 14px;
+            "
             @click="showQcQueue = !showQcQueue"
           >
             🛡️ CRA QC Queue
@@ -805,7 +813,7 @@ async function handleDeleteFile(file) {
   padding: 9px 32px 9px 34px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface-muted);
   outline: none;
   transition: all 0.2s;
@@ -919,7 +927,7 @@ async function handleDeleteFile(file) {
 }
 
 .sort-indicator {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   margin-left: 4px;
   color: var(--semantic-color-text-secondary);
 }
@@ -970,7 +978,7 @@ async function handleDeleteFile(file) {
 }
 
 .version-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
   padding: 1px 5px;
@@ -979,14 +987,14 @@ async function handleDeleteFile(file) {
 }
 
 .study-badge {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-primary);
 }
 
 .site-badge {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
@@ -994,7 +1002,7 @@ async function handleDeleteFile(file) {
 }
 
 .uploader-name {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   color: var(--semantic-color-text-secondary);
 }
@@ -1009,7 +1017,7 @@ async function handleDeleteFile(file) {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 

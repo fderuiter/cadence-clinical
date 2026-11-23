@@ -355,9 +355,11 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     public void FrontendQualityGates_FailClosedWhenWorkspaceDependenciesMissing()
     {
         Write("apps/web/src/sample.ts", "export const x = 1;\n");
+        Write("apps/web/src/sample.css", ".card { font-size: var(--font-size-sm); }\n");
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
+        FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.css"], preCommit: true).Should().Be(1);
     }
 
     [Fact]
@@ -2005,5 +2007,58 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         proc.WaitForExit();
         string stderr = stderrTask.GetAwaiter().GetResult();
         return (proc.ExitCode, stdout + stderr);
+    }
+
+    [Fact]
+    public void FrontendQualityGates_CheckEslint_StreamsStagedCssBlobsViaStdin_AndBlocksTypographyViolations()
+    {
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string repoNodeModules = Path.Combine(repoRoot, "node_modules");
+        if (!Directory.Exists(repoNodeModules))
+        {
+            return;
+        }
+
+        InitGitRepo();
+        Write(".gitignore", "node_modules/\n");
+        File.CreateSymbolicLink(Path.Combine(_tempDir, "node_modules"), repoNodeModules);
+        File.Copy(Path.Combine(repoRoot, "package.json"), Path.Combine(_tempDir, "package.json"));
+        File.Copy(Path.Combine(repoRoot, "pnpm-workspace.yaml"), Path.Combine(_tempDir, "pnpm-workspace.yaml"));
+        File.Copy(Path.Combine(repoRoot, "eslint.config.mjs"), Path.Combine(_tempDir, "eslint.config.mjs"));
+        Directory.CreateDirectory(Path.Combine(_tempDir, "packages", "ui"));
+        File.Copy(
+            Path.Combine(repoRoot, "packages", "ui", "tokens.css"),
+            Path.Combine(_tempDir, "packages", "ui", "tokens.css"));
+
+        // Stage a violating .css blob, then mask it with compliant CSS in the working tree.
+        Write(
+            "apps/web/src/probe.css",
+            ".badge {\n  font-family: Arial, sans-serif;\n  font-size: 10px;\n}\ninput.probe {\n  font-size: 0.875rem;\n}\n");
+        RunGit("add", "apps/web/src/probe.css");
+
+        const string compliantCss =
+            ".badge {\n  font-family: var(--font-sans);\n  font-size: var(--font-size-2xs);\n}\ninput.probe {\n  font-size: var(--semantic-font-size-control);\n}\n";
+        Write("apps/web/src/probe.css", compliantCss);
+
+        using (var violatingReader = GitIndexReader.TryOpen(_tempDir))
+        {
+            violatingReader.Should().NotBeNull();
+            FrontendQualityGateService.CheckEslint(
+                _tempDir,
+                ["apps/web/src/probe.css"],
+                preCommit: true,
+                violatingReader).Should().Be(
+                    1,
+                    "CheckEslint must include .css in EslintExtensions and lint staged .css blobs via --stdin");
+        }
+
+        RunGit("add", "apps/web/src/probe.css");
+        using var cleanReader = GitIndexReader.TryOpen(_tempDir);
+        cleanReader.Should().NotBeNull();
+        FrontendQualityGateService.CheckEslint(
+            _tempDir,
+            ["apps/web/src/probe.css"],
+            preCommit: true,
+            cleanReader).Should().Be(0);
     }
 }

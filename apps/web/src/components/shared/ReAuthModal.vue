@@ -364,7 +364,7 @@ defineExpose({
 
 .form-control {
   padding: 9px 12px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   background: var(--semantic-color-surface);

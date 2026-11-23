@@ -28,19 +28,19 @@
         min-width: 0;
       "
     >
-      <span style="font-size: 24px">⚠️</span>
+      <span style="font-size: var(--font-size-2xl)">⚠️</span>
       <div style="min-width: 0">
         <h3
           style="
             margin: 0 0 4px 0;
-            font-size: 16px;
+            font-size: var(--font-size-md);
             font-weight: 700;
             color: var(--semantic-color-warning-text-dark);
           "
         >
           Action Needed: Updated Study Consent
         </h3>
-        <p style="margin: 0; font-size: 14px">
+        <p style="margin: 0; font-size: var(--font-size-sm)">
           Your study consent form has been updated. Please review and sign the
           changes before submitting your next survey.
         </p>

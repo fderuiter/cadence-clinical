@@ -88,11 +88,40 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const isFontAsset =
+    url.origin === self.location.origin && url.pathname.endsWith(".woff2");
   const isStaticAsset =
     url.origin === self.location.origin &&
     url.pathname.startsWith(SW_BASE) &&
     !/(^|\/)api\//.test(url.pathname) &&
     !url.pathname.endsWith("/mockServiceWorker.js");
+
+  if (isFontAsset) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetchWithTimeout(event.request, 2000).then((response) => {
+          if (
+            response &&
+            response.status === 200 &&
+            response.type === "basic"
+          ) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        });
+      })
+    );
+    if (IS_MSW_MODE && typeof event.stopImmediatePropagation === "function") {
+      event.stopImmediatePropagation();
+    }
+    return;
+  }
 
   if (isStaticAsset) {
     // Limit network requests for application shell assets to a maximum of 2 seconds before racing to the local cache fallback

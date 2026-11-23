@@ -486,7 +486,7 @@ const formatTime = (isoString) => {
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .translations-section {
@@ -566,7 +566,7 @@ const formatTime = (isoString) => {
   background: white;
   border: 1px solid var(--border);
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 5px;
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
@@ -596,7 +596,7 @@ const formatTime = (isoString) => {
 }
 
 .inline-input {
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   padding: 6px 10px;
 }
 
@@ -730,7 +730,7 @@ const formatTime = (isoString) => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .error-text {

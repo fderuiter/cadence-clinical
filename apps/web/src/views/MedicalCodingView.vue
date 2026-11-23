@@ -654,7 +654,7 @@ onMounted(() => {
 
 .dict-select-box select,
 .confidence-select-box select {
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -677,7 +677,7 @@ onMounted(() => {
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .search-input:focus {

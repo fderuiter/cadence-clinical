@@ -561,7 +561,7 @@ function getTimepointClass(tp) {
   background-color: rgba(56, 189, 248, 0.15);
   color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.4);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -635,7 +635,7 @@ function getTimepointClass(tp) {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 8px;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
   outline: none;
 }
 
@@ -649,7 +649,7 @@ function getTimepointClass(tp) {
   background: none;
   border: none;
   color: var(--semantic-color-error);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -693,7 +693,7 @@ function getTimepointClass(tp) {
 }
 
 .timepoint-pill {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -716,7 +716,7 @@ function getTimepointClass(tp) {
 }
 
 .type-pill {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 4px;
   border-radius: 3px;
   font-weight: 600;
@@ -813,7 +813,7 @@ function getTimepointClass(tp) {
 }
 
 .metric-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -925,7 +925,7 @@ function getTimepointClass(tp) {
   background-color: rgba(56, 189, 248, 0.2);
   color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.4);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -935,7 +935,7 @@ function getTimepointClass(tp) {
   background-color: rgba(251, 191, 36, 0.2);
   color: var(--semantic-color-warning);
   border: 1px solid rgba(251, 191, 36, 0.4);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -944,7 +944,7 @@ function getTimepointClass(tp) {
 .manual-badge {
   background-color: rgba(148, 163, 184, 0.15);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -956,7 +956,7 @@ function getTimepointClass(tp) {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 2px 4px;
-  font-size: 0.75rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .action-btn-group {
@@ -969,7 +969,7 @@ function getTimepointClass(tp) {
   background-color: rgba(251, 191, 36, 0.15);
   color: var(--semantic-color-warning);
   border: 1px solid rgba(251, 191, 36, 0.3);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;

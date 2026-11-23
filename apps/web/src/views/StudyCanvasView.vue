@@ -26,6 +26,7 @@
           <li v-if="studyCode">
             <router-link
               id="zoom-study"
+              class="canvas-code"
               :to="studyLocation()"
               :aria-current="zoomCurrent === 'study' ? 'page' : undefined"
             >
@@ -44,19 +45,21 @@
               "
               :aria-current="zoomCurrent === 'site' ? 'page' : undefined"
             >
-              Site {{ zoomSite }}
+              Site <span class="canvas-code">{{ zoomSite }}</span>
             </router-link>
           </li>
           <li v-if="zoomParticipantCode">
             <span
               v-if="zoomCurrent === 'participant'"
               id="zoom-participant"
+              class="canvas-code"
               aria-current="page"
               >{{ zoomParticipantCode }}</span
             >
             <router-link
               v-else
               id="zoom-participant"
+              class="canvas-code"
               :to="zoomParticipantLocation"
             >
               {{ zoomParticipantCode }}
@@ -125,7 +128,7 @@
 
     <template v-if="studyCode">
       <div class="study-header">
-        <h1 id="canvas-study-title">
+        <h1 id="canvas-study-title" class="canvas-code">
           {{ studyCode }}
         </h1>
         <nav aria-label="Lifecycle">
@@ -608,7 +611,10 @@
                 {{ item.title }}
               </div>
               <div class="study-card-sponsor">
-                Sponsor: {{ item.sponsor_name }} ({{ item.sponsor_code }}) ·
+                Sponsor: {{ item.sponsor_name }} (<span class="canvas-code">{{
+                  item.sponsor_code
+                }}</span
+                >) ·
                 {{
                   item.site_count === 1
                     ? "1 linked site"
@@ -844,9 +850,11 @@
               />
               <label for="create-study-link-sandbox-site">
                 Link default workspace site
-                <strong>{{ defaultStarterSite.code }}</strong> ({{
-                  defaultStarterSite.name
-                }}, {{ defaultStarterSite.country }}) to this study
+                <strong class="canvas-code">{{
+                  defaultStarterSite.code
+                }}</strong>
+                ({{ defaultStarterSite.name }},
+                {{ defaultStarterSite.country }}) to this study
               </label>
             </div>
 
@@ -2560,8 +2568,13 @@ onUnmounted(() => {
 }
 
 .palette-trigger kbd {
-  font-family: inherit;
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.canvas-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .user {
@@ -2728,6 +2741,7 @@ onUnmounted(() => {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  font-size: var(--semantic-font-size-control);
 }
 
 .directory-section {
@@ -2794,7 +2808,9 @@ onUnmounted(() => {
 }
 
 .study-card-code {
-  font-size: 0.98rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-md);
 }
 
 .study-phase-badge {
@@ -2887,7 +2903,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   width: 100%;
   box-sizing: border-box;
 }

@@ -33,7 +33,7 @@
             >
               <th scope="row">
                 <label :for="`ecrf-item-${item.item_id}`">
-                  {{ item.item_id }}
+                  <span class="ecrf-item-code">{{ item.item_id }}</span>
                   <abbr
                     v-if="item.required"
                     class="ecrf-required"
@@ -85,7 +85,12 @@
                     v-for="warn in formState.previewWarnings[item.item_id]"
                     :key="warn.rule_id"
                   >
-                    <strong>[{{ warn.severity }}] {{ warn.rule_id }}:</strong>
+                    <strong
+                      >[{{ warn.severity }}]
+                      <span class="ecrf-mono-code">{{
+                        warn.rule_id
+                      }}</span>:</strong
+                    >
                     {{ warn.message }}
                   </li>
                 </ul>
@@ -128,10 +133,11 @@
                   >
                     {{ item.revision }}
                   </component>
-                  <template v-else>
+                  <span v-else class="ecrf-mono-code">
                     {{ item.revision }}
-                  </template>
-                  by {{ item.recorded_by }} at {{ item.recorded_at }}
+                  </span>
+                  by {{ item.recorded_by }} at
+                  <span class="ecrf-mono-code">{{ item.recorded_at }}</span>
                 </template>
                 <template v-else> No value </template>
               </td>
@@ -252,12 +258,19 @@
                   <label for="ecrf-sdv-reason">
                     <template v-if="sdv.pendingSdv.mode === 'verify'">
                       Reason for verifying
-                      {{ sdv.pendingSdv.item_id }} (revision
-                      {{ sdv.pendingSdv.revision }})
+                      <span class="ecrf-mono-code">{{
+                        sdv.pendingSdv.item_id
+                      }}</span>
+                      (revision
+                      <span class="ecrf-mono-code">{{
+                        sdv.pendingSdv.revision
+                      }}</span>)
                     </template>
                     <template v-else>
                       Reason for withdrawing verification on
-                      {{ sdv.pendingSdv.item_id }}
+                      <span class="ecrf-mono-code">{{
+                        sdv.pendingSdv.item_id
+                      }}</span>
                     </template>
                   </label>
                   <input
@@ -306,12 +319,17 @@
                 <div class="ecrf-form-row">
                   <label for="ecrf-raise-text">
                     <template v-if="raising.unrecorded">
-                      Missing-data query on {{ raising.item_id }} (no value
-                      recorded)
+                      Missing-data query on
+                      <span class="ecrf-mono-code">{{ raising.item_id }}</span>
+                      (no value recorded)
                     </template>
                     <template v-else>
-                      Query on {{ raising.item_id }} (revision
-                      {{ raising.revision }})
+                      Query on
+                      <span class="ecrf-mono-code">{{ raising.item_id }}</span>
+                      (revision
+                      <span class="ecrf-mono-code">{{
+                        raising.revision
+                      }}</span>)
                     </template>
                   </label>
                   <textarea id="ecrf-raise-text" v-model="raiseText" rows="2" />
@@ -384,7 +402,10 @@
           v-for="warn in formState.previewWarnings.__form__"
           :key="warn.rule_id"
         >
-          <strong>[{{ warn.severity }}] {{ warn.rule_id }}:</strong>
+          <strong
+            >[{{ warn.severity }}]
+            <span class="ecrf-mono-code">{{ warn.rule_id }}</span>:</strong
+          >
           {{ warn.message }}
         </li>
       </ul>
@@ -451,7 +472,7 @@
       <span>Unsaved values not recorded:</span>
       <ul>
         <li v-for="entry in formState.outcome.unsaved" :key="entry.item_id">
-          <strong>{{ entry.item_id }}:</strong>
+          <strong class="ecrf-mono-code">{{ entry.item_id }}:</strong>
           {{ formatUnsavedEntry(entry) }}
         </li>
       </ul>
@@ -646,7 +667,21 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   width: 100%;
   min-width: 52rem;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
+}
+.ecrf-form-items input[type="text"],
+.ecrf-form-items select,
+.ecrf-form-items textarea,
+.ecrf-form-row input[type="text"],
+.ecrf-form-row select,
+.ecrf-form-row textarea {
+  font-size: var(--semantic-font-size-control);
+}
+.ecrf-item-code,
+.ecrf-mono-code,
+.ecrf-observation-link {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-form-items th,
 .ecrf-form-items td {

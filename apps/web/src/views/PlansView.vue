@@ -896,7 +896,7 @@ async function handleActivateSubscription() {
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.92rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .field-error {

@@ -1250,14 +1250,14 @@ onMounted(() => {
 }
 
 .console-title {
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .console-subtitle {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.5;
   margin: 0;
@@ -1294,7 +1294,7 @@ onMounted(() => {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  font-size: 20px;
+  font-size: var(--font-size-xl);
 }
 
 .bg-blue {
@@ -1316,20 +1316,20 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .metric-value {
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 2px 0;
 }
 
 .metric-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1347,7 +1347,7 @@ onMounted(() => {
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -1369,7 +1369,7 @@ onMounted(() => {
 .badge-count {
   background: var(--semantic-color-error);
   color: var(--semantic-color-surface);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 10px;
 }
@@ -1402,7 +1402,7 @@ onMounted(() => {
 }
 
 .card-title {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
   margin: 0;
@@ -1452,7 +1452,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .legend-item {
@@ -1497,12 +1497,12 @@ onMounted(() => {
 }
 
 .sub-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .sub-val {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -1515,7 +1515,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   text-align: left;
 }
 
@@ -1555,15 +1555,15 @@ onMounted(() => {
   color: var(--semantic-color-accent-inverse);
   padding: 14px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   overflow-x: auto;
   margin: 0;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 /* Badges & Buttons */
 .badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1599,7 +1599,7 @@ onMounted(() => {
 }
 
 .severity-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1624,7 +1624,7 @@ onMounted(() => {
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .lakehouse-tag {
@@ -1632,7 +1632,7 @@ onMounted(() => {
   color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -1641,7 +1641,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
@@ -1668,7 +1668,7 @@ onMounted(() => {
 }
 .btn-sm {
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 /* Modals */
@@ -1703,7 +1703,7 @@ onMounted(() => {
 }
 
 .modal-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   margin: 0;
 }
@@ -1711,7 +1711,7 @@ onMounted(() => {
 .modal-close {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
 }
@@ -1741,7 +1741,7 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -1750,7 +1750,7 @@ onMounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  font-size: 13px;
+  font-size: var(--semantic-font-size-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -1764,7 +1764,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-error-border-soft);
   padding: 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   margin-bottom: 14px;
 }
 
@@ -1778,10 +1778,10 @@ onMounted(() => {
   font-weight: 700;
 }
 .text-sm {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 .threshold-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-left: 4px;
 }

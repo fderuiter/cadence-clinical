@@ -2839,9 +2839,7 @@ onMounted(() => {
   padding: 1.5rem;
   background-color: var(--semantic-color-surface-muted);
   min-height: 100vh;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: var(--font-sans);
   color: var(--semantic-color-text);
 }
 
@@ -2863,7 +2861,7 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   font-weight: 700;
   color: var(--semantic-color-primary);
@@ -2966,12 +2964,12 @@ onMounted(() => {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface);
 }
 
 .textarea-input {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .data-table {

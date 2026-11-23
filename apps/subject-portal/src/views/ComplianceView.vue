@@ -34,10 +34,19 @@
         margin-bottom: 16px;
       "
     >
-      <p style="color: var(--danger); font-weight: bold; font-size: 16px">
+      <p
+        style="
+          color: var(--danger);
+          font-weight: bold;
+          font-size: var(--font-size-md);
+        "
+      >
         Failed to load compliance data.
       </p>
-      <p id="compliance-error-msg" style="font-size: 14px; margin-bottom: 12px">
+      <p
+        id="compliance-error-msg"
+        style="font-size: var(--font-size-sm); margin-bottom: 12px"
+      >
         Unknown error
       </p>
       <button id="btn-retry-compliance" type="button" class="btn btn-primary">

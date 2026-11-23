@@ -177,8 +177,8 @@
                 <span>{{ warning.label }}</span>
                 <span
                   style="
-                    font-family: monospace;
-                    font-size: 0.7rem;
+                    font-family: var(--font-mono);
+                    font-size: var(--font-size-2xs);
                     background: var(--semantic-color-warning-bg-badge);
                     padding: 1px 4px;
                     border-radius: 4px;
@@ -188,7 +188,7 @@
               </div>
               <p
                 style="
-                  font-size: 0.72rem;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-warning-action-border);
                   margin: 0;
                   line-height: 1.3;
@@ -198,7 +198,7 @@
               </p>
               <div
                 style="
-                  font-size: 0.68rem;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-text-subtle);
                   margin-top: 4px;
                   font-style: italic;
@@ -267,8 +267,8 @@
               >
               <span
                 style="
-                  font-family: monospace;
-                  font-size: 0.72rem;
+                  font-family: var(--font-mono);
+                  font-size: var(--font-size-2xs);
                   background-color: var(--semantic-color-border);
                   padding: 2px 6px;
                   border-radius: 4px;
@@ -411,7 +411,7 @@
               <label
                 for="layout-justification-input"
                 style="
-                  font-size: 0.72rem;
+                  font-size: var(--font-size-2xs);
                   font-weight: 700;
                   color: var(--semantic-color-text-secondary);
                   text-transform: uppercase;
@@ -427,7 +427,7 @@
                 placeholder="Provide a clinical justification for this layout deviation..."
                 style="
                   width: 100%;
-                  font-size: 0.8rem;
+                  font-size: var(--semantic-font-size-control);
                   padding: 8px;
                   border: 1px solid var(--semantic-color-border-muted);
                   border-radius: 6px;
@@ -950,6 +950,6 @@ function onResetSimulation() {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 .text-xxs {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
 }
 </style>

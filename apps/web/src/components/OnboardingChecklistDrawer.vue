@@ -263,7 +263,7 @@ function startGuidedTour() {
   display: flex;
   flex-direction: column;
   z-index: 1051;
-  font-family: var(--semantic-font-family);
+  font-family: var(--font-sans);
   color: var(--semantic-color-text);
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -447,7 +447,7 @@ function startGuidedTour() {
 }
 
 .task-status-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 12px;

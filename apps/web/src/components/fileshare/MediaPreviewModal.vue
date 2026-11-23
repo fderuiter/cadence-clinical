@@ -1201,8 +1201,8 @@ function getStatusClass(status) {
 
 .checksum-text {
   display: block;
-  font-family: monospace;
-  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
   padding: 6px;
@@ -1314,7 +1314,7 @@ function getStatusClass(status) {
 
 /* Dynamic rotating diagonal watermark */
 .watermark-text {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 1rem;
   font-weight: 900;
   color: var(--semantic-color-error);
@@ -1376,7 +1376,7 @@ function getStatusClass(status) {
 }
 
 .quality-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   margin: 0;
@@ -1388,7 +1388,7 @@ function getStatusClass(status) {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 2px 6px;
-  font-size: 0.75rem;
+  font-size: var(--semantic-font-size-control);
   font-weight: 500;
   outline: none;
   cursor: pointer;
@@ -1619,7 +1619,7 @@ function getStatusClass(status) {
 .doc-sheet-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   border-top: 1px solid var(--semantic-color-border);
   padding-top: 12px;

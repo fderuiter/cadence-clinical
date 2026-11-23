@@ -236,7 +236,7 @@ export function createConditionRowHTML(
     rightOperandHTML = `
       <div class="form-group cond-right-group" style="flex: 1; min-width: 100px;">
         <label for="cond-right-type-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Value Type</label>
-        <select id="cond-right-type-${index}" class="cond-right-type" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
+        <select id="cond-right-type-${index}" class="cond-right-type" data-index="${index}" style="width: 100%; padding: 6px; font-size: var(--semantic-font-size-control); border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
           <option value="constant" ${cond.rightType === "constant" ? "selected" : ""}>Constant Value</option>
           <option value="field_ref" ${cond.rightType === "field_ref" ? "selected" : ""}>Field Reference</option>
         </select>
@@ -247,13 +247,13 @@ export function createConditionRowHTML(
           ? `
         <div class="form-group cond-right-val-group" style="flex: 1; min-width: 100px;">
           <label for="cond-right-value-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Constant Value</label>
-          <input id="cond-right-value-${index}" class="cond-right-value" data-index="${index}" type="text" placeholder="Value..." value="${cond.rightValue}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);" />
+          <input id="cond-right-value-${index}" class="cond-right-value" data-index="${index}" type="text" placeholder="Value..." value="${cond.rightValue}" style="width: 100%; padding: 6px; font-size: var(--semantic-font-size-control); border-radius: 4px; border: 1px solid var(--semantic-color-border-control);" />
         </div>
       `
           : `
         <div class="form-group cond-right-field-group" style="flex: 1; min-width: 100px;">
           <label for="cond-right-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Field</label>
-          <select id="cond-right-field-${index}" class="cond-right-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
+          <select id="cond-right-field-${index}" class="cond-right-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: var(--semantic-font-size-control); border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             <option value="">-- Select Field --</option>
             ${rightFieldOptions}
           </select>
@@ -269,7 +269,7 @@ export function createConditionRowHTML(
       <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-form-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Form</label>
-          <select id="cond-form-${index}" class="cond-form" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
+          <select id="cond-form-${index}" class="cond-form" data-index="${index}" style="width: 100%; padding: 6px; font-size: var(--semantic-font-size-control); border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             <option value="">-- Select Form --</option>
             ${formOptions}
           </select>
@@ -277,7 +277,7 @@ export function createConditionRowHTML(
 
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Field</label>
-          <select id="cond-field-${index}" class="cond-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
+          <select id="cond-field-${index}" class="cond-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: var(--semantic-font-size-control); border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             <option value="">-- Select Field --</option>
             ${fieldOptions}
           </select>
@@ -285,7 +285,7 @@ export function createConditionRowHTML(
 
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-operator-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Operator</label>
-          <select id="cond-operator-${index}" class="cond-operator" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
+          <select id="cond-operator-${index}" class="cond-operator" data-index="${index}" style="width: 100%; padding: 6px; font-size: var(--semantic-font-size-control); border-radius: 4px; border: 1px solid var(--semantic-color-border-control);">
             ${operatorOptions}
           </select>
         </div>
@@ -408,7 +408,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
 
         <div class="form-group" style="margin-bottom: 16px;">
           <label for="match-operator-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Match Conditions Group Operator</label>
-          <select id="match-operator-select" class="match-operator-selector" style="padding: 6px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px; font-size: 0.85rem;">
+          <select id="match-operator-select" class="match-operator-selector" style="padding: 6px; border: 1px solid var(--semantic-color-border-control); border-radius: 6px; font-size: var(--semantic-font-size-control);">
             <option value="and" ${opt.matchOperator === "and" ? "selected" : ""}>All conditions must be met (AND)</option>
             <option value="or" ${opt.matchOperator === "or" ? "selected" : ""}>Any condition can be met (OR)</option>
           </select>

@@ -637,7 +637,7 @@ function startGuidedTour() {
   padding: 24px;
   max-width: 1280px;
   margin: 0 auto;
-  font-family: var(--semantic-font-family);
+  font-family: var(--font-sans);
   color: var(--semantic-color-text);
 }
 
@@ -1064,7 +1064,7 @@ function startGuidedTour() {
 }
 
 .launcher-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 10px;

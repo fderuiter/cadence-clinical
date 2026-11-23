@@ -611,7 +611,7 @@ defineExpose({
 }
 
 .domain-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;

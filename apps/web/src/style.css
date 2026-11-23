@@ -11,6 +11,8 @@
 
 body {
   font-family: var(--font);
+  font-feature-settings: var(--font-feature-sans);
+  font-size: var(--semantic-font-size-body);
   background-color: var(--semantic-color-surface-header);
   color: var(--text-main);
   line-height: 1.5;
@@ -159,7 +161,7 @@ body {
 }
 
 .brand-subtitle {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   margin: 0;
   letter-spacing: 0.01em;
@@ -207,8 +209,8 @@ body {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 0.7rem;
-  font-family: monospace;
+  font-size: var(--font-size-2xs);
+  font-family: var(--font-mono);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -224,7 +226,7 @@ body {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 6px;
@@ -251,7 +253,7 @@ body {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
   font-weight: 600;
   cursor: pointer;
   outline: none;
@@ -305,7 +307,7 @@ body {
 }
 
 .user-role-label {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-accent-inverse);
   font-weight: 600;
 }
@@ -313,7 +315,7 @@ body {
 .btn-logout-action,
 .btn-login-action {
   padding: 4px 8px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background-color: var(--semantic-color-error);
   border: none;
@@ -366,7 +368,7 @@ body {
 }
 
 .nav-category-title {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
@@ -439,7 +441,7 @@ body {
 }
 
 .external-pill {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-success);
   background-color: var(--semantic-color-success-bg);
@@ -584,8 +586,8 @@ main {
 .json-editor {
   width: 100%;
   height: 400px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--semantic-font-size-control);
   padding: 16px;
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-accent-inverse);
@@ -790,7 +792,7 @@ main {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   resize: vertical;
   margin-top: 4px;
 }
@@ -836,7 +838,7 @@ main {
 
 .query-status-badge {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -945,7 +947,7 @@ main {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   margin-bottom: 16px;
 }
 
@@ -956,7 +958,7 @@ main {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   resize: vertical;
 }
 
@@ -1070,7 +1072,8 @@ main {
 }
 
 .ledger-block-index {
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
@@ -1081,6 +1084,8 @@ main {
 
 .ledger-block-timestamp {
   font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1108,7 +1113,7 @@ main {
 }
 
 .ledger-val {
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text-main);
   word-break: break-all;
 }
@@ -1133,7 +1138,8 @@ main {
 }
 
 .crypto-hash {
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--semantic-color-teal-text);
   word-break: break-all;
   background-color: var(--semantic-color-teal-bg);
@@ -1154,7 +1160,7 @@ main {
   color: var(--success);
   border: 2px solid var(--success);
   font-weight: 800;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
   text-transform: uppercase;
@@ -1464,13 +1470,14 @@ main {
 }
 
 .section-field-count {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .section-header-right {
@@ -1493,7 +1500,7 @@ main {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   padding: 2px 6px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -1615,8 +1622,8 @@ main {
 }
 
 .sdtm-tag-badge {
-  font-family: monospace;
-  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-primary);
   background-color: var(--semantic-color-primary-light);
@@ -1634,7 +1641,7 @@ main {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -1662,7 +1669,7 @@ main {
 }
 
 .inspector-section-title {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1676,7 +1683,7 @@ main {
 .warning-count-badge {
   background-color: var(--semantic-color-warning-bg-badge);
   color: var(--semantic-color-warning-dark);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 10px;
@@ -1713,7 +1720,7 @@ main {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   outline: none;
@@ -1776,10 +1783,6 @@ main {
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--semantic-color-text);
-}
-
-.font-mono {
-  font-family: monospace;
 }
 
 .font-bold {

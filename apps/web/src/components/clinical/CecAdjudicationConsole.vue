@@ -2099,16 +2099,7 @@ onMounted(() => {
   box-sizing: border-box;
   color: var(--color-text);
   background-color: var(--semantic-color-surface-muted);
-  font-family: var(
-    --semantic-font-family,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif
-  );
+  font-family: var(--font-sans);
   padding: 1.5rem;
 }
 
@@ -2204,7 +2195,7 @@ onMounted(() => {
   background: var(--color-surface);
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
-  font-size: 0.875rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--color-text);
   box-sizing: border-box;
 }
@@ -2393,7 +2384,7 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   padding: 0.2rem 0.5rem;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -2439,7 +2430,7 @@ onMounted(() => {
 }
 
 .category-tag {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -2467,7 +2458,7 @@ onMounted(() => {
 }
 
 .dot {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
@@ -2492,7 +2483,7 @@ onMounted(() => {
 
 /* Status Pills */
 .status-pill {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.2rem 0.5rem;
   border-radius: 12px;
@@ -2567,7 +2558,7 @@ onMounted(() => {
 }
 
 .hash-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   background: var(--semantic-color-surface-header);
   padding: 0.1rem 0.3rem;
   border-radius: 3px;
@@ -2644,7 +2635,7 @@ onMounted(() => {
 }
 
 .phi-badge {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   background: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
@@ -2709,12 +2700,12 @@ onMounted(() => {
 }
 
 .cell-value {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
 }
 
 .grade-badge {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.15rem 0.4rem;
   border-radius: 4px;

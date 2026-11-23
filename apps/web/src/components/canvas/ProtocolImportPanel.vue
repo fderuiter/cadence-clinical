@@ -658,7 +658,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   width: 100%;
   box-sizing: border-box;
 }
@@ -696,7 +696,7 @@ defineExpose({
   border-radius: 4px;
   background: var(--semantic-color-border);
   color: var(--semantic-color-text-body);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -895,6 +895,6 @@ defineExpose({
 
 .draft-item-id {
   color: var(--neutral-dark);
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
 }
 </style>

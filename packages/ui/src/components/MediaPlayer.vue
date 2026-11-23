@@ -525,7 +525,7 @@ onUnmounted(() => {
 }
 
 .media-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -554,7 +554,7 @@ onUnmounted(() => {
 
 .media-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -570,7 +570,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   color: var(--semantic-color-text);
   transition: background 0.15s ease;
@@ -586,7 +586,7 @@ onUnmounted(() => {
 }
 
 .zoom-indicator {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
   min-width: 42px;
@@ -625,7 +625,7 @@ onUnmounted(() => {
 
 .watermark-label {
   transform: rotate(-35deg);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
   white-space: nowrap;
@@ -662,7 +662,7 @@ onUnmounted(() => {
 }
 
 .page-counter {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--semantic-color-text-body);
 }
@@ -749,7 +749,7 @@ onUnmounted(() => {
   background: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -762,8 +762,8 @@ onUnmounted(() => {
 }
 
 .time-display {
-  font-size: 12px;
-  font-family: monospace;
+  font-size: var(--font-size-2xs);
+  font-family: var(--font-mono);
   color: var(--semantic-color-text-inverse-muted);
   min-width: 42px;
   font-variant-numeric: tabular-nums;
@@ -803,7 +803,7 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid var(--semantic-color-border-inverse);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   border-radius: 4px;
   padding: 2px 6px;
   cursor: pointer;
@@ -826,13 +826,13 @@ onUnmounted(() => {
 }
 
 .unsupported-msg {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-inverse-muted);
 }
 
 .btn {
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   border-radius: 6px;
   text-decoration: none;

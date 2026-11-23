@@ -599,14 +599,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: var(
-    --font,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif
-  );
+  font-family: var(--font);
   color: var(--primary);
 }
 
@@ -660,7 +653,7 @@ onUnmounted(() => {
 }
 
 .context-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
@@ -669,7 +662,7 @@ onUnmounted(() => {
 .route-badge {
   background-color: var(--semantic-color-indigo-bg);
   color: var(--semantic-color-indigo-text);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .persona-badge {
@@ -725,7 +718,7 @@ onUnmounted(() => {
   padding: 8px 32px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   background-color: white;
   color: var(--primary);
   outline: none;
@@ -855,7 +848,7 @@ onUnmounted(() => {
 .category-badge {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -865,7 +858,7 @@ onUnmounted(() => {
 .badge-version {
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -874,7 +867,7 @@ onUnmounted(() => {
 .badge-status {
   background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -895,7 +888,7 @@ onUnmounted(() => {
 }
 
 .tag-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   color: var(--semantic-color-text-secondary);
@@ -904,7 +897,7 @@ onUnmounted(() => {
 }
 
 .tag-pill-sm {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   padding: 1px 4px;
 }
 
@@ -928,7 +921,7 @@ onUnmounted(() => {
   background-color: rgba(255, 255, 255, 0.6);
   padding: 2px 4px;
   border-radius: 3px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .body-toggle-bar {
@@ -1003,7 +996,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-surface-header);
   padding: 2px 4px;
   border-radius: 3px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 
@@ -1074,7 +1067,7 @@ onUnmounted(() => {
 .badge-version-sm {
   background-color: var(--semantic-color-indigo-bg);
   color: var(--semantic-color-indigo-text);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 1px 5px;
   border-radius: 3px;

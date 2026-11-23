@@ -1259,4 +1259,176 @@ import { ClinicalIconButton } from "ui";
       expect(a11yErrors).toEqual([]);
     });
   });
+
+  describe("Requirement 9: Clinical Typography Scale, Monospace Identifiers & AST/CSS Guardrails (ADR-2651)", () => {
+    it("eliminates hardcoded font stacks, raw px font sizes outside :root, sub-0.75rem text, and sub-1rem form controls across ui, web, subject-portal, and docs/.vitepress", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const cssFiles = [
+        path.join(uiDir, "fonts.css"),
+        path.join(uiDir, "tokens.css"),
+        path.join(uiDir, "responsive.css"),
+        path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        ...walkFiles(path.join(uiDir, "src"), [".css"]),
+        ...walkFiles(webSrcDir, [".css"]),
+        ...walkFiles(portalSrcDir, [".css"]),
+      ];
+
+      const cssLintResults = await eslint.lintFiles(cssFiles);
+      const cssViolations = cssLintResults.flatMap((res) =>
+        res.messages.map(
+          (msg) =>
+            `${path.relative(repoRoot, res.filePath)}:${msg.line} [${msg.ruleId}] ${msg.message}`
+        )
+      );
+      expect(cssViolations).toEqual([]);
+
+      // Fast static scan over all Vue/JS/TS/CSS files for raw font stacks, px font sizes outside :root, and sub-0.75rem text
+      const allFrontendFiles = [
+        ...cssFiles,
+        path.join(uiDir, "index.js"),
+        ...walkFiles(path.join(uiDir, "src"), [".vue", ".js", ".ts"]),
+        ...walkFiles(webSrcDir, [".vue", ".js", ".ts"]),
+        ...walkFiles(portalSrcDir, [".vue", ".js", ".ts"]),
+      ];
+
+      const typographyViolations = [];
+      for (const filePath of allFrontendFiles) {
+        const rel = path.relative(repoRoot, filePath).replace(/\\/g, "/");
+        if (rel === "packages/ui/fonts.css") continue;
+        const raw = fs.readFileSync(filePath, "utf-8");
+        const cssChunks = filePath.endsWith(".vue")
+          ? Array.from(
+              raw.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
+              (m) => m[1]
+            )
+          : filePath.endsWith(".css")
+            ? [raw]
+            : [];
+
+        for (const chunk of cssChunks) {
+          let clean = chunk.replace(/\/\*[\s\S]*?\*\//g, "");
+          if (rel === "packages/ui/tokens.css") {
+            clean = clean.replace(
+              /(?::root(?:\[[^\]]+\])?|\[data-theme="[^"]+"\]|\.dark)[^{]*\{[^}]*\}/g,
+              ""
+            );
+          }
+          for (const ff of clean.matchAll(/font-family\s*:\s*([^;}]+)/gi)) {
+            const val = ff[1].replace(/!important/gi, "").trim();
+            if (
+              !/^(?:inherit|initial|unset|revert|revert-layer|var\(\s*--(?:font|semantic-font|vp-font-family)[a-zA-Z0-9_-]*\s*\))$/i.test(
+                val
+              )
+            ) {
+              typographyViolations.push(`${rel} raw font-family: ${val}`);
+            }
+          }
+          for (const fsMatch of clean.matchAll(/font-size\s*:\s*([^;}]+)/gi)) {
+            const val = fsMatch[1].replace(/!important/gi, "").trim();
+            if (/\d+(?:\.\d+)?px\b/i.test(val)) {
+              typographyViolations.push(`${rel} px font-size: ${val}`);
+            }
+            const remMatch = val.match(/^(\d*\.?\d+)rem$/i);
+            if (remMatch && Number.parseFloat(remMatch[1]) < 0.75) {
+              typographyViolations.push(`${rel} sub-floor font-size: ${val}`);
+            }
+          }
+        }
+      }
+      expect(typographyViolations).toEqual([]);
+    });
+
+    it("aligns subject-portal, web, VitePress theme, and staged demo verification with shared typography tokens and bundled WOFF2 subsets", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      expect(tokensCss).toMatch(
+        /(?:^|\n)input,\s*select,\s*textarea\s*\{[^}]*font-size:\s*var\(--semantic-font-size-control\)/
+      );
+
+      const portalCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+      const portalBodyProps = parseRuleProps(portalCss, /(?:^|\n)body\s*\{/);
+      expect(portalBodyProps).not.toBeNull();
+      expect(portalBodyProps["font-family"]).toBe("var(--font)");
+      expect(portalBodyProps["font-size"]).toBe("var(--font-size-md)");
+
+      const webCss = fs.readFileSync(
+        path.join(webSrcDir, "style.css"),
+        "utf-8"
+      );
+      const webBodyProps = parseRuleProps(webCss, /(?:^|\n)body\s*\{/);
+      expect(webBodyProps).not.toBeNull();
+      expect(webBodyProps["font-family"]).toBe("var(--font)");
+      expect(webBodyProps["font-size"]).toBe("var(--semantic-font-size-body)");
+
+      const vitepressCss = fs.readFileSync(
+        path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        "utf-8"
+      );
+      expect(vitepressCss).toContain(
+        '@import "../../../packages/ui/tokens.css";'
+      );
+      expect(vitepressCss).toContain(
+        "--vp-font-family-base: var(--font-sans);"
+      );
+      expect(vitepressCss).toContain(
+        "--vp-font-family-mono: var(--font-mono);"
+      );
+
+      const stageDemosScript = fs.readFileSync(
+        path.join(repoRoot, "scripts/stage-portal-demos.js"),
+        "utf-8"
+      );
+      expect(stageDemosScript).toContain("InterVariable");
+      expect(stageDemosScript).toContain("JetBrainsMonoVariable");
+      expect(stageDemosScript).toContain('.endsWith(".woff2")');
+    });
+
+    it("applies var(--font-mono) and tabular-nums to NodeRef chips, study/participant codes, CDISC item IDs, and Part 11 signatures per CLINICAL_CANVAS.md §2.13 while keeping subject-portal free of internal codes", () => {
+      const clinicalMonoComponents = [
+        "components/canvas/NodeRefChip.vue",
+        "views/StudyCanvasView.vue",
+        "components/canvas/ParticipantsSection.vue",
+        "components/ecrf/EcrfItemTable.vue",
+        "components/ecrf/EcrfSignaturesSection.vue",
+      ];
+
+      for (const relPath of clinicalMonoComponents) {
+        const content = fs.readFileSync(path.join(webSrcDir, relPath), "utf-8");
+        expect(
+          content,
+          `${relPath} must apply var(--font-mono) to clinical identifiers`
+        ).toContain("var(--font-mono)");
+        expect(
+          content,
+          `${relPath} must apply tabular-nums alignment to clinical identifiers`
+        ).toContain("tabular-nums");
+      }
+
+      // Subject portal views must remain plain-language 1rem participant copy without internal NodeRef URIs or NodeRefChip imports
+      const portalVueFiles = walkFiles(portalSrcDir, [".vue"]);
+      const leakingPortalFiles = [];
+      for (const filePath of portalVueFiles) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        if (
+          /\bNodeRefChip\b/.test(content) ||
+          /\b(?:study|participant|obs|query|visit|form):[0-9a-f-]{4,}/i.test(
+            content
+          )
+        ) {
+          leakingPortalFiles.push(path.relative(repoRoot, filePath));
+        }
+      }
+      expect(leakingPortalFiles).toEqual([]);
+    });
+  });
 });

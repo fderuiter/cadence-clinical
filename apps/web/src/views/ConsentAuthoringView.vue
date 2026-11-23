@@ -168,7 +168,7 @@
                     style="
                       background-color: var(--success);
                       color: white;
-                      font-size: 0.7rem;
+                      font-size: var(--font-size-2xs);
                       padding: 4px 8px;
                       border-radius: 4px;
                     "
@@ -447,7 +447,7 @@
               >
                 <span
                   style="
-                    font-family: monospace;
+                    font-family: var(--font-mono);
                     font-size: 0.85rem;
                     width: 24px;
                     text-align: center;
@@ -570,7 +570,7 @@
                     class="btn btn-remove-step"
                     style="
                       padding: 2px 6px;
-                      font-size: 0.7rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(--error);
                       color: white;
                       border: none;
@@ -592,7 +592,11 @@
                     v-model="step.question"
                     type="text"
                     placeholder="Understood and agree to risk factors?"
-                    style="width: 100%; padding: 4px 8px; font-size: 0.8rem"
+                    style="
+                      width: 100%;
+                      padding: 4px 8px;
+                      font-size: var(--semantic-font-size-control);
+                    "
                   />
                 </div>
                 <div v-else-if="step.type === 'signature_placeholder'">
@@ -606,7 +610,11 @@
                     v-model="step.role"
                     type="text"
                     placeholder="subject"
-                    style="width: 100%; padding: 4px 8px; font-size: 0.8rem"
+                    style="
+                      width: 100%;
+                      padding: 4px 8px;
+                      font-size: var(--semantic-font-size-control);
+                    "
                   />
                 </div>
               </div>

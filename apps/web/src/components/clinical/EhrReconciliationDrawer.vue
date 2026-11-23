@@ -1289,7 +1289,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1380,7 +1380,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .context-actions {
@@ -1435,7 +1435,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .metric-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -1504,7 +1504,7 @@ function formatResolutionAction(act?: string): string {
 .select-input,
 .search-input {
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   background-color: var(--semantic-color-surface);
@@ -1636,7 +1636,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .discrepancy-pill {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
@@ -1668,7 +1668,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .status-pill {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
@@ -1733,7 +1733,7 @@ function formatResolutionAction(act?: string): string {
 
 .source-badge,
 .form-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1825,13 +1825,13 @@ function formatResolutionAction(act?: string): string {
 
 .resolved-by-tag {
   margin-left: 6px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   opacity: 0.85;
 }
 
 .esign-badge,
 .query-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -2014,7 +2014,7 @@ function formatResolutionAction(act?: string): string {
 .textarea-input {
   width: 100%;
   padding: 10px 12px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-family: inherit;
@@ -2048,7 +2048,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .prov-stat .lbl {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;

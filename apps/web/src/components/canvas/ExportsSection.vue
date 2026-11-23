@@ -287,7 +287,7 @@ async function downloadSnapshot() {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }

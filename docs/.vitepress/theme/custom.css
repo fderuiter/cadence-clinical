@@ -1,3 +1,10 @@
+@import "../../../packages/ui/tokens.css";
+
+:root {
+  --vp-font-family-base: var(--font-sans);
+  --vp-font-family-mono: var(--font-mono);
+}
+
 /* Custom CSS for Mermaid Diagrams with Pan & Zoom */
 .mermaid-container {
   position: relative;
@@ -75,7 +82,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   user-select: none;
   transition:
     background-color 0.2s,

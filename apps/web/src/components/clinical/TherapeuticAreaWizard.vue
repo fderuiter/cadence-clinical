@@ -897,7 +897,7 @@ function synthesizeProtocol() {
 .badge-category {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -928,7 +928,7 @@ function synthesizeProtocol() {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -963,14 +963,14 @@ function synthesizeProtocol() {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text-dark);
   background-color: var(--semantic-color-surface);
 }
 
 .form-control-sm {
   padding: 4px 8px;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .customization-tabs-nav {

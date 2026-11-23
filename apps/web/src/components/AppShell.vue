@@ -610,6 +610,8 @@ onUnmounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .brand-link {
@@ -673,6 +675,8 @@ onUnmounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .plan-status-badge {
@@ -687,6 +691,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-info);
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .plan-status-badge:hover {
@@ -752,7 +757,7 @@ onUnmounted(() => {
 }
 
 .palette-kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   padding: 1px 5px;
   border-radius: 4px;
@@ -782,7 +787,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
+  font-size: var(--semantic-font-size-control);
   max-width: min(220px, 100%);
   min-width: 0;
 }
@@ -914,6 +919,10 @@ onUnmounted(() => {
   .app-header {
     padding: 10px 12px;
     gap: 10px;
+  }
+
+  .plan-status-badge {
+    white-space: normal;
   }
 
   .shell-expired-banner {

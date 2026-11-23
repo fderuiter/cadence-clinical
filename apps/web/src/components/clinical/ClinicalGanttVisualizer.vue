@@ -385,7 +385,7 @@
           style="
             font-size: 0.75rem;
             color: var(--semantic-color-text-secondary);
-            font-family: monospace;
+            font-family: var(--font-mono);
             margin-top: 2px;
           "
         >
@@ -420,7 +420,7 @@
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
-              font-size: 0.9rem;
+              font-size: var(--semantic-font-size-control);
             "
             placeholder="e.g. 14"
           />
@@ -451,7 +451,7 @@
                 padding: 8px;
                 border: 1px solid var(--border);
                 border-radius: 6px;
-                font-size: 0.9rem;
+                font-size: var(--semantic-font-size-control);
               "
               placeholder="e.g. 1"
             />
@@ -479,7 +479,7 @@
                 padding: 8px;
                 border: 1px solid var(--border);
                 border-radius: 6px;
-                font-size: 0.9rem;
+                font-size: var(--semantic-font-size-control);
               "
               placeholder="e.g. 3"
             />
@@ -509,7 +509,7 @@
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
-              font-size: 0.9rem;
+              font-size: var(--semantic-font-size-control);
             "
             placeholder="e.g. Screening, Day 1, baseline_visit"
           />
@@ -545,7 +545,7 @@
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
-              font-size: 0.85rem;
+              font-size: var(--semantic-font-size-control);
             "
             placeholder="Specify the scientific, regulatory, or operational reason for this schedule alteration..."
           />

@@ -1,0 +1,41 @@
+/* Self-hosted variable clinical typefaces (SIL OFL 1.1, same-origin offline-safe WOFF2).
+   Inter v4 retains OpenType cv05 (hooked lowercase l) and cv08 (serifed uppercase I)
+   for unambiguous clinical identifier legibility (CLINICAL_CANVAS.md §2.13). */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  font-feature-settings:
+    "cv05" 1,
+    "cv08" 1;
+  src: url("./fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  font-feature-settings:
+    "cv05" 1,
+    "cv08" 1;
+  src: url("./fonts/InterVariable-Italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("./fonts/JetBrainsMonoVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("./fonts/JetBrainsMonoVariable-Italic.woff2") format("woff2");
+}

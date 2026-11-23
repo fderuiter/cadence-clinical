@@ -158,13 +158,13 @@ const filteredLogs = computed(() => {
 
 .audit-title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .part11-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 12px;
@@ -180,7 +180,7 @@ const filteredLogs = computed(() => {
 .audit-search,
 .audit-select {
   padding: 6px 10px;
-  font-size: 13px;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   background: var(--semantic-color-surface);
@@ -224,12 +224,12 @@ const filteredLogs = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   margin-bottom: 6px;
 }
 
 .action-tag {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -256,7 +256,9 @@ const filteredLogs = computed(() => {
 
 .timestamp {
   color: var(--semantic-color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .user-id {
@@ -264,13 +266,13 @@ const filteredLogs = computed(() => {
 }
 
 .target-info {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
   margin-bottom: 6px;
 }
 
 .change-reason {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
   padding: 6px 10px;
@@ -286,7 +288,7 @@ const filteredLogs = computed(() => {
 .diff-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);

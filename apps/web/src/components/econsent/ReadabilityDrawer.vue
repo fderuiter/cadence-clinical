@@ -447,7 +447,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 12px;
   font-weight: 600;
@@ -590,7 +590,7 @@ onMounted(() => {
 }
 
 .diff-tag {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   font-weight: 700;
 }
@@ -692,7 +692,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   max-width: 100%;

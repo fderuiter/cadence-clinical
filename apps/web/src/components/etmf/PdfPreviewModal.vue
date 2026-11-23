@@ -576,7 +576,7 @@ function formatDate(dateStr) {
 .checksum-text {
   display: block;
   padding: 6px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
@@ -665,7 +665,7 @@ function formatDate(dateStr) {
 
 /* CSS Watermarking overlay rotates diagonally across the stored document stream */
 .watermark-text {
-  font-family: var(--font-sans, Arial, sans-serif);
+  font-family: var(--font);
   font-size: 1rem;
   font-weight: 900;
   color: var(--semantic-color-error);
@@ -692,7 +692,7 @@ function formatDate(dateStr) {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   line-height: 1.5;
   color: var(--semantic-color-text-dark);
@@ -778,7 +778,7 @@ function formatDate(dateStr) {
 }
 .signature-text-code {
   display: block;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);

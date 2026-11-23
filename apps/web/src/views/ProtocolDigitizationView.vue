@@ -1732,7 +1732,7 @@ const commitAndActivateEDC = async () => {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .btn-commit-edc {

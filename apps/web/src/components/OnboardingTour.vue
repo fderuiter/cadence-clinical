@@ -40,7 +40,7 @@
           0 8px 10px -6px rgba(0, 0, 0, 0.15);
         padding: 20px;
         width: 320px;
-        font-family: var(--semantic-font-family);
+        font-family: var(--font-sans);
       "
     >
       <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
@@ -169,7 +169,7 @@
             class="btn btn-tour-disable"
             style="
               padding: 6px 8px;
-              font-size: 0.7rem;
+              font-size: var(--font-size-2xs);
               color: var(--semantic-color-text-secondary);
               background: none;
               border: none;

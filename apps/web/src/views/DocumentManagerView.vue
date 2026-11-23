@@ -98,9 +98,9 @@
           </form>
 
           <div v-else class="etmf-study-chip">
-            Study: <strong>{{ effectiveStudyId }}</strong>
+            Study: <strong class="font-mono">{{ effectiveStudyId }}</strong>
             <template v-if="effectiveSiteId">
-              · Site: <strong>{{ effectiveSiteId }}</strong>
+              · Site: <strong class="font-mono">{{ effectiveSiteId }}</strong>
             </template>
           </div>
         </div>
@@ -138,15 +138,20 @@
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px" aria-hidden="true">📋</span>
+            <span style="font-size: var(--font-size-xl)" aria-hidden="true"
+              >📋</span
+            >
             <div>
-              <h3 :id="titleId" style="margin: 0; font-size: 16px">
+              <h3
+                :id="titleId"
+                style="margin: 0; font-size: var(--font-size-md)"
+              >
                 Document Metadata &amp; 21 CFR Part 11 Manifest
               </h3>
               <p
                 style="
                   margin: 2px 0 0 0;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-text-secondary);
                 "
               >
@@ -157,7 +162,11 @@
           <button
             type="button"
             class="btn btn-secondary btn-close-drawer"
-            style="padding: 4px 8px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 4px 8px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             aria-label="Close inspection drawer"
             :disabled="reviewingQc || submittingDraftQc"
             @click="close"
@@ -208,7 +217,7 @@
             <p
               style="
                 margin: 4px 0 0 0;
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text);
               "
             >
@@ -245,16 +254,19 @@
                 margin-bottom: 6px;
               "
             >
-              <span style="font-size: 11px; font-weight: 600"
+              <span style="font-size: var(--font-size-2xs); font-weight: 600"
                 >SHA-256 Checksum Digest</span
               >
               <span
                 v-if="getDocSha256(inspectedDoc) !== '—'"
                 class="badge status-approved"
-                style="font-size: 9px"
+                style="font-size: var(--font-size-2xs)"
                 >SHA-256 RECORDED</span
               >
-              <span v-else class="badge status-draft" style="font-size: 9px"
+              <span
+                v-else
+                class="badge status-draft"
+                style="font-size: var(--font-size-2xs)"
                 >NOT COMPUTED</span
               >
             </div>
@@ -289,7 +301,7 @@
                 margin-bottom: 8px;
               "
             >
-              <span style="font-size: 12px; font-weight: 600"
+              <span style="font-size: var(--font-size-2xs); font-weight: 600"
                 >DIA Classifier Confidence</span
               >
               <span
@@ -299,7 +311,7 @@
                     ? 'status-approved'
                     : 'status-draft'
                 "
-                style="font-size: 10px; font-weight: bold"
+                style="font-size: var(--font-size-2xs); font-weight: bold"
               >
                 {{ getDocConfidence(inspectedDoc) }}
               </span>
@@ -367,7 +379,7 @@
                 style="
                   width: 100%;
                   padding: 6px 10px;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   cursor: pointer;
                 "
                 :disabled="
@@ -424,7 +436,7 @@
                 style="
                   width: 100%;
                   padding: 6px 10px;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   cursor: pointer;
                 "
                 :disabled="
@@ -451,7 +463,11 @@
           v-if="inspectedDoc"
           type="button"
           class="btn btn-primary btn-preview-from-drawer"
-          style="padding: 8px 16px; font-size: 12px; cursor: pointer"
+          style="
+            padding: 8px 16px;
+            font-size: var(--font-size-2xs);
+            cursor: pointer;
+          "
           :disabled="reviewingQc || submittingDraftQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
@@ -1003,14 +1019,14 @@ defineExpose({
 }
 
 .etmf-scope-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .etmf-scope-input {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
@@ -1024,7 +1040,7 @@ defineExpose({
 
 .etmf-scope-apply-btn {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1039,7 +1055,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-warning-border);
   border-left: 4px solid var(--semantic-color-warning-border-strong);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-dark);
 }
 
@@ -1053,7 +1069,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -1066,7 +1082,7 @@ defineExpose({
 }
 
 .etmf-study-chip {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1081,7 +1097,7 @@ defineExpose({
   width: 100%;
   box-sizing: border-box;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -1090,7 +1106,7 @@ defineExpose({
 
 .qc-role-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-warning-dark);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
@@ -1100,7 +1116,7 @@ defineExpose({
 
 .qc-error-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-error-text-dark);
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
@@ -1173,7 +1189,7 @@ defineExpose({
 
 .section-heading {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1193,19 +1209,20 @@ defineExpose({
 }
 
 .meta-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .meta-val {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .font-mono {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .reason-box {
@@ -1214,7 +1231,7 @@ defineExpose({
   border-left: 3px solid var(--semantic-color-primary);
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .crypto-seal-card {
@@ -1226,8 +1243,9 @@ defineExpose({
 
 .sha256-hash-display {
   display: block;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-primary);
   word-break: break-all;
 }

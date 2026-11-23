@@ -88,7 +88,7 @@ const ariaLabel = computed(() => {
   align-items: center;
   gap: var(--spacing-2xs, 4px);
   border-radius: 9999px;
-  font-family: var(--font-sans, inherit);
+  font-family: var(--font-sans);
   font-weight: 600;
   line-height: 1;
   border: 1px solid transparent;
@@ -99,7 +99,7 @@ const ariaLabel = computed(() => {
 /* Sizes */
 .confidence-size-sm {
   padding: 2px 6px;
-  font-size: var(--font-size-2xs, 11px);
+  font-size: var(--font-size-2xs);
 }
 .confidence-size-sm .confidence-dot {
   width: 6px;
@@ -108,7 +108,7 @@ const ariaLabel = computed(() => {
 
 .confidence-size-md {
   padding: 3px 8px;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
 }
 .confidence-size-md .confidence-dot {
   width: 7px;
@@ -117,7 +117,7 @@ const ariaLabel = computed(() => {
 
 .confidence-size-lg {
   padding: 5px 12px;
-  font-size: var(--font-size-sm, 14px);
+  font-size: var(--font-size-sm);
 }
 .confidence-size-lg .confidence-dot {
   width: 8px;

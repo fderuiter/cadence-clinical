@@ -96,7 +96,8 @@ public static partial class DeidComplianceService
         "owasp.org", "ecfr.gov", "fda.gov", "ema.europa.eu", "ich.org", "iso.org", "conventionalcommits.org",
         "postgresql.org", "astral.sh", "python.org", "vuejs.org", "vitepress.dev", "vitejs.dev", "playwright.dev",
         "docker.com", "opentelemetry.io", "keycloak.org", "ietf.org", "rfc-editor.org", "spdx.org", "apache.org",
-        "opensource.org", "creativecommons.org", "mozilla.org", "npmjs.org", "nuget.org",
+        "opensource.org", "creativecommons.org", "mozilla.org", "npmjs.org", "nuget.org", "scripts.sil.org",
+        "rsms.me", "jetbrains.com",
     ];
 
     private static readonly HashSet<string> AllowedZipValues = new(StringComparer.Ordinal)

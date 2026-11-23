@@ -707,7 +707,7 @@ function downloadDefineXml() {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -752,7 +752,7 @@ function downloadDefineXml() {
 
 .version-select {
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
@@ -825,7 +825,7 @@ function downloadDefineXml() {
 }
 
 .badge-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 4px;
@@ -919,7 +919,7 @@ function downloadDefineXml() {
 }
 
 .record-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-success);
 }
@@ -938,7 +938,7 @@ function downloadDefineXml() {
 
 .domain-meta {
   margin-top: auto;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   display: flex;
   gap: 4px;
 }
@@ -989,7 +989,7 @@ function downloadDefineXml() {
   color: var(--semantic-color-text-inverse);
   padding: 16px;
   border-radius: 6px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.4;
   max-height: 480px;

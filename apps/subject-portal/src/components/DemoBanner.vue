@@ -10,7 +10,7 @@
       color: var(--semantic-color-warning);
       border-bottom: 1px solid var(--semantic-color-warning);
       padding: 8px 16px;
-      font-size: 13px;
+      font-size: var(--font-size-xs);
       font-weight: 600;
       text-align: center;
     "

@@ -447,7 +447,7 @@ function handleTreeKeyDown(e) {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   outline: none;
   box-sizing: border-box;
 }
@@ -461,7 +461,7 @@ function handleTreeKeyDown(e) {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface-muted);
   outline: none;
   box-sizing: border-box;
@@ -513,7 +513,7 @@ function handleTreeKeyDown(e) {
 }
 
 .toggle-icon {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   width: 14px;
   color: var(--semantic-color-text-secondary);
   flex-shrink: 0;
@@ -526,8 +526,8 @@ function handleTreeKeyDown(e) {
 }
 
 .study-code {
-  font-family: monospace;
-  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-primary);
   margin-right: 4px;
@@ -541,8 +541,8 @@ function handleTreeKeyDown(e) {
 }
 
 .folder-code {
-  font-family: monospace;
-  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-interactive-primary);
   padding: 1px 4px;

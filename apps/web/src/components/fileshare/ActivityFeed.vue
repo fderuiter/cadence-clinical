@@ -708,7 +708,7 @@ function formatRelativeTime(isoString) {
   display: inline-block;
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.725rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
@@ -756,7 +756,7 @@ function formatRelativeTime(isoString) {
 .filter-select,
 .filter-date {
   padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   background: var(--semantic-color-surface);
@@ -1040,7 +1040,7 @@ function formatRelativeTime(isoString) {
 }
 
 .font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .text-danger {
@@ -1048,7 +1048,7 @@ function formatRelativeTime(isoString) {
 }
 
 .text-xs {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
 }
 
 .load-more-section {

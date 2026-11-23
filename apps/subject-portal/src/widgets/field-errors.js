@@ -44,7 +44,7 @@ export function markFieldInvalid(fieldId, msg) {
     errDiv.id = `error-msg-${fieldId}`;
     errDiv.className = "validation-error-msg";
     errDiv.style.color = "var(--danger)";
-    errDiv.style.fontSize = "12px";
+    errDiv.style.fontSize = "var(--font-size-2xs)";
     errDiv.style.fontWeight = "600";
     errDiv.style.marginTop = "4px";
     errDiv.textContent = msg;

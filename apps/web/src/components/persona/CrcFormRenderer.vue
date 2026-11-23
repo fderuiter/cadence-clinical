@@ -430,7 +430,7 @@
                   background-color: var(--semantic-color-warning-bg-soft);
                   border: 1px solid var(--semantic-color-warning-border);
                   color: var(--semantic-color-warning);
-                  font-size: 0.7rem;
+                  font-size: var(--font-size-2xs);
                   font-weight: 600;
                   padding: 2px 6px;
                   border-radius: 10px;
@@ -510,7 +510,7 @@
                         color: 'white',
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        fontSize: '0.7rem',
+                        fontSize: 'var(--font-size-2xs)',
                         fontWeight: 'bold',
                         letterSpacing: '0.5px',
                       }"

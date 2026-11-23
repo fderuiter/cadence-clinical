@@ -629,7 +629,7 @@ function getDocumentCount(node) {
   padding: 10px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   outline: 2px solid transparent;
   transition: border-color 0.2s;
 }
@@ -643,7 +643,7 @@ function getDocumentCount(node) {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface-muted);
   outline: 2px solid transparent;
 }
@@ -682,7 +682,7 @@ function getDocumentCount(node) {
 }
 
 .toggle-icon {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   width: 16px;
   color: var(--semantic-color-text-secondary);
 }
@@ -706,7 +706,7 @@ function getDocumentCount(node) {
 }
 
 .artifact-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--semantic-color-interactive-primary);
   background-color: var(--semantic-color-info-bg);

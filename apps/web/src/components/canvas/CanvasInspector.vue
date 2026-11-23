@@ -29,7 +29,11 @@
       <template v-if="hasSelection">
         <header class="inspector-header">
           <span class="inspector-kind">{{ headerKind }}</span>
-          <h2 id="canvas-inspector-title" class="inspector-title">
+          <h2
+            id="canvas-inspector-title"
+            class="inspector-title"
+            :class="{ 'inspector-code': Boolean(participant) }"
+          >
             {{ headerTitle }}
           </h2>
           <details v-if="activeNodeRef" class="inspector-ref-details">
@@ -293,9 +297,12 @@
               {{ participantStateLabel(participant.status) }}
             </dd>
             <dt>Study</dt>
-            <dd>{{ participant.study_id }}</dd>
+            <dd class="inspector-code">{{ participant.study_id }}</dd>
             <dt>Site</dt>
-            <dd id="inspector-site">
+            <dd
+              id="inspector-site"
+              :class="{ 'inspector-code': Boolean(participant.site_id) }"
+            >
               {{ participant.site_id || "Not assigned" }}
             </dd>
             <dt>Protocol version</dt>
@@ -360,7 +367,9 @@
             <dd id="inspector-generic-kind">{{ genericDisplay.kindLabel }}</dd>
             <template v-if="genericDisplay.code">
               <dt>Code</dt>
-              <dd id="inspector-generic-code">{{ genericDisplay.code }}</dd>
+              <dd id="inspector-generic-code" class="inspector-code">
+                {{ genericDisplay.code }}
+              </dd>
             </template>
             <template
               v-if="
@@ -376,7 +385,7 @@
               <dd id="inspector-generic-status">{{ genericDisplay.status }}</dd>
             </template>
             <dt>Study</dt>
-            <dd>{{ studyCode }}</dd>
+            <dd class="inspector-code">{{ studyCode }}</dd>
           </dl>
         </template>
       </template>
@@ -785,8 +794,9 @@ watch(aiEnabled, (on) => {
   background: var(--neutral-light);
   padding: 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
-  font-family: monospace;
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .reasoning-modal-s-2 {
@@ -865,9 +875,15 @@ watch(aiEnabled, (on) => {
   font-size: 1.15rem;
 }
 
+.inspector-code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 .inspector-ref {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
 }
@@ -897,7 +913,7 @@ watch(aiEnabled, (on) => {
   border-radius: 4px;
   background: transparent;
   color: inherit;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   cursor: pointer;
 }
 

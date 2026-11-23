@@ -307,7 +307,8 @@ async function exportCasebook() {
 .record-header h2 {
   margin: 0;
   font-size: 1.1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .record-meta,
@@ -350,7 +351,7 @@ async function exportCasebook() {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }

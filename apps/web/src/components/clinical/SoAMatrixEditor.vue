@@ -843,7 +843,7 @@ onUnmounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .matrix-table-container {
@@ -931,7 +931,7 @@ onUnmounted(() => {
 
 .concept-code-tag {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;

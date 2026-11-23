@@ -1652,7 +1652,7 @@ onMounted(() => {
   padding: 7px 12px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border);
-  font-size: var(--font-size-sm);
+  font-size: var(--semantic-font-size-control);
   min-width: 280px;
 }
 
@@ -2119,7 +2119,7 @@ onMounted(() => {
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border);
-  font-size: var(--font-size-sm);
+  font-size: var(--semantic-font-size-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }

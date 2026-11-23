@@ -580,7 +580,7 @@ const confirmAndApply = () => {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .unmapped-tokens-list {
@@ -630,7 +630,7 @@ const confirmAndApply = () => {
 .token-code {
   font-size: 0.9rem;
   color: var(--semantic-color-primary);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .token-name {
@@ -706,7 +706,7 @@ const confirmAndApply = () => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .alias-grid {
@@ -722,7 +722,7 @@ const confirmAndApply = () => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .textarea-finding {
@@ -730,7 +730,7 @@ const confirmAndApply = () => {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   margin-bottom: 8px;
 }
 
@@ -761,7 +761,7 @@ const confirmAndApply = () => {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .drawer-footer {

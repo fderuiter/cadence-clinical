@@ -178,7 +178,7 @@
           background: none;
           font-weight: 600;
           cursor: pointer;
-          font-size: 16px;
+          font-size: var(--font-size-md);
           border-bottom: 3px solid transparent;
         "
         :style="
@@ -203,7 +203,7 @@
           background: none;
           font-weight: 600;
           cursor: pointer;
-          font-size: 16px;
+          font-size: var(--font-size-md);
           border-bottom: 3px solid transparent;
         "
         :style="
@@ -228,7 +228,7 @@
           background: none;
           font-weight: 600;
           cursor: pointer;
-          font-size: 16px;
+          font-size: var(--font-size-md);
           border-bottom: 3px solid transparent;
         "
         :style="
@@ -254,7 +254,7 @@
           background: none;
           font-weight: 600;
           cursor: pointer;
-          font-size: 16px;
+          font-size: var(--font-size-md);
           border-bottom: 3px solid transparent;
         "
         :style="
@@ -279,7 +279,7 @@
           background: none;
           font-weight: 600;
           cursor: pointer;
-          font-size: 16px;
+          font-size: var(--font-size-md);
           border-bottom: 3px solid transparent;
         "
         :style="
@@ -305,7 +305,7 @@
           background: none;
           font-weight: 600;
           cursor: pointer;
-          font-size: 16px;
+          font-size: var(--font-size-md);
           border-bottom: 3px solid transparent;
         "
         :style="
@@ -334,7 +334,7 @@
         flex-wrap: wrap;
         gap: 16px 24px;
         align-items: center;
-        font-size: 14px;
+        font-size: var(--font-size-sm);
         color: var(--semantic-color-text-body);
       "
     >
@@ -574,7 +574,7 @@
                     <div
                       v-if="Array.isArray(v.findings) && v.findings.length"
                       style="
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                         color: var(--semantic-color-text-secondary);
                         margin-top: 2px;
                       "
@@ -760,7 +760,9 @@
                 }}</span>
               </td>
               <td>
-                <code style="font-size: 11px">{{ letter.pdfSha256Hash }}</code>
+                <code style="font-size: var(--font-size-2xs)">{{
+                  letter.pdfSha256Hash
+                }}</code>
               </td>
               <td>
                 {{ letter.etmfDocumentId || "Draft (not filed)" }}
@@ -929,7 +931,7 @@
         <div
           style="
             margin-bottom: 16px;
-            font-size: 14px;
+            font-size: var(--font-size-sm);
             background: var(--semantic-color-surface-muted);
             padding: 12px;
             border-radius: 6px;
@@ -972,7 +974,7 @@
                   <strong>{{ d.staff_user_id }}</strong>
                   <div
                     style="
-                      font-size: 11px;
+                      font-size: var(--font-size-2xs);
                       color: var(--semantic-color-text-secondary);
                     "
                   >
@@ -984,7 +986,7 @@
                     <span
                       v-if="getStaffCertificates(d).length === 0"
                       style="
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                         color: var(--semantic-color-text-secondary);
                       "
                     >
@@ -999,7 +1001,7 @@
                         color: var(--semantic-color-success-dark);
                         border: 1px solid
                           var(--semantic-color-success-border-soft);
-                        font-size: 10px;
+                        font-size: var(--font-size-2xs);
                         font-weight: 600;
                         padding: 2px 6px;
                         border-radius: 4px;
@@ -1022,8 +1024,8 @@
                         background-color: var(--semantic-color-surface-header);
                         color: var(--semantic-color-text-body);
                         border: 1px solid var(--semantic-color-border-control);
-                        font-size: 10px;
-                        font-family: monospace;
+                        font-size: var(--font-size-2xs);
+                        font-family: var(--font-mono);
                       "
                     >
                       {{ task }}
@@ -1046,7 +1048,7 @@
                   <button
                     v-if="!d.signed_off"
                     class="btn btn-primary btn-sm"
-                    style="padding: 2px 8px; font-size: 11px"
+                    style="padding: 2px 8px; font-size: var(--font-size-2xs)"
                     :disabled="!canSignDoa"
                     :title="!canSignDoa ? DOA_SIGNOFF_ROLE_REASON : undefined"
                     @click="signDelegation(d)"
@@ -1058,7 +1060,7 @@
                     class="btn btn-cancel btn-sm"
                     style="
                       padding: 2px 8px;
-                      font-size: 11px;
+                      font-size: var(--font-size-2xs);
                       border-color: var(--semantic-color-error);
                       color: var(--semantic-color-error);
                     "
@@ -1120,7 +1122,9 @@
             </thead>
             <tbody>
               <tr v-for="audit in auditHistory" :key="audit.id">
-                <td style="white-space: nowrap; font-size: 12px">
+                <td
+                  style="white-space: nowrap; font-size: var(--font-size-2xs)"
+                >
                   {{ new Date(audit.timestamp).toLocaleString() }}
                 </td>
                 <td>{{ audit.user_id }}</td>
@@ -1135,7 +1139,7 @@
                     >{{ audit.action }}</span
                   >
                 </td>
-                <td style="font-size: 12px">
+                <td style="font-size: var(--font-size-2xs)">
                   {{ audit.details }}
                 </td>
               </tr>
@@ -1204,7 +1208,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1214,7 +1218,7 @@
             </div>
             <div
               style="
-                font-size: 15px;
+                font-size: var(--font-size-base);
                 font-weight: 700;
                 color: var(--semantic-color-text);
                 margin-top: 2px;
@@ -1226,7 +1230,7 @@
             </div>
             <div
               style="
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1242,7 +1246,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1252,7 +1256,7 @@
             </div>
             <div
               style="
-                font-size: 18px;
+                font-size: var(--font-size-lg);
                 font-weight: 800;
                 color: var(--semantic-color-primary-dark);
                 margin-top: 2px;
@@ -1265,7 +1269,10 @@
               }}
             </div>
             <div
-              style="font-size: 12px; color: var(--semantic-color-success-dark)"
+              style="
+                font-size: var(--font-size-2xs);
+                color: var(--semantic-color-success-dark);
+              "
             >
               Status: {{ investigatorGrant?.status || "ACTIVE" }}
             </div>
@@ -1274,7 +1281,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1284,7 +1291,7 @@
             </div>
             <div
               style="
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-body);
                 margin-top: 4px;
               "
@@ -1296,7 +1303,7 @@
             </div>
             <div
               style="
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1308,7 +1315,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1320,7 +1327,10 @@
               <select
                 id="select-budget-template"
                 v-model="selectedTemplateId"
-                style="padding: 4px 8px; font-size: 12px"
+                style="
+                  padding: 4px 8px;
+                  font-size: var(--semantic-font-size-control);
+                "
               >
                 <option value="">-- Select Template --</option>
                 <option
@@ -1359,7 +1369,10 @@
             <select
               id="select-grid-version"
               v-model="filteredVersionIndex"
-              style="padding: 4px 8px; font-size: 12px"
+              style="
+                padding: 4px 8px;
+                font-size: var(--semantic-font-size-control);
+              "
               @change="loadProcedureGrids"
             >
               <option value="ALL">All Versions</option>
@@ -1439,7 +1452,12 @@
                     >—</span
                   >
                 </td>
-                <td style="font-family: monospace; font-size: 12px">
+                <td
+                  style="
+                    font-family: var(--font-mono);
+                    font-size: var(--font-size-2xs);
+                  "
+                >
                   {{ grid.procedure_code }}
                 </td>
                 <td>{{ grid.procedure_name }}</td>
@@ -1555,7 +1573,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1573,7 +1591,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1588,7 +1606,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1603,7 +1621,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1618,7 +1636,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
                 border-top: 1px dashed var(--semantic-color-border-control);
                 padding-top: 6px;
@@ -1633,7 +1651,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1648,7 +1666,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 16px;
+                font-size: var(--font-size-md);
                 font-weight: 800;
                 color: var(--semantic-color-primary-dark);
                 border-top: 2px solid var(--semantic-color-primary-dark);
@@ -1671,7 +1689,7 @@
                 margin-top: 8px;
                 padding-top: 8px;
                 border-top: 1px solid var(--semantic-color-border);
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1740,7 +1758,7 @@
                       {{ adj.adjustment_type }}
                     </span>
                   </td>
-                  <td style="font-size: 12px">
+                  <td style="font-size: var(--font-size-2xs)">
                     {{ adj.description }}
                   </td>
                   <td
@@ -1784,7 +1802,7 @@
                     <span
                       v-else
                       style="
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                         color: var(--semantic-color-text-secondary);
                       "
                     >
@@ -1841,7 +1859,9 @@
                 >
                   #{{ amend.amendment_number }}
                 </td>
-                <td style="font-size: 12px; white-space: nowrap">
+                <td
+                  style="font-size: var(--font-size-2xs); white-space: nowrap"
+                >
                   {{ new Date(amend.effective_date).toLocaleDateString() }}
                 </td>
                 <td>${{ Number(amend.previous_budget).toLocaleString() }}</td>
@@ -1866,7 +1886,7 @@
                     }}
                   </span>
                 </td>
-                <td style="font-size: 12px">
+                <td style="font-size: var(--font-size-2xs)">
                   {{ amend.summary_of_changes }}
                 </td>
                 <td>{{ amend.approved_by || amend.created_by }}</td>
@@ -2274,7 +2294,7 @@
     >
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 12px;
           line-height: 1.4;
@@ -2326,7 +2346,7 @@
     >
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 16px;
           line-height: 1.4;
@@ -2769,7 +2789,7 @@
           <span
             style="
               font-weight: 600;
-              font-size: 13px;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-body);
             "
             >Monitoring Findings</span
@@ -2786,7 +2806,7 @@
         <div
           v-if="completeVisitFindings.length === 0"
           style="
-            font-size: 12px;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             margin-bottom: 6px;
           "
@@ -3039,7 +3059,7 @@
             style="
               margin: 0;
               color: var(--semantic-color-text-inverse);
-              font-size: 16px;
+              font-size: var(--font-size-md);
             "
           >
             RTSM Site Inventory &amp; Return Accountability
@@ -3048,7 +3068,7 @@
             style="
               margin: 4px 0 0;
               color: var(--semantic-color-text-inverse-muted);
-              font-size: 13px;
+              font-size: var(--font-size-xs);
             "
           >
             Manage site IP kit returns, barcode scanning, residual volumes, and
@@ -4620,7 +4640,7 @@ defineExpose({
   padding: 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-primary-dark);
   color: white;
 }
@@ -4639,7 +4659,7 @@ label {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -4650,7 +4670,7 @@ textarea {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--semantic-font-size-control);
   background: white;
   box-sizing: border-box;
 }
@@ -4686,7 +4706,7 @@ textarea {
 
 .btn-sm {
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-cancel {
@@ -4716,12 +4736,12 @@ textarea {
   border-radius: 6px;
   background: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .role-note {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

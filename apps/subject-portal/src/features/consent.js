@@ -137,7 +137,7 @@ export function renderConsentUI() {
       (sec) => `
     <div class="clause-view-box" style="border: 1px solid var(--semantic-color-border); padding: 16px; border-radius: 6px; background: var(--semantic-color-surface);">
       <h4 style="margin-top: 0; color: var(--semantic-color-primary); border-bottom: 1px dashed var(--semantic-color-border); padding-bottom: 6px;">${sec.title}</h4>
-      <p style="margin: 0; font-size: 14px;">${sec.content}</p>
+      <p style="margin: 0; font-size: var(--font-size-sm);">${sec.content}</p>
     </div>
   `
     )

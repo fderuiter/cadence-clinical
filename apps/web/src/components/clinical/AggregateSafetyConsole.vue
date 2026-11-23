@@ -2102,7 +2102,7 @@ onMounted(() => {
 .badge-regulatory {
   background-color: var(--semantic-color-indigo-bg);
   color: var(--semantic-color-indigo-text);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -2254,7 +2254,7 @@ onMounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
 }
@@ -2287,7 +2287,7 @@ onMounted(() => {
 }
 
 .hash-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   background: var(--semantic-color-info-light);
   padding: 2px 6px;
   border-radius: 4px;
@@ -2363,7 +2363,7 @@ onMounted(() => {
   margin: 4px 0;
 }
 .metric-sub {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2445,7 +2445,7 @@ onMounted(() => {
   display: inline-block;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   margin-left: 4px;
 }
@@ -2486,7 +2486,7 @@ onMounted(() => {
 .status-pill {
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 .status-pill.breach {
@@ -2506,7 +2506,7 @@ onMounted(() => {
 .outcome-badge {
   padding: 2px 6px;
   border-radius: 3px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 .outcome-badge.fatal {
@@ -2727,7 +2727,7 @@ onMounted(() => {
 }
 
 .live-pulse-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-error);
   background-color: var(--semantic-color-error-bg-soft);
@@ -2808,7 +2808,7 @@ onMounted(() => {
 }
 
 .country-pill {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
@@ -2824,9 +2824,9 @@ onMounted(() => {
 }
 
 .clock-citation {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
-  font-family: monospace;
+  font-family: var(--font-mono);
   margin-bottom: 12px;
 }
 
@@ -2864,7 +2864,7 @@ onMounted(() => {
 .clock-progress-labels {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
@@ -2878,7 +2878,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 6px;
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-body);
   background-color: var(--semantic-color-surface-muted);
   padding: 8px 10px;
@@ -2984,7 +2984,7 @@ onMounted(() => {
 }
 
 .citation-code {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 1px 4px;
   border-radius: 3px;

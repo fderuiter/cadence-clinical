@@ -430,7 +430,7 @@ const handleSubmit = async () => {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
   outline: none;

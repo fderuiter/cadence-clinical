@@ -615,7 +615,7 @@ useFocusTrap(drawerRef, {
   padding: 9px 12px;
   border: 1.5px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   font-family: inherit;
   background-color: white;
   color: var(--primary);

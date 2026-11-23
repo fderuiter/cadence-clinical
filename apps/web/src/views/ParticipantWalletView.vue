@@ -1797,7 +1797,7 @@ onMounted(() => {
   padding: var(--semantic-spacing-xl, 24px);
   max-width: 1600px;
   margin: 0 auto;
-  font-family: var(--semantic-font-family, sans-serif);
+  font-family: var(--font-sans);
   color: var(--semantic-color-text);
 }
 
@@ -1828,7 +1828,7 @@ onMounted(() => {
 
 .badge-xs {
   padding: 2px 4px;
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   margin-left: 4px;
 }
 
@@ -2153,7 +2153,7 @@ onMounted(() => {
 }
 
 .inquiry-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
   text-transform: uppercase;
 }
@@ -2199,7 +2199,7 @@ onMounted(() => {
 }
 
 .card-number {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 1.1rem;
   letter-spacing: 0.1em;
   margin-bottom: 8px;
@@ -2334,7 +2334,7 @@ onMounted(() => {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   box-sizing: border-box;

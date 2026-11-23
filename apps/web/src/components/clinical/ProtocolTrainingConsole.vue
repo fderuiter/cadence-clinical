@@ -1072,7 +1072,7 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
   background: var(--semantic-color-surface);
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
   min-width: 320px;
 }
 
@@ -1204,7 +1204,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .badge-sm {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -1495,7 +1495,7 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   margin-top: 4px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .statement-box {
@@ -1727,7 +1727,7 @@ async function handleExecuteBulkSignOff() {
   color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 

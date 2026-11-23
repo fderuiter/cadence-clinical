@@ -482,7 +482,7 @@ defineExpose({
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  font-size: 0.9375rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }

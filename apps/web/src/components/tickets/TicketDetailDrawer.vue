@@ -1299,7 +1299,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .ref-badge {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.15);
@@ -1309,7 +1309,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1544,7 +1544,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .meta-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   font-weight: 600;
@@ -1572,7 +1572,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .entity-id-value {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--semantic-color-text);
@@ -1669,7 +1669,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .comment-time {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-left: auto;
 }
@@ -1761,13 +1761,13 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .attachment-meta {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin: 2px 0;
 }
 
 .sha-hash {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1825,7 +1825,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .sig-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-success);
   text-transform: uppercase;
@@ -1843,7 +1843,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .token-val {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   word-break: break-all;
 }
@@ -1923,7 +1923,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .audit-time {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-left: auto;
 }
@@ -2008,7 +2008,7 @@ const onTicketSigned = (sigPayload) => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
   outline: none;
@@ -2278,7 +2278,7 @@ const onTicketSigned = (sigPayload) => {
   min-width: 190px;
   max-width: 240px;
   padding: 4px 8px;
-  font-size: 0.78rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .resolve-panel {
@@ -2310,7 +2310,7 @@ const onTicketSigned = (sigPayload) => {
 
 .audit-hash {
   margin-top: 4px;
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 </style>

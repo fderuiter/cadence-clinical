@@ -3,13 +3,13 @@
   <div class="qc-queue-container">
     <div class="qc-queue-header">
       <div>
-        <h3 style="margin: 0; font-size: 16px; font-weight: 700">
+        <h3 style="margin: 0; font-size: var(--font-size-md); font-weight: 700">
           🛡️ CRA Quality Control Review Queue
         </h3>
         <p
           style="
             margin: 2px 0 0 0;
-            font-size: 12px;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
           "
         >
@@ -21,14 +21,14 @@
       <div style="display: flex; gap: 8px">
         <button
           class="btn btn-secondary btn-sm btn-refresh-qc"
-          style="font-size: 12px"
+          style="font-size: var(--font-size-2xs)"
           @click="loadQueue"
         >
           🔄 Refresh Queue
         </button>
         <button
           class="btn btn-primary btn-sm btn-batch-accept"
-          style="font-size: 12px"
+          style="font-size: var(--font-size-2xs)"
           :disabled="!canReviewQc || selectedItemIds.length === 0"
           :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
           @click="openBatchAcceptModal"
@@ -79,7 +79,7 @@
       <div style="display: flex; align-items: center; gap: 12px">
         <label
           style="
-            font-size: 12px;
+            font-size: var(--font-size-2xs);
             display: flex;
             align-items: center;
             gap: 6px;
@@ -99,7 +99,7 @@
         <span
           v-if="selectedItemIds.length > 0"
           class="badge status-approved"
-          style="font-size: 11px"
+          style="font-size: var(--font-size-2xs)"
         >
           {{ selectedItemIds.length }} Selected
         </span>
@@ -112,7 +112,11 @@
           aria-label="Filter by filename or code"
           class="form-control"
           placeholder="Filter by filename or code..."
-          style="font-size: 12px; width: 220px; padding: 4px 8px"
+          style="
+            font-size: var(--semantic-font-size-control);
+            width: 220px;
+            padding: 4px 8px;
+          "
         />
       </div>
     </div>
@@ -128,11 +132,17 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px" aria-hidden="true">🔒</span>
-        <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
+        <span style="font-size: 2rem" aria-hidden="true">🔒</span>
+        <p
+          style="
+            margin: 8px 0 0 0;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+          "
+        >
           Study or Site Scope Assignment Required
         </p>
-        <p style="margin: 4px 0 0 0; font-size: 12px">
+        <p style="margin: 4px 0 0 0; font-size: var(--font-size-2xs)">
           {{ etmfStore.scopeForbiddenGuidance }}
         </p>
       </div>
@@ -145,11 +155,17 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px">✅</span>
-        <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
+        <span style="font-size: 2rem">✅</span>
+        <p
+          style="
+            margin: 8px 0 0 0;
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+          "
+        >
           No staged documents pending Quality Control review
         </p>
-        <p style="margin: 4px 0 0 0; font-size: 12px">
+        <p style="margin: 4px 0 0 0; font-size: var(--font-size-2xs)">
           All batch ingested files have been reviewed and adjudicated.
         </p>
       </div>
@@ -184,17 +200,23 @@
             </td>
             <td>
               <div style="display: flex; flex-direction: column">
-                <span class="font-mono font-bold" style="font-size: 12px">{{
-                  item.filename
-                }}</span>
-                <span class="text-muted" style="font-size: 10px"
+                <span
+                  class="font-mono font-bold"
+                  style="font-size: var(--font-size-2xs)"
+                  >{{ item.filename }}</span
+                >
+                <span class="text-muted" style="font-size: var(--font-size-2xs)"
                   >ID: {{ item.document_id }}</span
                 >
               </div>
             </td>
             <td>
               <div
-                style="display: flex; flex-direction: column; font-size: 11px"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  font-size: var(--font-size-2xs);
+                "
               >
                 <span>{{ item.staged_by }}</span>
                 <span class="text-muted">{{ formatDate(item.staged_at) }}</span>
@@ -203,7 +225,11 @@
             <td>
               <div
                 v-if="item.intelligence_report"
-                style="display: flex; flex-direction: column; font-size: 11px"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  font-size: var(--font-size-2xs);
+                "
               >
                 <span class="font-mono font-bold">{{
                   item.intelligence_report.primary_classification.artifact_code
@@ -247,12 +273,15 @@
                   v-for="(note, nIdx) in item.discrepancy_notes"
                   :key="nIdx"
                   class="badge status-hold"
-                  style="font-size: 10px"
+                  style="font-size: var(--font-size-2xs)"
                 >
                   ⚠️ {{ note }}
                 </span>
               </div>
-              <span v-else class="text-muted" style="font-size: 11px"
+              <span
+                v-else
+                class="text-muted"
+                style="font-size: var(--font-size-2xs)"
                 >No discrepancies</span
               >
             </td>
@@ -260,7 +289,7 @@
               <button
                 type="button"
                 class="btn btn-secondary btn-xs btn-inspect-qc"
-                style="font-size: 11px; padding: 4px 8px"
+                style="font-size: var(--font-size-2xs); padding: 4px 8px"
                 @click="openInspectionModal(item)"
               >
                 <span aria-hidden="true">📋 </span>Inspect &amp; Edit<span
@@ -292,13 +321,13 @@
       >
         <h4
           id="qc-batch-modal-title"
-          style="margin: 0 0 8px 0; font-size: 16px"
+          style="margin: 0 0 8px 0; font-size: var(--font-size-md)"
         >
           Batch Accept AI Classifications
         </h4>
         <p
           style="
-            font-size: 12px;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             margin-bottom: 12px;
           "
@@ -310,7 +339,7 @@
           <label
             for="batch-accept-reason"
             class="form-label"
-            style="font-size: 12px; font-weight: 600"
+            style="font-size: var(--font-size-2xs); font-weight: 600"
           >
             21 CFR Part 11 Reason for Approval <span class="required">*</span>
           </label>
@@ -320,20 +349,20 @@
             type="text"
             class="form-control"
             placeholder="e.g. Verified AI classifications against source regulatory document originals"
-            style="font-size: 12px"
+            style="font-size: var(--semantic-font-size-control)"
           />
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <button
             class="btn btn-secondary"
-            style="font-size: 12px"
+            style="font-size: var(--font-size-2xs)"
             @click="showBatchModal = false"
           >
             Cancel
           </button>
           <button
             class="btn btn-primary btn-confirm-batch-accept"
-            style="font-size: 12px"
+            style="font-size: var(--font-size-2xs)"
             :disabled="!batchReason || batchReason.length < 10"
             @click="executeBatchAccept"
           >
@@ -370,7 +399,11 @@
         >
           <h4
             id="qc-inspect-modal-title"
-            style="margin: 0; font-size: 15px; font-weight: 700"
+            style="
+              margin: 0;
+              font-size: var(--font-size-base);
+              font-weight: 700;
+            "
           >
             CRA Quality Control Review: {{ inspectedItem.filename }}
           </h4>
@@ -395,25 +428,29 @@
           <!-- Predicted Classification Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: var(--font-size-2xs);
+                color: var(--primary);
+              "
             >
               Predicted Taxonomy
             </h5>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: var(--font-size-2xs)">
               <strong>Artifact Code:</strong>
               <code class="font-mono">{{
                 inspectedItem.intelligence_report?.primary_classification
                   ?.artifact_code
               }}</code>
             </p>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: var(--font-size-2xs)">
               <strong>Artifact Type:</strong>
               {{
                 inspectedItem.intelligence_report?.primary_classification
                   ?.artifact_type
               }}
             </p>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: var(--font-size-2xs)">
               <strong>Zone:</strong>
               {{
                 inspectedItem.intelligence_report?.primary_classification?.zone
@@ -424,7 +461,7 @@
                   ?.section
               }}
             </p>
-            <p style="margin: 2px 0; font-size: 12px">
+            <p style="margin: 2px 0; font-size: var(--font-size-2xs)">
               <strong>AI Confidence:</strong>
               {{
                 Math.round(
@@ -438,13 +475,17 @@
           <!-- Override Taxonomy Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: var(--font-size-2xs);
+                color: var(--primary);
+              "
             >
               Override Taxonomy Tag
             </h5>
             <label
               class="form-label"
-              style="font-size: 11px"
+              style="font-size: var(--font-size-2xs)"
               for="qc-artifact-code-override"
               >Artifact Code Override</label
             >
@@ -452,7 +493,10 @@
               id="qc-artifact-code-override"
               v-model="overrideArtifactCode"
               class="form-control"
-              style="font-size: 12px; margin-bottom: 8px"
+              style="
+                font-size: var(--semantic-font-size-control);
+                margin-bottom: 8px;
+              "
             >
               <option value="">
                 -- Keep Predicted ({{
@@ -497,7 +541,7 @@
           <label
             for="review-reason-input"
             class="form-label"
-            style="font-size: 12px; font-weight: 600"
+            style="font-size: var(--font-size-2xs); font-weight: 600"
           >
             21 CFR Part 11 Reason for Change <span class="required">*</span>
           </label>
@@ -507,7 +551,7 @@
             type="text"
             class="form-control"
             placeholder="Mandatory Part 11 justification (min 10 chars)"
-            style="font-size: 12px"
+            style="font-size: var(--semantic-font-size-control)"
           />
         </div>
 
@@ -523,14 +567,14 @@
         >
           <button
             class="btn btn-secondary"
-            style="font-size: 12px"
+            style="font-size: var(--font-size-2xs)"
             @click="inspectedItem = null"
           >
             Cancel
           </button>
           <button
             class="btn btn-danger btn-reject-qc"
-            style="font-size: 12px"
+            style="font-size: var(--font-size-2xs)"
             :disabled="
               !canReviewQc || !reviewReason || reviewReason.length < 10
             "
@@ -541,7 +585,7 @@
           </button>
           <button
             class="btn btn-primary btn-accept-qc"
-            style="font-size: 12px"
+            style="font-size: var(--font-size-2xs)"
             :disabled="
               !canReviewQc || !reviewReason || reviewReason.length < 10
             "
@@ -777,7 +821,7 @@ onMounted(() => {
 
 .qc-role-banner {
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   background: var(--semantic-color-warning-bg-soft);
   border-bottom: 1px solid var(--semantic-color-warning-bg-badge);
   color: var(--semantic-color-warning-dark);
@@ -785,7 +829,7 @@ onMounted(() => {
 
 .qc-error-banner {
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   background: var(--semantic-color-error-bg-soft);
   border-bottom: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);
@@ -799,7 +843,7 @@ onMounted(() => {
 .qc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .qc-table th,

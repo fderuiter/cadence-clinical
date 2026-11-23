@@ -10,8 +10,17 @@
           {{ workspaceTitle }}
         </h2>
         <span v-if="participant" class="workspace-meta">
-          {{ participant.subject_id }} ·
-          {{ participant.site_id ? `Site ${participant.site_id}` : "No site" }}
+          <span class="font-mono tabular-nums">{{
+            participant.subject_id
+          }}</span>
+          ·
+          <template v-if="participant.site_id"
+            >Site
+            <span class="font-mono tabular-nums">{{
+              participant.site_id
+            }}</span></template
+          >
+          <template v-else>No site</template>
         </span>
       </div>
       <router-link

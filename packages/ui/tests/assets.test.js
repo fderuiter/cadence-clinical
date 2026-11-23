@@ -2,6 +2,129 @@ import { describe, it, expect } from "vitest";
 import { ESLint } from "eslint";
 import fs from "fs";
 import path from "path";
+import zlib from "zlib";
+
+const WOFF2_KNOWN_TAGS = [
+  "cmap",
+  "head",
+  "hhea",
+  "hmtx",
+  "maxp",
+  "name",
+  "OS/2",
+  "post",
+  "cvt ",
+  "fpgm",
+  "glyf",
+  "loca",
+  "prep",
+  "CFF ",
+  "VORG",
+  "EBDT",
+  "EBLC",
+  "gasp",
+  "hdmx",
+  "kern",
+  "LTSH",
+  "PCLT",
+  "VDMX",
+  "vhea",
+  "vmtx",
+  "BASE",
+  "GDEF",
+  "GPOS",
+  "GSUB",
+  "EBSC",
+  "JSTF",
+  "MATH",
+  "CBDT",
+  "CBLC",
+  "COLR",
+  "CPAL",
+  "SVG ",
+  "sbix",
+  "acnt",
+  "avar",
+  "bdat",
+  "bloc",
+  "bsln",
+  "cvar",
+  "fdsc",
+  "feat",
+  "fmtx",
+  "fvar",
+  "gvar",
+  "hsty",
+  "just",
+  "lcar",
+  "mort",
+  "morx",
+  "opbd",
+  "prop",
+  "trak",
+  "Zapf",
+  "Silf",
+  "Glat",
+  "Gloc",
+  "Feat",
+  "Sill",
+];
+
+function readUIntBase128(buf, startOffset) {
+  let accum = 0;
+  let offset = startOffset;
+  for (let i = 0; i < 5; i++) {
+    const byte = buf[offset++];
+    accum = (accum << 7) | (byte & 0x7f);
+    if ((byte & 0x80) === 0) {
+      return { value: accum >>> 0, nextOffset: offset };
+    }
+  }
+  throw new Error("Invalid UIntBase128 in WOFF2 table directory");
+}
+
+function inspectWoff2Binary(filePath) {
+  const buf = fs.readFileSync(filePath);
+  const magic = buf.toString("ascii", 0, 4);
+  const declaredLength = buf.readUInt32BE(8);
+  const numTables = buf.readUInt16BE(12);
+  const totalCompressedSize = buf.readUInt32BE(20);
+
+  let offset = 48;
+  const tableTags = [];
+  for (let i = 0; i < numTables; i++) {
+    const flags = buf[offset++];
+    const tagIndex = flags & 0x3f;
+    let tag;
+    if (tagIndex === 63) {
+      tag = buf.toString("ascii", offset, offset + 4);
+      offset += 4;
+    } else {
+      tag = WOFF2_KNOWN_TAGS[tagIndex];
+    }
+    tableTags.push(tag);
+    const xformVersion = (flags >> 6) & 0x03;
+    offset = readUIntBase128(buf, offset).nextOffset;
+    const hasTransformLength =
+      tag === "glyf" || tag === "loca"
+        ? xformVersion === 0
+        : xformVersion !== 0;
+    if (hasTransformLength) {
+      offset = readUIntBase128(buf, offset).nextOffset;
+    }
+  }
+
+  const compressedStream = buf.subarray(offset, offset + totalCompressedSize);
+  const decompressed = zlib.brotliDecompressSync(compressedStream);
+  return {
+    magic,
+    byteLength: buf.length,
+    declaredLength,
+    numTables,
+    tableTags,
+    decompressed,
+  };
+}
 
 function parseRootTokens(cssContent) {
   const rootMatch = cssContent.match(/:root\s*\{([\s\S]*?)\}/);
@@ -85,9 +208,111 @@ describe("CSS Assets and Package Exports", () => {
 
     expect(pkg.exports).toBeDefined();
     expect(pkg.exports["."]).toBe("./index.js");
+    expect(pkg.exports["./fonts.css"]).toBe("./fonts.css");
     expect(pkg.exports["./tokens.css"]).toBe("./tokens.css");
     expect(pkg.exports["./responsive.css"]).toBe("./responsive.css");
     expect(pkg.exports["./package.json"]).toBe("./package.json");
+  });
+
+  it("vendors SIL OFL 1.1 Inter v4 and JetBrains Mono variable WOFF2 subsets with OpenType fvar and GSUB cv05/cv08 features", () => {
+    const fontsDir = path.join(uiDir, "fonts");
+    const fontsCssPath = path.join(uiDir, "fonts.css");
+    expect(fs.existsSync(fontsCssPath)).toBe(true);
+
+    const fontsCss = fs.readFileSync(fontsCssPath, "utf-8");
+    expect(fontsCss).not.toMatch(/https?:\/\/|url\(\s*['"]?\/\//i);
+    expect(fontsCss).toContain('font-family: "Inter"');
+    expect(fontsCss).toContain('font-family: "JetBrains Mono"');
+    expect(fontsCss).toContain("font-display: swap");
+    expect(fontsCss).toMatch(/"cv05"\s+1,\s*"cv08"\s+1/);
+
+    for (const licenseFile of ["Inter-OFL.txt", "JetBrainsMono-OFL.txt"]) {
+      const licenseText = fs.readFileSync(
+        path.join(fontsDir, licenseFile),
+        "utf-8"
+      );
+      expect(licenseText).toContain("SIL OPEN FONT LICENSE Version 1.1");
+    }
+
+    const expectedFonts = [
+      {
+        file: "InterVariable.woff2",
+        features: ["wght", "opsz", "cv05", "cv08", "tnum"],
+      },
+      {
+        file: "InterVariable-Italic.woff2",
+        features: ["wght", "opsz", "cv05", "cv08", "tnum"],
+      },
+      {
+        file: "JetBrainsMonoVariable.woff2",
+        features: ["wght", "zero"],
+      },
+      {
+        file: "JetBrainsMonoVariable-Italic.woff2",
+        features: ["wght", "zero"],
+      },
+    ];
+
+    for (const { file, features } of expectedFonts) {
+      expect(fontsCss).toContain(`./fonts/${file}`);
+      const info = inspectWoff2Binary(path.join(fontsDir, file));
+      expect(info.magic).toBe("wOF2");
+      expect(info.byteLength).toBe(info.declaredLength);
+      expect(info.byteLength).toBeGreaterThan(20_000);
+      expect(info.tableTags).toContain("fvar");
+      expect(info.tableTags).toContain("GSUB");
+      for (const tag of features) {
+        expect(
+          info.decompressed.includes(Buffer.from(tag, "ascii")),
+          `${file} missing OpenType tag "${tag}"`
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("defines a rem typography scale anchored at 0.75rem floor and 1rem form controls in tokens.css", () => {
+    const tokensPath = path.join(uiDir, "tokens.css");
+    const rawCss = fs.readFileSync(tokensPath, "utf-8");
+    const tokens = parseRootTokens(rawCss);
+
+    expect(rawCss).toContain('@import "./fonts.css";');
+    expect(tokens.get("--font-sans")).toMatch(
+      /^"Inter",\s*system-ui,\s*-apple-system\b/
+    );
+    expect(tokens.get("--font-feature-sans")).toBe('"cv05" 1, "cv08" 1');
+    expect(tokens.get("--font-mono")).toMatch(
+      /^"JetBrains Mono",\s*ui-monospace\b/
+    );
+    expect(tokens.get("--semantic-font-mono")).toBe(tokens.get("--font-mono"));
+
+    expect(tokens.get("--font-size-2xs")).toBe("0.75rem");
+    expect(tokens.get("--font-size-xs")).toBe("0.8125rem");
+    expect(tokens.get("--font-size-sm")).toBe("0.875rem");
+    expect(tokens.get("--font-size-base")).toBe("0.9375rem");
+    expect(tokens.get("--font-size-md")).toBe("1rem");
+    expect(tokens.get("--font-size-lg")).toBe("1.125rem");
+    expect(tokens.get("--font-size-xl")).toBe("1.375rem");
+    expect(tokens.get("--font-size-2xl")).toBe("1.5rem");
+    expect(tokens.get("--font-size-3xl")).toBe("1.75rem");
+    expect(tokens.get("--semantic-font-size-body")).toBe("0.9375rem");
+    expect(tokens.get("--semantic-font-size-control")).toBe("1rem");
+    expect(tokens.get("--semantic-font-size-heading")).toBe("1.375rem");
+
+    expect(rawCss).toMatch(
+      /\.clinical-badge\s*\{[^}]*font-size:\s*var\(--font-size-2xs\)/
+    );
+    expect(rawCss).toMatch(
+      /\.clinical-input\s+input\[type="text"\][\s\S]*?\.clinical-input\s+\.clinical-input-control\s*\{[^}]*font-size:\s*var\(--semantic-font-size-control\)/
+    );
+    expect(rawCss).toMatch(
+      /\.validation-error-msg\s*\{[^}]*font-size:\s*var\(--font-size-xs\)/
+    );
+    expect(rawCss).toMatch(
+      /\.font-mono\s*\{[^}]*font-family:\s*var\(--font-mono\)/
+    );
+    expect(rawCss).toMatch(
+      /\.tabular-nums\s*\{[^}]*font-variant-numeric:\s*tabular-nums/
+    );
   });
 
   it("should have tokens.css with correct root custom properties", () => {
@@ -334,6 +559,51 @@ describe("CSS Assets and Package Exports", () => {
       const cssRules = cssResult.messages.map((m) => m.ruleId);
       expect(cssRules).toContain("custom-vue/no-inline-hex");
       expect(cssRules).toContain("custom-vue/no-undefined-css-vars");
+    });
+
+    it("blocks hardcoded font-family stacks, raw px font sizes outside :root, sub-0.75rem text, and sub-1rem form controls via ESLint", async () => {
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const [vueViolation] = await eslint.lintText(
+        `<template>
+  <div>
+    <span style="font-family: monospace; font-size: 10px">Code</span>
+    <input class="custom-field" type="text" aria-label="Search" />
+  </div>
+</template>
+<style scoped>
+.custom-field {
+  font-size: var(--font-size-sm);
+}
+</style>
+`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/__TypographyProbe.vue"
+          ),
+        }
+      );
+      const vueRuleIds = vueViolation.messages.map((m) => m.ruleId);
+      expect(vueRuleIds).toContain("custom-vue/no-raw-font-family");
+      expect(vueRuleIds).toContain("custom-vue/no-px-font-size");
+      expect(vueRuleIds).toContain("custom-vue/no-subfloor-font-size");
+      expect(vueRuleIds).toContain("custom-vue/no-sub-1rem-form-control");
+
+      const [cssViolation] = await eslint.lintText(
+        `.caption {\n  font-family: "Inter", sans-serif;\n  font-size: 0.65rem;\n}\n.label {\n  font-size: 14px;\n}\nselect.filter {\n  font-size: 0.875rem;\n}\n`,
+        {
+          filePath: path.join(repoRoot, "apps/subject-portal/src/__probe.css"),
+        }
+      );
+      const cssRuleIds = cssViolation.messages.map((m) => m.ruleId);
+      expect(cssRuleIds).toContain("custom-vue/no-raw-font-family");
+      expect(cssRuleIds).toContain("custom-vue/no-px-font-size");
+      expect(cssRuleIds).toContain("custom-vue/no-subfloor-font-size");
+      expect(cssRuleIds).toContain("custom-vue/no-sub-1rem-form-control");
     });
   });
 });

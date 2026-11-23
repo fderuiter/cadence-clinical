@@ -190,7 +190,7 @@ const calculateSum = (columnId) => {
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
-  font-size: 0.875rem;
+  font-size: var(--semantic-font-size-control);
   background-color: var(--semantic-color-surface);
 }
 

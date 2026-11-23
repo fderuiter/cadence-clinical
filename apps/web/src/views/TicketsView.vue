@@ -1373,7 +1373,7 @@ const exportAuditTrail = (format) => {
 }
 
 .badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1529,7 +1529,7 @@ const exportAuditTrail = (format) => {
   border: none;
   background: transparent;
   outline: none;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   width: 100%;
 }
 
@@ -1542,7 +1542,7 @@ const exportAuditTrail = (format) => {
   padding: 6px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
   outline: none;
@@ -1677,7 +1677,7 @@ const exportAuditTrail = (format) => {
 }
 
 .ref-tag {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
@@ -1695,7 +1695,7 @@ const exportAuditTrail = (format) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
 }
 
 .category-pill {
@@ -1707,7 +1707,7 @@ const exportAuditTrail = (format) => {
 }
 
 .sla-mini-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1781,7 +1781,7 @@ const exportAuditTrail = (format) => {
   color: var(--semantic-color-text-secondary);
   border-bottom: 1px solid var(--semantic-color-border-control);
   text-transform: uppercase;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   letter-spacing: 0.02em;
 }
 
@@ -1801,7 +1801,7 @@ const exportAuditTrail = (format) => {
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 .font-semibold {
   font-weight: 600;
@@ -1814,7 +1814,7 @@ const exportAuditTrail = (format) => {
 }
 
 .priority-tag {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1904,7 +1904,7 @@ const exportAuditTrail = (format) => {
 }
 
 .batch-select {
-  font-size: 0.82rem;
+  font-size: var(--semantic-font-size-control);
   padding: 5px 10px;
 }
 

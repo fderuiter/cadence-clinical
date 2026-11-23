@@ -616,7 +616,7 @@ function completeAndClose() {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -692,7 +692,7 @@ function completeAndClose() {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   outline: none;
@@ -792,7 +792,7 @@ function completeAndClose() {
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }
@@ -941,7 +941,7 @@ function completeAndClose() {
 }
 
 .detail-val.code {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .signature-truncate {

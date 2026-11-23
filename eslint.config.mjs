@@ -926,6 +926,952 @@ const noAriaLabelMismatchRule = {
   },
 };
 
+function parseCssRuleBlocks(maskedText, baseOffset = 0) {
+  const blocks = [];
+  let i = 0;
+  let stmtStart = 0;
+  const len = maskedText.length;
+
+  while (i < len) {
+    const ch = maskedText[i];
+    if (ch === "'" || ch === '"') {
+      const quote = ch;
+      i++;
+      while (i < len && maskedText[i] !== quote) {
+        if (maskedText[i] === "\\") i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+    if (ch === ";" && stmtStart <= i) {
+      stmtStart = i + 1;
+      i++;
+      continue;
+    }
+    if (ch === "{") {
+      const header = maskedText.slice(stmtStart, i);
+      const selectorTrimmed = header.trim();
+      const bodyStart = i + 1;
+      let depth = 1;
+      i++;
+      while (i < len && depth > 0) {
+        const c = maskedText[i];
+        if (c === "'" || c === '"') {
+          const q = c;
+          i++;
+          while (i < len && maskedText[i] !== q) {
+            if (maskedText[i] === "\\") i++;
+            i++;
+          }
+        } else if (c === "{") {
+          depth++;
+        } else if (c === "}") {
+          depth--;
+          if (depth === 0) break;
+        }
+        i++;
+      }
+      const bodyEnd = i;
+      const innerBody = maskedText.slice(bodyStart, bodyEnd);
+      if (/^@(?:media|supports|layer|container)\b/i.test(selectorTrimmed)) {
+        blocks.push(...parseCssRuleBlocks(innerBody, baseOffset + bodyStart));
+      } else if (!/^@(?:-webkit-|-moz-)?keyframes\b/i.test(selectorTrimmed)) {
+        blocks.push({
+          selector: selectorTrimmed,
+          selectorOffset: baseOffset + stmtStart,
+          body: innerBody,
+          bodyOffset: baseOffset + bodyStart,
+        });
+      }
+      i++;
+      stmtStart = i;
+      continue;
+    }
+    i++;
+  }
+  return blocks;
+}
+
+function extractCssDeclarations(body, bodyOffset) {
+  const decls = [];
+  let start = 0;
+  let parenDepth = 0;
+  const len = body.length;
+
+  const pushChunk = (endIdx) => {
+    const rawChunk = body.slice(start, endIdx);
+    const leadWs = rawChunk.match(/^\s*/)?.[0]?.length ?? 0;
+    const trimmed = rawChunk.trim();
+    if (!trimmed) return;
+    const colonIdx = trimmed.indexOf(":");
+    if (colonIdx <= 0) return;
+    const prop = trimmed.slice(0, colonIdx).trim().toLowerCase();
+    if (!/^(?:--[a-z0-9_-]+|[a-z-]+)$/i.test(prop)) return;
+    const rawValue = trimmed
+      .slice(colonIdx + 1)
+      .replace(/!important\s*$/i, "")
+      .trim();
+    decls.push({
+      prop,
+      value: rawValue,
+      offset: bodyOffset + start + leadWs,
+    });
+  };
+
+  for (let i = 0; i < len; i++) {
+    const ch = body[i];
+    if (ch === "'" || ch === '"') {
+      const q = ch;
+      i++;
+      while (i < len && body[i] !== q) {
+        if (body[i] === "\\") i++;
+        i++;
+      }
+      continue;
+    }
+    if (ch === "(") parenDepth++;
+    else if (ch === ")" && parenDepth > 0) parenDepth--;
+    else if (ch === ";" && parenDepth === 0) {
+      pushChunk(i);
+      start = i + 1;
+    }
+  }
+  pushChunk(len);
+  return decls;
+}
+
+function splitTopLevelCssList(text, delimiter = ",") {
+  const parts = [];
+  let start = 0;
+  let paren = 0;
+  let bracket = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "'" || ch === '"') {
+      const q = ch;
+      i++;
+      while (i < text.length && text[i] !== q) {
+        if (text[i] === "\\") i++;
+        i++;
+      }
+      continue;
+    }
+    if (ch === "(") paren++;
+    else if (ch === ")" && paren > 0) paren--;
+    else if (ch === "[") bracket++;
+    else if (ch === "]" && bracket > 0) bracket--;
+    else if (ch === delimiter && paren === 0 && bracket === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
+
+function isRootThemeSelector(selector) {
+  const parts = splitTopLevelCssList(selector, ",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return false;
+  return parts.every((p) =>
+    /^(?::root(?:\[[^\]]+\])?|\[data-theme="[^"]+"\]|\.dark)$/.test(p)
+  );
+}
+
+function isAllowedFontFamilyValue(rawValue) {
+  const val = rawValue.replace(/!important\s*$/i, "").trim();
+  if (!val) return true;
+  if (
+    /^(?:inherit|initial|unset|revert|revert-layer)$/i.test(val) ||
+    /^var\(\s*--(?:font|semantic-font|vp-font-family)[a-zA-Z0-9_-]*\s*\)$/.test(
+      val
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
+let cachedBaseRootTokens = null;
+
+function getBaseRootTokens() {
+  if (cachedBaseRootTokens) return cachedBaseRootTokens;
+  const map = new Map();
+  if (fs.existsSync(tokensCssPath)) {
+    const cleanTokens = stripCssCommentsPreservingNewlines(
+      fs.readFileSync(tokensCssPath, "utf8")
+    );
+    for (const block of parseCssRuleBlocks(cleanTokens)) {
+      if (isRootThemeSelector(block.selector)) {
+        for (const d of extractCssDeclarations(block.body, block.bodyOffset)) {
+          if (d.prop.startsWith("--") && !map.has(d.prop)) {
+            map.set(d.prop, d.value);
+          }
+        }
+      }
+    }
+  }
+  cachedBaseRootTokens = map;
+  return map;
+}
+
+function buildTokenRemMap(extraCssTexts = []) {
+  const rawVars = new Map(getBaseRootTokens());
+  for (const cssText of extraCssTexts) {
+    const clean = stripCssCommentsPreservingNewlines(cssText);
+    for (const block of parseCssRuleBlocks(clean)) {
+      for (const d of extractCssDeclarations(block.body, block.bodyOffset)) {
+        if (d.prop.startsWith("--")) {
+          rawVars.set(d.prop, d.value);
+        }
+      }
+    }
+  }
+
+  const resolveRem = (expr, seen = new Set()) => {
+    if (!expr) return null;
+    const trimmed = expr.replace(/!important\s*$/i, "").trim();
+    const varMatch = trimmed.match(
+      /^var\(\s*(--[a-zA-Z0-9_-]+)(?:\s*,\s*([^)]+))?\s*\)$/
+    );
+    if (varMatch) {
+      const varName = varMatch[1].toLowerCase();
+      if (!seen.has(varName) && rawVars.has(varName)) {
+        const nextSeen = new Set(seen);
+        nextSeen.add(varName);
+        const resolved = resolveRem(rawVars.get(varName), nextSeen);
+        if (resolved !== null) return resolved;
+      }
+      if (varMatch[2]) {
+        return resolveRem(varMatch[2], seen);
+      }
+      return null;
+    }
+
+    const clampMatch = trimmed.match(/^clamp\(\s*([^,]+),/i);
+    if (clampMatch) {
+      return resolveRem(clampMatch[1], seen);
+    }
+
+    const unitMatch = trimmed.match(
+      /^([+-]?(?:\d+\.?\d*|\.\d+))(rem|em|px|%|pt)$/i
+    );
+    if (!unitMatch) return null;
+    const num = Number.parseFloat(unitMatch[1]);
+    const unit = unitMatch[2].toLowerCase();
+    if (unit === "rem" || unit === "em") return num;
+    if (unit === "px") return num / 16;
+    if (unit === "%") return num / 100;
+    if (unit === "pt") return (num * (96 / 72)) / 16;
+    return null;
+  };
+
+  return { rawVars, resolveRem };
+}
+
+const KNOWN_FORM_CONTROL_CLASSES = new Set([
+  "clinical-input",
+  "clinical-lookup-input",
+  "form-control",
+  "form-input",
+  "form-select",
+  "form-textarea",
+]);
+
+const NON_TEXT_INPUT_TYPES = new Set([
+  "checkbox",
+  "radio",
+  "range",
+  "hidden",
+  "file",
+  "color",
+  "button",
+  "submit",
+  "reset",
+  "image",
+]);
+
+function unwrapScopedPseudoSelectors(sel) {
+  let current = sel;
+  let prev = "";
+  while (current !== prev) {
+    prev = current;
+    current = current.replace(
+      /:(?:deep|slotted|global)\(\s*([^()]*)\s*\)/gi,
+      " $1 "
+    );
+  }
+  return current;
+}
+
+function extractRightmostCompoundSelector(complexSelector) {
+  const unwrapped = unwrapScopedPseudoSelectors(complexSelector).trim();
+  let paren = 0;
+  let bracket = 0;
+  let lastBoundary = 0;
+  for (let i = 0; i < unwrapped.length; i++) {
+    const ch = unwrapped[i];
+    if (ch === "'" || ch === '"') {
+      const q = ch;
+      i++;
+      while (i < unwrapped.length && unwrapped[i] !== q) {
+        if (unwrapped[i] === "\\") i++;
+        i++;
+      }
+      continue;
+    }
+    if (ch === "(") paren++;
+    else if (ch === ")" && paren > 0) paren--;
+    else if (ch === "[") bracket++;
+    else if (ch === "]" && bracket > 0) bracket--;
+    else if (
+      paren === 0 &&
+      bracket === 0 &&
+      (ch === ">" || ch === "+" || ch === "~" || /\s/.test(ch))
+    ) {
+      lastBoundary = i + 1;
+    }
+  }
+  return unwrapped.slice(lastBoundary).trim();
+}
+
+function selectorTargetsTextFormControl(
+  selectorList,
+  templateControlClasses = new Set()
+) {
+  for (const rawBranch of splitTopLevelCssList(selectorList, ",")) {
+    const branch = rawBranch.trim();
+    if (!branch || branch.startsWith("@") || branch.includes("::")) continue;
+    const compound = extractRightmostCompoundSelector(branch);
+    if (!compound) continue;
+
+    const withoutNot = compound.replace(/:not\([^)]*\)/gi, "");
+    if (
+      /\[type\s*=\s*["']?(?:checkbox|radio|range|hidden|file|color|button|submit|reset|image)["']?\s*\]/i.test(
+        withoutNot
+      )
+    ) {
+      continue;
+    }
+
+    const strippedAttrsAndPseudos = withoutNot
+      .replace(/\[[^\]]*\]/g, "")
+      .replace(/:[a-zA-Z-]+(?:\([^)]*\))?/g, "");
+
+    if (/^(?:input|select|textarea)(?=$|[.#])/i.test(strippedAttrsAndPseudos)) {
+      return true;
+    }
+
+    for (const clsMatch of strippedAttrsAndPseudos.matchAll(
+      /\.([a-zA-Z0-9_-]+)/g
+    )) {
+      const cls = clsMatch[1];
+      if (
+        KNOWN_FORM_CONTROL_CLASSES.has(cls) ||
+        templateControlClasses.has(cls)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isVueTextFormControlElement(elementNode) {
+  const tag = elementNode.rawName || elementNode.name || "";
+  const lowerTag = tag.toLowerCase();
+  const controlTags = new Set([
+    "input",
+    "select",
+    "textarea",
+    "clinicalinput",
+    "clinical-input",
+    "clinicallookupinput",
+    "clinical-lookup-input",
+  ]);
+  if (!controlTags.has(lowerTag)) return false;
+  if (lowerTag === "input") {
+    for (const attr of elementNode.startTag?.attributes || []) {
+      if (
+        !attr.directive &&
+        attr.key?.type === "VIdentifier" &&
+        attr.key.name === "type" &&
+        attr.value?.value &&
+        NON_TEXT_INPUT_TYPES.has(attr.value.value.trim().toLowerCase())
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function collectStaticElementClasses(elementNode) {
+  const classes = [];
+  for (const attr of elementNode.startTag?.attributes || []) {
+    if (
+      !attr.directive &&
+      attr.key?.type === "VIdentifier" &&
+      attr.key.name === "class" &&
+      attr.value?.value
+    ) {
+      for (const token of attr.value.value.split(/\s+/).filter(Boolean)) {
+        classes.push(token);
+      }
+    }
+  }
+  return classes;
+}
+
+function extractInlineFontDeclsFromAttrText(attrText) {
+  const results = [];
+  for (const m of attrText.matchAll(
+    /(?:^|[;"'`{\s,])(font-family|fontFamily|font-size|fontSize)\s*:\s*([^;"'`}\n,]+(?:\([^)]*\)[^;"'`}\n,]*)?)/g
+  )) {
+    const rawProp = m[1];
+    const cleanVal = m[2]
+      .trim()
+      .replace(/^['"`]|['"`]$/g, "")
+      .replace(/!important\s*$/i, "")
+      .trim();
+    results.push({
+      prop:
+        rawProp === "fontFamily"
+          ? "font-family"
+          : rawProp === "fontSize"
+            ? "font-size"
+            : rawProp,
+      value: cleanVal,
+    });
+  }
+  return results;
+}
+
+function stripJsCommentsPreservingLayout(sourceText) {
+  return stripCssCommentsPreservingNewlines(sourceText).replace(
+    /\/\/.*$/gm,
+    (c) => " ".repeat(c.length)
+  );
+}
+
+const noRawFontFamilyRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow hardcoded font-family stacks outside packages/ui/fonts.css and packages/ui/tokens.css :root.",
+      category: "Best Practices",
+    },
+    messages: {
+      noRawFontFamily:
+        'Hardcoded font-family "{{value}}" is prohibited. Reference var(--font-sans), var(--font-mono), or var(--font) from packages/ui/tokens.css.',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith("/packages/ui/fonts.css")) {
+      return {};
+    }
+
+    const checkCssText = (rawCss, baseOffset, isTokensCss = false) => {
+      const masked = stripCssCommentsPreservingNewlines(rawCss);
+      for (const block of parseCssRuleBlocks(masked, baseOffset)) {
+        if (isTokensCss && isRootThemeSelector(block.selector)) continue;
+        if (/^@font-face\b/i.test(block.selector) && isTokensCss) continue;
+        for (const decl of extractCssDeclarations(
+          block.body,
+          block.bodyOffset
+        )) {
+          if (
+            decl.prop === "font-family" &&
+            !isAllowedFontFamilyValue(decl.value)
+          ) {
+            context.report({
+              loc: offsetToLoc(sourceText, decl.offset),
+              messageId: "noRawFontFamily",
+              data: { value: decl.value },
+            });
+          }
+        }
+      }
+    };
+
+    const checkJsScriptText = (rawScript, baseOffset) => {
+      const clean = stripJsCommentsPreservingLayout(rawScript);
+      for (const m of clean.matchAll(
+        /(?:style\.fontFamily\s*=\s*['"`]([^'"`]+)['"`]|\bfontFamily\s*:\s*['"`]([^'"`]+)['"`]|font-family\s*:\s*([^;"'`}\n]+))/g
+      )) {
+        const val = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+        if (val && !isAllowedFontFamilyValue(val)) {
+          context.report({
+            loc: offsetToLoc(sourceText, baseOffset + m.index),
+            messageId: "noRawFontFamily",
+            data: { value: val },
+          });
+        }
+      }
+    };
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          checkCssText(
+            sourceText,
+            0,
+            filename.endsWith("/packages/ui/tokens.css")
+          );
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const scriptAndStyleVisitor = {
+        "Program:exit"() {
+          for (const sm of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            checkCssText(sm[2], sm.index + sm[1].length, false);
+          }
+          for (const scm of sourceText.matchAll(
+            /(<script\b[^>]*>)([\s\S]*?)<\/script>/gi
+          )) {
+            checkJsScriptText(scm[2], scm.index + scm[1].length);
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return scriptAndStyleVisitor;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (isStyleOrColorVAttribute(node) && node.value) {
+              const attrText = context.sourceCode.getText(node.value);
+              for (const d of extractInlineFontDeclsFromAttrText(attrText)) {
+                if (
+                  d.prop === "font-family" &&
+                  !isAllowedFontFamilyValue(d.value)
+                ) {
+                  context.report({
+                    node: node.value,
+                    messageId: "noRawFontFamily",
+                    data: { value: d.value },
+                  });
+                }
+              }
+            }
+          },
+        },
+        scriptAndStyleVisitor
+      );
+    }
+
+    return {
+      Program() {
+        checkJsScriptText(sourceText, 0);
+      },
+    };
+  },
+};
+
+const noPxFontSizeRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow raw px font-size declarations outside :root so browser root font-size scaling works cleanly to 200%.",
+      category: "Best Practices",
+    },
+    messages: {
+      noPxFontSize:
+        'Raw px font-size "{{value}}" is prohibited outside :root. Use rem tokens from packages/ui/tokens.css (e.g. var(--font-size-sm)).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+    const pxUnitRegex = /(?:^|[^\w-])\d+(?:\.\d+)?px\b/i;
+
+    const checkCssText = (rawCss, baseOffset) => {
+      const masked = stripCssCommentsPreservingNewlines(rawCss);
+      for (const block of parseCssRuleBlocks(masked, baseOffset)) {
+        if (isRootThemeSelector(block.selector)) continue;
+        for (const decl of extractCssDeclarations(
+          block.body,
+          block.bodyOffset
+        )) {
+          if (
+            (decl.prop === "font-size" || decl.prop.includes("font-size")) &&
+            pxUnitRegex.test(decl.value)
+          ) {
+            context.report({
+              loc: offsetToLoc(sourceText, decl.offset),
+              messageId: "noPxFontSize",
+              data: { value: decl.value },
+            });
+          }
+        }
+      }
+    };
+
+    const checkJsScriptText = (rawScript, baseOffset) => {
+      const clean = stripJsCommentsPreservingLayout(rawScript);
+      for (const m of clean.matchAll(
+        /(?:style\.fontSize\s*=\s*['"`]([^'"`]+)['"`]|\bfontSize\s*:\s*['"`]([^'"`]+)['"`]|font-size\s*:\s*([^;"'`}\n]+))/g
+      )) {
+        const val = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+        if (val && pxUnitRegex.test(val)) {
+          context.report({
+            loc: offsetToLoc(sourceText, baseOffset + m.index),
+            messageId: "noPxFontSize",
+            data: { value: val },
+          });
+        }
+      }
+    };
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          checkCssText(sourceText, 0);
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const scriptAndStyleVisitor = {
+        "Program:exit"() {
+          for (const sm of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            checkCssText(sm[2], sm.index + sm[1].length);
+          }
+          for (const scm of sourceText.matchAll(
+            /(<script\b[^>]*>)([\s\S]*?)<\/script>/gi
+          )) {
+            checkJsScriptText(scm[2], scm.index + scm[1].length);
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return scriptAndStyleVisitor;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (isStyleOrColorVAttribute(node) && node.value) {
+              const attrText = context.sourceCode.getText(node.value);
+              for (const d of extractInlineFontDeclsFromAttrText(attrText)) {
+                if (d.prop === "font-size" && pxUnitRegex.test(d.value)) {
+                  context.report({
+                    node: node.value,
+                    messageId: "noPxFontSize",
+                    data: { value: d.value },
+                  });
+                }
+              }
+            }
+          },
+        },
+        scriptAndStyleVisitor
+      );
+    }
+
+    return {
+      Program() {
+        checkJsScriptText(sourceText, 0);
+      },
+    };
+  },
+};
+
+const noSubfloorFontSizeRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow font-size declarations resolving below the 0.75rem (12px) minimum clinical legibility floor.",
+      category: "Best Practices",
+    },
+    messages: {
+      subfloorFontSize:
+        'Font size "{{value}}" resolves below the 0.75rem (12px) legibility floor. Use at least var(--font-size-2xs) (0.75rem).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+    const MIN_FLOOR_REM = 0.75 - 1e-6;
+
+    const checkCssText = (rawCss, baseOffset, resolver) => {
+      const masked = stripCssCommentsPreservingNewlines(rawCss);
+      for (const block of parseCssRuleBlocks(masked, baseOffset)) {
+        for (const decl of extractCssDeclarations(
+          block.body,
+          block.bodyOffset
+        )) {
+          if (decl.prop === "font-size" || decl.prop.includes("font-size")) {
+            const remVal = resolver.resolveRem(decl.value);
+            if (remVal !== null && remVal < MIN_FLOOR_REM) {
+              context.report({
+                loc: offsetToLoc(sourceText, decl.offset),
+                messageId: "subfloorFontSize",
+                data: { value: decl.value },
+              });
+            }
+          }
+        }
+      }
+    };
+
+    const checkJsScriptText = (rawScript, baseOffset, resolver) => {
+      const clean = stripJsCommentsPreservingLayout(rawScript);
+      for (const m of clean.matchAll(
+        /(?:style\.fontSize\s*=\s*['"`]([^'"`]+)['"`]|\bfontSize\s*:\s*['"`]([^'"`]+)['"`]|font-size\s*:\s*([^;"'`}\n]+))/g
+      )) {
+        const val = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+        if (val) {
+          const remVal = resolver.resolveRem(val);
+          if (remVal !== null && remVal < MIN_FLOOR_REM) {
+            context.report({
+              loc: offsetToLoc(sourceText, baseOffset + m.index),
+              messageId: "subfloorFontSize",
+              data: { value: val },
+            });
+          }
+        }
+      }
+    };
+
+    if (filename.endsWith(".css")) {
+      const resolver = buildTokenRemMap([sourceText]);
+      return {
+        Program() {
+          checkCssText(sourceText, 0, resolver);
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const styleTexts = Array.from(
+        sourceText.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
+        (m) => m[1]
+      );
+      const resolver = buildTokenRemMap(styleTexts);
+
+      const scriptAndStyleVisitor = {
+        "Program:exit"() {
+          for (const sm of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            checkCssText(sm[2], sm.index + sm[1].length, resolver);
+          }
+          for (const scm of sourceText.matchAll(
+            /(<script\b[^>]*>)([\s\S]*?)<\/script>/gi
+          )) {
+            checkJsScriptText(scm[2], scm.index + scm[1].length, resolver);
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return scriptAndStyleVisitor;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (isStyleOrColorVAttribute(node) && node.value) {
+              const attrText = context.sourceCode.getText(node.value);
+              for (const d of extractInlineFontDeclsFromAttrText(attrText)) {
+                if (d.prop === "font-size") {
+                  const remVal = resolver.resolveRem(d.value);
+                  if (remVal !== null && remVal < MIN_FLOOR_REM) {
+                    context.report({
+                      node: node.value,
+                      messageId: "subfloorFontSize",
+                      data: { value: d.value },
+                    });
+                  }
+                }
+              }
+            }
+          },
+        },
+        scriptAndStyleVisitor
+      );
+    }
+
+    const resolver = buildTokenRemMap();
+    return {
+      Program() {
+        checkJsScriptText(sourceText, 0, resolver);
+      },
+    };
+  },
+};
+
+const noSub1RemFormControlRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow font-size declarations resolving below 1rem (16px) on text inputs, selects, textareas, and .clinical-input controls to prevent mobile auto-zoom.",
+      category: "Best Practices",
+    },
+    messages: {
+      sub1RemControl:
+        'Form control font-size "{{value}}" resolves below 1rem (16px) and triggers iOS/iPadOS viewport auto-zoom. Use var(--semantic-font-size-control) or var(--font-size-md) (1rem).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+    const MIN_CONTROL_REM = 1.0 - 1e-6;
+
+    const checkCssBlocks = (
+      rawCss,
+      baseOffset,
+      resolver,
+      templateControlClasses
+    ) => {
+      const masked = stripCssCommentsPreservingNewlines(rawCss);
+      for (const block of parseCssRuleBlocks(masked, baseOffset)) {
+        if (
+          !selectorTargetsTextFormControl(
+            block.selector,
+            templateControlClasses
+          )
+        ) {
+          continue;
+        }
+        for (const decl of extractCssDeclarations(
+          block.body,
+          block.bodyOffset
+        )) {
+          if (decl.prop === "font-size") {
+            const remVal = resolver.resolveRem(decl.value);
+            if (remVal !== null && remVal < MIN_CONTROL_REM) {
+              context.report({
+                loc: offsetToLoc(sourceText, decl.offset),
+                messageId: "sub1RemControl",
+                data: { value: decl.value },
+              });
+            }
+          }
+        }
+      }
+    };
+
+    if (filename.endsWith(".css")) {
+      const resolver = buildTokenRemMap([sourceText]);
+      return {
+        Program() {
+          checkCssBlocks(sourceText, 0, resolver, new Set());
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const styleTexts = Array.from(
+        sourceText.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
+        (m) => m[1]
+      );
+      const resolver = buildTokenRemMap(styleTexts);
+      const templateControlClasses = new Set();
+
+      const styleExitVisitor = {
+        "Program:exit"() {
+          for (const sm of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            checkCssBlocks(
+              sm[2],
+              sm.index + sm[1].length,
+              resolver,
+              templateControlClasses
+            );
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return styleExitVisitor;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VElement(node) {
+            if (!isVueTextFormControlElement(node)) return;
+            for (const cls of collectStaticElementClasses(node)) {
+              templateControlClasses.add(cls);
+            }
+            for (const attr of node.startTag?.attributes || []) {
+              if (isStyleOrColorVAttribute(attr) && attr.value) {
+                const attrText = context.sourceCode.getText(attr.value);
+                for (const d of extractInlineFontDeclsFromAttrText(attrText)) {
+                  if (d.prop === "font-size") {
+                    const remVal = resolver.resolveRem(d.value);
+                    if (remVal !== null && remVal < MIN_CONTROL_REM) {
+                      context.report({
+                        node: attr.value,
+                        messageId: "sub1RemControl",
+                        data: { value: d.value },
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          },
+        },
+        styleExitVisitor
+      );
+    }
+
+    // JS / TS files: check embedded CSS rules targeting form controls
+    const resolver = buildTokenRemMap();
+    return {
+      Program() {
+        for (const tplMatch of sourceText.matchAll(/`([\s\S]*?)`/g)) {
+          if (tplMatch[1].includes("{") && tplMatch[1].includes("font-size")) {
+            checkCssBlocks(
+              tplMatch[1],
+              tplMatch.index + 1,
+              resolver,
+              new Set()
+            );
+          }
+        }
+      },
+    };
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
@@ -933,6 +1879,10 @@ const customVuePlugin = {
     "no-raw-overlays": noRawOverlaysRule,
     "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
+    "no-raw-font-family": noRawFontFamilyRule,
+    "no-px-font-size": noPxFontSizeRule,
+    "no-subfloor-font-size": noSubfloorFontSizeRule,
+    "no-sub-1rem-form-control": noSub1RemFormControlRule,
   },
 };
 
@@ -981,6 +1931,10 @@ export default [
       "custom-vue/no-raw-overlays": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
       "custom-vue/no-aria-label-mismatch": "error",
+      "custom-vue/no-raw-font-family": "error",
+      "custom-vue/no-px-font-size": "error",
+      "custom-vue/no-subfloor-font-size": "error",
+      "custom-vue/no-sub-1rem-form-control": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -1015,6 +1969,27 @@ export default [
       ...disabledCoreRulesForCss,
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-raw-font-family": "error",
+      "custom-vue/no-px-font-size": "error",
+      "custom-vue/no-subfloor-font-size": "error",
+      "custom-vue/no-sub-1rem-form-control": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.css"],
+    languageOptions: {
+      parser: cssStubParser,
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      ...disabledCoreRulesForCss,
+      "custom-vue/no-inline-hex": "error",
+      "custom-vue/no-raw-font-family": "error",
+      "custom-vue/no-px-font-size": "error",
+      "custom-vue/no-subfloor-font-size": "error",
+      "custom-vue/no-sub-1rem-form-control": "error",
     },
   },
   {
@@ -1031,6 +2006,10 @@ export default [
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
+      "custom-vue/no-raw-font-family": "error",
+      "custom-vue/no-px-font-size": "error",
+      "custom-vue/no-subfloor-font-size": "error",
+      "custom-vue/no-sub-1rem-form-control": "error",
     },
   },
   {
@@ -1049,6 +2028,9 @@ export default [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "custom-vue/no-unlabeled-glyph-button": "error",
+      "custom-vue/no-raw-font-family": "error",
+      "custom-vue/no-px-font-size": "error",
+      "custom-vue/no-subfloor-font-size": "error",
     },
   },
   {
@@ -1148,6 +2130,29 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+    },
+  },
+  {
+    files: ["**/*.mjs", "**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    rules: {
+      "no-undef": "off",
+    },
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+    },
+  },
+  {
+    files: ["docs/.vitepress/repoLinks.mjs"],
+    rules: {
+      "no-control-regex": "off",
     },
   },
   {

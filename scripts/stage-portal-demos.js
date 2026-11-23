@@ -75,6 +75,25 @@ function stagePortalDemos({
       }
     }
 
+    const assetsDir = path.join(destDir, "assets");
+    const assetEntries = fs.existsSync(assetsDir)
+      ? fs.readdirSync(assetsDir)
+      : [];
+    for (const requiredFontPrefix of [
+      "InterVariable",
+      "JetBrainsMonoVariable",
+    ]) {
+      const hasBundledFont = assetEntries.some(
+        (entry) =>
+          entry.startsWith(requiredFontPrefix) && entry.endsWith(".woff2")
+      );
+      if (!hasBundledFont) {
+        throw new Error(
+          `Expected staged demo WOFF2 font '${requiredFontPrefix}*.woff2' is missing from ${assetsDir}`
+        );
+      }
+    }
+
     console.log(
       `Staged ${target.label} into ${path.relative(rootDir, destDir)}`
     );

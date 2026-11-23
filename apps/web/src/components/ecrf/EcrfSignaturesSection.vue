@@ -22,7 +22,8 @@
       >
         <div>
           <strong>{{ meaningLabel(signature.meaning) }}</strong> by
-          {{ signature.signed_by }} at {{ signature.signed_at }}:
+          {{ signature.signed_by }} at
+          <span class="ecrf-mono-code">{{ signature.signed_at }}</span>:
           {{ signature.reason }}
           <span
             v-if="signature.superseded"
@@ -59,7 +60,7 @@
               }"
             >
               <th scope="row">
-                {{ signed.item_id }}
+                <span class="ecrf-mono-code">{{ signed.item_id }}</span>
               </th>
               <td>{{ formatObservationValue(signed.value) }}</td>
               <td>
@@ -75,12 +76,21 @@
                 >
                   {{ signed.revision }}
                 </component>
-                <template v-else>
+                <span v-else class="ecrf-mono-code">
                   {{ signed.revision }}
-                </template>
+                </span>
               </td>
               <td>{{ currentValueText(signed.item_id) }}</td>
-              <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
+              <td>
+                <span
+                  :class="{
+                    'ecrf-mono-code':
+                      currentOf(signed.item_id)?.revision !== undefined &&
+                      currentOf(signed.item_id)?.revision !== null,
+                  }"
+                  >{{ currentOf(signed.item_id)?.revision ?? "None" }}</span
+                >
+              </td>
             </tr>
           </tbody>
         </table>
@@ -227,7 +237,7 @@ const {
 
 <style scoped>
 .ecrf-form-hint {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-form-row {
@@ -237,6 +247,14 @@ const {
   gap: 8px;
   margin: 8px 0;
 }
+.ecrf-form-row select {
+  font-size: var(--semantic-font-size-control);
+}
+.ecrf-mono-code,
+.ecrf-observation-link {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
 .ecrf-signatures {
   list-style: none;
   padding: 0;
@@ -244,7 +262,7 @@ const {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .ecrf-signature {
   border: 1px solid var(--border);
@@ -261,7 +279,7 @@ const {
   border-radius: 999px;
   background-color: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 .ecrf-signature-state--superseded {
@@ -271,7 +289,7 @@ const {
 .ecrf-signed-values {
   margin-top: 6px;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .ecrf-signed-values caption {
   text-align: left;
@@ -290,7 +308,7 @@ const {
 .ecrf-form-outcome {
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   display: flex;
   gap: 8px;
   align-items: center;

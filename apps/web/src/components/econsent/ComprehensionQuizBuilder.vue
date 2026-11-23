@@ -647,7 +647,7 @@ defineExpose({
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .options-builder {

@@ -1829,7 +1829,7 @@ function downloadDossierJson() {
   border-radius: 6px;
   border: 1px solid var(--border);
   background-color: white;
-  font-size: 0.85rem;
+  font-size: var(--semantic-font-size-control);
   font-weight: 600;
   color: var(--primary);
 }
@@ -1882,7 +1882,7 @@ function downloadDossierJson() {
 }
 
 .threshold-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
@@ -2063,7 +2063,7 @@ function downloadDossierJson() {
 .progress-label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-bottom: 2px;
 }
@@ -2142,7 +2142,7 @@ function downloadDossierJson() {
   font-weight: 800;
 }
 .clock-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -2281,7 +2281,7 @@ function downloadDossierJson() {
 .badge-rca {
   background: var(--semantic-color-indigo-bg);
   color: var(--semantic-color-accent);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
 }
 
 .badge-critical {

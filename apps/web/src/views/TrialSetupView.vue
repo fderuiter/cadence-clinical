@@ -267,7 +267,7 @@ async function submitOnboarding() {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: var(--semantic-font-size-control);
 }
 
 .field-hint {

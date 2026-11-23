@@ -282,7 +282,7 @@ function resetSimulation() {
 }
 
 .rule-count-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   background-color: var(--semantic-color-border);
   color: var(--semantic-color-text-dark);
@@ -324,7 +324,7 @@ function resetSimulation() {
 .profile-select {
   flex: 1;
   padding: 6px 10px;
-  font-size: 0.8rem;
+  font-size: var(--semantic-font-size-control);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
@@ -399,7 +399,7 @@ function resetSimulation() {
 }
 
 .rule-type-badge {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   padding: 2px 6px;
@@ -431,7 +431,7 @@ function resetSimulation() {
 }
 
 .status-pill {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -459,7 +459,7 @@ function resetSimulation() {
 }
 
 .expand-chevron {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -481,7 +481,7 @@ function resetSimulation() {
 }
 
 .trace-section-header {
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--semantic-color-text-subtle);
@@ -493,7 +493,7 @@ function resetSimulation() {
   border-radius: 6px;
   padding: 8px;
   color: var(--semantic-color-text-inverse);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   overflow-x: auto;
 }
@@ -512,8 +512,8 @@ function resetSimulation() {
   background-color: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.72rem;
-  font-family: monospace;
+  font-size: var(--font-size-2xs);
+  font-family: var(--font-mono);
 }
 
 .dependency-item.has-value {

@@ -324,26 +324,26 @@ function formatDate(dt) {
 }
 
 .header-icon {
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
 }
 
 .drawer-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .drawer-subtitle {
   margin: 2px 0 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .btn-close-drawer {
   background: transparent;
   border: none;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
@@ -378,9 +378,9 @@ function formatDate(dt) {
 }
 
 .job-id-tag {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
@@ -388,13 +388,13 @@ function formatDate(dt) {
 }
 
 .study-id-text {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-left: 8px;
 }
 
 .status-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
@@ -403,7 +403,7 @@ function formatDate(dt) {
 }
 
 .status-badge-sm {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
@@ -438,7 +438,7 @@ function formatDate(dt) {
 .progress-info {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   margin-bottom: 6px;
   color: var(--semantic-color-text-body);
@@ -480,7 +480,7 @@ function formatDate(dt) {
 .progress-details {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-top: 6px;
 }
@@ -495,7 +495,7 @@ function formatDate(dt) {
 }
 
 .completion-message {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
   background: var(--semantic-color-success-bg-soft);
   padding: 8px 12px;
@@ -510,7 +510,7 @@ function formatDate(dt) {
   background: var(--semantic-color-success);
   color: var(--semantic-color-surface);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   padding: 10px 16px;
   border: none;
   border-radius: 6px;
@@ -530,7 +530,7 @@ function formatDate(dt) {
 
 .expiration-notice {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
@@ -541,7 +541,7 @@ function formatDate(dt) {
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   border-radius: 6px;
 }
 
@@ -551,7 +551,7 @@ function formatDate(dt) {
   background: var(--semantic-color-surface-muted);
   border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -562,7 +562,7 @@ function formatDate(dt) {
 
 .history-title {
   margin: 0 0 12px 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -578,7 +578,7 @@ function formatDate(dt) {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .history-item.is-active {
@@ -594,7 +594,7 @@ function formatDate(dt) {
 }
 
 .history-job-id {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -603,7 +603,7 @@ function formatDate(dt) {
   display: flex;
   justify-content: space-between;
   color: var(--semantic-color-text-secondary);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .history-item-action {
@@ -619,7 +619,7 @@ function formatDate(dt) {
   color: var(--semantic-color-interactive-primary);
   font-weight: 600;
   text-decoration: none;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .history-download-link:disabled {
@@ -632,7 +632,7 @@ function formatDate(dt) {
 }
 
 .empty-history-text {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }

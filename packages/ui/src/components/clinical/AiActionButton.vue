@@ -140,7 +140,7 @@ const handleClick = (e) => {
   align-items: center;
   justify-content: center;
   gap: var(--spacing-xs, 8px);
-  font-family: var(--font-sans, inherit);
+  font-family: var(--font-sans);
   font-weight: 500;
   border-radius: var(--radius-md, 6px);
   border: 1px solid transparent;
@@ -160,19 +160,19 @@ const handleClick = (e) => {
 /* Sizes */
 .ai-btn-sm {
   padding: 4px 10px;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   min-height: 28px;
 }
 
 .ai-btn-md {
   padding: 6px 14px;
-  font-size: var(--font-size-sm, 14px);
+  font-size: var(--font-size-sm);
   min-height: 36px;
 }
 
 .ai-btn-lg {
   padding: 10px 18px;
-  font-size: var(--font-size-base, 15px);
+  font-size: var(--font-size-base);
   min-height: 44px;
 }
 
