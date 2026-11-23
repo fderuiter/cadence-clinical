@@ -248,7 +248,10 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
 
     expect(res.status).toBe("PENDING_REVIEW");
     expect(res.auto_approved).toBe(false);
-    expect(res.review_notes).toContain("0.90 threshold");
+    expect(res.review_notes).toContain(
+      "could not read every detail on the receipt photo clearly"
+    );
+    expect(res.review_notes).not.toContain("0.90");
   });
 
   it("handles OCR extraction and submission errors gracefully", async () => {
