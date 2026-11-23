@@ -1,20 +1,18 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-backdrop"
-    role="presentation"
-    @click.self="close"
+  <ClinicalModal
+    :is-open="isOpen"
+    :teleport="false"
+    :show-footer="false"
+    size="lg"
+    dialog-class="ticket-create-modal"
+    body-class="ticket-create-modal-body"
+    aria-labelledby="create-modal-title"
+    close-label="Close"
+    @close="close"
   >
-    <div
-      ref="modalRef"
-      class="modal-dialog ticket-create-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-modal-title"
-      tabindex="-1"
-    >
-      <div class="modal-header">
-        <div class="modal-header-icon">🎫</div>
+    <template #header>
+      <div class="modal-header-title-wrap">
+        <div class="modal-header-icon" aria-hidden="true">🎫</div>
         <div>
           <h3 id="create-modal-title" class="modal-title">
             Log Clinical Issue / Ticket
@@ -24,21 +22,21 @@
             operational issue
           </p>
         </div>
-        <button
-          type="button"
-          class="btn-close"
-          aria-label="Close"
-          @click="close"
-        >
-          ✕
-        </button>
       </div>
+    </template>
 
-      <div class="modal-body">
+    <form
+      id="ticket-create-form"
+      class="ticket-create-form"
+      novalidate
+      @submit.prevent="handleSubmit"
+    >
+      <div class="modal-body-fields">
         <div class="form-row">
           <div class="form-group flex-2">
             <label for="ticket-title" class="form-label"
-              >Issue Title <span class="text-danger">*</span></label
+              >Issue Title
+              <span class="text-danger" aria-hidden="true">*</span></label
             >
             <input
               id="ticket-title"
@@ -51,7 +49,8 @@
           </div>
           <div class="form-group flex-1">
             <label for="ticket-category" class="form-label"
-              >ICH GCP Category <span class="text-danger">*</span></label
+              >ICH GCP Category
+              <span class="text-danger" aria-hidden="true">*</span></label
             >
             <select
               id="ticket-category"
@@ -85,7 +84,8 @@
         <div class="form-row">
           <div class="form-group flex-1">
             <label for="ticket-severity" class="form-label"
-              >GxP Severity Rating <span class="text-danger">*</span></label
+              >GxP Severity Rating
+              <span class="text-danger" aria-hidden="true">*</span></label
             >
             <select
               id="ticket-severity"
@@ -121,7 +121,7 @@
         <div class="form-group">
           <label for="ticket-desc" class="form-label"
             >Clinical Narrative &amp; Description
-            <span class="text-danger">*</span></label
+            <span class="text-danger" aria-hidden="true">*</span></label
           >
           <textarea
             id="ticket-desc"
@@ -141,7 +141,7 @@
               v-model="form.study_id"
               type="text"
               class="form-control"
-              placeholder="e.g. STUDY-ONC-202"
+              placeholder="e.g. CADENCE-101"
             />
           </div>
           <div class="form-group flex-1">
@@ -151,7 +151,7 @@
               v-model="form.site_id"
               type="text"
               class="form-control"
-              placeholder="e.g. SITE-101"
+              placeholder="e.g. SITE-01"
             />
           </div>
           <div class="form-group flex-1">
@@ -203,7 +203,7 @@
         <div class="form-group">
           <label for="ticket-reason" class="form-label"
             >GxP Justification / Reason for Creation
-            <span class="text-danger">*</span></label
+            <span class="text-danger" aria-hidden="true">*</span></label
           >
           <input
             id="ticket-reason"
@@ -236,25 +236,24 @@
         </button>
         <button
           id="btn-submit-ticket"
-          type="button"
+          type="submit"
           class="btn btn-primary"
           :disabled="loading || !isFormValid"
-          @click="handleSubmit"
+          @click.prevent="handleSubmit"
         >
           <span v-if="loading" class="spinner" />
           <span v-else>🚀 Log Issue</span>
         </button>
       </div>
-    </div>
-  </div>
+    </form>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { describeApiError } from "../../utils/apiErrors.js";
-import { isDemoBuild } from "../../utils/demoMode.js";
 
 const props = defineProps({
   isOpen: {
@@ -277,17 +276,8 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "created"]);
 
-const modalRef = ref(null);
 const loading = ref(false);
 const errorMessage = ref("");
-
-function defaultStudyForBuild() {
-  return isDemoBuild() ? "STUDY-ONC-202" : "";
-}
-
-function defaultSiteForBuild() {
-  return isDemoBuild() ? "SITE-101" : "";
-}
 
 const form = reactive({
   title: "",
@@ -295,8 +285,8 @@ const form = reactive({
   category: "PROTOCOL_DEVIATION",
   gxp_severity: "MINOR",
   priority: "MEDIUM",
-  study_id: props.defaultStudyId || defaultStudyForBuild(),
-  site_id: props.defaultSiteId || defaultSiteForBuild(),
+  study_id: props.defaultStudyId || "",
+  site_id: props.defaultSiteId || "",
   subject_id: "",
   entity_type: "",
   entity_id: "",
@@ -310,9 +300,8 @@ function applyInitialData() {
   form.category = init.category || "PROTOCOL_DEVIATION";
   form.gxp_severity = init.gxp_severity || "MINOR";
   form.priority = init.priority || "MEDIUM";
-  form.study_id =
-    init.study_id || props.defaultStudyId || defaultStudyForBuild();
-  form.site_id = init.site_id || props.defaultSiteId || defaultSiteForBuild();
+  form.study_id = init.study_id ?? props.defaultStudyId ?? "";
+  form.site_id = init.site_id ?? props.defaultSiteId ?? "";
   form.subject_id = init.subject_id || "";
   form.entity_type = init.entity_type || "";
   form.entity_id = init.entity_id || "";
@@ -344,12 +333,8 @@ const close = () => {
   emit("close");
 };
 
-useFocusTrap(modalRef, {
-  isOpen: () => props.isOpen,
-  onEscape: close,
-});
-
 const handleSubmit = async () => {
+  if (loading.value) return;
   if (!isFormValid.value) {
     errorMessage.value = "Please complete all required fields.";
     return;
@@ -385,11 +370,45 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  z-index: 1100;
+:deep(.ticket-create-modal-body) {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.modal-body {
+.modal-header-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.modal-header-icon {
+  font-size: 1.4rem;
+  line-height: 1.2;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--semantic-color-text-dark);
+}
+
+.modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.ticket-create-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.modal-body-fields {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;

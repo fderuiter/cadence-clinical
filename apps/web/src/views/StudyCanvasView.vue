@@ -959,6 +959,7 @@ import type { PaletteTarget } from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
+import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
@@ -1027,6 +1028,7 @@ interface StudyQuery {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const inAppShell = inject<boolean>("inAppShell", false);
 
@@ -2428,6 +2430,29 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
+watch(
+  () => ({
+    studyCode: studyCode.value,
+    stage: stage.value?.id || "",
+    section: section.value?.id || "",
+    siteCode: zoomSite.value || "",
+    subjectCode: zoomParticipantCode.value || canvas.record.subjectCode || "",
+    nodeRef: inspectedNodeText.value || "",
+    participantNodeRef: activeParticipantNodeText.value || "",
+    form: formQuery.value || "",
+    formId: openFormId.value || "",
+    formSpecId:
+      loadedForm.value?.collection_spec_id || initialSpecId.value || "",
+    isNewForm: isNewForm.value,
+    observationRef: openObservationRef.value || "",
+    proposalRef: proposalRef.value || "",
+  }),
+  (scopeSnapshot) => {
+    knowledgeStore.setCanvasEscalationContext(scopeSnapshot);
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
   window.addEventListener("beforeunload", handleBeforeUnload);
   if (!inAppShell) {
@@ -2443,6 +2468,7 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  knowledgeStore.clearCanvasEscalationContext();
   window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {

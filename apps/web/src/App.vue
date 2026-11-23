@@ -2,7 +2,7 @@
   <AppShell>
     <router-view />
   </AppShell>
-  <ContextualHelpDrawer />
+  <ContextualHelpDrawer v-if="showContextualHelp" />
   <Teleport to="body">
     <ToastHost />
   </Teleport>
@@ -10,16 +10,27 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
 import { getActivePinia } from "pinia";
+import { useRoute } from "vue-router";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
 import ToastHost from "./components/ToastHost.vue";
 import ConfirmationDialogHost from "./components/ConfirmationDialogHost.vue";
+import { useAuthStore } from "./stores/auth.js";
 import { isDemoBuild } from "./utils/demoMode.js";
 import "./style.css";
 
 const pinia = getActivePinia();
+const route = useRoute();
+const authStore = useAuthStore();
+
+const showContextualHelp = computed(
+  () =>
+    Boolean(authStore.isAuthenticated) &&
+    route?.name !== "login" &&
+    route?.path !== "/login"
+);
 
 onMounted(async () => {
   if (!isDemoBuild() || !pinia) {

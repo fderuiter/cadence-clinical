@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div ref="drawerRootRef">
     <!-- Contextual Help Slide-Out Drawer -->
     <ClinicalDrawer
       :is-open="knowledgeStore.isOpen"
@@ -17,7 +17,7 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">📖</span>
+              <span class="header-icon" aria-hidden="true">📖</span>
               <div>
                 <h3 id="help-drawer-title" class="drawer-title">
                   Clinical Guidance &amp; SOPs
@@ -39,6 +39,8 @@
             <div class="header-actions">
               <ClinicalIconButton
                 class="btn-icon-toggle"
+                variant="ghost"
+                size="sm"
                 :class="{ active: isSearchOpen }"
                 :aria-pressed="isSearchOpen ? 'true' : 'false'"
                 label="Toggle Search SOPs"
@@ -49,6 +51,8 @@
               </ClinicalIconButton>
               <ClinicalIconButton
                 class="btn-close"
+                variant="ghost"
+                size="sm"
                 label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
@@ -59,8 +63,12 @@
 
           <!-- Inline Search Bar -->
           <div v-if="isSearchOpen" class="search-bar-row">
+            <label for="help-search-input" class="sr-only">
+              Search clinical SOPs, guidelines, or topics
+            </label>
             <input
               id="help-search-input"
+              ref="searchInputRef"
               v-model="searchInput"
               type="text"
               class="search-input"
@@ -70,6 +78,8 @@
             <ClinicalIconButton
               v-if="searchInput"
               class="btn-clear-search"
+              variant="ghost"
+              size="sm"
               label="Clear SOP search"
               @click="clearSearch"
             >
@@ -126,8 +136,9 @@
           <h4>Search Results ({{ knowledgeStore.searchResults.length }})</h4>
           <button
             v-if="knowledgeStore.selectedArticle"
+            type="button"
             class="btn-link"
-            @click="knowledgeStore.backToPrimary()"
+            @click="backFromSearchSelection"
           >
             ← Back to Matched SOP
           </button>
@@ -144,29 +155,30 @@
         </div>
 
         <div v-else class="search-items-list">
-          <div
+          <button
             v-for="item in knowledgeStore.searchResults"
             :key="item.id"
+            type="button"
             class="search-result-card"
             :class="{
               active: knowledgeStore.displayedArticle?.id === item.id,
             }"
-            role="button"
-            tabindex="0"
-            :aria-pressed="knowledgeStore.displayedArticle?.id === item.id"
+            :aria-pressed="
+              knowledgeStore.displayedArticle?.id === item.id ? 'true' : 'false'
+            "
             @click="selectSearchResult(item)"
             @keydown.enter.prevent="selectSearchResult(item)"
             @keydown.space.prevent="selectSearchResult(item)"
           >
-            <div class="result-card-header">
-              <h5 class="result-title">
+            <span class="result-card-header">
+              <span class="result-title">
                 {{ item.title }}
-              </h5>
+              </span>
               <span v-if="item.version_label" class="badge badge-version">
                 v{{ item.version_label }}
               </span>
-            </div>
-            <div v-if="item.tags" class="tags-row">
+            </span>
+            <span v-if="item.tags" class="tags-row">
               <span
                 v-for="t in formatTags(item.tags)"
                 :key="t"
@@ -174,8 +186,8 @@
               >
                 #{{ t }}
               </span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -183,7 +195,12 @@
       <div v-else-if="knowledgeStore.displayedArticle" class="guidance-content">
         <!-- Back to Matched Spotlight SOP Bar if inspecting related -->
         <div v-if="knowledgeStore.selectedArticle" class="back-bar">
-          <button class="btn-back" @click="knowledgeStore.backToPrimary()">
+          <button
+            ref="backToPrimaryBtnRef"
+            type="button"
+            class="btn-back"
+            @click="returnToPrimarySop"
+          >
             ← Return to Route Spotlight SOP
           </button>
         </div>
@@ -223,7 +240,7 @@
 
           <!-- Section Anchor Callout -->
           <div v-if="knowledgeStore.activeSectionAnchor" class="anchor-callout">
-            <span class="anchor-icon">🎯</span>
+            <span class="anchor-icon" aria-hidden="true">🎯</span>
             <div class="anchor-text">
               <strong>Spotlight Section:</strong>
               <code>{{ knowledgeStore.activeSectionAnchor }}</code>
@@ -236,8 +253,13 @@
               >Standard Operating Procedure Content</span
             >
             <button
+              ref="toggleBodyBtnRef"
               type="button"
               class="btn-toggle-body"
+              :aria-expanded="
+                knowledgeStore.isArticleBodyExpanded ? 'true' : 'false'
+              "
+              aria-controls="contextual-help-sop-body"
               @click="knowledgeStore.toggleArticleBody()"
             >
               {{
@@ -251,6 +273,7 @@
           <!-- Collapsible Article Body -->
           <div
             v-if="knowledgeStore.isArticleBodyExpanded"
+            id="contextual-help-sop-body"
             class="sop-body prose-content"
           >
             <div
@@ -280,23 +303,22 @@
             }})
           </h5>
           <div class="related-list">
-            <div
+            <button
               v-for="rel in knowledgeStore.relatedArticles"
               :key="rel.id"
+              type="button"
               class="related-card"
-              role="button"
-              tabindex="0"
-              @click="knowledgeStore.selectArticle(rel)"
-              @keydown.enter.prevent="knowledgeStore.selectArticle(rel)"
-              @keydown.space.prevent="knowledgeStore.selectArticle(rel)"
+              @click="selectRelatedArticle(rel)"
+              @keydown.enter.prevent="selectRelatedArticle(rel)"
+              @keydown.space.prevent="selectRelatedArticle(rel)"
             >
-              <div class="related-card-top">
+              <span class="related-card-top">
                 <span class="related-card-title">{{ rel.title }}</span>
                 <span v-if="rel.version_label" class="badge badge-version-sm">
                   v{{ rel.version_label }}
                 </span>
-              </div>
-              <div v-if="rel.tags" class="tags-row">
+              </span>
+              <span v-if="rel.tags" class="tags-row">
                 <span
                   v-for="t in formatTags(rel.tags).slice(0, 2)"
                   :key="t"
@@ -304,15 +326,15 @@
                 >
                   #{{ t }}
                 </span>
-              </div>
-            </div>
+              </span>
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Empty Fallback State -->
       <div v-else class="empty-state">
-        <div class="empty-icon">🔍</div>
+        <div class="empty-icon" aria-hidden="true">🔍</div>
         <h4>No Specific SOP Mapped for This Route</h4>
         <p>
           There is currently no published SOP mapped specifically to
@@ -347,7 +369,7 @@
               title="Log Support Ticket pre-populated with current route context"
               @click="handleEscalate"
             >
-              <span class="btn-icon">🎫</span>
+              <span class="btn-icon" aria-hidden="true">🎫</span>
               Escalate to Support Ticket
             </button>
             <div class="drawer-hub-links">
@@ -397,13 +419,17 @@ import {
   ref,
   computed,
   watch,
+  nextTick,
   onMounted,
   onUnmounted,
   getCurrentInstance,
 } from "vue";
 import { useRoute } from "vue-router";
 import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
-import { useKnowledgeStore } from "../stores/knowledge.js";
+import {
+  canonicalizeContextualRoute,
+  useKnowledgeStore,
+} from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -414,6 +440,11 @@ const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
 const instance = getCurrentInstance();
+
+const drawerRootRef = ref(null);
+const searchInputRef = ref(null);
+const backToPrimaryBtnRef = ref(null);
+const toggleBodyBtnRef = ref(null);
 
 function openHubRoute(path) {
   knowledgeStore.closeDrawer();
@@ -430,6 +461,13 @@ useEscapeClose(() => knowledgeStore.closeDrawer(), {
 const isSearchOpen = ref(false);
 const searchInput = ref("");
 let searchDebounceTimer = null;
+
+const canonicalRoute = computed(() =>
+  canonicalizeContextualRoute({
+    path: route?.path || "/",
+    query: route?.query || {},
+  })
+);
 
 const activePersonaLabel = computed(() => {
   const pKey =
@@ -455,21 +493,27 @@ function formatTags(tags) {
   return [];
 }
 
-function toggleSearch() {
+async function toggleSearch() {
   isSearchOpen.value = !isSearchOpen.value;
   if (isSearchOpen.value) {
     searchInput.value = "";
+    await nextTick();
+    searchInputRef.value?.focus?.();
   }
 }
 
-function openSearchWithFallback() {
+async function openSearchWithFallback() {
   isSearchOpen.value = true;
   searchInput.value = "";
+  await nextTick();
+  searchInputRef.value?.focus?.();
 }
 
-function clearSearch() {
+async function clearSearch() {
   searchInput.value = "";
   knowledgeStore.search("");
+  await nextTick();
+  searchInputRef.value?.focus?.();
 }
 
 function onSearchInput() {
@@ -483,8 +527,38 @@ function selectSearchResult(item) {
   knowledgeStore.selectArticle(item);
 }
 
+async function selectRelatedArticle(item) {
+  knowledgeStore.selectArticle(item);
+  await nextTick();
+  backToPrimaryBtnRef.value?.focus?.();
+}
+
+async function returnToPrimarySop() {
+  knowledgeStore.backToPrimary();
+  await nextTick();
+  const firstRelated = drawerRootRef.value?.querySelector?.(".related-card");
+  if (firstRelated && typeof firstRelated.focus === "function") {
+    firstRelated.focus();
+  } else {
+    toggleBodyBtnRef.value?.focus?.();
+  }
+}
+
+async function backFromSearchSelection() {
+  knowledgeStore.backToPrimary();
+  await nextTick();
+  searchInputRef.value?.focus?.();
+}
+
 function handleEscalate() {
-  knowledgeStore.prepareEscalation();
+  const hasRouteScope =
+    route?.path &&
+    canonicalRoute.value === knowledgeStore.currentRoute &&
+    route.query &&
+    Object.keys(route.query).length > 0;
+  knowledgeStore.prepareEscalation(
+    hasRouteScope ? { query: route.query } : undefined
+  );
 }
 
 async function handleRetry() {
@@ -517,17 +591,14 @@ function handleTicketCreated(createdTicket) {
   knowledgeStore.closeDrawer();
 }
 
-// Watch route path changes to automatically update contextual help
-watch(
-  () => route?.path,
-  (newPath) => {
-    if (newPath && newPath !== knowledgeStore.currentRoute) {
-      searchInput.value = "";
-      isSearchOpen.value = false;
-      knowledgeStore.fetchContextualHelp(newPath, authStore.currentPersona);
-    }
+// Watch canonical route path + Clinical Canvas stage/section queries
+watch(canonicalRoute, (newRoute) => {
+  if (newRoute && newRoute !== knowledgeStore.currentRoute) {
+    searchInput.value = "";
+    isSearchOpen.value = false;
+    knowledgeStore.fetchContextualHelp(newRoute, authStore.currentPersona);
   }
-);
+});
 
 // Watch persona changes to automatically refresh contextual help
 watch(
@@ -537,22 +608,84 @@ watch(
       searchInput.value = "";
       isSearchOpen.value = false;
       knowledgeStore.fetchContextualHelp(
-        route?.path || knowledgeStore.currentRoute,
+        canonicalRoute.value || knowledgeStore.currentRoute,
         newPersona
       );
     }
   }
 );
 
-// Keyboard accessibility: F1 / '?' to toggle contextual help; Escape is handled by useFocusTrap
-function handleKeydown(e) {
+function isEditableOrFormControl(node) {
+  const el =
+    node instanceof HTMLElement
+      ? node
+      : typeof document !== "undefined" &&
+          document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName?.toUpperCase?.() || "";
+  if (["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tag)) return true;
   if (
-    e.key === "F1" ||
-    (e.key === "?" && !["INPUT", "TEXTAREA"].includes(e.target?.tagName))
+    typeof el.closest === "function" &&
+    el.closest(
+      '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
+    )
   ) {
-    e.preventDefault();
-    knowledgeStore.toggleDrawer();
+    return true;
   }
+  const role = (el.getAttribute?.("role") || "").toLowerCase();
+  return ["textbox", "searchbox", "combobox", "listbox", "spinbutton"].includes(
+    role
+  );
+}
+
+function hasActiveExternalModalTrap() {
+  if (knowledgeStore.isEscalating) return true;
+  let ancestor = drawerRootRef.value;
+  while (ancestor && ancestor !== document.body) {
+    if (
+      ancestor.inert ||
+      ancestor.hasAttribute?.("inert") ||
+      ancestor.getAttribute?.("aria-hidden") === "true"
+    ) {
+      return true;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  if (typeof document === "undefined") return false;
+  const activeDialog = document.activeElement?.closest?.(
+    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
+  );
+  if (
+    activeDialog &&
+    activeDialog.id !== "contextual-help-drawer" &&
+    !activeDialog.closest?.("#contextual-help-drawer")
+  ) {
+    return true;
+  }
+  const modalDialogs = document.querySelectorAll(
+    '[aria-modal="true"], [role="alertdialog"]'
+  );
+  for (const dialog of modalDialogs) {
+    if (dialog.id === "contextual-help-drawer") continue;
+    if (dialog.closest?.("#contextual-help-drawer")) continue;
+    return true;
+  }
+  return false;
+}
+
+// Keyboard accessibility: F1 / '?' to toggle contextual help; guarded against form controls and modal traps
+function handleKeydown(e) {
+  if (e.defaultPrevented) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key !== "F1" && e.key !== "?") return;
+  if (hasActiveExternalModalTrap()) return;
+  if (isEditableOrFormControl(e.target)) return;
+
+  e.preventDefault();
+  knowledgeStore.toggleDrawer();
 }
 
 onMounted(() => {
@@ -563,7 +696,10 @@ onMounted(() => {
     !knowledgeStore.primaryArticle &&
     !knowledgeStore.loading
   ) {
-    knowledgeStore.fetchContextualHelp(route.path, authStore.currentPersona);
+    knowledgeStore.fetchContextualHelp(
+      canonicalRoute.value,
+      authStore.currentPersona
+    );
   }
 });
 
@@ -685,33 +821,29 @@ onUnmounted(() => {
 }
 
 .btn-icon-toggle {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 4px 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.15s;
+  font-size: 0.95rem;
 }
 
-.btn-icon-toggle:hover,
 .btn-icon-toggle.active {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
 }
 
 .btn-close {
-  background: transparent;
-  border: none;
-  font-size: 1.25rem;
-  cursor: pointer;
-  color: var(--semantic-color-text-secondary);
-  padding: 4px 6px;
+  font-size: 1rem;
   line-height: 1;
 }
 
-.btn-close:hover {
-  color: var(--semantic-color-text);
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .search-bar-row {
@@ -722,7 +854,8 @@ onUnmounted(() => {
 
 .search-input {
   width: 100%;
-  padding: 8px 32px 8px 10px;
+  min-height: 36px;
+  padding: 8px 38px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.85rem;
@@ -738,11 +871,7 @@ onUnmounted(() => {
 
 .btn-clear-search {
   position: absolute;
-  right: 8px;
-  background: transparent;
-  border: none;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
+  right: 4px;
   font-size: 0.85rem;
 }
 
@@ -1034,6 +1163,9 @@ onUnmounted(() => {
 }
 
 .related-card {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
@@ -1114,6 +1246,9 @@ onUnmounted(() => {
 }
 
 .search-result-card {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
