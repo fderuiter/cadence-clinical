@@ -20,7 +20,7 @@ namespace Cadence.Rules.Packs;
 ///   "rules": [ { "id": "…", "version": 1, "authority": "CDISC",
 ///                "citation": { "document": "…", "section": "…", "uri": "https://…" },
 ///                "applicability": { "stage": "Standardization", "standard": "…", "standardVersion": "…",
-///                                   "agency": "…", "dataset": "…" },
+///                                   "agency": "…", "dataset": "…", "variable": "…" },
 ///                "severity": "Error", "condition": { "op": "…", "args": [ … ] },
 ///                "explanation": "…", "remediation": "…",
 ///                "effective": { "from": "2024-01-01", "until": null } } ] }
@@ -213,18 +213,19 @@ public static partial class RulePackJson
             return null;
         }
 
-        CheckProperties(json, path, problems, "stage", "standard", "standardVersion", "agency", "dataset");
+        CheckProperties(json, path, problems, "stage", "standard", "standardVersion", "agency", "dataset", "variable");
         var stage = Enum(json, "stage", path, StageNames, problems, required: true);
         var standard = Text(json, "standard", path, problems, required: false);
         var standardVersion = Text(json, "standardVersion", path, problems, required: false);
         var agency = Text(json, "agency", path, problems, required: false);
         var dataset = Text(json, "dataset", path, problems, required: false);
+        var variable = Text(json, "variable", path, problems, required: false);
         if (standardVersion is not null && standard is null)
         {
             problems.Add($"{path}.standardVersion: needs a standard.");
         }
 
-        return stage is null ? null : new RuleApplicability(stage.Value, standard, standardVersion, agency, dataset);
+        return stage is null ? null : new RuleApplicability(stage.Value, standard, standardVersion, agency, dataset, variable);
     }
 
     internal static EffectivePeriod? ReadEffective(JsonElement rule, string path, List<string> problems)
@@ -334,6 +335,7 @@ public static partial class RulePackJson
         WriteOptional(writer, "standardVersion", rule.Applicability.StandardVersion);
         WriteOptional(writer, "agency", rule.Applicability.Agency);
         WriteOptional(writer, "dataset", rule.Applicability.Dataset);
+        WriteOptional(writer, "variable", rule.Applicability.Variable);
         writer.WriteEndObject();
         writer.WriteString("severity", rule.Severity.ToString());
         writer.WritePropertyName("condition");

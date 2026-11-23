@@ -211,11 +211,22 @@ function onFormPanelClosed() {
   }
   loadedFormId.value = null;
   loadedFormTitle.value = "";
-  if (!routeQuery("formId") && !routeQuery("itemId")) return;
+  if (
+    !routeQuery("formId") &&
+    !routeQuery("itemId") &&
+    !routeQuery("collectionSpecId") &&
+    !routeQuery("plannedActivityId") &&
+    !routeQuery("visitId")
+  ) {
+    return;
+  }
   if (typeof router?.replace === "function") {
     const nextQuery = { ...(route?.query || {}) };
     delete nextQuery.formId;
     delete nextQuery.itemId;
+    delete nextQuery.collectionSpecId;
+    delete nextQuery.plannedActivityId;
+    delete nextQuery.visitId;
     void router.replace({ query: nextQuery });
   }
 }

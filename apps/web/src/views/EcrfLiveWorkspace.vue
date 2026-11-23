@@ -127,32 +127,31 @@
           </p>
         </section>
 
-        <!-- Participant's opened case report forms outside demo mode when no single form is selected -->
+        <!-- Participant's casebook organized by protocol visits outside demo mode when no single form is open -->
         <ParticipantFormsPanel
-          v-if="!routeQuery('formId') && resolvedEnrollmentId"
+          v-if="!hasOpenForm && resolvedEnrollmentId"
           style="margin-bottom: 16px"
           :study-code="scopeStore.activeStudyId.trim() || undefined"
           :subject-code="selectedSubjectId || 'participant'"
           :enrollment-id="resolvedEnrollmentId"
+          :schedule="scheduleForActiveStudy"
           :form-location="ecrfFormLocation"
           :new-form-location="null"
+          :new-form-cell-location="ecrfNewFormCellLocation"
+          @select-form="onCasebookSelectForm"
+          @select-new-cell="onCasebookSelectNewCell"
         />
 
         <!-- The participant's case report form, a kernel form instance saved a page at a time (ADR-2622). -->
         <EcrfFormPanel
-          :form-id="routeQuery('formId')"
+          :form-id="effectiveFormId"
           :enrollment-id="resolvedEnrollmentId || null"
           :enrollment-context="ecrfEnrollmentContext"
-          :schedule-loading="
-            !routeQuery('formId') && canvasStore.scheduleLoading
-          "
-          :schedule-error="
-            !routeQuery('formId') ? canvasStore.scheduleError : null
-          "
-          :collection-spec-id="routeQuery('collectionSpecId')"
-          :planned-activity-id="
-            routeQuery('plannedActivityId') ?? routeQuery('visitId')
-          "
+          :schedule-options="scheduleForActiveStudy"
+          :schedule-loading="!effectiveFormId && canvasStore.scheduleLoading"
+          :schedule-error="!effectiveFormId ? canvasStore.scheduleError : null"
+          :collection-spec-id="effectiveCollectionSpecId"
+          :planned-activity-id="effectivePlannedActivityId"
           :highlight-item-id="routeQuery('itemId')"
           :form-location="ecrfFormLocation"
           :observation-location="ecrfObservationLocation"
@@ -169,7 +168,7 @@
           @retry-schedule="onRetryScheduleOptions"
           @dirty-change="emit('dirty-change', $event)"
           @form-loaded="emit('form-loaded', $event)"
-          @closed="emit('closed')"
+          @closed="onFormPanelClosedInternal"
         />
       </div>
     </div>
@@ -177,7 +176,14 @@
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import * as VueRouter from "vue-router";
 import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
 import ParticipantFormsPanel from "../components/canvas/ParticipantFormsPanel.vue";
@@ -238,7 +244,43 @@ const selectedSubjectId = ref(
 const resolvedEnrollmentId = ref(routeEnrollmentId.value);
 const enrollmentStatusMessage = ref("");
 const selectionChangedFromInitial = ref(false);
+const selectedCasebookFormId = ref(null);
+const hasCellSelectionOverride = ref(false);
+const selectedCellSpecId = ref(null);
+const selectedCellActivityId = ref(null);
 let enrollmentLookupSeq = 0;
+
+const effectiveFormId = computed(
+  () => routeQuery("formId") ?? selectedCasebookFormId.value
+);
+const hasOpenForm = computed(() =>
+  Boolean(effectiveFormId.value || props.loadedFormId)
+);
+const effectiveCollectionSpecId = computed(() =>
+  hasCellSelectionOverride.value
+    ? selectedCellSpecId.value
+    : routeQuery("collectionSpecId")
+);
+const effectivePlannedActivityId = computed(() =>
+  hasCellSelectionOverride.value
+    ? selectedCellActivityId.value
+    : (routeQuery("plannedActivityId") ?? routeQuery("visitId"))
+);
+
+watch(
+  [
+    () => routeQuery("formId"),
+    () => routeQuery("collectionSpecId"),
+    () => routeQuery("plannedActivityId"),
+    () => routeQuery("visitId"),
+  ],
+  () => {
+    selectedCasebookFormId.value = null;
+    hasCellSelectionOverride.value = false;
+    selectedCellSpecId.value = null;
+    selectedCellActivityId.value = null;
+  }
+);
 
 const activeUserRole = computed(() => {
   if (authStore.isAuthenticated) {
@@ -276,8 +318,8 @@ const ecrfEnrollmentContext = computed(() => {
     subjectCode: selectedSubjectId.value.trim() || undefined,
     collectionSpecs: scheduleForActiveStudy.value?.collectionSpecs ?? [],
     plannedActivities: scheduleForActiveStudy.value?.plannedActivities ?? [],
-    scheduleLoading: !routeQuery("formId") && canvasStore.scheduleLoading,
-    scheduleError: !routeQuery("formId") ? canvasStore.scheduleError : null,
+    scheduleLoading: !effectiveFormId.value && canvasStore.scheduleLoading,
+    scheduleError: !effectiveFormId.value ? canvasStore.scheduleError : null,
   };
 });
 
@@ -289,7 +331,7 @@ function onRetryScheduleOptions() {
 }
 
 watch(
-  [() => scopeStore.activeStudyId.trim(), () => routeQuery("formId")],
+  [() => scopeStore.activeStudyId.trim(), effectiveFormId],
   ([code, activeFormId]) => {
     if (code && !activeFormId) {
       void canvasStore.loadScheduleOptions(code);
@@ -347,18 +389,55 @@ function ecrfFormLocation(formId, itemId) {
   };
 }
 
+function ecrfNewFormCellLocation(collectionSpecId, plannedActivityId) {
+  return {
+    path: "/ecrf",
+    query: buildEcrfScopeQuery({
+      collectionSpecId,
+      plannedActivityId: plannedActivityId || undefined,
+      visitId: plannedActivityId || undefined,
+    }),
+  };
+}
+
+function onCasebookSelectForm(formId) {
+  hasCellSelectionOverride.value = false;
+  selectedCellSpecId.value = null;
+  selectedCellActivityId.value = null;
+  selectedCasebookFormId.value = formId || null;
+}
+
+function onCasebookSelectNewCell({ collectionSpecId, plannedActivityId }) {
+  selectedCasebookFormId.value = null;
+  hasCellSelectionOverride.value = true;
+  selectedCellSpecId.value = collectionSpecId || null;
+  selectedCellActivityId.value = plannedActivityId || "";
+  void nextTick(() => {
+    const collectedInput = document.getElementById("ecrf-collected-at");
+    if (collectedInput && typeof collectedInput.focus === "function") {
+      collectedInput.focus();
+    }
+  });
+}
+
+function onFormPanelClosedInternal() {
+  selectedCasebookFormId.value = null;
+  hasCellSelectionOverride.value = false;
+  selectedCellSpecId.value = null;
+  selectedCellActivityId.value = null;
+  emit("closed");
+}
+
 function ecrfObservationLocation(observationId, formId, itemId) {
   const obsRef = observationNodeRef(observationId);
   if (!obsRef) return null;
-  const effectiveFormId =
-    formId || props.loadedFormId || routeQuery("formId") || "";
+  const effectiveForm =
+    formId || props.loadedFormId || effectiveFormId.value || "";
   const effectiveItemId = itemId || routeQuery("itemId") || "";
-  const formRef = effectiveFormId
-    ? collectionInstanceRef(effectiveFormId)
-    : null;
+  const formRef = effectiveForm ? collectionInstanceRef(effectiveForm) : null;
   const studyCode =
     scopeStore.activeStudyId.trim() || routeQuery("studyId") || "";
-  const returnTo = buildEcrfReturnUrl(effectiveFormId, effectiveItemId);
+  const returnTo = buildEcrfReturnUrl(effectiveForm, effectiveItemId);
   const returnLabel = props.loadedFormTitle
     ? `Back to ${props.loadedFormTitle}`
     : "Back to form";

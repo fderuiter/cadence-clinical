@@ -29,7 +29,11 @@ export function hasRequiredRole(userRoles, requiredRoles) {
 // The screen each role lands on when opening "/".
 function landingRouteFor(roles) {
   if (roles.includes("sponsor_designer")) return "mdr";
-  if (roles.includes("site_investigator") || roles.includes("crc")) {
+  if (
+    roles.includes("site_investigator") ||
+    roles.includes("crc") ||
+    roles.includes("trial_coordinator")
+  ) {
     return isDemoBuild() ? "ecrf" : "study";
   }
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";

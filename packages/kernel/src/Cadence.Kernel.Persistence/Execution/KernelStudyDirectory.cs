@@ -134,14 +134,16 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
             .ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(
+        TenantId tenant,
+        CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
         return await (
                 from s in db.Sites.AsNoTracking()
                 join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
                 where s.TenantId == tenant && s.IsActive
-                orderby s.SiteCode
+                orderby s.SiteCode, o.Code
                 select new SiteDirectoryEntry(
                     s.Id,
                     s.VersionIndex,
@@ -151,12 +153,17 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
                     o.Name,
                     s.SiteCode,
                     s.Name,
-                    s.Country))
+                    s.Country,
+                    s.IsActive,
+                    db.StudySites.Count(ss => ss.TenantId == tenant && ss.SiteId == s.Id && ss.IsActive)))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
 
-    public async Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default)
+    public async Task<SiteDirectoryEntry?> FindSiteAsync(
+        TenantId tenant,
+        SiteId siteId,
+        CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
         return await (
@@ -172,12 +179,18 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
                     o.Name,
                     s.SiteCode,
                     s.Name,
-                    s.Country))
+                    s.Country,
+                    s.IsActive,
+                    db.StudySites.Count(ss => ss.TenantId == tenant && ss.SiteId == s.Id && ss.IsActive)))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }
 
-    public async Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default)
+    public async Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+        TenantId tenant,
+        string siteCode,
+        OrganizationId? institutionId = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(siteCode))
         {
@@ -186,11 +199,17 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
 
         var normalized = siteCode.Trim().ToUpperInvariant();
         await using var db = contexts.Create(tenant);
+        var sites = db.Sites.AsNoTracking()
+            .Where(s => s.TenantId == tenant && s.IsActive && s.SiteCode.ToUpper() == normalized);
+        if (institutionId is { } instId)
+        {
+            sites = sites.Where(s => s.InstitutionId == instId);
+        }
+
         return await (
-                from s in db.Sites.AsNoTracking()
+                from s in sites
                 join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
-                where s.TenantId == tenant && s.IsActive && s.SiteCode.ToUpper() == normalized
-                orderby s.SiteCode, s.Id
+                orderby s.SiteCode, o.Code, s.Id
                 select new SiteDirectoryEntry(
                     s.Id,
                     s.VersionIndex,
@@ -200,7 +219,9 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
                     o.Name,
                     s.SiteCode,
                     s.Name,
-                    s.Country))
+                    s.Country,
+                    s.IsActive,
+                    db.StudySites.Count(ss => ss.TenantId == tenant && ss.SiteId == s.Id && ss.IsActive)))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -213,14 +234,15 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
         await using var db = contexts.Create(tenant);
         return await (
                 from ss in db.StudySites.AsNoTracking()
+                join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
                 join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
                 join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
                 where ss.TenantId == tenant && ss.StudyId == studyId && ss.IsActive
-                orderby s.SiteCode
+                orderby s.SiteCode, o.Code
                 select new StudySiteDirectoryEntry(
                     ss.Id,
                     ss.VersionIndex,
-                    ss.StudyId,
+                    st.Id,
                     s.Id,
                     s.VersionIndex,
                     s.SiteCode,
@@ -230,7 +252,10 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
                     o.VersionIndex,
                     o.Code,
                     o.Name,
-                    ss.Status))
+                    ss.Status,
+                    st.StudyCode,
+                    st.VersionIndex,
+                    ss.IsActive))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -243,13 +268,14 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
         await using var db = contexts.Create(tenant);
         return await (
                 from ss in db.StudySites.AsNoTracking()
+                join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
                 join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
                 join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
                 where ss.TenantId == tenant && ss.Id == studySiteId && ss.IsActive
                 select new StudySiteDirectoryEntry(
                     ss.Id,
                     ss.VersionIndex,
-                    ss.StudyId,
+                    st.Id,
                     s.Id,
                     s.VersionIndex,
                     s.SiteCode,
@@ -259,7 +285,44 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
                     o.VersionIndex,
                     o.Code,
                     o.Name,
-                    ss.Status))
+                    ss.Status,
+                    st.StudyCode,
+                    st.VersionIndex,
+                    ss.IsActive))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+        TenantId tenant,
+        StudyId studyId,
+        SiteId siteId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var db = contexts.Create(tenant);
+        return await (
+                from ss in db.StudySites.AsNoTracking()
+                join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
+                join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
+                join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
+                where ss.TenantId == tenant && ss.StudyId == studyId && ss.SiteId == siteId && ss.IsActive
+                select new StudySiteDirectoryEntry(
+                    ss.Id,
+                    ss.VersionIndex,
+                    st.Id,
+                    s.Id,
+                    s.VersionIndex,
+                    s.SiteCode,
+                    s.Name,
+                    s.Country,
+                    o.Id,
+                    o.VersionIndex,
+                    o.Code,
+                    o.Name,
+                    ss.Status,
+                    st.StudyCode,
+                    st.VersionIndex,
+                    ss.IsActive))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }
