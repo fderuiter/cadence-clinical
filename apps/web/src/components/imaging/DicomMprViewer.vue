@@ -785,16 +785,20 @@ onUnmounted(() => {
 }
 
 .toolbar-select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.8rem;
-  outline: none;
+  box-sizing: border-box;
 }
 
 .toolbar-btn {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
   border: 1px solid var(--semantic-color-border-inverse);
@@ -803,9 +807,11 @@ onUnmounted(() => {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  box-sizing: border-box;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease;

@@ -218,6 +218,7 @@ public sealed record FormResponse(
             .Select(i => i.ItemId)
             .ToList();
 
+        var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
         var blindedObsGuids = blindedObservationIds is { Count: > 0 }
             ? blindedObservationIds.Select(o => o.Value).ToHashSet()
             : null;
@@ -287,7 +288,7 @@ public sealed record FormResponse(
                     a.RetractedAt);
             })],
             [.. record.Attestations.Select(s => FormSignatureResponse.From(s, blindedItemIds, blindedObservationIds))],
-            record.ContentHash,
+            hasBlinded ? null : record.ContentHash,
             record.CollectionTitle,
             canSign);
     }
@@ -327,14 +328,21 @@ public sealed record FormItemResponse(
         Cadence.Kernel.Protocol.Design.CollectionItem? item,
         CollectedValueView? value,
         bool blinded = false,
-        IReadOnlyList<CodelistOptionView>? codelistOptions = null) =>
-        new(
+        IReadOnlyList<CodelistOptionView>? codelistOptions = null)
+    {
+        ObservationValue? effectiveValue = value?.Value;
+        if (blinded && value is not null && value.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+        {
+            effectiveValue = new MissingValue(NullFlavor.Masked);
+        }
+
+        return new(
             id,
             item?.Concept.ToString(),
             item?.Unit,
             item?.ExpectedKind?.ToString(),
             item?.Required ?? false,
-            blinded && value is not null ? new MissingValue(NullFlavor.Masked) : value?.Value,
+            effectiveValue,
             blinded ? null : value?.ObservationId.Value,
             value?.Revision ?? 0,
             blinded ? null : value?.RecordedBy,
@@ -342,6 +350,7 @@ public sealed record FormItemResponse(
             blinded ? null : item?.Terminology?.CodeSystemVersionId.Value,
             blinded || string.IsNullOrWhiteSpace(item?.Terminology?.Codelist) ? null : item.Terminology.Codelist,
             blinded ? null : codelistOptions);
+    }
 }
 
 /// <summary>A lock in force over a form.</summary>
@@ -396,14 +405,16 @@ public sealed record FormSignatureResponse(
     internal static FormSignatureResponse From(
         FormAttestationView signature,
         IReadOnlySet<string>? blindedItemIds = null,
-        IReadOnlySet<ObservationId>? blindedObservationIds = null) =>
-        new(
+        IReadOnlySet<ObservationId>? blindedObservationIds = null)
+    {
+        var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
+        return new(
             signature.AttestationId.Value,
             signature.Meaning.ToString(),
             signature.SignedBy,
             signature.SignedAt,
-            signature.Reason,
-            signature.ContentHash,
+            hasBlinded ? "masked" : signature.Reason,
+            hasBlinded ? "masked" : signature.ContentHash,
             signature.Superseded,
             signature.SignedValues?.Select(v =>
             {
@@ -413,6 +424,7 @@ public sealed record FormSignatureResponse(
                     ? new FormSignedValueResponse(v.ItemId, Guid.Empty, v.Revision, new MissingValue(NullFlavor.Masked))
                     : new FormSignedValueResponse(v.ItemId, v.ObservationId.Value, v.Revision, v.Value);
             }).ToList());
+    }
 }
 
 /// <summary>One value as a signature signed it.</summary>
@@ -445,9 +457,15 @@ public sealed record FormSavedResponse(
             {
                 var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(v.ItemId))
                     || (blindedObservationIds is not null && blindedObservationIds.Contains(v.ObservationId));
-                return isBlinded
-                    ? new FormSavedValueResponse(v.ItemId, Guid.Empty, new MissingValue(NullFlavor.Masked), v.Revision, v.Changed)
-                    : new FormSavedValueResponse(v.ItemId, v.ObservationId.Value, v.Value, v.Revision, v.Changed);
+                if (!isBlinded)
+                {
+                    return new FormSavedValueResponse(v.ItemId, v.ObservationId.Value, v.Value, v.Revision, v.Changed);
+                }
+
+                var maskedValue = v.Value is MissingValue { Reason: NullFlavor.NotAsked }
+                    ? v.Value
+                    : new MissingValue(NullFlavor.Masked);
+                return new FormSavedValueResponse(v.ItemId, Guid.Empty, maskedValue, v.Revision, v.Changed);
             })],
             form);
 }

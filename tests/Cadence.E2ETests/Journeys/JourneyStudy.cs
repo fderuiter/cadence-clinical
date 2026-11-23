@@ -83,7 +83,7 @@ internal sealed record JourneyStudy(
         await GrantAsync(fixture, tenant, Investigator, AuthorityScope.StudySite(studySite), from, ct, "participant.withdraw", "observation.correct");
         await GrantAsync(fixture, tenant, Monitor, AuthorityScope.StudySite(studySite), from, ct, "observation.query", "observation.verify", "assertion.retract");
         await GrantAsync(fixture, tenant, DataManager, AuthorityScope.Tenant(), from, ct, "attestation.sign");
-        await GrantAsync(fixture, tenant, DataManager, AuthorityScope.Study(study), from, ct, "lock.apply");
+        await GrantAsync(fixture, tenant, DataManager, AuthorityScope.Study(study), from, ct, "lock.apply", "study.export", "enrollment.export");
 
         // The Execution module's consumer opens its form when the kernel opens one, as svc:execution-forms; a tenant that
         // uses eCRF forms grants it tenant-wide, as its administrator would (apps/execution/module/README.md).

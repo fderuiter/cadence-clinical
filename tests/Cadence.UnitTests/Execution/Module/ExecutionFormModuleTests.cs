@@ -137,6 +137,22 @@ public sealed class ExecutionFormModuleTests
         blindedPos.CodeSystemVersionId.Should().BeNull();
         blindedPos.Codelist.Should().BeNull();
         blindedPos.CodelistOptions.Should().BeNull();
+
+        var blindedNotAsked = FormResponse.From(
+            RecordWithCodelists([position], codelists, Value("position", new MissingValue(NullFlavor.NotAsked))),
+            null,
+            blindedItemIds: new HashSet<string>(StringComparer.Ordinal) { "position" });
+        blindedNotAsked.Items.Single(i => i.ItemId == "position").Value.Should().Be(new MissingValue(NullFlavor.NotAsked));
+        blindedNotAsked.Items.Single(i => i.ItemId == "position").CodelistOptions.Should().BeNull();
+
+        var recordWithBlindedObs = RecordWithCodelists(
+            [position],
+            codelists,
+            Value("position", new CodedValue(csVersion, "SITTING"))) with
+        {
+            BlindedItemIds = new HashSet<string>(StringComparer.Ordinal) { "position" },
+        };
+        recordWithBlindedObs.MaskBlinded().ItemCodelists.Should().BeNull();
     }
 
     /// <summary>

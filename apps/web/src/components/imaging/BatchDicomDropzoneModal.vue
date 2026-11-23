@@ -695,12 +695,10 @@ function completeAndClose() {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
-  outline: none;
 }
 
-.param-input:focus {
+.param-input:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
 }
 
 .dropzone-area {
