@@ -136,7 +136,7 @@ describe("ClinicalContextBar", () => {
     app.mount(host);
 
     const links = Array.from(
-      host.querySelectorAll('a[data-router-link="true"]')
+      host.querySelectorAll<HTMLAnchorElement>('a[data-router-link="true"]')
     );
     expect(links).toHaveLength(4);
     expect(links[3].getAttribute("aria-current")).toBe("page");
