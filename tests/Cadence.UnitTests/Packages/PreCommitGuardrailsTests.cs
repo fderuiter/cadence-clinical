@@ -1112,7 +1112,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         exit8.Should().Be(0, out8 + err8);
         BuildCount().Should().Be(5, "missing cadence.runtimeconfig.json must force a rebuild even when CADENCE_CLI_CACHE_HIT is true");
 
-        // 6. Downstream CI jobs (GITHUB_ACTIONS=true without CADENCE_CLI_CACHE_HIT) execute prebuilt Native AOT binaries without rebuilding.
+        // 6. Downstream CI jobs (GITHUB_ACTIONS=true) and cadence ci worktrees (CADENCE_CLI_CACHE_HIT=true with standalone Native AOT ./bin/cadence) execute prebuilt Native AOT binaries without rebuilding.
         File.Delete(Path.Combine(cliRepo, "bin", "cadence.dll"));
         File.Delete(Path.Combine(cliRepo, "bin", "cadence.runtimeconfig.json"));
         File.Delete(hashFile);
@@ -1124,6 +1124,15 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             extraEnv: new Dictionary<string, string?> { ["GITHUB_ACTIONS"] = "true" });
         exit9.Should().Be(0, out9 + err9);
         BuildCount().Should().Be(5);
+
+        (int exit10, string out10, string err10) = RunNodeCli(
+            scriptPath,
+            ["--version"],
+            pathEnv,
+            homeDir,
+            extraEnv: new Dictionary<string, string?> { ["CADENCE_CLI_CACHE_HIT"] = "true" });
+        exit10.Should().Be(0, out10 + err10);
+        BuildCount().Should().Be(5, "standalone Native AOT ./bin/cadence without managed markers must be reused when CADENCE_CLI_CACHE_HIT is true");
     }
 
     [Fact]

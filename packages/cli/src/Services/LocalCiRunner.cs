@@ -59,19 +59,28 @@ public sealed record CiContainerScanScope(bool ShouldRun, string Note);
 /// <param name="BaseRef">The ref that "changed files" and merged worktree synthesis are compared with, as <c>origin/main</c> is in CI.</param>
 /// <param name="Offline">Skip <c>git fetch</c> before synthesizing the merged worktree (explicit air-gapped debugging only).</param>
 /// <param name="RequestedJobs">Job keys explicitly passed with <c>--job</c> (empty or null on a full default run).</param>
+/// <param name="IncludeUncommitted">Stage uncommitted working-tree and index edits in a temporary index copy and synthesize a snapshot commit on <c>HEAD</c>.</param>
 public sealed record LocalCiOptions(
     bool AllowMissingTools,
     bool AllowDbSkip,
     string BaseRef,
     bool Offline = false,
-    IReadOnlyCollection<string>? RequestedJobs = null)
+    IReadOnlyCollection<string>? RequestedJobs = null,
+    bool IncludeUncommitted = false)
 {
     public LocalCiOptions(
         bool AllowSkip,
         string BaseRef,
         bool Offline = false,
-        IReadOnlyCollection<string>? RequestedJobs = null)
-        : this(AllowMissingTools: AllowSkip, AllowDbSkip: AllowSkip, BaseRef: BaseRef, Offline: Offline, RequestedJobs: RequestedJobs)
+        IReadOnlyCollection<string>? RequestedJobs = null,
+        bool IncludeUncommitted = false)
+        : this(
+            AllowMissingTools: AllowSkip,
+            AllowDbSkip: AllowSkip,
+            BaseRef: BaseRef,
+            Offline: Offline,
+            RequestedJobs: RequestedJobs,
+            IncludeUncommitted: IncludeUncommitted)
     {
     }
 }
@@ -80,12 +89,14 @@ public sealed record LocalCiOptions(
 /// <param name="Succeeded">Whether remote fetch (when online), merge-tree synthesis, and worktree creation succeeded.</param>
 /// <param name="Environment">Worktree-scoped <see cref="LocalCiEnvironment"/> when <paramref name="Succeeded"/> is <c>true</c>.</param>
 /// <param name="Lease">Disposable lease that removes and prunes the temporary worktree after the run finishes.</param>
-/// <param name="Message">Diagnostic summary or failure details (including conflicted file paths).</param>
+/// <param name="Message">Diagnostic summary or failure details (including dirty or conflicted file paths).</param>
+/// <param name="EffectiveBaseRef">Resolved remote-tracking ref, tag ref, or commit SHA propagated into downstream <c>--base</c> scopes.</param>
 public sealed record CiWorkspacePreparation(
     bool Succeeded,
     LocalCiEnvironment? Environment,
     IDisposable? Lease,
-    string Message);
+    string Message,
+    string? EffectiveBaseRef = null);
 
 /// <summary>The side effects of a local CI run, replaceable in tests.</summary>
 public sealed class LocalCiEnvironment
@@ -166,7 +177,8 @@ public sealed class LocalCiEnvironment
     };
 
     /// <summary>
-    /// Prepares an ephemeral detached Git worktree under <see cref="Path.GetTempPath"/> representing <c>HEAD</c> merged
+    /// Prepares an ephemeral detached Git worktree under <see cref="Path.GetTempPath"/> representing <c>HEAD</c> (or an
+    /// opt-in uncommitted working-tree snapshot when <see cref="LocalCiOptions.IncludeUncommitted"/> is <c>true</c>) merged
     /// with <see cref="LocalCiOptions.BaseRef"/>, reusing read-only <c>.cadence</c> toolchains from <paramref name="toolchainRoot"/>.
     /// </summary>
     public static CiWorkspacePreparation PrepareMergedWorktree(
@@ -174,6 +186,20 @@ public sealed class LocalCiEnvironment
         LocalCiOptions options,
         Action<CiStep, IReadOnlyList<string>>? onStepStarting = null)
     {
+        var dirtyPaths = GitRevisionScopeService.GetWorkingTreeChanges(toolchainRoot);
+        if (dirtyPaths.Count > 0 && !options.IncludeUncommitted)
+        {
+            string listedPaths = dirtyPaths.Count <= 10
+                ? string.Join(", ", dirtyPaths)
+                : $"{string.Join(", ", dirtyPaths.Take(10))}, ... (+{dirtyPaths.Count - 10} more)";
+            return new CiWorkspacePreparation(
+                false,
+                null,
+                null,
+                $"uncommitted working-tree or index changes ({dirtyPaths.Count}): {listedPaths}. "
+                + "Commit or stash your changes first, or pass --include-uncommitted to validate a temporary snapshot.");
+        }
+
         string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(options.BaseRef);
         if (!options.Offline)
         {
@@ -186,11 +212,43 @@ public sealed class LocalCiEnvironment
                     null,
                     $"git fetch failed for '{effectiveBaseRef}': {fetch.ErrorMessage} (pass --offline only for air-gapped debugging)");
             }
+
+            if (!string.IsNullOrWhiteSpace(fetch.TrackingRef))
+            {
+                effectiveBaseRef = fetch.TrackingRef;
+            }
+        }
+        else if (dirtyPaths.Count > 0 && GitRevisionScopeService.IsRelativeOrSpecialRevision(effectiveBaseRef))
+        {
+            string? resolvedOfflineBase = GitRevisionScopeService.TryResolveCommitSha(toolchainRoot, effectiveBaseRef);
+            if (!string.IsNullOrEmpty(resolvedOfflineBase))
+            {
+                effectiveBaseRef = resolvedOfflineBase;
+            }
         }
 
-        var synthesized = GitRevisionScopeService.SynthesizeMergedCommit(toolchainRoot, effectiveBaseRef, "HEAD");
+        string pinnedRef = GitRevisionScopeService.CreateTemporaryRefName();
+        string headRevision = "HEAD";
+        if (dirtyPaths.Count > 0)
+        {
+            var snapshot = GitRevisionScopeService.SynthesizeWorkingTreeSnapshot(toolchainRoot, pinnedRef);
+            if (!snapshot.Succeeded || string.IsNullOrEmpty(snapshot.SnapshotCommitSha))
+            {
+                GitRevisionScopeService.DeleteTemporaryRef(toolchainRoot, pinnedRef);
+                return new CiWorkspacePreparation(
+                    false,
+                    null,
+                    null,
+                    $"could not synthesize uncommitted working-tree snapshot: {snapshot.ErrorMessage}");
+            }
+
+            headRevision = snapshot.SnapshotCommitSha;
+        }
+
+        var synthesized = GitRevisionScopeService.SynthesizeMergedCommit(toolchainRoot, effectiveBaseRef, headRevision, pinnedRef);
         if (!synthesized.MergeTree.Succeeded || string.IsNullOrEmpty(synthesized.MergeCommitSha))
         {
+            GitRevisionScopeService.DeleteTemporaryRef(toolchainRoot, pinnedRef);
             string conflictDetails = synthesized.MergeTree.HasConflicts && synthesized.MergeTree.ConflictingFiles.Count > 0
                 ? $"merge conflicts with '{effectiveBaseRef}': {string.Join(", ", synthesized.MergeTree.ConflictingFiles)}"
                 : (synthesized.MergeTree.ErrorMessage ?? $"could not synthesize merged tree against '{effectiveBaseRef}'");
@@ -201,9 +259,11 @@ public sealed class LocalCiEnvironment
                 toolchainRoot,
                 synthesized.MergeCommitSha,
                 out var worktree,
-                out string? worktreeError) ||
+                out string? worktreeError,
+                pinnedRef: pinnedRef) ||
             worktree is null)
         {
+            GitRevisionScopeService.DeleteTemporaryRef(toolchainRoot, pinnedRef);
             return new CiWorkspacePreparation(
                 false,
                 null,
@@ -225,10 +285,11 @@ public sealed class LocalCiEnvironment
         };
 
         string shortSha = synthesized.MergeCommitSha[..Math.Min(12, synthesized.MergeCommitSha.Length)];
+        string headLabel = dirtyPaths.Count > 0 ? $"snapshot {shortSha} ({dirtyPaths.Count} uncommitted file(s))" : $"HEAD {shortSha}";
         string message = synthesized.MergeTree.BehindCount > 0
             ? $"synthesized merged commit {shortSha} ({synthesized.MergeTree.BehindCount} commit(s) behind {effectiveBaseRef}) in {worktreeRoot}"
-            : $"verified HEAD {shortSha} up to date with {effectiveBaseRef} in {worktreeRoot}";
-        return new CiWorkspacePreparation(true, scopedEnvironment, worktree, message);
+            : $"verified {headLabel} up to date with {effectiveBaseRef} in {worktreeRoot}";
+        return new CiWorkspacePreparation(true, scopedEnvironment, worktree, message, EffectiveBaseRef: effectiveBaseRef);
     }
 
     private static int RunProcess(
@@ -248,6 +309,15 @@ public sealed class LocalCiEnvironment
         foreach (var (name, value) in variables)
         {
             psi.Environment[name] = value;
+        }
+
+        string worktreeCliBinary = Path.Combine(
+            workingDirectory,
+            "bin",
+            OperatingSystem.IsWindows() ? "cadence.exe" : "cadence");
+        if (!variables.ContainsKey("CADENCE_CLI_CACHE_HIT") && File.Exists(worktreeCliBinary))
+        {
+            psi.Environment["CADENCE_CLI_CACHE_HIT"] = "true";
         }
 
         string basePath = variables.TryGetValue("PATH", out string? customPath)
@@ -500,12 +570,18 @@ public static class LocalCiRunner
         var results = new List<CiStepResult>();
         IDisposable? workspaceLease = null;
         var activeEnvironment = environment;
+        var activeOptions = options;
 
         if (environment.PrepareWorkspace is not null)
         {
             var preflightWatch = Stopwatch.StartNew();
             var preflightStep = new CiStep("merge-readiness", "Prepare merged worktree");
             string modeNote = options.Offline ? $"--offline --base {options.BaseRef}" : $"git fetch + git merge-tree --write-tree ({options.BaseRef})";
+            if (options.IncludeUncommitted)
+            {
+                modeNote += " --include-uncommitted";
+            }
+
             environment.OnStepStarting?.Invoke(preflightStep, [modeNote]);
 
             var prepared = environment.PrepareWorkspace(options);
@@ -523,11 +599,15 @@ public static class LocalCiRunner
 
             workspaceLease = prepared.Lease;
             activeEnvironment = prepared.Environment;
+            if (!string.IsNullOrWhiteSpace(prepared.EffectiveBaseRef))
+            {
+                activeOptions = options with { BaseRef = prepared.EffectiveBaseRef };
+            }
         }
 
         using (workspaceLease)
         {
-            return RunJobsInWorkspace(jobs, options, activeEnvironment, results);
+            return RunJobsInWorkspace(jobs, activeOptions, activeEnvironment, results);
         }
     }
 

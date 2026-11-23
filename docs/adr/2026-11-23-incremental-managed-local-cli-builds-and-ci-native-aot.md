@@ -63,7 +63,7 @@ In day-to-day engineering workflows—especially `.githooks/pre-commit`, `pnpm c
   - Edits to `packages/engine_core` and `packages/database` no longer invalidate the CLI binary locally or in CI caches.
   - `Cadence.Cli` depends directly on `Npgsql` (`10.0.4` in `Directory.Packages.props`) instead of pulling `Npgsql.EntityFrameworkCore.PostgreSQL`, `Cadence.Database`, and `Cadence.Core.Domain`.
 - **Negative Impact / Technical Debt:**
-  - `scripts/run-cli.js` must verify that `./bin/cadence.dll` and `./bin/cadence.runtimeconfig.json` accompany `./bin/cadence` for managed builds (including when `CADENCE_CLI_CACHE_HIT=true`), while allowing prebuilt Native AOT artifacts in downstream `ci.yml` jobs.
+  - `scripts/run-cli.js` must verify that `./bin/cadence.dll` and `./bin/cadence.runtimeconfig.json` accompany `./bin/cadence` for managed builds (including when `CADENCE_CLI_CACHE_HIT=true` restores a managed `./bin` directory), while allowing standalone Native AOT binaries in downstream `ci.yml` jobs and `cadence ci` worktrees (`<worktreeRoot>/bin/cadence`).
 - **Mitigation Strategy:**
   - Separate the Native AOT cache key prefix (`cadence-cli-aot-`) in `ci.yml` from managed `./bin` caches (`cadence-cli-`) in `deploy-docs.yml` and `production-pipeline.yml`, keep `packages/security/src` watched for transitive `Cadence.Compliance` / `Cadence.Deid` changes, and enforce `IsAotCompatible`, `EnableTrimAnalyzer`, `-p:PublishAot=true`, and `run-cli.js` cache invalidation in automated tests.
 

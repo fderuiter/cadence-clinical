@@ -7,6 +7,7 @@ using System.Linq;
 using Cadence.Cli.Commands;
 using Cadence.Cli.Services;
 using Cadence.Compliance;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -359,7 +360,7 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
-    public void PrepareWorkspace_FetchesOriginMain_RunsInDetachedMergedWorktree_ReusesCadenceToolchain_AndCleansUp()
+    public void PrepareWorkspace_FailsClosedOnDirtyCheckout_SupportsIncludeUncommitted_AndCleansUpMergedWorktreeAndPinnedRef()
     {
         if (OperatingSystem.IsWindows())
         {
@@ -377,25 +378,24 @@ public class LocalCiRunnerTests
 
             Directory.CreateDirectory(repoDir);
             RunGit(repoDir, "init", "-q", "-b", "main");
+            File.WriteAllText(Path.Combine(repoDir, ".gitignore"), ".cadence/\n");
             File.WriteAllText(Path.Combine(repoDir, "base.txt"), "base\n");
             RunGit(repoDir, "add", "-A");
             RunGit(repoDir, "commit", "-q", "-m", "initial");
             RunGit(repoDir, "remote", "add", "origin", remoteDir);
             RunGit(repoDir, "push", "-q", "-u", "origin", "main");
 
-            // Create a read-only .cadence/bin tool in the caller checkout (untracked).
+            // Create a read-only .cadence/bin tool in the caller checkout (gitignored, like production).
             string cadenceBinDir = Path.Combine(repoDir, ".cadence", "bin");
             Directory.CreateDirectory(cadenceBinDir);
             string fakeToolPath = Path.Combine(cadenceBinDir, "cadence-test-linter");
             File.WriteAllText(fakeToolPath, "#!/bin/sh\nexit 0\n");
             File.SetUnixFileMode(fakeToolPath, UnixFileMode.UserRead | UnixFileMode.UserExecute);
 
-            // Feature branch commit + dirty untracked file in caller checkout.
             RunGit(repoDir, "checkout", "-q", "-b", "feature");
             File.WriteAllText(Path.Combine(repoDir, "feature.txt"), "from-feature\n");
             RunGit(repoDir, "add", "feature.txt");
             RunGit(repoDir, "commit", "-q", "-m", "feature commit");
-            File.WriteAllText(Path.Combine(repoDir, "dirty-caller.txt"), "uncommitted\n");
 
             // Advance origin/main in peer clone so caller's local origin/main is stale until fetched.
             RunGit(tempBase, "clone", "-q", remoteDir, peerDir);
@@ -404,9 +404,11 @@ public class LocalCiRunnerTests
             RunGit(peerDir, "commit", "-q", "-m", "upstream commit");
             RunGit(peerDir, "push", "-q", "origin", "main");
 
+            int executedCount = 0;
             string? observedWorktreeRoot = null;
             bool sawFeatureAndUpstream = false;
-            bool sawDirtyCallerFile = true;
+            bool sawDirtyCallerFile = false;
+            bool sawPinnedRefDuringRun = false;
             var job = Job("verify",
                 new CiStep("verify", "check-merged")
                 {
@@ -418,11 +420,22 @@ public class LocalCiRunnerTests
                 {
                     InProcess = (worktreeRoot, _) =>
                     {
+                        executedCount++;
                         observedWorktreeRoot = worktreeRoot;
                         sawFeatureAndUpstream =
                             File.Exists(Path.Combine(worktreeRoot, "feature.txt")) &&
                             File.Exists(Path.Combine(worktreeRoot, "upstream.txt"));
                         sawDirtyCallerFile = File.Exists(Path.Combine(worktreeRoot, "dirty-caller.txt"));
+                        sawPinnedRefDuringRun = !string.IsNullOrWhiteSpace(
+                            CaptureGit(repoDir, "for-each-ref", "--format=%(refname)", GitRevisionScopeService.TemporaryRefPrefix));
+                        string dirtyText = sawDirtyCallerFile
+                            ? File.ReadAllText(Path.Combine(worktreeRoot, "dirty-caller.txt"))
+                            : string.Empty;
+                        if (dirtyText.Contains("BROKEN", StringComparison.Ordinal))
+                        {
+                            return 1;
+                        }
+
                         File.WriteAllText(Path.Combine(worktreeRoot, "ephemeral-build.out"), "generated\n");
                         return 0;
                     },
@@ -430,22 +443,356 @@ public class LocalCiRunnerTests
                     InProcessCiText = "echo ok",
                 });
 
-            var options = new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main", Offline: false);
-            var results = LocalCiRunner.Run([job], options, LocalCiEnvironment.Create(repoDir));
+            var defaultOptions = new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main", Offline: false, IncludeUncommitted: false);
+
+            // 1. Untracked file fails closed on merge-readiness before any job executes.
+            File.WriteAllText(Path.Combine(repoDir, "dirty-caller.txt"), "untracked-edit\n");
+            var untrackedFail = LocalCiRunner.Run([job], defaultOptions, LocalCiEnvironment.Create(repoDir));
+            executedCount.Should().Be(0);
+            untrackedFail[0].Step.Job.Should().Be("merge-readiness");
+            untrackedFail[0].Outcome.Should().Be(CiOutcome.Failed);
+            untrackedFail[0].Note.Should().Contain("dirty-caller.txt")
+                .And.Contain("--include-uncommitted");
+            LocalCiCommand.Execute(
+                    ["actionlint"],
+                    allowMissingTools: false,
+                    allowDbSkip: false,
+                    baseRef: "origin/main",
+                    list: false,
+                    environment: LocalCiEnvironment.Create(repoDir),
+                    offline: false,
+                    includeUncommitted: false)
+                .Should().Be(1);
+            File.Delete(Path.Combine(repoDir, "dirty-caller.txt"));
+
+            // 2. Unstaged modification fails closed on merge-readiness.
+            File.WriteAllText(Path.Combine(repoDir, "feature.txt"), "unstaged-edit\n");
+            var unstagedFail = LocalCiRunner.Run([job], defaultOptions, LocalCiEnvironment.Create(repoDir));
+            executedCount.Should().Be(0);
+            unstagedFail[0].Outcome.Should().Be(CiOutcome.Failed);
+            unstagedFail[0].Note.Should().Contain("feature.txt");
+
+            // 3. Staged modification fails closed on merge-readiness.
+            RunGit(repoDir, "add", "feature.txt");
+            var stagedFail = LocalCiRunner.Run([job], defaultOptions, LocalCiEnvironment.Create(repoDir));
+            executedCount.Should().Be(0);
+            stagedFail[0].Outcome.Should().Be(CiOutcome.Failed);
+            stagedFail[0].Note.Should().Contain("feature.txt");
+
+            // 4. --include-uncommitted validates uncommitted edits (including failing when an uncommitted file is broken)
+            //    without mutating caller HEAD, .git/index, or working tree.
+            File.WriteAllText(Path.Combine(repoDir, "dirty-caller.txt"), "BROKEN uncommitted edit\n");
+            string headBefore = CaptureGit(repoDir, "rev-parse", "HEAD").Trim();
+            string brokenStatusBefore = CaptureGit(repoDir, "status", "--porcelain=v1");
+            byte[] brokenIndexBefore = File.ReadAllBytes(Path.Combine(repoDir, ".git", "index"));
+
+            var includeBrokenOptions = defaultOptions with { IncludeUncommitted = true };
+            var brokenResults = LocalCiRunner.Run([job], includeBrokenOptions, LocalCiEnvironment.Create(repoDir));
+            brokenResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Failed);
+            executedCount.Should().Be(1);
+            CaptureGit(repoDir, "status", "--porcelain=v1").Should().Be(brokenStatusBefore);
+            File.ReadAllBytes(Path.Combine(repoDir, ".git", "index")).Should().Equal(brokenIndexBefore);
+
+            File.WriteAllText(Path.Combine(repoDir, "dirty-caller.txt"), "valid uncommitted edit\n");
+            string statusBefore = CaptureGit(repoDir, "status", "--porcelain=v1");
+            byte[] indexBefore = File.ReadAllBytes(Path.Combine(repoDir, ".git", "index"));
+
+            var results = LocalCiRunner.Run([job], includeBrokenOptions, LocalCiEnvironment.Create(repoDir));
             results.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed);
 
             observedWorktreeRoot.Should().NotBeNull();
             observedWorktreeRoot.Should().StartWith(Path.GetTempPath());
             observedWorktreeRoot.Should().NotBe(repoDir);
-            sawFeatureAndUpstream.Should().BeTrue("merged worktree must contain both feature HEAD and fetched origin/main");
-            sawDirtyCallerFile.Should().BeFalse("caller untracked files must not leak into detached merged worktree");
+            sawFeatureAndUpstream.Should().BeTrue("merged worktree must contain both feature snapshot and fetched origin/main");
+            sawDirtyCallerFile.Should().BeTrue("--include-uncommitted must synthesize uncommitted edits into the merged worktree");
+            sawPinnedRefDuringRun.Should().BeTrue("synthesized commit must be pinned under refs/cadence-ci/<runId> while worktree is active");
             Directory.Exists(observedWorktreeRoot!).Should().BeFalse("temporary detached worktree must be removed after run");
+            CaptureGit(repoDir, "for-each-ref", "--format=%(refname)", GitRevisionScopeService.TemporaryRefPrefix).Trim()
+                .Should().BeEmpty("pinned refs/cadence-ci/<runId> ref must be deleted on worktree disposal");
+            Directory.Exists(Path.Combine(repoDir, ".git", "logs", "refs", "cadence-ci"))
+                .Should().BeFalse("temporary refs must not leave reflog entries");
+            CaptureGit(repoDir, "rev-parse", "HEAD").Trim().Should().Be(headBefore);
+            CaptureGit(repoDir, "status", "--porcelain=v1").Should().Be(statusBefore);
+            File.ReadAllBytes(Path.Combine(repoDir, ".git", "index")).Should().Equal(indexBefore);
             File.Exists(Path.Combine(repoDir, "ephemeral-build.out")).Should().BeFalse("caller checkout must not be mutated");
             File.Exists(Path.Combine(repoDir, "upstream.txt")).Should().BeFalse("caller branch checkout must remain on feature HEAD");
         }
         finally
         {
             DeleteTempTree(tempBase);
+        }
+    }
+
+    [Fact]
+    public void PrepareWorkspace_PropagatesFetchedTrackingRef_AndResolvesLocalTagAndRelativeRefsWithoutGitFetch()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string tempBase = Path.Combine(Path.GetTempPath(), $"local-ci-baseref-{Guid.NewGuid():N}");
+        string remoteDir = Path.Combine(tempBase, "origin.git");
+        string repoDir = Path.Combine(tempBase, "caller");
+        string peerDir = Path.Combine(tempBase, "peer");
+        string capturedArgsFile = Path.Combine(tempBase, "captured-args.txt");
+        try
+        {
+            Directory.CreateDirectory(remoteDir);
+            RunGit(remoteDir, "init", "-q", "--bare", "-b", "main");
+
+            Directory.CreateDirectory(repoDir);
+            RunGit(repoDir, "init", "-q", "-b", "main");
+            File.WriteAllText(Path.Combine(repoDir, ".gitignore"), ".cadence/\n");
+            File.WriteAllText(Path.Combine(repoDir, "base.txt"), "base\n");
+            RunGit(repoDir, "add", "-A");
+            RunGit(repoDir, "commit", "-q", "-m", "initial");
+            RunGit(repoDir, "tag", "v1.0.0");
+            RunGit(repoDir, "remote", "add", "origin", remoteDir);
+            RunGit(repoDir, "push", "-q", "-u", "origin", "main");
+
+            string cadenceBinDir = Path.Combine(repoDir, ".cadence", "bin");
+            Directory.CreateDirectory(cadenceBinDir);
+            string fakeCheck = Path.Combine(cadenceBinDir, "cadence-capture-args");
+            File.WriteAllText(fakeCheck, $"#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{capturedArgsFile}\"\nexit 0\n");
+            File.SetUnixFileMode(fakeCheck, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+            RunGit(repoDir, "checkout", "-q", "-b", "feature");
+            File.WriteAllText(Path.Combine(repoDir, "docs.md"), "feature docs\n");
+            RunGit(repoDir, "add", "docs.md");
+            RunGit(repoDir, "commit", "-q", "-m", "feature commit");
+            string parentSha = CaptureGit(repoDir, "rev-parse", "HEAD~1").Trim();
+
+            // Advance remote main in peer clone with a Dockerfile edit; local branch 'main' in caller remains stale at initial!
+            // Because feature did NOT touch Dockerfile relative to refs/remotes/origin/main, container-security must be skipped.
+            RunGit(tempBase, "clone", "-q", remoteDir, peerDir);
+            File.WriteAllText(Path.Combine(peerDir, "Dockerfile"), "FROM scratch\n");
+            File.WriteAllText(Path.Combine(peerDir, "upstream-remote.txt"), "remote\n");
+            RunGit(peerDir, "add", "Dockerfile", "upstream-remote.txt");
+            RunGit(peerDir, "commit", "-q", "-m", "remote main advance");
+            RunGit(peerDir, "push", "-q", "origin", "main");
+
+            string? observedInProcessBase = null;
+            bool sawRemoteUpstreamFile = false;
+
+            var jobs = new[]
+            {
+                Job("container-security", new CiStep("container-security", "scan")
+                {
+                    NeedsDocker = true,
+                    Commands = [new CiCommand("cadence-capture-args", ["docker"])],
+                }),
+                Job("verify",
+                    new CiStep("verify", "scoped-check")
+                    {
+                        Files = CiFileSource.ChangedFilesAcmr,
+                        Commands = [new CiCommand("cadence-capture-args", [], ForwardsBaseRef: true)],
+                    },
+                    new CiStep("verify", "in-process")
+                    {
+                        InProcess = (worktreeRoot, opts) =>
+                        {
+                            observedInProcessBase = opts.BaseRef;
+                            sawRemoteUpstreamFile = File.Exists(Path.Combine(worktreeRoot, "upstream-remote.txt"));
+                            return 0;
+                        },
+                        InProcessDisplay = "inspect active base ref",
+                        InProcessCiText = "echo base",
+                    }),
+            };
+
+            // Passing --base main online must fetch origin/main and propagate refs/remotes/origin/main everywhere.
+            var mainBranchResults = LocalCiRunner.Run(
+                jobs,
+                new LocalCiOptions(AllowSkip: false, BaseRef: "main", Offline: false),
+                LocalCiEnvironment.Create(repoDir));
+            mainBranchResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Passed, CiOutcome.Passed);
+            sawRemoteUpstreamFile.Should().BeTrue("merged worktree must use fetched refs/remotes/origin/main rather than stale local 'main'");
+            observedInProcessBase.Should().Be("refs/remotes/origin/main");
+            File.ReadAllLines(capturedArgsFile).Should().Equal("--base", "refs/remotes/origin/main", "docs.md");
+
+            // Point origin to a missing path so any accidental git fetch fails, then verify --base HEAD~1 and --base v1.0.0 work online.
+            RunGit(repoDir, "remote", "set-url", "origin", Path.Combine(tempBase, "missing.git"));
+
+            var headParentResults = LocalCiRunner.Run(
+                jobs,
+                new LocalCiOptions(AllowSkip: false, BaseRef: "HEAD~1", Offline: false),
+                LocalCiEnvironment.Create(repoDir));
+            headParentResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Passed, CiOutcome.Passed);
+            observedInProcessBase.Should().Be(parentSha);
+            File.ReadAllLines(capturedArgsFile).Should().Equal("--base", parentSha, "docs.md");
+
+            var tagResults = LocalCiRunner.Run(
+                jobs,
+                new LocalCiOptions(AllowSkip: false, BaseRef: "v1.0.0", Offline: false),
+                LocalCiEnvironment.Create(repoDir));
+            tagResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Passed, CiOutcome.Passed);
+            observedInProcessBase.Should().Be("refs/tags/v1.0.0");
+            File.ReadAllLines(capturedArgsFile).Should().Equal("--base", "refs/tags/v1.0.0", "docs.md");
+        }
+        finally
+        {
+            DeleteTempTree(tempBase);
+        }
+    }
+
+    [Fact]
+    public void NativeAotBuild_PublishesWorktreeBinAndReusesBinaryAcrossNodeCliStepsWithoutRebuild()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string tempWorktree = Path.Combine(Path.GetTempPath(), $"local-ci-aot-reuse-{Guid.NewGuid():N}");
+        string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempWorktree, "scripts"));
+            File.Copy(
+                Path.Combine(repoRoot, "scripts", "run-cli.js"),
+                Path.Combine(tempWorktree, "scripts", "run-cli.js"));
+            File.Copy(
+                Path.Combine(repoRoot, "global.json"),
+                Path.Combine(tempWorktree, "global.json"));
+
+            string invocationsLog = Path.Combine(tempWorktree, "cli-invocations.log");
+            var downstreamStep = CiPlan.Jobs.Single(j => j.Key == "lint-and-static")
+                .Steps.Single(s => s.Name == "Run Markdown validation");
+
+            // Simulate native-aot-build publishing ./bin/cadence inside the worktree, followed by real node scripts/run-cli.js execution.
+            var simAotStep = new CiStep("native-aot-build", "Publish the CLI as Native AOT")
+            {
+                InProcess = (wt, _) =>
+                {
+                    string binDir = Path.Combine(wt, "bin");
+                    Directory.CreateDirectory(binDir);
+                    string cadenceBin = Path.Combine(binDir, "cadence");
+                    File.WriteAllText(cadenceBin, $"#!/bin/sh\necho \"$*\" >> \"{invocationsLog}\"\nexit 0\n");
+                    File.SetUnixFileMode(cadenceBin, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                    // Make source tree newer than bin/cadence so run-cli.js would rebuild without CADENCE_CLI_CACHE_HIT=true!
+                    string cliSrcDir = Path.Combine(wt, "packages", "cli", "src");
+                    Directory.CreateDirectory(cliSrcDir);
+                    string newerSource = Path.Combine(cliSrcDir, "Program.cs");
+                    File.WriteAllText(newerSource, "// newer source\n");
+                    DateTime future = File.GetLastWriteTimeUtc(cadenceBin).AddMinutes(5);
+                    File.SetLastWriteTimeUtc(newerSource, future);
+                    return 0;
+                },
+                InProcessDisplay = "simulate native aot publish to ./bin",
+                InProcessCiText = "dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -p:PublishAot=true -o ./bin",
+            };
+
+            string capturedStdout = string.Empty;
+            IReadOnlyDictionary<string, string>? observedEnv = null;
+            var env = new LocalCiEnvironment
+            {
+                RepoRoot = tempWorktree,
+                IsToolOnPath = _ => true,
+                ProbePostgres = () => new CiPostgresStatus(true, "reachable."),
+                FindFiles = (_, _) => [],
+                Run = (command, extra, variables) =>
+                {
+                    observedEnv = variables;
+                    var psi = new ProcessStartInfo(command.FileName)
+                    {
+                        WorkingDirectory = tempWorktree,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                    };
+                    psi.Environment.Remove("GITHUB_ACTIONS");
+                    foreach (string arg in command.Arguments.Concat(extra))
+                    {
+                        psi.ArgumentList.Add(arg);
+                    }
+
+                    foreach (var (key, value) in variables)
+                    {
+                        psi.Environment[key] = value;
+                    }
+
+                    using var proc = Process.Start(psi)!;
+                    capturedStdout += proc.StandardOutput.ReadToEnd();
+                    proc.StandardError.ReadToEnd();
+                    proc.WaitForExit();
+                    return proc.ExitCode;
+                },
+            };
+
+            var jobs = new[]
+            {
+                Job("native-aot-build", simAotStep),
+                Job("lint-and-static", downstreamStep),
+            };
+
+            var results = LocalCiRunner.Run(jobs, Defaults, env);
+            results.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed);
+            observedEnv.Should().NotBeNull();
+            observedEnv!.Should().Contain(new KeyValuePair<string, string>("CADENCE_CLI_CACHE_HIT", "true"));
+            capturedStdout.Should().NotContain("[run-cli] Compiling Cadence CLI binary...")
+                .And.NotContain("[run-cli] Building Cadence CLI binary...");
+            File.ReadAllLines(invocationsLog).Should().Equal("check markdown");
+        }
+        finally
+        {
+            DeleteTempTree(tempWorktree);
+        }
+    }
+
+    [Fact]
+    public void RunProcess_PropagatesCadenceCliCacheHitToIndirectCliStepsWhenWorktreeBinaryExists()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string tempRepo = Path.Combine(Path.GetTempPath(), $"local-ci-indirect-aot-{Guid.NewGuid():N}");
+        string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempRepo, "scripts"));
+            RunGit(tempRepo, "init", "-q", "-b", "main");
+            File.Copy(
+                Path.Combine(repoRoot, "scripts", "run-cli.js"),
+                Path.Combine(tempRepo, "scripts", "run-cli.js"));
+            File.Copy(
+                Path.Combine(repoRoot, "global.json"),
+                Path.Combine(tempRepo, "global.json"));
+            RunGit(tempRepo, "add", "-A");
+            RunGit(tempRepo, "commit", "-q", "-m", "init");
+            RunGit(tempRepo, "update-ref", "refs/remotes/origin/main", "HEAD");
+
+            var prep = LocalCiEnvironment.PrepareMergedWorktree(
+                tempRepo,
+                new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main", Offline: true));
+            using (prep.Lease)
+            {
+                prep.Succeeded.Should().BeTrue(prep.Message);
+                string wt = prep.Environment!.RepoRoot;
+                string invocationsLog = Path.Combine(wt, "indirect-cli.log");
+
+                string binDir = Path.Combine(wt, "bin");
+                Directory.CreateDirectory(binDir);
+                string cadenceBin = Path.Combine(binDir, "cadence");
+                File.WriteAllText(
+                    cadenceBin,
+                    $"#!/bin/sh\necho \"${{CADENCE_CLI_CACHE_HIT:-unset}}:$*\" >> \"{invocationsLog}\"\nexit 0\n");
+                File.SetUnixFileMode(cadenceBin, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+                // Indirect CLI step (mirrors pnpm docs:build -> node scripts/run-cli.js with empty EnvironmentIfPassed).
+                int exitCode = prep.Environment.Run(
+                    new CiCommand("node", ["scripts/run-cli.js", "check", "openapi"]),
+                    [],
+                    new Dictionary<string, string>());
+                exitCode.Should().Be(0);
+                File.ReadAllLines(invocationsLog).Should().Equal("true:check openapi");
+            }
+        }
+        finally
+        {
+            DeleteTempTree(tempRepo);
         }
     }
 
@@ -814,7 +1161,10 @@ public class LocalCiRunnerTests
             """;
     }
 
-    private static void RunGit(string workingDir, params string[] args)
+    private static void RunGit(string workingDir, params string[] args) =>
+        _ = CaptureGit(workingDir, args);
+
+    private static string CaptureGit(string workingDir, params string[] args)
     {
         var psi = new ProcessStartInfo("git")
         {
@@ -834,10 +1184,11 @@ public class LocalCiRunnerTests
         }
 
         using var process = Process.Start(psi)!;
+        string output = process.StandardOutput.ReadToEnd();
         string error = process.StandardError.ReadToEnd();
-        process.StandardOutput.ReadToEnd();
         process.WaitForExit();
         process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
+        return output;
     }
 
     private static void DeleteTempTree(string path)

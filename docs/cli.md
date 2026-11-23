@@ -217,15 +217,22 @@ With no option, all tests run. If both options are given, `--fast` wins.
 ### `cadence ci`
 
 Runs the pull-request validation jobs of `.github/workflows/ci.yml` locally (#5017). Before running any job,
-`cadence ci` fetches `--base <ref>` (`origin/main` by default, unless `--offline` is passed), reports how many commits
-`HEAD` is behind `<ref>`, synthesizes a merged commit via `git merge-tree --write-tree` + `git commit-tree` (failing
-closed immediately with conflicted file paths if `git fetch` or `git merge-tree` fails), checks out that merged commit
-in a disposable detached worktree under `Path.GetTempPath()`, reuses read-only `.cadence/bin`, `.cadence/venv`, and
-`.venv` toolchains from your repository checkout, runs all selected jobs inside the temporary worktree in CI order, and
-removes and prunes the worktree afterward without mutating your checkout.
+`cadence ci` inspects working-tree hygiene (`GitRevisionScopeService.GetWorkingTreeChanges`) and fails closed on
+`merge-readiness` if staged, unstaged, or untracked edits exist unless `--include-uncommitted` is passed (which copies
+`.git/index` to a temporary index file and synthesizes an ephemeral snapshot commit on `HEAD` without mutating your
+checkout). It then fetches `--base <ref>` (`origin/main` by default, resolving remote branches into
+`refs/remotes/<remote>/<branch>`, resolving commit SHAs, `HEAD~1`, and local tags without `git fetch`, or skipping fetch
+with `--offline`), reports how many commits the head revision is behind the resolved base ref, synthesizes a merged
+commit via `git merge-tree --write-tree` + `git commit-tree` (failing closed immediately with conflicted file paths if
+`git fetch` or `git merge-tree` fails), pins synthesized commits under `refs/cadence-ci/<runId>`, checks out the merged
+commit in a disposable detached worktree under `Path.GetTempPath()`, reuses read-only `.cadence/bin`, `.cadence/venv`,
+and `.venv` toolchains from your repository checkout, runs all selected jobs inside the temporary worktree in CI order
+(forwarding the resolved base ref to scoped steps), and removes the temporary ref and worktree afterward without
+mutating your checkout.
 
 ```bash
 pnpm cadence ci                          # fetch origin/main, synthesize merged worktree, and run all 11 PR jobs
+pnpm cadence ci --include-uncommitted    # synthesize an ephemeral snapshot commit of uncommitted edits without mutating checkout
 pnpm cadence ci --job container-security # validate Compose config, build and Trivy-scan all 18 .NET and 2 SCE images
 pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
 pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
@@ -234,15 +241,16 @@ pnpm cadence ci --offline                # air-gapped debugging: skip git fetch 
 pnpm cadence ci --list                   # what each step runs locally, without running it
 ```
 
-| Option                  | Description                                                                                                                                                                                                                                                     |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>`       | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `container-security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                              |
-| `--allow-missing-tools` | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `docker`, `trivy`, `bash`) or Docker daemon is unavailable with setup guidance, while still requiring PostgreSQL and `*.database.txt` database test evidence. |
-| `--allow-db-skip`       | Accepts a run whose PostgreSQL tests or `*.database.txt` fixture metadata did not execute (without PostgreSQL or with incomplete TRX/metadata), while still requiring all external tool binaries and the Docker daemon.                                         |
-| `--allow-skip`          | Shorthand for `--allow-missing-tools --allow-db-skip`: skips steps whose required binary or Docker daemon is unavailable with setup guidance, and accepts a run without PostgreSQL or complete database test evidence.                                          |
-| `--base <ref>`          | The ref fetched (unless `--offline`), merged into `HEAD` for the temporary worktree, used to scope `container-security` trigger diffs, and forwarded as `--base <ref>` to scoped CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.     |
-| `--offline`             | Skips `git fetch` for explicit air-gapped debugging while still synthesizing a detached merged worktree against the local `--base <ref>`.                                                                                                                       |
-| `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                      |
+| Option                  | Description                                                                                                                                                                                                                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-j\|--job <job>`       | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `container-security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                                            |
+| `--allow-missing-tools` | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `docker`, `trivy`, `bash`) or Docker daemon is unavailable with setup guidance, while still requiring PostgreSQL and `*.database.txt` database test evidence.                               |
+| `--allow-db-skip`       | Accepts a run whose PostgreSQL tests or `*.database.txt` fixture metadata did not execute (without PostgreSQL or with incomplete TRX/metadata), while still requiring all external tool binaries and the Docker daemon.                                                                       |
+| `--allow-skip`          | Shorthand for `--allow-missing-tools --allow-db-skip`: skips steps whose required binary or Docker daemon is unavailable with setup guidance, and accepts a run without PostgreSQL or complete database test evidence.                                                                        |
+| `--base <ref>`          | The ref fetched into `refs/remotes/<remote>/<branch>` (or resolved locally without `git fetch` for commit SHAs, `HEAD~1`, and tags; skipped with `--offline`), merged for the temporary worktree, used to scope `container-security`, and forwarded to scoped checks. Default: `origin/main`. |
+| `--offline`             | Skips `git fetch` for explicit air-gapped debugging while still synthesizing a detached merged worktree against the local `--base <ref>`.                                                                                                                                                     |
+| `--include-uncommitted` | Copies `.git/index` to a temporary index, stages staged, unstaged, and untracked edits, and synthesizes an ephemeral snapshot commit for the merged worktree without mutating your checkout.                                                                                                  |
+| `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                                                    |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -288,11 +296,8 @@ Where it differs from CI:
   with the setup hint, instead of failing.
 - **Not run:** the Playwright browser install, `Upload Trivy scan results to GitHub Security tab` (SARIF upload to GitHub Code Scanning), and the jobs that act on GitHub itself
   (`ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
-- **Commit first.** `cadence ci` synthesizes a detached merged worktree from `HEAD` and `--base <ref>` (`origin/main`), so
-  uncommitted working-tree or staged edits in your checkout are never included in the merged worktree; your checkout is
-  left untouched throughout the run.
-- The Native AOT publish targets this machine's runtime (`linux-x64` in CI), since AOT does not cross-compile, and
-  writes to a temporary folder.
+- **Clean checkouts required unless `--include-uncommitted` is passed.** `cadence ci` checks `GitRevisionScopeService.GetWorkingTreeChanges` before synthesizing the merged worktree and fails `merge-readiness` with exit `1` (listing dirty paths and instructing you to commit, stash, or pass `--include-uncommitted`) when staged, unstaged, or untracked edits exist. Passing `--include-uncommitted` copies `.git/index` to a temporary index file, stages all edits, and synthesizes an ephemeral snapshot commit pinned under `refs/cadence-ci/<runId>` (deleted when the worktree is disposed without running `git prune` or `git gc`), leaving your checkout untouched.
+- **Single Native AOT publish reused across CLI jobs.** `native-aot-build` targets this machine's runtime (`linux-x64` in CI), since AOT does not cross-compile, publishes into `./bin` (`<worktreeRoot>/bin/cadence`), and sets `CADENCE_CLI_CACHE_HIT=true` for downstream `node scripts/run-cli.js` steps in `lint-and-static`, `docs-build`, and `security` so the compiled binary is reused without rebuilding.
 
 `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs` reads `ci.yml` and fails when a job or step is added, renamed or
 removed, changes its command or `ForwardsBaseRef` flag, leaves `InProcess` null while declaring `InProcessCiText` or `InProcessDisplay`, or breaks `CoveredBy` gate coverage, until `packages/cli/src/Services/CiPlan.cs` follows.

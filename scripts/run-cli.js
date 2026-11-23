@@ -318,6 +318,14 @@ function hasManagedRuntimeFiles() {
   return fs.existsSync(dllPath) && fs.existsSync(runtimeConfigPath);
 }
 
+function hasAnyManagedMarker() {
+  return (
+    fs.existsSync(dllPath) ||
+    fs.existsSync(runtimeConfigPath) ||
+    fs.existsSync(inputHashPath)
+  );
+}
+
 function readStoredInputHash() {
   try {
     return fs.readFileSync(inputHashPath, "utf8").trim();
@@ -335,7 +343,7 @@ function needsBuild() {
   }
 
   if (process.env.CADENCE_CLI_CACHE_HIT === "true") {
-    return !hasManagedRuntimeFiles();
+    return hasAnyManagedMarker() ? !hasManagedRuntimeFiles() : false;
   }
 
   if (
