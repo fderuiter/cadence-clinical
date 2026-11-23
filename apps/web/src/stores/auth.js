@@ -160,8 +160,26 @@ const ADMIN_ROLE_ALIASES = [
   "tmf_auditor",
 ];
 
+const INDIVIDUAL_FAMILIES = ["Blueprint", "Capture"];
+const COMPLETE_FAMILIES = [
+  ...INDIVIDUAL_FAMILIES,
+  "Orbit",
+  "Engage",
+  "Allocate",
+  "Vigil",
+  "Lens",
+  "Assure",
+];
+const BASELINE_CAPABILITIES = [
+  "audit_trail",
+  "electronic_signatures",
+  "authorization",
+  "record_export",
+];
+
 export const ROLE_ALIASES = {
   crc: ["site_investigator", "crc"],
+  trial_coordinator: ["site_investigator", "crc", "trial_coordinator"],
   site_investigator: ["site_investigator", "crc"],
   principal_investigator: [
     "principal_investigator",
@@ -208,7 +226,7 @@ export const PERSONA_PRESETS = [
   {
     key: "site_crc",
     label: "🩺 Site Coordinator / CRC",
-    requires: ["site_investigator", "crc"],
+    requires: ["site_investigator", "crc", "trial_coordinator"],
   },
   {
     key: "site_investigator",
@@ -270,22 +288,21 @@ function purgeLegacyAuthStorage() {
  */
 export function purgeLegacyUnscopedKeys() {
   if (typeof window === "undefined" || !window.localStorage) return;
-  const legacyKeys = [
-    "subjects",
-    "formValues",
-    "formQueries",
-    "ledgerBlocks",
-    "currentUsdm",
-    "cadence_clinical_subjects",
-    "onboarding_current_step",
-    "onboarding_is_active",
-    "onboarding_disabled",
-    "onboarding_events",
-    "onboarding_global_disabled",
-    "onboarding_global_dismissed",
-  ];
   try {
-    for (const key of legacyKeys) {
+    for (const key of [
+      "subjects",
+      "formValues",
+      "formQueries",
+      "ledgerBlocks",
+      "currentUsdm",
+      "cadence_clinical_subjects",
+      "onboarding_current_step",
+      "onboarding_is_active",
+      "onboarding_disabled",
+      "onboarding_events",
+      "onboarding_global_disabled",
+      "onboarding_global_dismissed",
+    ]) {
       window.localStorage.removeItem(key);
     }
   } catch {
@@ -480,6 +497,7 @@ export const useAuthStore = defineStore("auth", {
     isCrc: (state) =>
       holdsAnyRole(state.rawRoles, [
         "crc",
+        "trial_coordinator",
         "site_investigator",
         "principal_investigator",
       ]),
@@ -555,17 +573,8 @@ export const useAuthStore = defineStore("auth", {
     entitledFamilies: (state) =>
       state.entitlements?.product_families ||
       (isDemoBuild() && state.isDemoMode
-        ? [
-            "Blueprint",
-            "Capture",
-            "Orbit",
-            "Engage",
-            "Allocate",
-            "Vigil",
-            "Lens",
-            "Assure",
-          ]
-        : ["Blueprint", "Capture"]),
+        ? COMPLETE_FAMILIES
+        : INDIVIDUAL_FAMILIES),
     activePlanBadge: (state) => {
       if (!state.isAuthenticated) return null;
       if (isDemoBuild() && state.isDemoMode && !state.entitlements) {
@@ -617,14 +626,9 @@ export const useAuthStore = defineStore("auth", {
       this.accessToken = keycloak.token;
       this.idToken = keycloak.idToken || null;
       this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
-      const parsedSiteIds = parseScopeClaimValues(claims.site_id, {
-        rejectWildcard: true,
-      });
-      const parsedStudyIds = parseScopeClaimValues(claims.study_ids, {
-        rejectWildcard: true,
-      });
-      this.siteIds = parsedSiteIds;
-      this.studyIds = parsedStudyIds;
+      const noWildcard = { rejectWildcard: true };
+      this.siteIds = parseScopeClaimValues(claims.site_id, noWildcard);
+      this.studyIds = parseScopeClaimValues(claims.study_ids, noWildcard);
       this.user = {
         username: claims.preferred_username || claims.sub || "",
         email: claims.email || "",
@@ -653,7 +657,7 @@ export const useAuthStore = defineStore("auth", {
       purgeLegacyUnscopedKeys();
       // Another account's (or an unattributable) clinical draft never survives
       // this account signing in (#5369).
-      purgeUserScopedStorage(storageScopeOf(this));
+      purgeUserScopedStorage(storageScopeOf(this), !isDemoBuild());
       if (this.currentPersona) {
         rehydrateStoresForPersona(this.currentPersona, this._p);
       }
@@ -786,22 +790,8 @@ export const useAuthStore = defineStore("auth", {
             started_at: null,
             trial_ends_at: null,
             is_read_only: false,
-            product_families: [
-              "Blueprint",
-              "Capture",
-              "Orbit",
-              "Engage",
-              "Allocate",
-              "Vigil",
-              "Lens",
-              "Assure",
-            ],
-            baseline_capabilities: [
-              "audit_trail",
-              "electronic_signatures",
-              "authorization",
-              "record_export",
-            ],
+            product_families: COMPLETE_FAMILIES,
+            baseline_capabilities: BASELINE_CAPABILITIES,
             environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
           };
           this.entitlementsLoaded = true;
@@ -831,13 +821,8 @@ export const useAuthStore = defineStore("auth", {
         started_at: null,
         trial_ends_at: null,
         is_read_only: true,
-        product_families: ["Blueprint", "Capture"],
-        baseline_capabilities: [
-          "audit_trail",
-          "electronic_signatures",
-          "authorization",
-          "record_export",
-        ],
+        product_families: INDIVIDUAL_FAMILIES,
+        baseline_capabilities: BASELINE_CAPABILITIES,
         environment_notice: PRE_RELEASE_ENVIRONMENT_NOTICE,
       };
       this.entitlements = {

@@ -1,0 +1,32 @@
+# Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
+# One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2Transmission.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DeviceSafetyInvestigation.SiteId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DeviceSafetyInvestigation.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.IcsrReportingEvaluation.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.PeriodicSafetyReportRecord.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SaeReconciliationJob.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SaeReconciliationRun.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetyNarrative.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalAlert.StudyId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalDetectionRun.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2Transmission.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2TransmissionAuditLog
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DeviceSafetyInvestigation.SiteId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DeviceSafetyInvestigation.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DsurCompileRequest.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DsurLineListingItem.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DsurReportPayload.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DsurUpdateRequest.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.IcsrReportingEvaluation.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.PeriodicSafetyReportRecord.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SaeReconciliationJob.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SaeReconciliationRun.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetyAuditLog
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetyCaseIcsrInput.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetyNarrative.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalAlert.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalDetectionRun.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SubjectEnrollmentRecord.StudyId
+K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SubjectExposureDetail.StudyId

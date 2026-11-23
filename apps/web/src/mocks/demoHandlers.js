@@ -480,7 +480,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/organizations", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createOrganization(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createOrganization(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -494,7 +498,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/sites", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createSite(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createSite(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -502,27 +510,42 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
       return HttpResponse.json(result.data, { status: 201 });
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) =>
-      HttpResponse.json(
-        store.listStudySites(decodeURIComponent(String(params.studyRef)))
-      )
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) => {
+      const result = store.listStudySites(
+        decodeURIComponent(String(params.studyRef))
+      );
+      if (Array.isArray(result)) {
+        return HttpResponse.json(result);
+      }
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.post(
       "*/api/v1/kernel/studies/:studyRef/sites",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         const reason = readRequiredReasonHeader(request);
+        const idempotencyKey =
+          request.headers.get("Idempotency-Key") ||
+          request.headers.get("idempotency-key") ||
+          "";
         const result = store.linkSiteToStudy(
           decodeURIComponent(String(params.studyRef)),
           body,
-          { reason }
+          { reason, idempotencyKey }
         );
         if (result.error) {
           return HttpResponse.json(result.error.problem, {
             status: result.error.status,
           });
         }
-        return HttpResponse.json(result.data, { status: 201 });
+        return HttpResponse.json(result.data, {
+          status: result.replayed ? 200 : 201,
+        });
       }
     ),
     http.get("*/api/v1/kernel/protocol-templates", () =>
@@ -721,6 +744,33 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(updated);
       }
     ),
+    http.get("*/api/v1/kernel/work-queues", () => {
+      return HttpResponse.json({
+        queues: [],
+      });
+    }),
+    http.post("*/api/v1/kernel/work-queues", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          definition:
+            "work_queue_definition:01960000-0000-7000-8000-000000000900",
+          code: body?.code || "custom_queue",
+          version: 1,
+          title: body?.title || "Custom Queue",
+          capability: body?.capability || "observation.verify",
+          verb_class: body?.verb_class || "Execute",
+          source: body?.source || "observation.awaiting_verification",
+        },
+        { status: 201 }
+      );
+    }),
+    http.get("*/api/v1/kernel/studies/:studyRef/validation/findings", () => {
+      return HttpResponse.json({
+        total: 0,
+        findings: [],
+      });
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
       ({ params, request }) => {
@@ -2413,6 +2463,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           category: "TRANSIT",
           confidence_score: 0.95,
           raw_text: rawText,
+          ocr_token: `demo_ocr_token_${Date.now()}`,
           warning: null,
         });
       }
@@ -2420,18 +2471,31 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/payments/participant/expenses", async ({ request }) => {
       const body = await readJsonBody(request);
       const gross = Number(body?.gross_amount ?? body?.grossAmount ?? 0);
-      const conf = Number(body?.ocr_confidence ?? body?.ocrConfidence ?? 0);
-      const autoApproved = gross > 0 && gross <= 100 && conf >= 0.9;
+      const category = String(body?.category || "TRANSIT").toUpperCase();
+      const isMeal = Boolean(
+        body?.is_meal_allowance ?? body?.isMealAllowance ?? category === "MEAL"
+      );
+      const taxDeduction =
+        isMeal && gross > 75 ? Number(((gross - 75) * 0.15).toFixed(2)) : 0;
+      const netAmount = Number((gross - taxDeduction).toFixed(2));
+      const hasServerScan = Boolean(
+        body?.ocr_token ||
+        body?.ocrToken ||
+        body?.receipt_image_base64 ||
+        body?.receiptImageBase64
+      );
+      const autoApproved =
+        gross > 0 && gross <= 100 && (!isMeal || gross <= 75) && hasServerScan;
       const created = {
         id: `exp-${Date.now()}`,
         subject_id: body?.subject_id || body?.subjectId || "SUBJ-1001",
         expense_date: body?.expense_date || body?.expenseDate || "2026-08-01", // deid-ignore
-        category: body?.category || "TRANSIT",
+        category,
         merchant_name:
           body?.merchant_name || body?.merchantName || "Demo Receipt",
         gross_amount: gross,
-        tax_deduction: 0,
-        net_amount: gross,
+        tax_deduction: taxDeduction,
+        net_amount: netAmount,
         status: autoApproved ? "APPROVED" : "PENDING_REVIEW",
         auto_approved: autoApproved,
         receipt_image_name:

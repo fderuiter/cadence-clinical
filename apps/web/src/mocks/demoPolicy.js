@@ -33,6 +33,7 @@ const PARTICIPANT_MANAGEMENT_ROLES = new Set([
   "investigator",
   "lead_investigator",
   "crc",
+  "trial_coordinator",
 ]);
 
 const UNBLIND_AUTHORITY_ROLES = new Set([
@@ -54,6 +55,7 @@ const FORM_WRITE_ROLES = new Set([
   "investigator",
   "lead_investigator",
   "crc",
+  "trial_coordinator",
 ]);
 
 const FORM_SIGN_ROLES = new Set([
@@ -71,6 +73,7 @@ const OBSERVATION_CORRECTION_ROLES = new Set([
   "investigator",
   "lead_investigator",
   "crc",
+  "trial_coordinator",
 ]);
 
 const SDV_AUTHORITY_ROLES = new Set([
@@ -96,6 +99,7 @@ const QUERY_ANSWER_ROLES = new Set([
   "investigator",
   "lead_investigator",
   "crc",
+  "trial_coordinator",
 ]);
 
 const DESIGN_AUTHORITY_ROLES = new Set([
@@ -1087,10 +1091,11 @@ export async function evaluateDemoRequestPolicy(request, store) {
   }
 
   if (/\/api\/v1\/ctms\//.test(pathname)) {
-    const isDoaSign = /\/api\/v1\/ctms\/doa\/sign$/.test(pathname);
+    const isDoaSign =
+      /\/api\/v1\/ctms\/doa\/sign(-off)?$/.test(pathname) ||
+      /\/api\/v1\/ctms\/doa\/[^/]+\/sign(-off)?$/.test(pathname);
     const allowed = isDoaSign
-      ? hasAnyRole(caller, CTMS_WRITE_ROLES) ||
-        hasAnyRole(caller, FORM_SIGN_ROLES)
+      ? holdsMatrixPermission(caller, "ctms_doa:sign")
       : hasAnyRole(caller, CTMS_WRITE_ROLES);
     if (!allowed) {
       return {

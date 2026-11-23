@@ -351,6 +351,10 @@
               :key="`attention-${studyCode}`"
               :study-code="studyCode"
             />
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
@@ -365,20 +369,39 @@
             @filter="applyParticipantFilter"
           />
 
+          <SitesSection
+            v-else-if="section?.id === 'sites'"
+            :key="`sites-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+            @open-participants="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                    site: code || undefined,
+                  })
+                )
+            "
+            @open-activation="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'start',
+                    section: 'site-activation',
+                    site: code || undefined,
+                  })
+                )
+            "
+          />
+
           <ProtocolVersionsSection
             v-else-if="section?.id === 'protocol-versions'"
             :key="studyCode"
             :study-code="studyCode"
             :selected-ref="selectedVersionText"
             @select="selectVersion"
-          />
-
-          <StudySitesPanel
-            v-else-if="section?.id === 'sites'"
-            :key="`sites-${studyCode}`"
-            :study-code="studyCode"
-            :can-manage-sites="authStore.canManageWorkspaceSites"
-            @open-participants="openParticipantsForSite"
           />
 
           <SiteActivationPanel
@@ -995,10 +1018,16 @@ import {
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
-import { SignOutConfirmModal, handoffFocus, useSignOutGuard } from "ui";
+import {
+  SignOutConfirmModal,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
+import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -1011,12 +1040,14 @@ import ValidationSection from "../components/canvas/ValidationSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import SitesSection from "../components/canvas/SitesSection.vue";
 import QueriesSection, {
   type StudyQueriesFilterState,
 } from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import StudySitesPanel from "../components/canvas/StudySitesPanel.vue";
+import WorkQueuesPanel from "../components/canvas/WorkQueuesPanel.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
 import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
@@ -1068,6 +1099,7 @@ interface StudyQuery {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
@@ -2732,14 +2764,40 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }
 
+watch(
+  () => ({
+    studyCode: studyCode.value,
+    stage: stage.value?.id || "",
+    section: section.value?.id || "",
+    siteCode: zoomSite.value || "",
+    subjectCode: zoomParticipantCode.value || canvas.record.subjectCode || "",
+    nodeRef: inspectedNodeText.value || "",
+    participantNodeRef: activeParticipantNodeText.value || "",
+    form: formQuery.value || "",
+    formId: openFormId.value || "",
+    formSpecId:
+      loadedForm.value?.collection_spec_id || initialSpecId.value || "",
+    isNewForm: isNewForm.value,
+    observationRef: openObservationRef.value || "",
+    proposalRef: proposalRef.value || "",
+  }),
+  (scopeSnapshot) => {
+    knowledgeStore.setCanvasEscalationContext(scopeSnapshot);
+  },
+  { immediate: true }
+);
+
 const SECTION_HEADING_TARGETS: Record<string, string[]> = {
   participants: ["#participants-title"],
   "protocol-versions": ["#protocol-versions-title"],
-  sites: ["#study-sites-title"],
+  sites: ["#sites-section-title", "#study-sites-title"],
   "site-activation": ["#site-activation-title"],
   "startup-greenlight": ["#ctms-greenlight-title"],
   "site-milestones": ["#ctms-milestones-title"],
@@ -3138,6 +3196,7 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  knowledgeStore.clearCanvasEscalationContext();
   stopReturnFocusObserver();
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;

@@ -227,8 +227,10 @@ public sealed class SimulationEngine(
             {
                 changes.Add(new ScheduleChange(id, ElementChangeKind.Removed, old, null));
             }
-            else if (old.EpochId != @new.EpochId || old.StudyDay != @new.StudyDay
-                || old.WindowBefore != @new.WindowBefore || old.WindowAfter != @new.WindowAfter)
+            else if (old.EpochId != @new.EpochId
+                || ExpectedSchedule.NormalizeStudyDay(old.StudyDay) != ExpectedSchedule.NormalizeStudyDay(@new.StudyDay)
+                || old.WindowBefore != @new.WindowBefore
+                || old.WindowAfter != @new.WindowAfter)
             {
                 changes.Add(new ScheduleChange(id, ElementChangeKind.Changed, old, @new));
             }
@@ -370,7 +372,7 @@ public sealed class SimulationEngine(
     private static JsonObject? PlannedVisitNode(PlannedVisit? visit) => visit is null ? null : new JsonObject
     {
         ["epoch_id"] = visit.EpochId,
-        ["study_day"] = visit.StudyDay,
+        ["study_day"] = ExpectedSchedule.NormalizeStudyDay(visit.StudyDay),
         ["window_before"] = visit.WindowBefore,
         ["window_after"] = visit.WindowAfter,
     };

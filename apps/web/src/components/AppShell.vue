@@ -144,6 +144,8 @@
             id="btn-onboarding-checklist-trigger"
             type="button"
             class="shell-control-btn"
+            :aria-expanded="onboardingStore.isDrawerOpen ? 'true' : 'false'"
+            aria-controls="onboarding-checklist-drawer"
             title="Open workspace orientation and setup checklist"
             @click="onboardingStore.toggleDrawer()"
           >
@@ -227,11 +229,12 @@
         </button>
       </div>
 
-      <div
+      <nav
         v-if="authStore.isAuthenticated"
         id="mobile-nav-menu"
         class="mobile-nav-drawer"
         :class="{ 'is-open': isMobileMenuOpen }"
+        :hidden="!isMobileMenuOpen || undefined"
         aria-label="Mobile navigation"
       >
         <router-link
@@ -274,7 +277,7 @@
         >
           Knowledge
         </router-link>
-      </div>
+      </nav>
 
       <div
         class="sr-only-status-alerts"
@@ -364,7 +367,13 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ClinicalContextBar, SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  ClinicalContextBar,
+  SignOutConfirmModal,
+  hasActiveModalFocusTrap,
+  useEscapeClose,
+  useSignOutGuard,
+} from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -717,6 +726,20 @@ const {
   },
 });
 
+function closeMobileMenu({ restoreFocus = false } = {}) {
+  if (!isMobileMenuOpen.value) return;
+  isMobileMenuOpen.value = false;
+  if (restoreFocus && typeof document !== "undefined") {
+    nextTick(() => {
+      document.getElementById("btn-mobile-menu-toggle")?.focus?.();
+    });
+  }
+}
+
+useEscapeClose(() => closeMobileMenu({ restoreFocus: true }), {
+  isOpen: () => isMobileMenuOpen.value,
+});
+
 function handleGlobalKeydown(event) {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
     canvasStore.handleExplainShortcut(event);
@@ -725,6 +748,9 @@ function handleGlobalKeydown(event) {
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     isCommandPaletteOpen.value = !isCommandPaletteOpen.value;
   }
 }
