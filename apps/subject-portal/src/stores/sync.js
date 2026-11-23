@@ -29,7 +29,9 @@ export const useSyncStore = defineStore("sync", {
             (x) =>
               x.status === "QUEUED" ||
               x.status === "LOCAL_QUARANTINED" ||
-              x.status === "QUARANTINED"
+              x.status === "QUARANTINED" ||
+              ((x.status === "DECRYPTION_ERROR" || Boolean(x.locked)) &&
+                !x.unrecoverable)
           ).length
         : 0,
     quarantinedSubmissionsCount: (s) =>

@@ -251,6 +251,8 @@
             </router-link>
           </div>
         </div>
+
+        <DemoResetButton variant="login" />
       </div>
     </div>
   </div>
@@ -268,6 +270,7 @@ import {
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { formatRoleList } from "../utils/clinicalLabels";
+import DemoResetButton from "./demo/DemoResetButton.vue";
 
 const authStore = useAuthStore();
 const router = useRouter();

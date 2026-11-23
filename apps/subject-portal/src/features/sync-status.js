@@ -283,23 +283,9 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
     });
     updateDomRetryCountdownText();
     patchActiveSyncCountdownDescriptions();
-  } else if (eventType === "sync:success") {
+  } else if (eventType === "sync:success" || eventType === "sync:locked") {
     const prevStatus = state.syncStatusText;
-    if (state.__syncRetryTimer) {
-      clearTimeout(state.__syncRetryTimer);
-      state.__syncRetryTimer = null;
-    }
-    state.__pendingSyncRetry = null;
-    stopSyncCountdownTimer();
-    state.syncRetryInfo = {
-      attempt: 0,
-      maxRetries: 5,
-      nextRetryDelay: 0,
-      nextRetryTimestamp: null,
-      remainingSeconds: 0,
-      sequenceNumber: null,
-      isRetrying: false,
-    };
+    resetSyncRetryInfo();
     if (prevStatus) {
       syncMilestoneCountdown.complete(prevStatus);
     }

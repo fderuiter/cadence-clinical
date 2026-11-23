@@ -325,6 +325,12 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     return;
   }
 
+  const lockedItems = queued.filter(
+    (item) =>
+      (item.status === "DECRYPTION_ERROR" || Boolean(item.locked)) &&
+      !item.unrecoverable
+  );
+  const lockedCount = lockedItems.length;
   const decryptable = queued.filter(
     (item) => item.status !== "DECRYPTION_ERROR"
   );
@@ -375,6 +381,21 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
   if (validSubmissions.length === 0) {
     if (isManual && manualRefreshResult.refreshed) {
       state.autoSyncSuspended = false;
+    }
+    if (lockedCount > 0) {
+      const lockedBase = `Locked — enter your security PIN to sync ${lockedCount} queued survey${lockedCount === 1 ? "" : "s"}.`;
+      const txtLocked =
+        preCheckQuarantinedCount > 0
+          ? `${lockedBase} ${preCheckQuarantinedCount} survey(s) quarantined for coordinator review.`
+          : lockedBase;
+      setSyncMilestoneStatus(txtLocked);
+      emitSyncLifecycleEvent("sync:locked", {
+        syncedCount: 0,
+        lockedCount,
+        queuedCount: lockedCount,
+      });
+      await refreshSyncViews(candidateSnapshot);
+      return;
     }
     const txtComplete =
       preCheckQuarantinedCount > 0
@@ -630,6 +651,22 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       const msg =
         "Outdated form structure detected. Tap Manual Sync / Refresh to reload active survey definitions.";
       setSyncMilestoneStatus(msg);
+    } else if (lockedCount > 0) {
+      if (isManual) {
+        state.autoSyncSuspended = false;
+      }
+      const totalQuarantined =
+        preCheckQuarantinedCount + isolatedQuarantinedCount;
+      const quarantineSuffix =
+        totalQuarantined > 0 ? ` ${totalQuarantined} quarantined.` : "";
+      const txtLockedRemaining = `Locked — ${confirmedSubs.length} synced; enter your security PIN to sync ${lockedCount} remaining queued survey${lockedCount === 1 ? "" : "s"}.${quarantineSuffix}`;
+      setSyncMilestoneStatus(txtLockedRemaining);
+      emitSyncLifecycleEvent("sync:locked", {
+        syncedCount: confirmedSubs.length,
+        lockedCount,
+        sequenceNumber: seqNumber,
+        queuedCount: lockedCount,
+      });
     } else {
       if (isManual) {
         state.autoSyncSuspended = false;

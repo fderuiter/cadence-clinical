@@ -34,7 +34,9 @@ export const useCodingStore = defineStore("coding", {
       isLoading: false,
       dictionaryType: "MEDDRA",
       targetVersion: "27.0",
+      /** @type {any} */
       results: null,
+      /** @type {string | null} */
       error: null,
     },
     browserModal: {

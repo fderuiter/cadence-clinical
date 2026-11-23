@@ -279,11 +279,11 @@ describe("sync-queue secure storage and sync capabilities", () => {
     ).rejects.toThrow("Submission 999 not found");
   });
 
-  it("should warn and return null on saveDraft if session key is missing", async () => {
+  it("should warn and return false on saveDraft if session key is missing", async () => {
     clearInMemoryKey();
     clearSessionKey();
     const result = await saveDraft("assign_missing", { sample: "test" });
-    expect(result).toBeNull();
+    expect(result).toBe(false);
   });
 
   it("should warn and return null on getDraft if session key is missing", async () => {
@@ -299,7 +299,8 @@ describe("sync-queue secure storage and sync capabilities", () => {
     await initSessionKey(rawMaterial);
 
     const answers = { some_question: "some_typed_value" };
-    await saveDraft("assign_draft_01", answers);
+    const saved = await saveDraft("assign_draft_01", answers);
+    expect(saved).toBe(true);
 
     const retrieved = await getDraft("assign_draft_01");
     expect(retrieved).toEqual(answers);
@@ -337,7 +338,7 @@ describe("sync-queue secure storage and sync capabilities", () => {
 
     try {
       const saveRes = await saveDraft("any_id", { a: 1 });
-      expect(saveRes).toBeNull();
+      expect(saveRes).toBe(false);
 
       const getRes = await getDraft("any_id");
       expect(getRes).toBeNull();

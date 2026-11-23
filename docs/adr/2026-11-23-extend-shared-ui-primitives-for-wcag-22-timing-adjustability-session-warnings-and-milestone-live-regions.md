@@ -1,4 +1,4 @@
-# ADR-2657: Extend Shared UI Primitives for WCAG 2.2 Timing Adjustability, Session Warnings, and Milestone Live Regions
+# ADR-2658: Extend Shared UI Primitives for WCAG 2.2 Timing Adjustability, Session Warnings, and Milestone Live Regions
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

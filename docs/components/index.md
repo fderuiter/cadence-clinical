@@ -13,14 +13,17 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 26 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 29 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                                      | ARIA Landmark / Role                        |
 | :----------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
 | `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                                    | `navigation`, `list`, `link`                |
+| `ClinicalBreadcrumbs`                      | Accessible `<nav aria-label="Breadcrumb">` trail marking the active item with `aria-current="page"` and `48px` mobile touch targets              | `navigation`, `list`, `link`                |
+| `EntityLink`                               | `NodeRef`-compatible keyboard-operable button or link trigger with `.sr-only` context and peek/open focus restoration                            | `button` / `link`                           |
+| `ClinicalIcon`                             | Zero-emoji `1.75px` stroke-only vector icon primitive (`aria-hidden="true"`) paired with visible labels                                          | Decorative SVG (`aria-hidden="true"`)       |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, keyboard-sortable, paginated clinical dataset table with focusable rows, row selection, live pagination status, and tabular numerals | `table`, `region`, `columnheader`, `status` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap, `ariaDescribedby` support, and backdrop blur                                                            | `dialog`, `aria-modal="true"`               |
-| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                                     | `dialog`, `aria-modal="true"`               |
+| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer and `position="bottom"` / `mobileBottomSheet` `90dvh` safe-area bottom sheet with reactive focus containment        | `dialog`, `aria-modal="true"`               |
 | `ClinicalToastHost`                        | Focus-trap-exempt toast host splitting polite `status` and persistent `alert` live regions with hover, focus, and explicit pause                 | `region`, `alert`, `status`                 |
 | `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove                     | `button`, `status`                          |
 | `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot                          | `button`                                    |
@@ -50,6 +53,7 @@ All 26 Vue components and interaction helpers are exported directly from the roo
 | `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, modal stack queries (`hasActiveModalFocusTrap`), and `fallbackFocus` / visible fallback restoration         | Keyboard helper                             |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                                        | Keyboard helper                             |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                                                  | Async helper                                |
+| `callerScope` helpers                      | OIDC `studyId`/`siteId` claim normalisers (`extractAssignedStudies`, `extractAssignedSites`, `extractPrimaryStudyId`, `extractPrimarySiteId`)    | Scope helper                                |
 
 ---
 
