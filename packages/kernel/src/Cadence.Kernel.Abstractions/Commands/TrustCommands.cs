@@ -1,6 +1,7 @@
 using System;
 
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
@@ -36,7 +37,8 @@ public sealed record Attest(
     DateTimeOffset AuthenticatedAt,
     string Method,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<AttestationId>;
+    string ReasonForChange,
+    NodeRef? Scope = null) : ICommand<AttestationId>;
 
 /// <summary>Errors raised by the trust commands.</summary>
 public static class TrustErrors

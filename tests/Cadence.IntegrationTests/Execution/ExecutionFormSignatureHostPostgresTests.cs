@@ -169,7 +169,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
         await _scenario.Protocol.OkAsync(
             new ProvisionTenant(tenant, code, "Execution signature host tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
-        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct, requireDiastolic: false);
         var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
         var enrollment = await _scenario.Observations.ScreenAsync(tenant, studySite, ct);
         foreach (var (person, capability) in new[] { (Crc, "collection.record"), (Investigator, "collection.sign") })
