@@ -94,6 +94,32 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
         }
     }
 
+    /// <summary>
+    /// Assigns the clinical site for a siteless participant prior to randomization so screening enrollment can be
+    /// synchronized with the kernel. Idempotent when <paramref name="siteCode"/> matches the existing site; rejects
+    /// cross-site reassignment with <see cref="SubjectErrors.SiteAlreadyAssigned"/>.
+    /// </summary>
+    public Result<bool> AssignSite(SiteCode siteCode)
+    {
+        if (SiteCode is { } existing)
+        {
+            if (existing == siteCode)
+            {
+                return true;
+            }
+
+            return SubjectErrors.SiteAlreadyAssigned(existing.Value);
+        }
+
+        if (IsPostRandomization())
+        {
+            return SubjectErrors.LockedFactorMutation();
+        }
+
+        SiteCode = siteCode;
+        return true;
+    }
+
     /// <summary>Raise site #25 (`SOFT_DELETE_BLOCKED`, 403) — distinct error family from
     /// `LOCKED_FACTOR_MUTATION` even though both gate on the same `IsPostRandomization()` predicate.</summary>
     public Result<bool> ClearDemographics()

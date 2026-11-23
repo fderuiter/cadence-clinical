@@ -65,7 +65,7 @@ Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
 
 ### Tabular Numerals & Clinical Typography
 
-`packages/ui/tokens.css` defines `--font-variant-numeric-tabular: tabular-nums` (and `--semantic-font-variant-numeric-tabular`) as the single typographic source of truth across `packages/ui`, `apps/web`, and `apps/subject-portal` (ADR-2653):
+`packages/ui/tokens.css` defines `--font-variant-numeric-tabular: tabular-nums` (and `--semantic-font-variant-numeric-tabular`) as the single typographic source of truth across `packages/ui`, `apps/web`, and `apps/subject-portal` (ADR-2654):
 
 - **Global Selectors & Opt-In Hooks**: Applied automatically to `table`, `th`, `td`, `time`, `.clinical-table`, `.clinical-visit-matrix`, `.data-table`, `.clinical-badge`, `.tabular-nums`, and `[data-tabular-nums]:not([data-tabular-nums="false"])`.
 - **UA Form-Control Reset Overrides**: Browsers reset `font` on `<input>` and `<select>`, stripping inherited `font-variant-numeric` inside `<td>` cells and wrappers. `tokens.css` explicitly applies `--font-variant-numeric-tabular` to `input[type="number" | "date" | "datetime-local" | "time" | "month" | "week" | "tel" | "range"]`, `input[inputmode="numeric" | "decimal"]`, `td input:not([type="checkbox"]):not([type="radio"])`, `td select`, `.tabular-nums input/select`, `[data-tabular-nums] input/select`, and `.clinical-input-control` (`tabularNums` prop or `data-tabular-nums` attribute on `ClinicalInput`).

@@ -433,6 +433,27 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(html).toContain("Enroll Subject");
       expect(html).toContain("Enrollment payload");
       expect(html).not.toContain("modal-footer");
+      expect(html).toContain("modal-close-btn");
+
+      const headerOnlyHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalModal,
+              {
+                isOpen: true,
+                teleport: false,
+                title: "Reason Required",
+                showClose: false,
+              },
+              {
+                default: () => h("p", "Document reason"),
+              }
+            ),
+        })
+      );
+      expect(headerOnlyHtml).toContain("Reason Required");
+      expect(headerOnlyHtml).not.toContain("modal-close-btn");
 
       const emit = vi.fn();
       const { state } = await mountSetupSSR(
@@ -662,7 +683,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
     });
   });
 
-  describe("ClinicalInput & ClinicalFormField Tabular Numeral Propagation (ADR-2653)", () => {
+  describe("ClinicalInput & ClinicalFormField Tabular Numeral Propagation (ADR-2654)", () => {
     it("resolves ClinicalInput type, inputmode, data-tabular-nums opt-in/opt-out, error aria attributes, and input/change events", async () => {
       const textHtml = await renderToString(
         createSSRApp(ClinicalInput, {
