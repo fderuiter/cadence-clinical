@@ -812,7 +812,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       const emptyStyleTagFiles = [];
       for (const file of appVueFiles) {
         const content = fs.readFileSync(file, "utf-8");
-        if (/<style\b[^>]*>\s*<\/style>/.test(content)) {
+        if (/<style\b(?![^>]*\bsrc\s*=)[^>]*>\s*<\/style>/.test(content)) {
           emptyStyleTagFiles.push(path.relative(repoRoot, file));
         }
         for (const styleMatch of content.matchAll(

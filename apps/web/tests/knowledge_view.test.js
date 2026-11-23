@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router/index.js";
@@ -59,12 +59,6 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
           actual.getFallbackContextualHelp(params?.route, params?.persona)
         )
       ),
-      getArticle: vi.fn((id) => {
-        const found = actual.DEFAULT_MOCK_ARTICLES.find(
-          (a) => a.id === id || a.slug === id
-        );
-        return Promise.resolve(found || actual.DEFAULT_MOCK_ARTICLES[0]);
-      }),
       listArticles: vi.fn(() =>
         Promise.resolve([...actual.DEFAULT_MOCK_ARTICLES])
       ),
@@ -206,6 +200,7 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
   let authStore;
 
   beforeEach(() => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
     authStore = useAuthStore();
@@ -216,6 +211,10 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
     authStore.switchPersona("super_admin");
 
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe("1. Component Mounting & Header Architecture", () => {
@@ -619,13 +618,15 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
     });
   });
 
-  describe("6. Persona Switcher Verification Across All 6 Roles", () => {
+  describe("6. Persona Switcher Verification Across All 8 Roles", () => {
     const personas = [
       { key: "super_admin", roleName: "Super Admin" },
       { key: "sponsor_designer", roleName: "Sponsor Designer" },
       { key: "site_crc", roleName: "Site CRC" },
+      { key: "site_investigator", roleName: "Principal Investigator" },
       { key: "cra_monitor", roleName: "CRA Monitor" },
       { key: "data_manager", roleName: "Data Manager" },
+      { key: "safety_officer", roleName: "Safety Officer" },
       { key: "auditor", roleName: "Auditor" },
     ];
 
@@ -673,6 +674,86 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       expect(route).toBeDefined();
       expect(route.name).toBe("knowledge");
       expect(route.meta.requiresAuth).toBe(true);
+    });
+  });
+
+  describe("8. Live Build Mode (VITE_DEMO_MODE=false)", () => {
+    beforeEach(() => {
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+    });
+
+    it("hides SOP authoring controls, unbacked draft KPIs, and non-published status filters outside demo mode", async () => {
+      authStore.switchPersona("super_admin");
+      const wrapper = mount(KnowledgeView, {
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      expect(wrapper.find("#btn-create-article").exists()).toBe(false);
+      expect(wrapper.find("#btn-create-category").exists()).toBe(false);
+      expect(wrapper.find("#admin-authoring-toolbar").exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("Under Four-Eyes Review");
+      expect(wrapper.text()).not.toContain("Working Draft Revisions");
+
+      const statusOptions = wrapper
+        .find("#status-filter-select")
+        .findAll("option")
+        .map((o) => o.element.value);
+      expect(statusOptions).toEqual(["ALL", "PUBLISHED"]);
+    });
+
+    it("passes active persona to live category/article queries for safety_officer and site_investigator and loads versions & audit-log", async () => {
+      authStore.switchPersona("safety_officer");
+      const wrapper = mount(KnowledgeView, {
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      expect(knowledgeService.listCategories).toHaveBeenCalledWith({
+        persona: "safety_officer",
+      });
+      expect(knowledgeService.listArticles).toHaveBeenCalledWith(
+        expect.objectContaining({ persona: "safety_officer" })
+      );
+      expect(wrapper.find(".category-list").text()).toContain(
+        "Clinical Operations"
+      );
+      expect(wrapper.find(".category-list").text()).toContain(
+        "Regulatory & Quality Compliance"
+      );
+
+      // Switch persona to site_investigator and confirm live reload
+      authStore.switchPersona("site_investigator");
+      await flushPromises();
+      expect(knowledgeService.listCategories).toHaveBeenCalledWith({
+        persona: "site_investigator",
+      });
+
+      // Select the first visible SOP article, then switch reader tabs to Version History and Audit Trail
+      await wrapper.find(".article-card").trigger("click");
+      await flushPromises();
+
+      const tabs = wrapper.findAll(".reader-tab-btn");
+      const versionsTab = tabs.find((t) =>
+        t.text().includes("Version History")
+      );
+      const auditTab = tabs.find((t) =>
+        t.text().includes("Part 11 Audit Trail")
+      );
+      expect(versionsTab).toBeDefined();
+      expect(auditTab).toBeDefined();
+
+      await versionsTab.trigger("click");
+      await flushPromises();
+      expect(knowledgeService.listArticleVersions).toHaveBeenCalled();
+      expect(wrapper.find("#knowledge-reader-pane").text()).toContain("Locked");
+
+      await auditTab.trigger("click");
+      await flushPromises();
+      expect(knowledgeService.getArticleAuditLog).toHaveBeenCalled();
+      expect(
+        wrapper.find("#knowledge-reader-pane .hash-code").attributes("title")
+      ).toBe("sha256:abcd1234ef5678");
     });
   });
 });

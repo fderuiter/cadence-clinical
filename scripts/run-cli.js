@@ -35,7 +35,6 @@ const cliSourceDirs = [
     "src",
     "Cadence.Kernel.Abstractions"
   ),
-  path.join(rootDir, "packages", "core-models", "src"),
   path.join(rootDir, "packages", "deid", "src"),
   path.join(rootDir, "packages", "topology", "src"),
 ];

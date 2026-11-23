@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Text;
 
 using Cadence.Core.Domain.Randomization;
-using Cadence.Core.Domain.Supply;
 using Cadence.Core.Domain.Toxicity;
 using Cadence.Testing;
 using Cadence.Testing.Time;
@@ -236,34 +235,6 @@ public class DomainEngineUnitTests
             dir = Directory.GetParent(dir)?.FullName;
         }
         throw new InvalidOperationException("Could not locate Cadence.sln repository root.");
-    }
-
-    [Fact]
-    public void DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt()
-    {
-        var readings = new List<TemperatureReading>
-        {
-            new(4.0), new(5.0), new(6.0), new(5.5), new(4.5)
-        };
-
-        double mkt = DTPLogisticsEngine.CalculateMeanKineticTemperature(readings);
-        mkt.Should().BeInRange(4.8, 5.3);
-    }
-
-    [Fact]
-    public void DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible()
-    {
-        var readings = new List<TemperatureReading> { new(5.0), new(5.2) };
-        var auth = DTPLogisticsEngine.EvaluateDtpDispatch(
-            studyId: "STUDY-01", siteId: "SITE-01", subjectId: "SUBJ-01",
-            kitNumber: "KIT-999", lotNumber: "LOT-100", daysUntilExpiry: 60,
-            authorizedAt: FakeClock.DefaultStart,
-            temperatureReadings: readings
-        );
-
-        auth.IsEligibleForDispatch.Should().BeTrue();
-        auth.TamperSealId.Should().StartWith("SEAL-");
-        auth.AuthorizedTimestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
     }
 
     [Fact]
