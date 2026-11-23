@@ -43,6 +43,10 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static partial class SubjectEndpoints
 {
+    public const string UnblindSubjectSemanticAction = "execution.subject.unblind";
+    public const string WithdrawSubjectSemanticAction = "execution.subject.withdraw";
+
+    public static string SubjectStateAction(string subjectId) => $"/api/v1/execution/subjects/{subjectId}/state";
     [LoggerMessage(
         EventId = 3001,
         Level = LogLevel.Information,
@@ -108,6 +112,7 @@ public static partial class SubjectEndpoints
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("subject_enrollment:create").RequireCallerStudyScope()
+            .RequireChangeReasonHeader()
             .AddEndpointFilter<ValidationFilter<SubjectCreateRequest>>();
 
         group.MapPost("/{subjectId}/consent", RecordSubjectConsentAsync)
@@ -117,6 +122,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .RequireChangeReasonHeader()
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 
         // Legacy dual-route compatibility alias (`01_spec.md` §3 trap table): the legacy router declared
@@ -135,19 +141,26 @@ public static partial class SubjectEndpoints
         group.MapPost("/{subjectId}/consents", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsentAlias")
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .RequireChangeReasonHeader()
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>()
             .ExcludeFromDescription();
 
         group.MapPatch("/{subjectId}/state", AdvanceSubjectStateAsync)
             .WithName("UpdateSubjectState")
             .Produces<SubjectResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequireChangeReasonHeader()
+            .AddEndpointFilter(ValidateSubjectStateAuthorityAndJustificationAsync)
+            .RequireElectronicSignatureWhen(
+                RequiresStepUpSignatureForStateTransition,
+                ResolveStateTransitionSemanticAction,
+                ResolveStateTransitionConcreteAction);
 
         group.MapPatch("/{subjectId}/site", AssignSubjectSiteAsync)
             .WithName("AssignSubjectSite")
@@ -159,7 +172,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectSiteAssignmentRequest>>()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequireChangeReasonHeader();
 
         group.MapGet("/", ListSubjectsAsync)
             .WithName("ListSubjects")
@@ -191,13 +204,13 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequireChangeReasonHeader();
 
         group.MapDelete("/{subjectId}/demographics", DeleteSubjectDemographicsAsync)
             .WithName("DeleteSubjectDemographics")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequireChangeReasonHeader();
 
         return app;
     }
@@ -592,6 +605,67 @@ public static partial class SubjectEndpoints
     private static IResult? GuardMissingRecordScope(HttpContext http) =>
         ExecutionScopeGuard.RequireAnyStudyScope(http)
         ?? ExecutionScopeGuard.ResolveSiteFilter(http, null, out _, out _);
+
+    private const string TargetSubjectStateItemKey = "Cadence.Execution.TargetSubjectState";
+
+    private static ValueTask<object?> ValidateSubjectStateAuthorityAndJustificationAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        var request = context.Arguments.OfType<SubjectStateUpdateRequest>().FirstOrDefault();
+        if (SubjectAuthority.AuthorizeStateChange(context.HttpContext.User.ToAuthenticatedCaller(), request?.Target) is { } forbidden)
+        {
+            return ValueTask.FromResult<object?>(forbidden.ToProblemResult());
+        }
+
+        if (request is not null && SubjectStateCodec.TryParse(request.Target, out var target))
+        {
+            string changeReason = ChangeReasonHeader.Read(context.HttpContext.Request) ?? string.Empty;
+            if (target == SubjectState.Unblinded
+                && changeReason.Trim().Length < SubjectAuthority.MinimumUnblindingReasonLength)
+            {
+                return ValueTask.FromResult<object?>(
+                    SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength).ToProblemResult());
+            }
+
+            if (target == SubjectState.Withdrawn
+                && changeReason.Trim().Length < SubjectAuthority.MinimumWithdrawalReasonLength)
+            {
+                return ValueTask.FromResult<object?>(
+                    SubjectErrors.WithdrawalReasonTooShort(SubjectAuthority.MinimumWithdrawalReasonLength).ToProblemResult());
+            }
+        }
+
+        return next(context);
+    }
+
+    private static bool RequiresStepUpSignatureForStateTransition(EndpointFilterInvocationContext context)
+    {
+        var request = context.Arguments.OfType<SubjectStateUpdateRequest>().FirstOrDefault();
+        if (request is not null && SubjectStateCodec.TryParse(request.Target, out var target)
+            && target is SubjectState.Unblinded or SubjectState.Withdrawn)
+        {
+            context.HttpContext.Items[TargetSubjectStateItemKey] = target;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string ResolveStateTransitionSemanticAction(HttpContext httpContext)
+    {
+        if (httpContext.Items.TryGetValue(TargetSubjectStateItemKey, out var value)
+            && value is SubjectState state
+            && state == SubjectState.Unblinded)
+        {
+            return UnblindSubjectSemanticAction;
+        }
+
+        return WithdrawSubjectSemanticAction;
+    }
+
+    private static string ResolveStateTransitionConcreteAction(HttpContext httpContext) =>
+        SubjectStateAction(httpContext.Request.RouteValues["subjectId"]?.ToString() ?? string.Empty);
 
     /// <summary>Whether <paramref name="user"/> carries the gateway-signed unblinded-access claim.</summary>
     private static bool IsUnblindedCaller(ClaimsPrincipal user) =>

@@ -56,6 +56,7 @@ public static class SiteComplianceEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             // Called service to service by eTMF, signed as its service account holding the etmf_service role.
             .RequirePermission("site_compliance:etmf_sync").RequireCallerStudyScope()
+            .RequireChangeReasonHeader()
             .AddEndpointFilter<ValidationFilter<EtmfCompletenessWebhookPayload>>();
 
         app.MapPost("/api/v1/execution/sites/{siteId}/activate", ActivateSiteAsync)
@@ -65,7 +66,8 @@ public static class SiteComplianceEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("site_compliance:activate")
-            .RequireSiteScope("siteId");
+            .RequireSiteScope("siteId")
+            .RequireChangeReasonHeader();
 
         app.MapGet("/api/v1/execution/sites/{siteId}/compliance-status", GetSiteComplianceStatusAsync)
             .WithTags("SiteCompliance")

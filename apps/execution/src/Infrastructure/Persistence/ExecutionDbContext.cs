@@ -12,7 +12,9 @@ using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
@@ -107,6 +109,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<BulkLabRangeImportJob> BulkLabRangeImportJobs => Set<BulkLabRangeImportJob>();
 
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -136,6 +140,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new IpKitReconciliationCertificateConfiguration());
         modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();

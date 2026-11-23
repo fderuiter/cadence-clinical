@@ -34,6 +34,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
+| 2660–2669 | Security and GxP compliance (continued)                                           |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -414,6 +415,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
 - [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
+- [ADR-2664: Enforce Default GxP Audits, Step-Up Electronic Signatures, and Attribution Sentinels Across Standalone Services](2026-11-23-enforce-default-gxp-audits-signatures-and-sentinels.md) (2026-11-23)
 
 ### 6. Frontend & Design System
 

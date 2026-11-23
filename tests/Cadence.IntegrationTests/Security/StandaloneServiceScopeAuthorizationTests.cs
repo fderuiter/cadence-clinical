@@ -462,6 +462,7 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
         string greenlightToken)
     {
         await using var scope = fixture.Ctms.Services.CreateAsyncScope();
+        using var actorBinding = scope.ServiceProvider.GetRequiredService<Cadence.Database.Audit.IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
         var tenantScope = scope.ServiceProvider.GetRequiredService<ITenantScope>();
         using var _ = tenantScope.Bind(tenantUuid);
         var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
@@ -496,6 +497,7 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
         string auditDetails)
     {
         await using var scope = fixture.Interop.Services.CreateAsyncScope();
+        using var actorBinding = scope.ServiceProvider.GetRequiredService<Cadence.Database.Audit.IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
         var tenantScope = scope.ServiceProvider.GetRequiredService<ITenantScope>();
         using var _ = tenantScope.Bind(tenantUuid);
         var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();

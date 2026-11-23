@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Audit;
 using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 
@@ -23,21 +24,12 @@ namespace Cadence.Apps.Knowledge.Application;
 /// </summary>
 public static class KnowledgeAuditActorScope
 {
-    private static readonly AsyncLocal<string?> AmbientUserId = new();
+    public static string? CurrentUserId => AmbientAuditActorScope.Current?.Actor;
 
-    public static string? CurrentUserId => AmbientUserId.Value;
-
-    public static IDisposable Begin(string actorUserId)
-    {
-        string? previous = AmbientUserId.Value;
-        AmbientUserId.Value = actorUserId;
-        return new RestoreScope(previous);
-    }
-
-    private sealed class RestoreScope(string? previous) : IDisposable
-    {
-        public void Dispose() => AmbientUserId.Value = previous;
-    }
+    public static IDisposable Begin(
+        string actorUserId,
+        string changeReason = "Initial controlled SOP baseline publication") =>
+        AmbientAuditActorScope.BeginScope(actorUserId, changeReason);
 }
 
 /// <summary>

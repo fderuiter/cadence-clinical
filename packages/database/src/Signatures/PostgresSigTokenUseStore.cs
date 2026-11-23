@@ -41,8 +41,26 @@ public sealed class PostgresSigTokenUseStore<TContext>(IServiceScopeFactory scop
         var tokens = db.Set<ConsumedSignatureToken>();
         var now = clock.UtcNow;
 
-        // Rows past their window can never match an acceptable token again.
-        await tokens.Where(t => t.RetainUntil < now).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        bool isNpgsql = db.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true;
+        if (isNpgsql)
+        {
+            // Rows past their window can never match an acceptable token again.
+            await tokens.Where(t => t.RetainUntil < now).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var allTokens = await tokens.ToListAsync(cancellationToken).ConfigureAwait(false);
+            var expired = allTokens.Where(t => t.RetainUntil < now).ToList();
+            if (expired.Count > 0)
+            {
+                tokens.RemoveRange(expired);
+            }
+
+            if (allTokens.Any(t => t.RetainUntil >= now && string.Equals(t.TokenId, tokenId, StringComparison.Ordinal)))
+            {
+                return false;
+            }
+        }
 
         tokens.Add(new ConsumedSignatureToken { TokenId = tokenId, ConsumedAt = now, RetainUntil = retainUntil });
         try
@@ -50,7 +68,13 @@ public sealed class PostgresSigTokenUseStore<TContext>(IServiceScopeFactory scop
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return true;
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation }
+            || string.Equals(ex.InnerException?.GetType().Name, "SqliteException", StringComparison.Ordinal))
+        {
+            return false;
+        }
+        catch (ArgumentException) when (!db.Database.IsRelational())
         {
             return false;
         }

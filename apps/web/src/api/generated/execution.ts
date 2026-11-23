@@ -600,12 +600,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Unauthorized */
+        401: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
         };
       };
     };
@@ -711,12 +713,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Unauthorized */
+        401: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
         };
       };
     };
@@ -1167,12 +1171,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Unauthorized */
+        401: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
         };
       };
     };
@@ -2598,6 +2604,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -4209,6 +4224,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Forbidden */

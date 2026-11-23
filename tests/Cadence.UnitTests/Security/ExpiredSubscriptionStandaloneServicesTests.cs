@@ -277,6 +277,7 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         int standaloneSignatureRoutesVerified = 0;
         int kernelSignatureRoutesVerified = 0;
         int closeoutSignatureRoutesFound = 0;
+        int readExportSignatureRoutesFound = 0;
 
         foreach (var (host, boot) in ServiceHosts.All)
         {
@@ -312,12 +313,18 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
                     continue;
                 }
 
+                string method = sigEndpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.FirstOrDefault() ?? HttpMethods.Post;
+                if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method))
+                {
+                    readExportSignatureRoutesFound++;
+                    continue;
+                }
+
                 string? permission = ExtractFirstPermission(sigEndpoint);
                 GatewayIdentity baseCaller = permission is not null
                     ? CallerHolding(permission)
                     : TestSecurityContext.Identity("holder-kernel-sig", "Sponsor Admin");
 
-                string method = sigEndpoint.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.FirstOrDefault() ?? HttpMethods.Post;
                 string url = MaterializeRoute(sigEndpoint.RoutePattern);
                 string sigToken = TestSecurityContext.CreateSigToken(
                     userId: baseCaller.UserId,
@@ -373,8 +380,11 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         }
 
         standaloneSignatureRoutesVerified.Should().Be(
-            10,
-            "all ten standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, safety, and tickets must be verified");
+            27,
+            "all 27 mutating standalone ElectronicSignatureRequired clinical routes across ctms, econsent, execution, imaging, interop, knowledge, payments, safety, and tickets must be verified");
+        readExportSignatureRoutesFound.Should().Be(
+            1,
+            "ctms GET /api/v1/ctms/doa/sites/{site_id}/export-pdf is a safe-read inspection export preserved for expired tenants under PRD-SYS-053");
         kernelSignatureRoutesVerified.Should().Be(
             2,
             "kernel library-items/{itemRef}/approve and protocol-versions/{versionRef}/approve ElectronicSignatureRequired routes must both be verified");

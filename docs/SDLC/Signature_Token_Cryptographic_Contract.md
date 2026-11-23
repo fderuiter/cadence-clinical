@@ -53,11 +53,21 @@ The gateway issues tokens at `POST /api/v1/auth/signature-verification` to a cal
 
 The client then repeats the signature-gated request with the `X-Sig-Token` header. The gateway includes the header in the HMAC-signed identity it forwards, so it cannot be swapped between the gateway and the service.
 
-Signature-gated endpoints today:
+Representative signature-gated endpoints:
 
-| Endpoint                                                                                  | `semantic_action`        | `action`                               |
-| :---------------------------------------------------------------------------------------- | :----------------------- | :------------------------------------- |
-| `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve` | `/api/v1/execution/forms/{id}/approve` |
+| Endpoint                                                                                                     | `semantic_action`                                                                                                     | `action`                                                                                               |
+| :----------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`)                    | `execution.form.approve`                                                                                              | `/api/v1/execution/forms/{id}/approve`                                                                 |
+| `PATCH /api/v1/execution/subjects/{subjectId}/state` (when transitioning to `UNBLINDED` or `WITHDRAWN`)      | `execution.subject.unblind` / `execution.subject.withdraw`                                                            | `/api/v1/execution/subjects/{subjectId}/state`                                                         |
+| `POST /api/v1/execution/rtsm/kits/reconcile-batch`                                                           | `execution.rtsm.reconcile_batch`                                                                                      | `/api/v1/execution/rtsm/kits/reconcile-batch`                                                          |
+| `POST /api/v1/execution/rtsm/cgt/bedside-verify` & `POST /api/v1/execution/rtsm/cgt/destruction-certificate` | `execution.cgt.bedside_verify` / `execution.cgt.destruction_certificate`                                              | `/api/v1/execution/rtsm/cgt/bedside-verify` / `/api/v1/execution/rtsm/cgt/destruction-certificate`     |
+| `POST /api/v1/execution/devices/quarantine/release`                                                          | `execution.device.quarantine_release`                                                                                 | `/api/v1/execution/devices/quarantine/release`                                                         |
+| `POST /api/v1/ctms/startup/sites/{siteId}/greenlight/certify` & `/api/v1/ctms/startup/matrix/batch-certify`  | `ctms.greenlight.certify` / `ctms.greenlight.batch_certify`                                                           | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify` / `/api/v1/ctms/startup/matrix/batch-certify` |
+| `POST /api/v1/ctms/monitoring-visits/{visit_id}/sign-off` & `POST /api/v1/ctms/letters/compile`              | `ctms.monitoring_visit.sign_off` / `ctms.letter.compile`                                                              | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off` / `/api/v1/ctms/letters/compile`                  |
+| `POST /api/v1/ctms/doa/sign-off` & `GET /api/v1/ctms/doa/sites/{site_id}/export-pdf`                         | `ctms.doa.sign_off` / `ctms.doa.export_pdf`                                                                           | `/api/v1/ctms/doa/sign-off` / `/api/v1/ctms/doa/sites/{site_id}/export-pdf`                            |
+| `POST /api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                                            | `imaging.adjudication.chair_adjudicate`                                                                               | `/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                                           |
+| `POST /api/v1/payments/invoices/{id}/approve` & `POST /api/v1/payments/invoices/{id}/remittance-advice/sign` | `payments.invoice.approve` / `payments.remittance.sign`                                                               | `/api/v1/payments/invoices/{id}/approve` / `/api/v1/payments/invoices/{id}/remittance-advice/sign`     |
+| `POST /api/v1/interop/esource/reconcile/{accept,batch-accept,reject,batch-reject}`                           | `interop.esource.accept` / `interop.esource.batch_accept` / `interop.esource.reject` / `interop.esource.batch_reject` | `/api/v1/interop/esource/reconcile/{accept,batch-accept,reject,batch-reject}`                          |
 
 ---
 
@@ -65,7 +75,7 @@ Signature-gated endpoints today:
 
 Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation.
 
-This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, or `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id`) comes from the request body. The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
+This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id`) comes from the request body, or `RequireElectronicSignatureWhen(predicate, resolveSemanticAction, resolveConcreteAction)` when only regulated target transitions on a shared route require step-up re-authentication (such as `UNBLINDED` and `WITHDRAWN` on `PATCH /api/v1/execution/subjects/{subjectId}/state`). The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
 
 1. **Header Presence:** Extract `X-Sig-Token` from the HTTP request headers. If absent, reject with `401 Unauthorized` and payload:
    ```json
@@ -83,7 +93,7 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(toke
    - Extract the unique `jti` claim.
    - Only after every other check passes, record it with `ISigTokenUseStore.TryRecordFirstUseAsync(jti, exp + 5s)`. A second use, including a concurrent one, is rejected.
    - The record is kept until `exp + 5s`, the end of the acceptance window, never only until `exp`; otherwise the token could be replayed in the skew after expiry.
-   - Single use reaches exactly as far as the store is shared. Every service with an e-signature route (Execution, eConsent, Knowledge) uses `PostgresSigTokenUseStore<TContext>` (`consumed_signature_tokens` in its own schema, primary key on the token id), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (#5434, ADR-2515).
+   - Single use reaches exactly as far as the store is shared. Every standalone service with an e-signature route (`Execution`, `eConsent`, `Safety`, `Knowledge`, `Tickets`, `CTMS`, `Imaging`, `Payments`, `Interop`) registers `AddCadenceDurableSigTokenStore<TContext>()` (`PostgresSigTokenUseStore<TContext>`, backed by `consumed_signature_tokens` in its own schema with a primary key on `TokenId`), which holds across instances and restarts. Outside `Development` a host that maps a signed route over the process-local `ReplayCache` refuses to start (`SigTokenUseStoreStartupCheck`, #5434, ADR-2515).
 
 ---
 

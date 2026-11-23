@@ -577,8 +577,19 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         signOffResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // 3. Authorized investigator CAN reach sign-off endpoint (returns 404 for non-existent record rather than 403 Forbidden)
-        var piSignOffResponse = await piClient.PostAsJsonAsync(
-            "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
+        using var piSignOffReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+        {
+            Content = JsonContent.Create(signOffPayload),
+        };
+        piSignOffReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-1",
+                "/api/v1/ctms/doa/sign-off",
+                "ctms.doa.sign_off",
+                [RoleNormalization.ROLE_INVESTIGATOR],
+                issuedAt: _clock.UtcNow));
+        var piSignOffResponse = await piClient.SendAsync(piSignOffReq, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // 4. Investigator assigned only to SITE-999 is blocked at route scope middleware on GET /sites/{site_id}/log,

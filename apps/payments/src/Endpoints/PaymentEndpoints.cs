@@ -15,6 +15,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -632,12 +633,14 @@ public static class PaymentEndpoints
         group.MapPost("/invoices/{id}/approve", ApproveInvoice)
             .WithName("ApproveInvoice")
             .RequirePermission("payments_invoice:approve").RequireCallerStudyScope()
-            .WithSummary("Approve draft self-billing invoice for ERP export and settlement.");
+            .WithSummary("Approve draft self-billing invoice for ERP export and settlement.")
+            .RequireElectronicSignature("payments.invoice.approve", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
             .RequirePermission("payments_invoice:sign_remittance").RequireCallerStudyScope()
-            .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.");
+            .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.")
+            .RequireElectronicSignature("payments.remittance.sign", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)
             .WithName("DownloadRemittancePdf")

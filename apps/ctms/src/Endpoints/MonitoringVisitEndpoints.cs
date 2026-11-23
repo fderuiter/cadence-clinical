@@ -70,7 +70,8 @@ public static class MonitoringVisitEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature("ctms.monitoring_visit.sign_off", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapGet("/monitoring-visits/{visit_id}/letters", GetMonitoringVisitLettersAsync)
             .WithName("GetMonitoringVisitLetters")

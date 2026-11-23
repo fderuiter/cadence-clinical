@@ -675,4 +675,233 @@ public sealed class RouteAuthorizationTests
                 && SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(RoleNormalization.NormalizeRole(role)));
 
     private sealed class ProbeSigTokenUseStore : ReplayCache, IDurableSigTokenUseStore;
+
+    [Fact]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task AllExecutionMutatingRoutes_RequireChangeReasonHeaderFilter()
+    {
+        await using var host = ServiceHosts.All["execution"](null);
+        var mutatingRouteEndpoints = host.Endpoints
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .Where(ep =>
+            {
+                var methods = ep.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods ?? [];
+                bool isMutatingVerb = methods.Any(m => m is "POST" or "PUT" or "PATCH" or "DELETE");
+                string pattern = ep.RoutePattern.RawText ?? string.Empty;
+                bool isReadOnlyComputation =
+                    pattern.EndsWith("/labs/import/dry-run", StringComparison.Ordinal)
+                    || pattern.EndsWith("/labs/convert-unit", StringComparison.Ordinal)
+                    || pattern.EndsWith("/labs/toxicity/evaluate", StringComparison.Ordinal)
+                    || pattern.EndsWith("/rtsm/cgt/verify-barcode", StringComparison.Ordinal)
+                    || pattern.EndsWith("/coding/synonyms/validate", StringComparison.Ordinal)
+                    || pattern.EndsWith("/devices/parse-udi", StringComparison.Ordinal)
+                    || pattern.EndsWith("/rtsm/kits/validate-scan", StringComparison.Ordinal);
+                return isMutatingVerb && !isReadOnlyComputation;
+            })
+            .ToList();
+
+        mutatingRouteEndpoints.Count.Should().BeGreaterThanOrEqualTo(33);
+        foreach (var endpoint in mutatingRouteEndpoints)
+        {
+            endpoint.Metadata.GetMetadata<Cadence.Apps.Execution.Endpoints.Filters.ChangeReasonRequired>()
+                .Should().NotBeNull($"mutating route '{endpoint.DisplayName}' ({endpoint.RoutePattern.RawText}) must attach RequireChangeReasonHeader()");
+        }
+    }
+
+    [Theory]
+    [InlineData("ctms", "/api/v1/ctms/startup/sites/{siteId}/greenlight/certify")]
+    [InlineData("ctms", "/api/v1/ctms/startup/matrix/batch-certify")]
+    [InlineData("ctms", "/api/v1/ctms/monitoring-visits/{visit_id}/sign-off")]
+    [InlineData("ctms", "/api/v1/ctms/letters/compile")]
+    [InlineData("ctms", "/api/v1/ctms/doa/sign-off")]
+    [InlineData("ctms", "/api/v1/ctms/doa/sites/{site_id}/export-pdf")]
+    [InlineData("imaging", "/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate")]
+    [InlineData("payments", "/api/v1/payments/invoices/{id}/approve")]
+    [InlineData("payments", "/api/v1/payments/invoices/{id}/remittance-advice/sign")]
+    [InlineData("interop", "/api/v1/interop/esource/reconcile/accept")]
+    [InlineData("interop", "/api/v1/interop/esource/reconcile/batch-accept")]
+    [InlineData("interop", "/api/v1/interop/esource/reconcile/reject")]
+    [InlineData("interop", "/api/v1/interop/esource/reconcile/batch-reject")]
+    [InlineData("execution", "/api/v1/execution/subjects/{subjectId}/state")]
+    [InlineData("execution", "/api/v1/execution/rtsm/cgt/bedside-verify")]
+    [InlineData("execution", "/api/v1/execution/rtsm/cgt/destruction-certificate")]
+    [InlineData("execution", "/api/v1/execution/devices/quarantine/release")]
+    [InlineData("execution", "/api/v1/execution/rtsm/kits/reconcile-batch")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task NewlyGatedSignatureRoutes_CarryElectronicSignatureMetadata(string service, string expectedPattern)
+    {
+        await using var host = ServiceHosts.All[service](null);
+        var endpoint = host.Endpoints
+            .OfType<Microsoft.AspNetCore.Routing.RouteEndpoint>()
+            .FirstOrDefault(e => string.Equals(
+                "/" + (e.RoutePattern.RawText ?? string.Empty).TrimStart('/'),
+                expectedPattern,
+                StringComparison.OrdinalIgnoreCase));
+
+        endpoint.Should().NotBeNull($"expected route '{expectedPattern}' in service '{service}'");
+        endpoint!.Metadata.GetMetadata<ElectronicSignatureRequired>()
+            .Should().NotBeNull($"route '{expectedPattern}' in '{service}' must enforce RequireElectronicSignature");
+    }
+
+    [Theory]
+    [InlineData("ctms", "POST", "/api/v1/ctms/startup/sites/SITE-101/greenlight/certify?study_id=STUDY-1", "ctms.greenlight.certify", "{}")]
+    [InlineData("ctms", "POST", "/api/v1/ctms/startup/matrix/batch-certify", "ctms.greenlight.batch_certify", "{}")]
+    [InlineData("ctms", "POST", "/api/v1/ctms/monitoring-visits/VISIT-101/sign-off", "ctms.monitoring_visit.sign_off", "{}")]
+    [InlineData("ctms", "POST", "/api/v1/ctms/letters/compile?templateName=follow_up_letter", "ctms.letter.compile", """{"craId":"cra-1","createdAt":"2026-11-23","studyId":"STUDY-1","siteId":"probe-site"}""")]
+    [InlineData("ctms", "POST", "/api/v1/ctms/doa/sign-off", "ctms.doa.sign_off", """{"record_id":"REC-1","reason_for_change":"PI sign-off attestation"}""")]
+    [InlineData("ctms", "GET", "/api/v1/ctms/doa/sites/probe-site/export-pdf", "ctms.doa.export_pdf", null)]
+    [InlineData("imaging", "POST", "/api/v1/imaging/adjudications/8d1c4f0e-2f8b-4c39-9a51-0c6d7c1b2a10/chair-adjudicate", "imaging.adjudication.chair_adjudicate", """{"finalResponse":"CR","adjudicationRationale":"Central review consensus"}""")]
+    [InlineData("payments", "POST", "/api/v1/payments/invoices/INV-101/approve", "payments.invoice.approve", "{}")]
+    [InlineData("payments", "POST", "/api/v1/payments/invoices/INV-101/remittance-advice/sign", "payments.remittance.sign", """{"signature_reason":"Approve remittance"}""")]
+    [InlineData("interop", "POST", "/api/v1/interop/esource/reconcile/accept", "interop.esource.accept", """{"candidateId":"8d1c4f0e-2f8b-4c39-9a51-0c6d7c1b2a10","reasonForChange":"Accept EHR observation"}""")]
+    [InlineData("interop", "POST", "/api/v1/interop/esource/reconcile/batch-accept", "interop.esource.batch_accept", """{"candidateIds":["8d1c4f0e-2f8b-4c39-9a51-0c6d7c1b2a10"],"reasonForChange":"Batch accept EHR observations"}""")]
+    [InlineData("interop", "POST", "/api/v1/interop/esource/reconcile/reject", "interop.esource.reject", """{"candidateId":"8d1c4f0e-2f8b-4c39-9a51-0c6d7c1b2a10","reasonForChange":"Reject duplicate EHR observation"}""")]
+    [InlineData("interop", "POST", "/api/v1/interop/esource/reconcile/batch-reject", "interop.esource.batch_reject", """{"candidateIds":["8d1c4f0e-2f8b-4c39-9a51-0c6d7c1b2a10"],"reasonForChange":"Batch reject duplicate observations"}""")]
+    [InlineData("execution", "PATCH", "/api/v1/execution/subjects/SUBJ-101/state", "execution.subject.unblind", """{"status":"UNBLINDED"}""")]
+    [InlineData("execution", "PATCH", "/api/v1/execution/subjects/SUBJ-101/state", "execution.subject.withdraw", """{"status":"WITHDRAWN"}""")]
+    [InlineData("execution", "POST", "/api/v1/execution/rtsm/cgt/bedside-verify", "execution.cgt.bedside_verify", """{"studyId":"STUDY-1","siteId":"probe-site","subjectId":"SUBJ-1","din":"=W12342698765400","bagBarcodePayload":"P","patientWristbandId":"SUBJ-1","primaryVerifierId":"N1","secondaryVerifierId":"N2"}""")]
+    [InlineData("execution", "POST", "/api/v1/execution/rtsm/cgt/destruction-certificate", "execution.cgt.destruction_certificate", """{"studyId":"STUDY-1","siteId":"probe-site","chainOfCustodyId":"8d1c4f0e-2f8b-4c39-9a51-0c6d7c1b2a10","witness1Id":"W1","witness2Id":"W2","destructionMethod":"AUTOCLAVE"}""")]
+    [InlineData("execution", "POST", "/api/v1/execution/devices/quarantine/release", "execution.device.quarantine_release", """{"quarantineRecordId":"QR-1","releaseJustification":"QA clearance verified"}""")]
+    [InlineData("execution", "POST", "/api/v1/execution/rtsm/kits/reconcile-batch", "execution.rtsm.reconcile_batch", """{"studyId":"STUDY-1","siteId":"probe-site","items":[]}""")]
+    [GxPRequirement("SRS-SYS-005")]
+    [GxPRequirement("PRD-SUB-005")]
+    public async Task NewlyGatedSignatureRoutes_Return401ReauthenticationRequired_WhenSigTokenMissingOrReplayed(
+        string service,
+        string method,
+        string pathAndQuery,
+        string semanticAction,
+        string? jsonBody)
+    {
+        var replayStore = new ProbeSigTokenUseStore();
+        await using var booted = ServiceHosts.All[service](services =>
+        {
+            foreach (var existing in services.Where(d => d.ServiceType == typeof(ISigTokenUseStore)).ToList())
+            {
+                services.Remove(existing);
+            }
+
+            services.AddSingleton<ISigTokenUseStore>(replayStore);
+        });
+
+        string pathOnly = pathAndQuery.Split('?')[0];
+        var endpoint = booted.Endpoints
+            .Where(e => e.Metadata.GetMetadata<IHttpMethodMetadata>()?.HttpMethods.Contains(method, StringComparer.OrdinalIgnoreCase) != false)
+            .First(e => e.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null
+                && RouteMatchesConcretePath(e.RoutePattern, pathOnly));
+
+        string permission = endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>()
+            .Select(a => a.Policy!)
+            .First(p => p.StartsWith(PermissionPolicyProvider.PolicyPrefix, StringComparison.Ordinal))[PermissionPolicyProvider.PolicyPrefix.Length..];
+
+        string changeReason = "Emergency clinical justification exceeding fifty characters for regulated step-up verification";
+        var caller = CallerHolding(permission) with
+        {
+            SiteIds = [ProbeSite, "SITE-101"],
+            UnblindedAccess = true,
+            ChangeReason = changeReason,
+        };
+        if (string.Equals(pathOnly, "/api/v1/execution/subjects/SUBJ-101/state", StringComparison.Ordinal))
+        {
+            caller = TestSecurityContext.Identity("pi-sig-probe", "principal_investigator") with
+            {
+                SiteIds = [ProbeSite, "SITE-101"],
+                UnblindedAccess = true,
+                ChangeReason = changeReason,
+            };
+        }
+
+        // 1. Missing X-Sig-Token -> 401 REAUTHENTICATION_REQUIRED
+        using (var noSigClient = booted.CreateSignedClient(caller with { SigToken = null }))
+        {
+            using var missingReq = BuildProbeHttpRequest(method, pathAndQuery, jsonBody);
+            using var missingResp = await noSigClient.SendAsync(missingReq, Ct);
+            missingResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized, $"{service} {method} {pathOnly} must reject missing X-Sig-Token");
+            string missingBody = await missingResp.Content.ReadAsStringAsync(Ct);
+            missingBody.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        // 2. First use of fresh X-Sig-Token -> accepted and consumed (not 401)
+        string sigToken = TestSecurityContext.CreateSigToken(
+            userId: caller.UserId,
+            action: pathOnly,
+            semanticAction: semanticAction,
+            roles: caller.Roles.ToArray());
+
+        using var signedClient = booted.CreateSignedClient(caller with { SigToken = sigToken });
+        using (var firstReq = BuildProbeHttpRequest(method, pathAndQuery, jsonBody))
+        {
+            using var firstResp = await signedClient.SendAsync(firstReq, Ct);
+            firstResp.StatusCode.Should().NotBe(
+                HttpStatusCode.Unauthorized,
+                $"{service} {method} {pathOnly} must accept a valid first-use X-Sig-Token before handler execution");
+        }
+
+        // 3. Replayed X-Sig-Token -> 401 REAUTHENTICATION_REQUIRED
+        using var replayReq = BuildProbeHttpRequest(method, pathAndQuery, jsonBody);
+        using var replayResp = await signedClient.SendAsync(replayReq, Ct);
+        replayResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized, $"{service} {method} {pathOnly} must reject replayed X-Sig-Token");
+        string replayBody = await replayResp.Content.ReadAsStringAsync(Ct);
+        replayBody.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task ExecutionMutatingRoutes_Return400BeforeHandler_WhenChangeReasonMissingOrUnderTenChars_AndDecodeRfc8187()
+    {
+        await using var booted = ServiceHosts.All["execution"](null);
+        var caller = TestSecurityContext.Identity("dm-reason-probe", "Data Manager") with
+        {
+            SiteIds = [ProbeSite],
+        };
+
+        // Missing X-Change-Reason -> 400 Bad Request
+        using (var noReasonClient = booted.CreateSignedClient(caller with { ChangeReason = null }))
+        {
+            using var req = BuildProbeHttpRequest(HttpMethods.Post, "/api/v1/execution/sites/probe-site/activate", """{"study_id":"STUDY-1"}""");
+            using var resp = await noReasonClient.SendAsync(req, Ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await resp.Content.ReadAsStringAsync(Ct)).Should().Contain("X-Change-Reason header is required.");
+        }
+
+        // Fewer than 10 characters -> 400 Bad Request
+        using (var shortReasonClient = booted.CreateSignedClient(caller with { ChangeReason = "TooShort9" }))
+        {
+            using var req = BuildProbeHttpRequest(HttpMethods.Post, "/api/v1/execution/sites/probe-site/activate", """{"study_id":"STUDY-1"}""");
+            using var resp = await shortReasonClient.SendAsync(req, Ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await resp.Content.ReadAsStringAsync(Ct)).Should().Contain("at least 10 characters");
+        }
+
+        // RFC 8187 UTF-8 encoded < 10 characters -> decoded and rejected with 400 Bad Request
+        using (var shortRfc8187Client = booted.CreateSignedClient(caller with { ChangeReason = null }))
+        {
+            using var req = BuildProbeHttpRequest(HttpMethods.Post, "/api/v1/execution/sites/probe-site/activate", """{"study_id":"STUDY-1"}""");
+            req.Headers.TryAddWithoutValidation(GatewayHeaders.ChangeReason, "UTF-8''%E7%9F%AD%E3%81%84");
+            using var resp = await shortRfc8187Client.SendAsync(req, Ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await resp.Content.ReadAsStringAsync(Ct)).Should().Contain("at least 10 characters");
+        }
+    }
+
+    private static bool RouteMatchesConcretePath(RoutePattern pattern, string concretePath)
+    {
+        var concreteSegments = concretePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (pattern.PathSegments.Count != concreteSegments.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < concreteSegments.Length; i++)
+        {
+            var part = pattern.PathSegments[i].Parts.FirstOrDefault();
+            if (part is RoutePatternLiteralPart literal
+                && !string.Equals(literal.Content, concreteSegments[i], StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 }

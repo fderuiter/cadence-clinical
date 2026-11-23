@@ -39,6 +39,11 @@ public static class SubjectAuthority
     public const int MinimumUnblindingReasonLength = 50;
 
     /// <summary>
+    /// The shortest clinical justification a participant withdrawal accepts, in characters.
+    /// </summary>
+    public const int MinimumWithdrawalReasonLength = 50;
+
+    /// <summary>
     /// Whether <paramref name="role"/> may move a participant to <see cref="SubjectState.Unblinded"/>: the principal
     /// investigator or an authorized ER physician, the only roles PRD-SUB-005 allows to trigger emergency
     /// unblinding (#4982).

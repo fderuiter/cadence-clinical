@@ -28,6 +28,20 @@ Indexes:
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
+## payments.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
+
 ## payments.payments_audit_logs
 
 Entity: `PaymentAuditLog`
@@ -632,3 +646,28 @@ Indexes:
 
 - `IX_payments_split_payees_ContractId`: (`ContractId`)
 - `IX_payments_split_payees_tenant_id`: (`tenant_id`)
+
+## payments.transactional_outbox
+
+Entity: `TransactionalOutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AggregateId` | `character varying(255)` | no |  |  |
+| `AggregateType` | `character varying(255)` | no |  |  |
+| `Attempts` | `integer` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
+| `EventId` | `uuid` | no |  |  |
+| `EventType` | `character varying(255)` | no |  |  |
+| `LastError` | `character varying(2000)` | yes |  |  |
+| `Payload` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_transactional_outbox_CreatedAt_DispatchedAt`: (`CreatedAt`, `DispatchedAt`)
+- `IX_transactional_outbox_EventId`: (`EventId`)
+- `IX_transactional_outbox_tenant_id`: (`tenant_id`)

@@ -62,7 +62,7 @@
         type="button"
         class="btn btn-primary"
         :disabled="busy || !randomizeReason.trim()"
-        @click="randomizeModalOpen = true"
+        @click="activeSignatureFlow = 'randomize'"
       >
         Sign &amp; randomize participant
       </button>
@@ -81,25 +81,42 @@
             {{ participantStateLabel(code) }}
           </option>
         </select>
-        <label for="state-change-reason">Reason</label>
+        <label for="state-change-reason">{{
+          isWithdrawTarget ? "Clinical justification" : "Reason"
+        }}</label>
         <textarea
           id="state-change-reason"
           v-model="reason"
-          rows="2"
-          placeholder="Why the state changes (recorded in the audit trail)"
+          :rows="isWithdrawTarget ? 3 : 2"
+          :aria-describedby="
+            isWithdrawTarget
+              ? 'state-change-withdraw-note state-change-withdraw-char-count'
+              : undefined
+          "
+          :placeholder="
+            isWithdrawTarget
+              ? 'Document the clinical or participant withdrawal justification (minimum 50 characters)...'
+              : 'Why the state changes (recorded in the audit trail)'
+          "
         />
+        <template v-if="isWithdrawTarget">
+          <p id="state-change-withdraw-note" class="note">
+            Withdrawing a participant requires an electronic signature and a
+            clinical justification of at least 50 characters.
+          </p>
+          <p id="state-change-withdraw-char-count" class="note">
+            {{ stateReasonLength }} /
+            {{ MIN_CLINICAL_JUSTIFICATION_LENGTH }} minimum characters
+          </p>
+        </template>
         <button
           id="btn-change-state"
           type="button"
           class="btn btn-secondary"
-          :disabled="busy || !target || !reason.trim()"
+          :disabled="isChangeStateDisabled"
           @click="submit"
         >
-          {{
-            target
-              ? `Move to ${participantStateLabel(target).toLowerCase()}`
-              : "Move"
-          }}
+          {{ changeStateButtonLabel }}
         </button>
         <p
           v-if="target === 'ENROLLED'"
@@ -133,28 +150,32 @@
           </button>
         </div>
         <template v-if="unblindOpen">
-          <p class="note">
-            Breaking the blind is irreversible and recorded in the audit trail.
-            Provide a clinical justification of at least 50 characters.
+          <p id="emergency-unblind-note" class="note">
+            Breaking the blind is irreversible and requires an electronic
+            signature with a clinical justification of at least 50 characters.
           </p>
           <label for="emergency-unblind-reason">Clinical justification</label>
           <textarea
             id="emergency-unblind-reason"
             v-model="unblindReason"
             rows="3"
+            aria-describedby="emergency-unblind-note emergency-unblind-char-count"
             placeholder="Document the acute clinical emergency requiring immediate treatment arm disclosure..."
           />
           <p id="emergency-unblind-char-count" class="note">
-            {{ unblindReasonLength }} / 50 minimum characters
+            {{ unblindReasonLength }} /
+            {{ MIN_CLINICAL_JUSTIFICATION_LENGTH }} minimum characters
           </p>
           <button
             id="btn-confirm-emergency-unblind"
             type="button"
             class="btn btn-primary"
-            :disabled="busy || unblindReasonLength < 50"
+            :disabled="
+              busy || unblindReasonLength < MIN_CLINICAL_JUSTIFICATION_LENGTH
+            "
             @click="submitEmergencyUnblind"
           >
-            Confirm emergency unblinding
+            Sign &amp; confirm emergency unblinding
           </button>
         </template>
       </div>
@@ -165,18 +186,18 @@
     </template>
 
     <SignatureCaptureModal
-      v-if="effectiveCanManageParticipants && canRandomize"
-      :is-open="randomizeModalOpen"
+      v-if="hasStepUpCapableAction"
+      :is-open="activeSignatureFlow !== null"
       :username="authStore.user?.username || ''"
       :signer-name="
         authStore.user?.displayName || authStore.user?.username || ''
       "
-      signer-role="Site CRC"
-      :reasons="RANDOMIZE_SIGNING_REASONS"
-      :action-url="randomizeSubjectAction(participant.id)"
-      :semantic-action="RANDOMIZE_SUBJECT_SEMANTIC_ACTION"
-      :on-sign="handleRandomizeSigned"
-      @cancel="randomizeModalOpen = false"
+      :signer-role="signatureModalSignerRole"
+      :reasons="signatureModalReasons"
+      :action-url="signatureModalActionUrl"
+      :semantic-action="signatureModalSemanticAction"
+      :on-sign="handleSignatureCompleted"
+      @cancel="activeSignatureFlow = null"
     />
   </section>
 </template>
@@ -192,6 +213,13 @@ import {
   participantStateLabel,
   randomizeSubjectAction,
 } from "../../canvas/lifecycle";
+import {
+  MIN_CLINICAL_JUSTIFICATION_LENGTH,
+  UNBLIND_SUBJECT_SEMANTIC_ACTION,
+  WITHDRAW_SUBJECT_SEMANTIC_ACTION,
+  requiresStepUpSignatureForState,
+  subjectStateAction,
+} from "../../canvas/participantSignatures";
 import { useAuthStore } from "../../stores/auth.js";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import {
@@ -202,15 +230,30 @@ import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 /**
  * Moves the inspected participant to another state, dispatches step-up randomization from ENROLLED,
- * and offers emergency unblinding to Principal Investigators and Authorized ER Physicians (#4943).
+ * and enforces Part 11 step-up electronic signatures with >= 50-character clinical justifications on
+ * participant withdrawal and emergency unblinding (#4943).
  */
 const props = defineProps<{
   participant: SubjectSummary;
   canManageParticipants?: boolean;
 }>();
 
+type SignatureFlow = "randomize" | "withdraw" | "unblind";
+
 const RANDOMIZE_SIGNING_REASONS = [
   "I verify participant eligibility and authorize randomization",
+  "INVESTIGATOR_SIGNATURE",
+  "APPROVAL",
+];
+
+const WITHDRAW_SIGNING_REASONS = [
+  "I verify clinical justification and authorize participant withdrawal",
+  "INVESTIGATOR_SIGNATURE",
+  "APPROVAL",
+];
+
+const UNBLIND_SIGNING_REASONS = [
+  "I authorize emergency treatment arm unblinding for acute clinical care",
   "INVESTIGATOR_SIGNATURE",
   "APPROVAL",
 ];
@@ -223,7 +266,7 @@ const busy = ref(false);
 
 const stratFactors = ref<Array<{ key: string; value: string }>>([]);
 const randomizeReason = ref("");
-const randomizeModalOpen = ref(false);
+const activeSignatureFlow = ref<SignatureFlow | null>(null);
 
 const unblindOpen = ref(false);
 const unblindReason = ref("");
@@ -238,7 +281,75 @@ const canRandomize = computed(() =>
   canRandomizeParticipant(props.participant.status)
 );
 const canUnblind = computed(() => canUnblindParticipant(authStore));
+const stateReasonLength = computed(() => reason.value.trim().length);
 const unblindReasonLength = computed(() => unblindReason.value.trim().length);
+const isWithdrawTarget = computed(() => target.value === "WITHDRAWN");
+
+const isChangeStateDisabled = computed(() => {
+  if (busy.value || !target.value || !reason.value.trim()) {
+    return true;
+  }
+  if (
+    requiresStepUpSignatureForState(target.value) &&
+    stateReasonLength.value < MIN_CLINICAL_JUSTIFICATION_LENGTH
+  ) {
+    return true;
+  }
+  return false;
+});
+
+const changeStateButtonLabel = computed(() => {
+  if (!target.value) {
+    return "Move";
+  }
+  const label = participantStateLabel(target.value).toLowerCase();
+  return requiresStepUpSignatureForState(target.value)
+    ? `Sign & move to ${label}`
+    : `Move to ${label}`;
+});
+
+const hasStepUpCapableAction = computed(
+  () =>
+    (effectiveCanManageParticipants.value &&
+      (canRandomize.value || changes.value.targets.includes("WITHDRAWN"))) ||
+    (changes.value.unblindingWithheld && canUnblind.value)
+);
+
+const signatureModalSignerRole = computed(() => {
+  if (activeSignatureFlow.value === "randomize") {
+    return "Site CRC";
+  }
+  if (activeSignatureFlow.value === "unblind") {
+    return "Investigator";
+  }
+  return "";
+});
+
+const signatureModalReasons = computed(() => {
+  if (activeSignatureFlow.value === "unblind") {
+    return UNBLIND_SIGNING_REASONS;
+  }
+  if (activeSignatureFlow.value === "withdraw") {
+    return WITHDRAW_SIGNING_REASONS;
+  }
+  return RANDOMIZE_SIGNING_REASONS;
+});
+
+const signatureModalActionUrl = computed(() =>
+  activeSignatureFlow.value === "randomize"
+    ? randomizeSubjectAction(props.participant.id)
+    : subjectStateAction(props.participant.id)
+);
+
+const signatureModalSemanticAction = computed(() => {
+  if (activeSignatureFlow.value === "unblind") {
+    return UNBLIND_SUBJECT_SEMANTIC_ACTION;
+  }
+  if (activeSignatureFlow.value === "withdraw") {
+    return WITHDRAW_SUBJECT_SEMANTIC_ACTION;
+  }
+  return RANDOMIZE_SUBJECT_SEMANTIC_ACTION;
+});
 
 const finalNote = computed(
   () =>
@@ -250,7 +361,7 @@ watch([() => props.participant.id, () => props.participant.status], () => {
   reason.value = "";
   stratFactors.value = [];
   randomizeReason.value = "";
-  randomizeModalOpen.value = false;
+  activeSignatureFlow.value = null;
   unblindOpen.value = false;
   unblindReason.value = "";
 });
@@ -267,12 +378,30 @@ async function submit() {
   const state = target.value;
   const why = reason.value.trim();
   if (!state || !why) return;
+  if (requiresStepUpSignatureForState(state)) {
+    if (why.length < MIN_CLINICAL_JUSTIFICATION_LENGTH) return;
+    activeSignatureFlow.value = "withdraw";
+    return;
+  }
   busy.value = true;
   try {
     await changeParticipantStateMutation(canvas, props.participant, state, why);
   } finally {
     busy.value = false;
   }
+}
+
+async function handleSignatureCompleted(
+  sigToken: string,
+  signingReason: string
+) {
+  if (activeSignatureFlow.value === "unblind") {
+    return handleUnblindSigned(sigToken, signingReason);
+  }
+  if (activeSignatureFlow.value === "withdraw") {
+    return handleWithdrawSigned(sigToken, signingReason);
+  }
+  return handleRandomizeSigned(sigToken, signingReason);
 }
 
 async function handleRandomizeSigned(sigToken: string, signingReason: string) {
@@ -300,7 +429,7 @@ async function handleRandomizeSigned(sigToken: string, signingReason: string) {
         message: "Participant randomization could not be completed.",
       };
     }
-    randomizeModalOpen.value = false;
+    activeSignatureFlow.value = null;
     randomizeReason.value = "";
     stratFactors.value = [];
     return { kind: "signed" };
@@ -309,24 +438,64 @@ async function handleRandomizeSigned(sigToken: string, signingReason: string) {
   }
 }
 
-async function submitEmergencyUnblind() {
-  const why = unblindReason.value.trim();
-  if (!canUnblind.value || why.length < 50) return;
+async function handleWithdrawSigned(sigToken: string, signingReason: string) {
+  const why = reason.value.trim() || signingReason;
+  busy.value = true;
+  try {
+    const ok = await changeParticipantStateMutation(
+      canvas,
+      props.participant,
+      "WITHDRAWN",
+      why,
+      sigToken
+    );
+    if (!ok) {
+      return {
+        status: "FAILED",
+        message: "Participant withdrawal could not be completed.",
+      };
+    }
+    activeSignatureFlow.value = null;
+    target.value = "";
+    reason.value = "";
+    return { kind: "signed" };
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function handleUnblindSigned(sigToken: string, signingReason: string) {
+  const why = unblindReason.value.trim() || signingReason;
   busy.value = true;
   try {
     const ok = await changeParticipantStateMutation(
       canvas,
       props.participant,
       "UNBLINDED",
-      why
+      why,
+      sigToken
     );
-    if (ok) {
-      unblindOpen.value = false;
-      unblindReason.value = "";
+    if (!ok) {
+      return {
+        status: "FAILED",
+        message: "Emergency unblinding could not be completed.",
+      };
     }
+    activeSignatureFlow.value = null;
+    unblindOpen.value = false;
+    unblindReason.value = "";
+    return { kind: "signed" };
   } finally {
     busy.value = false;
   }
+}
+
+function submitEmergencyUnblind() {
+  const why = unblindReason.value.trim();
+  if (!canUnblind.value || why.length < MIN_CLINICAL_JUSTIFICATION_LENGTH) {
+    return;
+  }
+  activeSignatureFlow.value = "unblind";
 }
 </script>
 

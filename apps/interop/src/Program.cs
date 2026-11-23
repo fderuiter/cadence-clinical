@@ -3,6 +3,7 @@ using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
@@ -24,6 +25,7 @@ builder.Services.AddSingleton<ISceDockerEngineDriver, SceDockerEngineDriver>();
 // SMART client assertions are signed with server-side keys named per endpoint, never keys from a request (#5436).
 builder.Services.AddSingleton<ISmartSigningKeys, ConfigurationSmartSigningKeys>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();
+builder.Services.AddCadenceDurableSigTokenStore<InteropDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 var app = builder.Build();

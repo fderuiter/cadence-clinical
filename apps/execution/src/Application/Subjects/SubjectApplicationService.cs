@@ -126,7 +126,7 @@ public sealed class SubjectApplicationService(
             // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
             // resolution path"). This deliberately does not reproduce the router's distinct literal fallback
             // text ("Initial Subject Creation"); MIG-SUBJ-017 already unified every such fallback onto one
-            // constant ("system_operation").
+            // constant (fail-closed X-Change-Reason).
             subject.ReasonForChange = auditContext.ChangeReason;
 
             await subjects.AddAsync(subject, token).ConfigureAwait(false);
@@ -673,6 +673,12 @@ public sealed class SubjectApplicationService(
             && changeReason.Trim().Length < SubjectAuthority.MinimumUnblindingReasonLength)
         {
             return SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength);
+        }
+
+        if (target == SubjectState.Withdrawn
+            && changeReason.Trim().Length < SubjectAuthority.MinimumWithdrawalReasonLength)
+        {
+            return SubjectErrors.WithdrawalReasonTooShort(SubjectAuthority.MinimumWithdrawalReasonLength);
         }
 
         // Unblinding records who broke the blind, why and when on the subject itself, not only in the audit

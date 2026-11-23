@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Coding;
+using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -38,7 +40,8 @@ public static class SynonymEndpoints
             .WithName("ImportSynonymFile")
             .WithSummary("Ingest validated synonym dictionary rules into persistent store with GxP audit lineage.")
             .DisableAntiforgery()
-            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
+            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope()
+            .RequireChangeReasonHeader();
 
         group.MapGet("/", GetActiveSynonymRulesAsync)
             .WithName("GetActiveSynonymRules")
@@ -53,7 +56,8 @@ public static class SynonymEndpoints
         group.MapDelete("/{id:guid}", DeactivateSynonymRuleAsync)
             .WithName("DeactivateSynonymRule")
             .WithSummary("Deactivate an active synonym rule.")
-            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope();
+            .RequirePermission("medical_coding:manage_synonyms").RequireCallerStudyScope()
+            .RequireChangeReasonHeader();
 
         return group;
     }
@@ -165,9 +169,9 @@ public static class SynonymEndpoints
 
         string? changeReason = form["reason_for_change"].FirstOrDefault() ?? form["change_reason"].FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(changeReason) && httpContext.Request.Headers.TryGetValue("X-Change-Reason", out var headerVal))
+        if (string.IsNullOrWhiteSpace(changeReason))
         {
-            changeReason = headerVal.ToString();
+            changeReason = ChangeReasonHeader.Read(httpContext.Request);
         }
 
         if (string.IsNullOrWhiteSpace(changeReason))
@@ -183,7 +187,7 @@ public static class SynonymEndpoints
 
         try
         {
-            string createdBy = caller?.UserId ?? "DATA_MANAGER";
+            string createdBy = caller?.UserId ?? throw new AuditActorUnresolvedException();
             var result = await synonymService.ImportSynonymRulesAsync(
                 bytes,
                 file.FileName,
@@ -267,9 +271,9 @@ public static class SynonymEndpoints
         string? changeReason = httpContext.Request.Query["reason_for_change"].FirstOrDefault() ??
                                httpContext.Request.Query["change_reason"].FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(changeReason) && httpContext.Request.Headers.TryGetValue("X-Change-Reason", out var headerVal))
+        if (string.IsNullOrWhiteSpace(changeReason))
         {
-            changeReason = headerVal.ToString();
+            changeReason = ChangeReasonHeader.Read(httpContext.Request);
         }
 
         if (string.IsNullOrWhiteSpace(changeReason))

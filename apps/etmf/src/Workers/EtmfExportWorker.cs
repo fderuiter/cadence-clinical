@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
+using Cadence.Database.Audit;
 using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Storage;
@@ -126,6 +127,9 @@ public sealed class EtmfExportWorker : BackgroundService
 
     public async Task ProcessJobAsync(string jobId, CancellationToken ct)
     {
+        using var _ = AmbientAuditActorScope.BeginScope(
+            "svc:etmf-export-worker",
+            $"Automated eTMF archive export job {jobId}");
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<EtmfDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();

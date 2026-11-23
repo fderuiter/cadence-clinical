@@ -135,7 +135,8 @@ export async function changeParticipantStateMutation(
   store: StudyCanvasMutationStore,
   participant: SubjectSummary,
   state: string,
-  reason: string
+  reason: string,
+  sigToken?: string
 ): Promise<boolean> {
   const toasts = useToastStore();
   const label = participantStateLabel(state);
@@ -143,7 +144,8 @@ export async function changeParticipantStateMutation(
     const updated = await executionApi.changeSubjectState(
       participant.id,
       state,
-      reason
+      reason,
+      ...(sigToken ? [sigToken] : [])
     );
     const changed = { ...participant, status: updated.status };
     store.rememberParticipants([changed]);

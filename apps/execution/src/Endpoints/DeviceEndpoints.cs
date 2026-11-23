@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Devices;
+using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -21,6 +23,7 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class DeviceEndpoints
 {
+    public const string QuarantineReleaseSemanticAction = "execution.device.quarantine_release";
     public static IEndpointRouteBuilder MapDeviceEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/execution/devices");
@@ -41,7 +44,8 @@ public static class DeviceEndpoints
             .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:register").RequireCallerStudyAndSiteScope();
+            .RequirePermission("device_accountability:register").RequireCallerStudyAndSiteScope()
+            .RequireChangeReasonHeader();
 
         group.MapGet("/inventory", ListInventoryAsync)
             .WithName("ListDeviceInventory")
@@ -61,7 +65,8 @@ public static class DeviceEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:dispense").RequireCallerStudyAndSiteScope();
+            .RequirePermission("device_accountability:dispense").RequireCallerStudyAndSiteScope()
+            .RequireChangeReasonHeader();
 
         group.MapPost("/deficiencies", LogDeficiencyAsync)
             .WithName("LogDeviceDeficiency")
@@ -70,7 +75,8 @@ public static class DeviceEndpoints
             .Produces<DeviceDeficiencyResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:report_deficiency").RequireCallerStudyAndSiteScope();
+            .RequirePermission("device_accountability:report_deficiency").RequireCallerStudyAndSiteScope()
+            .RequireChangeReasonHeader();
 
         group.MapGet("/deficiencies", ListDeficienciesAsync)
             .WithName("ListDeviceDeficiencies")
@@ -92,7 +98,8 @@ public static class DeviceEndpoints
             .WithSummary("Initiate Quarantine")
             .Produces<DeviceQuarantineResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:quarantine").RequireCallerStudyAndSiteScope();
+            .RequirePermission("device_accountability:quarantine").RequireCallerStudyAndSiteScope()
+            .RequireChangeReasonHeader();
 
         group.MapGet("/quarantine", ListQuarantinesAsync)
             .WithName("ListDeviceQuarantines")
@@ -107,7 +114,9 @@ public static class DeviceEndpoints
             .Produces<DeviceQuarantineResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:release").RequireCallerStudyAndSiteScope();
+            .RequirePermission("device_accountability:release").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(QuarantineReleaseSemanticAction, http => http.Request.Path.Value ?? string.Empty)
+            .RequireChangeReasonHeader();
 
         group.MapGet("/investigation-summary", GetInvestigationSummaryAsync)
             .WithName("GetDeviceInvestigationSummary")

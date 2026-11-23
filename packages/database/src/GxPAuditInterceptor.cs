@@ -4,6 +4,7 @@ using System.Threading;
 
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database.Audit;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,10 @@ namespace Cadence.Database;
 /// <summary>
 /// EF Core SaveChangesInterceptor enforcing 21 CFR Part 11 immutable audit trail fields and Merkle block hashing.
 /// </summary>
-public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock) : SaveChangesInterceptor
+public class GxPAuditInterceptor(
+    Func<string> currentUserProvider,
+    IClock clock,
+    Func<string?>? currentReasonProvider = null) : SaveChangesInterceptor
 {
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
@@ -29,14 +33,21 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
 
         DbContext context = eventData.Context;
         Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
+        FlushStatefulAggregateOutbox(context);
         if (!HasAuditedWork(context))
         {
             // Nothing audited in this save (e.g. outbox bookkeeping), so there is no actor to resolve.
+            await Tenancy.StandaloneTenantSaveChangesInterceptor.StampTenantIdsAsync(context, cancellationToken).ConfigureAwait(false);
             return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
         }
 
         // Resolved only once something is audited; a provider with no actor throws here and the save fails.
         string currentUser = currentUserProvider();
+        if (string.IsNullOrWhiteSpace(currentUser))
+        {
+            throw new InvalidOperationException("GxP audit entries require a non-empty authenticated caller or 'svc:' service account.");
+        }
+
         DateTime now = AuditLogEntry.NormalizeTimestamp(clock.UtcNow.UtcDateTime);
 
         foreach (var entry in context.ChangeTracker.Entries<IGxPAuditable>())
@@ -80,28 +91,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
             .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .ToList();
 
-        if (context.Model.FindEntityType(typeof(TransactionalOutboxMessage)) is not null)
-        {
-            var statefulAggregates = context.ChangeTracker.Entries<IStatefulAggregate>()
-                .Select(e => e.Entity)
-                .ToList();
-
-            if (statefulAggregates.Count > 0)
-            {
-                var outboxSet = context.Set<TransactionalOutboxMessage>();
-                foreach (var aggregate in statefulAggregates)
-                {
-                    if (aggregate.OutboxMessages.Count > 0)
-                    {
-                        foreach (var msg in aggregate.OutboxMessages)
-                        {
-                            outboxSet.Add(msg);
-                        }
-                        aggregate.ClearDomainEvents();
-                    }
-                }
-            }
-        }
+        string? scopedReason = AmbientAuditActorScope.Current?.ChangeReason;
 
         foreach (var entry in auditableEntries)
         {
@@ -111,13 +101,19 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue));
 
             AuditAction? action = TakeAction(actions, entityName, entityId);
+            string resolvedReason = ResolveReasonForChange(
+                action?.ReasonForChange,
+                entry.Entity.ReasonForChange,
+                scopedReason,
+                currentReasonProvider);
+
             await chain.AppendAsync(new AuditLogEntryDraft(
                 entityName,
                 entityId,
                 action?.Action ?? entry.State.ToString(),
                 now,
                 action?.UserId ?? currentUser,
-                action?.ReasonForChange ?? entry.Entity.ReasonForChange,
+                resolvedReason,
                 entry.Entity.VersionIndex,
                 changesJson), cancellationToken).ConfigureAwait(false);
         }
@@ -137,6 +133,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 action.ChangesJson), cancellationToken).ConfigureAwait(false);
         }
 
+        await Tenancy.StandaloneTenantSaveChangesInterceptor.StampTenantIdsAsync(context, cancellationToken).ConfigureAwait(false);
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
     }
 
@@ -203,8 +200,63 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
     }
 
     private static bool HasAuditedWork(DbContext context) =>
-        AuditActions.HasPending(context)
-        || context.ChangeTracker.Entries<IGxPAuditable>().Any(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted);
+        context.Model.FindEntityType(typeof(AuditLogEntry)) is not null
+        && (AuditActions.HasPending(context)
+            || context.ChangeTracker.Entries<IGxPAuditable>().Any(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted));
+
+    private static void FlushStatefulAggregateOutbox(DbContext context)
+    {
+        if (context.Model.FindEntityType(typeof(TransactionalOutboxMessage)) is null)
+        {
+            return;
+        }
+
+        var statefulAggregates = context.ChangeTracker.Entries<IStatefulAggregate>()
+            .Select(e => e.Entity)
+            .ToList();
+
+        if (statefulAggregates.Count == 0)
+        {
+            return;
+        }
+
+        var outboxSet = context.Set<TransactionalOutboxMessage>();
+        foreach (var aggregate in statefulAggregates)
+        {
+            if (aggregate.OutboxMessages.Count > 0)
+            {
+                foreach (var msg in aggregate.OutboxMessages)
+                {
+                    outboxSet.Add(msg);
+                }
+
+                aggregate.ClearDomainEvents();
+            }
+        }
+    }
+
+    private static string ResolveReasonForChange(
+        string? actionReason,
+        string? entityReason,
+        string? scopedReason,
+        Func<string?>? currentReasonProvider)
+    {
+        if (!string.IsNullOrWhiteSpace(actionReason))
+        {
+            return actionReason;
+        }
+
+        if (!string.IsNullOrWhiteSpace(entityReason))
+        {
+            return entityReason;
+        }
+
+        string? fallbackReason = currentReasonProvider is not null
+            ? currentReasonProvider()
+            : scopedReason;
+
+        return fallbackReason ?? scopedReason ?? string.Empty;
+    }
 
     private static AuditAction? TakeAction(List<AuditAction> actions, string entityName, string entityId)
     {

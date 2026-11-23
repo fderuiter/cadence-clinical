@@ -157,11 +157,12 @@ public sealed class UnguardedWriteRegressionTests(ExecutionApiFactory factory) :
             {
                 new($"KIT-{site}", "LOT-REG", FakeClock.DefaultStart.AddYears(1), "AVAILABLE"),
             };
-            return await client.PostAsJsonAsync(
-                "/api/v1/execution/rtsm/kits/seed-inventory",
-                new SeedInventoryRequest("STUDY-REG", site, kits),
-                ExecutionApiFactory.JsonOptions,
-                Ct);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/execution/rtsm/kits/seed-inventory")
+            {
+                Content = JsonContent.Create(new SeedInventoryRequest("STUDY-REG", site, kits), options: ExecutionApiFactory.JsonOptions),
+            };
+            request.Headers.Add(GatewayHeaders.ChangeReason, Reason);
+            return await client.SendAsync(request, Ct);
         }
     }
 

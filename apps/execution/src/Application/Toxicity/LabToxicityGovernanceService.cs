@@ -50,7 +50,7 @@ public sealed class LabToxicityGovernanceService(
             return DomainError.NotFound("REVIEW_NOT_FOUND", $"Staged adverse event review '{reviewId}' not found.");
         }
 
-        string reviewerId = caller?.UserId ?? auditContextAccessor.UserId ?? "system";
+        string reviewerId = caller?.UserId ?? auditContextAccessor.UserId;
         string actionUpper = request.Action.Trim().ToUpperInvariant();
         DateTimeOffset now = clock.UtcNow;
         string msg;

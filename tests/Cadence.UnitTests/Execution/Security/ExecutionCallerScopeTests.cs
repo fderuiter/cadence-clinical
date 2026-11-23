@@ -327,11 +327,19 @@ public sealed class ExecutionCallerScopeTests : IDisposable
         {
             (await pharmClient.GetAsync($"/api/v1/execution/rtsm/kits/inventory/{StudyBeta}/{Site02}", Ct))
                 .StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            (await pharmClient.PostAsJsonAsync(
-                "/api/v1/execution/rtsm/kits/reconcile-batch",
-                new IpKitBatchReconciliationRequest(StudyBeta, Site02, [new IpKitItemReconcileRequest("KIT-B1", "LOT-1", "LOT-1", 0, 0, "RETURNED", "Unused")], ReasonForChange: Reason),
-                ExecutionApiFactory.JsonOptions,
-                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            const string reconcilePath = "/api/v1/execution/rtsm/kits/reconcile-batch";
+            string reconcileSig = TestSecurityContext.CreateSigToken(
+                PharmAlpha.UserId, reconcilePath, IpKitEndpoints.ReconcileBatchSemanticAction, [RoleNormalization.ROLE_PHARMACIST]);
+            using var reconcileReq = new HttpRequestMessage(HttpMethod.Post, reconcilePath)
+            {
+                Content = JsonContent.Create(
+                    new IpKitBatchReconciliationRequest(StudyBeta, Site02, [new IpKitItemReconcileRequest("KIT-B1", "LOT-1", "LOT-1", 0, 0, "RETURNED", "Unused")], ReasonForChange: Reason),
+                    options: ExecutionApiFactory.JsonOptions),
+            };
+            reconcileReq.Headers.Add(GatewayHeaders.ChangeReason, Reason);
+            reconcileReq.Headers.Add(GatewayHeaders.SigToken, reconcileSig);
+            (await pharmClient.SendAsync(reconcileReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         var dmAlpha = new GatewayIdentity(UserId: "dm-alpha", Roles: ["DATA_MANAGER", "Medical Coder"], SiteIds: [], TenantId: "tenant-alpha", StudyIds: [StudyAlpha], ChangeReason: Reason);
@@ -376,7 +384,13 @@ public sealed class ExecutionCallerScopeTests : IDisposable
         }
 
         // 5. eTMF webhook scoped to STUDY-ALPHA cannot write STUDY-BETA compliance
-        var etmfAlpha = new GatewayIdentity(UserId: "svc:etmf-alpha", Roles: [PermissionMatrix.EtmfServiceRole], SiteIds: [], TenantId: "tenant-alpha", StudyIds: [StudyAlpha]);
+        var etmfAlpha = new GatewayIdentity(
+            UserId: "svc:etmf-alpha",
+            Roles: [PermissionMatrix.EtmfServiceRole],
+            SiteIds: [],
+            TenantId: "tenant-alpha",
+            StudyIds: [StudyAlpha],
+            ChangeReason: "Automated eTMF completeness sync");
         using (var etmfClient = _factory.CreateSignedClient(etmfAlpha))
         {
             (await etmfClient.PostAsJsonAsync(

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.Authentication;
@@ -54,7 +55,7 @@ public static class LabRangeEndpoints
         rangesGroup.MapPost("/", CreateReferenceRangeAsync)
             .WithName("CreateReferenceRange")
             .WithSummary("Create laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -63,7 +64,7 @@ public static class LabRangeEndpoints
         rangesGroup.MapPut("/{id:guid}", UpdateReferenceRangeAsync)
             .WithName("UpdateReferenceRange")
             .WithSummary("Update laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -72,7 +73,7 @@ public static class LabRangeEndpoints
         rangesGroup.MapDelete("/{id:guid}", DeleteReferenceRangeAsync)
             .WithName("DeleteReferenceRange")
             .WithSummary("Deactivate laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<object>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -94,7 +95,7 @@ public static class LabRangeEndpoints
             .WithName("CommitLabRangeImport")
             .WithSummary("Commit validated bulk lab ranges into persistent store with Part 11 audit logging")
             .DisableAntiforgery()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<BulkLabRangeImportJobResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -190,7 +191,7 @@ public static class LabRangeEndpoints
             return denied;
         }
 
-        string createdBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
+        string createdBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
         var updatedRequest = request with { ReasonForChange = changeReason };
@@ -210,7 +211,7 @@ public static class LabRangeEndpoints
             return denied;
         }
 
-        string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
+        string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
         var updatedRequest = request with { ReasonForChange = changeReason };
@@ -233,7 +234,7 @@ public static class LabRangeEndpoints
             return denied;
         }
 
-        string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
+        string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
         string changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? "Deactivating lab reference range.";
 
         bool deleted = await labRangeImportService.DeleteReferenceRangeAsync(id, updatedBy, changeReason, ct);
@@ -363,7 +364,7 @@ public static class LabRangeEndpoints
             return scopeDenied;
         }
 
-        string submittedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? "DATA_MANAGER";
+        string submittedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
         string? headerChangeReason = ChangeReasonHeader.Read(httpContext.Request);
         if (!string.IsNullOrWhiteSpace(headerChangeReason))
         {

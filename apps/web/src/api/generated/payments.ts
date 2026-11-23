@@ -695,6 +695,14 @@ export interface components {
       isMilestone: boolean;
       milestoneCode?: null | string;
     };
+    Payments_ProblemDetails: {
+      type?: null | string;
+      title?: null | string;
+      /** Format: int32 */
+      status?: null | number | string;
+      detail?: null | string;
+      instance?: null | string;
+    };
     Payments_ReconcileInvoiceRequest: {
       payment_reference: string;
       /** @default SAP */
@@ -1524,12 +1532,14 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1548,12 +1558,14 @@ export interface operations {
       };
     };
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
