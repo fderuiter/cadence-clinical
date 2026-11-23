@@ -125,7 +125,7 @@ internal static class DevelopmentDemoData
         "library_item.draft",
         "study.declare_standards",
         "person.register",
-        "tenant_membership.register",
+        "tenant.enroll_member",
     ];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
@@ -179,7 +179,7 @@ internal static class DevelopmentDemoData
         foreach (var (username, subject, role, site) in Users)
         {
             var personId = PersonId.FromGuid(Guid.Parse(subject));
-            await seeder.SendAsync(
+            await seeder.EnsurePersonAsync(
                 new RegisterPerson(tenant, personId, Key($"person:{username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
             await seeder.SendAsync(
@@ -699,17 +699,40 @@ internal static class DevelopmentDemoData
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
+        /// <summary>
+        /// Sends <see cref="RegisterPerson"/> for a fixed-UUID demo user, tolerating <see cref="KernelErrors.AlreadyExists"/>
+        /// when another development tenant in the same database already registered that tenant-independent person record.
+        /// </summary>
+        public async Task EnsurePersonAsync(RegisterPerson command, CancellationToken cancellationToken)
+        {
+            var result = await DispatchAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken).ConfigureAwait(false);
+            if (!result.IsSuccess && result.Error?.Code != KernelErrors.AlreadyExists.Code)
+            {
+                throw Refused(command, result);
+            }
+        }
+
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
+        {
+            var result = await DispatchAsAsync(actor, command, cancellationToken).ConfigureAwait(false);
+            return result.IsSuccess ? result.Value! : throw Refused(command, result);
+        }
+
+        private async Task<CommandResult<TResult>> DispatchAsAsync<TResult>(
+            Actor actor,
+            ICommand<TResult> command,
+            CancellationToken cancellationToken)
         {
             await using var scope = scopes.CreateAsyncScope();
             var services = scope.ServiceProvider;
             services.GetRequiredService<ServiceActorScope>().Actor = actor;
-            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.Value!
-                : throw new InvalidOperationException(
-                    $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+            return await services.GetRequiredService<IKernelCommandSender>()
+                .SendAsync(command, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
+
+        private InvalidOperationException Refused<TResult>(ICommand<TResult> command, CommandResult<TResult> result) =>
+            new($"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
     }
 
     /// <summary>
