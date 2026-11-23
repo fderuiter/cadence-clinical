@@ -3,10 +3,11 @@ import { describeApiError } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
-async function loadKnowledgeService() {
-  const { knowledgeService } = await import("../api/knowledge.js");
-  return knowledgeService;
-}
+let knowledgeServicePromise;
+const loadKnowledgeService = () =>
+  (knowledgeServicePromise ??= import("../api/knowledge.js").then(
+    (module) => module.knowledgeService
+  ));
 
 const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
 

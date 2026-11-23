@@ -1,11 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  mount,
+  flushPromises,
+  DOMWrapper,
+  enableAutoUnmount,
+} from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../AppShell.vue";
 import CommandPaletteOverlay from "../CommandPaletteOverlay.vue";
 import { useAuthStore } from "../../stores/auth";
 import { kernelApi } from "../../api/kernelApi";
+
+enableAutoUnmount(afterEach);
 
 const DummyView = { template: "<div>Dummy</div>" };
 
@@ -23,10 +30,12 @@ const router = createRouter({
 
 describe("Global Command Palette Shell Integration", () => {
   let pinia;
+  let body;
 
   beforeEach(async () => {
     pinia = createPinia();
     setActivePinia(pinia);
+    body = new DOMWrapper(document.body);
     await router.push("/ecrf");
     await router.isReady();
   });
@@ -40,23 +49,23 @@ describe("Global Command Palette Shell Integration", () => {
       global: { plugins: [pinia, router] },
     });
 
-    expect(wrapper.find("#canvas-palette").exists()).toBe(false);
+    expect(body.find("#canvas-palette").exists()).toBe(false);
     await wrapper.find("#btn-open-palette").trigger("click");
-    expect(wrapper.find("#canvas-palette").exists()).toBe(true);
+    expect(body.find("#canvas-palette").exists()).toBe(true);
 
     // Site CRC Site readiness navigates to /ssu
     const pushSpy = vi.spyOn(router, "push");
-    await wrapper.find("#canvas-palette-input").setValue("Site readiness");
-    await wrapper.find("[role='option']").trigger("click");
+    await body.find("#canvas-palette-input").setValue("Site readiness");
+    await body.find("#canvas-palette [role='option']").trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/ssu");
-    expect(wrapper.find("#canvas-palette").exists()).toBe(false);
+    expect(body.find("#canvas-palette").exists()).toBe(false);
 
     // Reopen with global Cmd+K shortcut
     window.dispatchEvent(
       new KeyboardEvent("keydown", { key: "k", metaKey: true })
     );
     await wrapper.vm.$nextTick();
-    expect(wrapper.find("#canvas-palette").exists()).toBe(true);
+    expect(body.find("#canvas-palette").exists()).toBe(true);
 
     wrapper.unmount();
   });
@@ -71,20 +80,22 @@ describe("Global Command Palette Shell Integration", () => {
     authStore.isAuthenticated = true;
     authStore.rawRoles = ["Auditor"];
 
-    const wrapper = mount(CommandPaletteOverlay, {
+    mount(CommandPaletteOverlay, {
       props: { isOpen: true },
       global: { plugins: [pinia, router] },
     });
 
-    await wrapper.find("#canvas-palette-input").setValue("CAD-404");
+    await body.find("#canvas-palette-input").setValue("CAD-404");
     vi.advanceTimersByTime(250);
     await flushPromises();
 
-    expect(wrapper.find("#canvas-palette-kernel-note").text()).toContain(
+    expect(body.find("#canvas-palette-kernel-note").text()).toContain(
       "Studies can't be searched right now"
     );
-    expect(wrapper.find(".palette-group").text()).toBe("Open study");
-    expect(wrapper.find(".palette-label").text()).toBe("CAD-404");
+    expect(body.find("#canvas-palette .palette-group").text()).toBe(
+      "Open study"
+    );
+    expect(body.find("#canvas-palette .palette-label").text()).toBe("CAD-404");
 
     searchSpy.mockRestore();
     vi.useRealTimers();

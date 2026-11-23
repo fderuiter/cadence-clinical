@@ -7,8 +7,8 @@ using Cadence.Cli.Services;
 namespace Cadence.Cli.Commands;
 
 /// <summary>
-/// <c>cadence rulesets</c>: validates <c>.github/rulesets/*.json</c> against workflow definitions and reconciles them
-/// to GitHub Repository Rulesets via <c>gh api</c>.
+/// <c>cadence rulesets</c>: validates <c>CI Gate</c> workflow coverage and declarative <c>.github/rulesets/*.json</c>
+/// definitions (when present) and reconciles rulesets to GitHub Repository Rulesets via <c>gh api</c>.
 /// </summary>
 public static class RulesetsCommand
 {
@@ -16,7 +16,7 @@ public static class RulesetsCommand
     {
         var dryRun = new Option<bool>("--dry-run")
         {
-            Description = "Validate declarative rulesets and print the planned gh api reconciliation without modifying GitHub",
+            Description = "Validate CI Gate workflow coverage and any declarative .github/rulesets/*.json files, printing planned gh api reconciliation without modifying GitHub",
         };
         var repo = new Option<string?>("--repo")
         {
@@ -25,7 +25,7 @@ public static class RulesetsCommand
         repo.Validators.Add(RejectOptionLikeValue);
         var profile = new Option<string>("--profile")
         {
-            Description = $"Reconciliation profile: '{RulesetService.PausedActionsProfile}' (default while Actions is paused; omits status checks and merge_queue) or '{RulesetService.ActiveActionsProfile}' (full 2027 rulesets)",
+            Description = $"Reconciliation profile: '{RulesetService.PausedActionsProfile}' (default while Actions is paused; omits status checks and merge_queue) or '{RulesetService.ActiveActionsProfile}' (full declarative rulesets)",
             DefaultValueFactory = _ => RulesetService.PausedActionsProfile,
         };
         profile.Validators.Add(ValidateProfileOption);
