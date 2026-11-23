@@ -519,6 +519,34 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
     expect(kernelApi.dependents).toHaveBeenCalledWith(ENROLLMENT_REF);
   });
 
+  it("binds enrollment:<id> when opened via shared URL scope codec ?participant=<subjectCode>", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000000010";
+    vi.mocked(kernelApi.lookupEnrollment).mockResolvedValueOnce({
+      enrollment_ref: `${ENROLLMENT_REF}@1`,
+      study_ref: `${studyRef}@1`,
+      study_code: "CAD-101",
+      site_code: "017",
+      subject_code: "017-0001",
+    });
+    vi.mocked(kernelApi.getCommands).mockResolvedValue([
+      permitted("OpenCollectionInstance", "collection.open"),
+    ]);
+
+    await router.push(
+      `/studies/CAD-101?stage=conduct&section=participants&participant=017-0001`
+    );
+    await router.isReady();
+    wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    await wrapper.find("#verb-act").trigger("click");
+    await flushPromises();
+    expect(kernelApi.getCommands).toHaveBeenCalledWith(ENROLLMENT_REF);
+  });
+
   it("enforces single-stop roving tabindex across #canvas-inspector role=toolbar and opens/focuses #kernel-explain on Cmd/Ctrl+E", async () => {
     await router.push(
       `/studies/CAD-101?stage=conduct&section=participants&node=${REF}`

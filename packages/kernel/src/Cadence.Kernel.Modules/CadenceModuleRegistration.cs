@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Cadence.Kernel.Modules;
 
@@ -71,9 +72,9 @@ public static partial class CadenceModuleServiceCollectionExtensions
         }
 
         services.AddSingleton(new CadenceModuleRegistration(name, commandAssembly, documentName));
-        if (services.Any(d => d.ServiceType == typeof(Microsoft.AspNetCore.Routing.EndpointDataSource))
-            && services.Any(d => d.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostEnvironment)))
+        if (services.Any(d => d.ServiceType == typeof(IHostEnvironment)))
         {
+            services.AddRoutingCore();
             services.AddOpenApi(documentName, options =>
             {
                 options.ShouldInclude = description => string.Equals(description.GroupName, documentName, StringComparison.Ordinal);

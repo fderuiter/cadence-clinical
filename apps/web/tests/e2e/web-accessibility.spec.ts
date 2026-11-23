@@ -1554,6 +1554,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     const exportCasebookBtn = page.locator("#btn-export-casebook");
     await expect(exportCasebookBtn).toBeVisible();
     await exportCasebookBtn.click();
+    const digestSummary = page.locator(".casebook-digest-disclosure > summary");
+    await expect(digestSummary).toBeVisible();
+    await digestSummary.click();
     const shaCode = page.locator('[data-testid="participant-casebook-sha256"]');
     await expect(shaCode).toBeVisible();
     const shaBox = await shaCode.boundingBox();

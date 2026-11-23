@@ -37,7 +37,7 @@ describe("Subject portal router and stores", () => {
     await settle();
   });
 
-  it("has one route per view and a tab for every view but the questionnaire", () => {
+  it("has one route per view and a tab for every view but the questionnaire", async () => {
     expect(viewRoutes.map((route) => route.meta.viewId)).toEqual([
       "view-tasks",
       "view-questionnaire",
@@ -55,6 +55,30 @@ describe("Subject portal router and stores", () => {
       "wallet",
       "lay-summaries",
     ]);
+
+    const emojiPattern = /\p{Extended_Pictographic}/u;
+    for (const tab of tabs) {
+      expect(["function", "object"]).toContain(typeof tab.icon);
+      expect(emojiPattern.test(tab.label)).toBe(false);
+    }
+
+    const previousDemoMode = state.session.isDemoMode;
+    state.session.isDemoMode = true;
+    await settle();
+
+    for (const tab of tabs) {
+      const btn = document.getElementById(tab.buttonId);
+      expect(btn).not.toBeNull();
+      expect(emojiPattern.test(btn.textContent || "")).toBe(false);
+      const svg = btn.querySelector("svg.lucide");
+      expect(svg).not.toBeNull();
+      expect(svg.getAttribute("aria-hidden")).toBe("true");
+      expect(svg.getAttribute("width")).toBe("16");
+      expect(svg.getAttribute("height")).toBe("16");
+    }
+
+    state.session.isDemoMode = previousDemoMode;
+    await settle();
   });
 
   it("navigates to the view's route when showView is called", async () => {
