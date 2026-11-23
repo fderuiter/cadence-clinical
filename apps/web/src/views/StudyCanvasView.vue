@@ -1205,10 +1205,10 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
-    el.closest?.(".canvas")?.style?.setProperty(
-      "--canvas-topbar-height",
-      `${measured}px`
-    );
+    const canvasEl = el.closest?.(".canvas");
+    if (canvasEl instanceof HTMLElement) {
+      canvasEl.style.setProperty("--canvas-topbar-height", `${measured}px`);
+    }
   }
 }
 

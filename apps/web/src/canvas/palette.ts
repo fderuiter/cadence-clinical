@@ -2,7 +2,10 @@ import { getActivePinia } from "pinia";
 import type { LocationQuery, Router } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
-import { isScreenAvailable } from "../router/availability.js";
+import {
+  isScreenAvailable,
+  listDemoCatalogModules,
+} from "../router/availability.js";
 import { hasRequiredRole } from "../router/index.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -523,8 +526,10 @@ export function buildWorkspacePaletteItems(options: {
   if (!options.isAuthenticated) return [];
   const roles = options.normalizedRoles || [];
   const items: WorkspacePaletteOption[] = [];
+  const includedRoutes = new Set<string>();
 
   if (isScreenAvailable("study")) {
+    includedRoutes.add("study");
     const studyPath = buildStudiesWorkspacePath({
       studyCode: options.activeStudyCode,
       siteId: options.activeSiteId,
@@ -541,6 +546,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (canAccessDataCollection(roles)) {
+    includedRoutes.add("ecrf");
     items.push({
       key: "workspace:data-collection",
       group: "Workspace",
@@ -567,6 +573,11 @@ export function buildWorkspacePaletteItems(options: {
     subjectCode: options.activeSubjectCode,
   });
   if (siteReadinessPath) {
+    if (siteReadinessPath.startsWith("/ctms")) {
+      includedRoutes.add("ctms");
+    } else if (siteReadinessPath.startsWith("/ssu")) {
+      includedRoutes.add("ssu");
+    }
     items.push({
       key: "workspace:site-readiness",
       group: "Workspace",
@@ -577,6 +588,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
+    includedRoutes.add("etmf");
     items.push({
       key: "workspace:trial-documents",
       group: "Workspace",
@@ -589,6 +601,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (isScreenAvailable("training")) {
+    includedRoutes.add("training");
     items.push({
       key: "workspace:training",
       group: "Workspace",
@@ -601,6 +614,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (canAccessSupportHub(roles)) {
+    includedRoutes.add("tickets");
     items.push({
       key: "workspace:support",
       group: "Workspace",
@@ -617,6 +631,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (canAccessKnowledgeHub(roles)) {
+    includedRoutes.add("knowledge");
     items.push({
       key: "workspace:knowledge",
       group: "Workspace",
@@ -633,6 +648,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (isScreenAvailable("overview")) {
+    includedRoutes.add("overview");
     items.push({
       key: "workspace:orientation",
       group: "Workspace",
@@ -642,6 +658,30 @@ export function buildWorkspacePaletteItems(options: {
         routePath: buildStudyScopedPath("/overview", options.activeStudyCode),
       },
     });
+  }
+
+  if (isDemoBuild()) {
+    for (const mod of listDemoCatalogModules()) {
+      if (includedRoutes.has(mod.routeName)) continue;
+      if (!isScreenAvailable(mod.routeName)) continue;
+      if (
+        mod.requiresRole.length > 0 &&
+        !hasRequiredRole(roles, mod.requiresRole)
+      ) {
+        continue;
+      }
+      const routePath =
+        mod.routeName === "observation"
+          ? mod.defaultPath
+          : buildStudyScopedPath(mod.defaultPath, options.activeStudyCode);
+      items.push({
+        key: `preview:${mod.routeName}`,
+        group: "Preview",
+        label: mod.title,
+        detail: `${mod.family} · ${mod.summary}`,
+        target: { routePath },
+      });
+    }
   }
 
   items.push(
