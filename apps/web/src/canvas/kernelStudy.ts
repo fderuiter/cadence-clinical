@@ -25,6 +25,7 @@ interface SessionCacheBucket {
   studySites: Map<string, StudySiteOption[]>;
   studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
   enrollments: Map<string, NodeRef>;
+  enrollmentStudySites: Map<string, string>;
   enrollmentInFlight: Map<string, Promise<NodeRef | null>>;
   scheduleOptions: Map<string, StudyScheduleOptions>;
   scheduleOptionsInFlight: Map<string, Promise<StudyScheduleOptions | null>>;
@@ -40,6 +41,7 @@ function createSessionCacheBucket(): SessionCacheBucket {
     studySites: new Map(),
     studySitesInFlight: new Map(),
     enrollments: new Map(),
+    enrollmentStudySites: new Map(),
     enrollmentInFlight: new Map(),
     scheduleOptions: new Map(),
     scheduleOptionsInFlight: new Map(),
@@ -69,6 +71,7 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.studySites.clear();
   bucket.studySitesInFlight.clear();
   bucket.enrollments.clear();
+  bucket.enrollmentStudySites.clear();
   bucket.enrollmentInFlight.clear();
   bucket.scheduleOptions.clear();
   bucket.scheduleOptionsInFlight.clear();
@@ -119,6 +122,10 @@ function enrollmentKey(
   subjectCode: string
 ): string {
   return `${scope}::enrollment::${encodeURIComponent(normalizedStudy)}::${encodeURIComponent(siteCode ?? "*")}::${encodeURIComponent(subjectCode)}`;
+}
+
+function enrollmentSiteKey(scope: string, enrollmentId: string): string {
+  return `${scope}::enrollment-site::${encodeURIComponent(enrollmentId)}`;
 }
 
 /** Clears all cached positive study references, study site options, enrollment references, and schedules immediately. */
@@ -299,12 +306,24 @@ export function findKernelEnrollmentRef(
       const parsed = parseNodeRef(found.enrollment_ref);
       const resolved = parsed?.kind === "enrollment" ? parsed : null;
       const resolvedStudyRef = found.study_ref?.trim() || null;
+      const resolvedSiteRef = found.study_site_ref?.trim() || null;
       if (
         resolved &&
         bucket.epoch === epochAtStart &&
         getKernelStudyCallerScopeKey() === scope
       ) {
         bucket.enrollments.set(key, resolved);
+        if (resolvedSiteRef) {
+          const siteParsed = parseNodeRef(resolvedSiteRef);
+          const unversionedSiteRef =
+            siteParsed?.kind === "study_site"
+              ? `${siteParsed.kind}:${siteParsed.id}`
+              : resolvedSiteRef;
+          bucket.enrollmentStudySites.set(
+            enrollmentSiteKey(scope, resolved.id),
+            unversionedSiteRef
+          );
+        }
         bucket.enrollments.set(
           enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
           resolved
@@ -355,19 +374,39 @@ export function findKernelEnrollmentRef(
   return lookup;
 }
 
+/**
+ * Unversioned `study_site:<id>` reference cached for `enrollmentId` in the active caller scope from a prior
+ * `findKernelEnrollmentRef` lookup, or null when not yet cached.
+ */
+export function getCachedEnrollmentStudySiteRef(
+  enrollmentId: string
+): string | null {
+  const trimmed = enrollmentId.trim();
+  if (!trimmed) return null;
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  return (
+    bucket.enrollmentStudySites.get(enrollmentSiteKey(scope, trimmed)) ?? null
+  );
+}
+
 export interface StudySiteOption {
   code: string;
   label: string;
 }
 
 /**
- * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`), ordered by site code and cached
- * for the active `(tenant, actor, persona, studyCode)` session when positive. Returns an empty list when the kernel has
- * no visible study or study sites for the caller.
+ * Visible study sites for `studyCode` from the kernel's study-site directory (or zoom children fallback), ordered by
+ * site code and cached for the active `(tenant, actor, persona, studyCode)` session when positive. Returns an empty
+ * list when the kernel has no visible study or study sites for the caller.
  */
 export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   const trimmed = studyCode.trim();
-  if (!trimmed || typeof kernelApi.getChildren !== "function") {
+  if (
+    !trimmed ||
+    (typeof kernelApi.listStudySites !== "function" &&
+      typeof kernelApi.getChildren !== "function")
+  ) {
     return Promise.resolve([]);
   }
 
@@ -389,6 +428,44 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   let lookup: Promise<StudySiteOption[]> | undefined;
   lookup = (async (): Promise<StudySiteOption[]> => {
     try {
+      if (typeof kernelApi.listStudySites === "function") {
+        try {
+          const linked = await kernelApi.listStudySites(trimmed);
+          if (Array.isArray(linked) && linked.length > 0) {
+            const byCode = new Map<string, StudySiteOption>();
+            for (const item of linked) {
+              const code = item.site_code?.trim();
+              if (!code || byCode.has(code)) continue;
+              const name = item.site_name?.trim();
+              const country = item.country?.trim();
+              const detail =
+                name && name !== code
+                  ? country
+                    ? `${name} (${country})`
+                    : name
+                  : country || "";
+              byCode.set(code, {
+                code,
+                label: detail ? `${code} — ${detail}` : code,
+              });
+            }
+            const options = Array.from(byCode.values()).sort((a, b) =>
+              a.code.localeCompare(b.code)
+            );
+            if (
+              options.length > 0 &&
+              bucket.epoch === epochAtStart &&
+              getKernelStudyCallerScopeKey() === scope
+            ) {
+              bucket.studySites.set(key, options);
+            }
+            return options.map((item) => ({ ...item }));
+          }
+        } catch {
+          // Fall back to zoom-children lookup when study-sites endpoint is unavailable or mocked out.
+        }
+      }
+      if (typeof kernelApi.getChildren !== "function") return [];
       const studyRef = await findKernelStudyRef(trimmed);
       if (!studyRef) return [];
       const children = await kernelApi.getChildren(studyRef);
@@ -420,6 +497,62 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   })();
   bucket.studySitesInFlight.set(key, lookup);
   return lookup;
+}
+
+/**
+ * Resolves the canonical `study_site:<uuid>` `NodeRef` for `(studyCode, siteCode)` from the kernel's
+ * study-site directory (or visible `study_site` zoom children fallback), or `null` when the study or
+ * site is not visible to the caller.
+ */
+export async function findKernelStudySiteRef(
+  studyCode: string,
+  siteCode: string
+): Promise<string | null> {
+  const normalizedStudy = studyCode.trim();
+  const normalizedSite = siteCode.trim().toLowerCase();
+  if (!normalizedStudy || !normalizedSite) {
+    return null;
+  }
+  if (typeof kernelApi.listStudySites === "function") {
+    try {
+      const linked = await kernelApi.listStudySites(normalizedStudy);
+      if (Array.isArray(linked) && linked.length > 0) {
+        const matches = linked.filter(
+          (item) =>
+            Boolean(item.ref) &&
+            item.site_code?.trim().toLowerCase() === normalizedSite
+        );
+        if (matches.length === 1) {
+          const parsed = parseNodeRef(matches[0].ref);
+          return parsed?.kind === "study_site"
+            ? `${parsed.kind}:${parsed.id}`
+            : null;
+        }
+        return null;
+      }
+    } catch {
+      // Fall back to zoom-children lookup when study-sites endpoint is unavailable or mocked out.
+    }
+  }
+  if (
+    typeof kernelApi.search !== "function" ||
+    typeof kernelApi.getChildren !== "function"
+  ) {
+    return null;
+  }
+  const studyRef = await findKernelStudyRef(normalizedStudy);
+  if (!studyRef) return null;
+  const children = await kernelApi.getChildren(studyRef);
+  const matches = children.filter(
+    (child) =>
+      child.node.kind === "study_site" &&
+      !child.node.mask &&
+      Boolean(child.node.ref) &&
+      child.node.code?.trim().toLowerCase() === normalizedSite
+  );
+  if (matches.length !== 1) return null;
+  const parsed = parseNodeRef(matches[0].node.ref);
+  return parsed?.kind === "study_site" ? `${parsed.kind}:${parsed.id}` : null;
 }
 
 export interface StudyCollectionSpecOption {

@@ -38,7 +38,7 @@ public sealed class RouteAuthorizationTests
     private static readonly string[] AnonymousRoutes =
     [
         "/healthz", "/healthz/live", "/healthz/ready",
-        "/openapi/{documentName}.json", "/scalar/{documentName?}", "/scalar/scalar.js", "/scalar/scalar.aspnetcore.js",
+        "/openapi/{documentName}.json", "/scalar/{documentName?}", "/scalar/scalar.js", "/scalar/scalar.aspnetcore.js", "/scalar/favicon.svg",
     ];
 
     /// <summary>

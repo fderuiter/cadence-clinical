@@ -28,11 +28,10 @@ const managedBackgroundNodes = new Map();
 const resolveOption = (val) => (typeof val === "function" ? val() : unref(val));
 
 const isExemptLiveElement = (el) => {
-  if (!el || typeof el.getAttribute !== "function") return false;
+  if (!el?.getAttribute) return false;
   if (el.getAttribute("data-focus-trap-exempt") === "true") return true;
   if (el.getAttribute("id") === "toast-container") return true;
-  const cls = el.getAttribute("class") || "";
-  return /\btoast-host\b/.test(cls);
+  return /\btoast-host\b/.test(el.getAttribute("class") || "");
 };
 
 const containsExemptLiveElement = (el) => {
@@ -59,21 +58,14 @@ const restoreManagedNode = (el, snapshot) => {
     el.inert = snapshot.hadInertProp;
   }
   if (snapshot.hadInertAttr) {
-    if (typeof el.setAttribute === "function") {
-      el.setAttribute("inert", "");
-    }
-  } else if (
-    !snapshot.hadInertProp &&
-    typeof el.removeAttribute === "function"
-  ) {
-    el.removeAttribute("inert");
+    el.setAttribute?.("inert", "");
+  } else if (!snapshot.hadInertProp) {
+    el.removeAttribute?.("inert");
   }
   if (snapshot.prevAriaHidden === null) {
-    if (typeof el.removeAttribute === "function") {
-      el.removeAttribute("aria-hidden");
-    }
-  } else if (typeof el.setAttribute === "function") {
-    el.setAttribute("aria-hidden", snapshot.prevAriaHidden);
+    el.removeAttribute?.("aria-hidden");
+  } else {
+    el.setAttribute?.("aria-hidden", snapshot.prevAriaHidden);
   }
 };
 
@@ -140,21 +132,15 @@ const reconcileBackgroundInert = () => {
     if (!managedBackgroundNodes.has(el)) {
       managedBackgroundNodes.set(el, {
         hadInertProp: SUPPORTS_NATIVE_INERT_PROP ? Boolean(el.inert) : false,
-        hadInertAttr:
-          typeof el.hasAttribute === "function" && el.hasAttribute("inert"),
-        prevAriaHidden:
-          typeof el.getAttribute === "function"
-            ? el.getAttribute("aria-hidden")
-            : null,
+        hadInertAttr: Boolean(el.hasAttribute?.("inert")),
+        prevAriaHidden: el.getAttribute?.("aria-hidden") ?? null,
       });
     }
     if (SUPPORTS_NATIVE_INERT_PROP) {
       el.inert = true;
     }
-    if (typeof el.setAttribute === "function") {
-      el.setAttribute("inert", "");
-      el.setAttribute("aria-hidden", "true");
-    }
+    el.setAttribute?.("inert", "");
+    el.setAttribute?.("aria-hidden", "true");
   }
 };
 
@@ -167,12 +153,11 @@ const isJSDOMEnv = () =>
 const isElementInertOrHidden = (el, container) => {
   if (!el || el.disabled) return true;
   let node = el;
-  while (node && node !== container) {
+  while (node) {
     if (
       node.inert ||
-      (typeof node.hasAttribute === "function" && node.hasAttribute("inert")) ||
-      (typeof node.getAttribute === "function" &&
-        node.getAttribute("aria-hidden") === "true")
+      node.hasAttribute?.("inert") ||
+      node.getAttribute?.("aria-hidden") === "true"
     ) {
       return true;
     }
@@ -182,27 +167,8 @@ const isElementInertOrHidden = (el, container) => {
         return true;
       }
     }
+    if (node === container) break;
     node = node.parentElement;
-  }
-  if (container) {
-    if (
-      container.inert ||
-      (typeof container.hasAttribute === "function" &&
-        container.hasAttribute("inert")) ||
-      (typeof container.getAttribute === "function" &&
-        container.getAttribute("aria-hidden") === "true")
-    ) {
-      return true;
-    }
-    if (typeof window !== "undefined") {
-      const containerStyle = window.getComputedStyle(container);
-      if (
-        containerStyle.display === "none" ||
-        containerStyle.visibility === "hidden"
-      ) {
-        return true;
-      }
-    }
   }
   if (typeof window === "undefined" || isJSDOMEnv()) {
     return false;
@@ -463,34 +429,24 @@ export function useFocusTrap(
     handleTrapKeyDown(e, trapEntry);
   };
 
-  const syncContainerFocus = (container) => {
-    if (!container) return;
-    if (
-      typeof document !== "undefined" &&
-      typeof document.contains === "function" &&
-      document.contains(container)
-    ) {
+  const connectAndFocus = (el) => {
+    if (!el) return;
+    if (typeof document !== "undefined" && document.contains?.(el)) {
       trapEntry.wasConnected = true;
     }
     reconcileBackgroundInert();
-    focusIntoContainer(container);
+    focusIntoContainer(el);
+  };
+
+  const syncContainerFocus = (container) => {
+    if (!container) return;
+    connectAndFocus(container);
     nextTick(() => {
       if (
         isActive &&
         activeTrapStack[activeTrapStack.length - 1] === trapEntry
       ) {
-        const latestContainer = getContainer();
-        if (latestContainer) {
-          if (
-            typeof document !== "undefined" &&
-            typeof document.contains === "function" &&
-            document.contains(latestContainer)
-          ) {
-            trapEntry.wasConnected = true;
-          }
-          reconcileBackgroundInert();
-          focusIntoContainer(latestContainer);
-        }
+        connectAndFocus(getContainer());
       }
     });
   };
@@ -502,21 +458,17 @@ export function useFocusTrap(
     trapEntry.wasConnected = Boolean(
       container &&
       typeof document !== "undefined" &&
-      typeof document.contains === "function" &&
-      document.contains(container)
+      document.contains?.(container)
     );
 
     if (typeof document !== "undefined") {
       const currentActive = document.activeElement;
-      if (
+      previousActiveElement =
         currentActive &&
         currentActive !== document.body &&
         (!container || !container.contains(currentActive))
-      ) {
-        previousActiveElement = currentActive;
-      } else {
-        previousActiveElement = candidateTrigger;
-      }
+          ? currentActive
+          : candidateTrigger;
     }
 
     trapEntry.order = nextOverlayOrder();
@@ -525,11 +477,9 @@ export function useFocusTrap(
       if (SUPPORTS_NATIVE_INERT_PROP) {
         container.inert = false;
       }
-      if (typeof container.removeAttribute === "function") {
-        container.removeAttribute("inert");
-        if (container.getAttribute?.("aria-hidden") === "true") {
-          container.removeAttribute("aria-hidden");
-        }
+      container.removeAttribute?.("inert");
+      if (container.getAttribute?.("aria-hidden") === "true") {
+        container.removeAttribute?.("aria-hidden");
       }
     }
     if (typeof document !== "undefined") {
@@ -563,23 +513,20 @@ export function useFocusTrap(
 
     reconcileBackgroundInert();
 
-    const rawRestoreOption =
-      deactivateOptions && deactivateOptions.restoreFocus !== undefined
+    const resolvedRestore = resolveOption(
+      deactivateOptions?.restoreFocus !== undefined
         ? deactivateOptions.restoreFocus
-        : options.restoreFocus;
-    const resolvedRestore = resolveOption(rawRestoreOption, true);
+        : options.restoreFocus
+    );
 
     if (resolvedRestore !== false && typeof document !== "undefined") {
       const targetToFocus =
-        resolvedRestore &&
-        typeof resolvedRestore === "object" &&
-        typeof resolvedRestore.focus === "function"
+        typeof resolvedRestore?.focus === "function"
           ? resolvedRestore
           : previousActiveElement;
       if (
-        targetToFocus &&
-        typeof targetToFocus.focus === "function" &&
-        document.contains(targetToFocus)
+        typeof targetToFocus?.focus === "function" &&
+        document.contains?.(targetToFocus)
       ) {
         targetToFocus.focus();
       }

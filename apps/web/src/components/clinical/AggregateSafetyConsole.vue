@@ -3005,10 +3005,4 @@ onMounted(() => {
 .text-critical {
   color: var(--semantic-color-error) !important;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

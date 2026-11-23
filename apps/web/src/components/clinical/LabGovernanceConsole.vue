@@ -3417,10 +3417,4 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

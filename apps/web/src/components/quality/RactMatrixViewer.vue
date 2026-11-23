@@ -2140,8 +2140,7 @@ onMounted(() => {
   color: var(--semantic-color-text);
 }
 
-.form-control:focus {
-  outline: none;
+.form-control:focus-visible {
   border-color: var(--semantic-color-primary);
 }
 
@@ -2307,11 +2306,5 @@ onMounted(() => {
 
 .text-muted {
   color: var(--semantic-color-text-muted);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

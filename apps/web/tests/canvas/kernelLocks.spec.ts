@@ -3,6 +3,7 @@ import { kernelApi, type KernelLock } from "../../src/api/kernelApi";
 import {
   fetchStudyLocks,
   toAssertionLockRef,
+  toCoveringScopeLocks,
   toDirectScopeLocks,
 } from "../../src/canvas/kernelLocks";
 
@@ -169,6 +170,54 @@ describe("kernelLocks utilities", () => {
 
       expect(toDirectScopeLocks(studyLocks, ENROLLMENT_REF)).toEqual([
         { lockRef: `assertion:${LOCK_UUID}`, kind: "Frozen" },
+      ]);
+    });
+  });
+
+  describe("toCoveringScopeLocks", () => {
+    it("extracts active, unmasked ancestor locks whose scope differs from targetScope", () => {
+      const held = [
+        { lock_id: LOCK_UUID, kind: "Frozen", scope: FORM_REF },
+        { lock_id: `${LOCK_UUID}-study`, kind: "Locked", scope: STUDY_REF },
+      ];
+      expect(toCoveringScopeLocks(held, FORM_REF)).toEqual([
+        { kind: "Locked", scope: STUDY_REF },
+      ]);
+      expect(toCoveringScopeLocks(null, FORM_REF)).toEqual([]);
+      expect(toCoveringScopeLocks(held, "")).toEqual([]);
+
+      const studyLocks = [
+        {
+          ref: `assertion:${LOCK_UUID}`,
+          kind: "Frozen",
+          scope_ref: STUDY_REF,
+          masked: false,
+          released: false,
+        },
+        {
+          ref: `assertion:${LOCK_UUID}-direct`,
+          kind: "Locked",
+          scope_ref: ENROLLMENT_REF,
+          masked: false,
+          released: false,
+        },
+        {
+          ref: `assertion:${LOCK_UUID}-rel`,
+          kind: "Locked",
+          scope_ref: STUDY_REF,
+          masked: false,
+          released: true,
+        },
+        {
+          ref: null,
+          kind: "Locked",
+          scope_ref: STUDY_REF,
+          masked: true,
+          released: false,
+        },
+      ];
+      expect(toCoveringScopeLocks(studyLocks, ENROLLMENT_REF)).toEqual([
+        { kind: "Frozen", scope: STUDY_REF },
       ]);
     });
   });

@@ -3,7 +3,10 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
-import { createDemoFixturesPlugin } from "../../scripts/vite-strip-demo-fixtures.mjs";
+import {
+  createConstantFoldDemoModePlugin,
+  createDemoFixturesPlugin,
+} from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +34,6 @@ export default defineConfig(({ mode }) => ({
       "keycloak-js",
       "msw",
       "msw/browser",
-      "ui > axe-core",
       "usdm-schemas > zod",
     ],
   },
@@ -75,7 +77,10 @@ export default defineConfig(({ mode }) => ({
         name: "e2e-module-entrypoints",
         apply: "build",
         configResolved(resolved) {
-          isE2eProd = resolved.build?.outDir === "node_modules/.e2e-prod";
+          const outDir = resolved.build?.outDir;
+          isE2eProd =
+            outDir === "node_modules/.e2e-prod" ||
+            outDir === "node_modules/.e2e-demo";
         },
         transform(code, id) {
           if (!isE2eProd) return null;
@@ -113,6 +118,7 @@ export default defineConfig(({ mode }) => ({
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
+    createConstantFoldDemoModePlugin(__dirname),
   ],
   server: {
     port: DEV_PORT,
@@ -130,12 +136,19 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: [
-      // The mock gateway is test and dev tooling, kept out of the library's root export (#5335).
+      // The mock gateway and Vitest accessibility matcher are kept out of the library's root export (#5335).
       {
         find: /^ui\/testing$/,
         replacement: path.resolve(
           __dirname,
           "../../packages/ui/mockGateway.js"
+        ),
+      },
+      {
+        find: /^ui\/vitest$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/ui/accessibility-matcher.js"
         ),
       },
       {

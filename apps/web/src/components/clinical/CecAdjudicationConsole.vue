@@ -2213,12 +2213,10 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-.select-input:focus,
-.text-input:focus,
-.textarea-input:focus {
-  outline: none;
+.select-input:focus-visible,
+.text-input:focus-visible,
+.textarea-input:focus-visible {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .toggle-box {
@@ -3294,11 +3292,5 @@ onMounted(() => {
 .empty-cell {
   padding: 2rem !important;
   color: var(--color-text-muted);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -37,30 +37,32 @@ setTopEscapeOrderGetter(() => {
   return best ? best.order || 0 : 0;
 });
 
-function dispatchTopmostEscape(e) {
-  if (!e || e.key !== "Escape" || handledEscapeEvents.has(e)) return;
-  if (e.defaultPrevented) return;
-
-  const bestEntry = getTopDefaultEscapeEntry();
-  if (!bestEntry) return;
-
+function tryDispatchEntryEscape(e, entry) {
+  if (
+    !e ||
+    e.key !== "Escape" ||
+    e.defaultPrevented ||
+    handledEscapeEvents.has(e) ||
+    !entry?.isEnabled()
+  ) {
+    return;
+  }
   const trapInfo = getTopActiveTrapEscapeInfo();
   if (
     trapInfo.locked ||
     (trapInfo.active &&
       trapInfo.handlesEscape &&
-      trapInfo.order > (bestEntry.order || 0))
+      trapInfo.order > (entry.order || 0))
   ) {
     return;
   }
-
   handledEscapeEvents.add(e);
-  if (typeof e.preventDefault === "function") {
-    e.preventDefault();
-  }
-  if (typeof bestEntry.onClose === "function") {
-    bestEntry.onClose(e);
-  }
+  e.preventDefault?.();
+  entry.onClose?.(e);
+}
+
+function dispatchTopmostEscape(e) {
+  tryDispatchEntryEscape(e, getTopDefaultEscapeEntry());
 }
 
 function syncGlobalEscapeListeners() {
@@ -68,10 +70,8 @@ function syncGlobalEscapeListeners() {
   const docChanged = typeof document !== "undefined" && boundDoc !== document;
   const winChanged = typeof window !== "undefined" && boundWin !== window;
   if (globalListenersAttached && (docChanged || winChanged)) {
-    if (boundDoc)
-      boundDoc.removeEventListener("keydown", dispatchTopmostEscape);
-    if (boundWin)
-      boundWin.removeEventListener("keydown", dispatchTopmostEscape);
+    boundDoc?.removeEventListener("keydown", dispatchTopmostEscape);
+    boundWin?.removeEventListener("keydown", dispatchTopmostEscape);
     boundDoc = null;
     boundWin = null;
     globalListenersAttached = false;
@@ -87,14 +87,10 @@ function syncGlobalEscapeListeners() {
     }
     globalListenersAttached = Boolean(boundDoc || boundWin);
   } else if (!hasDefaultTargetEntries && globalListenersAttached) {
-    if (boundDoc) {
-      boundDoc.removeEventListener("keydown", dispatchTopmostEscape);
-      boundDoc = null;
-    }
-    if (boundWin) {
-      boundWin.removeEventListener("keydown", dispatchTopmostEscape);
-      boundWin = null;
-    }
+    boundDoc?.removeEventListener("keydown", dispatchTopmostEscape);
+    boundWin?.removeEventListener("keydown", dispatchTopmostEscape);
+    boundDoc = null;
+    boundWin = null;
     globalListenersAttached = false;
   }
 }
@@ -135,29 +131,9 @@ export function useEscapeClose(onCloseCallback, options = {}) {
     }
     escapeStack.push(entry);
 
-    if (customTarget && typeof customTarget.addEventListener === "function") {
+    if (customTarget?.addEventListener) {
       if (!entry.customHandler) {
-        entry.customHandler = (e) => {
-          if (!e || e.key !== "Escape" || handledEscapeEvents.has(e)) return;
-          if (e.defaultPrevented) return;
-          if (!entry.isEnabled()) return;
-          const trapInfo = getTopActiveTrapEscapeInfo();
-          if (
-            trapInfo.locked ||
-            (trapInfo.active &&
-              trapInfo.handlesEscape &&
-              trapInfo.order > (entry.order || 0))
-          ) {
-            return;
-          }
-          handledEscapeEvents.add(e);
-          if (typeof e.preventDefault === "function") {
-            e.preventDefault();
-          }
-          if (typeof entry.onClose === "function") {
-            entry.onClose(e);
-          }
-        };
+        entry.customHandler = (e) => tryDispatchEntryEscape(e, entry);
         customTarget.addEventListener("keydown", entry.customHandler);
       }
     } else {
@@ -170,11 +146,7 @@ export function useEscapeClose(onCloseCallback, options = {}) {
     if (idx !== -1) {
       escapeStack.splice(idx, 1);
     }
-    if (
-      customTarget &&
-      entry.customHandler &&
-      typeof customTarget.removeEventListener === "function"
-    ) {
+    if (customTarget?.removeEventListener && entry.customHandler) {
       customTarget.removeEventListener("keydown", entry.customHandler);
       entry.customHandler = null;
     } else {

@@ -428,10 +428,13 @@ function startGuidedTour() {
 }
 
 .task-checkbox {
-  width: 16px;
-  height: 16px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   accent-color: var(--semantic-color-interactive-primary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .task-title {

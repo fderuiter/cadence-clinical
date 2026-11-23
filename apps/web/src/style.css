@@ -5,37 +5,8 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --primary: var(--semantic-color-primary);
-  --primary-dark: var(--semantic-color-primary-dark);
-  --primary-light: var(--semantic-color-primary-light);
-  --accent: var(--semantic-color-accent);
-  --accent-light: var(--semantic-color-accent-light);
-  --accent-bg: var(--semantic-color-accent-bg);
-  --text-main: var(--semantic-color-text);
-  --text-muted: var(--semantic-color-text-muted);
-  --bg-main: var(--semantic-color-surface-muted);
-  --bg-card: var(--semantic-color-surface);
-  --neutral-dark: var(--semantic-color-text-muted);
-  --neutral-light: var(--semantic-color-surface-muted);
-  --border: var(--semantic-color-border);
-  --border-control: var(--semantic-color-border-control);
-  --success: var(--semantic-color-success);
-  --success-bg: var(--semantic-color-success-bg);
-  --warning: var(--semantic-color-warning);
-  --warning-bg: var(--semantic-color-warning-bg);
-  --error: var(--semantic-color-error);
-  --error-bg: var(--semantic-color-error-bg);
-  --danger: var(--semantic-color-error);
-  --danger-bg: var(--semantic-color-error-bg);
-  --font: var(--semantic-font-family);
   --shell-header-height: 57px;
   --canvas-topbar-height: 45px;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
@@ -112,10 +83,9 @@ body {
   }
 
   .mobile-menu-btn:hover,
-  .mobile-menu-btn:focus {
+  .mobile-menu-btn:focus-visible {
     background-color: var(--semantic-color-border-inverse);
     border-color: var(--semantic-color-accent-inverse);
-    outline: none;
   }
 
   /* Hide regulatory badges on mobile screens (<768px) */
@@ -283,18 +253,13 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  outline: none;
   transition: all 0.15s;
   min-height: 44px;
 }
 
-.persona-select:hover {
+.persona-select:hover,
+.persona-select:focus-visible {
   border-color: var(--semantic-color-accent-inverse);
-}
-
-.persona-select:focus {
-  border-color: var(--semantic-color-accent-inverse);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
 /* User Card in Header */
@@ -913,16 +878,6 @@ main {
 }
 
 /* Form Action Buttons */
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--spacing-sm, 12px);
-  margin-top: var(--spacing-xl, 24px);
-  border-top: 1px solid var(--border);
-  padding-top: var(--spacing-md, 16px);
-}
-
 .btn {
   padding: 10px 20px;
   font-size: 0.9rem;
@@ -932,17 +887,6 @@ main {
   cursor: pointer;
   font-family: var(--font);
   transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  color: var(--semantic-color-text-on-primary);
-  border-color: var(--primary);
-}
-
-.can-hover .btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
 }
 
 /* Modals */
@@ -1272,28 +1216,7 @@ main {
 
 /* Accessibility & Unified Token Enforcement (WCAG 2.2 AA) */
 
-/* 1. Touch Target Compliance (Requirement 4) - Opt-in helpers only */
-.touch-target,
-.min-touch-target,
-.touch-target-interactive {
-  min-height: var(--touch-target-min, 48px) !important;
-  min-width: var(--touch-target-min, 48px) !important;
-}
-
-/* 2. Keyboard Navigation Focus Indicators (Requirement 2) */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-a:focus-visible,
-[role="button"]:focus-visible,
-[tabindex]:focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
-  outline-offset: 2px !important;
-  box-shadow: none !important;
-}
-
-/* 3. Color Contrast Adjustments (Requirement 3) */
+/* Color Contrast Adjustments */
 .header-title-area p {
   color: var(--semantic-color-primary-light) !important;
 }
@@ -1317,13 +1240,7 @@ a:focus-visible,
   border-color: var(--semantic-color-success) !important;
 }
 
-.can-hover .btn-primary:hover {
-  background-color: var(--semantic-color-primary-dark) !important;
-  border-color: var(--semantic-color-primary-dark) !important;
-  color: var(--semantic-color-text-on-primary) !important;
-}
-
-/* 4. Skip to Content Link Styles (WCAG 2.4.1 Bypass Blocks) */
+/* Skip to Content Link Styles (WCAG 2.4.1 Bypass Blocks) */
 .skip-link {
   position: absolute;
   width: 1px;
@@ -1355,10 +1272,20 @@ a:focus-visible,
   z-index: 10000 !important;
   text-decoration: none !important;
   box-shadow:
+    0 0 0 2px var(--semantic-color-text-on-solid),
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
+}
+
+@media (forced-colors: active) {
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 /* ==========================================================================
@@ -1793,15 +1720,13 @@ a:focus-visible,
   font-size: 0.82rem;
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
-  outline: none;
   transition: all 0.15s;
   box-sizing: border-box;
 }
 
-.inspector-input:focus,
-.inspector-select:focus {
+.inspector-input:focus-visible,
+.inspector-select:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
 }
 
 .btn-compile-schema {
