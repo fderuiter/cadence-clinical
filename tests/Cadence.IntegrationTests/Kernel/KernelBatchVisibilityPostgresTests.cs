@@ -29,7 +29,9 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Intelligence.Tools;
+using Cadence.Rules.Evaluation;
 using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
 
@@ -49,7 +51,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// PostgreSQL verification of batched scope lookups over shared connection leases (<c>KernelAuthorityStore</c>,
 /// <c>GrantNodeVisibility</c>, <c>GrantChain</c>, <c>KernelLineageStore</c>, and <c>RequesterBoundVisibility</c>):
 /// one connection lease and two <c>pg_catalog.set_config</c> statements per bulk authority call (K-ID-2), one set-based
-/// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 13 path-bearing kinds, lineage
+/// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 18 path-bearing kinds, lineage
 /// version deduplication with preserved <c>masked:n</c> handles, and the 2,000-node waterfall benchmark.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -59,32 +61,19 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
     private static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
 
-    private static readonly ProtocolDesign SampleDesign = ProtocolDesignSamples.MinimalDesign() with
-    {
-        Objectives =
-        [
-            new Objective("obj.1", ObjectiveLevel.Primary, "Lower systolic blood pressure."),
-            new Objective("obj.2", ObjectiveLevel.Secondary, "Assess tolerability."),
-        ],
-        Endpoints =
-        [
-            new Endpoint("ep.1", "obj.1", ObjectiveLevel.Primary, "Change in SBP at week 12."),
-            new Endpoint("ep.2", "obj.2", ObjectiveLevel.Secondary, "Adverse events through week 12."),
-        ],
-    };
-
     private readonly KernelProtocolScenario _scenario = new(fixture);
 
     /// <summary>
-    /// Validates <see cref="IAuthorityStore.PathsOfAsync"/> across all 13 path-bearing kinds, every scope level on
-    /// grants, qualification requirements and effectivities, versioned references, missing ids, and non-path kinds:
-    /// every returned <see cref="ScopePath"/> matches <see cref="IAuthorityStore.PathOfAsync"/>, while opening 1
-    /// connection lease, running 2 <c>pg_catalog.set_config</c> statements, and executing 1 <c>SELECT</c> per present kind.
+    /// Validates <see cref="IAuthorityStore.PathsOfAsync"/> across all 18 path-bearing kinds, every scope level on
+    /// grants, qualification requirements, effectivities, assertions, attestations and validation findings, versioned
+    /// references, missing ids, and non-path kinds: every returned <see cref="ScopePath"/> matches
+    /// <see cref="IAuthorityStore.PathOfAsync"/>, while opening 1 connection lease, running 2 <c>pg_catalog.set_config</c>
+    /// statements, and executing 1 <c>SELECT</c> per present kind.
     /// </summary>
-    [Fact(DisplayName = "PathsOfAsync_AllThirteenPathBearingKinds_MatchesSingleLookupInOneLeaseAndOneQueryPerKind")]
+    [Fact(DisplayName = "PathsOfAsync_AllEighteenPathBearingKinds_MatchesSingleLookupInOneLeaseAndOneQueryPerKind")]
     [KernelRule("K-ID-2")]
     [KernelRule("K-AUTH-2")]
-    public async Task PathsOfAsyncAllThirteenPathBearingKindsMatchesSingleLookupInOneLeaseAndOneQueryPerKind()
+    public async Task PathsOfAsyncAllEighteenPathBearingKindsMatchesSingleLookupInOneLeaseAndOneQueryPerKind()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
@@ -100,7 +89,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.ParticipantBoston),
             NodeRef.For(PersonId.New()),
             NodeRef.For(ConceptId.New(), 1),
-            NodeRef.For(AttestationId.New(), 2),
+            NodeRef.For(TaskConfigurationId.New(), 1),
         ];
         var nonPathResult = await harness.AuthorityStore.PathsOfAsync(world.Tenant, nonPathOnly, ct);
         nonPathResult.Values.Should().AllSatisfy(p => p.Should().Be(ScopePath.TenantWide));
@@ -108,7 +97,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         harness.Recorder.SetConfigStatements.Should().Be(0);
         harness.Recorder.SelectStatements.Should().Be(0);
 
-        // Full batch spanning all 13 path-bearing kinds + versioned duplicates + missing ids + non-path kinds.
+        // Full batch spanning all 18 path-bearing kinds + versioned duplicates + missing ids + non-path kinds.
         NodeRef[] resources =
         [
             NodeRef.For(world.Sponsor),
@@ -141,6 +130,31 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.CountryEffectivity),
             NodeRef.For(world.SiteEffectivity),
             NodeRef.For(world.ProposalA, 1),
+            NodeRef.For(world.CollectionInstanceBoston, 1),
+            NodeRef.For(world.CollectionInstanceBoston, 2),
+            NodeRef.For(world.FormObservationBoston, 1),
+            NodeRef.For(world.StandaloneObservationBoston, 1),
+            NodeRef.For(world.VerificationAssertionBoston, 1),
+            NodeRef.For(world.RecordedFormLockAssertion, 1),
+            NodeRef.For(world.SiteLockAssertion, 1),
+            NodeRef.For(world.StudyLockAssertion, 1),
+            NodeRef.For(world.OpenStudyFinding),
+            NodeRef.For(world.DecidedStudyFinding, 1),
+            NodeRef.For(world.SiteCollectionFinding),
+            NodeRef.For(world.SiteObservationFinding),
+            NodeRef.For(world.ProtocolAttestation, 1),
+            NodeRef.For(world.EnrollmentAttestation, 1),
+            NodeRef.For(world.StudyArtifactAttestation, 1),
+            NodeRef.For(world.TenantArtifactAttestation, 1),
+            NodeRef.For(world.CollectionAttestation, 1),
+            NodeRef.For(world.RecordedLockAttestation, 1),
+            NodeRef.For(world.UnrecordedLockAttestation, 1),
+            NodeRef.For(world.ProposalAttestation, 1),
+            NodeRef.For(world.StudyFindingAttestation, 1),
+            NodeRef.For(world.SiteFindingAttestation, 1),
+            NodeRef.For(world.StandardAttestation, 1),
+            NodeRef.For(world.LibraryItemAttestation, 1),
+            NodeRef.For(world.TaskConfigurationAttestation, 1),
             NodeRef.For(StudyId.New()),
             .. nonPathOnly,
         ];
@@ -154,7 +168,35 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
         bulkLeaseCount.Should().Be(1, "PathsOfAsync holds a single connection lease across all per-kind queries");
         bulkSetConfigs.Should().Be(2, "KernelTenantConnectionInterceptor sets the tenant once on open and clears it once on close");
-        bulkSelects.Should().Be(13, "each of the 13 path-bearing kinds resolves in 1 set-based SELECT");
+        bulkSelects.Should().Be(18, "each of the 18 path-bearing kinds resolves in 1 set-based SELECT");
+
+        var expectedStudyPath = new ScopePath(world.Sponsor, world.StudyA);
+        var expectedBostonSitePath = new ScopePath(world.Sponsor, world.StudyA, "US", world.BostonSite);
+
+        bulkPaths[NodeRef.For(world.CollectionInstanceBoston, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.FormObservationBoston, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.StandaloneObservationBoston, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.VerificationAssertionBoston, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.RecordedFormLockAssertion, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.SiteLockAssertion, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.StudyLockAssertion, 1)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.OpenStudyFinding)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.DecidedStudyFinding, 1)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.SiteCollectionFinding)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.SiteObservationFinding)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.ProtocolAttestation, 1)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.StudyArtifactAttestation, 1)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.ProposalAttestation, 1)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.StudyFindingAttestation, 1)].Should().Be(expectedStudyPath);
+        bulkPaths[NodeRef.For(world.EnrollmentAttestation, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.CollectionAttestation, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.RecordedLockAttestation, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.SiteFindingAttestation, 1)].Should().Be(expectedBostonSitePath);
+        bulkPaths[NodeRef.For(world.TenantArtifactAttestation, 1)].Should().Be(ScopePath.TenantWide);
+        bulkPaths[NodeRef.For(world.UnrecordedLockAttestation, 1)].Should().Be(ScopePath.TenantWide);
+        bulkPaths[NodeRef.For(world.StandardAttestation, 1)].Should().Be(ScopePath.TenantWide);
+        bulkPaths[NodeRef.For(world.LibraryItemAttestation, 1)].Should().Be(ScopePath.TenantWide);
+        bulkPaths[NodeRef.For(world.TaskConfigurationAttestation, 1)].Should().Be(ScopePath.TenantWide);
 
         // Verify exact parity against single-node PathOfAsync for every distinct NodeRef.
         foreach (var resource in resources.Distinct())
@@ -317,7 +359,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         // Warm up EF Core compiled query cache once before measuring.
         _ = await visibility.MaskAsync(benchmark.Tenant, benchmark.Coordinator, benchmark.Nodes[..16], ct);
 
-        // Scenario 1: Site coordinator holding a delegated study-site grant over 2,000 nodes across 13 path-bearing kinds + participants + reference data.
+        // Scenario 1: Site coordinator holding a delegated study-site grant over 2,000 nodes across 18 path-bearing kinds + participants + reference data.
         harness.Recorder.Reset();
         var swCoordinator = Stopwatch.StartNew();
         var coordinatorMasked = await visibility.MaskAsync(benchmark.Tenant, benchmark.Coordinator, benchmark.Nodes, ct);
@@ -352,17 +394,18 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         deniedMasked.Should().HaveCount(benchmark.DistinctInputCount);
 
         // Coordinator scenario:
-        // 1 GrantsHeldAsync (1 lease) + 1 FindGrantsAsync for parent (1 lease) + 1 PathsOfAsync across 13 kinds (1 lease, 13 SELECTs) + 1 StudySitePathsAsync (1 lease, 2 SELECTs) = 4 leases, 8 set_config, 17 SELECTs = 25 wire statements total (down from 4,004-12,012!).
+        // 1 GrantsHeldAsync (1 lease) + 1 FindGrantsAsync for parent (1 lease) + 1 PathsOfAsync across 18 kinds (1 lease, 18 SELECTs) + 1 StudySitePathsAsync (1 lease, 2 SELECTs) = 4 leases, 8 set_config, 22 SELECTs = 30 wire statements total.
         coordinatorStats.ConnectionsOpened.Should().Be(4);
         coordinatorStats.SetConfigStatements.Should().Be(8);
-        coordinatorStats.SelectStatements.Should().Be(17, "1 grants_held + 1 parent_grants + 13 per-kind path queries + 2 study-site reachability queries");
+        coordinatorStats.SelectStatements.Should().Be(22, "1 grants_held + 1 parent_grants + 18 per-kind path queries + 2 study-site reachability queries");
         coordinatorStats.SimulatedAtHalfMsPerStatementMs.Should().BeLessThan(50.0);
+        coordinatorMasked.Should().NotContainKey(NodeRef.For(benchmark.AttestedTaskConfiguration, 1), "task_configuration is visible to any tenant grant holder");
 
         // Agent direct scenario:
-        // 2 GrantsHeldAsync + 1 FindGrantsAsync + 1 shared PathsOfAsync (13 SELECTs) + 1 StudySitePathsAsync (2 SELECTs) = 5 leases, 10 set_config, 18 SELECTs = 28 wire statements total.
+        // 2 GrantsHeldAsync + 1 FindGrantsAsync + 1 shared PathsOfAsync (18 SELECTs) + 1 StudySitePathsAsync (2 SELECTs) = 5 leases, 10 set_config, 23 SELECTs = 33 wire statements total.
         agentDirectStats.ConnectionsOpened.Should().Be(5);
         agentDirectStats.SetConfigStatements.Should().Be(10);
-        agentDirectStats.SelectStatements.Should().Be(18);
+        agentDirectStats.SelectStatements.Should().Be(23);
         agentDirectStats.SimulatedAtHalfMsPerStatementMs.Should().BeLessThan(50.0);
 
         // Denied requester scenario: 1 GrantsHeldAsync only; skips agent pass completely!
@@ -370,6 +413,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         deniedStats.SetConfigStatements.Should().Be(2);
         deniedStats.SelectStatements.Should().Be(1);
         deniedStats.SimulatedAtHalfMsPerStatementMs.Should().BeLessThan(50.0);
+        deniedMasked.Should().ContainKey(NodeRef.For(benchmark.AttestedTaskConfiguration, 1));
 
         // Mixed RequesterBoundVisibility scenario: only requester-visible nodes enter principal.Acting, so uncovered participants/sites are not re-queried on the second pass!
         boundMixedStats.SimulatedAtHalfMsPerStatementMs.Should().BeLessThan(50.0);
@@ -382,7 +426,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             nodeCount = benchmark.Nodes.Count,
             distinctNodeRefs = benchmark.DistinctInputCount,
             distinctUnversionedObjects = benchmark.Nodes.Select(n => n.Unversioned()).Distinct().Count(),
-            presentPathBearingKinds = 13,
+            presentPathBearingKinds = 18,
             baselinePreFixWireStatementRange = new { min = 4_004, max = 12_012, minAtHalfMs = 2_002.0, maxAtHalfMs = 6_006.0 },
             scenarios = new
             {
@@ -431,45 +475,38 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
     private async Task<AllKindsWorld> SeedAllKindsWorldAsync(CancellationToken ct)
     {
-        var (tenant, studyA) = await _scenario.NewStudyAsync(ct);
+        var signed = await new KernelSignedTargetsScenario(fixture).CreateAsync(ct);
+        var tenant = signed.Tenant;
+        var studyA = signed.Study;
+        var bostonSite = signed.StudySite;
+        var enrollmentBoston = signed.Enrollment;
+        var protocolVersionA = signed.ProtocolVersion;
         var studyB = await NewStudyInTenantAsync(tenant, ct);
 
         OrganizationId sponsor;
+        ParticipantId participantBoston;
+        SiteId hospitalBoston;
+        Guid protocolElementAId;
+        EffectivityId studyEffectivity;
         await using (var db = fixture.CreateContext(tenant))
         {
             sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == studyA).Select(s => s.SponsorId).SingleAsync(ct);
-        }
-
-        var protocolVersionA = await ApproveDesignAsync(tenant, studyA, ct);
-        NodeRef protocolElementA;
-        await using (var db = fixture.CreateContext(tenant))
-        {
-            var elementId = await db.LineageNodes.AsNoTracking()
+            participantBoston = await db.Enrollments.AsNoTracking().Where(e => e.Id == enrollmentBoston).Select(e => e.ParticipantId).SingleAsync(ct);
+            hospitalBoston = await db.StudySites.AsNoTracking().Where(ss => ss.Id == bostonSite).Select(ss => ss.SiteId).SingleAsync(ct);
+            protocolElementAId = await db.LineageNodes.AsNoTracking()
                 .Where(n => n.Kind == NodeKinds.ProtocolElement)
                 .Select(n => n.NodeId)
                 .FirstAsync(ct);
-            protocolElementA = new NodeRef(NodeKinds.ProtocolElement, elementId);
+            studyEffectivity = await db.Effectivities.AsNoTracking()
+                .Where(e => e.ProtocolVersionId == protocolVersionA)
+                .Select(e => e.Id)
+                .SingleAsync(ct);
         }
 
-        var (bostonSite, hospitalBoston) = await AddStudySiteAsync(tenant, studyA, "US", ct, externalInstitution: true);
         var (chicagoSite, _) = await AddStudySiteAsync(tenant, studyA, "US", ct);
         var (berlinSite, hospitalBerlin) = await AddStudySiteAsync(tenant, studyB, "DE", ct, externalInstitution: true);
-
-        var (participantBoston, enrollmentBoston) = await ScreenAsync(tenant, bostonSite, "BATCH-001", ct);
         var (participantChicago, _) = await ScreenAsync(tenant, chicagoSite, "BATCH-002", ct);
 
-        var studyArtifact = ArtifactId.New();
-        var studyArtifactVersion = ArtifactVersionId.New();
-        await _scenario.OkAsync(RegisterArtifactCommand(tenant, studyArtifact, studyArtifactVersion, studyA, "study-plan-v1"), ct);
-
-        var tenantArtifact = ArtifactId.New();
-        var tenantArtifactVersion = ArtifactVersionId.New();
-        await _scenario.OkAsync(RegisterArtifactCommand(tenant, tenantArtifact, tenantArtifactVersion, studyId: null, "tenant-sop-v1"), ct);
-
-        var studyEffectivity = EffectivityId.New();
-        await _scenario.OkAsync(
-            new DeclareEffectivity(tenant, studyEffectivity, protocolVersionA, EffectivityScope.Study(), Tick(), KernelProtocolScenario.Key(), "Study-wide"),
-            ct);
         var countryEffectivity = EffectivityId.New();
         await _scenario.OkAsync(
             new DeclareEffectivity(tenant, countryEffectivity, protocolVersionA, EffectivityScope.InCountry("US"), Tick(), KernelProtocolScenario.Key(), "US filing"),
@@ -503,33 +540,74 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             new DefineQualificationRequirement(tenant, siteRequirement, "observation.record", "site_sop", null, AuthorityScope.StudySite(bostonSite), Tick(), null, KernelProtocolScenario.Key(), "Site SOP"),
             ct);
 
-        var proposer = Actor.AutomationAgent("batch-proposer").ActingFor(reader);
-        var proposalA = ProposalId.New();
-        var previousActor = fixture.CurrentActor.Actor;
-        try
-        {
-            fixture.CurrentActor.Actor = proposer;
-            var proposalResult = await fixture.Sender.SendAsync(
-                new Propose(
-                    tenant,
-                    proposalA,
-                    studyA,
-                    "Review protocol impact",
-                    studyArtifactVersion,
-                    [NodeRef.For(studyA)],
-                    ContentHash.Compute("""{"simulation":"batch"}"""),
-                    ["protocol.approve"],
-                    fixture.Clock.UtcNow.AddDays(7),
-                    "claude-opus-5",
-                    KernelProtocolScenario.Key(),
-                    "Batch test proposal"),
-                cancellationToken: ct);
-            proposalResult.IsSuccess.Should().BeTrue(proposalResult.Error?.Message);
-        }
-        finally
-        {
-            fixture.CurrentActor.Actor = previousActor;
-        }
+        // Site-level and study-level lock assertions:
+        var observations = new KernelObservationScenario(fixture);
+        var siteLock = await observations.LockAsync(tenant, studyA, NodeRef.For(bostonSite), ct, LockKind.Frozen);
+        await _scenario.OkAsync(siteLock, ct);
+        var studyLock = await observations.LockAsync(tenant, studyA, NodeRef.For(studyA), ct, LockKind.Frozen);
+        await _scenario.OkAsync(studyLock, ct);
+
+        // Open study finding (R2 from KernelSignedTargetsScenario), plus site-level findings on collection_instance and observation:
+        var openStudyFinding = (await fixture.Findings.ListAsync(tenant, new FindingQuery(studyA), ct)).Findings
+            .Single(f => f.RuleId == "R2").Id;
+
+        var collectionFindingTarget = new FindingTarget(FindingTargetKind.DatasetRecord, "VITALS", signed.CollectionInstance.Value.ToString("D"), KernelCollectionScenario.Systolic);
+        var observationFindingTarget = new FindingTarget(FindingTargetKind.Observation, "VITALS", NodeRef.For(signed.StandaloneObservation).ToString());
+        var siteRunId = ValidationRunId.New();
+        var siteRunAt = Tick();
+        await _scenario.OkAsync(
+            new RecordValidationRun(
+                tenant,
+                siteRunId,
+                studyA,
+                ValidationStage.Collection,
+                [signed.LibraryItem],
+                new DateOnly(2026, 9, 30),
+                null,
+                null,
+                null,
+                [],
+                ["VITALS"],
+                siteRunAt.AddSeconds(-1),
+                siteRunAt,
+                [
+                    new ValidationDetection(
+                        "signed-targets-pack",
+                        "R1",
+                        1,
+                        ValidationSeverity.Error,
+                        collectionFindingTarget,
+                        "Systolic check on collection instance.",
+                        null,
+                        [new ObservedVariable("SYS", "90")]),
+                    new ValidationDetection(
+                        "signed-targets-pack",
+                        "R2",
+                        1,
+                        ValidationSeverity.Warning,
+                        observationFindingTarget,
+                        "Heart rate check on standalone observation.",
+                        null,
+                        [new ObservedVariable("HR", "68")]),
+                ],
+                KernelProtocolScenario.Key(),
+                "Site findings run"),
+            ct);
+
+        var collectionFindings = (await fixture.Findings.ListAsync(tenant, new FindingQuery(studyA) { Stage = ValidationStage.Collection }, ct)).Findings;
+        var siteCollectionFinding = collectionFindings.Single(f => f.Target.Kind == FindingTargetKind.DatasetRecord).Id;
+        var siteObservationFinding = collectionFindings.Single(f => f.Target.Kind == FindingTargetKind.Observation).Id;
+        const string SiteRationale = "Confirmed reading at Boston site.";
+        var siteFindingAttestation = await _scenario.OkAsync(
+            _scenario.AttestCommand(
+                tenant,
+                AttestationMeaning.Responsibility,
+                new AttestationTarget(
+                    NodeKinds.ValidationFinding,
+                    siteCollectionFinding.Value,
+                    FindingDecisionContent.Hash(siteCollectionFinding, siteRunId, FindingStatus.Accepted, SiteRationale))),
+            ct);
+        await _scenario.OkAsync(new AcceptFinding(tenant, siteCollectionFinding, SiteRationale, siteFindingAttestation, KernelProtocolScenario.Key(), "Accept site finding"), ct);
 
         Tick();
 
@@ -546,11 +624,11 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             participantChicago,
             enrollmentBoston,
             protocolVersionA,
-            protocolElementA.Id,
-            studyArtifact,
-            tenantArtifact,
-            studyArtifactVersion,
-            tenantArtifactVersion,
+            protocolElementAId,
+            signed.StudyArtifact,
+            signed.TenantArtifact,
+            signed.StudyArtifactVersion,
+            signed.TenantArtifactVersion,
             tenantGrant,
             orgGrant,
             studyGrant,
@@ -563,7 +641,32 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             studyEffectivity,
             countryEffectivity,
             siteEffectivity,
-            proposalA);
+            signed.Proposal,
+            signed.CollectionInstance,
+            signed.FormObservation,
+            signed.StandaloneObservation,
+            signed.VerificationAssertion,
+            signed.RecordedLockAssertion,
+            siteLock.AssertionId,
+            studyLock.AssertionId,
+            openStudyFinding,
+            signed.ValidationFinding,
+            siteCollectionFinding,
+            siteObservationFinding,
+            signed.ProtocolVersionAttestation,
+            signed.EnrollmentAttestation,
+            signed.StudyArtifactAttestation,
+            signed.TenantArtifactAttestation,
+            signed.CollectionInstanceAttestation,
+            signed.RecordedLockAttestation,
+            signed.UnrecordedLockAttestation,
+            signed.ProposalAttestation,
+            signed.ValidationFindingAttestation,
+            siteFindingAttestation,
+            signed.StandardVersionAttestation,
+            signed.LibraryItemAttestation,
+            signed.TaskConfigurationAttestation,
+            signed.AttestedTaskConfiguration);
     }
 
     private async Task<WaterfallScenario> SeedTwoThousandNodeScenarioAsync(CancellationToken ct)
@@ -652,6 +755,16 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.CountryEffectivity),
             NodeRef.For(world.SiteEffectivity),
             NodeRef.For(world.ProposalA, 1),
+            NodeRef.For(world.CollectionInstanceBoston, 1),
+            NodeRef.For(world.FormObservationBoston, 1),
+            NodeRef.For(world.VerificationAssertionBoston, 1),
+            NodeRef.For(world.SiteLockAssertion, 1),
+            NodeRef.For(world.StudyLockAssertion, 1),
+            NodeRef.For(world.OpenStudyFinding),
+            NodeRef.For(world.SiteCollectionFinding),
+            NodeRef.For(world.CollectionAttestation, 1),
+            NodeRef.For(world.ProtocolAttestation, 1),
+            NodeRef.For(world.AttestedTaskConfiguration, 1),
         };
 
         foreach (var enrollmentId in bulkEnrollments)
@@ -677,25 +790,8 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             new AgentPrincipal(world.Tenant, agent, coordinator, runId),
             new AgentPrincipal(world.Tenant, agent, stranger, runId),
             nodes,
-            nodes.Distinct().Count());
-    }
-
-    private async Task<ProtocolVersionId> ApproveDesignAsync(TenantId tenant, StudyId study, CancellationToken ct)
-    {
-        var id = ProtocolVersionId.New();
-        (await _scenario.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(SampleDesign))).IsSuccess.Should().BeTrue();
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Review"), ct);
-        var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approve"), ct);
-        return id;
-    }
-
-    private static RegisterArtifact RegisterArtifactCommand(
-        TenantId tenant, ArtifactId artifact, ArtifactVersionId version, StudyId? studyId, string label)
-    {
-        var bytes = Encoding.UTF8.GetBytes(label);
-        var content = new ArtifactContent(ContentHash.OfBytes(bytes), bytes.Length, "application/pdf", $"blob://evidence/{label}");
-        return new RegisterArtifact(tenant, artifact, version, ArtifactKind.EthicsApproval, studyId, label, content, KernelProtocolScenario.Key(), "Filed");
+            nodes.Distinct().Count(),
+            world.AttestedTaskConfiguration);
     }
 
     private async Task<(ParticipantId Participant, EnrollmentId Enrollment)> ScreenAsync(
@@ -794,7 +890,32 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         EffectivityId StudyEffectivity,
         EffectivityId CountryEffectivity,
         EffectivityId SiteEffectivity,
-        ProposalId ProposalA)
+        ProposalId ProposalA,
+        CollectionInstanceId CollectionInstanceBoston,
+        ObservationId FormObservationBoston,
+        ObservationId StandaloneObservationBoston,
+        AssertionId VerificationAssertionBoston,
+        AssertionId RecordedFormLockAssertion,
+        AssertionId SiteLockAssertion,
+        AssertionId StudyLockAssertion,
+        ValidationFindingId OpenStudyFinding,
+        ValidationFindingId DecidedStudyFinding,
+        ValidationFindingId SiteCollectionFinding,
+        ValidationFindingId SiteObservationFinding,
+        AttestationId ProtocolAttestation,
+        AttestationId EnrollmentAttestation,
+        AttestationId StudyArtifactAttestation,
+        AttestationId TenantArtifactAttestation,
+        AttestationId CollectionAttestation,
+        AttestationId RecordedLockAttestation,
+        AttestationId UnrecordedLockAttestation,
+        AttestationId ProposalAttestation,
+        AttestationId StudyFindingAttestation,
+        AttestationId SiteFindingAttestation,
+        AttestationId StandardAttestation,
+        AttestationId LibraryItemAttestation,
+        AttestationId TaskConfigurationAttestation,
+        TaskConfigurationId AttestedTaskConfiguration)
     {
         public SiteId HospitalBoston => SiteId.FromGuid(HospitalBostonId);
     }
@@ -805,7 +926,8 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         AgentPrincipal Principal,
         AgentPrincipal UnpermittedPrincipal,
         List<NodeRef> Nodes,
-        int DistinctInputCount);
+        int DistinctInputCount,
+        TaskConfigurationId AttestedTaskConfiguration);
 
     private sealed record WireSnapshot(
         int ConnectionsOpened,

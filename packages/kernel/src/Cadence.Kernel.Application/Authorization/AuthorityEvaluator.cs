@@ -75,6 +75,15 @@ public interface IAuthorityStore
     }
 
     /// <summary>
+    /// Resolves scope paths for <paramref name="resources"/> together with the subset of unversioned evidence nodes that
+    /// may classify as blinded treatment data (<c>null</c> when the store has not pre-filtered evidence nodes, in which
+    /// case callers inspect all scope-visible evidence candidates via <see cref="InspectEvidenceNodesAsync"/>).
+    /// </summary>
+    async Task<(IReadOnlyDictionary<NodeRef, ScopePath> Paths, IReadOnlySet<NodeRef>? PotentiallyBlindedEvidence)> ResolveVisibilityPathsAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken) =>
+        (await PathsOfAsync(tenant, resources, cancellationToken).ConfigureAwait(false), null);
+
+    /// <summary>
     /// The scope paths of the study sites reached by an object that belongs to no study itself: the study sites where a
     /// participant has an enrollment, or where a site takes part in a study. Empty for any other object.
     /// </summary>
@@ -105,14 +114,25 @@ public interface IAuthorityStore
     Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
 
     /// <summary>
-    /// For each blinded object in <paramref name="nodes"/> (such as a treatment-allocation observation or an assertion
-    /// about one), returns the <see cref="EnrollmentId"/> against which <c>enrollment.unblind</c> is evaluated (K-AUTH-4).
-    /// Objects that are not blinded are omitted.
+    /// Resolves the scope path and treatment-blinding classification (<c>K-AUTH-4</c>) of existing <c>observation</c>,
+    /// <c>validation_finding</c>, <c>assertion</c>, and <c>form_query</c> nodes in <paramref name="nodes"/>. Nodes that
+    /// do not exist in <paramref name="tenant"/> or are of other kinds are omitted from the returned dictionary.
     /// </summary>
-    Task<IReadOnlyDictionary<NodeRef, EnrollmentId>> BlindedNodeEnrollmentsAsync(
-        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyDictionary<NodeRef, EnrollmentId>>(new Dictionary<NodeRef, EnrollmentId>());
+    Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        return Task.FromResult<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>>(new Dictionary<NodeRef, EvidenceNodeClassification>());
+    }
 }
+
+/// <summary>
+/// Resolved scope path and treatment-blinding status of an <c>observation</c>, <c>validation_finding</c>,
+/// <c>assertion</c>, or <c>form_query</c> node (K-AUTH-4).
+/// </summary>
+/// <param name="Scope">Where the governing enrollment or study sits on the scope path.</param>
+/// <param name="IsBlinded">True when reading the node reveals blinded treatment allocation or dispensation.</param>
+public sealed record EvidenceNodeClassification(ScopePath Scope, bool IsBlinded);
 
 /// <summary>Settings of the authority evaluator.</summary>
 /// <param name="PlatformOperators">

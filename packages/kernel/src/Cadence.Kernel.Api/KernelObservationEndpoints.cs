@@ -88,9 +88,9 @@ public static class KernelObservationEndpoints
             return KernelProblems.NotFound(NodeRef.For(observation));
         }
 
-        // An observation is seen by whoever may see its enrollment (ADR-2457) and, when blinded, holds enrollment.unblind (K-AUTH-4).
+        // An observation requires both enrollment scope visibility (ADR-2457) and unblinded access when blinded (K-AUTH-4).
         var enrollment = NodeRef.For(record.EnrollmentId);
-        var observationNode = NodeRef.For(observation);
+        var observationNode = NodeRef.For(record.ObservationId);
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [enrollment, observationNode], cancellationToken).ConfigureAwait(false);
         return masks.For(enrollment) is null && masks.For(observationNode) is null
             ? TypedResults.Ok(KernelObservationResponse.From(record))

@@ -25,8 +25,33 @@ public interface IKernelReadAccess
     /// The mask reason preventing the current caller from seeing <paramref name="node"/> in <paramref name="tenant"/>,
     /// or null when <paramref name="node"/> is visible.
     /// </summary>
-    async ValueTask<MaskReason?> MaskForAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
-        await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false) ? null : MaskReason.NotPermitted;
+    async ValueTask<MaskReason?> MaskForAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    {
+        var masked = await MaskAsync(tenant, [node], cancellationToken).ConfigureAwait(false);
+        return masked.TryGetValue(node, out var reason) ? reason : null;
+    }
+
+    /// <summary>
+    /// Evaluates visibility across <paramref name="nodes"/> in <paramref name="tenant"/> as a single batch, returning
+    /// the <see cref="MaskReason"/> for each masked node (visible nodes are omitted).
+    /// </summary>
+    async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var masked = new Dictionary<NodeRef, MaskReason>();
+        foreach (var node in nodes)
+        {
+            if (!masked.ContainsKey(node) && !await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false))
+            {
+                masked[node] = MaskReason.NotPermitted;
+            }
+        }
+
+        return masked;
+    }
 
     /// <summary>
     /// Returns the subset of <paramref name="nodes"/> that the current caller may see in <paramref name="tenant"/>,

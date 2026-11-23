@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -24,6 +25,7 @@ using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -275,6 +277,84 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             .Equal((1, Mmhg(182), "Initial entry"), (2, Mmhg(128), $"Typographical Error: {Detail}"));
     }
 
+    /// <summary>
+    /// Verifies <see cref="CreateBrowserCheckStartInfo"/> resolves <c>pnpm</c> (<c>pnpm.cmd</c> and <c>pnpm.exe</c> on Windows,
+    /// plus shebang-less POSIX <c>pnpm</c> via <see cref="PosixProcessLauncher"/>) using <see cref="ProcessStartInfo.ArgumentList"/>
+    /// rather than bare string arguments.
+    /// </summary>
+    [Fact(DisplayName = "CreateBrowserCheckStartInfo_ResolvesPnpmViaPosixProcessLauncher_AndPopulatesArgumentList")]
+    public void CreateBrowserCheckStartInfoResolvesPnpmViaPosixProcessLauncherAndPopulatesArgumentList()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-browser-psi-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            string winCmdDir = Path.Combine(tempRoot, "win-cmd");
+            string winExeDir = Path.Combine(tempRoot, "win-exe");
+            Directory.CreateDirectory(winCmdDir);
+            Directory.CreateDirectory(winExeDir);
+
+            File.WriteAllText(Path.Combine(winCmdDir, "pnpm"), "#!/bin/sh\n");
+            string pnpmCmd = Path.Combine(winCmdDir, "pnpm.cmd");
+            File.WriteAllText(pnpmCmd, "@echo off\r\n");
+            string pnpmExe = Path.Combine(winExeDir, "pnpm.exe");
+            File.WriteAllText(pnpmExe, "MZ");
+
+            var cmdPsi = CreateBrowserCheckStartInfo(
+                tempRoot,
+                "observation:123",
+                "slip detail",
+                new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = $"{winCmdDir};{winExeDir}" },
+                isWindows: true);
+            cmdPsi.FileName.Should().Be(pnpmCmd);
+            cmdPsi.UseShellExecute.Should().BeFalse();
+            cmdPsi.Arguments.Should().BeEmpty();
+            cmdPsi.ArgumentList.Should().Equal("exec", "playwright", "test", "--config", "playwright.correction-check.config.ts");
+            cmdPsi.Environment["OBSERVATION_REF"].Should().Be("observation:123");
+            cmdPsi.Environment["CORRECTION_DETAIL"].Should().Be("slip detail");
+
+            var exePsi = CreateBrowserCheckStartInfo(
+                tempRoot,
+                "observation:456",
+                "other detail",
+                new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = $"{winExeDir};{winCmdDir}" },
+                isWindows: true);
+            exePsi.FileName.Should().Be(pnpmExe);
+            exePsi.ArgumentList.Should().Equal("exec", "playwright", "test", "--config", "playwright.correction-check.config.ts");
+
+            if (!OperatingSystem.IsWindows() && File.Exists("/bin/sh"))
+            {
+                string posixBin = Path.Combine(tempRoot, "posix-bin");
+                Directory.CreateDirectory(posixBin);
+                string shebanglessPnpm = Path.Combine(posixBin, "pnpm");
+                File.WriteAllText(
+                    shebanglessPnpm,
+                    "printf '%s|%s|%s\\n' \"$OBSERVATION_REF\" \"$CORRECTION_DETAIL\" \"$*\"\n");
+                File.SetUnixFileMode(shebanglessPnpm, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+                var posixPsi = CreateBrowserCheckStartInfo(
+                    tempRoot,
+                    "observation:789",
+                    "posix enoexec detail",
+                    new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = $"{posixBin}:/bin:/usr/bin" },
+                    isWindows: false);
+                posixPsi.FileName.Should().Be(shebanglessPnpm);
+                posixPsi.ArgumentList.Should().Equal("exec", "playwright", "test", "--config", "playwright.correction-check.config.ts");
+
+                using var proc = PosixProcessLauncher.Start(posixPsi)!;
+                string output = proc.StandardOutput.ReadToEnd();
+                string error = proc.StandardError.ReadToEnd();
+                proc.WaitForExit();
+                proc.ExitCode.Should().Be(0, error);
+                output.Trim().Should().Be("observation:789|posix enoexec detail|exec playwright test --config playwright.correction-check.config.ts");
+            }
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
+
     private static object Correction(EnrollmentId enrollment, decimal systolic, long expectedVersion) =>
         new { enrollment_ref = NodeRef.For(enrollment).ToString(), value = Systolic(systolic), expected_version = expectedVersion };
 
@@ -377,54 +457,55 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     private static async Task<(int ExitCode, string Output)> RunBrowserCheckAsync(string observationRef, string detail, CancellationToken ct)
     {
         var web = Path.Combine(RepositoryRoot(), "apps", "web");
-        var start = CreateBrowserCheckStartInfo(web, observationRef, detail, useShellForPnpm: false);
+        var start = CreateBrowserCheckStartInfo(web, observationRef, detail);
+        using var process = PosixProcessLauncher.Start(start)!;
 
-        Process process;
+        var stdout = process.StandardOutput.ReadToEndAsync(ct);
+        var stderr = process.StandardError.ReadToEndAsync(ct);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromMinutes(5));
         try
         {
-            process = Process.Start(start)!;
+            await process.WaitForExitAsync(timeout.Token);
         }
-        catch (System.ComponentModel.Win32Exception ex) when (!OperatingSystem.IsWindows() && ex.NativeErrorCode == PosixEnoexec)
+        catch (OperationCanceledException)
         {
-            // npm's pnpm 10/11 entry script is intentionally shebang-less; fall back to /bin/sh like POSIX execvp.
-            process = Process.Start(CreateBrowserCheckStartInfo(web, observationRef, detail, useShellForPnpm: true))!;
+            process.Kill(entireProcessTree: true);
+            throw;
         }
 
-        using (process)
-        {
-            var stdout = process.StandardOutput.ReadToEndAsync(ct);
-            var stderr = process.StandardError.ReadToEndAsync(ct);
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromMinutes(5));
-            try
-            {
-                await process.WaitForExitAsync(timeout.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                process.Kill(entireProcessTree: true);
-                throw;
-            }
-
-            return (process.ExitCode, await stdout + await stderr);
-        }
+        return (process.ExitCode, await stdout + await stderr);
     }
 
-    private const int PosixEnoexec = 8;
     private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
 
-    private static ProcessStartInfo CreateBrowserCheckStartInfo(string web, string observationRef, string detail, bool useShellForPnpm)
+    internal static ProcessStartInfo CreateBrowserCheckStartInfo(
+        string web,
+        string observationRef,
+        string detail,
+        IReadOnlyDictionary<string, string?>? environment = null,
+        bool? isWindows = null)
     {
-        var start = useShellForPnpm
-            ? new ProcessStartInfo("/bin/sh")
-            : new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts");
-        start.WorkingDirectory = web;
-        start.RedirectStandardOutput = true;
-        start.RedirectStandardError = true;
-        if (useShellForPnpm)
+        string pnpmExecutable = PosixProcessLauncher.ResolveExecutablePath("pnpm", web, environment, isWindows) ?? "pnpm";
+        var start = new ProcessStartInfo(pnpmExecutable)
         {
-            start.ArgumentList.Add("-c");
-            start.ArgumentList.Add("exec pnpm exec playwright test --config playwright.correction-check.config.ts");
+            WorkingDirectory = web,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        start.ArgumentList.Add("exec");
+        start.ArgumentList.Add("playwright");
+        start.ArgumentList.Add("test");
+        start.ArgumentList.Add("--config");
+        start.ArgumentList.Add("playwright.correction-check.config.ts");
+
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                start.Environment[key] = value;
+            }
         }
 
         start.Environment["OBSERVATION_REF"] = observationRef;

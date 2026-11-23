@@ -5,6 +5,7 @@ using System.Linq;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
 
 namespace Cadence.Modules.Execution.Endpoints;
@@ -183,7 +184,12 @@ public sealed record FormResponse(
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
     /// when null), then any item the layout does not name, and completeness derived from the required items.
     /// </summary>
-    internal static FormResponse From(CollectionInstanceRecord record, IReadOnlyList<string>? layout, bool canSign = true)
+    internal static FormResponse From(
+        CollectionInstanceRecord record,
+        IReadOnlyList<string>? layout,
+        bool canSign = true,
+        IReadOnlySet<string>? blindedItemIds = null,
+        IReadOnlySet<ObservationId>? blindedObservationIds = null)
     {
         var specification = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
         var values = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
@@ -193,12 +199,33 @@ public sealed record FormResponse(
             .Distinct(StringComparer.Ordinal)
             .ToList();
         var items = order
-            .Select(id => FormItemResponse.From(id, specification.GetValueOrDefault(id), values.GetValueOrDefault(id)))
+            .Select(id =>
+            {
+                var specItem = specification.GetValueOrDefault(id);
+                var currentValue = values.GetValueOrDefault(id);
+                var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(id))
+                    || (currentValue is not null && blindedObservationIds is not null && blindedObservationIds.Contains(currentValue.ObservationId));
+                return FormItemResponse.From(id, specItem, currentValue, isBlinded);
+            })
             .ToList();
         var missing = items
             .Where(i => i.Required && (i.Value is null || i.Value is MissingValue { Reason: NullFlavor.NotAsked }))
             .Select(i => i.ItemId)
             .ToList();
+
+        var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
+        var blindedObsGuids = blindedObservationIds is { Count: > 0 }
+            ? blindedObservationIds.Select(o => o.Value).ToHashSet()
+            : null;
+        var blindedQueryGuids = blindedObsGuids is not null
+            ? record.Assertions
+                .Where(assertion => assertion.Kind == AssertionKind.Queried
+                    && assertion.Target.Kind == NodeKinds.Observation
+                    && blindedObsGuids.Contains(assertion.Target.Id))
+                .Select(assertion => assertion.AssertionId.Value)
+                .ToHashSet()
+            : [];
+
         return new(
             record.CollectionInstanceId.Value,
             record.EnrollmentId.Value,
@@ -215,11 +242,48 @@ public sealed record FormResponse(
             missing.Count == 0,
             missing,
             items,
-            [.. record.Locks.Select(l => new FormLockResponse(l.LockId.Value, l.Kind.ToString(), l.Scope.ToString(), l.LockedAt, l.LockedBy, l.ReasonForChange))],
-            [.. record.Assertions.Select(a => new FormAssertionResponse(
-                a.AssertionId.Value, a.Kind.ToString(), a.Target.ToString(), a.Revision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, a.RetractedAt))],
-            [.. record.Attestations.Select(FormSignatureResponse.From)],
-            record.ContentHash,
+            [.. record.Locks.Select(l =>
+            {
+                var isBlindedLock = blindedObsGuids is not null
+                    && l.Scope.Kind == NodeKinds.Observation
+                    && blindedObsGuids.Contains(l.Scope.Id);
+                return isBlindedLock
+                    ? new FormLockResponse(l.LockId.Value, l.Kind.ToString(), "masked", l.LockedAt, "masked", "masked")
+                    : new FormLockResponse(l.LockId.Value, l.Kind.ToString(), l.Scope.ToString(), l.LockedAt, l.LockedBy, l.ReasonForChange);
+            })],
+            [.. record.Assertions.Select(a =>
+            {
+                var isBlindedAssertion = blindedObsGuids is not null
+                    && ((a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
+                        || (a.Kind == AssertionKind.QueryAnswered && a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id)));
+                if (isBlindedAssertion)
+                {
+                    var maskedText = a.Text is null ? null : "masked";
+                    return new FormAssertionResponse(
+                        a.AssertionId.Value,
+                        a.Kind.ToString(),
+                        "masked",
+                        a.Revision,
+                        maskedText,
+                        "masked",
+                        a.AssertedAt,
+                        "masked",
+                        a.RetractedAt);
+                }
+
+                return new FormAssertionResponse(
+                    a.AssertionId.Value,
+                    a.Kind.ToString(),
+                    a.Target.ToString(),
+                    a.Revision,
+                    a.Text,
+                    a.AssertedBy,
+                    a.AssertedAt,
+                    a.ReasonForChange,
+                    a.RetractedAt);
+            })],
+            [.. record.Attestations.Select(s => FormSignatureResponse.From(s, blindedItemIds, blindedObservationIds))],
+            hasBlinded ? null : record.ContentHash,
             record.CollectionTitle,
             canSign);
     }
@@ -248,18 +312,30 @@ public sealed record FormItemResponse(
     string? RecordedBy,
     DateTimeOffset? RecordedAt)
 {
-    internal static FormItemResponse From(string id, Cadence.Kernel.Protocol.Design.CollectionItem? item, CollectedValueView? value) =>
-        new(
+    internal static FormItemResponse From(
+        string id,
+        Cadence.Kernel.Protocol.Design.CollectionItem? item,
+        CollectedValueView? value,
+        bool blinded = false)
+    {
+        ObservationValue? effectiveValue = value?.Value;
+        if (blinded && value is not null && value.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+        {
+            effectiveValue = new MissingValue(NullFlavor.Masked);
+        }
+
+        return new(
             id,
             item?.Concept.ToString(),
             item?.Unit,
             item?.ExpectedKind?.ToString(),
             item?.Required ?? false,
-            value?.Value,
-            value?.ObservationId.Value,
+            effectiveValue,
+            blinded ? null : value?.ObservationId.Value,
             value?.Revision ?? 0,
-            value?.RecordedBy,
+            blinded ? null : value?.RecordedBy,
             value?.RecordedAt);
+    }
 }
 
 /// <summary>A lock in force over a form.</summary>
@@ -311,16 +387,29 @@ public sealed record FormSignatureResponse(
     bool Superseded,
     IReadOnlyList<FormSignedValueResponse>? SignedValues)
 {
-    internal static FormSignatureResponse From(FormAttestationView signature) =>
-        new(
+    internal static FormSignatureResponse From(
+        FormAttestationView signature,
+        IReadOnlySet<string>? blindedItemIds = null,
+        IReadOnlySet<ObservationId>? blindedObservationIds = null)
+    {
+        var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
+        return new(
             signature.AttestationId.Value,
             signature.Meaning.ToString(),
             signature.SignedBy,
             signature.SignedAt,
-            signature.Reason,
-            signature.ContentHash,
+            hasBlinded ? "masked" : signature.Reason,
+            hasBlinded ? "masked" : signature.ContentHash,
             signature.Superseded,
-            signature.SignedValues?.Select(v => new FormSignedValueResponse(v.ItemId, v.ObservationId.Value, v.Revision, v.Value)).ToList());
+            signature.SignedValues?.Select(v =>
+            {
+                var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(v.ItemId))
+                    || (blindedObservationIds is not null && blindedObservationIds.Contains(v.ObservationId));
+                return isBlinded
+                    ? new FormSignedValueResponse(v.ItemId, Guid.Empty, v.Revision, new MissingValue(NullFlavor.Masked))
+                    : new FormSignedValueResponse(v.ItemId, v.ObservationId.Value, v.Revision, v.Value);
+            }).ToList());
+    }
 }
 
 /// <summary>One value as a signature signed it.</summary>
@@ -341,11 +430,28 @@ public sealed record FormSavedResponse(
     IReadOnlyList<FormSavedValueResponse> Values,
     FormResponse? Form = null)
 {
-    internal static FormSavedResponse From(CollectedValuesState state, FormResponse? form = null) =>
+    internal static FormSavedResponse From(
+        CollectedValuesState state,
+        FormResponse? form = null,
+        IReadOnlySet<string>? blindedItemIds = null,
+        IReadOnlySet<ObservationId>? blindedObservationIds = null) =>
         new(
             state.CollectionInstanceId.Value,
             state.Version,
-            [.. state.Values.Select(v => new FormSavedValueResponse(v.ItemId, v.ObservationId.Value, v.Value, v.Revision, v.Changed))],
+            [.. state.Values.Select(v =>
+            {
+                var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(v.ItemId))
+                    || (blindedObservationIds is not null && blindedObservationIds.Contains(v.ObservationId));
+                if (!isBlinded)
+                {
+                    return new FormSavedValueResponse(v.ItemId, v.ObservationId.Value, v.Value, v.Revision, v.Changed);
+                }
+
+                var maskedValue = v.Value is MissingValue { Reason: NullFlavor.NotAsked }
+                    ? v.Value
+                    : new MissingValue(NullFlavor.Masked);
+                return new FormSavedValueResponse(v.ItemId, Guid.Empty, maskedValue, v.Revision, v.Changed);
+            })],
             form);
 }
 

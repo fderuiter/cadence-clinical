@@ -123,7 +123,12 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             },
             HttpStatusCode.OK,
             ct);
-        var blindedObsId = new ObservationId(saved.Values.Single(v => v.ItemId == TreatmentItem).ObservationId);
+        saved.Values.Single(v => v.ItemId == TreatmentItem).ObservationId.Should().Be(Guid.Empty);
+        var pharmFormAfterSave = await SendJsonAsync<JsonElement>(
+            unblindedPharm, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}", null, null, HttpStatusCode.OK, ct);
+        var blindedObsId = new ObservationId(pharmFormAfterSave.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("item_id").GetString() == TreatmentItem)
+            .GetProperty("observation_id").GetGuid());
         var blindedObsRef = NodeRef.For(blindedObsId).ToString();
 
         // Outbox consumer evaluates ARM_CHECK: records the finding, yet opens ZERO automated FormQuery on blinded item!
@@ -302,7 +307,12 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             },
             HttpStatusCode.OK,
             ct);
-        var blindedObsARef = NodeRef.For(new ObservationId(savedA.Values.Single(v => v.ItemId == TreatmentItem).ObservationId)).ToString();
+        savedA.Values.Single(v => v.ItemId == TreatmentItem).ObservationId.Should().Be(Guid.Empty);
+        var pharmFormAAfterSave = await SendJsonAsync<JsonElement>(
+            unblindedPharm, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}", null, null, HttpStatusCode.OK, ct);
+        var blindedObsARef = NodeRef.For(new ObservationId(pharmFormAAfterSave.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("item_id").GetString() == TreatmentItem)
+            .GetProperty("observation_id").GetGuid())).ToString();
 
         // Site B: save violating Systolic (252) directly via command pipeline.
         var savedB = await _scenario.Protocol.OkAsync(
@@ -326,15 +336,14 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var blindedFindingRef = allFindings.Single(f => f.GetProperty("rule_id").GetString() == "ARM_CHECK").GetProperty("ref").GetString()!;
         var siteBFindingRef = allFindings.Single(f => f.GetProperty("record_key").GetString()!.Contains(world.FormB.Value.ToString("D"), StringComparison.Ordinal)).GetProperty("ref").GetString()!;
 
-        // 2. SiteACrc sees ONLY Site A's 2 findings (total_count == 2), zero Site B findings, and ARM_CHECK is masked!
+        // 2. SiteACrc sees ONLY Site A's non-blinded finding (total == 1), zero Site B findings, and blinded ARM_CHECK is withheld!
         var crcFindingsRaw = await GetRawAsync(siteACrc, $"/api/v1/kernel/studies/{studyRef}/validation/findings", HttpStatusCode.OK, ct);
-        crcFindingsRaw.Should().NotContain("252").And.NotContain(siteBFindingRef).And.NotContain(BlindedArmText);
+        crcFindingsRaw.Should().NotContain("252").And.NotContain(siteBFindingRef).And.NotContain(BlindedArmText).And.NotContain("ARM_CHECK");
         using (var crcFindingsDoc = JsonDocument.Parse(crcFindingsRaw))
         {
-            crcFindingsDoc.RootElement.GetProperty("total").GetInt32().Should().Be(2);
-            var armFinding = crcFindingsDoc.RootElement.GetProperty("findings").EnumerateArray()
-                .Single(f => f.GetProperty("rule_id").GetString() == "ARM_CHECK");
-            armFinding.GetProperty("observed").EnumerateArray().Should().OnlyContain(o => o.GetProperty("value").GetString() == "masked");
+            crcFindingsDoc.RootElement.GetProperty("total").GetInt32().Should().Be(1);
+            crcFindingsDoc.RootElement.GetProperty("findings").EnumerateArray()
+                .Single().GetProperty("rule_id").GetString().Should().Be("VS_SBP_HIGH");
         }
 
         // Cross-site GET /validation/findings/{siteBFindingRef} returns 403 Forbidden for SiteACrc.
@@ -343,13 +352,12 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             crossSiteDetail.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
-        // TenantMonitor (Tenant() scope, no enrollment.unblind) gets masked finding AND masked explanation on blindedFindingRef.
-        var monitorDetailRaw = await GetRawAsync(tenantMonitor, $"/api/v1/kernel/validation/findings/{blindedFindingRef}", HttpStatusCode.OK, ct);
-        monitorDetailRaw.Should().NotContain(BlindedArmText);
-        using (var monitorDetailDoc = JsonDocument.Parse(monitorDetailRaw))
+        // TenantMonitor (Tenant() scope, no enrollment.unblind) is refused 403 Forbidden on blindedFindingRef.
+        using (var monitorBlindedDetail = await tenantMonitor.GetAsync(new Uri($"/api/v1/kernel/validation/findings/{blindedFindingRef}", UriKind.Relative), ct))
         {
-            monitorDetailDoc.RootElement.GetProperty("finding").GetProperty("observed").EnumerateArray()
-                .Should().OnlyContain(o => o.GetProperty("value").GetString() == "masked");
+            monitorBlindedDetail.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            var monitorDetailBody = await monitorBlindedDetail.Content.ReadAsStringAsync(ct);
+            monitorDetailBody.Should().NotContain(BlindedArmText);
         }
 
         // 3. RulePack preview: SiteACrc evaluates only Site A's form, sees VS_SBP_HIGH, and withholds blinded ARM_CHECK
@@ -384,13 +392,12 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var crcExplainSiteBFinding = await McpCallAsync(siteACrc, KernelToolNames.Explain, new { node = siteBFindingRef }, ct);
         crcExplainSiteBFinding.GetProperty("isError").GetBoolean().Should().BeTrue();
 
-        //    - TenantMonitor (Tenant() scope, no enrollment.unblind) cannot get_node on blinded observation (isError == true),
-        //      and explain on blindedFindingRef redacts BlindedArmText!
+        //    - TenantMonitor (Tenant() scope, no enrollment.unblind) cannot get_node on blinded observation or explain blindedFindingRef (isError == true)!
         var monitorGetBlindedObs = await McpCallAsync(tenantMonitor, KernelToolNames.GetNode, new { node = blindedObsARef }, ct);
         monitorGetBlindedObs.GetProperty("isError").GetBoolean().Should().BeTrue();
 
         var monitorExplainBlinded = await McpCallAsync(tenantMonitor, KernelToolNames.Explain, new { node = blindedFindingRef }, ct);
-        monitorExplainBlinded.GetProperty("isError").GetBoolean().Should().BeFalse();
+        monitorExplainBlinded.GetProperty("isError").GetBoolean().Should().BeTrue();
         monitorExplainBlinded.ToString().Should().NotContain(BlindedArmText);
 
         //    - UnblindedPharmacist sees BlindedArmText in both get_node and explain.
@@ -437,7 +444,12 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             },
             HttpStatusCode.OK,
             ct);
-        var blindedObsId = new ObservationId(saved.Values.Single(v => v.ItemId == TreatmentItem).ObservationId);
+        saved.Values.Single(v => v.ItemId == TreatmentItem).ObservationId.Should().Be(Guid.Empty);
+        var pharmFormForExport = await SendJsonAsync<JsonElement>(
+            unblindedPharm, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}", null, null, HttpStatusCode.OK, ct);
+        var blindedObsId = new ObservationId(pharmFormForExport.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("item_id").GetString() == TreatmentItem)
+            .GetProperty("observation_id").GetGuid());
         var blindedObsUuid = blindedObsId.Value.ToString("D");
 
         // Verify blinded observation, raise + answer kernel query on blinded observation, and sign formA before tCut.
@@ -565,12 +577,12 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             {
                 var cb = JsonSerializer.Deserialize<KernelCasebookResponse>(statCasebookRaw, Json)!;
                 cb.Queries.Should().HaveCount(2);
-                cb.Queries.Should().OnlyContain(q => q.Ref == "masked" && q.TargetRef == "masked" && q.Text == "masked" && q.AssertedBy == "masked");
+                cb.Queries.Should().OnlyContain(q => q.Ref == "masked" && q.TargetRef == "masked" && q.Text == "masked" && q.AssertedBy == null);
 
                 var maskedVerif = cb.Verifications.Should().ContainSingle().Subject;
                 maskedVerif.Ref.Should().Be("masked");
                 maskedVerif.ObservationRef.Should().Be("masked");
-                maskedVerif.VerifiedBy.Should().Be("masked");
+                maskedVerif.VerifiedBy.Should().BeNull();
 
                 cb.Attestations.Should().HaveCount(2);
                 var maskedLockAttest = cb.Attestations.Single(a => a.Ref == "masked");
@@ -930,7 +942,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
-            (Actor.AutomationAgent(IntelligenceMcp.AgentName), ["observation.verify"], AuthorityScope.Tenant()),
+            (Actor.AutomationAgent(IntelligenceMcp.AgentName), ["observation.verify", "enrollment.unblind"], AuthorityScope.Tenant()),
         })
         {
             foreach (var cap in capabilities)

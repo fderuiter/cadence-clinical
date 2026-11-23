@@ -296,9 +296,10 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         }
 
         var attestations = await ReadAttestationsAsync(db, targetIds, knownAt, cancellationToken).ConfigureAwait(false);
+
         var auditKeys = observationSnapshots.Select(o => o.ObservationId.ToString())
-            .Concat(collectionSnapshots.Select(c => c.CollectionInstanceId.ToString()))
             .Concat(obsAssertionViews.Select(a => a.AssertionId.ToString()))
+            .Concat(collectionSnapshots.Select(c => c.CollectionInstanceId.ToString()))
             .Concat(lockEntries.Select(l => l.LockId.ToString()))
             .Concat(attestations.Select(a => a.AttestationId.ToString()))
             .Append(enrollment.ToString())
@@ -749,9 +750,12 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         IReadOnlyList<ExportAttestationSnapshot> attestations,
         IReadOnlyList<ProtocolDesign> designs)
     {
-        var blindedObsGuids = observations
+        var blindedObsIds = observations
             .Where(o => o.IsBlindedTreatment)
-            .Select(o => o.ObservationId.Value)
+            .Select(o => o.ObservationId)
+            .ToHashSet();
+        var blindedObsGuids = blindedObsIds
+            .Select(id => id.Value)
             .ToHashSet();
 
         var blindedCollectionGuids = observations
@@ -761,6 +765,13 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
 
         foreach (var coll in collections)
         {
+            if (BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(coll.CollectionSpecId, coll.CollectionSpecName, designs: designs)
+                || coll.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains))
+            {
+                blindedCollectionGuids.Add(coll.CollectionInstanceId.Value);
+                continue;
+            }
+
             var spec = designs.SelectMany(d => d.CollectionSpecs)
                 .FirstOrDefault(s => string.Equals(s.Id, coll.CollectionSpecId, StringComparison.Ordinal));
             if (spec is not null && spec.Items.Any(i => BlindedObservationClassifier.IsBlindedTreatment(

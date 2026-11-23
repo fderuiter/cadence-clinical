@@ -8,6 +8,7 @@ import {
   useClinicalStore,
 } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
+import { useToastStore } from "../src/stores/toasts.js";
 import { soaClient } from "../src/api/soaClient.js";
 import { stateTrackingPlugin } from "../src/stores/plugins.js";
 
@@ -156,17 +157,20 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     ];
 
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const toastStore = useToastStore();
 
     // Attempting to write modifications to local storage (addLedgerBlock)
     await expect(
       store.addLedgerBlock("UPDATE_FIELD", { id: "f1" }, "Testing cyclic check")
     ).rejects.toThrow("USDM Graph Validator");
 
-    // Verify alert was called with cycle path information
-    expect(alertSpy).toHaveBeenCalled();
-    const alertMsg = alertSpy.mock.calls[0][0];
-    expect(alertMsg).toContain("Skip-Logic Cycle Alert");
-    expect(alertMsg).toContain("f1 -> f2 -> f3 -> f1");
+    // Verify persistent error toast was pushed instead of window.alert
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(toastStore.toasts[0]).toMatchObject({
+      tone: "error",
+      title: "Skip-Logic Cycle Alert",
+    });
+    expect(toastStore.toasts[0].message).toContain("f1 -> f2 -> f3 -> f1");
 
     // Verify local storage was NOT modified with the new block
     expect(window.localStorage.getItem("ledgerBlocks")).toBeNull();
@@ -263,8 +267,9 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     ).toBeNull();
   });
 
-  it("fires CYCLE_DETECTED window.alert before console.error in both addLedgerBlock and pushSoAMutation", async () => {
+  it("pushes a persistent CYCLE_DETECTED error toast before console.error in both addLedgerBlock and pushSoAMutation without window.alert", async () => {
     const store = useClinicalStore();
+    const toastStore = useToastStore();
     store.ecrfFields = [
       {
         id: "f1",
@@ -291,9 +296,16 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     ];
 
     const callOrder = [];
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation((msg) => {
-      callOrder.push(`alert:${msg}`);
-    });
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const originalPush = toastStore.push.bind(toastStore);
+    const pushSpy = vi
+      .spyOn(toastStore, "push")
+      .mockImplementation((options) => {
+        callOrder.push(
+          `toast:${options.tone}:${options.timeoutMs}:${options.title}:${options.message}`
+        );
+        return originalPush(options);
+      });
     const errorSpy = vi.spyOn(console, "error").mockImplementation((msg) => {
       callOrder.push(`error:${msg}`);
     });
@@ -305,12 +317,18 @@ describe("Shared Zod Schema Client-Side Validation", () => {
       "Local storage persistence blocked by USDM Graph Validator:"
     );
 
-    expect(callOrder[0]).toContain("alert:Skip-Logic Cycle Alert:");
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(callOrder[0]).toContain("toast:error:0:Skip-Logic Cycle Alert:");
     expect(callOrder[1]).toContain(
       "error:Local storage persistence blocked by USDM Graph Validator:"
     );
+    expect(toastStore.toasts[0]).toMatchObject({
+      tone: "error",
+      title: "Skip-Logic Cycle Alert",
+    });
 
     callOrder.length = 0;
+    toastStore.toasts = [];
 
     await expect(
       store.pushSoAMutation(
@@ -321,10 +339,16 @@ describe("Shared Zod Schema Client-Side Validation", () => {
       )
     ).rejects.toThrow("Graph validation failure:");
 
-    expect(callOrder[0]).toContain("alert:Skip-Logic Cycle Alert:");
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(callOrder[0]).toContain("toast:error:0:Skip-Logic Cycle Alert:");
     expect(callOrder[1]).toContain("error:Graph validation failure:");
+    expect(toastStore.toasts[0]).toMatchObject({
+      tone: "error",
+      title: "Skip-Logic Cycle Alert",
+    });
     expect(saveArmSpy).not.toHaveBeenCalled();
 
+    pushSpy.mockRestore();
     alertSpy.mockRestore();
     errorSpy.mockRestore();
   });

@@ -92,15 +92,15 @@ public interface ICollectionValidationService
 
     /// <summary>
     /// Evaluates the study's pinned rule packs in memory over <paramref name="formId"/> overlaid with
-    /// <paramref name="draftValues"/>, replacing persisted and cross-form blinded values with null when
-    /// <paramref name="maskBlinded"/> is true (K-AUTH-4).
+    /// <paramref name="draftValues"/>, replacing blinded variables with <c>null</c> and suppressing blinded warnings
+    /// when <paramref name="unblinded"/> is <see langword="false"/> (K-AUTH-4, K-RULE-3).
     /// </summary>
     Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
         TenantId tenant,
         CollectionInstanceId formId,
         IReadOnlyDictionary<string, ObservationValue?> draftValues,
         DateOnly asOf,
-        bool maskBlinded,
+        bool unblinded,
         CancellationToken cancellationToken = default) =>
         PreviewFormAsync(tenant, formId, draftValues, asOf, cancellationToken);
 
@@ -124,17 +124,23 @@ public interface ICollectionValidationService
 
     /// <summary>
     /// Evaluates the study's pinned rule packs in memory over an already-loaded <paramref name="target"/> form record
-    /// overlaid with <paramref name="draftValues"/>, replacing persisted and cross-form blinded values with null when
-    /// <paramref name="maskBlinded"/> is true (K-AUTH-4).
+    /// overlaid with <paramref name="draftValues"/> (plus sibling forms on the enrollment) without re-reading the target
+    /// form or mutating kernel state, replacing blinded variables with <c>null</c> and suppressing blinded warnings when
+    /// <paramref name="unblinded"/> is <see langword="false"/> (K-AUTH-4, K-RULE-3).
     /// </summary>
     Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
         TenantId tenant,
         CollectionInstanceRecord target,
         IReadOnlyDictionary<string, ObservationValue?> draftValues,
         DateOnly asOf,
-        bool maskBlinded,
+        bool unblinded,
         CancellationToken cancellationToken = default) =>
-        PreviewFormAsync(tenant, target, draftValues, asOf, cancellationToken);
+        PreviewFormAsync(
+            tenant,
+            target ?? throw new ArgumentNullException(nameof(target)),
+            draftValues,
+            asOf,
+            cancellationToken);
 
     /// <summary>
     /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item (draft or approved) in memory against
@@ -148,16 +154,17 @@ public interface ICollectionValidationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item in memory against visible collection
-    /// instances of <paramref name="studyId"/>, masking blinded items for enrollments outside <paramref name="unblindedEnrollments"/>.
+    /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item (draft or approved) in memory against
+    /// collection instances of <paramref name="studyId"/> visible to <paramref name="caller"/>, replacing blinded
+    /// variables with <c>null</c> for enrollments not in <paramref name="unblindedEnrollments"/> (K-AUTH-4, K-RULE-3).
     /// </summary>
     Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
         TenantId tenant,
         StudyId studyId,
         LibraryItemId rulePackId,
         DateOnly asOf,
-        IReadOnlySet<EnrollmentId>? visibleEnrollments,
-        IReadOnlySet<EnrollmentId>? unblindedEnrollments,
+        Actor? caller,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments = null,
         CancellationToken cancellationToken = default) =>
         PreviewRulePackAsync(tenant, studyId, rulePackId, asOf, cancellationToken);
 
