@@ -66,7 +66,7 @@
           class="gate-badge"
           :class="`gate-${singleGate.overall_status.toLowerCase()}`"
         >
-          {{ singleGate.overall_status }}
+          {{ formatClinicalStatus(singleGate.overall_status) }}
         </span>
       </div>
 
@@ -177,7 +177,7 @@
                     class="gate-badge"
                     :class="`gate-${row.overall_status.toLowerCase()}`"
                   >
-                    {{ row.overall_status }}
+                    {{ formatClinicalStatus(row.overall_status) }}
                   </span>
                 </td>
                 <td>
@@ -241,6 +241,7 @@ import { computed, onMounted, ref } from "vue";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -481,7 +482,6 @@ onMounted(() => {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 700;
-  text-transform: uppercase;
 }
 
 .gate-certified,

@@ -288,7 +288,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             ProbePostgres = () => new CiPostgresStatus(true, "ok"),
             FindFiles = (_, _) => [],
             DeleteDirectory = _ => { },
-            FindSkippedDatabaseTests = _ => [],
+            FindSkippedDatabaseTests = (_, _) => [],
         };
 
         var passResult = LocalCiRunner.Run([onlyStepJob], options, env).Single();
@@ -1369,8 +1369,18 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
         string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
         Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
+        string realNodeModules = Path.Combine(realRepoRoot, "node_modules");
         string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
-        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        bool createdSymlink = Directory.Exists(realNodeModules);
+        if (createdSymlink)
+        {
+            Directory.CreateSymbolicLink(symlinkNodeModules, realNodeModules);
+        }
+        else
+        {
+            Directory.CreateDirectory(symlinkNodeModules);
+        }
+
         Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
 
         string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");

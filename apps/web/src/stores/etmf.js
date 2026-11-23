@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { DEMO_STUDY, getDemoPersonaByWorkflow } from "demo-fixtures";
 import { etmfService } from "../api/etmf";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
@@ -288,7 +289,9 @@ export const useEtmfStore = defineStore("etmf", {
     /** @type {EtmfDocumentRecord | null} */
     activeDocument: null,
     isUploading: false,
-    currentStudyId: isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "",
+    currentStudyId:
+      getSyncedStudyScope() ||
+      (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : ""),
     currentSiteId: "",
     scopeForbiddenGuidance: "",
     documentsError: "",
@@ -342,6 +345,9 @@ export const useEtmfStore = defineStore("etmf", {
           this.scopeForbiddenGuidance = "";
           this.documentsError = "";
         }
+        if (nextStudy) {
+          syncActiveStudyScope(nextStudy);
+        }
       }
       if (siteId !== undefined && siteId !== null) {
         const nextSite = String(siteId).trim();
@@ -356,8 +362,10 @@ export const useEtmfStore = defineStore("etmf", {
     async fetchBinderTree(studyId) {
       if (typeof studyId === "string" && studyId.trim()) {
         this.currentStudyId = studyId.trim();
+        syncActiveStudyScope(this.currentStudyId);
       } else if (!this.currentStudyId && isDemoBuild() && DEMO_STUDY.code) {
         this.currentStudyId = DEMO_STUDY.code;
+        syncActiveStudyScope(this.currentStudyId);
       }
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy

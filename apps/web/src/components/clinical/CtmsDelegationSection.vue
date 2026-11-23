@@ -68,14 +68,20 @@
               <td>
                 <strong>{{ rec.staff_user_id }}</strong>
               </td>
-              <td>{{ rec.task_codes.join(", ") }}</td>
+              <td>
+                {{
+                  rec.task_codes
+                    .map((code) => formatClinicalEnum(code))
+                    .join(", ")
+                }}
+              </td>
               <td>{{ rec.start_date }}</td>
               <td>
                 <span
                   class="status-pill"
                   :class="`doa-${delegationStatus(rec).toLowerCase()}`"
                 >
-                  {{ delegationStatus(rec) }}
+                  {{ formatClinicalStatus(delegationStatus(rec)) }}
                 </span>
               </td>
               <td class="action-cell">
@@ -246,6 +252,10 @@ import { computed, onMounted, ref } from "vue";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+} from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 

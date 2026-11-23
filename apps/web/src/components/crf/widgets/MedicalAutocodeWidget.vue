@@ -150,10 +150,8 @@ const selectTerm = (term) => {
   color: var(--semantic-color-text);
 }
 
-.autocode-input:focus {
-  outline: none;
+.autocode-input:focus-visible {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .autocode-spinner {

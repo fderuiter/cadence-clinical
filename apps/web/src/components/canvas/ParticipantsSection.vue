@@ -394,11 +394,12 @@ function onSiteChange(event: Event) {
 .participants-header input[type="search"],
 .participants-header select {
   max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 6px;
-  border: 1px solid var(--border);
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 8px;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 #participants-site {
@@ -409,17 +410,25 @@ function onSiteChange(event: Event) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 2px 4px 2px 8px;
   border-radius: 999px;
   background: var(--accent-bg);
   font-size: 0.85rem;
 }
 
 .filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 0 4px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: inherit;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .status-line {
@@ -464,12 +473,18 @@ function onSiteChange(event: Event) {
 }
 
 .row-select {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 2px 4px;
   border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--accent);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .numeric {

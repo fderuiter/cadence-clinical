@@ -489,6 +489,13 @@ async function load(refText: string) {
   try {
     const loaded = await kernelApi.getProposal(refText);
     proposal.value = loaded;
+    if (loaded.ref) {
+      seedNodeSummary(loaded.ref, {
+        kind: "proposal",
+        title: loaded.intent,
+        status: loaded.status,
+      });
+    }
     if (loaded.plan?.ref && loaded.plan.title) {
       seedNodeSummary(loaded.plan.ref, {
         kind: "artifact_version",
