@@ -255,14 +255,49 @@
           <template v-else-if="readiness">
             <div class="readiness-summary">
               <span
-                class="readiness-badge"
+                class="clinical-badge readiness-badge"
                 :class="
                   readiness.ready_for_lock
-                    ? 'readiness-badge--ready'
-                    : 'readiness-badge--blocked'
+                    ? 'clinical-badge--verified readiness-badge--ready'
+                    : 'clinical-badge--error readiness-badge--blocked'
                 "
                 data-testid="study-locks-readiness-status"
               >
+                <svg
+                  v-if="readiness.ready_for_lock"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+                  />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
                 {{
                   readiness.ready_for_lock
                     ? "Ready for Locked"
@@ -418,7 +453,11 @@
             <td>
               <span
                 :class="[
+                  'clinical-badge',
                   'lock-badge',
+                  entry.kind.toLowerCase() === 'locked'
+                    ? 'clinical-badge--locked'
+                    : 'clinical-badge--frozen',
                   `lock-badge--${entry.kind.toLowerCase()}`,
                 ]"
               >
@@ -1222,24 +1261,6 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   gap: 8px;
 }
 
-.readiness-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.readiness-badge--ready {
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.readiness-badge--blocked {
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
-}
-
 .readiness-counts {
   color: var(--semantic-color-text-body);
   font-variant-numeric: tabular-nums;
@@ -1328,24 +1349,6 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface-muted);
-}
-
-.lock-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.lock-badge--frozen {
-  background: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary-dark);
-}
-
-.lock-badge--locked {
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
 }
 
 .masked-pill {

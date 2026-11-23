@@ -415,26 +415,36 @@
         >
         <span
           v-else-if="complianceLoadError"
-          class="badge"
-          style="
-            background-color: var(--semantic-color-warning-dark);
-            color: var(--semantic-color-text-on-solid);
-          "
+          class="clinical-badge clinical-badge--warning"
           :title="complianceLoadError"
         >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+            />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
           STATUS UNAVAILABLE
         </span>
         <span
           v-else
-          class="badge"
-          :class="{ gxp: complianceStatus.is_complete }"
-          :style="
+          class="clinical-badge"
+          :class="
             complianceStatus.is_complete
-              ? {}
-              : {
-                  backgroundColor: 'var(--semantic-color-error)',
-                  color: 'var(--semantic-color-surface)',
-                }
+              ? 'clinical-badge--verified'
+              : 'clinical-badge--error'
           "
           :title="
             complianceStatus.is_complete
@@ -443,6 +453,39 @@
                 (complianceStatus.missing_documents || []).join(', ')
           "
         >
+          <svg
+            v-if="complianceStatus.is_complete"
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m15 9-6 6" />
+            <path d="m9 9 6 6" />
+          </svg>
           {{ complianceStatus.is_complete ? "COMPLIANT" : "NON-COMPLIANT" }}
         </span>
       </div>
@@ -492,8 +535,12 @@
                   </td>
                   <td>
                     <span
-                      class="badge"
-                      :class="{ gxp: m.status === 'ACHIEVED' }"
+                      class="clinical-badge badge"
+                      :class="
+                        m.status === 'ACHIEVED'
+                          ? 'clinical-badge--verified gxp'
+                          : 'clinical-badge--draft'
+                      "
                       >{{ m.status }}</span
                     >
                   </td>
@@ -593,8 +640,14 @@
                   <td>{{ v.cra_id || "N/A" }}</td>
                   <td>
                     <span
-                      class="badge"
-                      :class="{ gxp: v.status === 'SIGNED_OFF' }"
+                      class="clinical-badge badge"
+                      :class="
+                        v.status === 'SIGNED_OFF'
+                          ? 'clinical-badge--signed gxp'
+                          : v.status === 'COMPLETED'
+                            ? 'clinical-badge--verified'
+                            : 'clinical-badge--draft'
+                      "
                       >{{ v.status }}</span
                     >
                   </td>
@@ -755,9 +808,15 @@
               </td>
               <td>{{ letter.letterType }}</td>
               <td>
-                <span class="badge" :class="{ gxp: letter.isSigned }">{{
-                  letter.status
-                }}</span>
+                <span
+                  class="clinical-badge"
+                  :class="
+                    letter.isSigned
+                      ? 'clinical-badge--signed'
+                      : 'clinical-badge--draft'
+                  "
+                  >{{ letter.status }}</span
+                >
               </td>
               <td>
                 <code style="font-size: 11px">{{ letter.pdfSha256Hash }}</code>
@@ -993,22 +1052,24 @@
                     <span
                       v-for="(cert, idx) in getStaffCertificates(d)"
                       :key="idx"
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-color-success-bg-soft);
-                        color: var(--semantic-color-success-dark);
-                        border: 1px solid
-                          var(--semantic-color-success-border-soft);
-                        font-size: 10px;
-                        font-weight: 600;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 4px;
-                      "
+                      class="clinical-badge clinical-badge--verified"
                     >
-                      <span>✓</span> {{ cert }}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="m9 12 2 2 4-4" />
+                      </svg>
+                      {{ cert }}
                     </span>
                   </div>
                 </td>
@@ -1017,14 +1078,8 @@
                     <span
                       v-for="task in d.task_codes"
                       :key="task"
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-color-surface-header);
-                        color: var(--semantic-color-text-body);
-                        border: 1px solid var(--semantic-color-border-control);
-                        font-size: 10px;
-                        font-family: monospace;
-                      "
+                      class="clinical-badge clinical-badge--draft"
+                      style="font-family: var(--font-mono)"
                     >
                       {{ task }}
                     </span>
@@ -1033,14 +1088,26 @@
                 <td>{{ d.start_date }}</td>
                 <td>{{ d.end_date || "—" }}</td>
                 <td>
-                  <span class="badge" :class="{ gxp: d.is_active }">{{
-                    d.is_active ? "ACTIVE" : "INACTIVE"
-                  }}</span>
+                  <span
+                    class="clinical-badge"
+                    :class="
+                      d.is_active
+                        ? 'clinical-badge--verified'
+                        : 'clinical-badge--draft'
+                    "
+                    >{{ d.is_active ? "ACTIVE" : "INACTIVE" }}</span
+                  >
                 </td>
                 <td>
-                  <span class="badge" :class="{ gxp: d.signed_off }">{{
-                    d.signed_off ? "YES" : "PENDING PI"
-                  }}</span>
+                  <span
+                    class="clinical-badge"
+                    :class="
+                      d.signed_off
+                        ? 'clinical-badge--signed'
+                        : 'clinical-badge--warning'
+                    "
+                    >{{ d.signed_off ? "YES" : "PENDING PI" }}</span
+                  >
                 </td>
                 <td style="display: flex; gap: 6px">
                   <button
@@ -1126,14 +1193,9 @@
                 <td>{{ audit.user_id }}</td>
                 <td>{{ audit.user_role }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-body);
-                    "
-                    >{{ audit.action }}</span
-                  >
+                  <span class="clinical-badge clinical-badge--draft">{{
+                    audit.action
+                  }}</span>
                 </td>
                 <td style="font-size: 12px">
                   {{ audit.details }}
@@ -1408,11 +1470,7 @@
                 <td>
                   <span
                     v-if="grid.activity_id"
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-primary-light);
-                      color: var(--semantic-color-primary);
-                    "
+                    class="clinical-badge clinical-badge--frozen"
                   >
                     {{ grid.activity_id }}
                   </span>
@@ -1425,11 +1483,7 @@
                 <td>
                   <span
                     v-if="grid.form_id"
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-success-bg-soft);
-                      color: var(--semantic-color-success-dark);
-                    "
+                    class="clinical-badge clinical-badge--verified"
                   >
                     {{ grid.form_id }}
                   </span>
@@ -1451,28 +1505,17 @@
                 <td>${{ (grid.patient_stipend || 0).toFixed(2) }}</td>
                 <td>${{ (grid.travel_reimbursement || 0).toFixed(2) }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-secondary);
-                    "
+                  <span class="clinical-badge clinical-badge--draft"
                     >v{{ grid.version_index }}</span
                   >
                 </td>
                 <td>
                   <span
-                    class="badge"
-                    :style="
+                    class="clinical-badge"
+                    :class="
                       grid.is_active
-                        ? {
-                            background: 'var(--semantic-color-success-bg)',
-                            color: 'var(--semantic-color-success-dark)',
-                          }
-                        : {
-                            background: 'var(--semantic-color-error-bg)',
-                            color: 'var(--semantic-color-error-text-dark)',
-                          }
+                        ? 'clinical-badge--verified'
+                        : 'clinical-badge--error'
                     "
                   >
                     {{ grid.is_active ? "ACTIVE" : "HISTORICAL" }}
@@ -1724,17 +1767,11 @@
                 <tr v-for="adj in budgetAdjustments" :key="adj.id">
                   <td>
                     <span
-                      class="badge"
-                      :style="
+                      class="clinical-badge"
+                      :class="
                         adj.amount >= 0
-                          ? {
-                              background: 'var(--semantic-color-success-bg)',
-                              color: 'var(--semantic-color-success-dark)',
-                            }
-                          : {
-                              background: 'var(--semantic-color-error-bg)',
-                              color: 'var(--semantic-color-error-text-dark)',
-                            }
+                          ? 'clinical-badge--verified'
+                          : 'clinical-badge--error'
                       "
                     >
                       {{ adj.adjustment_type }}
@@ -1756,18 +1793,11 @@
                   </td>
                   <td>
                     <span
-                      class="badge"
-                      :style="
+                      class="clinical-badge"
+                      :class="
                         adj.status === 'APPROVED'
-                          ? {
-                              background: 'var(--semantic-color-success-bg)',
-                              color: 'var(--semantic-color-success-dark)',
-                            }
-                          : {
-                              background:
-                                'var(--semantic-color-warning-bg-badge)',
-                              color: 'var(--semantic-color-warning-dark)',
-                            }
+                          ? 'clinical-badge--verified'
+                          : 'clinical-badge--warning'
                       "
                     >
                       {{ adj.status }}
@@ -1854,14 +1884,8 @@
                   ${{ Number(amend.revised_budget).toLocaleString() }}
                 </td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-primary-light);
-                      color: var(--semantic-color-primary);
-                    "
-                  >
-                    v{{ amend.previous_version_index }} ➔ v{{
+                  <span class="clinical-badge clinical-badge--frozen">
+                    v{{ amend.previous_version_index }} to v{{
                       amend.new_version_index
                     }}
                   </span>
@@ -1871,13 +1895,7 @@
                 </td>
                 <td>{{ amend.approved_by || amend.created_by }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-success-bg);
-                      color: var(--semantic-color-success-dark);
-                    "
-                  >
+                  <span class="clinical-badge clinical-badge--verified">
                     {{ amend.status }}
                   </span>
                 </td>
@@ -4697,6 +4715,7 @@ textarea {
 .btn-secondary {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
 }
 
 .btn-primary {

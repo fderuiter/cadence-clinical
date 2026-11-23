@@ -1337,8 +1337,9 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .badge-status-in_progress {
-  background: var(--semantic-color-ai);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
+  border: 1px solid var(--semantic-color-info-border);
 }
 
 .badge-status-waiting_on_site,

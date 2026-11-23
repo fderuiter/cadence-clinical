@@ -2188,8 +2188,8 @@ onMounted(() => {
 }
 
 .lang-r {
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai-dark);
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .version-pill {
