@@ -9,12 +9,14 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 
 | Task                    | Command                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------ |
-| Set up a new machine    | `make wizard`                                                                  |
+| Set up a new machine    | `make wizard` (headless: `make setup`)                                         |
 | Build                   | `dotnet build Cadence.sln`                                                     |
-| Unit tests              | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| Unit tests (.NET)       | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
 | Architecture tests      | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| Frontend & docs tests   | `pnpm test`                                                                    |
 | Format check            | `dotnet format Cadence.sln --verify-no-changes`                                |
 | All quality gates       | `pnpm cadence check`                                                           |
+| Full local verification | `make verify`                                                                  |
 | Auto-fix                | `pnpm cadence fix`                                                             |
 | Traceability validation | `pnpm cadence gxp sync`                                                        |
 | New ADR                 | `pnpm cadence scaffold adr "<title>"`                                          |
@@ -32,17 +34,19 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
-make wizard            # or: bash scripts/setup_wizard.sh   (Windows: scripts/setup_wizard.ps1)
+make wizard            # interactive: bash scripts/setup_wizard.sh (Windows: scripts/setup_wizard.ps1)
+make setup             # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
 ```
 
 The wizard detects the environment (workstation, Codespaces, devcontainer, Claude Code remote session
 or CI), installs or validates the .NET 10 SDK and dev certificate, installs the pnpm workspace,
+provisions `.cadence/venv` (`detect-secrets`) and `.cadence/bin` (`actionlint`, `hadolint`, `shellcheck`),
 points Git at the repository hooks (`git config core.hooksPath .githooks`), creates `.env` from
-`.env.example`, and runs `cadence doctor`. Use `--dev` (or `-y`) to skip prompts and `--minimal` to
-skip the Playwright browser download.
+`.env.example`, and runs `cadence doctor`. `make setup` passes `--dev --minimal` to skip prompts and
+the Playwright browser download.
 
-With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the workspaces
-with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
+With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites) and developer tools
+already provisioned, restore the workspaces directly with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -71,8 +75,11 @@ dotnet build Cadence.sln
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 dotnet format Cadence.sln --verify-no-changes
+pnpm test
 pnpm cadence check
 ```
+
+`make verify` runs `pnpm cadence check`, `pnpm test`, and `pnpm cadence test` in sequence.
 
 Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,

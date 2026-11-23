@@ -4,6 +4,7 @@
 - **Date:** 2026-11-19
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
+- **Amended by:** [ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md)
 - **Requirements:** PRD-CRF-015 (WCAG 2.1 AA keyboard focus containment and accessibility auditing), PRD-SYS-001 (21 CFR Part 11 electronic signature and mandatory lock workflows)
 
 ---
@@ -22,12 +23,12 @@ Even after introducing shared focus-trap primitives in `packages/ui` (ADR-2544),
 
 ### Option 1: Centralize Background `inert` Reconciliation, `ClinicalDrawer`, and LIFO `Escape` Stacking in `packages/ui` (Selected)
 
-- **Overview:** Extend `useFocusTrap` in `packages/ui` to reconcile `inert` and `aria-hidden="true"` across ancestor siblings up to `document.body` (exempting `[data-focus-trap-exempt="true"]` live-alert hosts), export `trapTabFocus(event, container)` alongside `getFocusableElements`, deduplicate `Tab` and `Escape` keyboard events via `WeakSet` tracking and `defaultPrevented` checks across `window`/`document` listeners, coordinate `useEscapeClose` with `useFocusTrap` via a shared monotonic LIFO stack, import compiled `packages/ui/dist/index.css` in `apps/web/src/style.css`, introduce `ClinicalDrawer.vue`, enhance `ClinicalModal.vue` (`dismissible`, `closeOnBackdrop`, `initialFocus`, `restoreFocus`, `teleport`), retire `apps/web/src/composables/{useFocusTrap,useEscapeClose}.js` and `apps/subject-portal/src/components/focus-trap.js` (including inline focusable selector fallbacks in `apps/subject-portal/src/features/signature.js`), free `Tab` exit from inline `ClinicalQueryPanel.vue`, and remove all overlay `vuejs-accessibility` suppressions.
+- **Overview:** Extend `useFocusTrap` in `packages/ui` to reconcile `inert` and `aria-hidden="true"` across ancestor siblings up to `document.body` (exempting `[data-focus-trap-exempt="true"]` live-alert hosts), export `trapTabFocus(event, container)` alongside `getFocusableElements`, deduplicate `Tab` and `Escape` keyboard events via `WeakSet` tracking and `defaultPrevented` checks across `window`/`document` listeners, coordinate `useEscapeClose` with `useFocusTrap` via a shared monotonic LIFO stack, introduce `ClinicalDrawer.vue`, enhance `ClinicalModal.vue` (`dismissible`, `closeOnBackdrop`, `initialFocus`, `restoreFocus`, `teleport`) with Vite compiling their `<style scoped>` rules directly from `packages/ui` source ([ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md), superseding the interim `packages/ui/dist/index.css` import in `apps/web/src/style.css`), retire `apps/web/src/composables/{useFocusTrap,useEscapeClose}.js` and `apps/subject-portal/src/components/focus-trap.js` (including inline focusable selector fallbacks in `apps/subject-portal/src/features/signature.js`), free `Tab` exit from inline `ClinicalQueryPanel.vue`, and remove all overlay `vuejs-accessibility` suppressions.
 - **Pros:**
   - ✅ Satisfies PRD-CRF-015 and PRD-SYS-001 across stacked modals, drawers, anchored tours, and inline panels.
   - ✅ Preserves live toast announcements by teleporting `ToastHost.vue` to `document.body` with `data-focus-trap-exempt="true"`.
 - **Cons:**
-  - ❌ Requires rebuilding `packages/ui` (`pnpm --filter ui build`) before running downstream `apps/web` tests that resolve `packages/ui/dist`.
+  - ❌ Initially required rebuilding `packages/ui` (`pnpm --filter ui build`) before running downstream `apps/web` tests until [ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) switched `apps/web` to resolve `packages/ui` directly from workspace source; exported signature changes still require regenerating `packages/ui/index.d.ts`.
 
 ### Option 2: Manage `inert` and `aria-hidden` Per-Application in App Shells
 

@@ -78,7 +78,7 @@ cd cadence-clinical
 dotnet build Cadence.sln                        # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj      # unit tests
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-pnpm install --frozen-lockfile && pnpm --filter ui build          # frontend workspace & shared UI package
+pnpm install --frozen-lockfile                  # frontend workspace (apps resolve packages/ui from source)
 ```
 
 ### Running the services
