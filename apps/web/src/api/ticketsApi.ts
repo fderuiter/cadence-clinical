@@ -387,7 +387,6 @@ export const ticketsApi = {
     });
 
     return unwrapResponse(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (openApiClient as any).POST("/api/v1/auth/signature-verification", {
         body,
       })

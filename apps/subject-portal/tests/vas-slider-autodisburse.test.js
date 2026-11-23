@@ -88,13 +88,27 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
 
     const displayBadge = document.getElementById("pain_vas_display");
     expect(displayBadge).not.toBeNull();
-    expect(displayBadge.textContent).toContain("Value: 0");
+    expect(displayBadge.textContent).toContain("Not answered");
+    expect(displayBadge.getAttribute("data-state")).toBe("untouched");
+    expect(sliderInput.getAttribute("data-touched")).toBe("false");
+    expect(sliderInput.getAttribute("aria-valuetext")).toBe("Not answered");
+
+    // Untouched required slider must fail validation instead of silently submitting 0
+    expect(validateActiveQuestionnaire()).toBe(false);
+    expect(
+      document
+        .getElementById("field-container-pain_vas")
+        .classList.contains("has-error")
+    ).toBe(true);
 
     // Simulate user sliding to 75
     sliderInput.value = "75";
-    sliderInput.dispatchEvent(new Event("input"));
+    sliderInput.dispatchEvent(new Event("input", { bubbles: true }));
 
     expect(displayBadge.textContent).toContain("Value: 75");
+    expect(displayBadge.getAttribute("data-state")).toBe("touched");
+    expect(sliderInput.getAttribute("data-touched")).toBe("true");
+    expect(sliderInput.hasAttribute("aria-valuetext")).toBe(false);
 
     // Validate active questionnaire
     const valid = validateActiveQuestionnaire();
@@ -117,6 +131,64 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
     const queued = await getQueuedSubmissions();
     expect(queued).toHaveLength(1);
     expect(queued[0].answers.pain_vas).toBe(75);
+  });
+
+  it("accepts deliberate 0 VAS selection via pointerdown/keyboard while storing empty string for untouched optional VAS sliders", async () => {
+    const mixedVasInstrument = {
+      id: "inst_vas_mixed",
+      name: "Mixed Required & Optional VAS",
+      description: "Tests deliberate zero vs untouched optional VAS",
+      version_index: 1,
+      items: {
+        pain_vas: {
+          label: "Pain Intensity (0-100 VAS)",
+          type: "visual_analog",
+          required: true,
+          min: 0,
+          max: 100,
+          step: 1,
+        },
+        fatigue_vas: {
+          label: "Optional Fatigue (0-10 VAS)",
+          type: "visual_analog",
+          required: false,
+          min: 0,
+          max: 10,
+          step: 1,
+        },
+      },
+    };
+
+    state.assignments = [
+      { id: "assign_vas_mixed", instrument_id: "inst_vas_mixed" },
+    ];
+    state.instruments["inst_vas_mixed"] = mixedVasInstrument;
+
+    await startQuestionnaire("assign_vas_mixed");
+
+    const painSlider = document.getElementById("pain_vas");
+    const fatigueSlider = document.getElementById("fatigue_vas");
+
+    // Pressing Tab over the slider must NOT mark it touched
+    painSlider.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", bubbles: true })
+    );
+    expect(painSlider.getAttribute("data-touched")).toBe("false");
+    expect(validateActiveQuestionnaire()).toBe(false);
+
+    // Deliberately selecting 0 via Home/ArrowLeft keydown marks it touched with Value: 0
+    painSlider.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Home", bubbles: true })
+    );
+    expect(painSlider.getAttribute("data-touched")).toBe("true");
+    expect(document.getElementById("pain_vas_display").textContent).toContain(
+      "Value: 0"
+    );
+    expect(fatigueSlider.getAttribute("data-touched")).toBe("false");
+
+    expect(validateActiveQuestionnaire()).toBe(true);
+    expect(state.activeQuestionnaire.answers.pain_vas).toBe(0);
+    expect(state.activeQuestionnaire.answers.fatigue_vas).toBe("");
   });
 
   it("triggers server-rule diary stipend endpoint without client-supplied amount upon ePRO sync and updates wallet balance", async () => {

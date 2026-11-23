@@ -193,15 +193,15 @@
               placeholder="Search SOPs by title, tag, or content..."
               @input="onSearchInput"
             />
-            <button
+            <ClinicalIconButton
               v-if="searchQuery"
-              type="button"
               class="btn-clear-search"
               title="Clear search"
+              label="Clear search"
               @click="clearSearch"
             >
               ✕
-            </button>
+            </ClinicalIconButton>
           </div>
 
           <!-- Quick Tag Filter Chips -->
@@ -1054,7 +1054,7 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
@@ -1067,6 +1067,7 @@ import { isDemoBuild } from "../utils/demoMode.js";
 export default {
   name: "KnowledgeView",
   components: {
+    ClinicalIconButton,
     ClinicalModal,
   },
   setup() {

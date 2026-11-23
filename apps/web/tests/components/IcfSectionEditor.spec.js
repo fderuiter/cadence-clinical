@@ -1,13 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import IcfSectionEditor from "../../src/components/econsent/IcfSectionEditor.vue";
+import { useToastStore } from "../../src/stores/toasts.js";
 
 describe("IcfSectionEditor.vue glossary capability", () => {
   let originalMatchMedia;
+  let pinia;
 
   beforeEach(() => {
+    pinia = createPinia();
+    setActivePinia(pinia);
     originalMatchMedia = window.matchMedia;
-    // Mock window.alert to prevent alert from executing in tests
     vi.spyOn(window, "alert").mockImplementation(() => {});
   });
 
@@ -59,12 +63,17 @@ describe("IcfSectionEditor.vue glossary capability", () => {
     await wrapper.vm.$nextTick();
     expect(wrapper.find(".glossary-popover").exists()).toBe(false);
 
-    // Click should alert on desktop
+    // Click should push an accessible info toast on desktop without window.alert
     termSpan.element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await wrapper.vm.$nextTick();
-    expect(window.alert).toHaveBeenCalledWith(
-      "Glossary Definition:\n\nplacebo: Sample explanation of placebo"
-    );
+    expect(window.alert).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "info",
+        title: "Glossary Definition: placebo",
+        message: "placebo: Sample explanation of placebo",
+      }),
+    ]);
   });
 
   it("touch/mobile behavior without hover support (tap to toggle)", async () => {

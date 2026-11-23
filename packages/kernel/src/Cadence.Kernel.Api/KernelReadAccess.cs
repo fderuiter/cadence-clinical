@@ -32,6 +32,13 @@ public sealed class KernelReadAccess(
     }
 
     /// <inheritdoc />
+    public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken) =>
+        KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken);
+
+    /// <inheritdoc />
     public async ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(
         TenantId tenant,
         IReadOnlyCollection<NodeRef> nodes,
