@@ -22,6 +22,8 @@ public sealed class SubjectActivationToken
 
     public Guid Id { get; private set; }
 
+    public Guid TenantId { get; internal set; }
+
     public SubjectCode SubjectCode { get; private set; }
 
     public StudyCode StudyCode { get; private set; }

@@ -19,6 +19,7 @@ using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Core.Domain;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -218,6 +219,31 @@ public sealed class SubjectActivationCodeTests : IDisposable
 
     [Fact]
     [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task RedeemAndLookupActivationCode_WithoutVerifiedTenantScope_Returns403Forbidden()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var untrustedSubjectClient = _factory.CreateSignedClient(new GatewayIdentity(
+            UserId: "subj-untrusted",
+            Roles: ["Subject"],
+            SiteIds: ["SITE-101"],
+            TenantId: null,
+            StudyIds: ["CADENCE-101"],
+            ChangeReason: "Redeem without workspace tenant"));
+
+        var redeemRes = await PostJsonAsync(
+            untrustedSubjectClient,
+            "/api/v1/execution/subjects/activation-codes/redeem",
+            new SubjectActivationCodeRedeemRequest("CAD-AAAA-BBBB-CCCC"),
+            ct);
+        redeemRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var meRes = await untrustedSubjectClient.GetAsync("/api/v1/execution/subjects/activation-codes/me", ct);
+        meRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
     [KernelRule("K-IDN-1")]
     public async Task SubjectRepository_SqlitePersistence_StoresOnly64CharHmacHashesAtRest()
     {
@@ -264,6 +290,104 @@ public sealed class SubjectActivationCodeTests : IDisposable
 
         dbTokenHash.Should().Be(codeHash).And.HaveLength(64).And.NotContain(rawCode);
         dbPrincipalHash.Should().Be(principalHash).And.HaveLength(64).And.NotContain(rawOidcSub);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task SubjectActivationTokenConfiguration_ScopesIndexesAndRelationalFilterByTenant()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var sqlite = new SqliteConnection("DataSource=:memory:");
+        await sqlite.OpenAsync(ct);
+
+        Guid tenantAlpha = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        Guid tenantBeta = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        string alphaCodeHash = _lookupHasher.ComputeHash("CAD23456789ABCD", SubjectActivationToken.TokenHashPurpose);
+        string principalHash = _lookupHasher.ComputeHash("subject-shared-sub", SubjectActivationToken.PrincipalHashPurpose);
+
+        var alphaBuilder = new DbContextOptionsBuilder<ExecutionDbContext>().UseSqlite(sqlite);
+        alphaBuilder.UseCadenceStandaloneTenancy(new FixedTenantAccessor(tenantAlpha), isRelational: true);
+        var betaBuilder = new DbContextOptionsBuilder<ExecutionDbContext>().UseSqlite(sqlite);
+        betaBuilder.UseCadenceStandaloneTenancy(new FixedTenantAccessor(tenantBeta), isRelational: true);
+
+        await using (var alphaDb = new ExecutionDbContext(alphaBuilder.Options))
+        {
+            await alphaDb.Database.EnsureCreatedAsync(ct);
+
+            var entityType = alphaDb.Model.FindEntityType(typeof(SubjectActivationToken))!;
+            entityType.GetIndexes().Select(i => i.Properties.Select(p => p.Name).ToArray())
+                .Should().ContainEquivalentOf(new[] { "TenantId", "SubjectCode" })
+                .And.ContainEquivalentOf(new[] { "TenantId", "RedeemedByPrincipalHash" })
+                .And.NotContainEquivalentOf(new[] { "SubjectCode" })
+                .And.NotContainEquivalentOf(new[] { "RedeemedByPrincipalHash" });
+
+            var alphaRepo = new SubjectRepository(alphaDb);
+            var token = SubjectActivationToken.Issue(
+                new SubjectCode("SUBJ-101-001"),
+                new StudyCode("CADENCE-101"),
+                new SiteCode("SITE-101"),
+                alphaCodeHash,
+                _clock.UtcNow,
+                "crc-alpha",
+                "Alpha workspace issuance");
+            token.Redeem(principalHash, _clock.UtcNow.AddMinutes(2));
+            await alphaRepo.AddActivationTokenAsync(token, ct);
+            await alphaRepo.SaveChangesAsync(ct);
+        }
+
+        await using var betaDb = new ExecutionDbContext(betaBuilder.Options);
+        var betaRepo = new SubjectRepository(betaDb);
+        (await betaRepo.GetActivationTokenByHashAsync(alphaCodeHash, ct)).Should().BeNull();
+        (await betaDb.SubjectActivationTokens.AsNoTracking().ToListAsync(ct)).Should().BeEmpty();
+
+        string inMemoryDbName = Guid.NewGuid().ToString();
+        var inMemoryAlphaBuilder = new DbContextOptionsBuilder<ExecutionDbContext>().UseInMemoryDatabase(inMemoryDbName);
+        inMemoryAlphaBuilder.UseCadenceStandaloneTenancy(new FixedTenantAccessor(tenantAlpha), isRelational: false);
+        var inMemoryBetaBuilder = new DbContextOptionsBuilder<ExecutionDbContext>().UseInMemoryDatabase(inMemoryDbName);
+        inMemoryBetaBuilder.UseCadenceStandaloneTenancy(new FixedTenantAccessor(tenantBeta), isRelational: false);
+
+        await using (var inMemoryAlphaDb = new ExecutionDbContext(inMemoryAlphaBuilder.Options))
+        {
+            var inMemoryAlphaRepo = new SubjectRepository(inMemoryAlphaDb);
+            var redeemed = SubjectActivationToken.Issue(
+                new SubjectCode("SUBJ-101-001"),
+                new StudyCode("CADENCE-101"),
+                new SiteCode("SITE-101"),
+                alphaCodeHash,
+                _clock.UtcNow,
+                "crc-alpha",
+                "Alpha workspace issuance");
+            redeemed.Redeem(principalHash, _clock.UtcNow.AddMinutes(2));
+            await inMemoryAlphaRepo.AddActivationTokenAsync(redeemed, ct);
+            await inMemoryAlphaRepo.SaveChangesAsync(ct);
+            (await inMemoryAlphaRepo.GetRedeemedActivationByPrincipalHashAsync(principalHash, ct)).Should().NotBeNull();
+        }
+
+        await using var inMemoryBetaDb = new ExecutionDbContext(inMemoryBetaBuilder.Options);
+        var inMemoryBetaRepo = new SubjectRepository(inMemoryBetaDb);
+        (await inMemoryBetaRepo.GetRedeemedActivationByPrincipalHashAsync(principalHash, ct)).Should().BeNull();
+    }
+
+    private sealed class FixedTenantAccessor(Guid tenantId) : ICurrentTenantAccessor
+    {
+        public Guid? GetCurrentTenantId() => tenantId;
+
+        public ValueTask<Guid?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default) => new(tenantId);
+
+        public bool IsSystemSuppressed => false;
+
+        public bool HasHttpRequestWithoutTenant => false;
+
+        public bool IsCurrentTenantReadOnly => false;
+
+        public bool IsHttpWriteExemptFromExpiry => false;
+
+        public bool IsHttpProductFamilyExempt => false;
+
+        public IReadOnlyList<string>? CurrentTenantProductFamilies => null;
+
+        public TenantScopingCaps? CurrentTenantScoping => null;
     }
 
     [Fact]

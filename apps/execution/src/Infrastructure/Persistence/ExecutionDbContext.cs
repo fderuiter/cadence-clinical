@@ -19,6 +19,7 @@ using Cadence.Database.Tenancy;
 using MassTransit;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
@@ -32,6 +33,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
 /// @req:PRD-SYS-007
+/// @req:PRD-SYS-192
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
 /// @req:PRD-SCM-005
@@ -45,6 +47,13 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
     public Guid? ActiveInMemoryTenantFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantFilter(this);
 
     public string? ActiveInMemoryTenantStringFilter => StandaloneTenantModelExtensions.ResolveInMemoryTenantStringFilter(this);
+
+    public Guid? ActiveRelationalTenantFilter => ResolveRelationalTenantFilter(this);
+
+    public Guid? ActiveBoundTenantId => ResolveActiveBoundTenantId(this);
+
+    public bool HasUnverifiedRequestTenant => ResolveHasUnverifiedRequestTenant(this);
+
     public DbSet<ClinicalSubject> ClinicalSubjects => Set<ClinicalSubject>();
 
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
@@ -130,6 +139,56 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
+
+        modelBuilder.Entity<ClinicalSubject>()
+            .HasQueryFilter(e => ActiveRelationalTenantFilter == null || e.TenantId == ActiveRelationalTenantFilter);
+        modelBuilder.Entity<SubjectConsent>()
+            .HasQueryFilter(e => ActiveRelationalTenantFilter == null || e.TenantId == ActiveRelationalTenantFilter);
+        modelBuilder.Entity<SubjectActivationToken>()
+            .HasQueryFilter(e => ActiveRelationalTenantFilter == null || e.TenantId == ActiveRelationalTenantFilter);
+        modelBuilder.Entity<SiteComplianceCache>()
+            .HasQueryFilter(e => ActiveRelationalTenantFilter == null || e.TenantId == ActiveRelationalTenantFilter);
+
         modelBuilder.ConfigureStandaloneTenancy(this);
+    }
+
+    private static Guid? ResolveRelationalTenantFilter(DbContext context)
+    {
+        var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        if (ext is null || !ext.IsRelational || ext.TenantAccessor is null || ext.TenantAccessor.IsSystemSuppressed)
+        {
+            return null;
+        }
+
+        if (ext.TenantAccessor.GetCurrentTenantId() is { } activeTenant && activeTenant != Guid.Empty)
+        {
+            return activeTenant;
+        }
+
+        return StandaloneTenantModelExtensions.UnboundTenantSentinel;
+    }
+
+    private static Guid? ResolveActiveBoundTenantId(DbContext context)
+    {
+        var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        if (ext?.TenantAccessor is null || ext.TenantAccessor.IsSystemSuppressed)
+        {
+            return null;
+        }
+
+        return ext.TenantAccessor.GetCurrentTenantId() is { } activeTenant && activeTenant != Guid.Empty
+            ? activeTenant
+            : null;
+    }
+
+    private static bool ResolveHasUnverifiedRequestTenant(DbContext context)
+    {
+        var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        if (ext?.TenantAccessor is null || ext.TenantAccessor.IsSystemSuppressed)
+        {
+            return false;
+        }
+
+        return ext.TenantAccessor.HasHttpRequestWithoutTenant;
     }
 }

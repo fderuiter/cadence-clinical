@@ -18,11 +18,17 @@ public sealed class SubjectActivationTokenConfiguration : IEntityTypeConfigurati
         builder.ToTable("subject_activation_tokens");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.TenantId)
+            .HasColumnName("tenant_id")
+            .HasColumnType("uuid")
+            .IsRequired();
+
         builder.Property(x => x.SubjectCode)
             .HasConversion(c => c.Value, v => new SubjectCode(v))
             .HasMaxLength(255)
             .IsRequired();
-        builder.HasIndex(x => x.SubjectCode);
+        builder.HasIndex(x => new { x.TenantId, x.SubjectCode })
+            .HasDatabaseName("IX_subject_activation_tokens_tenant_id_SubjectCode");
 
         builder.Property(x => x.StudyCode)
             .HasConversion(c => c.Value, v => new StudyCode(v))
@@ -50,7 +56,8 @@ public sealed class SubjectActivationTokenConfiguration : IEntityTypeConfigurati
 
         builder.Property(x => x.RedeemedByPrincipalHash)
             .HasMaxLength(64);
-        builder.HasIndex(x => x.RedeemedByPrincipalHash);
+        builder.HasIndex(x => new { x.TenantId, x.RedeemedByPrincipalHash })
+            .HasDatabaseName("IX_subject_activation_tokens_tenant_id_RedeemedByPrincipalHash");
 
         builder.Property<long>("_version").IsConcurrencyToken().HasDefaultValue(0L);
     }

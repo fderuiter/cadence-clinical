@@ -570,6 +570,11 @@ public static partial class SubjectEndpoints
 
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
+        if (ExecutionScopeGuard.RequireVerifiedTenant(http) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         if (string.IsNullOrWhiteSpace(request.ActivationCode))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
@@ -601,6 +606,11 @@ public static partial class SubjectEndpoints
         HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+
+        if (ExecutionScopeGuard.RequireVerifiedTenant(http) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
 
         string? callerPrincipalId = ResolveCallerPrincipalId(http.User);
         if (string.IsNullOrWhiteSpace(callerPrincipalId))

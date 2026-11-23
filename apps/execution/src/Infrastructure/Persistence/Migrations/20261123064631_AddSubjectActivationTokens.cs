@@ -21,6 +21,7 @@ public partial class AddSubjectActivationTokens : Migration
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
+                tenant_id = table.Column<Guid>(type: "uuid", nullable: false),
                 SubjectCode = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                 StudyCode = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                 SiteCode = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
@@ -32,7 +33,6 @@ public partial class AddSubjectActivationTokens : Migration
                 RedeemedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                 RedeemedByPrincipalHash = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                 IsRevoked = table.Column<bool>(type: "boolean", nullable: false),
-                tenant_id = table.Column<Guid>(type: "uuid", nullable: false),
                 _version = table.Column<long>(type: "bigint", nullable: false, defaultValue: 0L)
             },
             constraints: table =>
@@ -41,19 +41,19 @@ public partial class AddSubjectActivationTokens : Migration
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_subject_activation_tokens_RedeemedByPrincipalHash",
-            table: "subject_activation_tokens",
-            column: "RedeemedByPrincipalHash");
-
-        migrationBuilder.CreateIndex(
-            name: "IX_subject_activation_tokens_SubjectCode",
-            table: "subject_activation_tokens",
-            column: "SubjectCode");
-
-        migrationBuilder.CreateIndex(
             name: "IX_subject_activation_tokens_tenant_id",
             table: "subject_activation_tokens",
             column: "tenant_id");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_subject_activation_tokens_tenant_id_RedeemedByPrincipalHash",
+            table: "subject_activation_tokens",
+            columns: ["tenant_id", "RedeemedByPrincipalHash"]);
+
+        migrationBuilder.CreateIndex(
+            name: "IX_subject_activation_tokens_tenant_id_SubjectCode",
+            table: "subject_activation_tokens",
+            columns: ["tenant_id", "SubjectCode"]);
 
         migrationBuilder.CreateIndex(
             name: "IX_subject_activation_tokens_TokenHash",
