@@ -16,7 +16,7 @@ migration application.
   `ICurrentTenantAccessor` (`HttpContextCurrentTenantAccessor` + `ITenantScope`), `ITenantCodeResolver`
   (`PostgresKernelTenantCodeResolver` via `kernel.tenant_id_by_code(text)`), `StandaloneTenantConnectionInterceptor`
   (sets `cadence.tenant_id` on open and resets to `''` on close), and `StandaloneTenantSaveChangesInterceptor`
-  (stamps verified `tenant_id` shadow columns on insert and blocks cross-tenant mutation), backing PostgreSQL
+  (stamps verified `tenant_id` shadow columns on insert, blocks cross-tenant mutation, and refuses writes when `ICurrentTenantAccessor.IsTenantReadOnly` is true), backing PostgreSQL
   `ENABLE` + `FORCE ROW LEVEL SECURITY` (`tenant_isolation` using `kernel.current_tenant_id()`,
   [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)). The optional
   `configureOptions(serviceProvider, options)` runs per scope after the provider is set, so a host can add a
