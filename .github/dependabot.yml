@@ -77,15 +77,18 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Aspire.*"
         update-types: ["version-update:semver-major"]
-      # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
-      - dependency-name: "AWSSDK.*"
-        versions: [">= 4.1.0"]
-      # Fluid.Core 3.x removes mutable MemberAccessStrategy/MemberNameStrategies used by FluidTemplateRenderer (#5948, ADR-2823).
-      - dependency-name: "Fluid.Core"
-        update-types: ["version-update:semver-major"]
       # NetAnalyzers 11.x targets the .NET 11 SDK wave and escalates rules conflicting with Clinical Kernel API names (#5949, ADR-2233, ADR-2823).
       - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
         update-types: ["version-update:semver-major"]
+      # Fluid.Core 3.x makes TemplateOptions/MemberAccessStrategy read-only after Build(); stay on 2.41.x until FluidTemplateRenderer is migrated (#5948, ADR-2823).
+      - dependency-name: "Fluid.Core"
+        update-types: ["version-update:semver-major"]
+      # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
+      - dependency-name: "AWSSDK.*"
+        versions: [">= 4.1.0"]
+      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0 (CADDEP001); stay on 1.20.x while targeting net10.0 (#5944, ADR-2233, ADR-2823).
+      - dependency-name: "OpenTelemetry*"
+        versions: [">= 1.21.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog; single active lockfile PR)
   - package-ecosystem: "npm"

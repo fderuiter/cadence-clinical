@@ -184,23 +184,53 @@ public sealed class RulesetServiceTests : IDisposable
         writer.ToString().Should().Contain("must fail when required job 'compliance' is skipped");
     }
 
-    [Fact]
-    public void Validate_FailsWhenVersionTagsRulesetAllowsBypassActors()
+    [Theory]
+    [InlineData("[]", "bypass_actors")]
+    [InlineData("""[{ "actor_id": 2, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""", "actor_id 5")]
+    [InlineData("""[{ "actor_id": 5, "actor_type": "Team", "bypass_mode": "always" }]""", "RepositoryRole")]
+    [InlineData("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""", "bypass_mode 'always'")]
+    public void Validate_FailsWhenVersionTagsRulesetMisconfiguresReleaseAdminBypassActors(string bypassActorsJson, string expectedError)
     {
-        Write(".github/rulesets/version_tags.json", """
+        Write(".github/rulesets/version_tags.json", $$"""
+            {
+              "name": "version-tags-protection",
+              "target": "tag",
+              "enforcement": "active",
+              "bypass_actors": {{bypassActorsJson}},
+              "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
+              "rules": [
+                { "type": "creation" },
+                { "type": "required_signatures" },
+                { "type": "deletion" },
+                { "type": "non_fast_forward" }
+              ]
+            }
+            """);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        writer.ToString().Should().Contain(expectedError);
+    }
+
+    [Theory]
+    [InlineData("""[{ "type": "required_signatures" }, { "type": "deletion" }, { "type": "non_fast_forward" }]""", "creation")]
+    [InlineData("""[{ "type": "creation" }, { "type": "deletion" }, { "type": "non_fast_forward" }]""", "required_signatures")]
+    public void Validate_FailsWhenVersionTagsRulesetOmitsCreationOrRequiredSignatures(string rulesJson, string missingRule)
+    {
+        Write(".github/rulesets/version_tags.json", $$"""
             {
               "name": "version-tags-protection",
               "target": "tag",
               "enforcement": "active",
               "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }],
               "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
-              "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+              "rules": {{rulesJson}}
             }
             """);
         using var writer = new StringWriter();
 
         RulesetService.Validate(_root, writer).Should().Be(1);
-        writer.ToString().Should().Contain("bypass_actors");
+        writer.ToString().Should().Contain(missingRule);
     }
 
     [Theory]
@@ -317,6 +347,12 @@ public sealed class RulesetServiceTests : IDisposable
         RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
             .Should().Be(1, "cadence rulesets sync requires declarative ruleset files");
         syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+
+        WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "always()", checkComplianceResult: false);
+        using var brokenCiWriter = new StringWriter();
+        RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
+        brokenCiWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.")
+            .And.Contain("compliance");
     }
 
     [Fact]
@@ -413,8 +449,20 @@ public sealed class RulesetServiceTests : IDisposable
               "name": "version-tags-protection",
               "target": "tag",
               "enforcement": "active",
+              "bypass_actors": [
+                {
+                  "actor_id": 5,
+                  "actor_type": "RepositoryRole",
+                  "bypass_mode": "always"
+                }
+              ],
               "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
-              "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+              "rules": [
+                { "type": "creation" },
+                { "type": "required_signatures" },
+                { "type": "deletion" },
+                { "type": "non_fast_forward" }
+              ]
             }
             """);
         WriteCiWorkflow(ciGateNeeds: "[unit-tests, container-security, compliance]", ciGateIf: "always()", checkComplianceResult: true);

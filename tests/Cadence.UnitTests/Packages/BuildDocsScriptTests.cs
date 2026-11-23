@@ -96,7 +96,7 @@ public sealed class BuildDocsScriptTests : IDisposable
     }
 
     [Fact]
-    public void BuildDocs_WhenSkipChecksIsSet_SkipsDuplicateGates_ButStillRunsCheckRtm()
+    public void BuildDocs_WhenSkipChecksEnvIsSet_IgnoresBypassAndRunsAllReadOnlyChecks()
     {
         var result = RunBuildDocs(new Dictionary<string, string?>
         {
@@ -104,13 +104,17 @@ public sealed class BuildDocsScriptTests : IDisposable
         });
 
         result.ExitCode.Should().Be(0, result.Output);
-        ReadCliLog().Should().Equal("check rtm|RTM_DRAFT=|GENERATE_RTM_DRAFT=");
+        ReadCliLog().Should().Equal(
+            "check openapi|RTM_DRAFT=|GENERATE_RTM_DRAFT=",
+            "check schema-doc|RTM_DRAFT=|GENERATE_RTM_DRAFT=",
+            "check markdown|RTM_DRAFT=|GENERATE_RTM_DRAFT=",
+            "check rtm|RTM_DRAFT=|GENERATE_RTM_DRAFT=");
         ReadPnpmLog().Should().Contain("exec vitepress build docs");
         AssertTrackedDocsUnchangedAndTempDocsCleaned();
     }
 
     [Fact]
-    public void BuildDocs_WhenSkipChecksIsSetAndCheckRtmFails_BlocksDraftPublishAndExitsNonZero()
+    public void BuildDocs_WhenSkipChecksEnvIsSetAndCheckRtmFails_RunsPriorChecksThenBlocksDraftPublish()
     {
         var result = RunBuildDocs(new Dictionary<string, string?>
         {
@@ -119,7 +123,11 @@ public sealed class BuildDocsScriptTests : IDisposable
         });
 
         result.ExitCode.Should().Be(1);
-        ReadCliLog().Should().Equal("check rtm|RTM_DRAFT=|GENERATE_RTM_DRAFT=");
+        ReadCliLog().Should().Equal(
+            "check openapi|RTM_DRAFT=|GENERATE_RTM_DRAFT=",
+            "check schema-doc|RTM_DRAFT=|GENERATE_RTM_DRAFT=",
+            "check markdown|RTM_DRAFT=|GENERATE_RTM_DRAFT=",
+            "check rtm|RTM_DRAFT=|GENERATE_RTM_DRAFT=");
         ReadPnpmLog().Should().NotContain("exec vitepress build docs");
         AssertTrackedDocsUnchangedAndTempDocsCleaned();
     }
@@ -170,10 +178,7 @@ public sealed class BuildDocsScriptTests : IDisposable
             .Single(s => s.Name == "Run documentation compilation");
 
         docsStep.RestoreFiles.Should().BeEmpty("pnpm docs:build validates GxP snapshots without rewriting docs/SDLC");
-        docsStep.EnvironmentIfPassed.Should().ContainSingle(e =>
-            e.StepKey == "dotnet-quality/Run Cadence quality sentinels" &&
-            e.Name == "CADENCE_DOCS_SKIP_CHECKS" &&
-            e.Value == "1");
+        docsStep.EnvironmentIfPassed.Should().BeEmpty("pnpm docs:build always runs openapi, schema-doc, markdown, and rtm checks");
     }
 
     [Fact]
@@ -214,10 +219,22 @@ public sealed class BuildDocsScriptTests : IDisposable
         SchemaDocGeneratorService.FindDrift(renderDir, committedDir).Should().BeEmpty();
 
         string committedText = File.ReadAllText(committedPaymentsDoc);
+        committedText.Should().NotContain("| Table | Entity | Columns |");
+        committedText.Should().Contain("## payments.payments_payables");
         committedText.Should().Contain("ck_payments_payables_status");
         committedText.Should().Contain("ck_payments_self_billing_invoices_status");
         committedText.Should().Contain("ck_payments_participant_expense_claims_status");
         committedText.Should().Contain("ck_payments_participant_disbursements_status");
+
+        string schemaReadme = File.ReadAllText(Path.Combine(repoRoot, "docs", "schema", "README.md"));
+        schemaReadme.Should().Contain("| Module | DbContext |");
+        schemaReadme.Should().NotContain("| Module | DbContext | Tables |");
+        foreach (var module in PersistenceModuleCatalog.All)
+        {
+            string moduleDocPath = Path.Combine(repoRoot, "docs", "schema", $"{module.Module}.md");
+            File.Exists(moduleDocPath).Should().BeTrue($"{module.Module}.md must be committed for VitePress navigation");
+            File.ReadAllText(moduleDocPath).Should().NotContain("| Table | Entity | Columns |");
+        }
     }
 
     [Fact]
