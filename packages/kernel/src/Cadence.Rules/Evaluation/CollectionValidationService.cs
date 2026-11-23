@@ -575,6 +575,13 @@ public sealed class CollectionValidationService(
             }
         }
 
+        if (_blinding is BlindedTreatmentClassifier
+            && form.BlindedItemIds is not null
+            && form.BlindedItemIds.Contains(itemId))
+        {
+            return true;
+        }
+
         var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
         BlindedConceptMetadata? conceptMeta = specItem is not null && conceptMap.TryGetValue(specItem.Concept.ConceptId, out var meta)
             ? meta
@@ -613,61 +620,44 @@ public sealed class CollectionValidationService(
             return [];
         }
 
-        var designs = new List<ProtocolDesign>();
-        var seenVersions = new HashSet<ProtocolVersionId>();
-        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
+        var studyDesigns = await protocols.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        if (studyDesigns.Count > 0)
         {
-            if (seenVersions.Add(versionId)
-                && await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            var formDesigns = new List<ProtocolDesign>();
+            foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
             {
-                designs.Add(design);
+                if (studyDesigns.TryGetValue(versionId, out var design))
+                {
+                    formDesigns.Add(design);
+                }
+            }
+
+            return formDesigns.Count > 0 ? formDesigns : [.. studyDesigns.Values];
+        }
+
+        var fallbackDesigns = new List<ProtocolDesign>();
+        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Where(id => !id.IsEmpty).Distinct())
+        {
+            if (await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                fallbackDesigns.Add(design);
             }
         }
 
-        if (designs.Count > 0)
-        {
-            return designs;
-        }
-
-        var summaries = await protocols.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        foreach (var summaryId in summaries.Select(summary => summary.Id).Where(seenVersions.Add))
-        {
-            if (await protocols.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
-            {
-                designs.Add(design);
-            }
-        }
-
-        return designs;
+        return fallbackDesigns;
     }
 
-    private async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
+    private Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
         TenantId tenant,
         IReadOnlyList<CollectionInstanceRecord> forms,
         IReadOnlyList<ProtocolDesign> designs,
-        CancellationToken cancellationToken)
-    {
-        if (concepts is null)
-        {
-            return new Dictionary<ConceptId, BlindedConceptMetadata>();
-        }
-
-        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
-        var refs = forms.SelectMany(f => f.Items).Select(i => i.Concept)
-            .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept))
-            .Distinct();
-        foreach (var conceptRef in refs)
-        {
-            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
-                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
-            if (view is not null)
-            {
-                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
-            }
-        }
-
-        return resolved;
-    }
+        CancellationToken cancellationToken) =>
+        BlindedConceptMetadata.ResolveManyAsync(
+            concepts,
+            tenant,
+            forms.SelectMany(f => f.Items).Select(i => i.Concept)
+                .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept)),
+            cancellationToken);
 
     private static ValidationRunId DeriveRunId(TenantId tenant, StudyId study, string idempotencyKey)
     {

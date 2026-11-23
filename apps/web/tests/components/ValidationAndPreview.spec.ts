@@ -159,7 +159,8 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
 
     expect(ecrfFormsApi.previewValues).toHaveBeenCalledWith(
       formId,
-      expect.arrayContaining([expect.objectContaining({ item_id: "SYSBP" })])
+      expect.arrayContaining([expect.objectContaining({ item_id: "SYSBP" })]),
+      { signal: expect.any(AbortSignal) }
     );
     expect(wrapper.find("[data-testid='ecrf-preview-banner']").exists()).toBe(
       true

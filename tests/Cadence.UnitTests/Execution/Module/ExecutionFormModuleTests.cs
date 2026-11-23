@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -8,13 +9,16 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Endpoints;
@@ -24,6 +28,7 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
@@ -325,6 +330,218 @@ public sealed class ExecutionFormModuleTests
         ok.Value.Form.Items.Should().ContainSingle().Which.Revision.Should().Be(1);
     }
 
+    /// <summary>
+    /// When <see cref="CollectionInstanceRecord.BlindedItemIds"/> and <see cref="CollectionInstanceRecord.BlindedObservationIds"/>
+    /// are precomputed by persistence, blinded <c>GetAsync</c> and <c>SaveAsync</c> redact blinded items and superseded
+    /// <c>SignedValues</c> without querying <see cref="IProtocolVersionReader"/> or <see cref="IConceptRegistry"/>.
+    /// </summary>
+    [Fact(DisplayName = "FormEndpoints_GetAndSaveAsync_ReusePrecomputedBlindingSets_WithoutQueryingProtocolsOrConcepts")]
+    public async Task FormEndpointsGetAndSaveAsyncReusePrecomputedBlindingSetsWithoutQueryingProtocolsOrConcepts()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var sbpObs = ObservationId.New();
+        var trtObs = ObservationId.New();
+        var priorSignedTrtObs = ObservationId.New();
+        var items = new[] { Item("sbp", required: true), Item("trt_arm", required: true) };
+        var record = new CollectionInstanceRecord(
+            CollectionInstanceId.New(),
+            EnrollmentId.New(),
+            ParticipantId.New(),
+            StudyId.New(),
+            StudySiteId.New(),
+            ProtocolVersionId.New(),
+            "cs.day1",
+            "act.day1",
+            At,
+            "crc@example.test",
+            At,
+            3,
+            items,
+            [
+                new CollectedValueView("sbp", sbpObs, ConceptRef.New(), new QuantityValue(124m, "mm[Hg]"), At, 2, "crc@example.test", At),
+                new CollectedValueView("trt_arm", trtObs, ConceptRef.New(), new TextValue("SECRET-ARM-A"), At, 2, "irt@example.test", At),
+            ],
+            [],
+            [],
+            [
+                new FormAttestationView(
+                    AttestationId.New(),
+                    AttestationMeaning.Approved,
+                    "pi@example.test",
+                    At.AddMinutes(-5),
+                    "hash-v1",
+                    "PI review",
+                    Superseded: true,
+                    SignedValues:
+                    [
+                        new SignedValueView("sbp", sbpObs, 1, new QuantityValue(120m, "mm[Hg]")),
+                        new SignedValueView("trt_arm", priorSignedTrtObs, 1, new TextValue("SECRET-PRIOR-ARM")),
+                    ]),
+            ],
+            "hash-v2",
+            "Day 1 Visit",
+            BlindedItemIds: FrozenSet.Create(StringComparer.Ordinal, "trt_arm"),
+            BlindedObservationIds: FrozenSet.Create(trtObs));
+
+        var services = new ServiceCollection()
+            .AddSingleton<IProtocolVersionReader>(new ThrowingProtocolVersionReader())
+            .AddSingleton<IConceptRegistry>(new ThrowingConceptRegistry())
+            .BuildServiceProvider();
+
+        var contexts = new InMemoryFormContextFactory($"exec-forms-precomputed-{Guid.NewGuid():N}");
+        var getHttp = await ContextWithTenantAsync(tenant, services);
+        var getResponse = await FormEndpoints.GetAsync(
+            record.CollectionInstanceId.Value,
+            getHttp,
+            new StubCollectionInstanceRecords([], [record]),
+            contexts,
+            new StubReadAccess(canSee: true, canSign: true, canUnblind: false),
+            ct);
+
+        var got = getResponse.Result.Should().BeOfType<Ok<FormResponse>>().Subject.Value!;
+        var maskedItem = got.Items.Single(i => i.ItemId == "trt_arm");
+        maskedItem.ObservationId.Should().BeNull();
+        maskedItem.RecordedBy.Should().BeNull();
+        maskedItem.Value.Should().Be(new MissingValue(NullFlavor.Masked));
+        got.Items.Single(i => i.ItemId == "sbp").Value.Should().Be(new QuantityValue(124m, "mm[Hg]"));
+
+        var signedTrt = got.Signatures.Single().SignedValues!.Single(sv => sv.ItemId == "trt_arm");
+        signedTrt.ObservationId.Should().Be(Guid.Empty);
+        signedTrt.Value.Should().Be(new MissingValue(NullFlavor.Masked));
+
+        var saveHttp = await ContextWithTenantAsync(tenant, services);
+        saveHttp.Request.Headers[FormEndpoints.IdempotencyKeyHeader] = "idem-blinded-save";
+        var sender = new StubCommandSender(
+            new CollectedValuesState(
+                record.CollectionInstanceId,
+                4,
+                [
+                    new CollectedValueState("sbp", sbpObs, new QuantityValue(126m, "mm[Hg]"), 3, true),
+                    new CollectedValueState("trt_arm", trtObs, new TextValue("SECRET-ARM-A"), 2, false),
+                ]));
+        var updated = record with
+        {
+            Version = 4,
+            Values =
+            [
+                new CollectedValueView("sbp", sbpObs, ConceptRef.New(), new QuantityValue(126m, "mm[Hg]"), At, 3, "crc@example.test", At),
+                new CollectedValueView("trt_arm", trtObs, ConceptRef.New(), new TextValue("SECRET-ARM-A"), At, 2, "irt@example.test", At),
+            ],
+        };
+        var saveResponse = await FormEndpoints.SaveAsync(
+            record.CollectionInstanceId.Value,
+            new SaveFormValuesRequest([new FormValueRequest("sbp", new QuantityValue(126m, "mm[Hg]"), 2, null, null)]),
+            saveHttp,
+            new StubCollectionInstanceRecords([], [record, updated]),
+            sender,
+            new FixedChangeReason("Updated systolic BP"),
+            ct,
+            contexts,
+            new StubReadAccess(canSee: true, canSign: true, canUnblind: false));
+
+        var saved = saveResponse.Result.Should().BeOfType<Ok<FormSavedResponse>>().Subject.Value!;
+        var savedTrt = saved.Values.Single(v => v.ItemId == "trt_arm");
+        savedTrt.ObservationId.Should().Be(Guid.Empty);
+        savedTrt.Value.Should().Be(new MissingValue(NullFlavor.Masked));
+        saved.Form!.Items.Single(i => i.ItemId == "trt_arm").Value.Should().Be(new MissingValue(NullFlavor.Masked));
+    }
+
+    /// <summary>
+    /// When <see cref="CollectionInstanceRecord.BlindedItemIds"/> is <c>null</c> (in-memory test fixtures), blinded reads
+    /// batch study designs and item concepts instead of looping per version or per concept.
+    /// </summary>
+    [Fact(DisplayName = "FormEndpoints_GetAsync_BatchesProtocolDesignsAndConcepts_WhenBlindingSetsAreNull")]
+    public async Task FormEndpointsGetAsyncBatchesProtocolDesignsAndConceptsWhenBlindingSetsAreNull()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var studyId = StudyId.New();
+        var versionId = ProtocolVersionId.New();
+        var blindedConcept = new ConceptRef(ConceptId.New(), 1);
+        var sbpConcept = new ConceptRef(ConceptId.New(), 1);
+        var staleDbpConcept = new ConceptRef(ConceptId.New(), 9);
+
+        var items = new[]
+        {
+            new CollectionItem("sbp", sbpConcept, Required: true),
+            new CollectionItem("dbp", staleDbpConcept, Required: false),
+            new CollectionItem("arm_code", blindedConcept, Required: true),
+        };
+        var trtObs = ObservationId.New();
+        var record = new CollectionInstanceRecord(
+            CollectionInstanceId.New(),
+            EnrollmentId.New(),
+            ParticipantId.New(),
+            studyId,
+            StudySiteId.New(),
+            versionId,
+            "cs.baseline",
+            "act.day1",
+            At,
+            "crc@example.test",
+            At,
+            2,
+            items,
+            [
+                new CollectedValueView("sbp", ObservationId.New(), sbpConcept, new QuantityValue(122m, "mm[Hg]"), At, 1, "crc@example.test", At),
+                new CollectedValueView("arm_code", trtObs, blindedConcept, new TextValue("ACTIVE-DOSE-200"), At, 1, "irt@example.test", At),
+            ],
+            [],
+            [],
+            [],
+            "hash-null-sets",
+            "Baseline Visit",
+            BlindedItemIds: null,
+            BlindedObservationIds: null);
+
+        var protocolReader = new CountingProtocolVersionReader(
+            studyId,
+            versionId,
+            new ProtocolDesign
+            {
+                Title = "Blinded Trial",
+                Interventions = [new Intervention("int.1", "Study Drug", blindedConcept)],
+                CollectionSpecs = [new CollectionSpec("cs.baseline", "Baseline Visit", items)],
+            });
+        var conceptRegistry = new CountingConceptRegistry(
+            pinned: new Dictionary<ConceptRef, ConceptVersionView>
+            {
+                [sbpConcept] = new(sbpConcept, ConceptOrigin.Sponsor, "SBP", ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic blood pressure", ConceptStatus.Active, 1, ConceptMappingState.Unmapped, At),
+                [blindedConcept] = new(blindedConcept, ConceptOrigin.Sponsor, "ARM", ConceptKind.BiomedicalConcept, "Assigned Arm", "Randomized treatment arm", ConceptStatus.Active, 1, ConceptMappingState.Unmapped, At),
+            },
+            current: new Dictionary<ConceptId, ConceptVersionView>
+            {
+                [staleDbpConcept.ConceptId] = new(new ConceptRef(staleDbpConcept.ConceptId, 1), ConceptOrigin.Sponsor, "DBP", ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic blood pressure", ConceptStatus.Active, 1, ConceptMappingState.Unmapped, At),
+            });
+
+        var services = new ServiceCollection()
+            .AddSingleton<IProtocolVersionReader>(protocolReader)
+            .AddSingleton<IConceptRegistry>(conceptRegistry)
+            .BuildServiceProvider();
+        var http = await ContextWithTenantAsync(tenant, services);
+
+        var contexts = new InMemoryFormContextFactory($"exec-forms-fallback-{Guid.NewGuid():N}");
+        var response = await FormEndpoints.GetAsync(
+            record.CollectionInstanceId.Value,
+            http,
+            new StubCollectionInstanceRecords([], [record]),
+            contexts,
+            new StubReadAccess(canSee: true, canSign: false, canUnblind: false),
+            ct);
+
+        var got = response.Result.Should().BeOfType<Ok<FormResponse>>().Subject.Value!;
+        got.Items.Single(i => i.ItemId == "arm_code").Value.Should().Be(new MissingValue(NullFlavor.Masked));
+        got.Items.Single(i => i.ItemId == "sbp").Value.Should().Be(new QuantityValue(122m, "mm[Hg]"));
+
+        protocolReader.GetDesignsForStudyCalls.Should().Be(1);
+        protocolReader.SingleGetDesignCalls.Should().Be(0);
+        conceptRegistry.ResolveManyCalls.Should().Be(1);
+        conceptRegistry.GetCurrentManyCalls.Should().Be(1);
+        conceptRegistry.SingleResolveCalls.Should().Be(0);
+        conceptRegistry.SingleGetCurrentCalls.Should().Be(0);
+    }
+
     private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant, IServiceProvider? services = null)
     {
         var http = new DefaultHttpContext();
@@ -378,7 +595,7 @@ public sealed class ExecutionFormModuleTests
         public string? Read(HttpContext context) => reason;
     }
 
-    private sealed class StubReadAccess(bool canSee, bool canSign = false) : IKernelReadAccess
+    private sealed class StubReadAccess(bool canSee, bool canSign = false, bool? canUnblind = null) : IKernelReadAccess
     {
         public NodeRef? CheckedNode { get; private set; }
 
@@ -389,7 +606,171 @@ public sealed class ExecutionFormModuleTests
         }
 
         public ValueTask<bool> CanExerciseAsync(TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(canSign);
+            ValueTask.FromResult(Capability.IsUnblinding(capability.Token) ? (canUnblind ?? canSign) : canSign);
+    }
+
+    private sealed class InMemoryFormContextFactory(string dbName) : IModuleTenantContextFactory<ExecutionModuleDbContext>
+    {
+        public ExecutionModuleDbContext Create(TenantId tenant)
+        {
+            var options = new DbContextOptionsBuilder<ExecutionModuleDbContext>()
+                .UseInMemoryDatabase($"{dbName}-{tenant.Value:N}")
+                .Options;
+            return new ExecutionModuleDbContext(options);
+        }
+    }
+
+    private sealed class ThrowingProtocolVersionReader : IProtocolVersionReader
+    {
+        public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Protocol versions should not be queried when blinding sets are precomputed.");
+
+        public Task<ProtocolVersionSummary?> GetAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Protocol versions should not be queried when blinding sets are precomputed.");
+
+        public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Protocol versions should not be queried when blinding sets are precomputed.");
+
+        public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Protocol designs should not be queried when blinding sets are precomputed.");
+
+        public Task<IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign>> GetDesignsForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Protocol designs should not be queried when blinding sets are precomputed.");
+    }
+
+    private sealed class ThrowingConceptRegistry : IConceptRegistry
+    {
+        public Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Concepts should not be queried when blinding sets are precomputed.");
+
+        public Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> ResolveManyAsync(TenantId tenant, IReadOnlyCollection<ConceptRef> concepts, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Concepts should not be queried when blinding sets are precomputed.");
+
+        public Task<ConceptVersionView?> GetCurrentAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Concepts should not be queried when blinding sets are precomputed.");
+
+        public Task<IReadOnlyDictionary<ConceptId, ConceptVersionView>> GetCurrentManyAsync(TenantId tenant, IReadOnlyCollection<ConceptId> concepts, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Concepts should not be queried when blinding sets are precomputed.");
+
+        public Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<CodeSystemVersionView?> FindCodeSystemVersionAsync(TenantId tenant, string codeSystemUri, string version, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<CodeSystemEntryView>> LookupAsync(TenantId tenant, Cadence.Kernel.Knowledge.Coding coding, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<CodeSystemEntryView>> GetGroupAsync(TenantId tenant, CodeSystemVersionId version, string groupCode, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ConceptMappingView>> ResolveCodingAsync(TenantId tenant, Cadence.Kernel.Knowledge.Coding coding, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ConceptMappingView>> GetMappingsAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class CountingProtocolVersionReader(
+        StudyId studyId,
+        ProtocolVersionId versionId,
+        ProtocolDesign design) : IProtocolVersionReader
+    {
+        public int GetDesignsForStudyCalls { get; private set; }
+        public int SingleGetDesignCalls { get; private set; }
+
+        public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([]);
+
+        public Task<ProtocolVersionSummary?> GetAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult<ProtocolVersionSummary?>(null);
+
+        public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult<SoaMatrix?>(null);
+
+        public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+        {
+            SingleGetDesignCalls++;
+            return Task.FromResult(version == versionId ? design : null);
+        }
+
+        public Task<IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign>> GetDesignsForStudyAsync(
+            TenantId tenant,
+            StudyId study,
+            CancellationToken cancellationToken)
+        {
+            GetDesignsForStudyCalls++;
+            IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign> result = study == studyId
+                ? new Dictionary<ProtocolVersionId, ProtocolDesign> { [versionId] = design }
+                : new Dictionary<ProtocolVersionId, ProtocolDesign>();
+            return Task.FromResult(result);
+        }
+    }
+
+    private sealed class CountingConceptRegistry(
+        IReadOnlyDictionary<ConceptRef, ConceptVersionView> pinned,
+        IReadOnlyDictionary<ConceptId, ConceptVersionView> current) : IConceptRegistry
+    {
+        public int SingleResolveCalls { get; private set; }
+        public int SingleGetCurrentCalls { get; private set; }
+        public int ResolveManyCalls { get; private set; }
+        public int GetCurrentManyCalls { get; private set; }
+
+        public Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default)
+        {
+            SingleResolveCalls++;
+            return Task.FromResult(pinned.GetValueOrDefault(concept));
+        }
+
+        public Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> ResolveManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ConceptRef> concepts,
+            CancellationToken cancellationToken = default)
+        {
+            ResolveManyCalls++;
+            IReadOnlyDictionary<ConceptRef, ConceptVersionView> found = concepts
+                .Where(pinned.ContainsKey)
+                .Distinct()
+                .ToDictionary(c => c, c => pinned[c]);
+            return Task.FromResult(found);
+        }
+
+        public Task<ConceptVersionView?> GetCurrentAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default)
+        {
+            SingleGetCurrentCalls++;
+            return Task.FromResult(current.GetValueOrDefault(concept));
+        }
+
+        public Task<IReadOnlyDictionary<ConceptId, ConceptVersionView>> GetCurrentManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ConceptId> concepts,
+            CancellationToken cancellationToken = default)
+        {
+            GetCurrentManyCalls++;
+            IReadOnlyDictionary<ConceptId, ConceptVersionView> found = concepts
+                .Where(current.ContainsKey)
+                .Distinct()
+                .ToDictionary(c => c, c => current[c]);
+            return Task.FromResult(found);
+        }
+
+        public Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<CodeSystemVersionView?> FindCodeSystemVersionAsync(TenantId tenant, string codeSystemUri, string version, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<CodeSystemEntryView>> LookupAsync(TenantId tenant, Cadence.Kernel.Knowledge.Coding coding, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<CodeSystemEntryView>> GetGroupAsync(TenantId tenant, CodeSystemVersionId version, string groupCode, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ConceptMappingView>> ResolveCodingAsync(TenantId tenant, Cadence.Kernel.Knowledge.Coding coding, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ConceptMappingView>> GetMappingsAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class StubCollectionInstanceRecords(

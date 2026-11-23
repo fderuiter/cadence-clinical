@@ -95,4 +95,28 @@ public interface IKernelReadAccess
         EnrollmentId enrollment,
         CancellationToken cancellationToken) =>
         CanExerciseAsync(tenant, new Capability("enrollment.unblind", VerbClass.Read), NodeRef.For(enrollment), cancellationToken);
+
+    /// <summary>
+    /// Returns the subset of <paramref name="enrollments"/> for which the current caller holds <c>enrollment.unblind</c>
+    /// in <paramref name="tenant"/> (K-AUTH-4), evaluated in one batch when supported by the host.
+    /// </summary>
+    async ValueTask<IReadOnlySet<EnrollmentId>> CanUnblindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<EnrollmentId> enrollments,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(enrollments);
+        var permitted = new HashSet<EnrollmentId>();
+        var checkedEnrollments = new HashSet<EnrollmentId>();
+        foreach (var enrollment in enrollments)
+        {
+            if (checkedEnrollments.Add(enrollment)
+                && await CanUnblindAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false))
+            {
+                permitted.Add(enrollment);
+            }
+        }
+
+        return permitted;
+    }
 }

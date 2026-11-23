@@ -7,8 +7,12 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Domain;
@@ -20,6 +24,8 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 using Xunit;
 
@@ -242,6 +248,177 @@ public sealed class ExecutionFormQueryTests
         access.FilterVisibleCalls.Should().Be(1);
     }
 
+    [Fact(DisplayName = "FormQueryEndpoints_ListQueries_SkipsUnblindProbeForNonBlindedQueries_AndBatchesOnlyBlindedEnrollments")]
+    public async Task FormQueryEndpointsListQueriesSkipsUnblindProbeForNonBlindedQueriesAndBatchesOnlyBlindedEnrollments()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock(At);
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+        var siteA = StudySiteId.New();
+        var siteB = StudySiteId.New();
+        var enrollmentNonBlinded = EnrollmentId.New();
+        var enrollmentMasked = EnrollmentId.New();
+        var enrollmentUnblinded = EnrollmentId.New();
+        var http = await ContextWithTenantAsync(tenant);
+        var dbName = $"form-queries-blinding-{Guid.NewGuid():N}";
+        var contexts = new InMemoryQueryContextFactory(dbName);
+
+        var formNonBlindedId = CollectionInstanceId.New();
+        var formMaskedId = CollectionInstanceId.New();
+        var formUnblindedId = CollectionInstanceId.New();
+        var obsNonBlinded1 = ObservationId.New();
+        var obsNonBlinded2 = ObservationId.New();
+        var obsMasked = ObservationId.New();
+        var obsUnblinded = ObservationId.New();
+        var sbpConcept = ConceptRef.New();
+        var armConcept = ConceptRef.New();
+
+        CollectionItem[] items =
+        [
+            new("item.sbp", sbpConcept, Required: true, ValueKind: ObservationValueKind.Quantity, Unit: "mmHg"),
+            new("item.trt_arm", armConcept, Required: true, ValueKind: ObservationValueKind.Text),
+        ];
+
+        CollectionInstanceRecord BuildForm(
+            CollectionInstanceId id,
+            EnrollmentId enrollment,
+            StudySiteId site,
+            ObservationId sbpObs,
+            ObservationId? armObs,
+            IReadOnlySet<string> blindedItems,
+            IReadOnlySet<ObservationId> blindedObs) =>
+            new(
+                id,
+                enrollment,
+                ParticipantId.New(),
+                study,
+                site,
+                ProtocolVersionId.New(),
+                "spec.day1",
+                "act.day1",
+                At,
+                "crc@site.test",
+                At,
+                1,
+                items,
+                armObs is { } armId
+                    ? [
+                        new CollectedValueView("item.sbp", sbpObs, sbpConcept, new QuantityValue(122m, "mmHg"), At, 1, "crc@site.test", At),
+                        new CollectedValueView("item.trt_arm", armId, armConcept, new TextValue("ARM-ACTIVE-CANARY"), At, 1, "irt@system.test", At),
+                    ]
+                    : [new CollectedValueView("item.sbp", sbpObs, sbpConcept, new QuantityValue(122m, "mmHg"), At, 1, "crc@site.test", At)],
+                [],
+                [],
+                [],
+                null,
+                "Day 1 Visit",
+                BlindedItemIds: blindedItems,
+                BlindedObservationIds: blindedObs);
+
+        var forms = new StubQueryForms(
+        [
+            BuildForm(
+                formNonBlindedId,
+                enrollmentNonBlinded,
+                siteA,
+                obsNonBlinded1,
+                null,
+                new HashSet<string>(StringComparer.Ordinal),
+                new HashSet<ObservationId>()),
+            BuildForm(
+                formMaskedId,
+                enrollmentMasked,
+                siteA,
+                obsNonBlinded2,
+                obsMasked,
+                new HashSet<string>(StringComparer.Ordinal) { "item.trt_arm" },
+                new HashSet<ObservationId> { obsMasked }),
+            BuildForm(
+                formUnblindedId,
+                enrollmentUnblinded,
+                siteB,
+                ObservationId.New(),
+                obsUnblinded,
+                new HashSet<string>(StringComparer.Ordinal) { "item.trt_arm" },
+                new HashSet<ObservationId> { obsUnblinded }),
+        ]);
+
+        var navigator = new StubStudyNavigator(
+            study,
+            [
+                new StudyEnrollmentNode(enrollmentNonBlinded, "017-0001", siteA, "017"),
+                new StudyEnrollmentNode(enrollmentMasked, "017-0002", siteA, "017"),
+                new StudyEnrollmentNode(enrollmentUnblinded, "022-0001", siteB, "022"),
+            ]);
+        var access = new StubBatchReadAccess(
+            [
+                NodeRef.For(study),
+                NodeRef.For(enrollmentNonBlinded),
+                NodeRef.For(enrollmentMasked),
+                NodeRef.For(enrollmentUnblinded),
+            ],
+            [enrollmentUnblinded]);
+
+        var nonBlindedQueryA = FormQuery.Raise(
+            FormQueryId.New(), tenant, formNonBlindedId, enrollmentNonBlinded, "item.sbp", obsNonBlinded1, 1,
+            "Confirm systolic reading", AssertionId.New(), "cra", At, "SDV").Query;
+        var nonBlindedQueryB = FormQuery.Raise(
+            FormQueryId.New(), tenant, formMaskedId, enrollmentMasked, "item.sbp", obsNonBlinded2, 1,
+            "Verify cuff size", AssertionId.New(), "cra", At.AddMinutes(1), "SDV").Query;
+
+        await using (var db = contexts.Create(tenant))
+        {
+            using var _ = db.PermitCommandWrites();
+            db.FormQueries.AddRange(nonBlindedQueryA, nonBlindedQueryB);
+            await db.SaveChangesAsync(ct);
+        }
+
+        // 1. Worklist containing only non-blinded queries must issue zero unblind checks.
+        var nonBlindedList = await FormQueryEndpoints.ListQueriesAsync(
+            new FormQueryListFilter(StudyId: study.Value), http, forms, contexts, access, navigator, clock, ct);
+        var nonBlindedResponses = nonBlindedList.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Which.Value!;
+        nonBlindedResponses.Should().HaveCount(2);
+        nonBlindedResponses.Select(r => r.Text).Should().Contain(["Confirm systolic reading", "Verify cuff size"]);
+        access.CanUnblindCalls.Should().Be(0);
+        access.CanUnblindManyCalls.Should().Be(0);
+
+        // 2. Adding blinded queries on two enrollments batches CanUnblindManyAsync once for ONLY those two enrollments.
+        var maskedQuery = FormQuery.Raise(
+            FormQueryId.New(), tenant, formMaskedId, enrollmentMasked, "item.trt_arm", obsMasked, 1,
+            "Masked arm canary text", AssertionId.New(), "unblinded-dm", At.AddMinutes(2), "Kit check").Query;
+        var unblindedQuery = FormQuery.Raise(
+            FormQueryId.New(), tenant, formUnblindedId, enrollmentUnblinded, "item.trt_arm", obsUnblinded, 1,
+            "Unblinded arm canary text", AssertionId.New(), "unblinded-dm", At.AddMinutes(3), "Kit check").Query;
+
+        await using (var db = contexts.Create(tenant))
+        {
+            using var _ = db.PermitCommandWrites();
+            db.FormQueries.AddRange(maskedQuery, unblindedQuery);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var mixedList = await FormQueryEndpoints.ListQueriesAsync(
+            new FormQueryListFilter(StudyId: study.Value), http, forms, contexts, access, navigator, clock, ct);
+        var mixedResponses = mixedList.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Which.Value!;
+        mixedResponses.Should().HaveCount(4);
+        access.CanUnblindCalls.Should().Be(0);
+        access.CanUnblindManyCalls.Should().Be(1);
+        access.LastUnblindEnrollmentBatch.Should().BeEquivalentTo([enrollmentMasked, enrollmentUnblinded]);
+
+        var shapedMasked = mixedResponses.Single(r => r.QueryId == maskedQuery.Id.Value);
+        shapedMasked.Text.Should().Be("masked");
+        shapedMasked.RaisedBy.Should().Be("masked");
+        shapedMasked.Messages.Should().OnlyContain(m => m.Text == "masked" && m.By == "masked");
+
+        var shapedUnblinded = mixedResponses.Single(r => r.QueryId == unblindedQuery.Id.Value);
+        shapedUnblinded.Text.Should().Be("Unblinded arm canary text");
+        shapedUnblinded.ObservationId.Should().Be(obsUnblinded.Value);
+        shapedUnblinded.RaisedBy.Should().Be("unblinded-dm");
+
+        mixedResponses.Single(r => r.QueryId == nonBlindedQueryB.Id.Value).Text.Should().Be("Verify cuff size");
+    }
+
     private static (FormQuery Query, KernelAssertionStep Step) Raise(
         string text = "Confirm the value",
         FormQueryOrigin origin = FormQueryOrigin.Manual) =>
@@ -280,19 +457,61 @@ public sealed class ExecutionFormQueryTests
             throw new InvalidOperationException("Database should not be queried when validation or visibility short-circuits.");
     }
 
-    private sealed class StubQueryForms : ICollectionInstanceRecords
+    private sealed class InMemoryQueryContextFactory(string dbName) : IModuleTenantContextFactory<ExecutionModuleDbContext>
     {
+        public ExecutionModuleDbContext Create(TenantId tenant)
+        {
+            var options = new DbContextOptionsBuilder<ExecutionModuleDbContext>()
+                .UseInMemoryDatabase($"{dbName}-{tenant.Value:N}")
+                .ReplaceService<IModelCustomizer, InMemoryQueryModelCustomizer>()
+                .Options;
+            return new ExecutionModuleDbContext(options);
+        }
+    }
+
+    private sealed class InMemoryQueryModelCustomizer(ModelCustomizerDependencies dependencies) : ModelCustomizer(dependencies)
+    {
+        public override void Customize(ModelBuilder modelBuilder, DbContext context)
+        {
+            base.Customize(modelBuilder, context);
+            modelBuilder.Entity<FormQuery>().Ignore(q => q.Periods);
+            modelBuilder.Ignore<FormQueryPeriod>();
+        }
+    }
+
+    private sealed class StubQueryForms(IEnumerable<CollectionInstanceRecord>? records = null) : ICollectionInstanceRecords
+    {
+        private readonly Dictionary<CollectionInstanceId, CollectionInstanceRecord> _records =
+            records?.ToDictionary(r => r.CollectionInstanceId) ?? [];
+
         public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
-            Task.FromResult<CollectionInstanceRecord?>(null);
+            Task.FromResult(_records.GetValueOrDefault(instance));
+
+        public Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<CollectionInstanceId> instances,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>>(
+                instances.Distinct().Where(_records.ContainsKey).ToDictionary(id => id, id => _records[id]));
 
         public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<CollectionInstanceSummary>>([]);
     }
 
-    private sealed class StubBatchReadAccess(IEnumerable<NodeRef> visible) : IKernelReadAccess
+    private sealed class StubBatchReadAccess(
+        IEnumerable<NodeRef> visible,
+        IEnumerable<EnrollmentId>? unblindedEnrollments = null) : IKernelReadAccess
     {
         private readonly HashSet<NodeRef> _visible = [.. visible.Select(n => n.Unversioned())];
+        private readonly HashSet<EnrollmentId> _unblinded = [.. unblindedEnrollments ?? []];
+
         public int FilterVisibleCalls { get; private set; }
+
+        public int CanUnblindCalls { get; private set; }
+
+        public int CanUnblindManyCalls { get; private set; }
+
+        public IReadOnlyList<EnrollmentId> LastUnblindEnrollmentBatch { get; private set; } = [];
 
         public ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
             ValueTask.FromResult(_visible.Contains(node.Unversioned()));
@@ -302,6 +521,23 @@ public sealed class ExecutionFormQueryTests
             FilterVisibleCalls++;
             return ValueTask.FromResult<IReadOnlySet<NodeRef>>(
                 nodes.Select(n => n.Unversioned()).Where(_visible.Contains).ToHashSet());
+        }
+
+        public ValueTask<bool> CanUnblindAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken)
+        {
+            CanUnblindCalls++;
+            return ValueTask.FromResult(_unblinded.Contains(enrollment));
+        }
+
+        public ValueTask<IReadOnlySet<EnrollmentId>> CanUnblindManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<EnrollmentId> enrollments,
+            CancellationToken cancellationToken)
+        {
+            CanUnblindManyCalls++;
+            LastUnblindEnrollmentBatch = [.. enrollments];
+            return ValueTask.FromResult<IReadOnlySet<EnrollmentId>>(
+                enrollments.Where(_unblinded.Contains).ToHashSet());
         }
     }
 

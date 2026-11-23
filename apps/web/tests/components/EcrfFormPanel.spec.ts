@@ -55,6 +55,11 @@ vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
       openForm: vi.fn(),
       getForm: vi.fn(),
       saveValues: vi.fn(),
+      previewValues: vi.fn(async () => ({
+        form_id: "0192f3c4-5e6a-7b8c-9d0e-00000000f001",
+        evaluated_rule_packs: 0,
+        warnings: [],
+      })),
       signForm: vi.fn(),
     },
   };
@@ -155,6 +160,12 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     vi.mocked(ecrfFormsApi.getForm).mockReset();
     vi.mocked(ecrfFormsApi.openForm).mockReset();
     vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    vi.mocked(ecrfFormsApi.previewValues).mockReset();
+    vi.mocked(ecrfFormsApi.previewValues).mockResolvedValue({
+      form_id: FORM_ID,
+      evaluated_rule_packs: 0,
+      warnings: [],
+    } as never);
     resetQueries();
   });
 
@@ -1963,12 +1974,20 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.mocked(ecrfFormsApi.getForm).mockReset();
+    vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    vi.mocked(ecrfFormsApi.previewValues).mockReset();
+    vi.mocked(ecrfFormsApi.previewValues).mockResolvedValue({
+      form_id: FORM_ID,
+      evaluated_rule_packs: 0,
+      warnings: [],
+    } as never);
     resetQueries();
   });
 
   afterEach(() => {
     wrapper?.unmount();
     wrapper = undefined;
+    vi.useRealTimers();
   });
 
   it("verifies a recorded item with a mandatory reason, withdraws the verification, and clears verified status when a newer revision exists", async () => {
@@ -2884,5 +2903,185 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
 
     expect(ecrfFormsApi.getForm).toHaveBeenCalledWith(FORM_ID);
     expect(wrapper.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
+  });
+
+  it("aborts superseded in-flight draft previews on rapid edits and ignores AbortError without clearing newer warnings", async () => {
+    vi.useFakeTimers();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+
+    const capturedSignals: AbortSignal[] = [];
+    let rejectFirstPreview: ((reason?: unknown) => void) | undefined;
+    let resolveSecondPreview: ((value: unknown) => void) | undefined;
+
+    vi.mocked(ecrfFormsApi.previewValues)
+      .mockImplementationOnce((_formId, _values, options) => {
+        const signal =
+          options && "aborted" in options ? options : options?.signal;
+        if (signal) capturedSignals.push(signal);
+        return new Promise((_resolve, reject) => {
+          rejectFirstPreview = reject;
+        }) as never;
+      })
+      .mockImplementationOnce((_formId, _values, options) => {
+        const signal =
+          options && "aborted" in options ? options : options?.signal;
+        if (signal) capturedSignals.push(signal);
+        return new Promise((resolve) => {
+          resolveSecondPreview = resolve;
+        }) as never;
+      });
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    await wrapper.find("#ecrf-item-SYSBP").setValue("210");
+    vi.advanceTimersByTime(260);
+    await flushPromises();
+
+    expect(ecrfFormsApi.previewValues).toHaveBeenCalledTimes(1);
+    expect(capturedSignals).toHaveLength(1);
+    expect(capturedSignals[0].aborted).toBe(false);
+
+    // Typing a second edit immediately aborts the first in-flight preview request.
+    await wrapper.find("#ecrf-item-SYSBP").setValue("245");
+    expect(capturedSignals[0].aborted).toBe(true);
+
+    vi.advanceTimersByTime(260);
+    await flushPromises();
+
+    expect(ecrfFormsApi.previewValues).toHaveBeenCalledTimes(2);
+    expect(capturedSignals).toHaveLength(2);
+    expect(capturedSignals[1].aborted).toBe(false);
+
+    resolveSecondPreview?.({
+      form_id: FORM_ID,
+      evaluated_rule_packs: 1,
+      warnings: [
+        {
+          pack_key: "vitals.pack",
+          rule_id: "VS_SYSBP_MAX",
+          rule_version: 1,
+          severity: "Warning",
+          dataset: "VS",
+          item_id: "SYSBP",
+          message: "Systolic BP 245 exceeds plausible upper bound.",
+          remediation_guidance: null,
+        },
+      ],
+    });
+    await flushPromises();
+
+    expect(
+      wrapper.find("[data-testid='ecrf-preview-warnings-SYSBP']").text()
+    ).toContain("VS_SYSBP_MAX");
+
+    // Late AbortError from the superseded preview is silently ignored and keeps newer warnings intact.
+    rejectFirstPreview?.(
+      new DOMException("The operation was aborted.", "AbortError")
+    );
+    await flushPromises();
+
+    expect(
+      wrapper.find("[data-testid='ecrf-preview-warnings-SYSBP']").text()
+    ).toContain("VS_SYSBP_MAX");
+  });
+
+  it("aborts an active draft preview before saving, reloading, or unmounting", async () => {
+    vi.useFakeTimers();
+    const initialForm = form();
+    const savedForm = form({
+      version: 3,
+      complete: true,
+      missing_required: [],
+      items: [
+        item({
+          ...initialForm.items[0],
+          value: { type: "quantity", value: 132, unit: "mm[Hg]" },
+          revision: 4,
+        }),
+        item({
+          ...initialForm.items[1],
+          observation_id: OBS_DIA,
+          value: { type: "quantity", value: 82, unit: "mm[Hg]" },
+          revision: 1,
+        }),
+        initialForm.items[2],
+      ],
+    });
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(initialForm as never);
+    vi.mocked(ecrfFormsApi.saveValues).mockResolvedValue({
+      form_id: FORM_ID,
+      version: 3,
+      values: [
+        {
+          item_id: "SYSBP",
+          observation_id: OBS_ID,
+          value: { type: "quantity", value: 132, unit: "mm[Hg]" },
+          revision: 4,
+          changed: true,
+        },
+        {
+          item_id: "DIABP",
+          observation_id: OBS_DIA,
+          value: { type: "quantity", value: 82, unit: "mm[Hg]" },
+          revision: 1,
+          changed: true,
+        },
+      ],
+      form: savedForm,
+    } as never);
+
+    const capturedSignals: AbortSignal[] = [];
+    vi.mocked(ecrfFormsApi.previewValues).mockImplementation(
+      (_formId, _values, options) => {
+        const signal =
+          options && "aborted" in options ? options : options?.signal;
+        if (signal) capturedSignals.push(signal);
+        return new Promise(() => {}) as never;
+      }
+    );
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    // 1. Save aborts active preview before saveValues runs
+    await wrapper.find("#ecrf-item-SYSBP").setValue("132");
+    await wrapper.find("#ecrf-item-DIABP").setValue("82");
+    vi.advanceTimersByTime(260);
+    await flushPromises();
+    expect(capturedSignals).toHaveLength(1);
+    expect(capturedSignals[0].aborted).toBe(false);
+
+    await wrapper.find("#ecrf-save-reason").setValue("Corrected BP");
+    await wrapper.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+    expect(capturedSignals[0].aborted).toBe(true);
+    expect(ecrfFormsApi.saveValues).toHaveBeenCalledTimes(1);
+
+    // 2. Reloading another form aborts active preview
+    const secondFormId = "01950000-0000-7000-8000-000000000999";
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({ form_id: secondFormId }) as never
+    );
+    await wrapper.find("#ecrf-item-DIABP").setValue("84");
+    vi.advanceTimersByTime(260);
+    await flushPromises();
+    expect(capturedSignals).toHaveLength(2);
+    expect(capturedSignals[1].aborted).toBe(false);
+
+    await wrapper.setProps({ formId: secondFormId });
+    await flushPromises();
+    expect(capturedSignals[1].aborted).toBe(true);
+
+    // 3. Unmount aborts active preview
+    await wrapper.find("#ecrf-item-DIABP").setValue("86");
+    vi.advanceTimersByTime(260);
+    await flushPromises();
+    expect(capturedSignals).toHaveLength(3);
+    expect(capturedSignals[2].aborted).toBe(false);
+
+    wrapper.unmount();
+    wrapper = undefined;
+    expect(capturedSignals[2].aborted).toBe(true);
   });
 });

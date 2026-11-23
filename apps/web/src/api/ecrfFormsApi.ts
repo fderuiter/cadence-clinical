@@ -80,6 +80,11 @@ export interface SaveEcrfFormValues {
   idempotencyKey: string;
 }
 
+/** Optional per-request options for cancellable draft rule previews. */
+export interface EcrfFormPreviewOptions {
+  signal?: AbortSignal;
+}
+
 export interface SignEcrfForm {
   meaning: EcrfSignatureMeaning;
   /** The form's `content_hash` as it was read; the kernel refuses (409) if the form changed since. */
@@ -186,12 +191,15 @@ export const ecrfFormsApi = {
    */
   previewValues(
     formId: string,
-    values: EcrfFormValue[]
+    values: EcrfFormValue[],
+    options?: EcrfFormPreviewOptions | AbortSignal
   ): Promise<EcrfFormPreview> {
+    const signal = options && "aborted" in options ? options : options?.signal;
     return unwrapResponse(
       client.POST("/api/v1/execution/forms/{formId}/preview", {
         params: { path: { formId } },
         body: { values },
+        ...(signal ? { signal } : {}),
       })
     );
   },

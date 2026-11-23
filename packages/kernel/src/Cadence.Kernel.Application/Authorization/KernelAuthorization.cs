@@ -131,6 +131,69 @@ public sealed partial class KernelAuthorization(
         return decision;
     }
 
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyDictionary<NodeRef, AuthorizationDecision>> CanIManyAsync(
+        TenantId tenant,
+        Capability capability,
+        IReadOnlyCollection<NodeRef> resources,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(resources);
+        if (tenant.IsEmpty)
+        {
+            throw new ArgumentException("A dry run is asked within a tenant.", nameof(tenant));
+        }
+
+        var distinct = resources.Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return new Dictionary<NodeRef, AuthorizationDecision>();
+        }
+
+        if (currentActor.Actor is not { } actor)
+        {
+            var unresolved = AuthorizationDecision.Deny(
+                KernelErrors.ActorUnresolved.Message,
+                EvaluatedCondition.Unsatisfied(ActorResolvedCondition, "Sign in as an accountable person or service account"));
+            var deniedByResource = new Dictionary<NodeRef, AuthorizationDecision>(distinct.Count);
+            foreach (var resource in distinct)
+            {
+                LogDryRun(logger, tenant, "unresolved", capability.Token, resource, false, ActorResolvedCondition);
+                deniedByResource[resource] = unresolved;
+            }
+
+            return deniedByResource;
+        }
+
+        var now = KernelTimestamps.ToStoredPrecision(clock.UtcNow);
+        var rawDecisions = await evaluator
+            .EvaluateManyAsync(actor, tenant, capability, distinct, now, now, cancellationToken)
+            .ConfigureAwait(false);
+        var actorName = actor.ToString();
+        var result = new Dictionary<NodeRef, AuthorizationDecision>(distinct.Count);
+        foreach (var resource in distinct)
+        {
+            var raw = rawDecisions.TryGetValue(resource, out var found)
+                ? found
+                : AuthorizationDecision.Deny(KernelErrors.AuthorizationDenied.Message);
+            var normalized = raw.Permitted || raw.Reason is not null
+                ? raw
+                : raw with { Reason = KernelErrors.AuthorizationDenied.Message };
+            LogDryRun(
+                logger,
+                tenant,
+                actorName,
+                capability.Token,
+                resource,
+                normalized.Permitted,
+                string.Join(',', normalized.Conditions.Where(c => !c.Met).Select(c => c.Code)));
+            result[resource] = normalized;
+        }
+
+        return result;
+    }
+
     public async ValueTask<IReadOnlyList<CommandAvailability>> GetCommandsAsync(
         TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
     {

@@ -681,18 +681,21 @@ internal static class FormQueryEndpoints
             }
         }
 
-        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
-        foreach (var enrollmentId in queries.Select(q => q.EnrollmentId).Distinct())
-        {
-            canUnblindByEnrollment[enrollmentId] = await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false);
-        }
+        var blindedEnrollmentIds = queries
+            .Where(q => recordsById.TryGetValue(q.FormId, out var rec) && rec.IsQueryBlinded(q.ItemId, q.ObservationId))
+            .Select(q => q.EnrollmentId)
+            .Distinct()
+            .ToList();
+        var unblindedEnrollments = blindedEnrollmentIds.Count > 0
+            ? await access.CanUnblindManyAsync(tenant, blindedEnrollmentIds, cancellationToken).ConfigureAwait(false)
+            : new HashSet<EnrollmentId>();
 
         return [
             .. queries.Select(q =>
             {
-                var maskBlinded = !canUnblindByEnrollment[q.EnrollmentId]
-                    && recordsById.TryGetValue(q.FormId, out var rec)
-                    && rec.IsQueryBlinded(q.ItemId, q.ObservationId);
+                var maskBlinded = recordsById.TryGetValue(q.FormId, out var rec)
+                    && rec.IsQueryBlinded(q.ItemId, q.ObservationId)
+                    && !unblindedEnrollments.Contains(q.EnrollmentId);
                 return FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId), maskBlinded);
             }),
         ];

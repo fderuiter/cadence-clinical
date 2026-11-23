@@ -83,4 +83,31 @@ public sealed class KernelReadAccess(
         EnrollmentId enrollment,
         CancellationToken cancellationToken) =>
         CanExerciseAsync(tenant, EnrollmentUnblind, NodeRef.For(enrollment), cancellationToken);
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlySet<EnrollmentId>> CanUnblindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<EnrollmentId> enrollments,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(enrollments);
+        if (enrollments.Count == 0 || probe is null)
+        {
+            return new HashSet<EnrollmentId>();
+        }
+
+        var distinct = enrollments.Distinct().ToList();
+        var resources = distinct.Select(static e => NodeRef.For(e)).ToList();
+        var decisions = await probe.CanIManyAsync(tenant, EnrollmentUnblind, resources, cancellationToken).ConfigureAwait(false);
+        var permitted = new HashSet<EnrollmentId>();
+        foreach (var enrollment in distinct)
+        {
+            if (decisions.TryGetValue(NodeRef.For(enrollment), out var decision) && decision.Permitted)
+            {
+                permitted.Add(enrollment);
+            }
+        }
+
+        return permitted;
+    }
 }

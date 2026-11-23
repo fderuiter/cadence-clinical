@@ -153,6 +153,7 @@ export function useEcrfForm(
   );
   const previewing = ref(false);
   let previewTimer: ReturnType<typeof setTimeout> | null = null;
+  let previewAbortController: AbortController | null = null;
   let previewSeq = 0;
   let pendingOpen: { request: string; formId: string; key: string } | null =
     null;
@@ -456,17 +457,38 @@ export function useEcrfForm(
     }
   );
 
+  function abortActivePreview() {
+    if (previewAbortController !== null) {
+      previewAbortController.abort();
+      previewAbortController = null;
+    }
+  }
+
+  function isAbortError(error: unknown): boolean {
+    return (
+      (error instanceof DOMException && error.name === "AbortError") ||
+      (error instanceof Error && error.name === "AbortError")
+    );
+  }
+
   function cancelPreview() {
     if (previewTimer !== null) {
       clearTimeout(previewTimer);
       previewTimer = null;
     }
+    abortActivePreview();
     previewSeq++;
     previewing.value = false;
   }
 
   /** Evaluates pinned study edit-check rule packs in memory for current draft edits without mutating server state. */
   async function runPreview(): Promise<void> {
+    if (previewTimer !== null) {
+      clearTimeout(previewTimer);
+      previewTimer = null;
+    }
+    abortActivePreview();
+
     const current = form.value;
     if (
       !current ||
@@ -474,6 +496,7 @@ export function useEcrfForm(
       !dirty.value ||
       typeof ecrfFormsApi.previewValues !== "function"
     ) {
+      previewSeq++;
       clearRecord(previewWarnings);
       previewing.value = false;
       return;
@@ -492,30 +515,38 @@ export function useEcrfForm(
       });
     }
     if (draftValues.length === 0) {
+      previewSeq++;
       clearRecord(previewWarnings);
       previewing.value = false;
       return;
     }
 
+    const controller = new AbortController();
+    previewAbortController = controller;
     const seq = ++previewSeq;
     previewing.value = true;
     try {
       const response = await ecrfFormsApi.previewValues(
         current.form_id,
-        draftValues
+        draftValues,
+        { signal: controller.signal }
       );
-      if (seq !== previewSeq) return;
+      if (controller.signal.aborted || seq !== previewSeq) return;
       clearRecord(previewWarnings);
       for (const warning of response.warnings ?? []) {
         const key = warning.item_id || "__form__";
         if (!previewWarnings[key]) previewWarnings[key] = [];
         previewWarnings[key].push(warning);
       }
-    } catch {
+    } catch (error) {
+      if (controller.signal.aborted || isAbortError(error)) return;
       if (seq === previewSeq) {
         clearRecord(previewWarnings);
       }
     } finally {
+      if (previewAbortController === controller) {
+        previewAbortController = null;
+      }
       if (seq === previewSeq) {
         previewing.value = false;
       }
@@ -523,13 +554,9 @@ export function useEcrfForm(
   }
 
   function schedulePreview() {
-    if (previewTimer !== null) {
-      clearTimeout(previewTimer);
-      previewTimer = null;
-    }
+    cancelPreview();
     if (!form.value || locked.value || !dirty.value) {
       clearRecord(previewWarnings);
-      previewing.value = false;
       return;
     }
     previewTimer = setTimeout(() => {
@@ -593,6 +620,7 @@ export function useEcrfForm(
     restoreFromStorage: boolean
   ): Promise<void> {
     cancelDraftSave();
+    cancelPreview();
     lastRequestedFormId = formId;
     const request = ++loadRequest;
     loading.value = true;
@@ -766,6 +794,7 @@ export function useEcrfForm(
       return;
     }
 
+    cancelPreview();
     const sent = JSON.stringify({ form: current.form_id, values, reason });
     if (pendingSave?.request !== sent) {
       pendingSave = { request: sent, key: newKey() };

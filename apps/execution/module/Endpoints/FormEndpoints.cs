@@ -439,53 +439,102 @@ internal static class FormEndpoints
         {
             var classifier = services?.GetService<IBlindedTreatmentClassifier>()
                 ?? BlindedTreatmentClassifier.Instance;
-            var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, services, cancellationToken).ConfigureAwait(false);
-            var concepts = await LoadItemConceptsAsync(tenant, record.Items, services, cancellationToken).ConfigureAwait(false);
             var specById = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
             var valuesById = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
 
-            foreach (var itemId in specById.Keys.Concat(valuesById.Keys).Distinct(StringComparer.Ordinal))
+            if (record.BlindedItemIds is not null
+                && record.BlindedObservationIds is not null
+                && classifier is BlindedTreatmentClassifier)
             {
-                specById.TryGetValue(itemId, out var specItem);
-                valuesById.TryGetValue(itemId, out var recordedValue);
-                BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
-                    ? m
-                    : null;
-                if (classifier.IsBlindedCollectionItem(
-                        record.CollectionSpecId,
-                        record.CollectionTitle,
-                        specItem,
-                        recordedValue?.Value,
-                        conceptMeta,
-                        designs))
+                blindedItemIds.UnionWith(record.BlindedItemIds);
+                blindedObservationIds.UnionWith(record.BlindedObservationIds);
+
+                foreach (var itemId in specById.Keys.Concat(valuesById.Keys).Distinct(StringComparer.Ordinal))
                 {
-                    blindedItemIds.Add(itemId);
-                    if (recordedValue is not null)
+                    specById.TryGetValue(itemId, out var specItem);
+                    valuesById.TryGetValue(itemId, out var recordedValue);
+                    if (blindedItemIds.Contains(itemId)
+                        || classifier.IsBlindedCollectionItem(
+                            record.CollectionSpecId,
+                            record.CollectionTitle,
+                            specItem,
+                            recordedValue?.Value))
                     {
-                        blindedObservationIds.Add(recordedValue.ObservationId);
+                        blindedItemIds.Add(itemId);
+                        if (recordedValue is not null)
+                        {
+                            blindedObservationIds.Add(recordedValue.ObservationId);
+                        }
+                    }
+                }
+
+                foreach (var signedValue in record.Attestations
+                    .Where(signature => signature.SignedValues is not null)
+                    .SelectMany(signature => signature.SignedValues!))
+                {
+                    specById.TryGetValue(signedValue.ItemId, out var specItem);
+                    if (blindedItemIds.Contains(signedValue.ItemId)
+                        || blindedObservationIds.Contains(signedValue.ObservationId)
+                        || classifier.IsBlindedCollectionItem(
+                            record.CollectionSpecId,
+                            record.CollectionTitle,
+                            specItem,
+                            signedValue.Value))
+                    {
+                        blindedItemIds.Add(signedValue.ItemId);
+                        blindedObservationIds.Add(signedValue.ObservationId);
                     }
                 }
             }
-
-            foreach (var signedValue in record.Attestations
-                .Where(signature => signature.SignedValues is not null)
-                .SelectMany(signature => signature.SignedValues!))
+            else
             {
-                specById.TryGetValue(signedValue.ItemId, out var specItem);
-                BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
-                    ? m
-                    : null;
-                if (blindedItemIds.Contains(signedValue.ItemId)
-                    || classifier.IsBlindedCollectionItem(
-                        record.CollectionSpecId,
-                        record.CollectionTitle,
-                        specItem,
-                        signedValue.Value,
-                        conceptMeta,
-                        designs))
+                var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, services, cancellationToken).ConfigureAwait(false);
+                var concepts = await LoadItemConceptsAsync(tenant, record.Items, services, cancellationToken).ConfigureAwait(false);
+
+                foreach (var itemId in specById.Keys.Concat(valuesById.Keys).Distinct(StringComparer.Ordinal))
                 {
-                    blindedItemIds.Add(signedValue.ItemId);
-                    blindedObservationIds.Add(signedValue.ObservationId);
+                    specById.TryGetValue(itemId, out var specItem);
+                    valuesById.TryGetValue(itemId, out var recordedValue);
+                    BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
+                        ? m
+                        : null;
+                    if (classifier.IsBlindedCollectionItem(
+                            record.CollectionSpecId,
+                            record.CollectionTitle,
+                            specItem,
+                            recordedValue?.Value,
+                            conceptMeta,
+                            designs))
+                    {
+                        blindedItemIds.Add(itemId);
+                        if (recordedValue is not null)
+                        {
+                            blindedObservationIds.Add(recordedValue.ObservationId);
+                        }
+                    }
+                }
+
+                foreach (var signedValue in record.Attestations
+                    .Where(signature => signature.SignedValues is not null)
+                    .SelectMany(signature => signature.SignedValues!))
+                {
+                    specById.TryGetValue(signedValue.ItemId, out var specItem);
+                    BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
+                        ? m
+                        : null;
+                    if (blindedItemIds.Contains(signedValue.ItemId)
+                        || blindedObservationIds.Contains(signedValue.ObservationId)
+                        || classifier.IsBlindedCollectionItem(
+                            record.CollectionSpecId,
+                            record.CollectionTitle,
+                            specItem,
+                            signedValue.Value,
+                            conceptMeta,
+                            designs))
+                    {
+                        blindedItemIds.Add(signedValue.ItemId);
+                        blindedObservationIds.Add(signedValue.ObservationId);
+                    }
                 }
             }
         }
@@ -506,50 +555,36 @@ internal static class FormEndpoints
             return [];
         }
 
-        var designs = new List<ProtocolDesign>();
-        if (await reader.GetDesignAsync(tenant, governingVersionId, cancellationToken).ConfigureAwait(false) is { } governing)
+        var studyDesigns = await reader.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        if (studyDesigns.TryGetValue(governingVersionId, out var governing))
         {
-            designs.Add(governing);
-            return designs;
+            return [governing];
         }
 
-        var summaries = await reader.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        foreach (var summaryId in summaries.Select(summary => summary.Id))
+        if (studyDesigns.Count > 0)
         {
-            if (await reader.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
-            {
-                designs.Add(design);
-            }
+            return [.. studyDesigns.Values];
         }
 
-        return designs;
+        if (!governingVersionId.IsEmpty
+            && await reader.GetDesignAsync(tenant, governingVersionId, cancellationToken).ConfigureAwait(false) is { } fallback)
+        {
+            return [fallback];
+        }
+
+        return [];
     }
 
-    private static async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadItemConceptsAsync(
+    private static Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadItemConceptsAsync(
         TenantId tenant,
         IReadOnlyList<CollectionItem> items,
         IServiceProvider? services,
-        CancellationToken cancellationToken)
-    {
-        var concepts = services?.GetService<IConceptRegistry>();
-        if (concepts is null || items.Count == 0)
-        {
-            return new Dictionary<ConceptId, BlindedConceptMetadata>();
-        }
-
-        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
-        foreach (var conceptRef in items.Select(i => i.Concept).Distinct())
-        {
-            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
-                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
-            if (view is not null)
-            {
-                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
-            }
-        }
-
-        return resolved;
-    }
+        CancellationToken cancellationToken) =>
+        BlindedConceptMetadata.ResolveManyAsync(
+            services?.GetService<IConceptRegistry>(),
+            tenant,
+            items.Select(i => i.Concept),
+            cancellationToken);
 
     private static ProblemHttpResult BadRequest(string title, string detail) =>
         TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);
