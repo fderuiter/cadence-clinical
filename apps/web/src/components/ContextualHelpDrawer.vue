@@ -2,10 +2,11 @@
   <div ref="drawerRootRef">
     <!-- Contextual Help Slide-Out Drawer -->
     <ClinicalDrawer
+      id="contextual-help-drawer"
       :is-open="knowledgeStore.isOpen"
       :teleport="false"
       dockable
-      id="contextual-help-drawer"
+      :dismissible="!knowledgeStore.isEscalating"
       overlay-id="contextual-help-drawer-overlay"
       overlay-class="drawer-overlay"
       panel-class="drawer-panel"
@@ -14,7 +15,6 @@
       @close="knowledgeStore.closeDrawer()"
     >
       <template #header>
-        <!-- Header -->
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
@@ -28,7 +28,7 @@
                 <div class="context-badges">
                   <span class="context-badge route-badge" title="Active Route">
                     <MapPin :size="12" aria-hidden="true" />
-                    {{ knowledgeStore.currentRoute }}
+                    <span>{{ knowledgeStore.currentRoute }}</span>
                   </span>
                   <span
                     class="context-badge persona-badge"
@@ -42,6 +42,7 @@
 
             <div class="header-actions">
               <ClinicalIconButton
+                v-if="knowledgeStore.activeDrawerTab === 'guidance'"
                 class="btn-icon-toggle"
                 variant="ghost"
                 size="sm"
@@ -60,13 +61,60 @@
                 label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
-                <X :size="16" aria-hidden="true" />
+                <X :size="18" aria-hidden="true" />
               </ClinicalIconButton>
             </div>
           </div>
 
-          <!-- Inline Search Bar -->
-          <div v-if="isSearchOpen" class="search-bar-row">
+          <!-- Inline Drawer View Tabs -->
+          <div
+            class="drawer-tabs"
+            role="tablist"
+            aria-label="Contextual assistance views"
+          >
+            <button
+              id="tab-contextual-guidance"
+              type="button"
+              role="tab"
+              class="drawer-tab-btn"
+              :class="{ active: knowledgeStore.activeDrawerTab === 'guidance' }"
+              :aria-selected="
+                knowledgeStore.activeDrawerTab === 'guidance' ? 'true' : 'false'
+              "
+              aria-controls="panel-contextual-guidance"
+              @click="switchTab('guidance')"
+            >
+              <BookOpen :size="14" aria-hidden="true" />
+              <span>SOP Guidance</span>
+            </button>
+            <button
+              id="tab-contextual-tickets"
+              type="button"
+              role="tab"
+              class="drawer-tab-btn"
+              :class="{ active: knowledgeStore.activeDrawerTab === 'tickets' }"
+              :aria-selected="
+                knowledgeStore.activeDrawerTab === 'tickets' ? 'true' : 'false'
+              "
+              aria-controls="panel-contextual-tickets"
+              @click="switchTab('tickets')"
+            >
+              <Ticket :size="14" aria-hidden="true" />
+              <span>Support Tickets</span>
+              <span
+                v-if="knowledgeStore.hasLoadedDrawerTickets"
+                class="tab-count-pill"
+              >
+                {{ knowledgeStore.drawerTickets.length }}
+              </span>
+            </button>
+          </div>
+
+          <!-- Inline Search Bar (Guidance Tab Only) -->
+          <div
+            v-if="knowledgeStore.activeDrawerTab === 'guidance' && isSearchOpen"
+            class="search-bar-row"
+          >
             <label for="help-search-input" class="sr-only">
               Search clinical SOPs, guidelines, or topics
             </label>
@@ -93,240 +141,116 @@
         </div>
       </template>
 
-      <!-- Body Content -->
-      <!-- Loading State -->
-      <div v-if="knowledgeStore.loading" class="loading-state">
-        <div class="spinner" />
-        <p>Resolving contextual SOP guidance...</p>
-      </div>
-
-      <!-- Error State -->
+      <!-- ================================================================ -->
+      <!-- TAB 1: SOP GUIDANCE                                              -->
+      <!-- ================================================================ -->
       <div
-        v-else-if="knowledgeStore.error"
-        id="contextual-help-error-alert"
-        class="help-error-alert"
-        role="alert"
-        aria-live="assertive"
+        v-if="knowledgeStore.activeDrawerTab === 'guidance'"
+        id="panel-contextual-guidance"
+        role="tabpanel"
+        aria-labelledby="tab-contextual-guidance"
+        class="drawer-tabpanel"
       >
-        <div class="error-alert-header">
-          <span class="error-alert-icon" aria-hidden="true">⚠️</span>
-          <h4 class="error-alert-title">
-            {{
-              knowledgeStore.lastFailedAction?.type === "search"
-                ? "Unable to Search SOP Articles"
-                : "Unable to Load Contextual SOP Guidance"
-            }}
-          </h4>
-        </div>
-        <p class="error-alert-message">{{ knowledgeStore.error }}</p>
-        <div class="error-alert-actions">
-          <button
-            id="btn-contextual-help-retry"
-            type="button"
-            class="btn btn-secondary btn-retry"
-            @click="handleRetry"
-          >
-            ↻ Retry
-          </button>
-        </div>
-      </div>
-
-      <!-- Search Results View -->
-      <div
-        v-else-if="isSearchOpen && searchInput.trim()"
-        class="search-results-section"
-      >
-        <div class="section-subhead">
-          <h4>Search Results ({{ knowledgeStore.searchResults.length }})</h4>
-          <button
-            v-if="knowledgeStore.selectedArticle"
-            type="button"
-            class="btn-link"
-            @click="backFromSearchSelection"
-          >
-            ← Back to Matched SOP
-          </button>
+        <!-- Loading State -->
+        <div v-if="knowledgeStore.loading" class="loading-state">
+          <div class="spinner" />
+          <p>Resolving contextual SOP guidance...</p>
         </div>
 
+        <!-- Error State -->
         <div
-          v-if="knowledgeStore.searchResults.length === 0"
-          class="empty-search"
+          v-else-if="knowledgeStore.error"
+          id="contextual-help-error-alert"
+          class="help-error-alert"
+          role="alert"
+          aria-live="assertive"
         >
-          <p>
-            No SOPs matched your query "<em>{{ searchInput }}</em
-            >".
-          </p>
-        </div>
-
-        <div v-else class="search-items-list">
-          <button
-            v-for="item in knowledgeStore.searchResults"
-            :key="item.id"
-            type="button"
-            class="search-result-card"
-            :class="{
-              active: knowledgeStore.displayedArticle?.id === item.id,
-            }"
-            :aria-pressed="
-              knowledgeStore.displayedArticle?.id === item.id ? 'true' : 'false'
-            "
-            @click="selectSearchResult(item)"
-            @keydown.enter.prevent="selectSearchResult(item)"
-            @keydown.space.prevent="selectSearchResult(item)"
-          >
-            <span class="result-card-header">
-              <span class="result-title">
-                {{ item.title }}
-              </span>
-              <span v-if="item.version_label" class="badge badge-version">
-                v{{ item.version_label }}
-              </span>
-            </span>
-            <span v-if="item.tags" class="tags-row">
-              <span
-                v-for="t in formatTags(item.tags)"
-                :key="t"
-                class="tag-pill"
-              >
-                #{{ t }}
-              </span>
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Matched / Selected SOP View -->
-      <div v-else-if="knowledgeStore.displayedArticle" class="guidance-content">
-        <!-- Back to Matched Spotlight SOP Bar if inspecting related -->
-        <div v-if="knowledgeStore.selectedArticle" class="back-bar">
-          <button
-            ref="backToPrimaryBtnRef"
-            type="button"
-            class="btn-back"
-            @click="returnToPrimarySop"
-          >
-            ← Return to Route Spotlight SOP
-          </button>
-        </div>
-
-        <!-- Spotlight SOP Card -->
-        <div class="sop-card">
-          <div class="sop-meta-header">
-            <span class="category-badge">
+          <div class="error-alert-header">
+            <AlertTriangle
+              class="error-alert-icon"
+              :size="18"
+              aria-hidden="true"
+            />
+            <h4 class="error-alert-title">
               {{
-                knowledgeStore.displayedArticle.category_name ||
-                "Clinical Guidance"
+                knowledgeStore.lastFailedAction?.type === "search"
+                  ? "Unable to Search SOP Articles"
+                  : "Unable to Load Contextual SOP Guidance"
               }}
-            </span>
-            <span
-              v-if="knowledgeStore.displayedArticle.version_label"
-              class="badge badge-version"
-            >
-              v{{ knowledgeStore.displayedArticle.version_label }}
-            </span>
-            <span class="badge badge-status">PUBLISHED</span>
+            </h4>
           </div>
-
-          <h4 class="sop-title">
-            {{ knowledgeStore.displayedArticle.title }}
-          </h4>
-
-          <!-- Tags -->
-          <div v-if="knowledgeStore.displayedArticle.tags" class="tags-row">
-            <span
-              v-for="tag in formatTags(knowledgeStore.displayedArticle.tags)"
-              :key="tag"
-              class="tag-pill"
-            >
-              #{{ tag }}
-            </span>
-          </div>
-
-          <!-- Section Anchor Callout -->
-          <div v-if="knowledgeStore.activeSectionAnchor" class="anchor-callout">
-            <span class="anchor-icon" aria-hidden="true">🎯</span>
-            <div class="anchor-text">
-              <strong>Spotlight Section:</strong>
-              <code>{{ knowledgeStore.activeSectionAnchor }}</code>
-            </div>
-          </div>
-
-          <!-- Article Body Header & Toggle -->
-          <div class="body-toggle-bar">
-            <span class="body-toggle-label"
-              >Standard Operating Procedure Content</span
-            >
+          <p class="error-alert-message">{{ knowledgeStore.error }}</p>
+          <div class="error-alert-actions">
             <button
-              ref="toggleBodyBtnRef"
+              id="btn-contextual-help-retry"
               type="button"
-              class="btn-toggle-body"
-              :aria-expanded="
-                knowledgeStore.isArticleBodyExpanded ? 'true' : 'false'
-              "
-              aria-controls="contextual-help-sop-body"
-              @click="knowledgeStore.toggleArticleBody()"
+              class="btn btn-secondary btn-retry"
+              @click="handleRetry"
             >
-              {{
-                knowledgeStore.isArticleBodyExpanded
-                  ? "▲ Collapse Body"
-                  : "▼ Expand Body"
-              }}
+              <RefreshCw :size="14" aria-hidden="true" />
+              <span>Retry</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Search Results View -->
+        <div
+          v-else-if="isSearchOpen && searchInput.trim()"
+          class="search-results-section"
+        >
+          <div class="section-subhead">
+            <h4>Search Results ({{ knowledgeStore.searchResults.length }})</h4>
+            <button
+              v-if="knowledgeStore.selectedArticle"
+              type="button"
+              class="btn-link"
+              @click="backFromSearchSelection"
+            >
+              Back to Matched SOP
             </button>
           </div>
 
-          <!-- Collapsible Article Body -->
           <div
-            v-if="knowledgeStore.isArticleBodyExpanded"
-            id="contextual-help-sop-body"
-            class="sop-body prose-content"
+            v-if="knowledgeStore.searchResults.length === 0"
+            class="empty-search"
           >
-            <div
-              v-if="knowledgeStore.displayedArticle.body_html"
-              v-html="knowledgeStore.displayedArticle.body_html"
-            />
-            <div
-              v-else-if="knowledgeStore.displayedArticle.body_markdown"
-              class="markdown-pre"
-            >
-              {{ knowledgeStore.displayedArticle.body_markdown }}
-            </div>
+            <p>
+              No SOPs matched your query "<em>{{ searchInput }}</em
+              >".
+            </p>
           </div>
-        </div>
 
-        <!-- Related Articles / Secondary Guides -->
-        <div
-          v-if="
-            !knowledgeStore.selectedArticle &&
-            knowledgeStore.relatedArticles.length > 0
-          "
-          class="related-section"
-        >
-          <h5 class="related-title">
-            📚 Related Clinical SOPs ({{
-              knowledgeStore.relatedArticles.length
-            }})
-          </h5>
-          <div class="related-list">
+          <div v-else class="search-items-list">
             <button
-              v-for="rel in knowledgeStore.relatedArticles"
-              :key="rel.id"
+              v-for="item in knowledgeStore.searchResults"
+              :key="item.id"
               type="button"
-              class="related-card"
-              @click="selectRelatedArticle(rel)"
-              @keydown.enter.prevent="selectRelatedArticle(rel)"
-              @keydown.space.prevent="selectRelatedArticle(rel)"
+              class="search-result-card"
+              :class="{
+                active: knowledgeStore.displayedArticle?.id === item.id,
+              }"
+              :aria-pressed="
+                knowledgeStore.displayedArticle?.id === item.id
+                  ? 'true'
+                  : 'false'
+              "
+              @click="selectSearchResult(item)"
+              @keydown.enter.prevent="selectSearchResult(item)"
+              @keydown.space.prevent="selectSearchResult(item)"
             >
-              <span class="related-card-top">
-                <span class="related-card-title">{{ rel.title }}</span>
-                <span v-if="rel.version_label" class="badge badge-version-sm">
-                  v{{ rel.version_label }}
+              <span class="result-card-header">
+                <span class="result-title">
+                  {{ item.title }}
+                </span>
+                <span v-if="item.version_label" class="badge badge-version">
+                  v{{ item.version_label }}
                 </span>
               </span>
-              <span v-if="rel.tags" class="tags-row">
+              <span v-if="item.tags" class="tags-row">
                 <span
-                  v-for="t in formatTags(rel.tags).slice(0, 2)"
+                  v-for="t in formatTags(item.tags)"
                   :key="t"
-                  class="tag-pill tag-pill-sm"
+                  class="tag-pill"
                 >
                   #{{ t }}
                 </span>
@@ -334,31 +258,433 @@
             </button>
           </div>
         </div>
+
+        <!-- Matched / Selected SOP View -->
+        <div
+          v-else-if="knowledgeStore.displayedArticle"
+          class="guidance-content"
+        >
+          <!-- Back to Matched Spotlight SOP Bar if inspecting related -->
+          <div v-if="knowledgeStore.selectedArticle" class="back-bar">
+            <button
+              ref="backToPrimaryBtnRef"
+              type="button"
+              class="btn-back"
+              @click="returnToPrimarySop"
+            >
+              <ArrowLeft :size="14" aria-hidden="true" />
+              <span>Return to Route Spotlight SOP</span>
+            </button>
+          </div>
+
+          <!-- Spotlight SOP Card -->
+          <div class="sop-card">
+            <div class="sop-meta-header">
+              <span class="category-badge">
+                {{
+                  knowledgeStore.displayedArticle.category_name ||
+                  "Clinical Guidance"
+                }}
+              </span>
+              <span
+                v-if="knowledgeStore.displayedArticle.version_label"
+                class="badge badge-version"
+              >
+                v{{ knowledgeStore.displayedArticle.version_label }}
+              </span>
+              <span class="badge badge-status">PUBLISHED</span>
+            </div>
+
+            <h4 class="sop-title">
+              {{ knowledgeStore.displayedArticle.title }}
+            </h4>
+
+            <!-- Tags -->
+            <div v-if="knowledgeStore.displayedArticle.tags" class="tags-row">
+              <span
+                v-for="tag in formatTags(knowledgeStore.displayedArticle.tags)"
+                :key="tag"
+                class="tag-pill"
+              >
+                #{{ tag }}
+              </span>
+            </div>
+
+            <!-- Formatted Section Anchor Callout -->
+            <div
+              v-if="knowledgeStore.activeSectionAnchor"
+              class="anchor-callout"
+              :data-anchor-target="normalizedSectionAnchorId"
+            >
+              <Target class="anchor-icon" :size="16" aria-hidden="true" />
+              <div class="anchor-text">
+                <strong>Spotlight Section:</strong>
+                <button
+                  id="btn-jump-spotlight-section"
+                  type="button"
+                  class="anchor-jump-btn"
+                  :title="`Scroll to ${formattedSectionAnchor}`"
+                  @click="handleJumpToSectionAnchor"
+                >
+                  {{ formattedSectionAnchor }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Article Body Header & Toggle -->
+            <div class="body-toggle-bar">
+              <span class="body-toggle-label">
+                Standard Operating Procedure Content
+              </span>
+              <button
+                ref="toggleBodyBtnRef"
+                type="button"
+                class="btn-toggle-body"
+                :aria-expanded="
+                  knowledgeStore.isArticleBodyExpanded ? 'true' : 'false'
+                "
+                aria-controls="contextual-help-sop-body"
+                @click="knowledgeStore.toggleArticleBody()"
+              >
+                {{
+                  knowledgeStore.isArticleBodyExpanded
+                    ? "Collapse Body"
+                    : "Expand Body"
+                }}
+              </button>
+            </div>
+
+            <!-- Collapsible Article Body -->
+            <div
+              v-if="knowledgeStore.isArticleBodyExpanded"
+              id="contextual-help-sop-body"
+              ref="sopBodyRef"
+              class="sop-body prose-content"
+            >
+              <div v-if="displayedArticleHtml" v-html="displayedArticleHtml" />
+              <div v-else-if="displayedArticleMarkdown" class="markdown-pre">
+                {{ displayedArticleMarkdown }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Related Articles / Secondary Guides -->
+          <div
+            v-if="
+              !knowledgeStore.selectedArticle &&
+              knowledgeStore.relatedArticles.length > 0
+            "
+            class="related-section"
+          >
+            <h5 class="related-title">
+              <Library :size="14" aria-hidden="true" />
+              <span>
+                Related Clinical SOPs ({{
+                  knowledgeStore.relatedArticles.length
+                }})
+              </span>
+            </h5>
+            <div class="related-list">
+              <button
+                v-for="rel in knowledgeStore.relatedArticles"
+                :key="rel.id"
+                type="button"
+                class="related-card"
+                @click="selectRelatedArticle(rel)"
+                @keydown.enter.prevent="selectRelatedArticle(rel)"
+                @keydown.space.prevent="selectRelatedArticle(rel)"
+              >
+                <span class="related-card-top">
+                  <span class="related-card-title">{{ rel.title }}</span>
+                  <span v-if="rel.version_label" class="badge badge-version-sm">
+                    v{{ rel.version_label }}
+                  </span>
+                </span>
+                <span v-if="rel.tags" class="tags-row">
+                  <span
+                    v-for="t in formatTags(rel.tags).slice(0, 2)"
+                    :key="t"
+                    class="tag-pill tag-pill-sm"
+                  >
+                    #{{ t }}
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty Fallback State -->
+        <div v-else class="empty-state">
+          <Search class="empty-icon" :size="32" aria-hidden="true" />
+          <h4>No Specific SOP Mapped for This Route</h4>
+          <p>
+            There is currently no published SOP mapped specifically to
+            <code>{{ knowledgeStore.currentRoute }}</code> for persona
+            <strong>{{ activePersonaLabel }}</strong>.
+          </p>
+          <div class="empty-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="openSearchWithFallback"
+            >
+              <Search :size="14" aria-hidden="true" />
+              <span>Search Knowledge Hub</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="openHubRoute('/knowledge')"
+            >
+              <Library :size="14" aria-hidden="true" />
+              <span>Open Full SOP Hub</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- Empty Fallback State -->
-      <div v-else class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🔍</div>
-        <h4>No Specific SOP Mapped for This Route</h4>
-        <p>
-          There is currently no published SOP mapped specifically to
-          <code>{{ knowledgeStore.currentRoute }}</code> for persona
-          <strong>{{ activePersonaLabel }}</strong>.
-        </p>
-        <div class="empty-actions">
+      <!-- ================================================================ -->
+      <!-- TAB 2: INLINE SUPPORT TICKETS                                    -->
+      <!-- ================================================================ -->
+      <div
+        v-else
+        id="panel-contextual-tickets"
+        role="tabpanel"
+        aria-labelledby="tab-contextual-tickets"
+        class="drawer-tabpanel tickets-panel"
+      >
+        <div class="tickets-toolbar">
+          <div class="tickets-scope-summary">
+            <span class="tickets-scope-label">Scope:</span>
+            <span class="tickets-scope-value">{{ activeScopeSummary }}</span>
+          </div>
           <button
+            id="btn-refresh-drawer-tickets"
             type="button"
-            class="btn btn-secondary"
-            @click="openSearchWithFallback"
+            class="btn btn-secondary btn-compact"
+            :disabled="knowledgeStore.isTicketsLoading"
+            @click="handleRefreshDrawerTickets"
           >
-            🔍 Search Knowledge Hub
+            <RefreshCw :size="13" aria-hidden="true" />
+            <span>Refresh</span>
           </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="openHubRoute('/knowledge')"
+        </div>
+
+        <!-- Inline Ticket Detail Card -->
+        <div
+          v-if="knowledgeStore.selectedTicket"
+          id="drawer-ticket-detail-card"
+          class="ticket-detail-card"
+        >
+          <div class="ticket-detail-nav">
+            <button
+              id="btn-back-to-ticket-list"
+              type="button"
+              class="btn-back"
+              @click="handleBackToTicketList"
+            >
+              <ArrowLeft :size="14" aria-hidden="true" />
+              <span>Back to Scoped Tickets</span>
+            </button>
+            <span
+              v-if="knowledgeStore.isTicketDetailLoading"
+              class="detail-sync-indicator"
+            >
+              Refreshing...
+            </span>
+          </div>
+
+          <div
+            v-if="knowledgeStore.ticketDetailError"
+            id="drawer-ticket-detail-error"
+            class="help-error-alert"
+            role="alert"
           >
-            📚 Open Full SOP Hub
+            <div class="error-alert-header">
+              <AlertTriangle :size="16" aria-hidden="true" />
+              <h4 class="error-alert-title">
+                Unable to Refresh Ticket Details
+              </h4>
+            </div>
+            <p class="error-alert-message">
+              {{ knowledgeStore.ticketDetailError }}
+            </p>
+          </div>
+
+          <div class="ticket-detail-header">
+            <span class="ticket-ref-code">
+              {{
+                knowledgeStore.selectedTicket.reference ||
+                knowledgeStore.selectedTicket.id
+              }}
+            </span>
+            <span class="badge badge-status">
+              {{ knowledgeStore.selectedTicket.status || "OPEN" }}
+            </span>
+            <span
+              v-if="knowledgeStore.selectedTicket.priority"
+              class="badge badge-priority"
+            >
+              {{ knowledgeStore.selectedTicket.priority }}
+            </span>
+            <span
+              v-if="knowledgeStore.selectedTicket.gxp_severity"
+              class="badge badge-severity"
+            >
+              GxP: {{ knowledgeStore.selectedTicket.gxp_severity }}
+            </span>
+          </div>
+
+          <h4 class="ticket-detail-title">
+            {{ knowledgeStore.selectedTicket.title }}
+          </h4>
+
+          <p
+            v-if="knowledgeStore.selectedTicket.description"
+            class="ticket-detail-description"
+          >
+            {{ knowledgeStore.selectedTicket.description }}
+          </p>
+
+          <dl class="ticket-meta-grid">
+            <div class="ticket-meta-item">
+              <dt>Assigned Queue</dt>
+              <dd class="mono-val">
+                {{
+                  knowledgeStore.selectedTicket.assigned_queue || "UNASSIGNED"
+                }}
+              </dd>
+            </div>
+            <div class="ticket-meta-item">
+              <dt>Category</dt>
+              <dd class="mono-val">
+                {{ knowledgeStore.selectedTicket.category || "SYSTEM_SUPPORT" }}
+              </dd>
+            </div>
+            <div class="ticket-meta-item">
+              <dt>Study / Site</dt>
+              <dd class="mono-val">
+                {{
+                  formatTicketScope(
+                    knowledgeStore.selectedTicket.study_id,
+                    knowledgeStore.selectedTicket.site_id
+                  )
+                }}
+              </dd>
+            </div>
+            <div class="ticket-meta-item">
+              <dt>Subject ID</dt>
+              <dd class="mono-val">
+                {{ knowledgeStore.selectedTicket.subject_id || "—" }}
+              </dd>
+            </div>
+            <div class="ticket-meta-item">
+              <dt>Acknowledge Target</dt>
+              <dd class="mono-val">
+                <Clock :size="12" aria-hidden="true" />
+                <span>{{
+                  formatTimestamp(
+                    knowledgeStore.selectedTicket.acknowledge_target_at
+                  )
+                }}</span>
+              </dd>
+            </div>
+            <div class="ticket-meta-item">
+              <dt>Resolution SLA Target</dt>
+              <dd class="mono-val">
+                <Clock :size="12" aria-hidden="true" />
+                <span>{{
+                  formatTimestamp(knowledgeStore.selectedTicket.sla_target_at)
+                }}</span>
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- Inline Tickets Loading State -->
+        <div v-else-if="knowledgeStore.isTicketsLoading" class="loading-state">
+          <div class="spinner" />
+          <p>Loading scoped support tickets...</p>
+        </div>
+
+        <!-- Inline Tickets Error State -->
+        <div
+          v-else-if="knowledgeStore.ticketsError"
+          id="drawer-tickets-error-alert"
+          class="help-error-alert"
+          role="alert"
+        >
+          <div class="error-alert-header">
+            <AlertTriangle :size="18" aria-hidden="true" />
+            <h4 class="error-alert-title">Unable to Load Support Tickets</h4>
+          </div>
+          <p class="error-alert-message">{{ knowledgeStore.ticketsError }}</p>
+          <div class="error-alert-actions">
+            <button
+              id="btn-retry-drawer-tickets"
+              type="button"
+              class="btn btn-secondary btn-retry"
+              @click="handleRefreshDrawerTickets"
+            >
+              <RefreshCw :size="14" aria-hidden="true" />
+              <span>Retry</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty Scoped Tickets State -->
+        <div
+          v-else-if="knowledgeStore.drawerTickets.length === 0"
+          id="drawer-tickets-empty-state"
+          class="empty-state"
+        >
+          <Ticket class="empty-icon" :size="32" aria-hidden="true" />
+          <h4>No Support Tickets in Scope</h4>
+          <p>
+            No persisted support tickets currently match
+            <strong>{{ activeScopeSummary }}</strong>.
+          </p>
+        </div>
+
+        <!-- Scoped Ticket Cards List -->
+        <div v-else id="drawer-tickets-list" class="tickets-list">
+          <button
+            v-for="tkt in knowledgeStore.drawerTickets"
+            :key="tkt.id || tkt.reference"
+            type="button"
+            class="drawer-ticket-card"
+            :data-ticket-ref="tkt.reference || tkt.id"
+            @click="handleSelectDrawerTicket(tkt)"
+          >
+            <div class="drawer-ticket-card-top">
+              <span class="ticket-ref-code">
+                {{ tkt.reference || tkt.id }}
+              </span>
+              <div class="drawer-ticket-badges">
+                <span class="badge badge-status">
+                  {{ tkt.status || "OPEN" }}
+                </span>
+                <span v-if="tkt.priority" class="badge badge-priority">
+                  {{ tkt.priority }}
+                </span>
+              </div>
+            </div>
+            <div class="drawer-ticket-title">{{ tkt.title }}</div>
+            <div class="drawer-ticket-meta">
+              <span class="mono-val">{{
+                tkt.assigned_queue || "UNASSIGNED"
+              }}</span>
+              <span
+                v-if="tkt.study_id || tkt.site_id"
+                class="ticket-meta-sep"
+                aria-hidden="true"
+                >·</span
+              >
+              <span v-if="tkt.study_id || tkt.site_id" class="mono-val">
+                {{ formatTicketScope(tkt.study_id, tkt.site_id) }}
+              </span>
+            </div>
           </button>
         </div>
       </div>
@@ -368,14 +694,43 @@
         <div class="drawer-footer">
           <div class="drawer-footer-primary">
             <button
+              id="btn-escalate-support-ticket"
               type="button"
               class="btn btn-escalate"
-              title="Log Support Ticket pre-populated with current route context"
+              :disabled="isReadOnlyAuditor"
+              :aria-disabled="isReadOnlyAuditor ? 'true' : undefined"
+              :aria-describedby="
+                isReadOnlyAuditor
+                  ? 'auditor-escalation-readonly-note'
+                  : undefined
+              "
+              :title="
+                isReadOnlyAuditor
+                  ? 'Ticket escalation is disabled for read-only auditor roles'
+                  : 'Log Support Ticket pre-populated with current route context'
+              "
               @click="handleEscalate"
             >
-              <span class="btn-icon" aria-hidden="true">🎫</span>
-              Escalate to Support Ticket
+              <Lock
+                v-if="isReadOnlyAuditor"
+                class="btn-icon"
+                :size="15"
+                aria-hidden="true"
+              />
+              <Ticket v-else class="btn-icon" :size="15" aria-hidden="true" />
+              <span>Escalate to Support Ticket</span>
             </button>
+
+            <p
+              v-if="isReadOnlyAuditor"
+              id="auditor-escalation-readonly-note"
+              class="auditor-readonly-note"
+            >
+              Read-only auditor access: creating support tickets is disabled to
+              preserve inspection independence. Use the Support Tickets tab to
+              inspect scoped records.
+            </p>
+
             <div class="drawer-hub-links">
               <button
                 id="btn-open-knowledge-hub"
@@ -383,7 +738,7 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/knowledge')"
               >
-                📚 Browse SOP Hub
+                Browse SOP Hub
               </button>
               <span class="hub-link-sep" aria-hidden="true">·</span>
               <button
@@ -392,7 +747,7 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/tickets')"
               >
-                🎫 Support Queue
+                Support Queue
               </button>
             </div>
           </div>
@@ -409,7 +764,7 @@
 
     <!-- Ticket Escalation Modal -->
     <TicketCreateModal
-      v-if="knowledgeStore.isEscalating"
+      v-if="knowledgeStore.isEscalating && !isReadOnlyAuditor"
       :is-open="knowledgeStore.isEscalating"
       :initial-data="knowledgeStore.escalationPayload || {}"
       @close="knowledgeStore.cancelEscalation()"
@@ -420,6 +775,7 @@
 
 <script setup>
 import {
+  h,
   ref,
   computed,
   watch,
@@ -428,7 +784,6 @@ import {
   onUnmounted,
   getCurrentInstance,
 } from "vue";
-import { BookOpen, MapPin, Search, X } from "lucide-vue-next";
 import { useRoute } from "vue-router";
 import {
   ClinicalDrawer,
@@ -436,14 +791,171 @@ import {
   hasActiveModalFocusTrap,
   useEscapeClose,
 } from "ui";
+import { isScreenAvailable } from "../router/availability.js";
 import {
   canonicalizeContextualRoute,
   useKnowledgeStore,
 } from "../stores/knowledge.js";
-import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import {
+  useAuthStore,
+  PERSONA_PRESETS,
+  normalizeRole,
+} from "../stores/auth.js";
+
+function makeLucideIcon(nodes) {
+  const Icon = (props, { attrs }) =>
+    h(
+      "svg",
+      {
+        xmlns: "http://www.w3.org/2000/svg",
+        width: props.size || 16,
+        height: props.size || 16,
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        "stroke-width": "2",
+        "stroke-linecap": "round",
+        "stroke-linejoin": "round",
+        "aria-hidden": "true",
+        ...attrs,
+      },
+      nodes.map(([tag, nodeAttrs]) => h(tag, nodeAttrs))
+    );
+  Icon.props = ["size"];
+  return Icon;
+}
+
+const AlertTriangle = makeLucideIcon([
+  [
+    "path",
+    {
+      d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
+    },
+  ],
+  ["path", { d: "M12 9v4" }],
+  ["path", { d: "M12 17h.01" }],
+]);
+const ArrowLeft = makeLucideIcon([
+  ["path", { d: "m12 19-7-7 7-7" }],
+  ["path", { d: "M19 12H5" }],
+]);
+const BookOpen = makeLucideIcon([
+  ["path", { d: "M12 7v14" }],
+  [
+    "path",
+    {
+      d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+    },
+  ],
+]);
+const Clock = makeLucideIcon([
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["polyline", { points: "12 6 12 12 16 14" }],
+]);
+const Library = makeLucideIcon([
+  ["path", { d: "m16 6 4 14" }],
+  ["path", { d: "M12 6v14" }],
+  ["path", { d: "M8 8v12" }],
+  ["path", { d: "M4 4v16" }],
+]);
+const Lock = makeLucideIcon([
+  ["rect", { width: "18", height: "11", x: "3", y: "11", rx: "2", ry: "2" }],
+  ["path", { d: "M7 11V7a5 5 0 0 1 10 0v4" }],
+]);
+const MapPin = makeLucideIcon([
+  [
+    "path",
+    {
+      d: "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0",
+    },
+  ],
+  ["circle", { cx: "12", cy: "10", r: "3" }],
+]);
+const RefreshCw = makeLucideIcon([
+  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }],
+  ["path", { d: "M21 3v5h-5" }],
+  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }],
+  ["path", { d: "M8 16H3v5" }],
+]);
+const Search = makeLucideIcon([
+  ["circle", { cx: "11", cy: "11", r: "8" }],
+  ["path", { d: "m21 21-4.3-4.3" }],
+]);
+const Target = makeLucideIcon([
+  ["circle", { cx: "12", cy: "12", r: "10" }],
+  ["circle", { cx: "12", cy: "12", r: "6" }],
+  ["circle", { cx: "12", cy: "12", r: "2" }],
+]);
+const Ticket = makeLucideIcon([
+  [
+    "path",
+    {
+      d: "M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z",
+    },
+  ],
+  ["path", { d: "M13 5v2" }],
+  ["path", { d: "M13 17v2" }],
+  ["path", { d: "M13 11v2" }],
+]);
+const X = makeLucideIcon([
+  ["path", { d: "M18 6 6 18" }],
+  ["path", { d: "m6 6 12 12" }],
+]);
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
+
+const OPERATIONAL_MUTATION_ROLES = new Set([
+  "sponsor_admin",
+  "super_admin",
+  "sponsor_designer",
+  "data_manager",
+  "cra",
+  "monitor",
+  "safety_reviewer",
+  "safety_officer",
+  "sponsor_mm",
+  "crc",
+  "site_investigator",
+  "principal_investigator",
+  "investigator",
+]);
+
+const CLINICAL_ACRONYMS = {
+  ecrf: "eCRF",
+  crf: "CRF",
+  sdv: "SDV",
+  ctms: "CTMS",
+  ssu: "SSU",
+  etmf: "eTMF",
+  tmf: "TMF",
+  gxp: "GxP",
+  edc: "EDC",
+  soa: "SoA",
+  usdm: "USDM",
+  pi: "PI",
+  sae: "SAE",
+  rtsm: "RTSM",
+  irb: "IRB",
+  iec: "IEC",
+  qc: "QC",
+  mdr: "MDR",
+  capa: "CAPA",
+  sla: "SLA",
+  sop: "SOP",
+};
+
+const LOWERCASE_CONNECTORS = new Set([
+  "and",
+  "or",
+  "of",
+  "for",
+  "in",
+  "on",
+  "to",
+  "by",
+  "with",
+]);
 
 const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
@@ -455,6 +967,28 @@ const drawerRootRef = ref(null);
 const searchInputRef = ref(null);
 const backToPrimaryBtnRef = ref(null);
 const toggleBodyBtnRef = ref(null);
+const sopBodyRef = ref(null);
+const isSearchOpen = ref(false);
+const searchInput = ref("");
+let searchDebounceTimer = null;
+
+function resolveEscalationRoute() {
+  const liveRoute = resolveActiveRouteLocation(route);
+  const storeRoute = String(
+    knowledgeStore.rawRoute || knowledgeStore.currentRoute || ""
+  ).trim();
+  if (!knowledgeStore.hasLoadedContextualHelp || !storeRoute) {
+    return liveRoute || storeRoute || "/";
+  }
+  if (liveRoute && liveRoute.includes("?")) {
+    const livePath = liveRoute.split("?")[0] || "/";
+    const storePath = storeRoute.split("?")[0] || "/";
+    if (livePath === storePath) {
+      return liveRoute;
+    }
+  }
+  return storeRoute;
+}
 
 function openHubRoute(path) {
   knowledgeStore.closeDrawer();
@@ -468,9 +1002,26 @@ useEscapeClose(() => knowledgeStore.closeDrawer(), {
   isOpen: () => knowledgeStore.isOpen && !knowledgeStore.isEscalating,
 });
 
-const isSearchOpen = ref(false);
-const searchInput = ref("");
-let searchDebounceTimer = null;
+const normalizedCallerRoles = computed(() =>
+  (authStore.rawRoles || []).map(normalizeRole).filter(Boolean)
+);
+
+const isReadOnlyAuditor = computed(() => {
+  if (authStore.currentPersona === "auditor") {
+    return true;
+  }
+  const roles = normalizedCallerRoles.value;
+  const hasAuditorRole = roles.some(
+    (r) => r === "auditor" || r === "tmf_auditor"
+  );
+  if (!hasAuditorRole) {
+    return false;
+  }
+  if (!authStore.isDemoMode) {
+    return true;
+  }
+  return !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r));
+});
 
 const canonicalRoute = computed(() =>
   canonicalizeContextualRoute({
@@ -485,6 +1036,153 @@ const activePersonaLabel = computed(() => {
   const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
   return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
 });
+
+const displayedArticleHtml = computed(() => {
+  const article = knowledgeStore.displayedArticle;
+  if (!article) return "";
+  if (article.body_html) return article.body_html;
+  if (
+    !knowledgeStore.selectedArticle &&
+    knowledgeStore.primaryVersion?.body_html
+  ) {
+    return knowledgeStore.primaryVersion.body_html;
+  }
+  return "";
+});
+
+const displayedArticleMarkdown = computed(() => {
+  const article = knowledgeStore.displayedArticle;
+  if (!article) return "";
+  if (article.body_markdown) return article.body_markdown;
+  if (
+    !knowledgeStore.selectedArticle &&
+    knowledgeStore.primaryVersion?.body_markdown
+  ) {
+    return knowledgeStore.primaryVersion.body_markdown;
+  }
+  return "";
+});
+
+const normalizedSectionAnchorId = computed(() =>
+  String(knowledgeStore.activeSectionAnchor || "")
+    .trim()
+    .replace(/^#+/, "")
+);
+
+function formatAnchorSlug(rawAnchor) {
+  const clean = String(rawAnchor || "")
+    .trim()
+    .replace(/^#+/, "");
+  if (!clean) return "";
+  const words = clean.split(/[-_\s]+/).filter(Boolean);
+  return words
+    .map((word, idx) => {
+      const lower = word.toLowerCase();
+      if (CLINICAL_ACRONYMS[lower]) {
+        return CLINICAL_ACRONYMS[lower];
+      }
+      if (idx > 0 && LOWERCASE_CONNECTORS.has(lower)) {
+        return lower;
+      }
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
+const formattedSectionAnchor = computed(() =>
+  formatAnchorSlug(knowledgeStore.activeSectionAnchor)
+);
+
+const activeScopeSummary = computed(() => {
+  const scope = knowledgeStore.activeRouteScope || {};
+  const parts = [];
+  if (scope.study_id) parts.push(`Study ${scope.study_id}`);
+  if (scope.site_id) parts.push(`Site ${scope.site_id}`);
+  return parts.length > 0
+    ? parts.join(" · ")
+    : "All authorized studies & sites";
+});
+
+function formatTicketScope(studyId, siteId) {
+  if (studyId && siteId) return `${studyId} / ${siteId}`;
+  if (studyId) return studyId;
+  if (siteId) return siteId;
+  return "Global";
+}
+
+function formatTimestamp(isoString) {
+  if (!isoString) return "Pending";
+  const parsed = new Date(isoString);
+  if (Number.isNaN(parsed.getTime())) return String(isoString);
+  return parsed.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+
+function scrollToSectionAnchorTarget() {
+  const anchorId = normalizedSectionAnchorId.value;
+  const container = sopBodyRef.value;
+  if (!anchorId || !container) return false;
+
+  const elementsWithId = container.querySelectorAll("[id]");
+  let targetEl = null;
+  for (const el of elementsWithId) {
+    el.classList.remove("spotlight-target-heading");
+    if (el.id === anchorId) {
+      targetEl = el;
+    }
+  }
+
+  if (!targetEl) return false;
+  targetEl.classList.add("spotlight-target-heading");
+  if (typeof targetEl.scrollIntoView === "function") {
+    targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  return true;
+}
+
+function resolveActiveRouteLocation(r = route) {
+  if (!r) return "";
+  if (typeof r.fullPath === "string" && r.fullPath.trim()) {
+    return r.fullPath.trim();
+  }
+  if (typeof r.path === "string" && r.path.trim()) {
+    return r.path.trim();
+  }
+  return "";
+}
+
+async function handleJumpToSectionAnchor() {
+  if (!knowledgeStore.isArticleBodyExpanded) {
+    knowledgeStore.isArticleBodyExpanded = true;
+    await nextTick();
+    return;
+  }
+  scrollToSectionAnchorTarget();
+}
+
+function switchTab(tab) {
+  knowledgeStore.setActiveDrawerTab(tab);
+  if (tab === "tickets" && !knowledgeStore.selectedTicket) {
+    knowledgeStore.fetchDrawerTickets();
+  }
+}
+
+async function handleRefreshDrawerTickets() {
+  if (knowledgeStore.selectedTicketId) {
+    await knowledgeStore.selectDrawerTicket(knowledgeStore.selectedTicketId);
+  }
+  await knowledgeStore.fetchDrawerTickets();
+}
+
+async function handleSelectDrawerTicket(ticket) {
+  await knowledgeStore.selectDrawerTicket(ticket);
+}
+
+async function handleBackToTicketList() {
+  knowledgeStore.clearSelectedDrawerTicket();
+  if (!knowledgeStore.hasLoadedDrawerTickets) {
+    await knowledgeStore.fetchDrawerTickets();
+  }
+}
 
 function formatTags(tags) {
   if (!tags) return [];
@@ -561,14 +1259,18 @@ async function backFromSearchSelection() {
 }
 
 function handleEscalate() {
+  if (isReadOnlyAuditor.value) {
+    return;
+  }
   const hasRouteScope =
     route?.path &&
     canonicalRoute.value === knowledgeStore.currentRoute &&
     route.query &&
     Object.keys(route.query).length > 0;
-  knowledgeStore.prepareEscalation(
-    hasRouteScope ? { query: route.query } : undefined
-  );
+  knowledgeStore.prepareEscalation({
+    route: resolveEscalationRoute(),
+    query: hasRouteScope ? route.query : undefined,
+  });
 }
 
 async function handleRetry() {
@@ -576,53 +1278,134 @@ async function handleRetry() {
 }
 
 function handleTicketCreated(createdTicket) {
-  if (createdTicket) {
-    knowledgeStore.recordEscalatedTicket(createdTicket);
-    const refId = createdTicket.reference || createdTicket.id;
-    const queueSuffix = createdTicket.assigned_queue
-      ? ` (${createdTicket.assigned_queue})`
-      : "";
-    const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
-    toastStore.push({
-      tone: "success",
-      title: simulated
-        ? `Simulated ticket ${refId} saved in demo session`
-        : `Support ticket ${refId} submitted`,
-      message: `Reference ID: ${refId}${queueSuffix}`,
-      action: refId
+  if (!createdTicket) {
+    knowledgeStore.cancelEscalation();
+    return;
+  }
+
+  knowledgeStore.openCreatedTicketInDrawer(createdTicket);
+
+  const refId = createdTicket.reference || createdTicket.id;
+  const queueSuffix = createdTicket.assigned_queue
+    ? ` (${createdTicket.assigned_queue})`
+    : "";
+  const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
+  toastStore.push({
+    tone: "success",
+    title: simulated
+      ? `Simulated ticket ${refId} saved in demo session`
+      : `Support ticket ${refId} submitted`,
+    message: `Reference ID: ${refId}${queueSuffix}`,
+    action:
+      refId && isScreenAvailable("tickets")
         ? {
             label: `Open ${refId}`,
             to: `/tickets?ref=${encodeURIComponent(refId)}`,
           }
         : null,
-    });
-  }
-  knowledgeStore.cancelEscalation();
-  knowledgeStore.closeDrawer();
+  });
 }
 
-// Watch canonical route path + Clinical Canvas stage/section queries
+// Watch canonical route path + Clinical Canvas stage/section/zoom queries
 watch(canonicalRoute, (newRoute) => {
   if (newRoute && newRoute !== knowledgeStore.currentRoute) {
     searchInput.value = "";
     isSearchOpen.value = false;
-    knowledgeStore.fetchContextualHelp(newRoute, authStore.currentPersona);
+    knowledgeStore.fetchContextualHelp(
+      resolveActiveRouteLocation(route) || newRoute,
+      authStore.currentPersona
+    );
+    if (
+      knowledgeStore.isOpen &&
+      knowledgeStore.activeDrawerTab === "tickets" &&
+      !knowledgeStore.selectedTicket
+    ) {
+      knowledgeStore.fetchDrawerTickets();
+    }
   }
 });
+
+// Keep raw route scope synchronized when non-canonical query params (e.g. studyId/siteId) change on the same path
+watch(
+  () => resolveActiveRouteLocation(route),
+  (newFullRoute) => {
+    if (
+      newFullRoute &&
+      canonicalRoute.value === knowledgeStore.currentRoute &&
+      newFullRoute !== knowledgeStore.rawRoute
+    ) {
+      knowledgeStore.rawRoute = newFullRoute;
+      if (
+        knowledgeStore.isOpen &&
+        knowledgeStore.activeDrawerTab === "tickets" &&
+        !knowledgeStore.selectedTicket
+      ) {
+        knowledgeStore.fetchDrawerTickets();
+      }
+    }
+  }
+);
 
 // Watch persona changes to automatically refresh contextual help
 watch(
   () => authStore.currentPersona,
   (newPersona) => {
     if (newPersona && newPersona !== knowledgeStore.activePersona) {
+      if (isReadOnlyAuditor.value && knowledgeStore.isEscalating) {
+        knowledgeStore.cancelEscalation();
+      }
       searchInput.value = "";
       isSearchOpen.value = false;
       knowledgeStore.fetchContextualHelp(
-        canonicalRoute.value || knowledgeStore.currentRoute,
+        resolveActiveRouteLocation(route) ||
+          canonicalRoute.value ||
+          knowledgeStore.currentRoute,
         newPersona
       );
+      if (
+        knowledgeStore.isOpen &&
+        knowledgeStore.activeDrawerTab === "tickets" &&
+        !knowledgeStore.selectedTicket
+      ) {
+        knowledgeStore.fetchDrawerTickets();
+      }
     }
   }
+);
+
+// Auto-load scoped tickets when the drawer opens on the Support Tickets tab
+watch(
+  () => [knowledgeStore.isOpen, knowledgeStore.activeDrawerTab],
+  ([isOpen, tab]) => {
+    if (
+      isOpen &&
+      tab === "tickets" &&
+      !knowledgeStore.selectedTicket &&
+      !knowledgeStore.isTicketsLoading &&
+      !knowledgeStore.hasLoadedDrawerTickets
+    ) {
+      knowledgeStore.fetchDrawerTickets();
+    }
+  },
+  { immediate: true }
+);
+
+// Scroll matching HTML heading id into view when SOP guidance and spotlight anchor resolve
+watch(
+  () => [
+    knowledgeStore.isOpen,
+    knowledgeStore.activeDrawerTab,
+    knowledgeStore.displayedArticle?.id,
+    knowledgeStore.activeSectionAnchor,
+    knowledgeStore.isArticleBodyExpanded,
+  ],
+  async ([isOpen, tab, articleId, anchor, expanded]) => {
+    if (isOpen && tab === "guidance" && articleId && anchor && expanded) {
+      await nextTick();
+      scrollToSectionAnchorTarget();
+    }
+  },
+  { immediate: true }
 );
 
 function isEditableOrFormControl(node) {
@@ -703,14 +1486,15 @@ function handleKeydown(e) {
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeydown);
+  const initialRoute = resolveActiveRouteLocation(route);
   if (
-    route?.path &&
+    initialRoute &&
     !knowledgeStore.hasLoadedContextualHelp &&
     !knowledgeStore.primaryArticle &&
     !knowledgeStore.loading
   ) {
     knowledgeStore.fetchContextualHelp(
-      canonicalRoute.value,
+      initialRoute || canonicalRoute.value,
       authStore.currentPersona
     );
   }
@@ -737,7 +1521,7 @@ onUnmounted(() => {
 }
 
 :deep(.drawer-panel) {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: var(
     --semantic-drawer-width-sm,
     var(--drawer-width-sm, min(100vw, 440px))
@@ -745,7 +1529,7 @@ onUnmounted(() => {
   max-width: 100vw;
   height: 100vh;
   height: 100dvh;
-  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--semantic-shadow-xl);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -779,12 +1563,12 @@ onUnmounted(() => {
 }
 
 .drawer-header {
-  padding: 16px 20px;
+  padding: 16px 20px 12px;
   border-bottom: 1px solid var(--border);
   background-color: var(--semantic-color-surface-muted);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .header-main-row {
@@ -800,8 +1584,11 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  margin-top: 2px;
 }
 
 .drawer-title {
@@ -823,12 +1610,16 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .route-badge {
   background-color: var(--semantic-color-indigo-bg);
   color: var(--semantic-color-indigo-text);
-  font-family: monospace;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  word-break: break-all;
 }
 
 .persona-badge {
@@ -869,6 +1660,48 @@ onUnmounted(() => {
   border: 0;
 }
 
+.drawer-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background-color: var(--semantic-color-surface-header);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-control);
+}
+
+.drawer-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.drawer-tab-btn.active {
+  background-color: var(--semantic-color-surface);
+  color: var(--primary);
+  box-shadow: var(--semantic-shadow-sm);
+}
+
+.tab-count-pill {
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background-color: var(--semantic-color-indigo-bg);
+  color: var(--semantic-color-indigo-text);
+}
+
 .search-bar-row {
   position: relative;
   display: flex;
@@ -881,8 +1714,8 @@ onUnmounted(() => {
   padding: 8px 38px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
-  background-color: white;
+  font-size: 1rem;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
   box-sizing: border-box;
 }
@@ -907,6 +1740,12 @@ onUnmounted(() => {
   background-color: var(--semantic-color-surface);
 }
 
+.drawer-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .loading-state,
 .empty-state {
   display: flex;
@@ -920,7 +1759,7 @@ onUnmounted(() => {
 }
 
 .empty-icon {
-  font-size: 2.5rem;
+  color: var(--semantic-color-text-secondary);
 }
 
 .empty-state h4 {
@@ -990,7 +1829,7 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 16px;
   background-color: var(--semantic-color-surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1026,6 +1865,17 @@ onUnmounted(() => {
   background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success);
   font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-priority,
+.badge-severity {
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
+  border: 1px solid var(--semantic-color-border);
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1072,14 +1922,30 @@ onUnmounted(() => {
 }
 
 .anchor-icon {
-  font-size: 1rem;
+  flex-shrink: 0;
 }
 
-.anchor-text code {
-  background-color: rgba(255, 255, 255, 0.6);
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: monospace;
+.anchor-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.anchor-jump-btn {
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning-dark);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.anchor-jump-btn:hover {
+  text-decoration: underline;
 }
 
 .body-toggle-bar {
@@ -1126,6 +1992,14 @@ onUnmounted(() => {
   color: var(--primary);
   margin: 12px 0 6px 0;
   font-weight: 700;
+  scroll-margin-top: 12px;
+}
+
+.sop-body :deep(.spotlight-target-heading) {
+  background-color: var(--semantic-color-warning-bg-badge);
+  border-left: 3px solid var(--semantic-color-warning-border);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
 .sop-body :deep(h2) {
@@ -1154,7 +2028,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-surface-header);
   padding: 2px 4px;
   border-radius: 3px;
-  font-family: monospace;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
   font-size: 0.8rem;
 }
 
@@ -1171,11 +2045,14 @@ onUnmounted(() => {
 
 .related-title {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .related-list {
@@ -1203,11 +2080,12 @@ onUnmounted(() => {
 .related-card:focus-visible {
   background-color: var(--semantic-color-surface);
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .related-card:focus-visible,
-.search-result-card:focus-visible {
+.search-result-card:focus-visible,
+.drawer-ticket-card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -1274,7 +2152,7 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
@@ -1311,6 +2189,190 @@ onUnmounted(() => {
   text-align: center;
   color: var(--semantic-color-text-secondary);
   font-size: 0.84rem;
+}
+
+/* Inline Support Tickets Panel */
+.tickets-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--semantic-color-border);
+}
+
+.tickets-scope-summary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.tickets-scope-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tickets-scope-value {
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  color: var(--primary);
+}
+
+.btn-compact {
+  padding: 5px 10px;
+  font-size: 0.76rem;
+}
+
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-ticket-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: var(--semantic-color-surface);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.drawer-ticket-card:hover {
+  border-color: var(--accent);
+  background-color: var(--semantic-color-surface-muted);
+}
+
+.drawer-ticket-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-ticket-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ticket-ref-code {
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--semantic-color-indigo-text);
+  background-color: var(--semantic-color-indigo-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.drawer-ticket-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary);
+  line-height: 1.35;
+}
+
+.drawer-ticket-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.ticket-meta-sep {
+  color: var(--semantic-color-text-secondary);
+}
+
+.ticket-detail-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background-color: var(--semantic-color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticket-detail-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-sync-indicator {
+  font-size: 0.74rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.ticket-detail-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ticket-detail-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.35;
+}
+
+.ticket-detail-description {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--semantic-color-text-body);
+  white-space: pre-wrap;
+}
+
+.ticket-meta-grid {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--semantic-color-border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ticket-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ticket-meta-item dt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--semantic-color-text-secondary);
+}
+
+.ticket-meta-item dd {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  word-break: break-word;
+}
+
+.mono-val {
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-variant-numeric: tabular-nums;
 }
 
 .help-error-alert {
@@ -1365,7 +2427,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -1374,6 +2436,18 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
+  flex: 1;
+}
+
+.auditor-readonly-note {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--semantic-color-text-secondary);
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  padding: 6px 8px;
 }
 
 .drawer-hub-links {
@@ -1420,21 +2494,27 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-control);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background-color: var(--semantic-color-surface-header);
 }
 
 .btn-escalate {
-  background-color: var(--accent);
-  color: var(--semantic-color-surface);
-  border: 1px solid transparent;
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  border: 1px solid var(--primary);
 }
 
-.btn-escalate:hover {
-  background-color: var(--semantic-color-accent);
+.btn-escalate:hover:not(:disabled) {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.btn-escalate:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn-icon {
-  font-size: 0.95rem;
+  flex-shrink: 0;
 }
 </style>

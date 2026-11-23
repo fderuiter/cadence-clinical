@@ -25,14 +25,16 @@ On viewports with `max-height: 480px` (such as `320x256` WCAG 2.1 SC 1.4.10 refl
 
 ## ClinicalDrawer Props
 
-| Prop              | Type      | Default   | Description                                                              |
-| :---------------- | :-------- | :-------- | :----------------------------------------------------------------------- |
-| `open` / `isOpen` | `Boolean` | `false`   | Controls slide-over visibility (`modelValue` also supported).            |
-| `title`           | `String`  | `''`      | Drawer header title bound via `aria-labelledby`.                         |
-| `size`            | `String`  | `'md'`    | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens. |
-| `position`        | `String`  | `'right'` | Slide-in edge (`right` or `left`).                                       |
-| `dismissible`     | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
-| `teleport`        | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
+| Prop                | Type      | Default   | Description                                                              |
+| :------------------ | :-------- | :-------- | :----------------------------------------------------------------------- |
+| `open` / `isOpen`   | `Boolean` | `false`   | Controls slide-over visibility (`modelValue` also supported).            |
+| `title`             | `String`  | `''`      | Drawer header title bound via `aria-labelledby`.                         |
+| `size`              | `String`  | `'md'`    | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens. |
+| `position`          | `String`  | `'right'` | Slide-in edge (`right`, `left`, or `bottom`).                            |
+| `mobileBottomSheet` | `Boolean` | `false`   | Anchors side drawers as bottom sheets on narrow viewports (`<= 640px`).  |
+| `dockable`          | `Boolean` | `false`   | Switches drawer to a non-modal side-by-side inspector at `>= 1280px`.    |
+| `dismissible`       | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
+| `teleport`          | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
 
 ## Overlay & Inline Focus Composables (`useFocusTrap`, `hasActiveModalFocusTrap`, `trapTabFocus`, `handoffFocus`, `useInlineFocusHandoff` & `useEscapeClose`)
 
@@ -75,7 +77,7 @@ const handleConfirm = () => {
 </template>
 ```
 
-## Three-Tier Responsive Overlay Architecture (ADR-2657)
+## Three-Tier Responsive Overlay Architecture (ADR-2658)
 
 Both `ClinicalModal` and `ClinicalDrawer` pair `vh` fallbacks with `dvh` dynamic viewport units, enforce `>= 16px` (`1rem`) font sizing on touch form controls to prevent Safari auto-zoom, and adapt across three clinical viewport tiers:
 

@@ -20,10 +20,8 @@
 
     <form id="sign-modal-form" class="clinical-modal-form" @submit.prevent>
       <div class="modal-body">
-        <p>
-          Please confirm that these answers are your own by choosing a reason
-          below and entering your participant ID and account password or
-          security PIN.
+        <p id="sign-modal-instructions">
+          {{ modalInstructionText }}
         </p>
         <!-- Accessible modal live error region -->
         <div
@@ -86,11 +84,13 @@
           />
         </div>
         <div class="form-group">
-          <label for="sign-password">Account Password or Security PIN</label>
+          <label id="sign-password-label" for="sign-password">{{
+            credentialLabel
+          }}</label>
           <input
             id="sign-password"
-            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
-            placeholder="Enter your account password or security PIN..."
+            v-bind="credentialInputAttrs"
+            :placeholder="credentialPlaceholder"
             required
           />
         </div>
@@ -115,12 +115,57 @@ import {
   requiresCustomSignatureReason,
 } from "ui";
 
+import { isAuthenticatedSession } from "../api/client.js";
 import { closeSignatureModal } from "../features/signature.js";
+import { useSessionStore } from "../stores/session.js";
 import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
 
+const OFFLINE_SECURITY_PIN_INPUT_ATTRS = Object.freeze({
+  type: "password",
+  inputmode: "numeric",
+  pattern: "[0-9]*",
+  autocomplete: "off",
+  autocapitalize: "off",
+  autocorrect: "off",
+  spellcheck: "false",
+});
 const selectedReason = ref("Initial Questionnaire Completion");
+const sessionStore = useSessionStore();
 const ui = useUiStore();
+
+const isOfflinePinMode = computed(() => {
+  void sessionStore.session?.token;
+  void sessionStore.session?.isOfflineMode;
+  void sessionStore.session?.isDemoMode;
+  return ui.pendingSignableAction === "epro" && !isAuthenticatedSession();
+});
+
+const credentialLabel = computed(() =>
+  isOfflinePinMode.value ? "Security PIN" : "Account Password"
+);
+
+const credentialPlaceholder = computed(() =>
+  isOfflinePinMode.value
+    ? "Enter your numeric security PIN..."
+    : "Enter your account password..."
+);
+
+const credentialInputAttrs = computed(() =>
+  isOfflinePinMode.value
+    ? OFFLINE_SECURITY_PIN_INPUT_ATTRS
+    : SIGNATURE_PASSWORD_INPUT_ATTRS
+);
+
+const modalInstructionText = computed(() => {
+  if (ui.pendingSignableAction === "consent") {
+    return "Please confirm your electronic consent by selecting a signing reason below and entering your participant ID and account password.";
+  }
+  if (isOfflinePinMode.value) {
+    return "Please confirm that these answers are your own by choosing a reason below and entering your participant ID and numeric security PIN.";
+  }
+  return "Please confirm that these answers are your own by choosing a reason below and entering your participant ID and account password.";
+});
 
 const isOtherReason = computed(() =>
   requiresCustomSignatureReason(selectedReason.value)

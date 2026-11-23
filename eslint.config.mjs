@@ -373,6 +373,35 @@ function getElementOverlayClassToken(elementNode, sourceCode) {
   return null;
 }
 
+function getStaticAttrValue(elementNode, attrName) {
+  if (!elementNode?.startTag?.attributes) return null;
+  for (const attr of elementNode.startTag.attributes) {
+    if (
+      !attr.directive &&
+      attr.key?.type === "VIdentifier" &&
+      attr.key.name === attrName
+    ) {
+      return attr.value?.value ?? "";
+    }
+  }
+  return null;
+}
+
+function hasStaticOrBoundAttr(elementNode, attrName) {
+  if (!elementNode?.startTag?.attributes) return false;
+  return elementNode.startTag.attributes.some((attr) => {
+    if (!attr.directive && attr.key?.type === "VIdentifier") {
+      return attr.key.name === attrName;
+    }
+    if (attr.directive && attr.key?.type === "VDirectiveKey") {
+      return (
+        attr.key.name?.name === "bind" && attr.key.argument?.name === attrName
+      );
+    }
+    return false;
+  });
+}
+
 const noRawOverlaysRule = {
   meta: {
     type: "problem",
@@ -383,9 +412,9 @@ const noRawOverlaysRule = {
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited outside packages/ui. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2657).',
+        'Raw overlay container "{{className}}" is prohibited outside packages/ui. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2658).',
       noBackdropSuppression:
-        "Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (ADR-2657).",
+        "Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (ADR-2658).",
     },
   },
   create(context) {

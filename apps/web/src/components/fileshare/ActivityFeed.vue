@@ -325,7 +325,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close"]);
+defineEmits(["close"]);
 
 const fileshareStore = useFileshareStore();
 

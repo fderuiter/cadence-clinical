@@ -82,6 +82,10 @@ const props = defineProps({
     type: String,
     default: "right",
   },
+  mobileBottomSheet: {
+    type: Boolean,
+    default: false,
+  },
   role: {
     type: String,
     default: "dialog",
@@ -135,7 +139,7 @@ const checkWideDesktop = () => {
   }
   if (typeof window.matchMedia === "function") {
     return Boolean(
-      window.matchMedia(`(min-width: ${props.dockMinWidth}px)`).matches
+      window.matchMedia(`(min-width: ${props.dockMinWidth}px)`)?.matches
     );
   }
   return false;
@@ -157,8 +161,9 @@ const bindMediaQuery = () => {
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function"
   ) {
-    mediaQueryList = window.matchMedia(`(min-width: ${props.dockMinWidth}px)`);
-    mediaQueryList.addEventListener?.("change", syncWideDesktop);
+    mediaQueryList =
+      window.matchMedia(`(min-width: ${props.dockMinWidth}px)`) || null;
+    mediaQueryList?.addEventListener?.("change", syncWideDesktop);
   }
   syncWideDesktop();
 };
@@ -291,6 +296,7 @@ defineExpose({
           'is-docked': isDocked && drawerOpen,
           'is-closed': keepMounted && !drawerOpen,
           active: drawerOpen,
+          'mobile-bottom-sheet': position === 'bottom' || mobileBottomSheet,
         },
         overlayClass,
       ]"
@@ -305,7 +311,7 @@ defineExpose({
         v-bind="attrs"
         :class="[
           'clinical-drawer-panel',
-          `size-${size}`,
+          position === 'bottom' ? 'drawer-bottom-sheet' : `size-${size}`,
           `position-${position}`,
           {
             'is-docked': isDocked && drawerOpen,
@@ -313,6 +319,9 @@ defineExpose({
             active: drawerOpen,
             open: drawerOpen,
           },
+          position === 'bottom' || mobileBottomSheet
+            ? 'drawer-mobile-bottom-sheet'
+            : 'drawer-panel-mobile-full',
           panelClass,
         ]"
         :role="role"
@@ -324,13 +333,25 @@ defineExpose({
         :aria-describedby="computedDescribedby"
         tabindex="-1"
       >
-        <slot
-          v-if="showHeader"
-          name="header"
-          :close="closeDrawer"
-          :title-id="headingId"
-        >
-          <header :class="['clinical-drawer-header', headerClass]">
+        <div
+          v-if="position === 'bottom' || mobileBottomSheet"
+          class="clinical-drawer-sheet-handle"
+          aria-hidden="true"
+        ></div>
+        <template v-if="showHeader">
+          <header
+            v-if="$slots.header && headerClass"
+            :class="['clinical-drawer-header', headerClass]"
+          >
+            <slot name="header" :close="closeDrawer" :title-id="headingId" />
+          </header>
+          <slot
+            v-else-if="$slots.header"
+            name="header"
+            :close="closeDrawer"
+            :title-id="headingId"
+          />
+          <header v-else :class="['clinical-drawer-header', headerClass]">
             <div class="clinical-drawer-titles">
               <h2 :id="headingId" class="clinical-drawer-title">
                 {{ title }}
@@ -353,7 +374,7 @@ defineExpose({
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
+                stroke-width="1.75"
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 aria-hidden="true"
@@ -364,7 +385,7 @@ defineExpose({
               </svg>
             </button>
           </header>
-        </slot>
+        </template>
 
         <slot name="subheader" />
 
@@ -403,6 +424,11 @@ defineExpose({
 
 .clinical-drawer-backdrop.position-left {
   justify-content: flex-start;
+}
+
+.clinical-drawer-backdrop.position-bottom {
+  justify-content: center;
+  align-items: flex-end;
 }
 
 .clinical-drawer-backdrop.is-closed {
@@ -466,6 +492,28 @@ defineExpose({
   box-shadow: none;
 }
 
+.clinical-drawer-panel.position-bottom {
+  width: min(100vw, 680px);
+  height: auto;
+  max-height: 90vh;
+  max-height: 90dvh;
+  border-left: none;
+  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+  box-shadow: 0 -8px 24px -4px rgba(0, 0, 0, 0.16);
+  animation-name: clinical-drawer-slide-in-bottom;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.clinical-drawer-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-border-control);
+  margin: 10px auto 2px;
+  flex-shrink: 0;
+}
+
 .size-sm {
   width: min(100vw, 400px);
 }
@@ -500,6 +548,15 @@ defineExpose({
   }
   to {
     transform: translateX(0);
+  }
+}
+
+@keyframes clinical-drawer-slide-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
   }
 }
 
@@ -556,14 +613,22 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
   background: transparent;
   border: none;
   font-size: 16px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 6px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
   line-height: 1.2;
+}
+
+.position-bottom .clinical-drawer-close-btn,
+.drawer-mobile-bottom-sheet .clinical-drawer-close-btn {
+  min-width: var(--touch-target-min, 48px);
+  min-height: var(--touch-target-min, 48px);
 }
 
 .clinical-drawer-close-btn:hover:not(:disabled) {
@@ -620,9 +685,30 @@ defineExpose({
 }
 
 @media (max-width: 640px) {
+  .clinical-drawer-backdrop.mobile-bottom-sheet {
+    justify-content: center;
+    align-items: flex-end;
+  }
+
   .clinical-drawer-panel {
     width: 100vw;
     max-width: 100vw;
+  }
+
+  .clinical-drawer-panel.drawer-mobile-bottom-sheet {
+    height: auto;
+    max-height: 90dvh;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+    border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+    animation-name: clinical-drawer-slide-in-bottom;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .clinical-drawer-close-btn {
+    min-width: var(--touch-target-min, 48px);
+    min-height: var(--touch-target-min, 48px);
   }
 
   .clinical-drawer-header,
@@ -630,6 +716,10 @@ defineExpose({
   .clinical-drawer-footer {
     padding-left: 16px;
     padding-right: 16px;
+  }
+
+  .clinical-drawer-footer {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 }
 

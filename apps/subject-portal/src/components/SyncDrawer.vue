@@ -16,11 +16,8 @@
   >
     <template #header>
       <div class="drawer-header">
-        <h3
-          id="drawer-title"
-          style="display: inline-flex; align-items: center; gap: 8px"
-        >
-          <RefreshCw :size="18" aria-hidden="true" />
+        <h3 id="drawer-title" class="drawer-title-heading">
+          <ClinicalIcon name="refresh" :size="18" />
           <span>Submission Sync Status</span>
         </h3>
         <button
@@ -30,7 +27,7 @@
           aria-label="Close drawer"
           @click="toggleSyncDrawer"
         >
-          <X :size="20" aria-hidden="true" />
+          <ClinicalIcon name="x" :size="20" />
         </button>
       </div>
     </template>
@@ -85,8 +82,15 @@
               {{ getSyncStatusLabel(item) }}
             </span>
           </div>
-          <div class="item-time">
+          <div class="item-time tabular-nums">
             Saved {{ formatTime(item.device_timestamp) }}
+          </div>
+          <div class="item-peek-actions">
+            <EntityLink
+              label="View details"
+              :sr-context="getInstrumentDisplayName(item.diary_id)"
+              @peek="({ triggerEl }) => openSyncSubmissionPeek(item, triggerEl)"
+            />
           </div>
           <div class="item-details">
             <p class="item-desc">
@@ -144,9 +148,15 @@
 </template>
 
 <script setup>
-import { RefreshCw, X } from "lucide-vue-next";
 import { ref, watch } from "vue";
-import { ClinicalDrawer, getFocusableElements } from "ui";
+import {
+  ClinicalDrawer,
+  ClinicalIcon,
+  EntityLink,
+  getFocusableElements,
+} from "ui";
+
+import { openSyncSubmissionPeek } from "../features/peek.js";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,

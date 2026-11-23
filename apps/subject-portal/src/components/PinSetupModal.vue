@@ -85,19 +85,43 @@
       </div>
     </form>
   </ClinicalModal>
+  <SignOutConfirmModal
+    id="pin-setup-signout-confirm-modal"
+    :open="isSignOutConfirmOpen"
+    title="Log Out With Unsaved or Unsent Survey Entries?"
+    description="You have unsaved questionnaire drafts or unsent offline survey submissions on this device. Logging out before configuring your PIN will leave pending entries unsent."
+    stay-label="Stay & Configure PIN"
+    confirm-label="Log Out Anyway"
+    @confirm="confirmSignOut"
+    @cancel="cancelSignOut"
+  />
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
+import { ClinicalModal, SignOutConfirmModal, useSignOutGuard } from "ui";
 
-import { logout } from "../features/auth.js";
+import {
+  hasUnsavedOrUnsyncedLocalData,
+  logout,
+  prepareSignOutGuardState,
+} from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 
+const {
+  isConfirmOpen: isSignOutConfirmOpen,
+  requestSignOut,
+  confirmSignOut,
+  cancelSignOut,
+} = useSignOutGuard({
+  flushExternalDrafts: prepareSignOutGuardState,
+  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+  onConfirmSignOut: () => logout({ confirmed: true }),
+});
 function handleSignOut() {
-  logout();
+  return requestSignOut();
 }
 </script>

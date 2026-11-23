@@ -188,13 +188,27 @@
       </div>
     </form>
   </ClinicalModal>
+  <SignOutConfirmModal
+    id="pin-unlock-signout-confirm-modal"
+    :open="isSignOutConfirmOpen"
+    title="Log Out With Unsaved or Unsent Survey Entries?"
+    description="You have unsaved questionnaire drafts or locked offline survey submissions waiting to sync on this device. Logging out now will leave those entries unsent until you sign back in and unlock your PIN."
+    stay-label="Stay & Unlock PIN"
+    confirm-label="Log Out Anyway"
+    @confirm="confirmSignOut"
+    @cancel="cancelSignOut"
+  />
 </template>
 
 <script setup>
 import { computed } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalModal, SignOutConfirmModal, useSignOutGuard } from "ui";
 
-import { logout } from "../features/auth.js";
+import {
+  hasUnsavedOrUnsyncedLocalData,
+  logout,
+  prepareSignOutGuardState,
+} from "../features/auth.js";
 import {
   MAX_PIN_UNLOCK_ATTEMPTS,
   cancelPINReset,
@@ -209,6 +223,16 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 
+const {
+  isConfirmOpen: isSignOutConfirmOpen,
+  requestSignOut,
+  confirmSignOut,
+  cancelSignOut,
+} = useSignOutGuard({
+  flushExternalDrafts: prepareSignOutGuardState,
+  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+  onConfirmSignOut: () => logout({ confirmed: true }),
+});
 const maxAttempts = computed(
   () => sessionStore.pinUnlock.maxAttempts || MAX_PIN_UNLOCK_ATTEMPTS
 );
@@ -238,6 +262,6 @@ const requiresIdentitySignIn = computed(() => {
 });
 
 function handleSignOut() {
-  logout();
+  return requestSignOut();
 }
 </script>

@@ -1,23 +1,27 @@
 <template>
+  <!-- Arrow pointing at anchor (hidden when unanchored or detached) -->
+  <div
+    v-if="isTourOpen && showArrow"
+    :style="arrowStyle"
+    class="popover-arrow"
+    :class="{ 'popover-arrow--bottom': arrowPlacement === 'top' }"
+    aria-hidden="true"
+  />
+
   <ClinicalModal
+    ref="clinicalModalRef"
     :is-open="isTourOpen"
     :modal="isModalStep"
     :teleport="false"
     :show-header="false"
     :show-footer="false"
-    backdrop-class="onboarding-backdrop"
+    :backdrop-class="isModalStep ? 'onboarding-backdrop' : ''"
     dialog-class="onboarding-popover-card"
     body-class="onboarding-popover-surface"
     aria-labelledby="onboarding-tour-title"
     :style="popoverStyle"
     @close="onboardingStore.dismissTour()"
   >
-    <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
-    <div
-      v-if="hasTargetElement && currentStepConfig?.targetSelector"
-      class="popover-arrow"
-    />
-
     <!-- Popover Header -->
     <div class="onboarding-popover-header">
       <h4 id="onboarding-tour-title" class="onboarding-popover-title">
@@ -39,7 +43,7 @@
     <!-- Popover Action Buttons -->
     <div class="onboarding-popover-actions">
       <!-- Left buttons -->
-      <div>
+      <div class="onboarding-popover-left-actions">
         <button
           v-if="currentStep === 1"
           type="button"
@@ -90,7 +94,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { ClinicalModal } from "ui";
 import {
@@ -107,6 +111,13 @@ const NON_SHELL_TOUR_ROUTES = new Set([
   "forbidden",
   "unavailable",
 ]);
+
+const VIEWPORT_MARGIN_PX = 12;
+const ANCHOR_GAP_PX = 12;
+const DEFAULT_CARD_WIDTH_PX = 320;
+const DEFAULT_CARD_HEIGHT_PX = 220;
+const PASSIVE_LISTENER_OPTIONS = { passive: true };
+const SCROLL_CAPTURE_OPTIONS = { capture: true, passive: true };
 
 const props = defineProps({
   activeTab: {
@@ -137,13 +148,16 @@ const currentStepConfig = computed(
 const totalSteps = computed(() => onboardingStore.totalSteps || 1);
 
 const effectiveRoles = computed(() => {
-  if (authStore.rawRoles?.length > 0) {
-    return authStore.normalizedRoles || [];
-  }
-  const personaKey =
+  const roles = authStore.normalizedRoles || [];
+  const key =
     authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+  const preset = PERSONA_PRESETS.find((p) => p.key === key);
+  if (preset && key !== "super_admin" && roles.includes("sponsor_admin")) {
+    return preset.requires;
+  }
+  return authStore.rawRoles?.length
+    ? roles
+    : preset?.requires || ["sponsor_admin"];
 });
 
 function canNavigateToTourRoute(routeName) {
@@ -198,29 +212,131 @@ const stepTargetDescription = computed(
 );
 
 const hasTargetElement = ref(false);
+const isArrowDetached = ref(false);
+const arrowPlacement = ref("bottom");
+const arrowStyle = ref({});
+const clinicalModalRef = ref(null);
+const popoverRef = computed(() => clinicalModalRef.value?.dialogEl ?? null);
 
 const isTourOpen = computed(() =>
   Boolean(onboardingStore.isActive && !onboardingStore.disabled)
 );
+const isBoundaryStep = computed(
+  () => currentStep.value === 1 || currentStep.value === totalSteps.value
+);
 const isModalStep = computed(
   () =>
     isTourOpen.value &&
-    (currentStep.value === 1 ||
-      currentStep.value === totalSteps.value ||
-      !hasTargetElement.value)
+    isBoundaryStep.value &&
+    (!currentStepConfig.value?.targetSelector || !hasTargetElement.value)
 );
 
-const popoverStyle = ref({
-  position: "fixed",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  zIndex: 1000,
-});
+const showArrow = computed(() =>
+  Boolean(
+    hasTargetElement.value &&
+    currentStepConfig.value?.targetSelector &&
+    !isArrowDetached.value
+  )
+);
+
+function buildCenteredPopoverStyle(cssZoomScale = 1) {
+  const style = {
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    zIndex: 1000,
+  };
+  if (cssZoomScale > 1 && typeof window !== "undefined") {
+    const vv = window.visualViewport;
+    const rawVpW = vv?.width || window.innerWidth || 1024;
+    const rawVpH = vv?.height || window.innerHeight || 768;
+    const scaledVpW = rawVpW / cssZoomScale;
+    const scaledVpH = rawVpH / cssZoomScale;
+    style.maxWidth = `${Math.max(0, scaledVpW - VIEWPORT_MARGIN_PX * 2)}px`;
+    style.maxHeight = `${Math.max(
+      0,
+      Math.min(scaledVpH * 0.9, scaledVpH - VIEWPORT_MARGIN_PX * 2)
+    )}px`;
+  }
+  return style;
+}
+
+const popoverStyle = ref(buildCenteredPopoverStyle());
 
 let currentRafId = null;
 let isDisposed = false;
 const pendingTimers = new Set();
+
+function getEffectiveCssZoom() {
+  if (typeof document === "undefined" || typeof window === "undefined") {
+    return 1;
+  }
+  const rootEl = document.documentElement;
+  if (
+    rootEl &&
+    typeof rootEl.currentCSSZoom === "number" &&
+    rootEl.currentCSSZoom > 0
+  ) {
+    return rootEl.currentCSSZoom;
+  }
+  if (typeof window.getComputedStyle === "function" && rootEl) {
+    const rawZoom = parseFloat(window.getComputedStyle(rootEl).zoom || "1");
+    if (Number.isFinite(rawZoom) && rawZoom > 0) {
+      return rawZoom;
+    }
+  }
+  return 1;
+}
+
+function isElementVisible(el) {
+  if (!el || typeof el.getBoundingClientRect !== "function") {
+    return false;
+  }
+  let cur = el;
+  while (cur && cur.nodeType === 1) {
+    if (cur.hasAttribute?.("hidden")) {
+      return false;
+    }
+    if (
+      typeof window !== "undefined" &&
+      typeof window.getComputedStyle === "function"
+    ) {
+      const style = window.getComputedStyle(cur);
+      if (style.display === "none" || style.visibility === "hidden") {
+        return false;
+      }
+    }
+    cur = cur.parentElement;
+  }
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function findFirstVisibleTarget(selectorList) {
+  if (!selectorList || typeof document === "undefined") {
+    return null;
+  }
+  const candidates = String(selectorList)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    let nodes;
+    try {
+      nodes = document.querySelectorAll(candidate);
+    } catch {
+      continue;
+    }
+    for (const el of nodes) {
+      if (isElementVisible(el)) {
+        return el;
+      }
+    }
+  }
+  return null;
+}
 
 function cancelPendingRaf() {
   if (currentRafId !== null) {
@@ -301,16 +417,12 @@ const updatePosition = () => {
 
   const config = currentStepConfig.value;
   const selector = config?.targetSelector;
+  const cssZoomScale = getEffectiveCssZoom();
 
   if (!selector) {
     hasTargetElement.value = false;
-    popoverStyle.value = {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      zIndex: 1000,
-    };
+    isArrowDetached.value = true;
+    popoverStyle.value = buildCenteredPopoverStyle(cssZoomScale);
     return;
   }
 
@@ -322,39 +434,195 @@ const updatePosition = () => {
       currentRafId = null;
       return;
     }
-    const el = document.querySelector(selector);
+
+    const zoomScale = getEffectiveCssZoom();
+    const el = findFirstVisibleTarget(selector);
     if (el) {
-      const rect = el.getBoundingClientRect();
+      let rect = el.getBoundingClientRect();
+      if (
+        rect.width === 0 &&
+        rect.height === 0 &&
+        typeof el.closest === "function" &&
+        el.closest("#header-secondary-menu")
+      ) {
+        const menuBtn = document.getElementById("btn-header-actions-menu");
+        if (menuBtn) {
+          rect = menuBtn.getBoundingClientRect();
+        }
+      }
       if (rect.width > 0 && rect.height > 0) {
-        popoverStyle.value = {
+        const vv = typeof window !== "undefined" ? window.visualViewport : null;
+        const rawVpWidth =
+          vv?.width ||
+          (typeof window !== "undefined" ? window.innerWidth : 1024) ||
+          1024;
+        const rawVpHeight =
+          vv?.height ||
+          (typeof window !== "undefined" ? window.innerHeight : 768) ||
+          768;
+        const vpWidth = zoomScale > 1 ? rawVpWidth / zoomScale : rawVpWidth;
+        const vpHeight = zoomScale > 1 ? rawVpHeight / zoomScale : rawVpHeight;
+        const vpOffsetLeft =
+          (vv?.offsetLeft || 0) / (zoomScale > 1 ? zoomScale : 1);
+        const vpOffsetTop =
+          (vv?.offsetTop || 0) / (zoomScale > 1 ? zoomScale : 1);
+
+        const maxAllowedWidth = Math.max(0, vpWidth - VIEWPORT_MARGIN_PX * 2);
+        const maxAllowedHeight = Math.max(
+          0,
+          Math.min(vpHeight * 0.9, vpHeight - VIEWPORT_MARGIN_PX * 2)
+        );
+
+        const measuredRect = popoverRef.value?.getBoundingClientRect?.();
+        const rawCardWidth =
+          (measuredRect?.width
+            ? measuredRect.width / (zoomScale > 1 ? zoomScale : 1)
+            : 0) ||
+          popoverRef.value?.offsetWidth ||
+          Math.min(
+            DEFAULT_CARD_WIDTH_PX,
+            maxAllowedWidth || DEFAULT_CARD_WIDTH_PX
+          );
+        const rawCardHeight =
+          (measuredRect?.height
+            ? measuredRect.height / (zoomScale > 1 ? zoomScale : 1)
+            : 0) ||
+          popoverRef.value?.offsetHeight ||
+          Math.min(
+            DEFAULT_CARD_HEIGHT_PX,
+            maxAllowedHeight || DEFAULT_CARD_HEIGHT_PX
+          );
+
+        const cardWidth = Math.min(
+          rawCardWidth,
+          maxAllowedWidth || rawCardWidth
+        );
+        const cardHeight = Math.min(
+          rawCardHeight,
+          maxAllowedHeight || rawCardHeight
+        );
+
+        const anchorTop = zoomScale > 1 ? rect.top / zoomScale : rect.top;
+        const anchorBottom =
+          zoomScale > 1 ? rect.bottom / zoomScale : rect.bottom;
+        const anchorLeft = zoomScale > 1 ? rect.left / zoomScale : rect.left;
+        const anchorRight = zoomScale > 1 ? rect.right / zoomScale : rect.right;
+        const anchorWidth = anchorRight - anchorLeft;
+        const anchorCenterX = anchorLeft + anchorWidth / 2;
+
+        const halfWidth = cardWidth / 2;
+        const minCenterX = vpOffsetLeft + VIEWPORT_MARGIN_PX + halfWidth;
+        const maxCenterX =
+          vpOffsetLeft + vpWidth - VIEWPORT_MARGIN_PX - halfWidth;
+        const clampedCenterX =
+          minCenterX > maxCenterX
+            ? vpOffsetLeft + vpWidth / 2
+            : Math.min(maxCenterX, Math.max(minCenterX, anchorCenterX));
+
+        const minTop = vpOffsetTop + VIEWPORT_MARGIN_PX;
+        const maxTop = Math.max(
+          minTop,
+          vpOffsetTop + vpHeight - VIEWPORT_MARGIN_PX - cardHeight
+        );
+
+        const belowTop = anchorBottom + ANCHOR_GAP_PX;
+        const aboveTop = anchorTop - ANCHOR_GAP_PX - cardHeight;
+        const spaceBelow =
+          vpOffsetTop + vpHeight - VIEWPORT_MARGIN_PX - anchorBottom;
+        const spaceAbove = anchorTop - minTop;
+        const overflowsBottom =
+          belowTop + cardHeight > vpOffsetTop + vpHeight - VIEWPORT_MARGIN_PX;
+
+        let placement = "bottom";
+        let unclampedTop = belowTop;
+        if (
+          overflowsBottom &&
+          anchorTop > minTop &&
+          (aboveTop >= minTop || spaceAbove > spaceBelow)
+        ) {
+          placement = "top";
+          unclampedTop = aboveTop;
+        }
+
+        const clampedTop = Math.min(maxTop, Math.max(minTop, unclampedTop));
+        const cardLeft = clampedCenterX - halfWidth;
+        const cardRight = clampedCenterX + halfWidth;
+
+        const anchorInViewport =
+          anchorBottom > vpOffsetTop &&
+          anchorTop < vpOffsetTop + vpHeight &&
+          anchorRight > vpOffsetLeft &&
+          anchorLeft < vpOffsetLeft + vpWidth;
+        const verticallyDetached = Math.abs(clampedTop - unclampedTop) > 4;
+        const horizontallyDetached =
+          cardRight < anchorLeft + 12 || cardLeft > anchorRight - 12;
+
+        isArrowDetached.value =
+          !anchorInViewport || verticallyDetached || horizontallyDetached;
+        arrowPlacement.value = placement;
+
+        if (!isArrowDetached.value) {
+          const clampedArrowX = Math.min(
+            Math.max(cardLeft + 18, anchorCenterX),
+            Math.max(cardLeft + 18, cardRight - 18)
+          );
+          arrowStyle.value = {
+            position: "fixed",
+            top:
+              placement === "top"
+                ? `${clampedTop + cardHeight}px`
+                : `${clampedTop - 10}px`,
+            left: `${clampedArrowX}px`,
+            transform: "translateX(-50%)",
+            zIndex: 1001,
+          };
+        }
+
+        const nextStyle = {
           position: "fixed",
-          top: `${rect.bottom + 12}px`,
-          left: `${rect.left + rect.width / 2}px`,
+          top: `${clampedTop}px`,
+          left: `${clampedCenterX}px`,
           transform: "translateX(-50%)",
           zIndex: 1000,
         };
+        if (zoomScale > 1) {
+          nextStyle.maxWidth = `${maxAllowedWidth}px`;
+          nextStyle.maxHeight = `${maxAllowedHeight}px`;
+        }
+        popoverStyle.value = nextStyle;
         hasTargetElement.value = true;
         currentRafId = null;
         return;
       }
     }
+
     if (attempts < MAX_RETRIES && typeof requestAnimationFrame === "function") {
       attempts++;
       currentRafId = requestAnimationFrame(checkAndPosition);
     } else {
       hasTargetElement.value = false;
-      popoverStyle.value = {
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 1000,
-      };
+      isArrowDetached.value = true;
+      popoverStyle.value = buildCenteredPopoverStyle(zoomScale);
       currentRafId = null;
     }
   };
 
   checkAndPosition();
+};
+
+const handleScroll = (event) => {
+  const target = event?.target;
+  if (
+    target &&
+    typeof Node !== "undefined" &&
+    target instanceof Node &&
+    popoverRef.value &&
+    typeof popoverRef.value.contains === "function" &&
+    popoverRef.value.contains(target)
+  ) {
+    return;
+  }
+  updatePosition();
 };
 
 const handleNext = async () => {
@@ -380,6 +648,9 @@ const handleComplete = () => {
 };
 
 watch(currentStep, async () => {
+  if (popoverRef.value) {
+    popoverRef.value.scrollTop = 0;
+  }
   const config = currentStepConfig.value;
   if (config?.query?.tab) {
     emit("update:activeTab", config.query.tab);
@@ -413,17 +684,19 @@ watch(
 
 watch(
   () => onboardingStore.isActive,
-  (active) => {
+  async (active) => {
     if (active) {
-      syncStepRoute();
+      await syncStepRoute();
+      updatePosition();
+      await nextTick();
       updatePosition();
     }
   }
 );
 
 watch(
-  () => authStore.currentPersona,
-  async (newPersona, oldPersona) => {
+  () => [authStore.currentPersona, (authStore.normalizedRoles || []).join(",")],
+  async ([newPersona], [oldPersona] = []) => {
     if (newPersona && (oldPersona !== undefined || !onboardingStore.isActive)) {
       onboardingStore.loadPersonaState(newPersona);
       await syncStepRoute();
@@ -435,7 +708,18 @@ watch(
 
 onMounted(async () => {
   isDisposed = false;
-  window.addEventListener("resize", updatePosition);
+  window.addEventListener("resize", updatePosition, PASSIVE_LISTENER_OPTIONS);
+  window.addEventListener("scroll", handleScroll, SCROLL_CAPTURE_OPTIONS);
+  window.visualViewport?.addEventListener(
+    "resize",
+    updatePosition,
+    PASSIVE_LISTENER_OPTIONS
+  );
+  window.visualViewport?.addEventListener(
+    "scroll",
+    handleScroll,
+    PASSIVE_LISTENER_OPTIONS
+  );
   await syncStepRoute();
   updatePosition();
   schedulePositionUpdate(100);
@@ -455,7 +739,22 @@ onMounted(async () => {
 onUnmounted(() => {
   isDisposed = true;
   if (typeof window !== "undefined") {
-    window.removeEventListener("resize", updatePosition);
+    window.removeEventListener(
+      "resize",
+      updatePosition,
+      PASSIVE_LISTENER_OPTIONS
+    );
+    window.removeEventListener("scroll", handleScroll, SCROLL_CAPTURE_OPTIONS);
+    window.visualViewport?.removeEventListener(
+      "resize",
+      updatePosition,
+      PASSIVE_LISTENER_OPTIONS
+    );
+    window.visualViewport?.removeEventListener(
+      "scroll",
+      handleScroll,
+      PASSIVE_LISTENER_OPTIONS
+    );
   }
   for (const timerId of pendingTimers) {
     clearTimeout(timerId);
@@ -472,6 +771,7 @@ onUnmounted(() => {
 }
 
 :deep(.onboarding-popover-card) {
+  box-sizing: border-box;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border: 2px solid var(--semantic-color-interactive-primary);
@@ -480,16 +780,22 @@ onUnmounted(() => {
     0 10px 25px -5px rgba(0, 0, 0, 0.15),
     0 8px 10px -6px rgba(0, 0, 0, 0.15);
   width: min(320px, calc(100vw - 24px));
-  max-width: 320px;
+  max-width: calc(100vw - 24px);
+  max-height: min(90vh, calc(100vh - 24px));
+  max-height: min(90dvh, calc(100dvh - 24px));
   font-family: var(--semantic-font-family);
-  overflow: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 :deep(.onboarding-popover-surface) {
   position: relative;
-  padding: 20px;
+  padding-top: 20px;
+  padding-right: calc(20px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(20px + env(safe-area-inset-left, 0px));
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 @media (max-width: 480px) {
@@ -508,21 +814,25 @@ onUnmounted(() => {
 }
 
 .popover-arrow {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 0;
   height: 0;
+  pointer-events: none;
   border-left: 10px solid transparent;
   border-right: 10px solid transparent;
   border-bottom: 10px solid var(--semantic-color-interactive-primary);
+}
+
+.popover-arrow--bottom {
+  border-bottom: none;
+  border-top: 10px solid var(--semantic-color-interactive-primary);
 }
 
 .onboarding-popover-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
@@ -537,6 +847,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .onboarding-popover-body {
@@ -561,19 +872,41 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.onboarding-popover-left-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .onboarding-popover-right-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }
 
 .btn-tour-dismiss,
-.btn-tour-back {
-  padding: 6px 12px;
+.btn-tour-back,
+.btn-tour-disable,
+.btn-tour-next,
+.btn-tour-complete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
   font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.btn-tour-dismiss,
+.btn-tour-back {
+  padding: 10px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
@@ -582,8 +915,7 @@ onUnmounted(() => {
 }
 
 .btn-tour-disable {
-  padding: 6px 8px;
-  font-size: 0.7rem;
+  padding: 10px 8px;
   color: var(--semantic-color-text-secondary);
   background: none;
   border: none;
@@ -593,8 +925,7 @@ onUnmounted(() => {
 
 .btn-tour-next,
 .btn-tour-complete {
-  padding: 6px 14px;
-  font-size: 0.75rem;
+  padding: 10px 14px;
   color: var(--semantic-color-surface);
   border: none;
   border-radius: 6px;

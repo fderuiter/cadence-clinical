@@ -372,6 +372,10 @@ onUnmounted(() => {
   min-width: 0;
   max-width: 100%;
 }
+.ecrf-form-panel > * {
+  min-width: 0;
+  max-width: 100%;
+}
 .ecrf-form-panel
   :deep(
     input:not([type="checkbox"]):not([type="radio"]):not(.clinical-input):not(

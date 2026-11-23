@@ -1,6 +1,7 @@
 <template>
-  <div @contextmenu.prevent>
+  <div>
     <ClinicalModal
+      @contextmenu.prevent
       :is-open="true"
       :teleport="false"
       size="xl"
