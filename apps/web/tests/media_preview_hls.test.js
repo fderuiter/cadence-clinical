@@ -390,6 +390,67 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     wrapper.unmount();
   });
 
+  it("plays direct MP4 stream URLs natively without initializing HLS.js", async () => {
+    const isSupportedSpy = vi
+      .spyOn(Hls, "isSupported")
+      .mockImplementation(() => true);
+    const loadSourceSpy = vi
+      .spyOn(Hls.prototype, "loadSource")
+      .mockImplementation(vi.fn());
+
+    fileshareService.getStreamUrl.mockResolvedValueOnce({
+      file_id: "file-video-001",
+      stream_url: "https://example.com/raw/video.mp4",
+      expires_in: 300,
+      transcode_status: "READY",
+      message: "Direct MP4 ready",
+    });
+
+    const wrapper = mount(MediaPreviewModal, {
+      props: {
+        fileRecord: mockVideoFile,
+      },
+    });
+
+    await flushPromises();
+
+    const video = wrapper.find("video.video-element");
+    expect(video.exists()).toBe(true);
+    expect(video.attributes("src") || video.element.src).toContain("video.mp4");
+    expect(isSupportedSpy).not.toHaveBeenCalled();
+    expect(loadSourceSpy).not.toHaveBeenCalled();
+
+    isSupportedSpy.mockRestore();
+    loadSourceSpy.mockRestore();
+    wrapper.unmount();
+  });
+
+  it("skips HLS.js initialization in demo mode even when stream URL ends with .m3u8", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    const isSupportedSpy = vi
+      .spyOn(Hls, "isSupported")
+      .mockImplementation(() => true);
+
+    try {
+      const wrapper = mount(MediaPreviewModal, {
+        props: {
+          fileRecord: mockVideoFile,
+        },
+      });
+
+      await flushPromises();
+
+      const video = wrapper.find("video.video-element");
+      expect(video.exists()).toBe(true);
+      expect(isSupportedSpy).not.toHaveBeenCalled();
+
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+      isSupportedSpy.mockRestore();
+    }
+  });
+
   describe("Strict GxP Playback Audit Gating & Recovery", () => {
     it("defers checkpoint state tracking until recordPlaybackAudit resolves and pauses video on failure after retries", async () => {
       fileshareService.recordPlaybackAudit.mockRejectedValue(
