@@ -88,6 +88,7 @@
         <aside
           class="metadata-sidebar"
           aria-label="File Metadata and Audit Ledger"
+          tabindex="0"
         >
           <div class="meta-section">
             <h4>Record Details</h4>
@@ -1108,6 +1109,28 @@ function getStatusClass(status) {
 </script>
 
 <style scoped>
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-card {
+  background: var(--semantic-color-surface);
+  border-radius: 12px;
+  border: 1px solid var(--semantic-color-border);
+  box-shadow: var(--semantic-shadow-xl);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .media-preview-modal {
   max-width: 1100px !important;
   width: 95% !important;
@@ -1162,6 +1185,11 @@ function getStatusClass(status) {
   padding: 16px;
   overflow-y: auto;
   box-sizing: border-box;
+}
+
+.metadata-sidebar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .meta-section {

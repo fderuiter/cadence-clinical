@@ -6,7 +6,7 @@
 
     <header class="workspace-header">
       <div class="workspace-title-group">
-        <h2 id="canvas-form-workspace-title">
+        <h2 id="canvas-form-workspace-title" tabindex="-1">
           {{ workspaceTitle }}
         </h2>
         <span v-if="participant" class="workspace-meta">

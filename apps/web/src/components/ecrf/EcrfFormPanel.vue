@@ -1,6 +1,8 @@
 <template>
   <section id="ecrf-form-instance" class="card ecrf-form-panel">
-    <div class="card-title">Case report form</div>
+    <div id="ecrf-form-title" class="card-title" tabindex="-1">
+      Case report form
+    </div>
 
     <EcrfFormOpener
       v-if="!form"
@@ -15,8 +17,8 @@
       :load-error="formState.loadError"
       :opening="formState.opening"
       :open-error="formState.openError"
-      @load-form="void formState.load($event)"
-      @open-form="void formState.open($event)"
+      @load-form="onLoadForm"
+      @open-form="onOpenForm"
       @retry-load="formState.retryLoad"
       @retry-schedule="emit('retry-schedule')"
       @enrollment-change="formState.openError = null"
@@ -97,6 +99,7 @@ import {
   reactive,
   watch,
 } from "vue";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
@@ -172,6 +175,32 @@ function setEntryMissing(itemId: string, missing: string) {
   if (formState.entries[itemId]) formState.entries[itemId].missing = missing;
 }
 
+function handoffAfterFormOpen() {
+  if (!form.value || props.highlightItemId) return;
+  void handoffFocus([
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled]), #ecrf-form-page textarea:not([disabled])"
+      ),
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+      ),
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+async function onLoadForm(id: string) {
+  await formState.load(id);
+  handoffAfterFormOpen();
+}
+
+async function onOpenForm(payload: Parameters<typeof formState.open>[0]) {
+  await formState.open(payload);
+  handoffAfterFormOpen();
+}
+
 function itemObservationLink(
   observationId: string | null | undefined,
   itemId?: string | null
@@ -243,6 +272,12 @@ async function closeForm() {
   formState.clearDraft();
   formState.close();
   emit("closed");
+  void handoffFocus([
+    "#ecrf-form-id",
+    "#ecrf-collection-spec",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function focusHighlightedItem(itemId: string) {
@@ -252,7 +287,11 @@ async function focusHighlightedItem(itemId: string) {
     ?.scrollIntoView?.({ block: "center" });
   const input = document.getElementById(`ecrf-item-${itemId}`) as
     HTMLInputElement | HTMLSelectElement | null;
-  if (input && !input.disabled) input.focus?.();
+  if (input && !input.disabled) {
+    input.focus?.();
+  } else {
+    void handoffFocus(["#canvas-form-workspace-title", "#ecrf-form-title"]);
+  }
 }
 
 function onQueryListClick(event: MouseEvent) {

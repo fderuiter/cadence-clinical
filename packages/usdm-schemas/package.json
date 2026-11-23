@@ -4,6 +4,16 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./epro": {
+      "types": "./src/epro.ts",
+      "default": "./src/epro.ts"
+    }
+  },
   "scripts": {
     "test": "vitest run"
   },

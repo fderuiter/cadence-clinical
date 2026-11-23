@@ -6,7 +6,7 @@
     :aria-busy="canvas.participantsLoading"
   >
     <header class="participants-header">
-      <h2 id="participants-title">Participants</h2>
+      <h2 id="participants-title" tabindex="-1">Participants</h2>
       <label for="participants-search">Search</label>
       <input
         id="participants-search"
@@ -45,7 +45,7 @@
           id="btn-clear-site-filter"
           type="button"
           :aria-label="`Show participants at every site, not only ${siteId}`"
-          @click="emitFilter({ siteId: '' })"
+          @click="clearSiteFilter"
         >
           ×
         </button>
@@ -55,7 +55,7 @@
         id="btn-add-participant"
         type="button"
         class="btn btn-secondary"
-        @click="adding = true"
+        @click="openAddParticipant"
       >
         Add participant
       </button>
@@ -87,7 +87,7 @@
       :site-options="authorizedSiteOptions"
       :restrict-to-options="hasExplicitSiteScope"
       @added="onAdded"
-      @close="adding = false"
+      @close="closeAddParticipant"
     />
 
     <p id="participants-status-line" class="status-line" role="status">
@@ -148,6 +148,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { handoffFocus, useInlineFocusHandoff } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import {
   authorizedParticipantSiteCodes,
@@ -190,6 +191,28 @@ const SEARCH_DEBOUNCE_MS = 180;
 const canvas = useStudyCanvasStore();
 const authStore = useAuthStore();
 const adding = ref(false);
+const addParticipantHandoff = useInlineFocusHandoff({
+  openTarget: "#add-participant-code",
+  closeFallback: ["#btn-add-participant", "#participants-search"],
+});
+
+function clearSiteFilter() {
+  emitFilter({ siteId: "" });
+  void handoffFocus("#participants-site");
+}
+
+function openAddParticipant() {
+  addParticipantHandoff.rememberTrigger("#btn-add-participant");
+  adding.value = true;
+  void addParticipantHandoff.handoff("#add-participant-code", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function closeAddParticipant() {
+  adding.value = false;
+  void addParticipantHandoff.restoreTrigger("#btn-add-participant");
+}
 const searchInputRef = ref<HTMLInputElement | null>(null);
 const searchInput = ref(props.query);
 const searchFocused = ref(false);
@@ -306,7 +329,16 @@ function switchToCoordinatorLens() {
 /** Closes the form and selects the new participant when the list could place it. */
 function onAdded(participant: SubjectSummary | null) {
   adding.value = false;
-  if (participant) emit("select", participant);
+  if (participant) {
+    emit("select", participant);
+    void handoffFocus([
+      `#participant-${participant.subject_id}`,
+      "#btn-add-participant",
+      "#participants-search",
+    ]);
+  } else {
+    void addParticipantHandoff.restoreTrigger("#btn-add-participant");
+  }
 }
 
 const statusLine = computed(() => {
