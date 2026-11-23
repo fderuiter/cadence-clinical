@@ -1,23 +1,49 @@
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
 import {
-  NODE_KINDS,
-  formatNodeRef,
-  parseNodeRef,
-  tryNodeRef,
-} from "../../src/canvas/nodeRef";
+  CANVAS_GENERATED_DIR,
+  generateCanvasContracts,
+  parsePermissionMatrix,
+  parseRoleNormalization,
+  renderCanvasContractFiles,
+} from "../../scripts/generate-canvas-contracts.js";
+import * as authority from "../../src/canvas/authority";
 import {
+  BACKEND_ROLE_ALIASES,
+  WEB_PERSONA_ROLE_ALIASES,
   canActivateSite,
+  canAnswerQueries,
+  canAssignTrainingCurriculum,
   canCertifyGreenlight,
+  canCompleteMonitoringVisits,
+  canCorrectObservations,
   canExportEtmf,
+  canManageDoa,
+  canManageMilestones,
+  canManageMonitoringVisits,
   canManageParticipants,
+  canManageQueries,
+  canManageRulePacks,
+  canManageSiteMilestones,
   canReadEtmf,
+  canReadRandomizationSchemes,
   canReconcileIpKits,
+  canRecordChainOfCustody,
   canReviewEtmfQc,
+  canScheduleMonitoringVisits,
+  canSeedIpKits,
+  canSignForms,
   canSignOffDoa,
+  canSignOffMonitoringVisit,
+  canSignOffMonitoringVisits,
+  canSignTrainingDelegations,
   canStageEtmfQc,
   canTagEtmf,
+  canVerifySource,
+  normalizeBackendRole,
 } from "../../src/canvas/authority";
 import {
   PARTICIPANT_STATES,
@@ -27,6 +53,17 @@ import {
   findSection,
   findStage,
 } from "../../src/canvas/lifecycle";
+import {
+  NODE_KINDS,
+  formatNodeRef,
+  parseNodeRef,
+  tryNodeRef,
+} from "../../src/canvas/nodeRef";
+import {
+  PERSONA_PRESETS,
+  ROLE_ALIASES as AUTH_ROLE_ALIASES,
+  normalizeRole as normalizeWebRole,
+} from "../../src/stores/auth.js";
 
 const repoRoot = join(__dirname, "..", "..", "..", "..");
 const ID = "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e";
@@ -183,7 +220,132 @@ describe("Canvas lifecycle", () => {
   });
 });
 
-describe("Canvas authority mirror", () => {
+describe("Generated canvas contracts freshness & drift gate", () => {
+  it("matches every checked-in file in src/canvas/generated/", async () => {
+    const rendered = await renderCanvasContractFiles();
+    expect(rendered.size).toBeGreaterThan(0);
+    for (const [fileName, expected] of rendered.entries()) {
+      const checkedIn = readFileSync(
+        join(CANVAS_GENERATED_DIR, fileName),
+        "utf8"
+      );
+      expect(checkedIn, fileName).toBe(expected);
+    }
+    const stale = await generateCanvasContracts({ check: true });
+    expect(stale).toEqual([]);
+  });
+
+  it("exits with code 1 on --check when any file under src/canvas/generated/ drifts", async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "cadence-canvas-contracts-"));
+    try {
+      await generateCanvasContracts({ check: false, outputDir: tempDir });
+      expect(
+        await generateCanvasContracts({
+          check: true,
+          outputDir: tempDir,
+          baseDir: tempDir,
+        })
+      ).toEqual([]);
+
+      // Drift an existing generated file and verify check detects it and CLI exits 1
+      writeFileSync(
+        join(tempDir, "nodeKinds.ts"),
+        "// drifted\nexport const NODE_KINDS = [] as const;\n"
+      );
+      const stale = await generateCanvasContracts({
+        check: true,
+        outputDir: tempDir,
+        baseDir: tempDir,
+      });
+      expect(stale).toContain("nodeKinds.ts");
+
+      let exitCode = 0;
+      try {
+        execFileSync(
+          process.execPath,
+          [
+            "--input-type=module",
+            "-e",
+            `import { generateCanvasContracts } from "./scripts/generate-canvas-contracts.js";
+             const stale = await generateCanvasContracts({ check: true, outputDir: ${JSON.stringify(tempDir)} });
+             if (stale.length > 0) process.exit(1);`,
+          ],
+          { cwd: join(repoRoot, "apps/web"), stdio: "pipe" }
+        );
+      } catch (err: unknown) {
+        exitCode =
+          err &&
+          typeof err === "object" &&
+          "status" in err &&
+          typeof err.status === "number"
+            ? err.status
+            : 1;
+      }
+      expect(exitCode).toBe(1);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("Canvas authority mirror & all 29 can* helpers", () => {
+  const { roleAliases: csharpRoleAliases } = parseRoleNormalization();
+  const { permissionRoles: csharpPermissionRoles } = parsePermissionMatrix();
+
+  const CANONICAL_TEST_ROLES = [
+    "sysadmin",
+    "sponsor_designer",
+    "protocol_reviewer",
+    "sponsor_dm",
+    "sponsor_mm",
+    "sponsor_statistician",
+    "unblinded_statistician",
+    "idmc",
+    "pharmacist",
+    "emergency_unblinder",
+    "investigator",
+    "principal_investigator",
+    "authorized_er_physician",
+    "lead_investigator",
+    "crc",
+    "cra",
+    "monitor",
+    "external_monitor",
+    "subject",
+    "auditor",
+    "finance_officer",
+    "terminology_manager",
+  ] as const;
+
+  it("mirrors RoleNormalization.cs aliases 1:1 and reconciles web-only super_admin and tmf_auditor against auth.js", () => {
+    expect(BACKEND_ROLE_ALIASES).toEqual(csharpRoleAliases);
+    expect("super_admin" in BACKEND_ROLE_ALIASES).toBe(false);
+    expect("tmf_auditor" in BACKEND_ROLE_ALIASES).toBe(false);
+
+    // Reconcile super_admin against auth.js: super_admin persona requires sponsor_admin and normalizes to sponsor_admin -> sponsor_dm (never sysadmin)
+    const superAdminPreset = PERSONA_PRESETS.find(
+      (p: { key: string }) => p.key === "super_admin"
+    );
+    expect(superAdminPreset?.requires).toEqual(["sponsor_admin"]);
+    expect(normalizeWebRole("super_admin")).toBe("sponsor_admin");
+    expect(AUTH_ROLE_ALIASES.super_admin).toEqual(
+      AUTH_ROLE_ALIASES.sponsor_admin
+    );
+    expect(WEB_PERSONA_ROLE_ALIASES.super_admin).toBe(
+      csharpRoleAliases.sponsor_admin
+    );
+    expect(normalizeBackendRole("super_admin")).toBe("sponsor_dm");
+    expect(normalizeBackendRole("super_admin")).not.toBe("sysadmin");
+
+    // Reconcile tmf_auditor against auth.js: tmf_auditor maps to auditor
+    expect(AUTH_ROLE_ALIASES.tmf_auditor).toEqual(AUTH_ROLE_ALIASES.auditor);
+    expect(WEB_PERSONA_ROLE_ALIASES.tmf_auditor).toBe(
+      csharpRoleAliases.auditor
+    );
+    expect(normalizeBackendRole("tmf_auditor")).toBe("auditor");
+    expect(normalizeBackendRole("TMF Auditor")).toBe("auditor");
+  });
+
   it("offers participant changes to exactly the roles Execution's SubjectAuthority accepts", () => {
     const source = readFileSync(
       join(
@@ -213,7 +375,9 @@ describe("Canvas authority mirror", () => {
       "cra",
       "monitor",
       "auditor",
+      "tmf_auditor",
       "sponsor_admin",
+      "super_admin",
       "admin",
       "sponsor_dm",
       "data_manager",
@@ -239,41 +403,237 @@ describe("Canvas authority mirror", () => {
     }
   });
 
-  it("mirrors separation-of-duties permissions in PermissionMatrix.Execution.cs and PermissionMatrix.Ctms.cs", () => {
-    // site_compliance:activate & ctms_greenlight:certify -> sysadmin, sponsor_dm only
-    for (const role of [
-      "sysadmin",
-      "sponsor_dm",
-      "Data Manager",
-      "Sponsor Admin",
-    ]) {
-      expect(canActivateSite({ rawRoles: [role] }), role).toBe(true);
-      expect(canCertifyGreenlight({ rawRoles: [role] }), role).toBe(true);
-    }
-    for (const role of [
-      "cra",
-      "crc",
-      "Site Investigator",
-      "pharmacist",
-      "auditor",
-      "sponsor_designer",
-    ]) {
-      expect(canActivateSite({ rawRoles: [role] }), role).toBe(false);
-      expect(canCertifyGreenlight({ rawRoles: [role] }), role).toBe(false);
+  it("validates all 29 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
+    const exportedCanNames = Object.keys(authority)
+      .filter(
+        (key) =>
+          /^can[A-Z]/.test(key) &&
+          typeof (authority as Record<string, unknown>)[key] === "function"
+      )
+      .sort();
+
+    const matrixBackedChecks: Array<{
+      name: string;
+      fn: (auth: authority.AuthorityAuth) => boolean;
+      permission: string;
+    }> = [
+      {
+        name: "canSignForms",
+        fn: canSignForms,
+        permission: "ecrf_form:sign",
+      },
+      {
+        name: "canVerifySource",
+        fn: canVerifySource,
+        permission: "sdv:update",
+      },
+      {
+        name: "canActivateSite",
+        fn: canActivateSite,
+        permission: "site_compliance:activate",
+      },
+      {
+        name: "canCertifyGreenlight",
+        fn: canCertifyGreenlight,
+        permission: "ctms_greenlight:certify",
+      },
+      {
+        name: "canManageMilestones",
+        fn: canManageMilestones,
+        permission: "ctms_site_milestone:update",
+      },
+      {
+        name: "canManageSiteMilestones",
+        fn: canManageSiteMilestones,
+        permission: "ctms_site_milestone:update",
+      },
+      {
+        name: "canScheduleMonitoringVisits",
+        fn: canScheduleMonitoringVisits,
+        permission: "ctms_monitoring_visit:create",
+      },
+      {
+        name: "canManageMonitoringVisits",
+        fn: canManageMonitoringVisits,
+        permission: "ctms_monitoring_visit:create",
+      },
+      {
+        name: "canCompleteMonitoringVisits",
+        fn: canCompleteMonitoringVisits,
+        permission: "ctms_monitoring_visit:update",
+      },
+      {
+        name: "canSignOffMonitoringVisits",
+        fn: canSignOffMonitoringVisits,
+        permission: "ctms_monitoring_visit:sign_off",
+      },
+      {
+        name: "canSignOffMonitoringVisit",
+        fn: canSignOffMonitoringVisit,
+        permission: "ctms_monitoring_visit:sign_off",
+      },
+      {
+        name: "canManageDoa",
+        fn: canManageDoa,
+        permission: "ctms_doa:assign",
+      },
+      {
+        name: "canSignOffDoa",
+        fn: canSignOffDoa,
+        permission: "ctms_doa:sign_off",
+      },
+      {
+        name: "canReconcileIpKits",
+        fn: canReconcileIpKits,
+        permission: "rtsm_supply:write",
+      },
+      {
+        name: "canSeedIpKits",
+        fn: canSeedIpKits,
+        permission: "ip_kit_inventory:seed",
+      },
+      {
+        name: "canRecordChainOfCustody",
+        fn: canRecordChainOfCustody,
+        permission: "cgt_chain_of_custody:write",
+      },
+      {
+        name: "canReadRandomizationSchemes",
+        fn: canReadRandomizationSchemes,
+        permission: "randomization_scheme:read",
+      },
+      {
+        name: "canReadEtmf",
+        fn: canReadEtmf,
+        permission: "etmf_document:read",
+      },
+      {
+        name: "canStageEtmfQc",
+        fn: canStageEtmfQc,
+        permission: "etmf_document:create",
+      },
+      {
+        name: "canTagEtmf",
+        fn: canTagEtmf,
+        permission: "etmf_document:tag",
+      },
+      {
+        name: "canReviewEtmfQc",
+        fn: canReviewEtmfQc,
+        permission: "etmf_document:transition_clinical_qc",
+      },
+      {
+        name: "canExportEtmf",
+        fn: canExportEtmf,
+        permission: "etmf_document:export",
+      },
+      {
+        name: "canAssignTrainingCurriculum",
+        fn: canAssignTrainingCurriculum,
+        permission: "training_curriculum:assign",
+      },
+      {
+        name: "canSignTrainingDelegations",
+        fn: canSignTrainingDelegations,
+        permission: "delegation_log:sign",
+      },
+    ];
+
+    const serviceBackedChecks: Array<{
+      name: string;
+      fn: (auth: authority.AuthorityAuth) => boolean;
+      allowedCanonicalRoles: readonly string[];
+    }> = [
+      {
+        name: "canManageParticipants",
+        fn: canManageParticipants,
+        allowedCanonicalRoles: [
+          "investigator",
+          "principal_investigator",
+          "lead_investigator",
+          "crc",
+        ],
+      },
+      {
+        name: "canManageQueries",
+        fn: canManageQueries,
+        allowedCanonicalRoles: ["cra", "monitor", "sponsor_dm"],
+      },
+      {
+        name: "canAnswerQueries",
+        fn: canAnswerQueries,
+        allowedCanonicalRoles: [
+          "crc",
+          "investigator",
+          "principal_investigator",
+          "lead_investigator",
+          "authorized_er_physician",
+        ],
+      },
+      {
+        name: "canManageRulePacks",
+        fn: canManageRulePacks,
+        allowedCanonicalRoles: ["sponsor_designer", "sponsor_dm", "sysadmin"],
+      },
+      {
+        name: "canCorrectObservations",
+        fn: canCorrectObservations,
+        allowedCanonicalRoles: [
+          "crc",
+          "investigator",
+          "principal_investigator",
+          "lead_investigator",
+          "authorized_er_physician",
+          "sponsor_dm",
+        ],
+      },
+    ];
+
+    const testedNames = [
+      ...matrixBackedChecks.map((c) => c.name),
+      ...serviceBackedChecks.map((c) => c.name),
+    ].sort();
+    expect(exportedCanNames).toHaveLength(29);
+    expect(testedNames).toEqual(exportedCanNames);
+
+    // Verify all 24 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
+    for (const { name, fn, permission } of matrixBackedChecks) {
+      const grantedSet = new Set(csharpPermissionRoles[permission] ?? []);
+      expect(grantedSet.size, `${name} (${permission})`).toBeGreaterThan(0);
+      for (const role of CANONICAL_TEST_ROLES) {
+        expect(fn({ rawRoles: [role] }), `${name} with ${role}`).toBe(
+          grantedSet.has(role)
+        );
+      }
+      // Verify all RoleNormalization aliases resolve identically to their canonical target
+      for (const [alias, canonical] of Object.entries(csharpRoleAliases)) {
+        expect(
+          fn({ rawRoles: [alias] }),
+          `${name} with alias '${alias}' -> '${canonical}'`
+        ).toBe(grantedSet.has(canonical));
+      }
     }
 
-    // ctms_doa:sign_off -> sysadmin, investigator variants only (never CRC or Data Manager)
-    for (const role of [
-      "sysadmin",
-      "investigator",
-      "Site Investigator",
-      "Principal Investigator",
-    ]) {
-      expect(canSignOffDoa({ rawRoles: [role] }), role).toBe(true);
+    // Verify the 5 Execution/Kernel service-backed helpers across every canonical role
+    for (const { name, fn, allowedCanonicalRoles } of serviceBackedChecks) {
+      const allowedSet = new Set(allowedCanonicalRoles);
+      for (const role of CANONICAL_TEST_ROLES) {
+        expect(fn({ rawRoles: [role] }), `${name} with ${role}`).toBe(
+          allowedSet.has(role)
+        );
+      }
     }
-    for (const role of ["crc", "cra", "Data Manager", "Sponsor Admin"]) {
-      expect(canSignOffDoa({ rawRoles: [role] }), role).toBe(false);
-    }
+
+    // Explicitly verify super_admin (sponsor_dm, NOT sysadmin) and tmf_auditor (auditor) across critical gates
+    expect(canActivateSite({ rawRoles: ["super_admin"] })).toBe(true);
+    expect(canCertifyGreenlight({ rawRoles: ["super_admin"] })).toBe(true);
+    expect(canSignOffDoa({ rawRoles: ["super_admin"] })).toBe(false);
+    expect(canSignOffDoa({ rawRoles: ["sysadmin"] })).toBe(true);
+    expect(canReadRandomizationSchemes({ rawRoles: ["tmf_auditor"] })).toBe(
+      true
+    );
+    expect(canStageEtmfQc({ rawRoles: ["tmf_auditor"] })).toBe(false);
+    expect(canReviewEtmfQc({ rawRoles: ["tmf_auditor"] })).toBe(false);
 
     // rtsm_supply -> pharmacist only
     expect(canReconcileIpKits({ rawRoles: ["pharmacist"] })).toBe(true);

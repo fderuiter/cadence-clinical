@@ -1382,7 +1382,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         Write("eslint.config.mjs", "export default [];\n");
         Write(".claude/skills/run-cadence/driver.mjs", "export const ok = true;\n");
         Write("packages/usdm-schemas/src/index.ts", "export const version = 4;\n");
-        Write("apps/web/src/stores/clinical.ts", "export const store = 1;\n");
+        Write("apps/web/src/stores/demo/clinicalEcrf.ts", "export const store = 1;\n");
         string dupLog = Path.Combine(_tempDir, "dup-check.log");
         Write("scripts/check_duplicate_identifiers.js", $"require('node:fs').writeFileSync({System.Text.Json.JsonSerializer.Serialize(dupLog)}, 'checked');\n");
         Write("docs/README.md", "# Ignored by EslintExtensions\n");
@@ -1416,14 +1416,14 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         FrontendQualityGateService.CheckEslint(_tempDir, getEnvironmentVariable: k => stubEnv.GetValueOrDefault(k))
             .Should().Be(0);
 
-        File.Exists(dupLog).Should().BeTrue("unscoped CheckEslint must run check_duplicate_identifiers.js when clinical.ts is tracked");
+        File.Exists(dupLog).Should().BeTrue("unscoped CheckEslint must run check_duplicate_identifiers.js when clinicalEcrf.ts is tracked");
         string captured = File.ReadAllText(argsCapture);
         captured.Should().StartWith("exec eslint --no-warn-ignored --max-warnings 0 -- ");
         captured.Should().NotContain("-r lint");
         captured.Should().Contain(".claude/skills/run-cadence/driver.mjs");
         captured.Should().Contain("eslint.config.mjs");
         captured.Should().Contain("packages/usdm-schemas/src/index.ts");
-        captured.Should().Contain("apps/web/src/stores/clinical.ts");
+        captured.Should().Contain("apps/web/src/stores/demo/clinicalEcrf.ts");
         captured.Should().NotContain("untracked-scratch.js");
         captured.Should().NotContain("docs/README.md");
 
@@ -1468,6 +1468,79 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.WriteAllText(failMarker, "1");
         ApiClientValidatorService.ValidateApiClients(_tempDir, k => stubEnv.GetValueOrDefault(k))
             .Should().Be(1, "workspace vue-tsc/tsc typecheck failure must fail api-clients gate");
+    }
+
+    [Fact]
+    public void FrontendEslintGate_ValidatesDuplicateIdentifiersInStagedClinicalEcrfSlice()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
+        Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
+        string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
+        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
+
+        string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
+        Directory.CreateDirectory(stubBin);
+        string pnpmStub = Path.Combine(stubBin, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\ncase \" $* \" in\n  *\" --stdin \"*) cat >/dev/null || true ;;\nesac\nexit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        InitGitRepo();
+        const string slicePath = "apps/web/src/stores/demo/clinicalEcrf.ts";
+        const string cleanSlice =
+            """
+            export function createClinicalEcrfState() {
+              return {
+                ecrfFields: [
+                  { id: "vssbp", label: "Systolic BP", type: "number" },
+                  { id: "vsdbp", label: "Diastolic BP", type: "number" },
+                ],
+              };
+            }
+            """;
+        const string duplicateSlice =
+            """
+            export function createClinicalEcrfState() {
+              return {
+                ecrfFields: [
+                  { id: "vssbp", label: "Systolic BP", type: "number" },
+                  { id: "vssbp", label: "Duplicate Systolic BP", type: "number" },
+                ],
+              };
+            }
+            """;
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{stubBin}{Path.PathSeparator}/tmp/bin{Path.PathSeparator}{originalPath}");
+
+            Write(slicePath, cleanSlice);
+            RunGit("add", slicePath);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(0);
+
+            Write(slicePath, duplicateSlice);
+            RunGit("add", slicePath);
+            // Even when the working tree looks clean, the staged git index duplicate must fail closed.
+            Write(slicePath, cleanSlice);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+            if (Directory.Exists(symlinkNodeModules))
+            {
+                Directory.Delete(symlinkNodeModules, recursive: false);
+            }
+        }
     }
 
     [Fact]
