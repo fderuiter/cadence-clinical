@@ -1,7 +1,9 @@
 // 3. My Compliance: rate, counts and survey history.
+import { createSrOnlyActionButton } from "ui";
 import { fetchCompliance, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import { demoNowMs, isDemoModeActive } from "../utils/demoMode.js";
+import { openCompliancePeek } from "./peek.js";
 
 // 3. My Compliance
 export function renderCompliance() {
@@ -106,6 +108,7 @@ export function renderCompliance() {
             ? "OVERDUE"
             : "PENDING";
       return {
+        id: item.id,
         instrument_id: item.instrument_id,
         instrument_name: item.instrument_name,
         due_at: item.due_at,
@@ -143,7 +146,7 @@ export function renderCompliance() {
     .sort((a, b) => new Date(b.due_at) - new Date(a.due_at));
 
   tbody.innerHTML = sorted
-    .map((item) => {
+    .map((item, rowIndex) => {
       const scheduledText = item.due_at
         ? new Date(item.due_at).toLocaleDateString()
         : "—";
@@ -173,17 +176,52 @@ export function renderCompliance() {
         item.instrument_name ||
         (state.instruments && state.instruments[item.instrument_id]?.name) ||
         "Assigned Instrument";
+      const peekBtnHtml = createSrOnlyActionButton({
+        id: `btn-peek-compliance-${rowIndex}`,
+        label: "View Details",
+        srContext: instName,
+        className: "btn btn-secondary btn-peek-compliance",
+        dataId: String(rowIndex),
+      });
 
       return `
-        <tr>
-          <td><strong>${instName}</strong></td>
-          <td>${scheduledText}</td>
-          <td>${submittedText}</td>
+        <tr id="compliance-row-${rowIndex}" data-row-index="${rowIndex}" style="cursor: pointer;">
+          <td>
+            <div class="compliance-row-title">
+              <strong>${instName}</strong>
+              ${peekBtnHtml}
+            </div>
+          </td>
+          <td class="tabular-nums">${scheduledText}</td>
+          <td class="tabular-nums">${submittedText}</td>
           <td><span class="status-pill ${pillClass}">${statusLabel}</span></td>
         </tr>
       `;
     })
     .join("");
+
+  tbody.querySelectorAll(".btn-peek-compliance").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const rowIdx = Number(btn.getAttribute("data-id"));
+      const target = Number.isFinite(rowIdx) ? sorted[rowIdx] : null;
+      if (target) {
+        openCompliancePeek(target, rowIdx, btn);
+      }
+    });
+  });
+
+  tbody.querySelectorAll("tr[data-row-index]").forEach((rowEl) => {
+    rowEl.addEventListener("click", (event) => {
+      if (event.target?.closest?.("button, a")) return;
+      const rowIdx = Number(rowEl.getAttribute("data-row-index"));
+      const target = Number.isFinite(rowIdx) ? sorted[rowIdx] : null;
+      const triggerBtn = rowEl.querySelector(".btn-peek-compliance") || rowEl;
+      if (target) {
+        openCompliancePeek(target, rowIdx, triggerBtn);
+      }
+    });
+  });
 }
 
 // Loads the compliance overview from the gateway.

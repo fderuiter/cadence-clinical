@@ -115,16 +115,25 @@ public sealed record GitSynthesizedMergeResult(
     GitMergeTreeResult MergeTree,
     string? MergeCommitSha);
 
+/// <summary>Outcome of synthesizing an ephemeral commit from uncommitted working-tree and index changes.</summary>
+public sealed record GitSnapshotCommitResult(
+    bool Succeeded,
+    string? HeadCommit,
+    string? TreeOid,
+    string? SnapshotCommitSha,
+    string? ErrorMessage);
+
 /// <summary>Disposable detached Git worktree allocated under <see cref="Path.GetTempPath"/>.</summary>
 public sealed class DetachedGitWorktree : IDisposable
 {
     private bool _disposed;
 
-    public DetachedGitWorktree(string originRepoRoot, string worktreePath, string commitSha)
+    public DetachedGitWorktree(string originRepoRoot, string worktreePath, string commitSha, string? pinnedRef = null)
     {
         OriginRepoRoot = originRepoRoot;
         WorktreePath = worktreePath;
         CommitSha = commitSha;
+        PinnedRef = string.IsNullOrWhiteSpace(pinnedRef) ? null : pinnedRef.Trim();
     }
 
     /// <summary>The primary repository root that owns the shared Git object store and refs.</summary>
@@ -135,6 +144,9 @@ public sealed class DetachedGitWorktree : IDisposable
 
     /// <summary>The commit SHA checked out in detached <c>HEAD</c> mode.</summary>
     public string CommitSha { get; }
+
+    /// <summary>Temporary <c>refs/cadence-ci/&lt;runId&gt;</c> ref pinning synthesized commits while the worktree is active.</summary>
+    public string? PinnedRef { get; }
 
     public void Dispose()
     {
@@ -164,6 +176,7 @@ public sealed class DetachedGitWorktree : IDisposable
         }
 
         _ = GitRevisionScopeService.RunGitCaptured(OriginRepoRoot, "worktree", "prune");
+        GitRevisionScopeService.DeleteTemporaryRef(OriginRepoRoot, PinnedRef);
     }
 }
 
@@ -186,6 +199,12 @@ public static class GitRevisionScopeService
 
     /// <summary>40-zero Git object ID emitted by GitHub Actions as <c>github.event.before</c> on tag and newly created branch pushes.</summary>
     public const string AllZeroSha = "0000000000000000000000000000000000000000";
+
+    /// <summary>Ref namespace used to pin synthesized snapshot and merge commits during an active <c>cadence ci</c> run.</summary>
+    public const string TemporaryRefPrefix = "refs/cadence-ci/";
+
+    /// <summary>Creates a unique temporary ref name under <see cref="TemporaryRefPrefix"/>.</summary>
+    public static string CreateTemporaryRefName() => $"{TemporaryRefPrefix}{Guid.NewGuid():N}";
 
     /// <summary>Normalizes a nullable <c>--base</c> option to <see cref="DefaultBaseRef"/> when omitted.</summary>
     public static string NormalizeBaseRef(string? baseRef) =>
@@ -657,8 +676,9 @@ public static class GitRevisionScopeService
     }
 
     /// <summary>
-    /// Splits a remote-tracking base ref (such as <c>origin/main</c> or <c>refs/remotes/origin/release/1.0</c>) into
-    /// its remote name, remote branch name, and local tracking ref (<c>refs/remotes/&lt;remote&gt;/&lt;branch&gt;</c>).
+    /// Splits a remote-tracking base ref (such as <c>origin/main</c>, <c>main</c>, or <c>refs/remotes/origin/release/1.0</c>)
+    /// into its remote name, remote branch name, and local tracking ref (<c>refs/remotes/&lt;remote&gt;/&lt;branch&gt;</c>).
+    /// Returns <c>false</c> for commit SHAs, relative revisions (such as <c>HEAD~1</c>), and tag references.
     /// </summary>
     public static bool TrySplitRemoteRef(
         string repoRoot,
@@ -671,42 +691,68 @@ public static class GitRevisionScopeService
         remoteBranch = string.Empty;
         trackingRef = string.Empty;
 
-        string normalized = NormalizeBaseRef(baseRef);
+        string rawNormalized = NormalizeBaseRef(baseRef);
+        if (IsLocalNonBranchRevision(repoRoot, rawNormalized))
+        {
+            return false;
+        }
+
+        bool explicitRemoteRef = false;
+        bool explicitHeadRef = false;
+        string normalized = rawNormalized;
         if (normalized.StartsWith("refs/remotes/", StringComparison.Ordinal))
         {
+            explicitRemoteRef = true;
             normalized = normalized["refs/remotes/".Length..];
         }
         else if (normalized.StartsWith("refs/heads/", StringComparison.Ordinal))
         {
+            explicitHeadRef = true;
             normalized = normalized["refs/heads/".Length..];
+        }
+
+        if (normalized.Length == 0)
+        {
+            return false;
         }
 
         var remotes = HasGitRepository(repoRoot)
             ? (RunGitLines(repoRoot, "remote") ?? []).OrderByDescending(r => r.Length).ToList()
             : [];
 
-        foreach (string configuredRemote in remotes)
+        if (!explicitHeadRef)
         {
-            string prefix = configuredRemote + "/";
-            if (normalized.StartsWith(prefix, StringComparison.Ordinal) && normalized.Length > prefix.Length)
+            foreach (string configuredRemote in remotes)
             {
-                remoteName = configuredRemote;
-                remoteBranch = normalized[prefix.Length..];
-                trackingRef = $"refs/remotes/{remoteName}/{remoteBranch}";
-                return true;
+                string prefix = configuredRemote + "/";
+                if (normalized.StartsWith(prefix, StringComparison.Ordinal) && normalized.Length > prefix.Length)
+                {
+                    remoteName = configuredRemote;
+                    remoteBranch = normalized[prefix.Length..];
+                    trackingRef = $"refs/remotes/{remoteName}/{remoteBranch}";
+                    return true;
+                }
+            }
+
+            int slashIndex = normalized.IndexOf('/', StringComparison.Ordinal);
+            if (slashIndex > 0 && slashIndex < normalized.Length - 1)
+            {
+                bool matchesBranchOnOrigin = !explicitRemoteRef
+                    && remotes.Contains("origin", StringComparer.Ordinal)
+                    && HasGitRepository(repoRoot)
+                    && (RunGitZeroExit(repoRoot, "show-ref", "--verify", "--quiet", $"refs/heads/{normalized}")
+                        || RunGitZeroExit(repoRoot, "show-ref", "--verify", "--quiet", $"refs/remotes/origin/{normalized}"));
+                if (!matchesBranchOnOrigin)
+                {
+                    remoteName = normalized[..slashIndex];
+                    remoteBranch = normalized[(slashIndex + 1)..];
+                    trackingRef = $"refs/remotes/{remoteName}/{remoteBranch}";
+                    return true;
+                }
             }
         }
 
-        int slashIndex = normalized.IndexOf('/', StringComparison.Ordinal);
-        if (slashIndex > 0 && slashIndex < normalized.Length - 1)
-        {
-            remoteName = normalized[..slashIndex];
-            remoteBranch = normalized[(slashIndex + 1)..];
-            trackingRef = $"refs/remotes/{remoteName}/{remoteBranch}";
-            return true;
-        }
-
-        if (remotes.Contains("origin", StringComparer.Ordinal) && normalized.Length > 0)
+        if (remotes.Contains("origin", StringComparer.Ordinal))
         {
             remoteName = "origin";
             remoteBranch = normalized;
@@ -718,8 +764,9 @@ public static class GitRevisionScopeService
     }
 
     /// <summary>
-    /// Fetches the remote branch backing <paramref name="baseRef"/> into its local remote-tracking ref without tags.
-    /// Fails closed when <paramref name="repoRoot"/> is not a Git repository, no remote can be resolved, or <c>git fetch</c> fails.
+    /// Fetches the remote branch backing <paramref name="baseRef"/> into its local remote-tracking ref without tags, or resolves
+    /// commit SHAs, relative revisions (<c>HEAD~1</c>), and local tag refs directly without invoking <c>git fetch</c>.
+    /// Fails closed when <paramref name="repoRoot"/> is not a Git repository, the revision/remote cannot be resolved, or <c>git fetch</c> fails.
     /// </summary>
     public static GitFetchResult FetchBaseRef(string repoRoot, string? baseRef = null)
     {
@@ -727,6 +774,30 @@ public static class GitRevisionScopeService
         if (!HasGitRepository(repoRoot))
         {
             return new GitFetchResult(false, string.Empty, string.Empty, effectiveBaseRef, $"'{repoRoot}' is not a Git repository.");
+        }
+
+        if (IsLocalNonBranchRevision(repoRoot, effectiveBaseRef))
+        {
+            string? localCommit = TryResolveCommitSha(repoRoot, effectiveBaseRef);
+            if (string.IsNullOrEmpty(localCommit))
+            {
+                return new GitFetchResult(
+                    false,
+                    string.Empty,
+                    string.Empty,
+                    effectiveBaseRef,
+                    $"Cannot resolve local Git revision '{effectiveBaseRef}' in '{repoRoot}'.");
+            }
+
+            string resolvedRef = localCommit;
+            if (IsTagReference(repoRoot, effectiveBaseRef))
+            {
+                resolvedRef = effectiveBaseRef.StartsWith("refs/tags/", StringComparison.Ordinal)
+                    ? effectiveBaseRef
+                    : $"refs/tags/{effectiveBaseRef}";
+            }
+
+            return new GitFetchResult(true, string.Empty, string.Empty, resolvedRef, string.Empty);
         }
 
         if (!TrySplitRemoteRef(repoRoot, effectiveBaseRef, out string remoteName, out string remoteBranch, out string trackingRef))
@@ -919,14 +990,101 @@ public static class GitRevisionScopeService
     }
 
     /// <summary>
+    /// Copies <c>.git/index</c> to a temporary <c>GIT_INDEX_FILE</c>, stages all working-tree changes via <c>git add -A</c>,
+    /// and synthesizes an ephemeral snapshot commit on <paramref name="head"/> without mutating the caller checkout or index.
+    /// </summary>
+    public static GitSnapshotCommitResult SynthesizeWorkingTreeSnapshot(
+        string repoRoot,
+        string? pinnedRef = null,
+        string head = "HEAD")
+    {
+        if (!HasGitRepository(repoRoot))
+        {
+            return new GitSnapshotCommitResult(false, null, null, null, $"'{repoRoot}' is not a Git repository.");
+        }
+
+        string? headCommit = TryResolveCommitSha(repoRoot, head);
+        if (string.IsNullOrEmpty(headCommit))
+        {
+            return new GitSnapshotCommitResult(false, null, null, null, $"Cannot resolve '{head}' commit in '{repoRoot}'.");
+        }
+
+        string? gitIndexPath = RunGitSingleLine(repoRoot, "rev-parse", "--git-path", "index");
+        string sourceIndexPath;
+        if (string.IsNullOrWhiteSpace(gitIndexPath))
+        {
+            sourceIndexPath = Path.Combine(repoRoot, ".git", "index");
+        }
+        else
+        {
+            sourceIndexPath = Path.IsPathRooted(gitIndexPath)
+                ? gitIndexPath
+                : Path.Combine(repoRoot, gitIndexPath);
+        }
+
+        string tempIndexPath = Path.Combine(Path.GetTempPath(), $"cadence-ci-index-{Guid.NewGuid():N}");
+        var indexEnv = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["GIT_INDEX_FILE"] = tempIndexPath,
+        };
+
+        try
+        {
+            if (File.Exists(sourceIndexPath))
+            {
+                File.Copy(sourceIndexPath, tempIndexPath, overwrite: true);
+            }
+
+            var (addExit, addOut, addErr) = RunGitCapturedWithEnv(repoRoot, indexEnv, "add", "-A");
+            if (addExit != 0)
+            {
+                string detail = FormatGitFailure("git add -A", addExit, addOut, addErr);
+                return new GitSnapshotCommitResult(false, headCommit, null, null, detail);
+            }
+
+            var (treeExit, treeOut, treeErr) = RunGitCapturedWithEnv(repoRoot, indexEnv, "write-tree");
+            string? treeOid = FirstNonEmptyLine(treeOut);
+            if (treeExit != 0 || string.IsNullOrWhiteSpace(treeOid))
+            {
+                string detail = FormatGitFailure("git write-tree", treeExit, treeOut, treeErr);
+                return new GitSnapshotCommitResult(false, headCommit, null, null, detail);
+            }
+
+            var (commitExit, snapshotSha, commitErr) = CreateCommitObject(
+                repoRoot,
+                treeOid,
+                "Synthesize uncommitted working-tree snapshot",
+                headCommit);
+            if (commitExit != 0 || string.IsNullOrWhiteSpace(snapshotSha))
+            {
+                return new GitSnapshotCommitResult(false, headCommit, treeOid, null, commitErr);
+            }
+
+            if (!string.IsNullOrWhiteSpace(pinnedRef) && !TryPinTemporaryRef(repoRoot, pinnedRef, snapshotSha, out string? pinError))
+            {
+                return new GitSnapshotCommitResult(false, headCommit, treeOid, null, pinError);
+            }
+
+            return new GitSnapshotCommitResult(true, headCommit, treeOid, snapshotSha, null);
+        }
+        finally
+        {
+            DeleteFileBestEffort(tempIndexPath);
+            DeleteFileBestEffort(tempIndexPath + ".lock");
+        }
+    }
+
+    /// <summary>
     /// Synthesizes a merged commit object via <c>git merge-tree --write-tree</c> and <c>git commit-tree</c> when
     /// <paramref name="head"/> is behind <paramref name="baseRef"/>, or reuses <paramref name="head"/> directly when it
-    /// already incorporates <paramref name="baseRef"/>. Leaves refs, index, and working tree untouched.
+    /// already incorporates <paramref name="baseRef"/>. Leaves caller branch refs, index, and working tree untouched,
+    /// optionally pinning the resulting commit under <paramref name="pinnedRef"/>.
     /// </summary>
     public static GitSynthesizedMergeResult SynthesizeMergedCommit(
         string repoRoot,
         string? baseRef = null,
-        string head = "HEAD")
+        string head = "HEAD",
+        string? pinnedRef = null)
     {
         var preview = PreviewMergeTree(repoRoot, baseRef, head);
         if (!preview.Succeeded ||
@@ -937,52 +1095,86 @@ public static class GitRevisionScopeService
             return new GitSynthesizedMergeResult(preview, null);
         }
 
+        string commitSha;
         if (preview.BehindCount == 0 || string.Equals(preview.BaseCommit, preview.HeadCommit, StringComparison.Ordinal))
         {
-            return new GitSynthesizedMergeResult(preview, preview.HeadCommit);
+            commitSha = preview.HeadCommit;
+        }
+        else
+        {
+            var (exitCode, createdSha, errorDetail) = CreateCommitObject(
+                repoRoot,
+                preview.TreeOid,
+                $"Synthesize merged CI tree ({preview.EffectiveBaseRef} + {head})",
+                preview.BaseCommit,
+                preview.HeadCommit);
+            if (exitCode != 0 || string.IsNullOrWhiteSpace(createdSha))
+            {
+                return new GitSynthesizedMergeResult(preview with { Succeeded = false, ErrorMessage = errorDetail }, null);
+            }
+
+            commitSha = createdSha;
         }
 
-        var (exitCode, stdout, stderr) = RunGitCaptured(
-            repoRoot,
-            "-c",
-            "user.name=Cadence CI",
-            "-c",
-            "user.email=ci@example.invalid", // deid-ignore: synthetic local git commit-tree identity
-            "-c",
-            "commit.gpgsign=false",
-            "commit-tree",
-            preview.TreeOid,
-            "-p",
-            preview.BaseCommit,
-            "-p",
-            preview.HeadCommit,
-            "-m",
-            $"Synthesize merged CI tree ({preview.EffectiveBaseRef} + {head})");
-
-        string? commitSha = stdout
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .FirstOrDefault();
-
-        if (exitCode != 0 || string.IsNullOrWhiteSpace(commitSha))
+        if (!string.IsNullOrWhiteSpace(pinnedRef) && !TryPinTemporaryRef(repoRoot, pinnedRef, commitSha, out string? pinError))
         {
-            string detail = string.IsNullOrWhiteSpace(stderr)
-                ? $"git commit-tree exited with code {exitCode}."
-                : stderr.Trim();
-            return new GitSynthesizedMergeResult(preview with { Succeeded = false, ErrorMessage = detail }, null);
+            return new GitSynthesizedMergeResult(preview with { Succeeded = false, ErrorMessage = pinError }, null);
         }
 
         return new GitSynthesizedMergeResult(preview, commitSha);
     }
 
     /// <summary>
-    /// Creates a detached temporary Git worktree under <see cref="Path.GetTempPath"/> checked out at <paramref name="commitSha"/>.
+    /// Pins <paramref name="commitSha"/> under <paramref name="refName"/> with <c>core.logAllRefUpdates=false</c> so synthesized
+    /// commits stay reachable without creating reflog entries.
+    /// </summary>
+    public static bool TryPinTemporaryRef(string repoRoot, string refName, string commitSha, out string? errorMessage)
+    {
+        errorMessage = null;
+        var (exitCode, stdout, stderr) = RunGitCaptured(
+            repoRoot,
+            "-c",
+            "core.logAllRefUpdates=false",
+            "update-ref",
+            refName,
+            commitSha);
+        if (exitCode == 0)
+        {
+            return true;
+        }
+
+        errorMessage = FormatGitFailure($"git update-ref {refName}", exitCode, stdout, stderr);
+        return false;
+    }
+
+    /// <summary>Deletes a temporary Git ref with <c>core.logAllRefUpdates=false</c> when present.</summary>
+    public static void DeleteTemporaryRef(string repoRoot, string? refName)
+    {
+        if (string.IsNullOrWhiteSpace(refName) || !HasGitRepository(repoRoot))
+        {
+            return;
+        }
+
+        _ = RunGitCaptured(
+            repoRoot,
+            "-c",
+            "core.logAllRefUpdates=false",
+            "update-ref",
+            "-d",
+            refName.Trim());
+    }
+
+    /// <summary>
+    /// Creates a detached temporary Git worktree under <see cref="Path.GetTempPath"/> checked out at <paramref name="commitSha"/>
+    /// and pins <paramref name="commitSha"/> under <c>refs/cadence-ci/&lt;runId&gt;</c> until <see cref="DetachedGitWorktree.Dispose"/> runs.
     /// </summary>
     public static bool TryCreateDetachedWorktree(
         string repoRoot,
         string commitSha,
         out DetachedGitWorktree? worktree,
         out string? errorMessage,
-        string directoryPrefix = "cadence-ci-worktree")
+        string directoryPrefix = "cadence-ci-worktree",
+        string? pinnedRef = null)
     {
         worktree = null;
         errorMessage = null;
@@ -999,7 +1191,16 @@ public static class GitRevisionScopeService
             return false;
         }
 
-        string tempWorktreePath = Path.Combine(Path.GetTempPath(), $"{directoryPrefix}-{Guid.NewGuid():N}");
+        string runId = $"{Guid.NewGuid():N}";
+        string effectivePinnedRef = string.IsNullOrWhiteSpace(pinnedRef)
+            ? $"{TemporaryRefPrefix}{runId}"
+            : pinnedRef.Trim();
+        if (!TryPinTemporaryRef(repoRoot, effectivePinnedRef, commitSha, out errorMessage))
+        {
+            return false;
+        }
+
+        string tempWorktreePath = Path.Combine(Path.GetTempPath(), $"{directoryPrefix}-{runId}");
         var (exitCode, stdout, stderr) = RunGitCaptured(
             repoRoot,
             "worktree",
@@ -1010,18 +1211,8 @@ public static class GitRevisionScopeService
 
         if (exitCode != 0)
         {
-            if (!string.IsNullOrWhiteSpace(stderr))
-            {
-                errorMessage = stderr.Trim();
-            }
-            else if (!string.IsNullOrWhiteSpace(stdout))
-            {
-                errorMessage = stdout.Trim();
-            }
-            else
-            {
-                errorMessage = $"git worktree add exited with code {exitCode}.";
-            }
+            errorMessage = FormatGitFailure("git worktree add", exitCode, stdout, stderr);
+            DeleteTemporaryRef(repoRoot, effectivePinnedRef);
 
             if (Directory.Exists(tempWorktreePath))
             {
@@ -1038,7 +1229,7 @@ public static class GitRevisionScopeService
             return false;
         }
 
-        worktree = new DetachedGitWorktree(repoRoot, tempWorktreePath, commitSha);
+        worktree = new DetachedGitWorktree(repoRoot, tempWorktreePath, commitSha, effectivePinnedRef);
         return true;
     }
 
@@ -1221,6 +1412,30 @@ public static class GitRevisionScopeService
                RunGitZeroExit(repoRoot, "show-ref", "--verify", "--quiet", $"refs/tags/{trimmed}");
     }
 
+    /// <summary>Whether <paramref name="revision"/> is a relative, peeled, or special Git revision rather than a branch ref.</summary>
+    public static bool IsRelativeOrSpecialRevision(string? revision)
+    {
+        if (string.IsNullOrWhiteSpace(revision))
+        {
+            return false;
+        }
+
+        string trimmed = revision.Trim();
+        if (trimmed is "HEAD" or "@")
+        {
+            return true;
+        }
+
+        if (trimmed.IndexOfAny(['~', '^', ':']) >= 0 || trimmed.Contains("@{", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return trimmed.StartsWith("refs/", StringComparison.Ordinal)
+            && !trimmed.StartsWith("refs/remotes/", StringComparison.Ordinal)
+            && !trimmed.StartsWith("refs/heads/", StringComparison.Ordinal);
+    }
+
     public static List<string>? RunGitNullTerminated(string repoRoot, params string[] args)
     {
         string? output = RunGitRaw(repoRoot, args);
@@ -1255,7 +1470,13 @@ public static class GitRevisionScopeService
         return exitCode == 0 ? stdout : null;
     }
 
-    public static (int ExitCode, string Stdout, string Stderr) RunGitCaptured(string repoRoot, params string[] args)
+    public static (int ExitCode, string Stdout, string Stderr) RunGitCaptured(string repoRoot, params string[] args) =>
+        RunGitCapturedWithEnv(repoRoot, environment: null, args);
+
+    public static (int ExitCode, string Stdout, string Stderr) RunGitCapturedWithEnv(
+        string repoRoot,
+        IReadOnlyDictionary<string, string>? environment,
+        params string[] args)
     {
         var psi = new ProcessStartInfo("git")
         {
@@ -1265,6 +1486,14 @@ public static class GitRevisionScopeService
             RedirectStandardError = true,
         };
         psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                psi.Environment[key] = value;
+            }
+        }
+
         foreach (string arg in args)
         {
             psi.ArgumentList.Add(arg);
@@ -1287,6 +1516,108 @@ public static class GitRevisionScopeService
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException)
         {
             return (-1, string.Empty, ex.Message);
+        }
+    }
+
+    private static bool IsLocalNonBranchRevision(string repoRoot, string normalized)
+    {
+        if (IsTagReference(repoRoot, normalized) || IsRelativeOrSpecialRevision(normalized))
+        {
+            return true;
+        }
+
+        if (!IsHexRevisionCandidate(normalized))
+        {
+            return false;
+        }
+
+        if (!HasGitRepository(repoRoot))
+        {
+            return normalized.Length is 40 or 64;
+        }
+
+        if (RunGitZeroExit(repoRoot, "show-ref", "--verify", "--quiet", $"refs/heads/{normalized}")
+            || RunGitZeroExit(repoRoot, "show-ref", "--verify", "--quiet", $"refs/remotes/origin/{normalized}"))
+        {
+            return false;
+        }
+
+        return normalized.Length is 40 or 64 || TryResolveCommitSha(repoRoot, normalized) is not null;
+    }
+
+    private static bool IsHexRevisionCandidate(string value) =>
+        value.Length is >= 4 and <= 64 && !IsAllZeros(value) && value.All(Uri.IsHexDigit);
+
+    private static (int ExitCode, string? CommitSha, string ErrorMessage) CreateCommitObject(
+        string repoRoot,
+        string treeOid,
+        string message,
+        params string[] parentCommits)
+    {
+        var args = new List<string>
+        {
+            "-c",
+            "user.name=Cadence CI",
+            "-c",
+            "user.email=ci@example.invalid", // deid-ignore: synthetic local git commit-tree identity
+            "-c",
+            "commit.gpgsign=false",
+            "commit-tree",
+            treeOid,
+        };
+        foreach (string parent in parentCommits)
+        {
+            args.Add("-p");
+            args.Add(parent);
+        }
+
+        args.Add("-m");
+        args.Add(message);
+
+        var (exitCode, stdout, stderr) = RunGitCaptured(repoRoot, [.. args]);
+        string? commitSha = FirstNonEmptyLine(stdout);
+        if (exitCode != 0 || string.IsNullOrWhiteSpace(commitSha))
+        {
+            return (exitCode == 0 ? 1 : exitCode, null, FormatGitFailure("git commit-tree", exitCode, stdout, stderr));
+        }
+
+        return (0, commitSha, string.Empty);
+    }
+
+    private static string? FirstNonEmptyLine(string? text) =>
+        text?
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault();
+
+    private static string FormatGitFailure(string commandLabel, int exitCode, string stdout, string stderr)
+    {
+        if (!string.IsNullOrWhiteSpace(stderr))
+        {
+            return stderr.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            return stdout.Trim();
+        }
+
+        return $"{commandLabel} exited with code {exitCode}.";
+    }
+
+    private static void DeleteFileBestEffort(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Best-effort cleanup of temporary index file.
         }
     }
 

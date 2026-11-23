@@ -377,7 +377,11 @@ describe("Session CryptoKey, IndexedDB handle, and submission projection caching
     await refreshSyncViews();
     expect(state.submissions).toHaveLength(1);
 
-    await logout();
+    const guardedLogout = await logout();
+    expect(guardedLogout).toEqual({ signedOut: false, guarded: true });
+    expect(getInMemorySessionKey()).not.toBeNull();
+
+    await logout({ confirmed: true });
     expect(getInMemorySessionKey()).toBeNull();
     expect(state.submissions).toEqual([]);
   });
@@ -392,7 +396,7 @@ describe("Session CryptoKey, IndexedDB handle, and submission projection caching
     };
 
     try {
-      expect(await saveDraft("assign_err", { vssbp: "120" })).toBeNull();
+      expect(await saveDraft("assign_err", { vssbp: "120" })).toBe(false);
       expect(await getDraft("assign_err")).toBeNull();
       expect(await getDraftAssignmentIds("subj_cache_01")).toEqual([]);
       await expect(deleteDraft("assign_err")).resolves.toBeUndefined();

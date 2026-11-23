@@ -15,6 +15,9 @@ async function getNotificationsService() {
 }
 
 function buildDefaultTemplates() {
+  if (!isDemoBuild()) {
+    return [];
+  }
   const leadUsername =
     getDemoPersonaForWorkspace("super_admin")?.username || "designer.lead";
   const subjectCode = DEFAULT_DEMO_PARTICIPANT?.subjectCode || "SUBJ-101-001";
@@ -81,6 +84,9 @@ function getDefaultTemplates() {
 }
 
 function getStorageKey(authStore) {
+  if (!isDemoBuild()) {
+    return "";
+  }
   let store = authStore;
   if (!store) {
     try {
@@ -141,43 +147,40 @@ export const useNotificationsStore = defineStore("notifications", {
       this.error = null;
       this.errorStatus = null;
       try {
-        const authStore = useAuthStore();
-        const storageKey = getStorageKey(authStore);
         const notificationsService = await getNotificationsService();
-        const isMocked =
-          notificationsService.getNotifications &&
-          (notificationsService.getNotifications._isMockFunction ||
-            typeof notificationsService.getNotifications.mock === "object");
-        if (
-          isDemoBuild() &&
-          authStore.isDemoMode &&
-          !authStore.token &&
-          !isMocked
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          let list = [];
-          if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem(storageKey);
-            if (stored) {
-              list = JSON.parse(stored);
+        if (isDemoBuild()) {
+          const authStore = useAuthStore();
+          const storageKey = getStorageKey(authStore);
+          const isMocked =
+            notificationsService.getNotifications &&
+            (notificationsService.getNotifications._isMockFunction ||
+              typeof notificationsService.getNotifications.mock === "object");
+          if (authStore.isDemoMode && !authStore.token && !isMocked) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            let list = [];
+            if (typeof window !== "undefined" && window.localStorage) {
+              const stored = window.localStorage.getItem(storageKey);
+              if (stored) {
+                list = JSON.parse(stored);
+              } else {
+                list = getDefaultTemplates();
+                window.localStorage.setItem(storageKey, JSON.stringify(list));
+              }
             } else {
               list = getDefaultTemplates();
-              window.localStorage.setItem(storageKey, JSON.stringify(list));
             }
-          } else {
-            list = getDefaultTemplates();
-          }
 
-          this.notifications = list.filter((n) => {
-            if (this.filters.category && n.category !== this.filters.category)
-              return false;
-            if (this.filters.priority && n.priority !== this.filters.priority)
-              return false;
-            if (this.filters.status && n.status !== this.filters.status)
-              return false;
-            return true;
-          });
-          return this.notifications;
+            this.notifications = list.filter((n) => {
+              if (this.filters.category && n.category !== this.filters.category)
+                return false;
+              if (this.filters.priority && n.priority !== this.filters.priority)
+                return false;
+              if (this.filters.status && n.status !== this.filters.status)
+                return false;
+              return true;
+            });
+            return this.notifications;
+          }
         }
 
         const data = await notificationsService.getNotifications({
@@ -199,54 +202,53 @@ export const useNotificationsStore = defineStore("notifications", {
       this.error = null;
       this.errorStatus = null;
       try {
-        const authStore = useAuthStore();
-        const storageKey = getStorageKey(authStore);
         const notificationsService = await getNotificationsService();
-        const isMocked =
-          notificationsService.acknowledgeNotification &&
-          (notificationsService.acknowledgeNotification._isMockFunction ||
-            typeof notificationsService.acknowledgeNotification.mock ===
-              "object");
-        if (
-          isDemoBuild() &&
-          authStore.isDemoMode &&
-          !authStore.token &&
-          !isMocked
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          let list = [];
-          if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem(storageKey);
-            if (stored) {
-              list = JSON.parse(stored);
+        if (isDemoBuild()) {
+          const authStore = useAuthStore();
+          const storageKey = getStorageKey(authStore);
+          const isMocked =
+            notificationsService.acknowledgeNotification &&
+            (notificationsService.acknowledgeNotification._isMockFunction ||
+              typeof notificationsService.acknowledgeNotification.mock ===
+                "object");
+          if (authStore.isDemoMode && !authStore.token && !isMocked) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            let list = [];
+            if (typeof window !== "undefined" && window.localStorage) {
+              const stored = window.localStorage.getItem(storageKey);
+              if (stored) {
+                list = JSON.parse(stored);
+              }
             }
-          }
-          if (list.length === 0) {
-            list = JSON.parse(JSON.stringify(this.notifications));
-          }
+            if (list.length === 0) {
+              list = JSON.parse(JSON.stringify(this.notifications));
+            }
 
-          const index = list.findIndex((n) => n.id === id);
-          if (index === -1) {
-            throw new Error("Notification not found");
-          }
+            const index = list.findIndex((n) => n.id === id);
+            if (index === -1) {
+              throw new Error("Notification not found");
+            }
 
-          const updated = {
-            ...list[index],
-            status: "ACKNOWLEDGED",
-            version_index: (list[index].version_index || 1) + 1,
-            reason_for_change: changeReason,
-          };
-          list[index] = updated;
+            const updated = {
+              ...list[index],
+              status: "ACKNOWLEDGED",
+              version_index: (list[index].version_index || 1) + 1,
+              reason_for_change: changeReason,
+            };
+            list[index] = updated;
 
-          if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem(storageKey, JSON.stringify(list));
-          }
+            if (typeof window !== "undefined" && window.localStorage) {
+              window.localStorage.setItem(storageKey, JSON.stringify(list));
+            }
 
-          const activeIndex = this.notifications.findIndex((n) => n.id === id);
-          if (activeIndex !== -1) {
-            this.notifications[activeIndex] = updated;
+            const activeIndex = this.notifications.findIndex(
+              (n) => n.id === id
+            );
+            if (activeIndex !== -1) {
+              this.notifications[activeIndex] = updated;
+            }
+            return updated;
           }
-          return updated;
         }
 
         const updated = await notificationsService.acknowledgeNotification(id, {
@@ -270,53 +272,53 @@ export const useNotificationsStore = defineStore("notifications", {
       this.error = null;
       this.errorStatus = null;
       try {
-        const authStore = useAuthStore();
-        const storageKey = getStorageKey(authStore);
         const notificationsService = await getNotificationsService();
-        const isMocked =
-          notificationsService.resolveNotification &&
-          (notificationsService.resolveNotification._isMockFunction ||
-            typeof notificationsService.resolveNotification.mock === "object");
-        if (
-          isDemoBuild() &&
-          authStore.isDemoMode &&
-          !authStore.token &&
-          !isMocked
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          let list = [];
-          if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem(storageKey);
-            if (stored) {
-              list = JSON.parse(stored);
+        if (isDemoBuild()) {
+          const authStore = useAuthStore();
+          const storageKey = getStorageKey(authStore);
+          const isMocked =
+            notificationsService.resolveNotification &&
+            (notificationsService.resolveNotification._isMockFunction ||
+              typeof notificationsService.resolveNotification.mock ===
+                "object");
+          if (authStore.isDemoMode && !authStore.token && !isMocked) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            let list = [];
+            if (typeof window !== "undefined" && window.localStorage) {
+              const stored = window.localStorage.getItem(storageKey);
+              if (stored) {
+                list = JSON.parse(stored);
+              }
             }
-          }
-          if (list.length === 0) {
-            list = JSON.parse(JSON.stringify(this.notifications));
-          }
+            if (list.length === 0) {
+              list = JSON.parse(JSON.stringify(this.notifications));
+            }
 
-          const index = list.findIndex((n) => n.id === id);
-          if (index === -1) {
-            throw new Error("Notification not found");
-          }
+            const index = list.findIndex((n) => n.id === id);
+            if (index === -1) {
+              throw new Error("Notification not found");
+            }
 
-          const updated = {
-            ...list[index],
-            status: "RESOLVED",
-            version_index: (list[index].version_index || 1) + 1,
-            reason_for_change: changeReason,
-          };
-          list[index] = updated;
+            const updated = {
+              ...list[index],
+              status: "RESOLVED",
+              version_index: (list[index].version_index || 1) + 1,
+              reason_for_change: changeReason,
+            };
+            list[index] = updated;
 
-          if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem(storageKey, JSON.stringify(list));
-          }
+            if (typeof window !== "undefined" && window.localStorage) {
+              window.localStorage.setItem(storageKey, JSON.stringify(list));
+            }
 
-          const activeIndex = this.notifications.findIndex((n) => n.id === id);
-          if (activeIndex !== -1) {
-            this.notifications[activeIndex] = updated;
+            const activeIndex = this.notifications.findIndex(
+              (n) => n.id === id
+            );
+            if (activeIndex !== -1) {
+              this.notifications[activeIndex] = updated;
+            }
+            return updated;
           }
-          return updated;
         }
 
         const updated = await notificationsService.resolveNotification(id, {
@@ -336,10 +338,23 @@ export const useNotificationsStore = defineStore("notifications", {
       }
     },
     resetDemoStorage() {
+      if (!isDemoBuild()) {
+        return;
+      }
       if (typeof window !== "undefined" && window.localStorage) {
-        const authStore = useAuthStore();
-        const storageKey = getStorageKey(authStore);
-        window.localStorage.removeItem(storageKey);
+        const keysToRemove = [];
+        for (let i = 0; i < window.localStorage.length; i += 1) {
+          const key = window.localStorage.key(i);
+          if (
+            key === "demo_notifications" ||
+            (key && key.startsWith("demo_notifications_"))
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+        for (const key of keysToRemove) {
+          window.localStorage.removeItem(key);
+        }
       }
       this.notifications = getDefaultTemplates();
     },
