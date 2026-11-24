@@ -29,8 +29,12 @@ export const i18n = createI18n({
     fr,
     de,
   },
-  missingWarn: process.env.NODE_ENV !== "production",
-  fallbackWarn: process.env.NODE_ENV !== "production",
+  missingWarn: globalThis.process
+    ? globalThis.process.env?.NODE_ENV !== "production"
+    : !import.meta.env?.PROD,
+  fallbackWarn: globalThis.process
+    ? globalThis.process.env?.NODE_ENV !== "production"
+    : !import.meta.env?.PROD,
 });
 
 export function setGlobalLocale(locale) {

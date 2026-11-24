@@ -167,6 +167,7 @@ body {
   padding: 2px 6px;
   border-radius: 10px;
   margin-left: auto;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .participant-info-card {
@@ -200,7 +201,7 @@ body {
 
 .participant-info-card .info-val {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .text-muted {
@@ -568,9 +569,8 @@ body {
 .score-value {
   font-size: 28px;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
   color: var(--primary-dark);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .score-lbl {
@@ -601,7 +601,7 @@ body {
 
 .breakdown-item .val {
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 /* Table styling */
@@ -614,7 +614,6 @@ body {
   border-collapse: collapse;
   text-align: left;
   font-size: 14px;
-  font-variant-numeric: tabular-nums;
 }
 
 .compliance-history-table th {
@@ -1049,6 +1048,7 @@ textarea {
   padding: 2px 6px;
   border-radius: 9999px;
   line-height: 1;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 /* Scrim / Overlay */

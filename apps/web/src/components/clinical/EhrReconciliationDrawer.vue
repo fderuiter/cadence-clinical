@@ -167,7 +167,7 @@
       <!-- Floating Action Bar for Selected Items -->
       <div v-if="selectedCandidateIds.length > 0" class="floating-batch-bar">
         <div class="batch-count-summary">
-          <span class="batch-count-badge">{{
+          <span class="batch-count-badge tabular-nums">{{
             selectedCandidateIds.length
           }}</span>
           item(s) selected

@@ -36,6 +36,10 @@ import {
 } from "../composables/useRouteScopeSync";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 const CtmsDemoWorkspace = defineAsyncComponent(
@@ -60,6 +64,10 @@ const demoWorkspaceRef = ref(null);
 const liveWorkspaceRef = ref(null);
 
 const initialRouteScope = readRouteScopeQuery(route);
+const hydratedScope = resolveHydratedWorkspaceScope(route, {
+  studyId: props.studyCode,
+  siteId: props.initialSiteId,
+});
 
 // Apply incoming route/prop scope synchronously before child panels render.
 if (props.studyCode.trim()) {
@@ -69,11 +77,28 @@ if (props.studyCode.trim()) {
 } else if (initialRouteScope.studyId) {
   setActiveStudyCode(initialRouteScope.studyId);
   scopeStore.activeStudyId = initialRouteScope.studyId;
-} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-  scopeStore.activeStudyId = activeStudyCode.value;
+} else if (
+  !scopeStore.activeStudyId &&
+  (hydratedScope.studyId || activeStudyCode.value)
+) {
+  scopeStore.activeStudyId = hydratedScope.studyId || activeStudyCode.value;
 }
 if (props.initialSiteId.trim()) {
   scopeStore.activeSiteId = props.initialSiteId.trim();
+} else if (
+  !initialRouteScope.siteId &&
+  hydratedScope.siteId &&
+  !scopeStore.activeSiteId
+) {
+  scopeStore.activeSiteId = hydratedScope.siteId;
+}
+if (scopeStore.activeStudyId || scopeStore.activeSiteId) {
+  syncWorkspaceScope({
+    ...(scopeStore.activeStudyId ? { studyId: scopeStore.activeStudyId } : {}),
+    ...(scopeStore.activeSiteId || scopeStore.activeStudyId
+      ? { siteId: scopeStore.activeSiteId }
+      : {}),
+  });
 }
 if (route && route.query) {
   const hasExplicitRouteScope = Boolean(
@@ -112,9 +137,14 @@ watch(
       setActiveStudyCode(nextScope.studyId);
     }
     if (isStandaloneRoute.value) {
-      scopeStore.activeStudyId = nextScope.studyId || activeStudyCode.value;
+      const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+      scopeStore.activeStudyId = resolvedStudy;
       scopeStore.activeSiteId = nextScope.siteId;
       scopeStore.activeSubjectId = nextScope.subjectId;
+      syncWorkspaceScope({
+        ...(resolvedStudy ? { studyId: resolvedStudy } : {}),
+        siteId: nextScope.siteId,
+      });
       return;
     }
     if (nextScope.studyId) {

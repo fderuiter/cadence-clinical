@@ -457,10 +457,12 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
+const OnboardingTour = defineAsyncComponent(
+  () => import("./OnboardingTour.vue")
+);
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
   : null;
@@ -1253,6 +1255,7 @@ onUnmounted(() => {
 .setup-progress-pill {
   font-size: 0.75rem;
   font-weight: 600;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--semantic-color-info-bg);

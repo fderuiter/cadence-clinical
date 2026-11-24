@@ -90,7 +90,7 @@ public static class LetterTemplateEndpoints
         if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
             && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
-            string detail = (scopeDenied as ProblemHttpResult)?.ProblemDetails.Detail
+            string detail = scopeDenied.ProblemDetails.Detail
                 ?? "You are not assigned to the requested study or site.";
             return CtmsScopeGuard.Forbidden(detail);
         }
