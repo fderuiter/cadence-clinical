@@ -62,12 +62,26 @@ public sealed class KernelReadAccess(
     }
 
     /// <inheritdoc />
+    public ValueTask<bool> CoversScopeAsync(
+        TenantId tenant,
+        NodeRef scope,
+        CancellationToken cancellationToken) =>
+        actor.Actor is { } reader
+            ? visibility.CoversScopeAsync(tenant, reader, scope, cancellationToken)
+            : ValueTask.FromResult(false);
+
+    /// <inheritdoc />
     public async ValueTask<bool> CanExerciseAsync(
         TenantId tenant,
         Capability capability,
         NodeRef resource,
         CancellationToken cancellationToken)
     {
+        if (actor.Actor is null)
+        {
+            return false;
+        }
+
         if (probe is null)
         {
             return !Capability.IsUnblinding(capability.Token);

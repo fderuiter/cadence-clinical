@@ -93,12 +93,30 @@ function setDraftPresenceFlag(assignmentId, hasDraft) {
   }
 }
 
-function persistQuestionnaireDraftSnapshot(assignmentId, collected) {
-  setDraftPresenceFlag(assignmentId, true);
-  renderTasks();
+const RECONSENT_SURVEY_GATE_MESSAGE =
+  "Action required: Please review and sign your updated study consent form before starting or submitting surveys.";
 
+function showQuestionnaireFormAlert(message) {
+  const formErrBanner =
+    typeof document !== "undefined"
+      ? document.getElementById("questionnaire-form-error")
+      : null;
+  if (formErrBanner) {
+    formErrBanner.setAttribute("role", "alert");
+    formErrBanner.setAttribute("aria-live", "assertive");
+    formErrBanner.textContent = message;
+    formErrBanner.style.display = "block";
+  }
+}
+
+function persistQuestionnaireDraftSnapshot(assignmentId, collected) {
   const flushTask = (async () => {
-    await saveDraft(assignmentId, collected);
+    const saved = await saveDraft(assignmentId, collected);
+    if (saved !== true) {
+      setDraftPresenceFlag(assignmentId, false);
+      renderTasks();
+      return false;
+    }
     setDraftPresenceFlag(assignmentId, true);
     renderTasks();
     try {
@@ -118,6 +136,14 @@ function persistQuestionnaireDraftSnapshot(assignmentId, collected) {
   return pendingDraftFlushPromise;
 }
 
+const DRAFT_SAVE_FAILURE_MESSAGE =
+  "Could not save your survey draft on this device. Your answers remain open so nothing is lost — unlock your Security PIN or retry saving before leaving.";
+
+function notifyDraftSaveFailure() {
+  showQuestionnaireFormAlert(DRAFT_SAVE_FAILURE_MESSAGE);
+  showToast(DRAFT_SAVE_FAILURE_MESSAGE, { variant: "error" });
+}
+
 export async function saveActiveDraftProgress() {
   if (!state.activeQuestionnaire) return false;
   const { instrument, assignment } = state.activeQuestionnaire;
@@ -131,7 +157,15 @@ export async function saveActiveDraftProgress() {
     return false;
   }
 
-  return await persistQuestionnaireDraftSnapshot(assignment.id, collected);
+  const saved = await persistQuestionnaireDraftSnapshot(
+    assignment.id,
+    collected
+  );
+  if (!saved) {
+    notifyDraftSaveFailure();
+    return false;
+  }
+  return true;
 }
 
 export const debouncedSaveActiveDraft = debounce(saveActiveDraftProgress, 1500);
@@ -166,7 +200,14 @@ export async function flushActiveQuestionnaireDraft(options = {}) {
     return false;
   }
 
-  return await persistQuestionnaireDraftSnapshot(assignment.id, collected);
+  const saved = await persistQuestionnaireDraftSnapshot(
+    assignment.id,
+    collected
+  );
+  if (!saved && clearActive) {
+    showToast(DRAFT_SAVE_FAILURE_MESSAGE, { variant: "error" });
+  }
+  return saved;
 }
 
 registerViewLeaveHandler("view-questionnaire", () => {
@@ -194,6 +235,12 @@ registerDraftSource({
 // 2. Questionnaire Completion
 export async function startQuestionnaire(assignmentId) {
   state.taskActionError = null;
+  if (state.pendingReconsent) {
+    state.taskActionError = RECONSENT_SURVEY_GATE_MESSAGE;
+    showToast(RECONSENT_SURVEY_GATE_MESSAGE, { variant: "error" });
+    renderTasks();
+    return;
+  }
   const assignment = state.assignments.find((a) => a.id === assignmentId);
   if (!assignment) return;
 
@@ -438,15 +485,30 @@ function taskReturnFocusTarget(assignmentId) {
 
 // Back button: preserves partial answers as an encrypted draft and marks the task for resumption.
 export async function saveAndLeaveQuestionnaire() {
-  const assignmentId = state.activeQuestionnaire?.assignment?.id || null;
+  const active = state.activeQuestionnaire;
+  const assignmentId = active?.assignment?.id || null;
   let saved = false;
-  if (state.activeQuestionnaire && state.activeQuestionnaire.assignment) {
-    try {
-      saved = await saveActiveDraftProgress();
-    } catch (err) {
-      console.warn("Could not save draft before leaving questionnaire:", err);
+
+  if (active && active.assignment) {
+    const collected = readCurrentFormAnswers(active.instrument, active.answers);
+    active.answers = collected;
+    if (hasAnyRecordedAnswer(collected)) {
+      try {
+        saved = await persistQuestionnaireDraftSnapshot(
+          active.assignment.id,
+          collected
+        );
+      } catch (err) {
+        console.warn("Could not save draft before leaving questionnaire:", err);
+        saved = false;
+      }
+      if (!saved) {
+        notifyDraftSaveFailure();
+        return false;
+      }
     }
   }
+
   state.questionnaireCancelConfirmOpen = false;
   state.activeQuestionnaire = null;
   renderTasks();
@@ -456,6 +518,7 @@ export async function saveAndLeaveQuestionnaire() {
   showView("view-tasks", {
     focusTarget: taskReturnFocusTarget(assignmentId),
   });
+  return true;
 }
 
 export async function leaveQuestionnaire() {
@@ -511,6 +574,11 @@ export async function confirmCancelQuestionnaire() {
 
 // Sign and Submit: validates, then asks for the electronic signature.
 export function requestQuestionnaireSignature() {
+  if (state.pendingReconsent) {
+    showQuestionnaireFormAlert(RECONSENT_SURVEY_GATE_MESSAGE);
+    showToast(RECONSENT_SURVEY_GATE_MESSAGE, { variant: "error" });
+    return;
+  }
   const formErrBanner = document.getElementById("questionnaire-form-error");
   if (validateActiveQuestionnaire()) {
     if (formErrBanner) {
@@ -520,12 +588,7 @@ export function requestQuestionnaireSignature() {
     openSignatureModal("epro");
   } else {
     const msg = "Please fix all form errors before signing.";
-    if (formErrBanner) {
-      formErrBanner.setAttribute("role", "alert");
-      formErrBanner.setAttribute("aria-live", "assertive");
-      formErrBanner.textContent = msg;
-      formErrBanner.style.display = "block";
-    }
+    showQuestionnaireFormAlert(msg);
     showToast(msg, { variant: "error" });
   }
 }

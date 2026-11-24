@@ -29,7 +29,17 @@ public sealed record RaiseFormQueryRequest(
 
 /// <summary>An answer to a query, or why it is reopened.</summary>
 /// <param name="Text">The text.</param>
-public sealed record FormQueryTextRequest(string Text);
+/// <param name="Assignee">Optional replacement assignee when ownership flips; omit to clear stale assignees.</param>
+public sealed record FormQueryTextRequest(string Text, string? Assignee = null);
+
+/// <summary>Request body for reassigning an open or answered query.</summary>
+/// <param name="Assignee">New assignee identifier, or null/empty to clear the current assignee.</param>
+/// <param name="OwnerRole">Optional updated owner role (<c>site</c>, <c>monitor</c>, <c>data_manager</c>).</param>
+/// <param name="Text">Optional note recorded in the query message thread.</param>
+public sealed record ReassignFormQueryRequest(
+    string? Assignee,
+    string? OwnerRole = null,
+    string? Text = null);
 
 /// <summary>Optional note body when closing or cancelling a query separately from <c>X-Change-Reason</c>.</summary>
 /// <param name="Text">Optional closing or cancellation note.</param>
@@ -83,19 +93,22 @@ public sealed record FormQueryResponse(
         FormQuery query,
         IReadOnlyDictionary<ObservationId, int> revisions,
         FormQueryContext? context = null,
-        bool maskBlinded = false) =>
-        From(FormQueryState.Of(query, query.VersionIndex), revisions, context, maskBlinded);
+        bool maskBlinded = false,
+        int? currentRevisionOverride = null) =>
+        From(FormQueryState.Of(query, query.VersionIndex), revisions, context, maskBlinded, currentRevisionOverride);
 
     /// <summary>A query after a command (or reconstructed snapshot), with the current revisions of its form's values.</summary>
     internal static FormQueryResponse From(
         FormQueryState state,
         IReadOnlyDictionary<ObservationId, int> revisions,
         FormQueryContext? context = null,
-        bool maskBlinded = false)
+        bool maskBlinded = false,
+        int? currentRevisionOverride = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(revisions);
-        int? current = revisions.TryGetValue(state.ObservationId, out var revision) ? revision : null;
+        int? current = currentRevisionOverride
+            ?? (revisions.TryGetValue(state.ObservationId, out var revision) ? revision : null);
         var raised = state.Messages[0];
         var question = state.Messages.Last(m => m.Kind is FormQueryMessageKind.Raised or FormQueryMessageKind.Reopened);
         return new FormQueryResponse(
@@ -103,7 +116,7 @@ public sealed record FormQueryResponse(
             state.FormId.Value,
             state.EnrollmentId.Value,
             state.ItemId,
-            state.ObservationId.Value,
+            maskBlinded ? Guid.Empty : state.ObservationId.Value,
             state.Revision,
             current,
             current > state.Revision,
@@ -140,7 +153,7 @@ public sealed record FormQueryResponse(
 }
 
 /// <summary>One step of a query's conversation.</summary>
-/// <param name="Kind">raised, answered, reopened, closed, cancelled or escalated.</param>
+/// <param name="Kind">raised, answered, reopened, reassigned, closed, cancelled or escalated.</param>
 /// <param name="Text">The query, answer or reopening text, or the closing/cancelling/escalation note.</param>
 /// <param name="By">Who recorded it.</param>
 /// <param name="At">When it was recorded.</param>
@@ -166,7 +179,9 @@ public sealed record FormQueryAgingDigestResponse(
     int EscalatedCount,
     IReadOnlyList<FormQueryAgingDigestEntry> Entries)
 {
-    internal static FormQueryAgingDigestResponse From(FormQueryAgingDigest digest) =>
+    internal static FormQueryAgingDigestResponse From(
+        FormQueryAgingDigest digest,
+        IReadOnlyList<FormQueryAgingDigestEntry>? entriesOverride = null) =>
         new(
             digest.Id,
             digest.StudyId.Value,
@@ -178,9 +193,11 @@ public sealed record FormQueryAgingDigestResponse(
             digest.StudyCode,
             digest.SiteCode,
             digest.EscalatedCount,
-            [.. digest.Entries]);
+            entriesOverride ?? [.. digest.Entries]);
 
-    internal static FormQueryAgingDigestResponse From(FormQueryAgingDigestState state) =>
+    internal static FormQueryAgingDigestResponse From(
+        FormQueryAgingDigestState state,
+        IReadOnlyList<FormQueryAgingDigestEntry>? entriesOverride = null) =>
         new(
             state.DigestId,
             state.StudyId.Value,
@@ -192,7 +209,7 @@ public sealed record FormQueryAgingDigestResponse(
             state.StudyCode,
             state.SiteCode,
             state.EscalatedCount,
-            state.Entries);
+            entriesOverride ?? state.Entries);
 }
 
 /// <summary>Response returned after running a study query escalation and digest pass.</summary>

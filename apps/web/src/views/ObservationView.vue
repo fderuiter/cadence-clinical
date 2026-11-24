@@ -32,22 +32,57 @@
             <template v-else>{{ observation.concept }}</template>
           </dd>
           <dt>Current value</dt>
-          <dd data-testid="observation-value">
+          <dd data-testid="observation-value" class="tabular-nums">
             {{ formatObservationValue(observation.value) }}
           </dd>
           <dt>Version</dt>
-          <dd data-testid="observation-version">
+          <dd data-testid="observation-version" class="tabular-nums">
             {{ observation.version }}
           </dd>
           <dt>Observed</dt>
-          <dd>{{ observation.observed_at }}</dd>
+          <dd class="tabular-nums">{{ observation.observed_at }}</dd>
+          <dt>Source verification</dt>
+          <dd data-testid="observation-sdv">
+            <template v-if="activeVerification">
+              <span
+                class="clinical-badge clinical-badge--verified"
+                data-testid="observation-sdv-badge"
+              >
+                Verified (rev {{ currentRevisionNumber }})
+              </span>
+              <span class="observation-sdv-meta tabular-nums">
+                by {{ activeVerification.asserted_by }} at
+                {{ activeVerification.asserted_at }}
+              </span>
+            </template>
+            <template v-else-if="supersededVerification">
+              <span
+                class="clinical-badge clinical-badge--warning"
+                data-testid="observation-sdv-badge"
+              >
+                Needs re-verification
+              </span>
+              <span class="observation-sdv-meta tabular-nums">
+                (verified at rev {{ supersededVerification.revision }} by
+                {{ supersededVerification.asserted_by }})
+              </span>
+            </template>
+            <span
+              v-else-if="hasRecordedValue"
+              class="clinical-badge clinical-badge--draft"
+              data-testid="observation-sdv-badge"
+            >
+              Unverified
+            </span>
+            <span v-else data-testid="observation-sdv-badge">No value</span>
+          </dd>
           <dt>Status</dt>
           <dd data-testid="observation-status">
-            <template v-if="observation.locks.length > 0">
+            <template v-if="observationLocks.length > 0">
               <span
-                v-for="held in observation.locks"
+                v-for="held in observationLocks"
                 :key="String(held.lock_id)"
-                class="observation-lock"
+                class="observation-lock tabular-nums"
               >
                 {{ held.kind }} at {{ lockScopeLabel(held.scope) }} by
                 <NodeRefChip
@@ -65,6 +100,32 @@
           </dd>
         </dl>
 
+        <nav
+          v-if="hasRouter && (owningFormLocation || studyQueriesLocation)"
+          class="observation-context-links"
+          data-testid="observation-context-links"
+          aria-label="Related clinical workspaces"
+        >
+          <component
+            :is="routerLinkTag"
+            v-if="owningFormLocation"
+            id="observation-open-form"
+            class="observation-context-link"
+            :to="owningFormLocation"
+          >
+            Open form{{ effectiveItemId ? ` (${effectiveItemId})` : "" }}
+          </component>
+          <component
+            :is="routerLinkTag"
+            v-if="studyQueriesLocation"
+            id="observation-open-queries"
+            class="observation-context-link"
+            :to="studyQueriesLocation"
+          >
+            Open study queries
+          </component>
+        </nav>
+
         <ScopeLockControls
           :study-ref="observationStudyRef"
           :scope-ref="cleanObservationRef"
@@ -74,6 +135,18 @@
           id-prefix="observation-lock"
           @changed="load"
         />
+
+        <div
+          v-if="activeVerification && !locked && canCorrect"
+          id="observation-sdv-edit-warning"
+          data-testid="observation-sdv-edit-warning"
+          class="observation-sdv-warning tabular-nums"
+          role="status"
+        >
+          This value is source data verified (revision
+          {{ currentRevisionNumber }}). Saving a correction drops SDV
+          verification to Needs re-verification and alerts the CRA.
+        </div>
 
         <form
           v-if="!locked && canCorrect"
@@ -87,7 +160,7 @@
             v-model="newValue"
             :disabled="saving"
             :aria-invalid="parseError !== null"
-            aria-describedby="observation-new-value-hint"
+            :aria-describedby="correctionDescribedBy"
           >
             <option value="">Select…</option>
             <option
@@ -119,9 +192,10 @@
             v-model="newValue"
             type="text"
             autocomplete="off"
+            :data-tabular-nums="isTabularObservation ? 'true' : undefined"
             :disabled="saving"
             :aria-invalid="parseError !== null"
-            aria-describedby="observation-new-value-hint"
+            :aria-describedby="correctionDescribedBy"
           />
           <span v-if="unit" data-testid="observation-unit">{{ unit }}</span>
           <button
@@ -146,6 +220,7 @@
           data-testid="observation-outcome"
           :class="[
             'observation-outcome',
+            'tabular-nums',
             `observation-outcome--${outcome.kind}`,
           ]"
           :role="outcome.kind === 'saved' ? 'status' : 'alert'"
@@ -159,6 +234,133 @@
             {{ outcome.message }}
           </template>
         </div>
+
+        <section
+          id="observation-queries"
+          class="observation-queries-section"
+          aria-labelledby="observation-queries-title"
+        >
+          <h3 id="observation-queries-title">Open queries</h3>
+          <p
+            v-if="openQueryThreads.length === 0"
+            data-testid="observation-no-open-queries"
+          >
+            No open queries on this value.
+          </p>
+          <ul
+            v-else
+            class="observation-query-list"
+            data-testid="observation-queries"
+          >
+            <li
+              v-for="thread in openQueryThreads"
+              :key="String(thread.query.assertion_id)"
+              class="observation-query-item"
+              :data-testid="`observation-query-${thread.query.assertion_id}`"
+            >
+              <div class="observation-query-header tabular-nums">
+                <span
+                  :class="[
+                    'clinical-badge',
+                    thread.hasActiveAnswer
+                      ? 'clinical-badge--warning'
+                      : 'clinical-badge--queried',
+                  ]"
+                >
+                  {{ thread.hasActiveAnswer ? "Answered" : "Open" }}
+                </span>
+                <span v-if="thread.query.revision !== null">
+                  Revision {{ thread.query.revision }}
+                </span>
+                <span
+                  v-if="thread.valueChanged"
+                  class="observation-query-changed"
+                >
+                  Value changed (now rev {{ currentRevisionNumber }})
+                </span>
+                <span class="observation-query-meta">
+                  by {{ thread.query.asserted_by }} at
+                  {{ thread.query.asserted_at }}
+                </span>
+              </div>
+              <p class="observation-query-text">
+                {{
+                  thread.query.text ||
+                  assertionReason(thread.query) ||
+                  "Query raised on this value."
+                }}
+              </p>
+              <ul
+                v-if="thread.answers.length > 0"
+                class="observation-query-answers tabular-nums"
+              >
+                <li
+                  v-for="ans in thread.answers"
+                  :key="String(ans.assertion_id)"
+                >
+                  Answered by {{ ans.asserted_by }} at {{ ans.asserted_at
+                  }}<template v-if="ans.text">: “{{ ans.text }}”</template
+                  ><template v-else-if="assertionReason(ans)"
+                    >: “{{ assertionReason(ans) }}”</template
+                  >
+                  <em v-if="ans.retracted_at">
+                    (retracted {{ ans.retracted_at }})</em
+                  >
+                </li>
+              </ul>
+              <div
+                v-if="hasRouter && (owningFormLocation || studyQueriesLocation)"
+                class="observation-query-links"
+              >
+                <component
+                  :is="routerLinkTag"
+                  v-if="owningFormLocation"
+                  class="observation-context-link"
+                  :to="owningFormLocation"
+                >
+                  Manage query on form
+                </component>
+                <component
+                  :is="routerLinkTag"
+                  v-if="studyQueriesLocation"
+                  class="observation-context-link"
+                  :to="studyQueriesLocation"
+                >
+                  View in study queries
+                </component>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <h3>Verifications, queries and answers</h3>
+        <p
+          v-if="observationAssertions.length === 0"
+          data-testid="observation-no-assertions"
+        >
+          None recorded.
+        </p>
+        <ul v-else class="tabular-nums" data-testid="observation-assertions">
+          <li
+            v-for="assertion in observationAssertions"
+            :key="String(assertion.assertion_id)"
+          >
+            {{ assertion.kind }}
+            <template v-if="assertion.revision !== null">
+              (revision {{ assertion.revision }})
+            </template>
+            by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
+            <template v-if="assertion.text">
+              : “{{ assertion.text }}”
+            </template>
+            <template v-if="assertionReason(assertion)">
+              (reason: {{ assertionReason(assertion) }})
+            </template>
+            <em v-if="assertion.retracted_at">
+              (retracted {{ assertion.retracted_at }})</em
+            >
+          </li>
+        </ul>
 
         <h3>Revisions</h3>
         <div
@@ -184,7 +386,7 @@
             </thead>
             <tbody>
               <tr
-                v-for="revision in observation.revisions"
+                v-for="revision in observationRevisions"
                 :key="revision.number"
               >
                 <td>{{ revision.number }}</td>
@@ -218,7 +420,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="entry in observation.audit" :key="entry.sequence">
+              <tr v-for="entry in observationAudit" :key="entry.sequence">
                 <td>{{ entry.sequence }}</td>
                 <td>{{ entry.recorded_at }}</td>
                 <td>{{ entry.actor_id }}</td>
@@ -236,6 +438,7 @@
       :show="reasonOpen"
       id-prefix="observation-"
       title="Reason for correction"
+      :description="reasonModalDescription"
       confirm-text="Save correction"
       @confirm="onReason"
       @cancel="reasonOpen = false"
@@ -258,6 +461,7 @@ import { kernelApi, type KernelObservation } from "../api/kernelApi";
 import {
   correctionUnit,
   formatObservationValue,
+  isUnrecordedValue,
   parseCorrection,
   sameObservationValue,
   type ExpectedItemSpec,
@@ -271,15 +475,20 @@ import {
   parseNodeRef,
   tryNodeRef,
 } from "../canvas/nodeRef";
-import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
+import {
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
 import {
   toCoveringScopeLocks,
   toDirectScopeLocks,
 } from "../canvas/kernelLocks";
+import { seedKernelStudyRef } from "../canvas/kernelStudy";
 import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
+import { isDemoBuild } from "../utils/demoMode";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
@@ -474,6 +683,196 @@ function lockScopeLabel(scope: unknown): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
+type ObservationAssertionItem = KernelObservation["assertions"][number];
+
+const observationLocks = computed(() => observation.value?.locks ?? []);
+const observationAssertions = computed<ObservationAssertionItem[]>(
+  () => observation.value?.assertions ?? []
+);
+const observationRevisions = computed(() => observation.value?.revisions ?? []);
+const observationAudit = computed(() => observation.value?.audit ?? []);
+
+function assertionReason(assertion: ObservationAssertionItem): string {
+  const raw =
+    assertion.reason_for_change ??
+    (assertion as { reason?: string | null }).reason ??
+    "";
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+const hasRecordedValue = computed(() =>
+  observation.value ? !isUnrecordedValue(observation.value.value) : false
+);
+
+const currentRevisionNumber = computed(() => {
+  const obs = observation.value;
+  if (!obs) return 1;
+  const revisions = observationRevisions.value;
+  const latest = revisions[revisions.length - 1];
+  return Number(latest?.number ?? obs.version);
+});
+
+const activeVerification = computed<ObservationAssertionItem | null>(() => {
+  if (!observation.value || !hasRecordedValue.value) return null;
+  const assertions = observationAssertions.value;
+  for (let i = assertions.length - 1; i >= 0; i--) {
+    const item = assertions[i];
+    if (
+      String(item.kind).toLowerCase() === "verified" &&
+      !item.retracted_at &&
+      Number(item.revision) === currentRevisionNumber.value
+    ) {
+      return item;
+    }
+  }
+  return null;
+});
+
+const supersededVerification = computed<ObservationAssertionItem | null>(() => {
+  if (
+    !observation.value ||
+    !hasRecordedValue.value ||
+    activeVerification.value
+  ) {
+    return null;
+  }
+  const assertions = observationAssertions.value;
+  for (let i = assertions.length - 1; i >= 0; i--) {
+    const item = assertions[i];
+    if (
+      String(item.kind).toLowerCase() === "verified" &&
+      !item.retracted_at &&
+      item.revision !== null &&
+      Number(item.revision) < currentRevisionNumber.value
+    ) {
+      return item;
+    }
+  }
+  return null;
+});
+
+const openQueryThreads = computed(() => {
+  if (!observation.value) return [];
+  const assertions = observationAssertions.value;
+  return assertions
+    .filter(
+      (item) =>
+        String(item.kind).toLowerCase() === "queried" && !item.retracted_at
+    )
+    .map((query) => {
+      const targetRef = `assertion:${String(query.assertion_id)}`;
+      const answers = assertions.filter(
+        (candidate) =>
+          String(candidate.kind).toLowerCase() === "queryanswered" &&
+          (String(candidate.target) === targetRef ||
+            String(candidate.target) === String(query.assertion_id))
+      );
+      const hasActiveAnswer = answers.some((ans) => !ans.retracted_at);
+      const valueChanged =
+        query.revision !== null &&
+        Number(query.revision) < currentRevisionNumber.value;
+      return {
+        query,
+        answers,
+        hasActiveAnswer,
+        valueChanged,
+      };
+    });
+});
+
+const effectiveStudyCode = computed(() => {
+  return (
+    (props.studyCode && props.studyCode.trim()) ||
+    queryString("studyId") ||
+    queryString("study") ||
+    ""
+  );
+});
+
+const effectiveFormRef = computed(() => {
+  const fromObs = observation.value?.form_ref?.trim() || "";
+  if (fromObs) return collectionInstanceRef(fromObs) ?? fromObs;
+  const fromQuery = queryString("form") || queryString("formId");
+  return fromQuery ? (collectionInstanceRef(fromQuery) ?? fromQuery) : "";
+});
+
+const effectiveItemId = computed(() => {
+  return (
+    observation.value?.item_id?.trim() ||
+    queryString("item") ||
+    queryString("itemId") ||
+    ""
+  );
+});
+
+const owningFormLocation = computed<RouteLocationRaw | null>(() => {
+  if (!activeRouter || !effectiveFormRef.value) return null;
+  const studyVal = effectiveStudyCode.value;
+  const siteVal =
+    queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+  if (studyVal && activeRouter.hasRoute("study")) {
+    const participantVal = resolveCanonicalParticipantParam(
+      studyVal,
+      queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        resolvedParticipantLabel.value
+    );
+    return {
+      name: "study",
+      params: { studyCode: studyVal },
+      query: {
+        stage: "conduct",
+        ...(siteVal ? { site: siteVal } : {}),
+        ...(participantVal ? { participant: participantVal } : {}),
+        form: effectiveFormRef.value,
+        ...(effectiveItemId.value ? { item: effectiveItemId.value } : {}),
+      },
+    };
+  }
+  const formUuid = collectionInstanceId(effectiveFormRef.value);
+  if (formUuid && activeRouter.hasRoute("ecrf")) {
+    return {
+      name: "ecrf",
+      query: {
+        formId: formUuid,
+        ...(effectiveItemId.value ? { itemId: effectiveItemId.value } : {}),
+      },
+    };
+  }
+  return null;
+});
+
+const studyQueriesLocation = computed<RouteLocationRaw | null>(() => {
+  const studyVal = effectiveStudyCode.value;
+  if (!activeRouter || !studyVal || !activeRouter.hasRoute("study")) {
+    return null;
+  }
+  const siteVal =
+    queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+  return {
+    name: "study",
+    params: { studyCode: studyVal },
+    query: {
+      stage: "data",
+      section: "queries",
+      ...(siteVal ? { site: siteVal } : {}),
+    },
+  };
+});
+
+const correctionDescribedBy = computed(() =>
+  activeVerification.value
+    ? "observation-sdv-edit-warning observation-new-value-hint"
+    : "observation-new-value-hint"
+);
+
+const reasonModalDescription = computed(() =>
+  activeVerification.value
+    ? `This value was source data verified at revision ${currentRevisionNumber.value}. Saving this correction supersedes the verified revision, marks the item as Needs re-verification, and sends a modification alert to the CRA.`
+    : undefined
+);
+
 const newValue = ref("");
 const reasonOpen = ref(false);
 
@@ -492,6 +891,12 @@ const expectedSpec = computed<ExpectedItemSpec | null>(() => {
 const unit = computed(() =>
   correctionUnit(observation.value?.value, expectedSpec.value)
 );
+
+const isTabularObservation = computed(() => {
+  const valueKind =
+    observation.value?.value?.type ?? observation.value?.expected_value_kind;
+  return valueKind === "quantity" || valueKind === "dateTime";
+});
 
 const parsed = computed(() => {
   const current = observation.value?.value;
@@ -531,8 +936,8 @@ function resolveCanonicalParticipantParam(
   const candidate = rawCandidate.trim();
   if (!candidate) return "";
   const parsed = parseNodeRef(candidate);
-  if (parsed?.kind === "participant") {
-    return formatNodeRef(parsed);
+  if (parsed?.kind === "enrollment" || parsed?.kind === "participant") {
+    return formatNodeRef({ kind: parsed.kind, id: parsed.id });
   }
   const stateRoot = getActivePinia()?.state.value as
     | {
@@ -540,7 +945,12 @@ function resolveCanonicalParticipantParam(
           studyCode?: string;
           knownParticipants?: Record<
             string,
-            { id?: string; subject_id?: string; study_id?: string }
+            {
+              id?: string;
+              subject_id?: string;
+              study_id?: string;
+              enrollment_ref?: string | null;
+            }
           >;
         };
       }
@@ -554,12 +964,94 @@ function resolveCanonicalParticipantParam(
           item.study_id === studyCodeValue ||
           stateRoot?.studyCanvas?.studyCode === studyCodeValue)
     );
+    const enrollmentNode = parseNodeRef(matched?.enrollment_ref);
+    if (enrollmentNode?.kind === "enrollment") {
+      return formatNodeRef({ kind: "enrollment", id: enrollmentNode.id });
+    }
     const node = matched?.id ? tryNodeRef("participant", matched.id) : null;
     if (node) {
       return formatNodeRef(node);
     }
   }
   return candidate;
+}
+
+function fallbackStepCode(rawLabel: string): string {
+  const trimmed = rawLabel.trim();
+  if (!trimmed) return "";
+  const head = /\s+[—–-]\s+/.test(trimmed)
+    ? trimmed.split(/\s+[—–-]\s+/)[0].trim()
+    : trimmed;
+  return head && !/\s/.test(head) ? head : "";
+}
+
+function extractStepStudyRef(step: unknown): string | null {
+  if (!step || typeof step !== "object") return null;
+  const s = step as { ref?: unknown; node?: unknown };
+  if (typeof s.ref === "string" && s.ref.trim()) return s.ref.trim();
+  if (typeof s.node === "string" && s.node.trim()) return s.node.trim();
+  if (s.node && typeof s.node === "object") {
+    const n = s.node as { kind?: unknown; id?: unknown };
+    const parsed =
+      typeof n.kind === "string" && n.kind === "study"
+        ? tryNodeRef("study", n.id)
+        : null;
+    return parsed ? formatNodeRef(parsed) : null;
+  }
+  return null;
+}
+
+async function resolveCanonicalStepCode(
+  step:
+    | {
+        ref?: string | null;
+        node?: unknown;
+        label?: string | null;
+        mask?: unknown;
+      }
+    | undefined
+): Promise<string> {
+  if (!step || step.mask !== null) return "";
+  const fallbackLabel = typeof step.label === "string" ? step.label.trim() : "";
+  const stepRef =
+    typeof step.ref === "string" && step.ref.trim() ? step.ref.trim() : "";
+  if (!stepRef) return fallbackStepCode(fallbackLabel);
+  const expectedKind = parseNodeRef(stepRef)?.kind ?? stepRef.split(":")[0];
+  if (typeof kernelApi.getNode === "function") {
+    try {
+      const summary = await kernelApi.getNode(stepRef);
+      if (summary && typeof summary === "object") {
+        if (
+          (summary.ref && summary.ref !== stepRef) ||
+          (expectedKind && summary.kind && summary.kind !== expectedKind)
+        ) {
+          return fallbackStepCode(fallbackLabel);
+        }
+        if (summary.mask !== null && summary.mask !== undefined) {
+          return "";
+        }
+        seedNodeSummary(stepRef, {
+          kind: summary.kind,
+          code: summary.code,
+          title: summary.title,
+          status: summary.status,
+        });
+        if (typeof summary.code === "string") {
+          return summary.code.trim();
+        }
+        if ("code" in summary && summary.code === null) {
+          return "";
+        }
+      }
+    } catch (err) {
+      const status = (err as { status?: number | null } | null)?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        return "";
+      }
+      return fallbackStepCode(fallbackLabel);
+    }
+  }
+  return fallbackStepCode(fallbackLabel);
 }
 
 watch(
@@ -581,6 +1073,23 @@ watch(
       explicitReturn.startsWith("/") &&
       !explicitReturn.startsWith("//")
     ) {
+      if (
+        !props.studyRef &&
+        !props.studyCode &&
+        typeof kernelApi.getZoomPath === "function"
+      ) {
+        const request = ++redirectRequest;
+        try {
+          const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
+          if (request !== redirectRequest) return;
+          const studyStep = steps.find(
+            (s) => s.level === "study" && s.mask === null
+          );
+          observationStudyRef.value = extractStepStudyRef(studyStep);
+        } catch {
+          // Keep standalone observation view when zoom path is unavailable.
+        }
+      }
       return;
     }
     const request = ++redirectRequest;
@@ -590,9 +1099,7 @@ watch(
       const studyStep = steps.find(
         (s) => s.level === "study" && s.mask === null
       );
-      const legacyStudyNode =
-        (studyStep as { node?: string | null } | undefined)?.node ?? null;
-      const studyRef = studyStep?.ref ?? legacyStudyNode;
+      const studyRef = extractStepStudyRef(studyStep);
       if (!props.studyRef && !props.studyCode) {
         observationStudyRef.value = studyRef;
       }
@@ -602,38 +1109,55 @@ watch(
       if (!enrollmentStep) {
         return;
       }
-      let resolvedStudyCode = "";
-      if (studyStep?.ref && typeof kernelApi.getNode === "function") {
-        const studyNode = await kernelApi.getNode(studyStep.ref);
-        if (request !== redirectRequest) return;
-        resolvedStudyCode =
-          studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
-      } else if (!studyStep?.ref && studyStep?.label) {
-        resolvedStudyCode = studyStep.label.split(" — ")[0].trim();
-      }
-      if (!resolvedStudyCode) return;
-      syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
         (s) =>
-          (s.level === "study_site" || s.level === "site") &&
-          s.mask === null &&
-          s.label
+          (s.level === "study_site" || s.level === "site") && s.mask === null
       );
-      const canonicalSiteLabel = siteStep?.label
-        ? siteStep.label.split(" — ")[0].trim()
-        : "";
-      const siteVal =
-        canonicalSiteLabel || queryString("site") || queryString("siteId");
-      resolvedSiteLabel.value = siteVal || "";
-      resolvedParticipantLabel.value = enrollmentStep.label || "";
-      const participantCandidate =
+      const [lineageStudyCode, canonicalSiteCode] = await Promise.all([
+        studyStep ? resolveCanonicalStepCode(studyStep) : Promise.resolve(""),
+        siteStep ? resolveCanonicalStepCode(siteStep) : Promise.resolve(""),
+      ]);
+      if (request !== redirectRequest) return;
+      const demoMode = isDemoBuild();
+      const explicitStudy = queryString("studyId") || queryString("study");
+      const explicitSite = queryString("site") || queryString("siteId");
+      const explicitParticipant =
         queryString("participant") ||
         queryString("subjectId") ||
-        queryString("subject") ||
-        enrollmentStep.label ||
-        "";
+        queryString("subject");
+      const canonicalStudyCode = demoMode
+        ? explicitStudy || lineageStudyCode
+        : lineageStudyCode;
+      if (!canonicalStudyCode) return;
+      syncActiveStudyScope(canonicalStudyCode);
+      const studyOverridden = Boolean(
+        demoMode &&
+        explicitStudy &&
+        lineageStudyCode &&
+        explicitStudy.toUpperCase() !== lineageStudyCode.toUpperCase()
+      );
+      if (studyRef && !studyOverridden) {
+        seedKernelStudyRef(canonicalStudyCode, studyRef);
+      }
+      const siteVal = demoMode
+        ? explicitSite || canonicalSiteCode
+        : canonicalSiteCode || explicitSite;
+      const siteOverridden = Boolean(
+        demoMode &&
+        explicitSite &&
+        canonicalSiteCode &&
+        explicitSite.toUpperCase() !== canonicalSiteCode.toUpperCase()
+      );
+      resolvedSiteLabel.value = siteVal || "";
+      resolvedParticipantLabel.value =
+        studyOverridden || siteOverridden
+          ? explicitParticipant
+          : enrollmentStep.label || "";
+      const participantCandidate =
+        explicitParticipant ||
+        (studyOverridden || siteOverridden ? "" : enrollmentStep.label || "");
       const participantVal = resolveCanonicalParticipantParam(
-        resolvedStudyCode,
+        canonicalStudyCode,
         participantCandidate
       );
       const rawForm = queryString("form") || queryString("formId");
@@ -647,7 +1171,7 @@ watch(
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: resolvedStudyCode },
+        params: { studyCode: canonicalStudyCode },
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),
@@ -680,6 +1204,76 @@ watch(() => props.observationRef, load);
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 4px 16px;
+}
+.observation-sdv-meta {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+}
+.observation-context-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+.observation-context-link {
+  color: var(--semantic-color-interactive-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.observation-sdv-warning {
+  padding: 10px 12px;
+  margin: 12px 0;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-text-dark);
+  font-size: 0.875rem;
+}
+.observation-queries-section {
+  margin-bottom: 16px;
+}
+.observation-query-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.observation-query-item {
+  padding: 10px 12px;
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+}
+.observation-query-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.observation-query-meta {
+  color: var(--semantic-color-text-secondary);
+}
+.observation-query-changed {
+  font-weight: 600;
+  color: var(--semantic-color-warning-text-dark);
+}
+.observation-query-text {
+  margin: 6px 0 0;
+}
+.observation-query-answers {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.875rem;
+}
+.observation-query-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
 }
 .observation-correction {
   display: flex;

@@ -403,7 +403,7 @@ const standaloneEnrollmentOptions = computed(() => {
         label:
           child.node.code ||
           child.node.title ||
-          getNodeDisplay(child.node.ref).label,
+          getNodeDisplay(child.node.ref!).label,
       };
     });
 
@@ -477,8 +477,8 @@ async function ensureStandaloneSitesLoaded() {
     const studies = await kernelApi.listStudies();
     const activeCode = getActiveWorkspaceContext().studyCode;
     const matchedStudy =
-      studies.find((s) => !s.mask && activeCode && s.code === activeCode) ??
-      studies.find((s) => !s.mask);
+      studies.find((s) => Boolean(activeCode) && s.code === activeCode) ??
+      studies[0];
     if (!matchedStudy?.ref) return;
     const children = await kernelApi.getChildren(matchedStudy.ref);
     standaloneSites.value = (children ?? [])
@@ -498,7 +498,7 @@ async function ensureStandaloneSitesLoaded() {
         return {
           ref: c.node.ref as string,
           label:
-            c.node.code || c.node.title || getNodeDisplay(c.node.ref).label,
+            c.node.code || c.node.title || getNodeDisplay(c.node.ref!).label,
         };
       });
     standaloneSitesLoaded.value = true;
@@ -746,26 +746,6 @@ function submitOpenNew() {
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
 }
-.ecrf-form-error {
-  color: var(--semantic-color-error);
-  font-size: 0.8rem;
-  margin: 2px 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.ecrf-form-outcome {
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ecrf-form-outcome--failed {
-  background-color: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
-}
 </style>
+
+<style scoped src="./ecrfFormBanners.css"></style>

@@ -240,10 +240,7 @@ function decodeDataUriToPdfBlob(dataUri) {
   const isBase64 = /;base64/i.test(metadata);
 
   if (isBase64) {
-    const binary =
-      typeof atob === "function"
-        ? atob(payload)
-        : Buffer.from(payload, "base64").toString("binary");
+    const binary = atob(payload);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);

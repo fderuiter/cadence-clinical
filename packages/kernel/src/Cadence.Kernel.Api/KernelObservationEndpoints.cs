@@ -83,16 +83,18 @@ public static class KernelObservationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        if (await observations.FindAsync(tenant, observation, cancellationToken).ConfigureAwait(false) is not { } record)
+        var observationNode = NodeRef.For(observation);
+        var observationMask = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [observationNode], cancellationToken).ConfigureAwait(false);
+        var unblinded = observationMask.For(observationNode) != MaskReason.Blinded;
+        if (await observations.FindForReaderAsync(tenant, observation, unblinded, cancellationToken).ConfigureAwait(false) is not { } record)
         {
-            return KernelProblems.NotFound(NodeRef.For(observation));
+            return KernelProblems.NotFound(observationNode);
         }
 
         // An observation requires both enrollment scope visibility (ADR-2457) and unblinded access when blinded (K-AUTH-4).
         var enrollment = NodeRef.For(record.EnrollmentId);
-        var observationNode = NodeRef.For(record.ObservationId);
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [enrollment, observationNode], cancellationToken).ConfigureAwait(false);
-        return masks.For(enrollment) is null && masks.For(observationNode) is null
+        return masks.For(enrollment) is null && masks.For(observationNode) is null && !record.ObservationId.IsEmpty
             ? TypedResults.Ok(KernelObservationResponse.From(record))
             : KernelProblems.NotVisible($"You may not see {observationNode}.");
     }
@@ -343,7 +345,7 @@ public sealed record KernelObservationStateResponse(string Ref, string Enrollmen
 /// <param name="Locks">The locks in force at its study, study site, enrollment or itself, widest scope first (ADR-2621); empty when none covers it.</param>
 /// <param name="Revisions">Every revision, oldest first.</param>
 /// <param name="Assertions">Verifications, queries and answers about it, retracted ones included, oldest first.</param>
-/// <param name="Audit">The kernel audit-chain entries about the observation, oldest first.</param>
+/// <param name="Audit">The kernel audit-chain entries about the observation and its covering assertions, oldest first.</param>
 /// <param name="FormRef">Owning collection instance NodeRef when the observation belongs to an eCRF form.</param>
 /// <param name="ItemId">Owning collection item identifier when the observation belongs to an eCRF form.</param>
 /// <param name="ExpectedValueKind">Expected value kind declared by the owning collection item.</param>

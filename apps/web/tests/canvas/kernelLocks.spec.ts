@@ -65,6 +65,7 @@ describe("kernelLocks utilities", () => {
           valid_at: "2026-06-01T10:00:00Z",
           known_at: "2026-06-01T10:00:00Z",
           locks: [sampleLock],
+          hidden: { more_exist: false, reasons: [] },
         })
         .mockResolvedValueOnce({} as never);
 
@@ -111,6 +112,8 @@ describe("kernelLocks utilities", () => {
           study_ref: STUDY_REF,
           scope_ref: ENROLLMENT_REF,
           scope_kind: "enrollment",
+          study_site_ref: null,
+          enrollment_ref: ENROLLMENT_REF,
           subject_code: "SUBJ-A",
           kind: "Frozen",
           attestation_ref: null,
@@ -131,6 +134,8 @@ describe("kernelLocks utilities", () => {
           study_ref: STUDY_REF,
           scope_ref: ENROLLMENT_REF,
           scope_kind: "enrollment",
+          study_site_ref: null,
+          enrollment_ref: ENROLLMENT_REF,
           subject_code: "SUBJ-A",
           kind: "Locked",
           attestation_ref: null,
@@ -151,6 +156,8 @@ describe("kernelLocks utilities", () => {
           study_ref: STUDY_REF,
           scope_ref: ENROLLMENT_REF,
           scope_kind: "enrollment",
+          study_site_ref: null,
+          enrollment_ref: null,
           subject_code: null,
           kind: "Locked",
           attestation_ref: null,

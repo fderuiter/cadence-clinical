@@ -36,7 +36,7 @@
         }}
       </p>
       <div class="completion-metrics">
-        <span class="metric-badge">
+        <span class="metric-badge tabular-nums">
           {{
             $t("econsent.translationTabs.sectionsMetric", {
               translated: translatedSectionsCount,
@@ -50,13 +50,17 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useEconsentStore } from "../../stores/econsent.js";
 import { useRovingTabindex } from "../../composables/useRovingTabindex.js";
-import { setGlobalLocale } from "../../i18n/index.js";
+import { preloadAllLocales, setGlobalLocale } from "../../i18n/index.js";
 
 const econsentStore = useEconsentStore();
 const tabsListRef = ref(null);
+
+onMounted(() => {
+  void preloadAllLocales();
+});
 
 const availableLanguages = [
   { code: "en", name: "English", flag: "🇬🇧" },

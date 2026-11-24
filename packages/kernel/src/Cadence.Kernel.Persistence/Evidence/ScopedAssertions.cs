@@ -49,6 +49,28 @@ internal sealed class ScopedAssertions
             [.. direct.Concat(answers).Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId) || a.TargetKind == NodeKinds.Assertion)]);
     }
 
+    /// <summary>Reads only the active locks and freezes at <paramref name="scopes"/>, widest first.</summary>
+    public static async Task<IReadOnlyList<LockView>> ReadLocksAsync(
+        KernelDbContext db,
+        IReadOnlyList<NodeRef> scopes,
+        CancellationToken cancellationToken)
+    {
+        var scopeIds = scopes.Select(s => s.Id).ToList();
+        var locks = await db.Assertions.AsNoTracking()
+            .Where(a => scopeIds.Contains(a.TargetId)
+                && (a.Kind == AssertionKind.Locked || a.Kind == AssertionKind.Frozen))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (locks.Count == 0)
+        {
+            return [];
+        }
+
+        return new ScopedAssertions(
+            scopes,
+            [.. locks.Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))]).Locks();
+    }
+
     /// <summary>The locks in force, widest scope first.</summary>
     public IReadOnlyList<LockView> Locks() =>
         [.. _stated
@@ -64,6 +86,26 @@ internal sealed class ScopedAssertions
         [.. _stated
             .Where(a => !a.IsLock && (about(a) || a.TargetKind == NodeKinds.Assertion))
             .Select(a => _retractedBy.TryGetValue(a.Id, out var retraction) ? View(a, retraction.Id, retraction.AssertedAt) : View(a, null, null))];
+
+    /// <summary>
+    /// Every covering assertion id for the audit trail (spec §8.2): locks on covering scopes, assertions accepted by
+    /// <paramref name="about"/>, answers to their queries, and every retraction or release of them.
+    /// </summary>
+    public IReadOnlyList<AssertionId> CoveringAuditIds(Func<Assertion, bool> about)
+    {
+        var queryIds = _stated
+            .Where(a => !a.IsLock && a.Kind == AssertionKind.Queried && about(a))
+            .Select(a => a.Id.Value)
+            .ToHashSet();
+        var coveredStated = _stated
+            .Where(a => a.IsLock || about(a) || (a.TargetKind == NodeKinds.Assertion && queryIds.Contains(a.TargetId)))
+            .Select(a => a.Id)
+            .ToList();
+        var retractions = coveredStated
+            .Where(_retractedBy.ContainsKey)
+            .Select(id => _retractedBy[id].Id);
+        return [.. coveredStated.Concat(retractions)];
+    }
 
     private int Width(Assertion assertion)
     {

@@ -369,6 +369,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
+        FrontendQualityGateService.CheckTypecheck(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
     }
 
     [Fact]
@@ -754,11 +755,16 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         InitGitRepo();
         Write(".github/workflows/ci.yml", "name: CI\non: INVALID_WORKFLOW_MARKER\n");
         Write("docker/Dockerfile.api", "FROM ubuntu:24.04\n# INVALID_DOCKERFILE_MARKER\n");
+        Write("scripts/resolve_dotnet_env.sh", "#!/bin/sh\nexport DOTNET_READY=1\n");
+        Write("scripts/deploy.sh", "#!/bin/sh\n# INVALID_SHELL_MARKER\n");
+        Write(".githooks/pre-commit", "#!/bin/sh\n. scripts/resolve_dotnet_env.sh\n# INVALID_SHELL_MARKER\n");
         RunGit("add", ".");
 
-        // Mask both files on disk with clean content so only staged index inspection catches them.
+        // Mask files on disk with clean content so only staged index inspection catches them.
         Write(".github/workflows/ci.yml", "name: CI\non: push\n");
         Write("docker/Dockerfile.api", "FROM ubuntu:24.04\n");
+        Write("scripts/deploy.sh", "#!/bin/sh\necho ok\n");
+        Write(".githooks/pre-commit", "#!/bin/sh\n. scripts/resolve_dotnet_env.sh\necho ok\n");
 
         var emptyPathEnv = new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = _tempDir };
         CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
@@ -767,6 +773,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             .Should().Be(1, "hadolint gate must fail closed when binary is missing");
         CliLinterGateService.ResolveShellcheck(_tempDir, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().BeNull("shellcheck resolution must return null when binary is missing");
+        CliLinterGateService.RunShellcheck(_tempDir, ["scripts/deploy.sh"], preCommit: true, getEnvironmentVariable: k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "shellcheck gate must fail closed when binary is missing");
 
         CreateCadenceBinLinterStubs();
         CliLinterGateService.ResolveShellcheck(_tempDir, k => emptyPathEnv.GetValueOrDefault(k))
@@ -776,13 +784,19 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             .Should().Be(1, "actionlint must validate staged workflow blob even when working tree is clean");
         CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(1, "hadolint must validate staged Dockerfile blob even when working tree is clean");
+        CliLinterGateService.RunShellcheck(_tempDir, ["scripts/deploy.sh"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "shellcheck must validate staged *.sh blob even when working tree is clean");
+        CliLinterGateService.RunShellcheck(_tempDir, [".githooks/pre-commit"], preCommit: true, reader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(1, "shellcheck must validate staged .githooks/* blob even when working tree is clean");
 
-        // Now stage the clean versions and verify both pass.
+        // Now stage the clean versions and verify all three gates pass (including -x cross-file sourcing for .githooks/pre-commit).
         RunGit("add", ".");
         using var cleanReader = GitIndexReader.TryOpen(_tempDir);
         CliLinterGateService.RunActionlint(_tempDir, [".github/workflows/ci.yml"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(0);
         CliLinterGateService.RunHadolint(_tempDir, ["docker/Dockerfile.api"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
+            .Should().Be(0);
+        CliLinterGateService.RunShellcheck(_tempDir, ["scripts/deploy.sh", ".githooks/pre-commit"], preCommit: true, cleanReader, k => emptyPathEnv.GetValueOrDefault(k))
             .Should().Be(0);
     }
 
@@ -1318,6 +1332,18 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             shellcheckPath,
             "#!/bin/sh\n" +
             "if [ \"${1:-}\" = \"--version\" ]; then echo 'ShellCheck - shell script analysis tool'; echo 'version: 0.11.0'; exit 0; fi\n" +
+            "if [ \"${1:-}\" != \"-x\" ]; then echo 'missing -x flag'; exit 1; fi\n" +
+            "shift\n" +
+            "for f in \"$@\"; do\n" +
+            "  if [ -f \"$f\" ] && grep -q 'INVALID_SHELL_MARKER' \"$f\" 2>/dev/null; then\n" +
+            "    echo \"$f:2:1: error: invalid shell marker\"\n" +
+            "    exit 1\n" +
+            "  fi\n" +
+            "  if [ \"$f\" = \".githooks/pre-commit\" ] && [ ! -f 'scripts/resolve_dotnet_env.sh' ]; then\n" +
+            "    echo \"$f:2:1: warning: SC1091 sourced script missing from workspace\"\n" +
+            "    exit 1\n" +
+            "  fi\n" +
+            "done\n" +
             "exit 0\n");
         File.SetUnixFileMode(shellcheckPath, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }
@@ -1351,6 +1377,92 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     {
         FrontendQualityGateService.CheckPrettier(_tempDir, [], preCommit: true).Should().Be(0);
         FrontendQualityGateService.CheckEslint(_tempDir, [], preCommit: true).Should().Be(0);
+        FrontendQualityGateService.CheckTypecheck(_tempDir, [], preCommit: true).Should().Be(0);
+    }
+
+    [Fact]
+    public void CiPlan_FrontendStyleAndLintStep_DelegatesEslintToCadenceCli()
+    {
+        var lintJob = CiPlan.Jobs.Single(j => j.Key == "lint-and-static");
+        var step = lintJob.Steps.Single(s => s.Name == "Run frontend style and lint");
+
+        step.EnvironmentIfPassed.Should().Contain(
+            new CiEnvironmentIfPassed(
+                "native-aot-build/Publish the CLI as Native AOT",
+                "CADENCE_CLI_CACHE_HIT",
+                "true"));
+        step.Commands.Should().HaveCount(3);
+        var eslintCmd = step.Commands[1];
+        eslintCmd.FileName.Should().Be("node");
+        eslintCmd.Arguments.Should().Equal("scripts/run-cli.js", "check", "eslint");
+        eslintCmd.ForwardsBaseRef.Should().BeFalse("ci.yml runs check eslint unscoped across all tracked files");
+
+        var typecheckCmd = step.Commands[2];
+        typecheckCmd.FileName.Should().Be("pnpm");
+        typecheckCmd.Arguments.Should().Equal("-r", "typecheck");
+    }
+
+    [Fact]
+    public void CheckEslint_UnscopedRun_LintsAllTrackedJsTsVueAndMjsFilesViaRootConfig_AndRunsDuplicateIdentifierCheck()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        InitGitRepo();
+        Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
+        Write("eslint.config.mjs", "export default [];\n");
+        Write(".claude/skills/run-cadence/driver.mjs", "export const ok = true;\n");
+        Write("packages/usdm-schemas/src/index.ts", "export const version = 4;\n");
+        Write("apps/web/src/stores/demo/clinicalEcrf.ts", "export const store = 1;\n");
+        string dupLog = Path.Combine(_tempDir, "dup-check.log");
+        Write("scripts/check_duplicate_identifiers.js", $"require('node:fs').writeFileSync({System.Text.Json.JsonSerializer.Serialize(dupLog)}, 'checked');\n");
+        Write("docs/README.md", "# Ignored by EslintExtensions\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "seed tracked files");
+
+        // Untracked scratch JS file should not be swept when git ls-files succeeds.
+        Write("untracked-scratch.js", "BROKEN_ESLINT_MARKER\n");
+
+        string binDir = Path.Combine(_tempDir, "pnpm-stub-bin");
+        Directory.CreateDirectory(binDir);
+        string argsCapture = Path.Combine(_tempDir, "pnpm-eslint-args.txt");
+        string pnpmStub = Path.Combine(binDir, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then echo '10.34.6'; exit 0; fi\n" +
+            $"printf '%s\\n' \"$*\" >> '{argsCapture}'\n" +
+            "for arg in \"$@\"; do\n" +
+            "  if [ -f \"$arg\" ] && grep -q 'BROKEN_ESLINT_MARKER' \"$arg\" 2>/dev/null; then exit 1; fi\n" +
+            "done\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? binDir : $"{binDir}{Path.PathSeparator}{systemPath}",
+        };
+
+        FrontendQualityGateService.CheckEslint(_tempDir, getEnvironmentVariable: k => stubEnv.GetValueOrDefault(k))
+            .Should().Be(0);
+
+        File.Exists(dupLog).Should().BeTrue("unscoped CheckEslint must run check_duplicate_identifiers.js when clinicalEcrf.ts is tracked");
+        string captured = File.ReadAllText(argsCapture);
+        captured.Should().StartWith("exec eslint --no-warn-ignored --max-warnings 0 -- ");
+        captured.Should().NotContain("-r lint");
+        captured.Should().Contain(".claude/skills/run-cadence/driver.mjs");
+        captured.Should().Contain("eslint.config.mjs");
+        captured.Should().Contain("packages/usdm-schemas/src/index.ts");
+        captured.Should().Contain("apps/web/src/stores/demo/clinicalEcrf.ts");
+        captured.Should().NotContain("untracked-scratch.js");
+        captured.Should().NotContain("docs/README.md");
+
+        Write(".claude/skills/run-cadence/driver.mjs", "BROKEN_ESLINT_MARKER\n");
+        FrontendQualityGateService.CheckEslint(_tempDir, getEnvironmentVariable: k => stubEnv.GetValueOrDefault(k))
+            .Should().Be(1, "unscoped CheckEslint must fail when a tracked root/skill .mjs file has an ESLint error");
     }
 
     [Fact]
@@ -1364,8 +1476,18 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
         string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
         Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
+        string realNodeModules = Path.Combine(realRepoRoot, "node_modules");
         string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
-        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        bool createdSymlink = Directory.Exists(realNodeModules);
+        if (createdSymlink)
+        {
+            Directory.CreateSymbolicLink(symlinkNodeModules, realNodeModules);
+        }
+        else
+        {
+            Directory.CreateDirectory(symlinkNodeModules);
+        }
+
         Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
 
         string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
@@ -1523,6 +1645,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/web/src/App.vue").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/subject-portal/src/main.ts").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/ui/src/index.ts").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/usdm-schemas/src/index.ts").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-api-types.js").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-canvas-contracts.js").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/kernel/src/Cadence.Kernel.Abstractions/References/NodeKinds.cs").Should().BeTrue();
@@ -1567,12 +1690,13 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             Environment.SetEnvironmentVariable("PATH", $"{sentinelBin}:/usr/bin:/bin");
 
             var context = new GateContext(_tempDir, ["README.md"], PreCommit: true);
+            QualityGates.Find("typecheck")!.Run(context).Should().BeTrue();
             QualityGates.Find("vulnerabilities")!.Run(context).Should().BeTrue();
             QualityGates.Find("api-clients")!.Run(context).Should().BeTrue();
             QualityGates.Find("openapi")!.Run(context).Should().BeTrue();
 
             File.Exists(invocationsLog).Should().BeFalse(
-                "staging only README.md must complete vulnerabilities, api-clients, and openapi offline without invoking dotnet, pnpm, pip-audit, or tsc");
+                "staging only README.md must complete typecheck, vulnerabilities, api-clients, and openapi offline without invoking dotnet, pnpm, pip-audit, or tsc");
         }
         finally
         {

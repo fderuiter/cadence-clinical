@@ -1,0 +1,49 @@
+.ecrf-role-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.ecrf-role-banner__label {
+  font-size: 0.9rem;
+}
+
+.ecrf-form-error {
+  color: var(--semantic-color-error);
+  font-size: 0.8rem;
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ecrf-form-outcome {
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ecrf-form-outcome--saved {
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+}
+
+.ecrf-form-outcome--stale,
+.ecrf-form-outcome--invalid,
+.ecrf-form-outcome--locked,
+.ecrf-form-outcome--failed {
+  background-color: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
+}

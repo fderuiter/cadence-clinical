@@ -162,21 +162,67 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer } from "ui";
+import {
+  buildScopedWorkflowPath,
+  resolveWorkspaceNavigationScope,
+} from "../canvas/palette";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
+import { resolveStorePinia } from "../stores/onboardingSummary.js";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
+const props = defineProps({
+  openOnMount: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["mounted-open"]);
+
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const activeCanvasStore = computed(
+  () => resolveStorePinia(authStore)?.state?.value?.studyCanvas || null
+);
+
+watch(
+  () => props.openOnMount,
+  (shouldOpen) => {
+    if (shouldOpen) {
+      if (!onboardingStore.isDrawerOpen) {
+        onboardingStore.openDrawer();
+      }
+      emit("mounted-open");
+    }
+  },
+  { immediate: true }
+);
 const router = useRouter();
-const route = useRoute();
+let activeRoute = null;
+try {
+  activeRoute = useRoute();
+} catch {
+  activeRoute = null;
+}
+const { activeStudyCode } = useActiveStudyScope();
+
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -216,7 +262,8 @@ function navigateToTask(task) {
   if (!task) return;
   const authorizedRoute = resolveAuthorizedTaskRoute(
     task,
-    effectiveRoles.value
+    effectiveRoles.value,
+    workspaceScope.value
   );
   if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
     router.push(authorizedRoute);
@@ -225,8 +272,13 @@ function navigateToTask(task) {
 }
 
 function openOrientationHub() {
-  if (isScreenAvailable("overview") && canPushResolvedPath("/overview")) {
-    router.push("/overview");
+  const targetPath = buildScopedWorkflowPath("/overview", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+  });
+  if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
+    router.push(targetPath);
     onboardingStore.closeDrawer();
   }
 }
@@ -238,19 +290,26 @@ async function startGuidedTour() {
   if (
     initialRouteName &&
     router &&
-    route?.name !== initialRouteName &&
-    (route?.name === "forbidden" ||
-      route?.path === "/forbidden" ||
-      route?.name === "unavailable" ||
-      route?.path === "/unavailable")
+    activeRoute?.name !== initialRouteName &&
+    (activeRoute?.name === "forbidden" ||
+      activeRoute?.path === "/forbidden" ||
+      activeRoute?.name === "unavailable" ||
+      activeRoute?.path === "/unavailable")
   ) {
     const resolved =
       typeof router.resolve === "function"
         ? router.resolve({ name: initialRouteName })
         : null;
-    const targetPath = resolved?.fullPath || resolved?.path;
+    const basePath = resolved?.path || resolved?.fullPath;
+    const targetPath = basePath
+      ? buildScopedWorkflowPath(basePath, {
+          studyCode: workspaceScope.value.studyCode,
+          siteId: workspaceScope.value.siteId,
+          subjectCode: workspaceScope.value.subjectCode,
+        })
+      : null;
     if (targetPath && canPushResolvedPath(targetPath)) {
-      await router.push({ name: initialRouteName });
+      await router.push(targetPath);
     }
   }
 }

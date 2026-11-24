@@ -17,6 +17,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Protocol;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
@@ -30,14 +31,21 @@ using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Standards.Mapping;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Rules.Packs;
 using Cadence.Security.Authentication;
+using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Kernel.Protocol;
+using Cadence.TestSupport.Kernel.Rules;
+using Cadence.TestSupport.Kernel.Standards;
 
 using FluentAssertions;
 
@@ -45,6 +53,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -88,10 +97,13 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
                 "study_site.activate",
                 "concept.define",
                 "protocol.draft",
+                "protocol.amend",
                 "protocol.revise_draft",
                 "protocol.submit_for_review",
                 "protocol.return_to_draft",
                 "protocol.approve",
+                "simulation.run",
+                "simulation.save_report",
                 "artifact.register",
                 "artifact.add_version",
                 "effectivity.declare",
@@ -502,11 +514,320 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         }
     }
 
+    [Fact]
+    [KernelRule("K-PROT-2")]
+    [KernelRule("K-SIM-5")]
+    public async Task ForkedAmendmentGovernance_EnforcesUndeclaredElementRefusal_MultiKindSimulation_AndAttestedSimulationReportGate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var sbpConcept = _store.SeedSbpConcept();
+        var baseDesign = new ProtocolDesign
+        {
+            Title = "CADENCE-101 Vitals Protocol",
+            Epochs = [new Epoch("ep.screening", "Screening", 1), new Epoch("ep.treatment", "Treatment", 2)],
+            PlannedActivities =
+            [
+                new PlannedActivity(
+                    "visit.screening",
+                    "Screening Visit",
+                    "ep.screening",
+                    [ActivityLocation.Site],
+                    ["cs.vitals"],
+                    new ActivityTiming(1, 0, 0)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.vitals",
+                    "Vital Signs",
+                    [new CollectionItem("item.sbp", sbpConcept, "mm[Hg]", Required: true)]),
+            ],
+        };
+
+        var v1Id = _store.SeedDraftProtocolVersion(ProtocolDesignDocument.Write(baseDesign));
+        var studyRef = NodeRef.For(_store.StudyId).ToString();
+        var v1Ref = NodeRef.For(v1Id).ToString();
+        var v1ApprovePath = $"/api/v1/kernel/protocol-versions/{v1Ref}/approve";
+
+        var factory = CreateFactory();
+        using var designer = factory.CreateSignedClient(DesignerIdentity);
+
+        // 1. First version approves with AttestationMeaning.Approved alone (no SimulationReport required for v1).
+        string v1Hash;
+        using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "fork-v1-submit", "Freeze v1", null), ct))
+        {
+            submitV1.StatusCode.Should().Be(HttpStatusCode.OK);
+            v1Hash = JsonDocument.Parse(await submitV1.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        var v1Sig = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            v1ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var approveV1 = await designer.SendAsync(
+            BuildPost(v1ApprovePath, "fork-v1-approve", "Approve v1", v1Sig, new { meaning = "Approved", expected_content_hash = v1Hash }),
+            ct))
+        {
+            approveV1.StatusCode.Should().Be(HttpStatusCode.OK, await approveV1.Content.ReadAsStringAsync(ct));
+        }
+
+        // 2. Fork v2 adding visit.week4 + eligibility.age18 while omitting them from ImpactedElements -> SubmitForReview refuses with 422!
+        var amendedDesign = baseDesign with
+        {
+            PlannedActivities =
+            [
+                .. baseDesign.PlannedActivities,
+                new PlannedActivity(
+                    "visit.week4",
+                    "Week 4 Visit",
+                    "ep.treatment",
+                    [ActivityLocation.Site],
+                    ["cs.vitals"],
+                    new ActivityTiming(28, 2, 2)),
+            ],
+            EligibilityCriteria =
+            [
+                new EligibilityCriterion("eligibility.age18", CriterionCategory.Inclusion, "Participant is at least 18 years old.", []),
+            ],
+        };
+        var v2Id = ProtocolVersionId.New();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ServiceActorScope>().Actor = Actor.Person(DesignerIdentity.UserId);
+            var sender = scope.ServiceProvider.GetRequiredService<IKernelCommandSender>();
+            var incompleteAmendment = new ProtocolAmendment(
+                "Add Week 4 visit",
+                "Follow-up blood pressure check",
+                AmendmentClassification.Substantial,
+                "Adds Week 4 and age criterion",
+                ["cs.vitals"],
+                TransitionPolicy.RequiresReconsent);
+            var forked = await sender.SendAsync(
+                new ForkProtocolVersion(Tenant, v1Id, v2Id, incompleteAmendment, "fork-v2-create", "Fork v2 from v1"),
+                cancellationToken: ct);
+            forked.IsSuccess.Should().BeTrue(forked.Error?.Message);
+
+            var revised = await sender.SendAsync(
+                new ReviseProtocolDraft(Tenant, v2Id, ProtocolDesignDocument.Write(amendedDesign), incompleteAmendment, "fork-v2-revise-incomplete", "Add Week 4 and eligibility"),
+                cancellationToken: ct);
+            revised.IsSuccess.Should().BeTrue(revised.Error?.Message);
+        }
+
+        var v2Ref = NodeRef.For(v2Id).ToString();
+        using (var refusedSubmit = await designer.SendAsync(
+            BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "fork-v2-submit-refused", "Submit incomplete amendment", null),
+            ct))
+        {
+            refusedSubmit.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            var problem = JsonDocument.Parse(await refusedSubmit.Content.ReadAsStringAsync(ct)).RootElement;
+            problem.GetProperty("code").GetString().Should().Be(ProtocolErrors.UndeclaredImpactedElements.Code);
+            var undeclared = problem.GetProperty("errors").GetProperty("impactedElements").EnumerateArray().Select(e => e.GetString()).ToList();
+            undeclared.Should().BeEquivalentTo("eligibility.age18", "visit.week4");
+            problem.GetProperty("explanation").GetProperty("producer").GetString().Should().Be("kernel.protocol.amendment_scope");
+            problem.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("code").GetString().Should().Be("protocol.amendment.impacted_elements");
+        }
+
+        // 3. Declare all changed elements and submit v2 -> InReview.
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ServiceActorScope>().Actor = Actor.Person(DesignerIdentity.UserId);
+            var sender = scope.ServiceProvider.GetRequiredService<IKernelCommandSender>();
+            var completeAmendment = new ProtocolAmendment(
+                "Add Week 4 visit",
+                "Follow-up blood pressure check",
+                AmendmentClassification.Substantial,
+                "Adds Week 4 and age criterion",
+                ["cs.vitals", "visit.week4", "eligibility.age18"],
+                TransitionPolicy.RequiresReconsent);
+            var fixedDraft = await sender.SendAsync(
+                new ReviseProtocolDraft(Tenant, v2Id, ProtocolDesignDocument.Write(amendedDesign), completeAmendment, "fork-v2-revise-complete", "Declare all impacted elements"),
+                cancellationToken: ct);
+            fixedDraft.IsSuccess.Should().BeTrue(fixedDraft.Error?.Message);
+        }
+
+        string v2Hash;
+        using (var submitV2 = await designer.SendAsync(
+            BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "fork-v2-submit-ok", "Freeze v2", null),
+            ct))
+        {
+            submitV2.StatusCode.Should().Be(HttpStatusCode.OK, await submitV2.Content.ReadAsStringAsync(ct));
+            v2Hash = JsonDocument.Parse(await submitV2.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        // 4. Multi-kind HTTP simulation works across ProtocolVersion, MappingSpecification, and RulePack.
+        var httpJsonOptions = factory.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
+        KernelSimulationResponse protocolSimulation;
+        using (var simProtRes = await designer.PostAsJsonAsync(
+            "/api/v1/kernel/simulation/simulate",
+            new { stored_version_ref = v2Ref, valid_at = T0, known_at = T0 },
+            ct))
+        {
+            simProtRes.StatusCode.Should().Be(HttpStatusCode.OK, await simProtRes.Content.ReadAsStringAsync(ct));
+            protocolSimulation = (await simProtRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
+            protocolSimulation.Candidate.Kind.Should().Be("ProtocolVersion");
+            protocolSimulation.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "visit.week4");
+        }
+
+        var mapSpecJson = MappingSpecificationJson.ToJson(
+            SampleMappingSpecifications.Specification(SampleMappingSpecifications.SystolicBloodPressure(sbpConcept))).GetRawText();
+        using (var simMapRes = await designer.PostAsJsonAsync(
+            "/api/v1/kernel/simulation/simulate",
+            new { kind = "MappingSpecification", study_ref = studyRef, candidate_content = mapSpecJson, valid_at = T0, known_at = T0 },
+            ct))
+        {
+            simMapRes.StatusCode.Should().Be(HttpStatusCode.OK, await simMapRes.Content.ReadAsStringAsync(ct));
+            var mapSim = (await simMapRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
+            mapSim.Candidate.Kind.Should().Be("MappingSpecification");
+        }
+
+        var rulePackJson = RulePackJson.ToJson(SampleRulePacks.Sample()).GetRawText();
+        using (var simRuleRes = await designer.PostAsJsonAsync(
+            "/api/v1/kernel/simulation/simulate",
+            new { kind = "RulePack", study_ref = studyRef, candidate_content = rulePackJson, valid_at = T0, known_at = T0 },
+            ct))
+        {
+            simRuleRes.StatusCode.Should().Be(HttpStatusCode.OK, await simRuleRes.Content.ReadAsStringAsync(ct));
+            var ruleSim = (await simRuleRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
+            ruleSim.Candidate.Kind.Should().Be("RulePack");
+        }
+
+        // 5. Approving v2 without an attested SimulationReport fails with 409 K.Protocol.SimulationReviewRequired and writes zero Approved attestations for v2!
+        var v2ApprovePath = $"/api/v1/kernel/protocol-versions/{v2Ref}/approve";
+        var v2SigMissingReport = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            v2ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var missingReportRes = await designer.SendAsync(
+            BuildPost(v2ApprovePath, "fork-v2-approve-no-report", "Approve v2 without simulation report", v2SigMissingReport, new
+            {
+                meaning = "Approved",
+                expected_content_hash = v2Hash,
+            }),
+            ct))
+        {
+            missingReportRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await missingReportRes.Content.ReadAsStringAsync(ct)).Should().Contain(ProtocolErrors.SimulationReviewRequired.Code);
+        }
+
+        _store.ReadAll<Attestation>().Count(a => a.Target.Id == v2Id.Value).Should().Be(0, "gate checks before recording orphan Approved attestation");
+
+        // 6. Saving a masked SimulationResult is refused (K-SIM-5); saving the unmasked SimulationResult registers a SimulationReport artifact.
+        var maskedSimulation = protocolSimulation with
+        {
+            Masked = [new KernelMaskedPartResponse(SimulationSnapshotMasking.SitesPart, MaskReason.NotPermitted.ToString())],
+        };
+        using (var saveMaskedRes = await designer.SendAsync(
+            BuildPost($"/api/v1/kernel/studies/{studyRef}/simulation-reports", "fork-v2-save-masked", "Attempt to save masked simulation", null, new
+            {
+                title = "Masked report",
+                result = maskedSimulation,
+            }, httpJsonOptions),
+            ct))
+        {
+            saveMaskedRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await saveMaskedRes.Content.ReadAsStringAsync(ct)).Should().Contain(EvidenceErrors.SimulationReportInvalid.Code);
+        }
+
+        Guid reportVersionId;
+        string reportContentHash;
+        using (var saveReportRes = await designer.SendAsync(
+            BuildPost($"/api/v1/kernel/studies/{studyRef}/simulation-reports", "fork-v2-save-report", "Save unmasked simulation report for v2", null, new
+            {
+                title = "Protocol v2 Simulation Impact Report",
+                result = protocolSimulation,
+            }, httpJsonOptions),
+            ct))
+        {
+            saveReportRes.StatusCode.Should().Be(HttpStatusCode.Created, await saveReportRes.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await saveReportRes.Content.ReadAsStringAsync(ct)).RootElement;
+            doc.GetProperty("kind").GetString().Should().Be("SimulationReport");
+            reportVersionId = doc.GetProperty("artifact_version_id").GetGuid();
+            reportContentHash = doc.GetProperty("content_hash").GetString()!;
+        }
+
+        // 7. Approving before signing Reviewed on the SimulationReport still refuses with 409; once Reviewed is signed, Approve succeeds!
+        var v2SigUnreviewed = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            v2ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var unreviewedRes = await designer.SendAsync(
+            BuildPost(v2ApprovePath, "fork-v2-approve-unreviewed", "Approve v2 with unsigned report", v2SigUnreviewed, new
+            {
+                meaning = "Approved",
+                expected_content_hash = v2Hash,
+            }),
+            ct))
+        {
+            unreviewedRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await unreviewedRes.Content.ReadAsStringAsync(ct)).Should().Contain(ProtocolErrors.SimulationReviewRequired.Code);
+        }
+
+        AttestationId reviewAttestationId;
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ServiceActorScope>().Actor = Actor.Person(DesignerIdentity.UserId);
+            var sender = scope.ServiceProvider.GetRequiredService<IKernelCommandSender>();
+            var signedReview = await sender.SendAsync(
+                new Attest(
+                    Tenant,
+                    AttestationId.New(),
+                    AttestationMeaning.Reviewed,
+                    new AttestationTarget(NodeKinds.ArtifactVersion, reportVersionId, reportContentHash),
+                    _clock.UtcNow,
+                    "pwd+otp",
+                    "fork-v2-review-attest",
+                    "Sign Reviewed attestation on v2 SimulationReport"),
+                cancellationToken: ct);
+            signedReview.IsSuccess.Should().BeTrue(signedReview.Error?.Message);
+            reviewAttestationId = signedReview.Value!;
+        }
+
+        var v2SigWrongRef = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            v2ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var wrongRefRes = await designer.SendAsync(
+            BuildPost(v2ApprovePath, "fork-v2-approve-wrong-ref", "Approve v2 with unrelated review attestation ref", v2SigWrongRef, new
+            {
+                meaning = "Approved",
+                expected_content_hash = v2Hash,
+                review_attestation_ref = NodeRef.For(AttestationId.New()).ToString(),
+            }),
+            ct))
+        {
+            wrongRefRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await wrongRefRes.Content.ReadAsStringAsync(ct)).Should().Contain(ProtocolErrors.SimulationReviewRequired.Code);
+        }
+
+        var v2SigApproved = TestSecurityContext.CreateSigToken(
+            DesignerIdentity.UserId,
+            v2ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: _clock.UtcNow);
+        using (var approvedV2Res = await designer.SendAsync(
+            BuildPost(v2ApprovePath, "fork-v2-approve-ok", "Approve v2 with verified SimulationReport review signature", v2SigApproved, new
+            {
+                meaning = "Approved",
+                expected_content_hash = v2Hash,
+                review_attestation_ref = NodeRef.For(reviewAttestationId).ToString(),
+            }),
+            ct))
+        {
+            approvedV2Res.StatusCode.Should().Be(HttpStatusCode.OK, await approvedV2Res.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await approvedV2Res.Content.ReadAsStringAsync(ct)).RootElement;
+            doc.GetProperty("status").GetString().Should().Be("Approved");
+        }
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateFactory()
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IClock>();
@@ -531,6 +852,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
                 services.AddSingleton<ITenantResidencyReader>(_store);
                 services.RemoveAll<IKernelUnitOfWorkFactory>();
                 services.AddSingleton<IKernelUnitOfWorkFactory>(_store);
+                services.RemoveAll<ISimulationInputs>();
+                services.AddSingleton<ISimulationInputs>(_store);
                 services.RemoveAll<IProtocolSubmissionCheck>();
 
                 foreach (var hosted in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
@@ -551,11 +874,12 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         string? idempotencyKey,
         string? reason,
         string? sigToken,
-        object? payload = null)
+        object? payload = null,
+        JsonSerializerOptions? jsonOptions = null)
     {
         var req = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative))
         {
-            Content = payload is not null ? JsonContent.Create(payload) : null,
+            Content = payload is not null ? JsonContent.Create(payload, options: jsonOptions) : null,
         };
         if (idempotencyKey is not null)
         {
@@ -584,7 +908,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         IStudyDirectory,
         IProtocolVersionReader,
         IStudyGovernanceReader,
-        IAttestationVerifier
+        IAttestationVerifier,
+        ISimulationInputs
     {
         private readonly TenantId _tenant;
         private readonly IClock _clock;
@@ -843,6 +1168,52 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             }
 
             return ValueTask.FromResult(AttestationVerification.Met);
+        }
+
+        public Task<ProtocolVersionSnapshot?> FindProtocolVersionAsync(TenantId tenant, ProtocolVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult(tenant == _tenant && Find<ProtocolVersion>(id) is { } pv
+                ? new ProtocolVersionSnapshot(pv.Id, pv.StudyId, pv.Number, pv.Status, pv.ParentVersionId, pv.Content, pv.ContentHash, pv.VersionIndex, pv.Amendment)
+                : null);
+
+        public Task<DependentsReport> DependentsAsync(
+            TenantId tenant,
+            Actor reader,
+            ProtocolVersionId baseVersion,
+            ProtocolVersionId? candidate,
+            IReadOnlySet<NodeRef> impactedElements,
+            SimulationAsOf asOf,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new DependentsReport(
+                NodeRef.For(baseVersion).ToString(),
+                LineageQuery.DefaultDepth,
+                asOf.ValidAt,
+                asOf.KnownAt,
+                [],
+                0,
+                false));
+
+        public Task<bool> StudyExistsAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken) =>
+            Task.FromResult(tenant == _tenant && studyId == StudyId);
+
+        public Task<SimulationStudySnapshot> LoadStudySnapshotAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SimulationAsOf asOf,
+            CancellationToken cancellationToken)
+        {
+            if (tenant != _tenant || studyId != StudyId)
+            {
+                return Task.FromResult(SimulationStudySnapshot.Empty);
+            }
+
+            var designs = ReadAll<ProtocolVersion>()
+                .Where(v => v.StudyId == studyId)
+                .ToDictionary(v => v.Id, v => v.Design());
+            return Task.FromResult(SimulationStudySnapshot.Empty with
+            {
+                Loaded = true,
+                ProtocolDesigns = designs,
+            });
         }
 
         private StudyDirectoryEntry ToStudyEntry() =>

@@ -83,8 +83,10 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import { kernelApi } from "../../api/kernelApi";
 import { useClinicalScopeStore } from "../../stores/clinicalScope";
+import { syncWorkspaceScope } from "../../stores/workspaceScope";
 import { isDemoBuild } from "../../utils/demoMode.js";
 
 /**
@@ -94,6 +96,12 @@ import { isDemoBuild } from "../../utils/demoMode.js";
  */
 const emit = defineEmits(["loaded"]);
 const store = useClinicalScopeStore();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter()
+    : null;
 const studyCode = ref(store.activeStudyId);
 const visibleStudies = ref([]);
 const studiesLoading = ref(false);
@@ -150,7 +158,12 @@ async function activateStudy(rawCode) {
   const code = String(rawCode ?? "").trim();
   if (!code) return;
   studyCode.value = code;
-  store.activeStudyId = code;
+  syncWorkspaceScope({
+    studyId: code,
+    router,
+    route,
+    syncRouteQuery: true,
+  });
   if (await store.loadSubjects(code)) emit("loaded");
 }
 

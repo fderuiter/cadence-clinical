@@ -34,7 +34,9 @@ export const useCodingStore = defineStore("coding", {
       isLoading: false,
       dictionaryType: "MEDDRA",
       targetVersion: "27.0",
+      /** @type {any} */
       results: null,
+      /** @type {string | null} */
       error: null,
     },
     browserModal: {
@@ -485,8 +487,8 @@ export const useCodingStore = defineStore("coding", {
         } else {
           this.assignments = [];
         }
-      } catch {
-        this.error = err.message || "Failed to load medical coding queue";
+      } catch (err) {
+        this.error = err?.message || "Failed to load medical coding queue";
       } finally {
         this.isLoading = false;
       }
@@ -798,8 +800,8 @@ export const useCodingStore = defineStore("coding", {
         // Clear selections
         this.selectedAssignmentIds = [];
         return res;
-      } catch {
-        this.error = err.message || "Batch assignment failed";
+      } catch (err) {
+        this.error = err?.message || "Batch assignment failed";
         throw err;
       } finally {
         this.isLoading = false;
@@ -925,8 +927,9 @@ export const useCodingStore = defineStore("coding", {
 
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
-      } catch {
-        this.error = err.message || "Failed to batch approve verbatim clusters";
+      } catch (err) {
+        this.error =
+          err?.message || "Failed to batch approve verbatim clusters";
         throw err;
       } finally {
         this.isLoading = false;
@@ -1062,8 +1065,8 @@ export const useCodingStore = defineStore("coding", {
 
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
-      } catch {
-        this.error = err.message || "Failed to batch code verbatim clusters";
+      } catch (err) {
+        this.error = err?.message || "Failed to batch code verbatim clusters";
         throw err;
       } finally {
         this.isLoading = false;
@@ -1124,9 +1127,9 @@ export const useCodingStore = defineStore("coding", {
 
         this.impactAnalysis.results = res.metrics || res;
         return res;
-      } catch {
+      } catch (err) {
         this.impactAnalysis.error =
-          err.message || "Failed to run up-versioning impact analysis";
+          err?.message || "Failed to run up-versioning impact analysis";
         throw err;
       } finally {
         this.impactAnalysis.isLoading = false;

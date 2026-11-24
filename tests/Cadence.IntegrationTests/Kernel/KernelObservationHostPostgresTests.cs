@@ -101,7 +101,11 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
 
         // Database lock, signed by the data manager through the kernel (ADR-2621); its HTTP surface is #5466.
         var observations = new KernelObservationScenario(fixture);
-        var study = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation.Id), ct))!.StudyId;
+        var obsId = ObservationId.FromGuid(observation.Id);
+        var study = (await fixture.ObservationRecords.FindAsync(tenant, obsId, ct))!.StudyId;
+        await _scenario.OkAsync(
+            new VerifyObservation(tenant, AssertionId.New(), enrollment, obsId, 2, KernelProtocolScenario.Key(), "Verified corrected value before study lock"),
+            ct);
         var locked = await _scenario.OkAsync(await observations.LockAsync(tenant, study, NodeRef.For(study), ct), ct);
         (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, Correction(enrollment, 129, 2), ct))
             .Should().Be(((HttpStatusCode)423, ObservationErrors.Locked.Code));
@@ -229,6 +233,60 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             .Should().Be(((HttpStatusCode)423, AssertionErrors.Locked.Code));
         (await ProblemAsync(monitor, $"assertions/{reVerifiedRef}/retraction", "Attempted withdrawal while Locked", new { enrollment_ref = enrollmentRef }, ct))
             .Should().Be(((HttpStatusCode)423, AssertionErrors.Locked.Code));
+    }
+
+    /// <summary>
+    /// Through the kernel HTTP host, <c>POST /api/v1/kernel/observations/{observationRef}/verifications</c> returns 409
+    /// (<c>K.Assertion.QueryOpen</c>) while an open query holds on the observation, succeeds once retracted, returns 409
+    /// (<c>K.Assertion.AlreadyVerified</c>) on duplicate verification of the same revision, and <c>GET</c> returns both
+    /// <c>Observation</c> and <c>Assertion</c> audit rows ordered by <c>sequence</c>.
+    /// </summary>
+    [Fact(DisplayName = "HostVerification_RefusesOpenQueryAndDuplicateVerification_AndReturnsAssertionAuditOrderedBySequence")]
+    [GxPRequirement("PRD-QRY-005")]
+    public async Task HostVerificationRefusesOpenQueryAndDuplicateVerificationAndReturnsAssertionAuditOrderedBySequence()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, tenant, enrollment) = await SeedAsync(grant: true, ct);
+        using var crc = Client(code, Crc);
+        using var monitor = Client(code, Monitor);
+
+        var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
+        {
+            enrollment_ref = NodeRef.For(enrollment).ToString(),
+            concept = $"{ConceptId.New()}@1",
+            value = Systolic(134),
+            observed_at = Tick().AddHours(-1),
+        }, HttpStatusCode.Created, ct);
+        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+        var observationId = ObservationId.FromGuid(observation.Id);
+        var enrollmentRef = NodeRef.For(enrollment).ToString();
+
+        var query = await _scenario.OkAsync(
+            new RaiseQuery(tenant, AssertionId.New(), enrollment, observationId, "Confirm cuff calibration.", KernelProtocolScenario.Key(), "Monitor discrepancy check"),
+            ct);
+        var queryRef = NodeRef.For(query.AssertionId);
+
+        (await ProblemAsync(monitor, $"observations/{observation}/verifications", "Attempted SDV with open query", new { enrollment_ref = enrollmentRef, revision = 1 }, ct))
+            .Should().Be((HttpStatusCode.Conflict, AssertionErrors.QueryOpen.Code));
+
+        await SendAsync<KernelAssertionStateResponse>(
+            monitor, HttpMethod.Post, $"assertions/{queryRef}/retraction", "Calibration confirmed on source log",
+            new { enrollment_ref = enrollmentRef }, HttpStatusCode.OK, ct);
+
+        await SendAsync<KernelAssertionStateResponse>(
+            monitor, HttpMethod.Post, $"observations/{observation}/verifications", "Verified against calibrated chart",
+            new { enrollment_ref = enrollmentRef, revision = 1 }, HttpStatusCode.Created, ct);
+
+        (await ProblemAsync(monitor, $"observations/{observation}/verifications", "Duplicate SDV on revision 1", new { enrollment_ref = enrollmentRef, revision = 1 }, ct))
+            .Should().Be((HttpStatusCode.Conflict, AssertionErrors.AlreadyVerified.Code));
+
+        var detail = await SendAsync<KernelObservationResponse>(monitor, HttpMethod.Get, $"observations/{observation}", null, null, HttpStatusCode.OK, ct);
+        detail.Audit.Select(a => a.Sequence).Should().BeInAscendingOrder().And.OnlyHaveUniqueItems();
+        detail.Audit.Should().Contain(a => a.Subject == nameof(Observation) && a.Action == "Created" && a.ActorId == Crc);
+        detail.Audit.Should().Contain(a => a.Subject == nameof(Assertion) && a.ReasonForChange == "Monitor discrepancy check");
+        detail.Audit.Should().Contain(a => a.Subject == nameof(Assertion) && a.ReasonForChange == "Calibration confirmed on source log" && a.ActorId == Monitor);
+        detail.Audit.Should().Contain(a => a.Subject == nameof(Assertion) && a.ReasonForChange == "Verified against calibrated chart" && a.ActorId == Monitor);
     }
 
     /// <summary>
@@ -395,7 +453,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
                     ct);
             }
 
-            foreach (var capability in new[] { "observation.verify", "assertion.retract" })
+            foreach (var capability in new[] { "observation.verify", "observation.query", "assertion.retract" })
             {
                 await _scenario.OkAsync(
                     new IssueGrant(tenant, GrantId.New(), Actor.Person(Monitor), capability, null, AuthorityScope.StudySite(studySite), Tick(), null, false,
@@ -412,6 +470,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error an observation endpoint returns must be one its command declares (ADR-2600 §4.5).

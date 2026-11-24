@@ -1,21 +1,8 @@
 <template>
   <div>
     <!-- Active User Role Badge & CRA Mode Toggle -->
-    <div
-      style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
-        background-color: var(--semantic-color-surface-muted);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-      "
-    >
-      <div style="font-size: 0.9rem">
+    <div class="ecrf-role-banner">
+      <div class="ecrf-role-banner__label">
         {{ $t("ecrf.activeRole") }}
         <span
           class="badge"
@@ -431,14 +418,31 @@ function onSubjectScreen() {
 }
 
 const demoRole = ref("site_investigator");
+let syncedPersona = authStore.currentPersona;
+
+function resyncWorkspaceForPersonaSwitch() {
+  for (const key of Object.keys(ecrfSessions)) {
+    delete ecrfSessions[key];
+  }
+  for (const key of Object.keys(sdvStates)) {
+    delete sdvStates[key];
+  }
+  pendingValueChange.value = null;
+  pendingSdvToggle.value = null;
+  showReasonModal.value = false;
+  selectListedSubject();
+}
 
 watch(
   () => authStore.currentPersona,
-  (persona, prevPersona) => {
+  (persona) => {
     if (!authStore.isAuthenticated) return;
     demoRole.value = persona === "cra_monitor" ? "cra" : "site_investigator";
-    if (prevPersona !== undefined && persona !== prevPersona) {
-      selectListedSubject();
+    if (syncedPersona !== null && persona !== syncedPersona) {
+      syncedPersona = persona;
+      resyncWorkspaceForPersonaSwitch();
+    } else {
+      syncedPersona = persona;
     }
   },
   { immediate: true }
@@ -450,9 +454,11 @@ function onRoleTesterChange() {
     authStore.isDemoMode &&
     !authStore.accessToken
   ) {
-    authStore.switchPersona(
-      demoRole.value === "cra" ? "cra_monitor" : "site_crc"
-    );
+    const nextPersona = demoRole.value === "cra" ? "cra_monitor" : "site_crc";
+    if (authStore.switchPersona(nextPersona)) {
+      syncedPersona = authStore.currentPersona;
+      resyncWorkspaceForPersonaSwitch();
+    }
   }
 }
 
@@ -1040,3 +1046,5 @@ defineExpose({
     handleCompleteReconsent(method, targetStore),
 });
 </script>
+
+<style scoped src="../../components/ecrf/ecrfFormBanners.css"></style>

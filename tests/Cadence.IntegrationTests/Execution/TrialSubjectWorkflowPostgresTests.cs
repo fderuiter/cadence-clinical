@@ -359,8 +359,9 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
             ct);
         sponsorOnlyTrialResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden, await sponsorOnlyTrialResponse.Content.ReadAsStringAsync(ct));
 
-        // 3. A caller holding Trial Coordinator outside a verified trial-<12hex> tenant receives 403 Forbidden from SubjectAuthority,
-        //    whereas inside a verified trial-<12hex> tenant SubjectAuthority admits Trial Coordinator (reaching kernel StudySiteUnknown 404).
+        // 3. A caller holding Trial Coordinator outside a verified trial-<12hex> tenant receives 403 Forbidden from the shared
+        //    permission authorization middleware before the handler runs, whereas inside a verified trial-<12hex> tenant
+        //    PermissionAuthorizationHandler and SubjectAuthority admit Trial Coordinator (reaching kernel StudySiteUnknown 404).
         using var nonTrialCoordinatorClient = executionHost.CreateSignedClient(new GatewayIdentity(
             UserId: "enterprise-trial-coord",
             Roles: ["Trial Coordinator"],
@@ -375,7 +376,6 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
             ct);
         string nonTrialCoordBody = await nonTrialCoordResponse.Content.ReadAsStringAsync(ct);
         nonTrialCoordResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden, nonTrialCoordBody);
-        nonTrialCoordBody.Should().Contain("UNAUTHORIZED_SUBJECT_ROLE");
 
         using var trialCoordinatorClient = executionHost.CreateSignedClient(new GatewayIdentity(
             UserId: trialFounderSub,
@@ -403,6 +403,7 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", AppConnectionString)
             .UseSetting("Kernel:VaultMasterKey", VaultMasterKey)
             .UseSetting("Kernel:VaultRegion", "US")

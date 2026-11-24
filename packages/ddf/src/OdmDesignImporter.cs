@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
@@ -29,6 +31,8 @@ namespace Cadence.Ddf;
 /// <param name="PayloadTooLarge">True when the XML payload exceeded <see cref="IProtocolDesignImporter.MaxPayloadBytes"/>.</param>
 /// <param name="Rules">Compiled collection-stage edit-check rules extracted from ODM <c>RangeCheck</c> and <c>ConditionDef</c> elements.</param>
 /// <param name="StudyOid">OID attribute on the imported ODM <c>Study</c> element, when present.</param>
+/// <param name="Epochs">Ordered study epochs derived from ODM <c>StudyEventDef</c> schedule definitions.</param>
+/// <param name="PlannedActivities">Ordered planned visit activities derived from ODM <c>Protocol</c>, <c>StudyEventRef</c>, <c>StudyEventDef</c>, and <c>FormRef</c> elements.</param>
 public sealed record OdmImportResult(
     string? Title,
     IReadOnlyList<CollectionSpec> CollectionSpecs,
@@ -36,7 +40,9 @@ public sealed record OdmImportResult(
     IReadOnlyList<ProtocolImportNote> Notes,
     bool PayloadTooLarge = false,
     IReadOnlyList<Rule>? Rules = null,
-    string? StudyOid = null)
+    string? StudyOid = null,
+    IReadOnlyList<Epoch>? Epochs = null,
+    IReadOnlyList<PlannedActivity>? PlannedActivities = null)
 {
     /// <summary>True when one or more forms were imported without validation problems.</summary>
     public bool IsSuccess => Problems.Count == 0 && !PayloadTooLarge && CollectionSpecs.Count > 0;
@@ -101,11 +107,12 @@ public static partial class OdmDesignImporter
         string odmXml,
         ProtocolConceptResolver resolveConcept,
         ISet<string>? reservedElementIds = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
         ArgumentNullException.ThrowIfNull(odmXml);
         var bytes = Encoding.UTF8.GetBytes(odmXml);
-        return ImportAsync(bytes, resolveConcept, reservedElementIds, cancellationToken);
+        return ImportAsync(bytes, resolveConcept, reservedElementIds, cancellationToken, resolveTerminology);
     }
 
     /// <summary>Imports raw UTF-8/XML bytes in ODM v1.3.2 format into collection specifications and notes.</summary>
@@ -113,7 +120,8 @@ public static partial class OdmDesignImporter
         byte[] xmlBytes,
         ProtocolConceptResolver resolveConcept,
         ISet<string>? reservedElementIds = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
         ArgumentNullException.ThrowIfNull(xmlBytes);
         ArgumentNullException.ThrowIfNull(resolveConcept);
@@ -166,12 +174,13 @@ public static partial class OdmDesignImporter
                 []);
         }
 
-        return await ParseDocumentAsync(document, resolveConcept, reservedElementIds, cancellationToken).ConfigureAwait(false);
+        return await ParseDocumentAsync(document, resolveConcept, resolveTerminology, reservedElementIds, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<OdmImportResult> ParseDocumentAsync(
         XDocument document,
         ProtocolConceptResolver resolveConcept,
+        ProtocolTerminologyResolver? resolveTerminology,
         ISet<string>? reservedIds,
         CancellationToken cancellationToken)
     {
@@ -258,6 +267,54 @@ public static partial class OdmDesignImporter
         var itemDefs = ParseByOid(mdv, "ItemDef", problems);
         var itemGroupDefs = ParseByOid(mdv, "ItemGroupDef", problems);
         var conditionDefs = ParseByOid(mdv, "ConditionDef", problems);
+        var studyEventDefs = ParseByOid(mdv, "StudyEventDef", problems);
+        foreach (var (eventOid, eventDef) in studyEventDefs)
+        {
+            ValidateYesNoAttribute(eventDef, "Repeating", $"StudyEventDef '{eventOid}'", problems);
+        }
+
+        var scheduledEvents = new List<(string EventOid, XElement EventDef)>();
+        var seenScheduledEventOids = new HashSet<string>(StringComparer.Ordinal);
+        if (Child(mdv, "Protocol") is { } protocolScheduleEl)
+        {
+            var orderedEventRefs = OrderRefs(Children(protocolScheduleEl, "StudyEventRef"), "Protocol", "StudyEventRef", problems);
+            foreach (var eventRef in orderedEventRefs)
+            {
+                var eventOid = Attr(eventRef, "StudyEventOID");
+                if (string.IsNullOrWhiteSpace(eventOid))
+                {
+                    problems.Add("<Protocol> has a <StudyEventRef> without a StudyEventOID attribute.");
+                    continue;
+                }
+
+                ValidateYesNoAttribute(eventRef, "Mandatory", $"Protocol StudyEventRef '{eventOid}'", problems);
+                if (!studyEventDefs.TryGetValue(eventOid, out var eventDef))
+                {
+                    problems.Add($"<Protocol> references StudyEventOID '{eventOid}', which does not exist in <MetaDataVersion>.");
+                    continue;
+                }
+
+                if (seenScheduledEventOids.Add(eventOid))
+                {
+                    scheduledEvents.Add((eventOid, eventDef));
+                }
+            }
+        }
+
+        if (scheduledEvents.Count == 0 && studyEventDefs.Count > 0 && problems.Count == 0)
+        {
+            foreach (var eventDef in Children(mdv, "StudyEventDef"))
+            {
+                var eventOid = Attr(eventDef, "OID");
+                if (!string.IsNullOrWhiteSpace(eventOid)
+                    && studyEventDefs.ContainsKey(eventOid)
+                    && seenScheduledEventOids.Add(eventOid))
+                {
+                    scheduledEvents.Add((eventOid, eventDef));
+                }
+            }
+        }
+
         var formDefs = Children(mdv, "FormDef").ToList();
         if (formDefs.Count == 0)
         {
@@ -278,30 +335,15 @@ public static partial class OdmDesignImporter
 
         var studyOid = Attr(study, "OID");
         var formConditionOids = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (Child(mdv, "Protocol") is { } protocolEl)
+        foreach (var (_, eventDef) in scheduledEvents)
         {
-            foreach (var eventRef in Children(protocolEl, "StudyEventRef"))
+            foreach (var formRef in Children(eventDef, "FormRef"))
             {
-                var eventOid = Attr(eventRef, "StudyEventOID");
-                if (string.IsNullOrWhiteSpace(eventOid))
+                var fOid = Attr(formRef, "FormOID");
+                var cOid = Attr(formRef, "CollectionExceptionConditionOID");
+                if (!string.IsNullOrWhiteSpace(fOid) && !string.IsNullOrWhiteSpace(cOid))
                 {
-                    continue;
-                }
-
-                var eventDef = Children(mdv, "StudyEventDef").FirstOrDefault(e => string.Equals(Attr(e, "OID"), eventOid, StringComparison.Ordinal));
-                if (eventDef is null)
-                {
-                    continue;
-                }
-
-                foreach (var formRef in Children(eventDef, "FormRef"))
-                {
-                    var fOid = Attr(formRef, "FormOID");
-                    var cOid = Attr(formRef, "CollectionExceptionConditionOID");
-                    if (!string.IsNullOrWhiteSpace(fOid) && !string.IsNullOrWhiteSpace(cOid))
-                    {
-                        formConditionOids[fOid] = cOid;
-                    }
+                    formConditionOids.TryAdd(fOid, cOid);
                 }
             }
         }
@@ -322,6 +364,7 @@ public static partial class OdmDesignImporter
         var seenFormOids = new HashSet<string>(StringComparer.Ordinal);
         var specs = new List<CollectionSpec>(formDefs.Count);
         var notedCodeLists = new HashSet<string>(StringComparer.Ordinal);
+        var resolvedCodeLists = new Dictionary<string, ProtocolTerminologyResolution>(StringComparer.Ordinal);
         var formIdByOid = new Dictionary<string, string>(StringComparer.Ordinal);
         var importedItems = new List<ImportedItemMeta>();
         var conditionTargets = new List<(string ConditionOid, ImportedItemMeta TargetItem)>();
@@ -411,9 +454,11 @@ public static partial class OdmDesignImporter
                         codeLists,
                         usedIds,
                         notedCodeLists,
+                        resolvedCodeLists,
                         notes,
                         problems,
                         resolveConcept,
+                        resolveTerminology,
                         cancellationToken).ConfigureAwait(false);
                     if (item is not null)
                     {
@@ -434,6 +479,66 @@ public static partial class OdmDesignImporter
             specs.Add(new CollectionSpec(formId, formName, items));
         }
 
+        var epochs = new List<Epoch>();
+        var plannedActivities = new List<PlannedActivity>();
+        var epochIdByKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (eventOid, eventDef) in scheduledEvents)
+        {
+            var eventName = FirstNonBlank(
+                Attr(eventDef, "Name"),
+                TranslatedText(Child(eventDef, "Description")),
+                eventOid)!;
+
+            if (string.Equals(Attr(eventDef, "Repeating"), "Yes", StringComparison.OrdinalIgnoreCase))
+            {
+                notes.Add(new ProtocolImportNote(
+                    eventOid,
+                    $"StudyEvent '{eventName}' declares Repeating='Yes'; multiple visit instances may occur per participant."));
+            }
+
+            var orderedFormRefs = OrderRefs(Children(eventDef, "FormRef"), eventOid, "FormRef", problems);
+            var activityFormIds = new List<string>(orderedFormRefs.Count);
+            var seenActivityFormIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var formRef in orderedFormRefs)
+            {
+                var refFormOid = Attr(formRef, "FormOID");
+                if (string.IsNullOrWhiteSpace(refFormOid))
+                {
+                    problems.Add($"StudyEvent '{eventOid}' has a <FormRef> without a FormOID attribute.");
+                    continue;
+                }
+
+                ValidateYesNoAttribute(formRef, "Mandatory", $"StudyEvent '{eventOid}' FormRef '{refFormOid}'", problems);
+                if (!formIdByOid.TryGetValue(refFormOid, out var mappedFormId))
+                {
+                    problems.Add($"StudyEvent '{eventOid}' references FormOID '{refFormOid}', which does not exist in <MetaDataVersion>.");
+                    continue;
+                }
+
+                if (seenActivityFormIds.Add(mappedFormId))
+                {
+                    activityFormIds.Add(mappedFormId);
+                }
+            }
+
+            var (epochKey, rawEpochId, epochName) = ResolveOdmEpoch(eventDef);
+            if (!epochIdByKey.TryGetValue(epochKey, out var epochId))
+            {
+                epochId = AllocateUniqueElementId(rawEpochId, "Epoch", usedIds);
+                epochIdByKey[epochKey] = epochId;
+                epochs.Add(new Epoch(epochId, epochName, epochs.Count + 1));
+            }
+
+            var activityId = AllocateUniqueElementId(eventOid, "Activity", usedIds);
+            plannedActivities.Add(new PlannedActivity(
+                activityId,
+                eventName,
+                epochId,
+                [ActivityLocation.Site],
+                activityFormIds));
+        }
+
         if (problems.Count > 0)
         {
             return new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid);
@@ -450,7 +555,36 @@ public static partial class OdmDesignImporter
 
         return problems.Count > 0
             ? new OdmImportResult(studyTitle, [], problems, DeduplicateNotes(notes), StudyOid: studyOid)
-            : new OdmImportResult(studyTitle, specs, [], DeduplicateNotes(notes), Rules: compiledRules, StudyOid: studyOid);
+            : new OdmImportResult(
+                studyTitle,
+                specs,
+                [],
+                DeduplicateNotes(notes),
+                Rules: compiledRules,
+                StudyOid: studyOid,
+                Epochs: epochs,
+                PlannedActivities: plannedActivities);
+    }
+
+    private static (string Key, string RawId, string Name) ResolveOdmEpoch(XElement eventDef)
+    {
+        if (Attr(eventDef, "Category") is { Length: > 0 } category)
+        {
+            return ($"category:{category}", $"Epoch.{SanitizeElementId(category, "epoch")}", category);
+        }
+
+        var eventType = Attr(eventDef, "Type");
+        if (string.Equals(eventType, "Unscheduled", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("type:unscheduled", "Epoch.unscheduled", "Unscheduled");
+        }
+
+        if (string.Equals(eventType, "Common", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("type:common", "Epoch.common", "Common");
+        }
+
+        return ("type:scheduled", "Epoch.scheduled", "Scheduled");
     }
 
     private static async Task<CollectionItem?> BuildItemAsync(
@@ -463,9 +597,11 @@ public static partial class OdmDesignImporter
         IReadOnlyDictionary<string, ParsedCodeList> codeLists,
         HashSet<string> usedIds,
         HashSet<string> notedCodeLists,
+        Dictionary<string, ProtocolTerminologyResolution> resolvedCodeLists,
         List<ProtocolImportNote> notes,
         List<string> problems,
         ProtocolConceptResolver resolveConcept,
+        ProtocolTerminologyResolver? resolveTerminology,
         CancellationToken cancellationToken)
     {
         var itemName = FirstNonBlank(Attr(itemDef, "Name"), itemOid)!;
@@ -491,35 +627,72 @@ public static partial class OdmDesignImporter
             }
         }
 
+        TerminologyBinding? terminology = null;
         var codeListOid = Attr(Child(itemDef, "CodeListRef"), "CodeListOID");
-        if (!string.IsNullOrWhiteSpace(codeListOid) && notedCodeLists.Add($"{itemOid}:{codeListOid}"))
+        if (!string.IsNullOrWhiteSpace(codeListOid))
         {
-            if (codeLists.TryGetValue(codeListOid, out var cl))
+            if (codeLists.TryGetValue(codeListOid, out var clForResolve) && resolveTerminology is not null)
             {
-                string sample;
-                if (cl.Codes.Count == 0)
+                if (!resolvedCodeLists.TryGetValue(codeListOid, out var termResolution))
                 {
-                    sample = "no coded values";
+                    termResolution = await resolveTerminology(
+                        new ProtocolTerminologyCandidate(
+                            SourceKey: $"odm:{codeListOid}",
+                            CodelistCode: codeListOid,
+                            CodelistName: clForResolve.Name,
+                            CodeSystemUri: clForResolve.ExternalDictionary,
+                            CodeSystemName: clForResolve.ExternalDictionary,
+                            CodeSystemVersion: clForResolve.ExternalVersion,
+                            Entries: clForResolve.Entries),
+                        cancellationToken).ConfigureAwait(false);
+                    resolvedCodeLists[codeListOid] = termResolution;
+                }
+
+                if (!string.IsNullOrWhiteSpace(termResolution.ErrorMessage))
+                {
+                    problems.Add(termResolution.ErrorMessage);
+                    return null;
+                }
+
+                terminology = termResolution.Binding;
+            }
+
+            if (terminology is null && notedCodeLists.Add($"{itemOid}:{codeListOid}"))
+            {
+                if (codeLists.TryGetValue(codeListOid, out var cl))
+                {
+                    string sample;
+                    if (cl.Codes.Count == 0)
+                    {
+                        sample = "no coded values";
+                    }
+                    else
+                    {
+                        var moreSuffix = cl.Codes.Count > 5 ? $", +{cl.Codes.Count - 5} more" : string.Empty;
+                        sample = string.Join(", ", cl.Codes.Take(5)) + moreSuffix;
+                    }
+
+                    notes.Add(new ProtocolImportNote(
+                        $"{rawFormOid}/{itemOid}",
+                        $"Unmapped terminology CodeList '{codeListOid}' ({cl.Name}: {sample}) on item '{itemName}' has no pinned code-system version in the tenant; imported item without terminology binding."));
                 }
                 else
                 {
-                    var moreSuffix = cl.Codes.Count > 5 ? $", +{cl.Codes.Count - 5} more" : string.Empty;
-                    sample = string.Join(", ", cl.Codes.Take(5)) + moreSuffix;
+                    notes.Add(new ProtocolImportNote(
+                        $"{rawFormOid}/{itemOid}",
+                        $"Unmapped terminology CodeListRef '{codeListOid}' on item '{itemName}' is not defined in <MetaDataVersion>; imported item without terminology binding."));
                 }
-
-                notes.Add(new ProtocolImportNote(
-                    $"{rawFormOid}/{itemOid}",
-                    $"Unmapped terminology CodeList '{codeListOid}' ({cl.Name}: {sample}) on item '{itemName}' has no pinned code-system version in the tenant; imported item without terminology binding."));
-            }
-            else
-            {
-                notes.Add(new ProtocolImportNote(
-                    $"{rawFormOid}/{itemOid}",
-                    $"Unmapped terminology CodeListRef '{codeListOid}' on item '{itemName}' is not defined in <MetaDataVersion>; imported item without terminology binding."));
             }
         }
 
-        var valueKind = MapDataType(Attr(itemDef, "DataType"), ucumUnit, itemOid, itemName, notes);
+        if (terminology is not null)
+        {
+            ucumUnit = null;
+        }
+
+        var valueKind = terminology is not null
+            ? ObservationValueKind.Coded
+            : MapDataType(Attr(itemDef, "DataType"), ucumUnit, itemOid, itemName, notes);
         var stableKey = $"odm:{itemOid}:{prompt}";
         var resolution = await resolveConcept(
             new ProtocolConceptCandidate(stableKey, extCode, prompt, definition, ConceptKind.DataElement),
@@ -548,7 +721,7 @@ public static partial class OdmDesignImporter
             itemId,
             conceptRef,
             Unit: ucumUnit,
-            Terminology: null,
+            Terminology: terminology,
             Required: required,
             Purpose: null,
             ValueKind: valueKind,
@@ -735,16 +908,67 @@ public static partial class OdmDesignImporter
             }
 
             var name = FirstNonBlank(Attr(cl, "Name"), oid)!;
-            var codes = Children(cl, "CodeListItem")
-                .Concat(Children(cl, "EnumeratedItem"))
-                .Select(i => Attr(i, "CodedValue"))
-                .Where(c => !string.IsNullOrWhiteSpace(c))
-                .Select(c => c!)
-                .ToList();
-            result[oid] = new ParsedCodeList(oid, name, codes);
+            var groupCode = BoundTerminologyToken(oid);
+            var codes = new List<string>();
+            var entries = new List<CodeSystemEntryData>();
+            var seenBoundedCodes = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var item in Children(cl, "CodeListItem").Concat(Children(cl, "EnumeratedItem")))
+            {
+                var rawCode = Attr(item, "CodedValue");
+                if (string.IsNullOrWhiteSpace(rawCode))
+                {
+                    continue;
+                }
+
+                codes.Add(rawCode);
+                var boundedCode = BoundTerminologyToken(rawCode)!;
+                if (!seenBoundedCodes.Add(boundedCode))
+                {
+                    continue;
+                }
+
+                var decode = TranslatedText(Child(item, "Decode"));
+                var display = FirstNonBlank(decode, rawCode)!;
+                var itemExtCode = ExtractExtCode(item);
+                var submissionValue = !string.Equals(boundedCode, rawCode, StringComparison.Ordinal)
+                    ? rawCode
+                    : itemExtCode;
+                entries.Add(new CodeSystemEntryData(
+                    Code: boundedCode,
+                    Display: display,
+                    GroupCode: groupCode,
+                    SubmissionValue: submissionValue));
+            }
+
+            var externalEl = Child(cl, "ExternalCodeList");
+            var externalDict = FirstNonBlank(
+                Attr(externalEl, "href"),
+                Attr(externalEl, "ref"),
+                Attr(externalEl, "Dictionary"));
+            var externalVersion = Attr(externalEl, "Version");
+
+            result[oid] = new ParsedCodeList(oid, name, codes, entries, externalDict, externalVersion);
         }
 
         return result;
+    }
+
+    internal static string? BoundTerminologyToken(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var trimmed = raw.Trim();
+        if (trimmed.Length <= 64)
+        {
+            return trimmed;
+        }
+
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(trimmed)));
+        return $"{trimmed[..55]}-{hash[..8]}";
     }
 
     private static Dictionary<string, XElement> ParseByOid(XElement parent, string elementName, List<string> problems)
@@ -1170,7 +1394,10 @@ public static partial class OdmDesignImporter
         var literals = new List<RuleExpression>(checkValues.Count);
         foreach (var rawVal in checkValues)
         {
-            literals.Add(new LiteralExpression(ToTypedRuleValue(rawVal, meta.Item.ExpectedKind)));
+            var effectiveVal = meta.Item.Terminology is not null
+                ? BoundTerminologyToken(rawVal) ?? rawVal
+                : rawVal;
+            literals.Add(new LiteralExpression(ToTypedRuleValue(effectiveVal, meta.Item.ExpectedKind)));
         }
 
         switch (comparator)
@@ -1382,5 +1609,11 @@ public static partial class OdmDesignImporter
         CollectionItem Item,
         XElement ItemDef);
 
-    private sealed record ParsedCodeList(string Oid, string Name, IReadOnlyList<string> Codes);
+    private sealed record ParsedCodeList(
+        string Oid,
+        string Name,
+        IReadOnlyList<string> Codes,
+        IReadOnlyList<CodeSystemEntryData> Entries,
+        string? ExternalDictionary,
+        string? ExternalVersion);
 }

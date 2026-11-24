@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
@@ -21,6 +22,24 @@ const DEV_PORT = 5174;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint; docker compose names
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
+const VIRTUAL_DEMO_TLDTS_STUB_ID = "\0virtual:demo-msw-tldts-stub";
+
+const DEMO_TLDTS_STUB = `
+export function getDomain(input, options = {}) {
+  if (typeof input !== "string" || !input) return null;
+  const host = input.trim().toLowerCase().replace(/\\.+$/, "");
+  if (!host || /^\\d+(?:\\.\\d+){3}$/.test(host) || host.includes(":")) {
+    return null;
+  }
+  const labels = host.split(".").filter(Boolean);
+  if (labels.length < 2) return null;
+  const tailTwo = labels.slice(-2).join(".");
+  if (options.allowPrivateDomains && tailTwo === "github.io") {
+    return labels.length >= 3 ? labels.slice(-3).join(".") : null;
+  }
+  return tailTwo;
+}
+`;
 
 export { injectHoistedPortalCspMeta, resolvePortalOidcOrigin };
 
@@ -37,7 +56,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
-      "../../packages/usdm-schemas/src/epro.ts",
+      "../../packages/usdm-schemas/src/epro-validator.ts",
     ],
     include: [
       "vue",
@@ -98,6 +117,7 @@ export default defineConfig(({ mode }) => ({
     })(),
     (() => {
       let isE2eProd = false;
+      let resolvedOutDir = path.resolve(__dirname, "dist");
       const indexEntry = path.resolve(__dirname, "src/index.js");
       const syncQueueEntry = path.resolve(__dirname, "src/sync-queue.js");
       return {
@@ -105,6 +125,10 @@ export default defineConfig(({ mode }) => ({
         apply: "build",
         configResolved(resolved) {
           const outDir = resolved.build?.outDir;
+          resolvedOutDir = path.resolve(
+            resolved.root || __dirname,
+            outDir || "dist"
+          );
           isE2eProd =
             outDir === "node_modules/.e2e-prod" ||
             outDir === "node_modules/.e2e-demo";
@@ -141,11 +165,62 @@ export default defineConfig(({ mode }) => ({
               "const m = globalThis.__CADENCE_E2E_SYNC_QUEUE__;\nexport const { queueSubmission, clearSessionKey } = m;\n",
           });
         },
+        writeBundle(_options, bundle) {
+          const swOutputPath = path.join(resolvedOutDir, "sw.js");
+          if (!fs.existsSync(swOutputPath)) return;
+
+          const emittedBundlePaths = Object.keys(bundle)
+            .map((fileName) => fileName.replace(/^\/+/, ""))
+            .filter(
+              (fileName) =>
+                Boolean(fileName) &&
+                !fileName.endsWith(".map") &&
+                fileName !== "sw.js" &&
+                fileName !== "index.html" &&
+                fileName !== "manifest.json" &&
+                !fileName.endsWith("mockServiceWorker.js")
+            )
+            .sort();
+
+          const injectedEntries = emittedBundlePaths
+            .map((relPath) => `  \`\${SW_BASE}${relPath}\`,`)
+            .join("\n");
+          const replacement =
+            emittedBundlePaths.length > 0
+              ? `const INJECTED_BUNDLE_ASSETS = [\n${injectedEntries}\n];`
+              : "const INJECTED_BUNDLE_ASSETS = [];";
+
+          const currentSwSource = fs.readFileSync(swOutputPath, "utf8");
+          const updatedSwSource = currentSwSource.replace(
+            /const INJECTED_BUNDLE_ASSETS = \[\];/,
+            replacement
+          );
+          fs.writeFileSync(swOutputPath, updatedSwSource, "utf8");
+        },
       };
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
     createConstantFoldDemoModePlugin(__dirname),
+    {
+      name: "slim-demo-msw-tldts",
+      apply: "build",
+      enforce: "pre",
+      resolveId(source, importer) {
+        if (
+          mode !== "demo" ||
+          source !== "tldts" ||
+          !importer ||
+          !importer.replace(/\\/g, "/").includes("/tough-cookie/")
+        ) {
+          return null;
+        }
+        return VIRTUAL_DEMO_TLDTS_STUB_ID;
+      },
+      load(id) {
+        return id === VIRTUAL_DEMO_TLDTS_STUB_ID ? DEMO_TLDTS_STUB : null;
+      },
+    },
   ],
   server: {
     port: DEV_PORT,

@@ -162,3 +162,35 @@ Foreign keys:
 Indexes:
 
 - `ix_form_query_periods_tenant_query`: (`tenant_id`, `query_id`)
+
+## execution.form_sdv_alerts
+
+Entity: `FormSdvAlert`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `form_id` | `uuid` | yes |  |  |
+| `item_id` | `character varying(128)` | yes |  |  |
+| `modified_at` | `timestamp with time zone` | no |  |  |
+| `modified_by` | `character varying(256)` | no |  |  |
+| `modified_reason` | `character varying(4000)` | no |  |  |
+| `new_revision` | `integer` | no |  |  |
+| `observation_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `study_site_id` | `uuid` | yes |  |  |
+| `superseded_revision` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `verified_at` | `timestamp with time zone` | no |  |  |
+| `verified_by` | `character varying(256)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Indexes:
+
+- `ix_form_sdv_alerts_tenant_enrollment_modified`: (`tenant_id`, `enrollment_id`, `modified_at`)
+- `ix_form_sdv_alerts_tenant_study_modified`: (`tenant_id`, `study_id`, `modified_at`)
+- `ux_form_sdv_alerts_tenant_observation_revision`: unique (`tenant_id`, `observation_id`, `new_revision`)

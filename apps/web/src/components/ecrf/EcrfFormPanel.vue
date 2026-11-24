@@ -59,6 +59,7 @@
         :can-answer-queries="effectiveCanAnswerQueries"
         :assertions-locked="formState.assertionsLocked"
         :act-query="queries.act"
+        :reassign-query="queries.reassign"
         :act-many-queries="queries.actMany"
         :current-form-titles="currentFormTitles"
         :query-form-link="queryFormLink"
@@ -369,6 +370,10 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+.ecrf-form-panel > * {
   min-width: 0;
   max-width: 100%;
 }

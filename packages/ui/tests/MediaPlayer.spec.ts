@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { FileUploadModal } from "../index.js";
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe("FileUploadModal Component & Package Exports (#4314)", () => {
   const modalPath = path.resolve(
-    __dirname,
+    currentDir,
     "../src/components/FileUploadModal.vue"
   );
 

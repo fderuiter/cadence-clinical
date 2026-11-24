@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
@@ -23,8 +25,35 @@ namespace Cadence.Kernel.Persistence.Evidence;
 /// Reads a form instance, its member observations, the assertions and locks that concern them and the signatures over
 /// the form through a context bound to the caller's tenant (ADR-2250). Read-only: no tracking.
 /// </summary>
-internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFactory contexts) : ICollectionInstanceRecords
+internal sealed class KernelCollectionInstanceRecords(
+    KernelTenantDbContextFactory contexts,
+    IAuthorizationProbe? authorizationProbe = null) : ICollectionInstanceRecords
 {
+    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+
+    public async Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken)
+    {
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return null;
+        }
+
+        if (authorizationProbe is null)
+        {
+            return record.MaskBlinded();
+        }
+
+        var decision = await authorizationProbe.CanIAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            NodeRef.For(record.EnrollmentId),
+            cancellationToken).ConfigureAwait(false);
+        return decision.Permitted ? record : record.MaskBlinded();
+    }
     public async Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
@@ -63,13 +92,14 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .Select(v => new { v.Id, v.Content })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var designs = studyVersions
-            .Select(v => ProtocolDesignDocument.Read(v.Content).Design)
+        var designsByVersion = studyVersions.ToDictionary(
+            v => v.Id,
+            v => ProtocolDesignDocument.Read(v.Content).Design);
+        var designs = designsByVersion.Values
             .Where(d => d is not null)
             .Select(d => d!)
             .ToList();
-        var governingContent = studyVersions.Single(v => v.Id == found.ProtocolVersionId).Content;
-        var spec = ProtocolDesignDocument.Read(governingContent).Design?.CollectionSpecs
+        var spec = designsByVersion[found.ProtocolVersionId]?.CollectionSpecs
             .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal));
         var items = spec?.Items ?? [];
         var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
@@ -86,7 +116,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 .Where(c => conceptIds.Contains(c.Id))
                 .ToDictionaryAsync(c => c.Id, cancellationToken)
                 .ConfigureAwait(false);
-        var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(found, items, observations, concepts, designs);
+        var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(found, collectionTitle, items, observations, concepts, designs);
 
         // A signature names the revisions current when it was recorded; any later revision or value supersedes it (#5463).
         string? contentHash = values.Count == 0
@@ -176,12 +206,12 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
 
         var allMemberIds = instances.SelectMany(c => c.Members.Select(m => m.ObservationId)).Distinct().ToList();
         var observations = allMemberIds.Count == 0
-            ? new Dictionary<ObservationId, Observation>()
-            : (await db.Observations.AsNoTracking()
-                    .Where(o => allMemberIds.Contains(o.Id))
-                    .ToListAsync(cancellationToken)
-                    .ConfigureAwait(false))
-                .ToDictionary(o => o.Id);
+            ? new Dictionary<ObservationId, ObservationSummaryRow>()
+            : await db.Observations.AsNoTracking()
+                .Where(o => allMemberIds.Contains(o.Id))
+                .Select(o => new ObservationSummaryRow(o.Id, o.Value, o.Revision))
+                .ToDictionaryAsync(o => o.Id, cancellationToken)
+                .ConfigureAwait(false);
 
         var first = instances[0];
         List<NodeRef> allScopes =
@@ -224,6 +254,345 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 signaturesByInstance[instance.Id.Value],
                 activeErrorTargets)),
         ];
+    }
+
+    public async Task<CollectionInstanceHeader?> FindHeaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty)
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        return await SelectHeaders(db.CollectionInstances.AsNoTracking().Where(c => c.Id == instance))
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var distinctIds = instances.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<CollectionInstanceId, CollectionInstanceHeader>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var headers = await SelectHeaders(db.CollectionInstances.AsNoTracking().Where(c => distinctIds.Contains(c.Id)))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return headers.ToDictionary(h => h.CollectionInstanceId);
+    }
+
+    private static IQueryable<CollectionInstanceHeader> SelectHeaders(IQueryable<CollectionInstance> query) =>
+        query.Select(c => new CollectionInstanceHeader(
+            c.Id,
+            c.EnrollmentId,
+            c.ParticipantId,
+            c.StudyId,
+            c.StudySiteId,
+            c.ProtocolVersionId,
+            c.CollectionSpecId,
+            c.PlannedActivityId,
+            c.CollectedAt,
+            c.OpenedAt,
+            c.VersionIndex));
+
+    public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceQueryTarget>> FindQueryTargetsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        IReadOnlySet<EnrollmentId> unblindedEnrollments,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        ArgumentNullException.ThrowIfNull(unblindedEnrollments);
+        var distinctIds = instances.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var forms = await db.CollectionInstances.AsNoTracking()
+            .Where(c => distinctIds.Contains(c.Id))
+            .Select(c => new QueryTargetFormRow(
+                c.Id,
+                c.EnrollmentId,
+                c.StudyId,
+                c.StudySiteId,
+                c.ProtocolVersionId,
+                c.CollectionSpecId,
+                c.PlannedActivityId,
+                c.Members.Select(m => new MemberObservationRow(m.ItemId, m.ObservationId)).ToList()))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (forms.Count == 0)
+        {
+            return new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>();
+        }
+
+        var allMemberIds = forms.SelectMany(f => f.Members.Select(m => m.ObservationId)).Distinct().ToList();
+        var observations = allMemberIds.Count == 0
+            ? new Dictionary<ObservationId, QueryTargetObservationRow>()
+            : await db.Observations.AsNoTracking()
+                .Where(o => allMemberIds.Contains(o.Id))
+                .Select(o => new QueryTargetObservationRow(o.Id, o.ConceptId, o.Value, o.Revision))
+                .ToDictionaryAsync(o => o.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        Dictionary<ProtocolVersionId, IReadOnlyList<CollectionSpec>>? specsByVersion = null;
+        Dictionary<StudyId, IReadOnlyList<ProtocolDesign>>? designsByStudy = null;
+        Dictionary<ConceptId, BlindedConceptMetadata>? concepts = null;
+        var blindedForms = forms.Where(f => !unblindedEnrollments.Contains(f.EnrollmentId)).ToList();
+        if (blindedForms.Count > 0)
+        {
+            var blindedStudyIds = blindedForms.Select(f => f.StudyId).Distinct().ToList();
+            var rawVersions = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => blindedStudyIds.Contains(v.StudyId))
+                .Select(v => new { v.Id, v.StudyId, v.Content })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var designsByVersion = rawVersions.ToDictionary(
+                v => v.Id,
+                v => ProtocolDesignDocument.Read(v.Content).Design);
+            specsByVersion = designsByVersion.ToDictionary(
+                kv => kv.Key,
+                kv => kv.Value?.CollectionSpecs ?? []);
+            designsByStudy = rawVersions
+                .Select(v => (v.StudyId, Design: designsByVersion[v.Id]))
+                .Where(x => x.Design is not null)
+                .GroupBy(x => x.StudyId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<ProtocolDesign>)g.Select(x => x.Design!).ToList());
+
+            var blindedMemberIds = blindedForms.SelectMany(f => f.Members.Select(m => m.ObservationId)).ToHashSet();
+            var conceptIds = rawVersions
+                .SelectMany(v => designsByVersion[v.Id]?.CollectionSpecs ?? [])
+                .SelectMany(s => s.Items)
+                .Select(i => i.Concept.ConceptId)
+                .Concat(observations.Values.Where(o => blindedMemberIds.Contains(o.Id)).Select(o => o.ConceptId))
+                .Distinct()
+                .ToList();
+            concepts = conceptIds.Count == 0
+                ? []
+                : await db.Concepts.AsNoTracking()
+                    .Where(c => conceptIds.Contains(c.Id))
+                    .Select(c => new { c.Id, c.ExternalCode, c.PreferredLabel, c.Definition })
+                    .ToDictionaryAsync(
+                        c => c.Id,
+                        c => new BlindedConceptMetadata(c.ExternalCode, c.PreferredLabel, c.Definition),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
+
+        var targets = new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>(forms.Count);
+        foreach (var form in forms)
+        {
+            var isUnblinded = unblindedEnrollments.Contains(form.EnrollmentId);
+            IReadOnlySet<string> blindedItems = FrozenSet<string>.Empty;
+            var blindedObservations = new HashSet<ObservationId>();
+            if (!isUnblinded && specsByVersion is not null && designsByStudy is not null && concepts is not null)
+            {
+                var specs = specsByVersion.GetValueOrDefault(form.ProtocolVersionId) ?? [];
+                var spec = specs.FirstOrDefault(s => string.Equals(s.Id, form.CollectionSpecId, StringComparison.Ordinal));
+                var items = spec?.Items ?? [];
+                var title = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+                var designs = designsByStudy.GetValueOrDefault(form.StudyId) ?? [];
+                (blindedItems, blindedObservations) = ClassifyQueryTargetBlinding(
+                    form,
+                    title,
+                    items,
+                    observations,
+                    concepts,
+                    designs);
+            }
+
+            var observationRevisions = new Dictionary<ObservationId, int>(form.Members.Count);
+            var itemRevisions = new Dictionary<string, int>(form.Members.Count, StringComparer.Ordinal);
+            foreach (var member in form.Members)
+            {
+                if (!observations.TryGetValue(member.ObservationId, out var obs))
+                {
+                    continue;
+                }
+
+                itemRevisions[member.ItemId] = obs.Revision;
+                if (isUnblinded || (!blindedItems.Contains(member.ItemId) && !blindedObservations.Contains(obs.Id)))
+                {
+                    observationRevisions[obs.Id] = obs.Revision;
+                }
+            }
+
+            targets[form.Id] = new CollectionInstanceQueryTarget(
+                form.Id,
+                form.EnrollmentId,
+                form.StudyId,
+                form.StudySiteId,
+                form.ProtocolVersionId,
+                form.CollectionSpecId,
+                form.PlannedActivityId,
+                observationRevisions,
+                itemRevisions,
+                blindedItems,
+                FrozenSet<ObservationId>.Empty);
+        }
+
+        return targets;
+    }
+
+    public async Task<CollectionInstanceScopeState?> FindScopeStateAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty)
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        var found = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.Id == instance)
+            .Select(c => new
+            {
+                c.Id,
+                c.EnrollmentId,
+                c.StudyId,
+                c.StudySiteId,
+                c.ProtocolVersionId,
+                c.CollectionSpecId,
+                c.PlannedActivityId,
+                c.VersionIndex,
+                EnrollmentVersion = db.Enrollments
+                    .Where(e => e.Id == c.EnrollmentId)
+                    .Select(e => (long?)e.VersionIndex)
+                    .FirstOrDefault() ?? 1L,
+                Members = c.Members.Select(m => new MemberObservationRow(m.ItemId, m.ObservationId)).ToList(),
+            })
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (found is null)
+        {
+            return null;
+        }
+
+        var memberIds = found.Members.Select(m => m.ObservationId).ToList();
+        var observations = memberIds.Count == 0
+            ? new Dictionary<ObservationId, ObservationSummaryRow>()
+            : await db.Observations.AsNoTracking()
+                .Where(o => memberIds.Contains(o.Id))
+                .Select(o => new ObservationSummaryRow(o.Id, o.Value, o.Revision))
+                .ToDictionaryAsync(o => o.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        var scopes = LockScopes.Covering(found.StudyId, found.StudySiteId, found.EnrollmentId, found.Id, memberIds);
+        var locks = await ScopedAssertions.ReadLocksAsync(db, scopes, cancellationToken).ConfigureAwait(false);
+
+        var values = found.Members
+            .Where(m => observations.ContainsKey(m.ObservationId))
+            .OrderBy(m => m.ItemId, StringComparer.Ordinal)
+            .Select(m =>
+            {
+                var obs = observations[m.ObservationId];
+                return new CollectionScopeValue(m.ItemId, obs.Id, obs.Value, obs.Revision);
+            })
+            .ToList();
+
+        return new CollectionInstanceScopeState(
+            found.Id,
+            found.EnrollmentId,
+            found.StudyId,
+            found.StudySiteId,
+            found.ProtocolVersionId,
+            found.CollectionSpecId,
+            found.PlannedActivityId,
+            found.VersionIndex,
+            found.EnrollmentVersion,
+            values,
+            locks);
+    }
+
+    public async Task<IReadOnlyList<CollectionRuleInput>> ListRuleInputsForEnrollmentAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken = default)
+    {
+        if (enrollment.IsEmpty)
+        {
+            return [];
+        }
+
+        await using var db = contexts.Create(tenant);
+        var forms = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.EnrollmentId == enrollment)
+            .OrderBy(c => c.OpenedAt).ThenBy(c => c.Id)
+            .Select(c => new
+            {
+                c.Id,
+                c.EnrollmentId,
+                c.StudyId,
+                c.ProtocolVersionId,
+                c.CollectionSpecId,
+                c.OpenedAt,
+                Members = c.Members.Select(m => new MemberObservationRow(m.ItemId, m.ObservationId)).ToList(),
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (forms.Count == 0)
+        {
+            return [];
+        }
+
+        var versionIds = forms.Select(f => f.ProtocolVersionId).Distinct().ToList();
+        var rawVersions = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => versionIds.Contains(v.Id))
+            .Select(v => new { v.Id, v.Content })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var specsByVersion = rawVersions.ToDictionary(
+            v => v.Id,
+            v => ProtocolDesignDocument.Read(v.Content).Design?.CollectionSpecs ?? []);
+
+        var allMemberIds = forms.SelectMany(f => f.Members.Select(m => m.ObservationId)).Distinct().ToList();
+        var observations = allMemberIds.Count == 0
+            ? new Dictionary<ObservationId, ObservationValue>()
+            : await db.Observations.AsNoTracking()
+                .Where(o => allMemberIds.Contains(o.Id))
+                .Select(o => new { o.Id, o.Value })
+                .ToDictionaryAsync(o => o.Id, o => o.Value, cancellationToken)
+                .ConfigureAwait(false);
+
+        var inputs = new List<CollectionRuleInput>(forms.Count);
+        foreach (var form in forms)
+        {
+            var specs = specsByVersion.GetValueOrDefault(form.ProtocolVersionId) ?? [];
+            var spec = specs.FirstOrDefault(s => string.Equals(s.Id, form.CollectionSpecId, StringComparison.Ordinal));
+            var items = spec?.Items ?? [];
+            var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+            var values = form.Members
+                .Where(m => observations.ContainsKey(m.ObservationId))
+                .OrderBy(m => m.ItemId, StringComparer.Ordinal)
+                .Select(m => new CollectionRuleValue(m.ItemId, m.ObservationId, observations[m.ObservationId]))
+                .ToList();
+            inputs.Add(new CollectionRuleInput(
+                form.Id,
+                form.EnrollmentId,
+                form.StudyId,
+                form.ProtocolVersionId,
+                form.CollectionSpecId,
+                form.OpenedAt,
+                items,
+                values,
+                collectionTitle));
+        }
+
+        return inputs;
     }
 
     public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
@@ -418,7 +787,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 .ToList();
             var assertions = FilterFormAssertions(allMemberAssertions, memberGuids);
             var studyDesigns = designsByStudy.GetValueOrDefault(instance.StudyId) ?? [];
-            var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(instance, items, observations, concepts, studyDesigns);
+            var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(instance, collectionTitle, items, observations, concepts, studyDesigns);
 
             string? contentHash = values.Count == 0
                 ? null
@@ -526,7 +895,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
     private static CollectionInstanceSummary ToSummary(
         CollectionInstance instance,
         IReadOnlyList<CollectionSpec> specs,
-        IReadOnlyDictionary<ObservationId, Observation> observations,
+        IReadOnlyDictionary<ObservationId, ObservationSummaryRow> observations,
         IReadOnlyList<LockView> allLocks,
         IReadOnlyList<AssertionView> allMemberAssertions,
         IReadOnlySet<(Guid ObservationId, int Revision)> verifiedRevisions,
@@ -563,9 +932,12 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
 
         var memberGuids = instance.Members.Select(m => m.ObservationId.Value).ToHashSet();
         var assertions = FilterFormAssertions(allMemberAssertions, memberGuids);
-        var (openQueryCount, answeredQueryCount) = CountActiveQueries(assertions);
+        var (activeQueryAssertionIds, answeredQueryAssertionIds) = ExtractActiveQueryAssertionIds(assertions);
+        var openQueryCount = activeQueryAssertionIds.Count - answeredQueryAssertionIds.Count;
+        var answeredQueryCount = answeredQueryAssertionIds.Count;
         var openErrorFindingCount = CountFormErrorFindings(instance.Id.Value, memberGuids, activeErrorTargets);
-        var complete = CollectionReadiness.IsComplete(missingRequiredCount, openQueryCount, answeredQueryCount, openErrorFindingCount);
+        var complete = (itemCount == 0 || recordedCount > 0)
+            && CollectionReadiness.IsComplete(missingRequiredCount, openQueryCount, answeredQueryCount, openErrorFindingCount);
         var blockers = CollectionReadiness.BuildBlockers(
             missingRequired,
             missingRequiredCount,
@@ -621,7 +993,9 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             openQueryCount,
             answeredQueryCount,
             openErrorFindingCount,
-            blockers);
+            blockers,
+            activeQueryAssertionIds,
+            answeredQueryAssertionIds);
     }
 
     internal static List<AssertionView> FilterFormAssertions(
@@ -635,6 +1009,28 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         return [.. allAssertions
             .Where(a => (a.Target.Kind == NodeKinds.Observation && memberObservationGuids.Contains(a.Target.Id))
                 || (a.Target.Kind == NodeKinds.Assertion && formQueryGuids.Contains(a.Target.Id)))];
+    }
+
+    internal static (IReadOnlySet<AssertionId> ActiveIds, IReadOnlySet<AssertionId> AnsweredIds) ExtractActiveQueryAssertionIds(
+        IReadOnlyList<AssertionView> assertions)
+    {
+        var activeIds = assertions
+            .Where(a => a.Kind == AssertionKind.Queried && a.RetractedAt is null)
+            .Select(a => a.AssertionId)
+            .ToFrozenSet();
+        if (activeIds.Count == 0)
+        {
+            return (FrozenSet<AssertionId>.Empty, FrozenSet<AssertionId>.Empty);
+        }
+
+        var answeredIds = assertions
+            .Where(a => a.Kind == AssertionKind.QueryAnswered
+                && a.RetractedAt is null
+                && a.Target.Kind == NodeKinds.Assertion
+                && activeIds.Contains(AssertionId.FromGuid(a.Target.Id)))
+            .Select(a => AssertionId.FromGuid(a.Target.Id))
+            .ToFrozenSet();
+        return (activeIds, answeredIds);
     }
 
     internal static (int OpenCount, int AnsweredCount) CountActiveQueries(
@@ -699,7 +1095,8 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .ToList();
         var (openQueries, answeredQueries) = CountActiveQueries(assertions);
         var errorFindings = CountFormErrorFindings(instanceGuid, memberGuids, activeErrorTargets);
-        var complete = CollectionReadiness.IsComplete(missingRequired.Count, openQueries, answeredQueries, errorFindings);
+        var complete = (items.Count == 0 || recordedItems.Count > 0)
+            && CollectionReadiness.IsComplete(missingRequired.Count, openQueries, answeredQueries, errorFindings);
         var blockers = CollectionReadiness.BuildBlockers(missingRequired, missingRequired.Count, openQueries, answeredQueries, errorFindings);
         return (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers);
     }
@@ -725,26 +1122,22 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
 
     private static (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyBlindedMembers(
         CollectionInstance instance,
+        string? collectionTitle,
         IReadOnlyList<CollectionItem> items,
         IReadOnlyDictionary<ObservationId, Observation> observations,
         IReadOnlyDictionary<ConceptId, Concept> concepts,
         IReadOnlyList<ProtocolDesign> designs)
     {
-        var blindedItems = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var item in items)
-        {
-            concepts.TryGetValue(item.Concept.ConceptId, out var concept);
-            if (BlindedObservationClassifier.IsBlindedTreatment(
-                    item.Concept.ConceptId,
-                    new TextValue(string.Empty),
-                    concept,
-                    instance.CollectionSpecId,
-                    item.Id,
-                    designs))
-            {
-                blindedItems.Add(item.Id);
-            }
-        }
+        BlindedConceptMetadata? ResolveConcept(ConceptId id) =>
+            concepts.TryGetValue(id, out var concept) ? BlindedObservationClassifier.ToMetadata(concept) : null;
+
+        var classifier = BlindedTreatmentClassifier.Instance;
+        var (specBlinded, blindedItems) = ClassifySpecBlindedItems(
+            instance.CollectionSpecId,
+            collectionTitle,
+            items,
+            ResolveConcept,
+            designs);
 
         var blindedObservations = new HashSet<ObservationId>();
         foreach (var member in instance.Members)
@@ -754,13 +1147,67 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 continue;
             }
 
-            concepts.TryGetValue(obs.ConceptId, out var concept);
-            if (blindedItems.Contains(member.ItemId)
-                || BlindedObservationClassifier.IsBlindedTreatment(
+            var conceptMeta = ResolveConcept(obs.ConceptId);
+            var currentOrHistoricalBlinded = classifier.IsBlindedObservation(
                     obs.ConceptId,
                     obs.Value,
-                    concept,
+                    conceptMeta,
                     instance.CollectionSpecId,
+                    member.ItemId,
+                    designs)
+                || obs.Revisions.Any(r => classifier.IsBlindedObservation(
+                    obs.ConceptId,
+                    r.Value,
+                    conceptMeta,
+                    instance.CollectionSpecId,
+                    member.ItemId,
+                    designs));
+            if (specBlinded || blindedItems.Contains(member.ItemId) || currentOrHistoricalBlinded)
+            {
+                blindedItems.Add(member.ItemId);
+                blindedObservations.Add(obs.Id);
+            }
+        }
+
+        return (
+            blindedItems.Count == 0 ? FrozenSet<string>.Empty : blindedItems.ToFrozenSet(StringComparer.Ordinal),
+            blindedObservations.Count == 0 ? FrozenSet<ObservationId>.Empty : blindedObservations.ToFrozenSet());
+    }
+
+    private static (IReadOnlySet<string> BlindedItems, HashSet<ObservationId> BlindedObservations) ClassifyQueryTargetBlinding(
+        QueryTargetFormRow form,
+        string? collectionTitle,
+        IReadOnlyList<CollectionItem> items,
+        IReadOnlyDictionary<ObservationId, QueryTargetObservationRow> observations,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> concepts,
+        IReadOnlyList<ProtocolDesign> designs)
+    {
+        BlindedConceptMetadata? ResolveConcept(ConceptId id) =>
+            concepts.TryGetValue(id, out var foundMeta) ? foundMeta : null;
+
+        var classifier = BlindedTreatmentClassifier.Instance;
+        var (specBlinded, blindedItems) = ClassifySpecBlindedItems(
+            form.CollectionSpecId,
+            collectionTitle,
+            items,
+            ResolveConcept,
+            designs);
+
+        var blindedObservations = new HashSet<ObservationId>();
+        foreach (var member in form.Members)
+        {
+            if (!observations.TryGetValue(member.ObservationId, out var obs))
+            {
+                continue;
+            }
+
+            if (specBlinded
+                || blindedItems.Contains(member.ItemId)
+                || classifier.IsBlindedObservation(
+                    obs.ConceptId,
+                    obs.Value,
+                    ResolveConcept(obs.ConceptId),
+                    form.CollectionSpecId,
                     member.ItemId,
                     designs))
             {
@@ -770,7 +1217,51 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         }
 
         return (
-            blindedItems.Count == 0 ? FrozenSet<string>.Empty : blindedItems,
-            blindedObservations.Count == 0 ? FrozenSet<ObservationId>.Empty : blindedObservations);
+            blindedItems.Count == 0 ? FrozenSet<string>.Empty : blindedItems.ToFrozenSet(StringComparer.Ordinal),
+            blindedObservations);
     }
+
+    private static (bool SpecBlinded, HashSet<string> BlindedItems) ClassifySpecBlindedItems(
+        string collectionSpecId,
+        string? collectionTitle,
+        IReadOnlyList<CollectionItem> items,
+        Func<ConceptId, BlindedConceptMetadata?> resolveConcept,
+        IReadOnlyList<ProtocolDesign> designs)
+    {
+        var classifier = BlindedTreatmentClassifier.Instance;
+        var specBlinded = classifier.IsBlindedCollectionSpec(collectionSpecId, collectionTitle, designs: designs);
+        var blindedItems = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in items)
+        {
+            if (specBlinded
+                || classifier.IsBlindedCollectionItem(
+                    collectionSpecId,
+                    collectionTitle,
+                    item,
+                    value: null,
+                    resolveConcept(item.Concept.ConceptId),
+                    designs))
+            {
+                blindedItems.Add(item.Id);
+            }
+        }
+
+        return (specBlinded, blindedItems);
+    }
+
+    private sealed record MemberObservationRow(string ItemId, ObservationId ObservationId);
+
+    private sealed record ObservationSummaryRow(ObservationId Id, ObservationValue Value, int Revision);
+
+    private sealed record QueryTargetObservationRow(ObservationId Id, ConceptId ConceptId, ObservationValue Value, int Revision);
+
+    private sealed record QueryTargetFormRow(
+        CollectionInstanceId Id,
+        EnrollmentId EnrollmentId,
+        StudyId StudyId,
+        StudySiteId StudySiteId,
+        ProtocolVersionId ProtocolVersionId,
+        string CollectionSpecId,
+        string? PlannedActivityId,
+        IReadOnlyList<MemberObservationRow> Members);
 }

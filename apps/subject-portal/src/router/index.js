@@ -110,6 +110,13 @@ function hydrateSessionScopeFromRouteQuery(query = {}) {
 
 function isAssignmentEligibleForQuestionnaire(assignmentId) {
   if (!assignmentId) return false;
+  if (
+    state.pendingReconsent &&
+    String(state.activeQuestionnaire?.assignment?.id || "") !==
+      String(assignmentId)
+  ) {
+    return false;
+  }
   const fromAssignments = (state.assignments || []).find(
     (a) => String(a.id) === String(assignmentId)
   );
@@ -401,6 +408,7 @@ export function getPortalRouter() {
       state.unavailableScreen = to.query?.screen
         ? String(to.query.screen)
         : null;
+      return;
     }
 
     // Validate /questionnaire on EVERY navigation (initial load, cold reload, and browser Back/Forward).
@@ -409,9 +417,18 @@ export function getPortalRouter() {
         normalizeQueryString(to.query?.assignmentId) ||
         normalizeQueryString(state.activeQuestionnaire?.assignment?.id);
       if (!isAssignmentEligibleForQuestionnaire(candidateAssignmentId)) {
+        const blockedByReconsent = Boolean(
+          candidateAssignmentId &&
+          state.pendingReconsent &&
+          String(state.activeQuestionnaire?.assignment?.id || "") !==
+            String(candidateAssignmentId)
+        );
         state.activeQuestionnaire = null;
         if (state.signatureModalOpen) {
           closeSignatureModal();
+        }
+        if (blockedByReconsent) {
+          void startQuestionnaire(candidateAssignmentId);
         }
         return {
           ...resolveDefaultPortalRoute(),
@@ -621,7 +638,13 @@ export function getPortalRouter() {
       if (!route) return;
 
       if (route.name !== "unavailable" && !isScreenAvailable(route.name)) {
-        state.unavailableScreen = String(route.name);
+        if (route.name === "tasks" && isScreenAvailable("wallet")) {
+          state.unavailableScreen = null;
+          state.currentView = "view-wallet";
+          return;
+        }
+        state.unavailableScreen =
+          route.name === "tasks" ? null : String(route.name);
         state.currentView = "view-unavailable";
         return;
       }
@@ -629,7 +652,14 @@ export function getPortalRouter() {
       const effectiveCurrentName = pendingRouteName ?? current.name;
 
       if (route.name === "unavailable") {
-        if (effectiveCurrentName !== "unavailable") {
+        const currentQueryScreen = router.currentRoute.value.query?.screen
+          ? String(router.currentRoute.value.query.screen)
+          : null;
+        if (
+          effectiveCurrentName !== "unavailable" ||
+          (pendingRouteName === null &&
+            currentQueryScreen !== (state.unavailableScreen || null))
+        ) {
           syncPushRoute(
             {
               name: "unavailable",

@@ -1,8 +1,11 @@
 import { computed, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { syncActiveStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
@@ -11,7 +14,23 @@ import {
 export interface ScopedWorkspaceSectionProps {
   studyCode?: string;
   siteId?: string;
+  lockStudy?: boolean;
 }
+
+export const scopedWorkspaceSectionProps = {
+  studyCode: {
+    type: String,
+    default: "",
+  },
+  siteId: {
+    type: String,
+    default: "",
+  },
+  lockStudy: {
+    type: Boolean,
+    default: undefined,
+  },
+} as const;
 
 export function useScopedWorkspaceSection(
   props: ScopedWorkspaceSectionProps,
@@ -24,14 +43,25 @@ export function useScopedWorkspaceSection(
 ) {
   const authStore = useAuthStore();
   const clinicalStore = useClinicalStore();
+  const canvasStore = useStudyCanvasStore();
   const toasts = useToastStore();
+  const route =
+    typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+  const router =
+    "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+      ? VueRouter.useRouter()
+      : null;
 
+  const isStudyLocked = computed(() =>
+    props.lockStudy === undefined ? Boolean(props.studyCode) : props.lockStudy
+  );
   const assignedStudies = computed(() => authStore.assignedStudies || []);
   const assignedSites = computed(() => authStore.assignedSites || []);
 
   const studyInput = ref(
     props.studyCode ||
       clinicalStore.activeStudyId ||
+      canvasStore.studyCode ||
       (assignedStudies.value.length ? assignedStudies.value[0] : "")
   );
   const siteInput = ref(
@@ -39,6 +69,7 @@ export function useScopedWorkspaceSection(
       clinicalStore.activeSiteId ||
       (assignedSites.value.length ? assignedSites.value[0] : "")
   );
+  const newSiteId = ref(siteInput.value);
 
   const loading = ref(false);
   const loaded = ref(false);
@@ -60,6 +91,7 @@ export function useScopedWorkspaceSection(
     (val) => {
       if (val === undefined) return;
       siteInput.value = val;
+      if (val) newSiteId.value = val;
       options.onSitePropChange?.(val);
     }
   );
@@ -69,7 +101,17 @@ export function useScopedWorkspaceSection(
       clinicalStore.activeStudyId = study;
       syncActiveStudyScope(study);
     }
-    if (site) clinicalStore.activeSiteId = site;
+    if (site) {
+      clinicalStore.activeSiteId = site;
+      newSiteId.value = site;
+    }
+    syncWorkspaceScope({
+      ...(study ? { studyId: study } : {}),
+      ...(site !== undefined && (site || study) ? { siteId: site } : {}),
+      router,
+      route,
+      syncRouteQuery: !isStudyLocked.value,
+    });
   }
 
   function recordLoadFailure(err: unknown, study?: string, site?: string) {
@@ -93,10 +135,12 @@ export function useScopedWorkspaceSection(
     authStore,
     clinicalStore,
     toasts,
+    isStudyLocked,
     assignedStudies,
     assignedSites,
     studyInput,
     siteInput,
+    newSiteId,
     loading,
     loaded,
     saving,

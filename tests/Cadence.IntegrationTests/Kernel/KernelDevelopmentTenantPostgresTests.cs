@@ -35,9 +35,16 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
 {
     private const string Operator = "svc:kernel-development-bootstrap";
 
-    // The Execution module's kernel event consumers (ADR-2622, #5461), granted by the demo data until #5566 provisions
-    // module service accounts.
-    private static readonly string[] ModuleConsumers = ["svc:execution-forms", "svc:execution-queries", "svc:execution-edit-checks"];
+    // The Execution module's kernel event consumers and SLA scheduler service account (ADR-2622, ADR-2625, ADR-2626, #5461),
+    // granted by the demo data until #5566 provisions module service accounts.
+    private static readonly string[] ModuleConsumers =
+    [
+        "svc:execution-forms",
+        "svc:execution-queries",
+        "svc:execution-edit-checks",
+        "svc:execution-query-sla",
+        "svc:execution-sdv-alerts",
+    ];
 
     /// <summary>
     /// The first start provisions the tenant with an audit entry naming the bootstrap's service account, and a caller
@@ -379,6 +386,7 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Development")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .UseSetting("Kernel:DevelopmentTenant:Code", code)
             .UseSetting("Kernel:DevelopmentTenant:DemoData", demoData ? "true" : "false"));

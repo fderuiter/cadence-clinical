@@ -54,7 +54,7 @@ public static class Program
         AddCommand(root, "dev", "Starts the .NET Aspire AppHost with all local services and datastores", DevCommand.Execute);
         AddCommand(root, "fix", "Executes self-healing formatting, index sync, schema and OpenAPI pipeline", ToolCommands.ConfigureFix);
 
-        AddCommand(root, "detect-duplication", "Finds duplicated C# and TypeScript code blocks", () => DuplicationDetectorService.DetectDuplication());
+        AddCommand(root, "detect-duplication", "Finds duplicated C#, JavaScript, TypeScript, Vue and CSS code blocks", () => DuplicationDetectorService.DetectDuplication());
         AddCommand(root, "validate-imports", "Checks cross-service import boundaries", () => ImportValidatorService.ValidateImports());
         AddCommand(root, "validate-dependencies", "Checks project and package dependency rules", () => DependencyValidatorService.ValidateDependencies());
         AddCommand(root, "validate-path-patterns", "Checks file path and directory conventions", () => PathPatternValidatorService.ValidatePathPatterns());
@@ -73,7 +73,7 @@ public static class Program
         AddCommand(root, "validate-openapi-drift", "Compares docs/openapi with the services", () => OpenApiDriftValidatorService.ValidateDrift());
         AddCommand(root, "generate-api-docs", "Renders docs/api from docs/openapi", ToolCommands.ConfigureGenerateApiDocs);
         AddCommand(root, "generate-schema-doc", "Renders docs/schema from the EF Core models", ToolCommands.ConfigureGenerateSchemaDoc);
-        AddCommand(root, "pre-commit-openapi", "Runs the quick OpenAPI check used by the pre-commit hook", () => PreCommitOpenApiService.ExecutePreCommitOpenApi());
+        AddCommand(root, "pre-commit-openapi", "Runs the quick OpenAPI check used by the pre-commit hook", () => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: true));
         AddCommand(root, "validate-api-clients", "Typechecks the web API clients against their OpenAPI types", () => ApiClientValidatorService.ValidateApiClients());
         AddCommand(root, "generate-cli-docs", "Synthesizes generated doc regions in CLI, CI, dev-env, architecture, database and signature guides; --check verifies parity", ToolCommands.ConfigureGenerateCliDocs);
         AddCommand(root, "generate-doc-index", "Synchronizes docs/DOCUMENTATION_INDEX.md with all repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);

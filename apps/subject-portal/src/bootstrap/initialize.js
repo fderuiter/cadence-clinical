@@ -13,6 +13,7 @@ import { logAuditRecord, renderLedger } from "../features/audit.js";
 import { restoreSession, signIn, watchUserIdentity } from "../features/auth.js";
 import { loadCompliance, renderCompliance } from "../features/compliance.js";
 import { loadNotifications, renderInbox } from "../features/inbox.js";
+import { showView } from "../features/navigation.js";
 import { checkPINWrapper } from "../features/pin.js";
 import {
   checkPendingReconsent,
@@ -30,7 +31,11 @@ import {
   loadAssignedTasks,
   renderTasks,
 } from "../features/tasks.js";
-import { loadParticipantWallet } from "../features/wallet.js";
+import {
+  hasAttemptedWalletHydration,
+  loadParticipantWallet,
+  resetWalletHydrationAttempt,
+} from "../features/wallet.js";
 import { isScreenAvailable } from "../router/availability.js";
 import {
   getPortalRouter,
@@ -47,6 +52,7 @@ import { mountPortal } from "./mount.js";
 // Bootstrap Initialization
 export async function initializeApp() {
   resetSyncRetryInfo();
+  resetWalletHydrationAttempt();
   hydrateSiteSupportContact();
   await restoreSession();
 
@@ -107,6 +113,17 @@ export async function initializeApp() {
         });
       }
     }
+  } else if (
+    !isDemoModeActive() &&
+    isScreenAvailable("wallet") &&
+    (state.currentView === "view-tasks" ||
+      (state.currentView === "view-unavailable" &&
+        (!state.unavailableScreen ||
+          state.unavailableScreen === "tasks" ||
+          state.unavailableScreen === "wallet")))
+  ) {
+    state.unavailableScreen = null;
+    showView("view-wallet");
   }
 
   // Hydrate available screens' data BEFORE mountPortal so cold reloads see hydrated state
@@ -116,17 +133,30 @@ export async function initializeApp() {
     const userId = state.session.userId;
     if (isScreenAvailable("tasks")) {
       await loadAssignedTasks(userId);
+    } else {
+      state.assignments = [];
     }
     if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
       await loadAssignedInstruments(userId);
+    } else {
+      state.instruments = {};
     }
     if (isScreenAvailable("compliance")) {
       await loadCompliance(userId);
+    } else {
+      state.compliance = null;
     }
     if (isScreenAvailable("inbox")) {
       await loadNotifications(userId);
+    } else {
+      state.notifications = [];
     }
-    if (isScreenAvailable("wallet")) {
+    if (
+      isScreenAvailable("wallet") &&
+      !state.walletLoaded &&
+      !state.walletLoading &&
+      !hasAttemptedWalletHydration()
+    ) {
       initialWalletHydration = loadParticipantWallet().catch((err) => {
         console.warn(
           "[Wallet] Initial wallet hydration warning:",
@@ -248,6 +278,10 @@ export async function initializeApp() {
     });
   }
 
+  // Switch database context and prompt PIN unlock/setup before running startup sync
+  watchUserIdentity();
+  await checkPINWrapper();
+
   // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
   await syncOfflineQueue(false, {
     autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
@@ -256,19 +290,15 @@ export async function initializeApp() {
   // Attach online/offline listener
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
+      if (!isScreenAvailable("tasks")) {
+        return;
+      }
       console.log("[App] Network online detected. Triggering sync...");
       syncOfflineQueue(false, {
         autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
       });
     });
-  }
 
-  // Switch database context and prompt PIN unlock/setup when active user identity changes
-  watchUserIdentity();
-
-  await checkPINWrapper();
-
-  if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
       console.log(
         "[App] Network offline detected. Enforcing PIN wrapper for offline operation..."

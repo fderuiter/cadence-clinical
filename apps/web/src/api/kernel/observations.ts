@@ -1,18 +1,18 @@
-import { unwrapResponse } from "../client";
 import type { KernelObservationValue } from "../observationValue";
 import {
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_VERIFIED,
   ASSERTION_LOCKED,
+  ASSERTION_QUERY_OPEN,
   ASSERTION_REVISION_STALE,
   assertionErrorCode,
   describeKernelError,
   KERNEL_AUTHORIZATION_DENIED,
   KERNEL_SUBSCRIPTION_EXPIRED,
-  kernelClient,
-  mutationHeaders,
-  unversioned,
   type KernelSchemas,
 } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type { KernelObservationValue };
 
@@ -81,6 +81,12 @@ export function describeAssertionError(error: unknown): string {
   if (code === ASSERTION_ALREADY_RETRACTED) {
     return "That verification was already withdrawn; reload the form.";
   }
+  if (code === ASSERTION_QUERY_OPEN) {
+    return "This value has an open query; resolve and close the query before verifying source data.";
+  }
+  if (code === ASSERTION_ALREADY_VERIFIED) {
+    return "This revision is already source data verified; reload to see the current verification.";
+  }
   if (code === ASSERTION_REVISION_STALE || status === 409) {
     return "The value changed since you loaded the form; reload the form and verify the current revision.";
   }
@@ -92,12 +98,9 @@ export function describeAssertionError(error: unknown): string {
 
 export const kernelObservationsApi = {
   /** One observation with its revisions, the locks covering it, the assertions about it and its kernel audit trail (GET /api/v1/kernel/observations/{observationRef}). */
-  getObservation(observationRef: string): Promise<KernelObservation> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/observations/{observationRef}", {
-        params: { path: { observationRef: unversioned(observationRef) } },
-      })
-    );
+  async getObservation(observationRef: string): Promise<KernelObservation> {
+    const { executeGetObservation } = await loadRouteTransport();
+    return executeGetObservation(observationRef);
   },
 
   /**
@@ -105,78 +108,32 @@ export const kernelObservationsApi = {
    * resolves only when the kernel has committed the value, its revision, the audit entry and the outgoing event
    * together; it rejects with an ApiError of status 409 (stale version), 423 (locked) or 422 (no reason).
    */
-  correctObservation({
-    observationRef,
-    enrollmentRef,
-    value,
-    expectedVersion,
-    reason,
-    idempotencyKey,
-  }: KernelObservationCorrection): Promise<KernelObservationState> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/observations/{observationRef}/corrections",
-        {
-          params: { path: { observationRef: unversioned(observationRef) } },
-          body: {
-            enrollment_ref: enrollmentRef,
-            value,
-            expected_version: expectedVersion,
-          },
-          headers: mutationHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  async correctObservation(
+    input: KernelObservationCorrection
+  ): Promise<KernelObservationState> {
+    const { executeCorrectObservation } = await loadRouteTransport();
+    return executeCorrectObservation(input);
   },
 
   /**
    * Verifies an observation's current revision against source (`POST /api/v1/kernel/observations/{observationRef}/verifications`).
    * Rejects with 409 (`K.Assertion.RevisionStale`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
    */
-  verifyObservation({
-    observationRef,
-    enrollmentRef,
-    revision,
-    assertionId,
-    reason,
-    idempotencyKey,
-  }: KernelObservationVerification): Promise<KernelAssertionState> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/observations/{observationRef}/verifications",
-        {
-          params: { path: { observationRef: unversioned(observationRef) } },
-          body: {
-            enrollment_ref: enrollmentRef,
-            revision,
-            ...(assertionId ? { assertion_id: assertionId } : {}),
-          },
-          headers: mutationHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  async verifyObservation(
+    input: KernelObservationVerification
+  ): Promise<KernelAssertionState> {
+    const { executeVerifyObservation } = await loadRouteTransport();
+    return executeVerifyObservation(input);
   },
 
   /**
    * Withdraws an active verification or assertion with a mandatory reason (`POST /api/v1/kernel/assertions/{assertionRef}/retraction`).
    * Rejects with 409 (`K.Assertion.AlreadyRetracted`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
    */
-  retractAssertion({
-    assertionRef,
-    enrollmentRef,
-    assertionId,
-    reason,
-    idempotencyKey,
-  }: KernelAssertionRetraction): Promise<KernelAssertionState> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/assertions/{assertionRef}/retraction", {
-        params: { path: { assertionRef: unversioned(assertionRef) } },
-        body: {
-          enrollment_ref: enrollmentRef,
-          ...(assertionId ? { assertion_id: assertionId } : {}),
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async retractAssertion(
+    input: KernelAssertionRetraction
+  ): Promise<KernelAssertionState> {
+    const { executeRetractAssertion } = await loadRouteTransport();
+    return executeRetractAssertion(input);
   },
 };

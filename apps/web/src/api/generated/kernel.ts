@@ -321,7 +321,7 @@ export interface paths {
     };
     /**
      * Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.
-     * @description Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).
+     * @description Projects canonical kernel observations at as_of(valid_at, known_at), filtering to the caller's visible scope, reporting omitted scopes as a collapsed indicator, and masking blinded treatment values in place (K-TRUTH-1, K-AUTH-4, ADR-2590).
      */
     get: operations["KernelExportStudySnapshot"];
     put?: never;
@@ -361,8 +361,25 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Evaluates a candidate USDM protocol version in memory without database changes. */
+    /** Evaluates a candidate protocol version, mapping specification, or rule pack in memory at a bitemporal (valid_at, known_at) instant without database changes. */
     post: operations["KernelSimulateProtocol"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/studies/{studyRef}/simulation-reports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Registers an unmasked SimulationResult as an immutable SimulationReport artifact version for Part 11 review attestation (K-SIM-5). */
+    post: operations["KernelSaveSimulationReport"];
     delete?: never;
     options?: never;
     head?: never;
@@ -782,6 +799,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/locks/in-force": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. */
+    get: operations["KernelGetScopeWriteLock"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/locks": {
     parameters: {
       query?: never;
@@ -806,7 +840,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. */
+    /** Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -1211,6 +1245,8 @@ export interface components {
       retracted_by: null | components["schemas"]["Kernel_AssertionId"];
       /** Format: date-time */
       retracted_at: null | string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_AttestationId: unknown;
     Kernel_CodelistOptionView: {
@@ -1241,6 +1277,10 @@ export interface components {
     Kernel_ExplanationStep: {
       claim: string;
       evidence: unknown[];
+    };
+    Kernel_HiddenObjects: {
+      more_exist: boolean;
+      reasons: components["schemas"]["Kernel_MaskReason"][];
     };
     Kernel_KernelAcceptFindingRequest: {
       rationale: string;
@@ -1289,6 +1329,32 @@ export interface components {
       changed_elements: components["schemas"]["Kernel_KernelElementChangeResponse"][];
       schedule:
         null | components["schemas"]["Kernel_KernelSoaAmendmentDiffResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      active_site_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      pending_site_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      total_participant_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      affected_participant_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      reconsent_participant_count: number | string;
+      hidden?: null | components["schemas"]["Kernel_HiddenObjects"];
     };
     Kernel_KernelApplyLockRequest: {
       study_ref: string;
@@ -1310,6 +1376,7 @@ export interface components {
       expected_content_hash?: null | string;
       /** Format: uuid */
       attestation_id?: null | string;
+      review_attestation_ref?: null | string;
     };
     Kernel_KernelArtifactResponse: {
       artifact_ref: string;
@@ -1570,6 +1637,14 @@ export interface components {
       variable: string;
       value: null | string;
     };
+    Kernel_KernelHiddenContentResponse: {
+      more_exist: boolean;
+      reasons: string[];
+    };
+    Kernel_KernelHiddenObjectsResponse: {
+      more_exist: boolean;
+      reasons: string[];
+    };
     Kernel_KernelImportedRulePackSummaryResponse: {
       ref: string;
       key: string;
@@ -1587,6 +1662,8 @@ export interface components {
       template_ids?: null | string[];
       /** @default false */
       replace_forms: boolean;
+      amendment_classification?: null | string;
+      transition_policy?: null | string;
     };
     Kernel_KernelLineageEdgeResponse: {
       from: string;
@@ -1652,6 +1729,16 @@ export interface components {
       finding_ref?: null | string;
       rule_id?: null | string;
       detail?: null | string;
+      /** Format: int32 */
+      current_revision?: null | number | string;
+      /** @default false */
+      signature_superseded: boolean;
+      planned_activity_id?: null | string;
+      planned_activity_name?: null | string;
+      /** Format: date */
+      planned_date?: null | string;
+      /** Format: date */
+      window_end?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1670,23 +1757,38 @@ export interface components {
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
       explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unverified_value_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unsigned_form_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unopened_visit_count: number | string;
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
       study_ref: string;
       scope_ref: null | string;
-      scope_kind: string;
+      scope_kind: null | string;
       study_site_ref: null | string;
       enrollment_ref: null | string;
       subject_code: null | string;
-      kind: string;
+      kind: null | string;
       attestation_ref: null | string;
       attestation_meaning: null | string;
       /** Format: date-time */
       locked_at: null | string;
       locked_by: null | string;
       reason_for_change: null | string;
-      released: boolean;
+      released: null | boolean;
       release_ref: null | string;
       /** Format: date-time */
       released_at: null | string;
@@ -1752,11 +1854,52 @@ export interface components {
       /** Format: int32 */
       revision: number | string;
     };
+    Kernel_KernelOperationalImpactResponse: {
+      /** Format: int32 */
+      active_site_count: number | string;
+      /** Format: int32 */
+      pending_site_count: number | string;
+      /** Format: int32 */
+      total_participant_count: number | string;
+      /** Format: int32 */
+      affected_participant_count: number | string;
+      /** Format: int32 */
+      reconsent_participant_count: number | string;
+      participant_impacts: components["schemas"]["Kernel_KernelParticipantSimulationImpactResponse"][];
+      hidden: components["schemas"]["Kernel_KernelHiddenObjectsResponse"];
+    };
     Kernel_KernelOrganizationSummaryResponse: {
       ref: string;
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelParticipantPlannedVisitResponse: {
+      visit_id: string;
+      /** Format: date */
+      target_date: string;
+      /** Format: date */
+      window_start: string;
+      /** Format: date */
+      window_end: string;
+    };
+    Kernel_KernelParticipantScheduleShiftResponse: {
+      activity_id: string;
+      change: string;
+      before:
+        | null
+        | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+      after:
+        | null
+        | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+    };
+    Kernel_KernelParticipantSimulationImpactResponse: {
+      enrollment: string;
+      subject_code: string;
+      status: string;
+      cohort: string;
+      requires_reconsent: boolean;
+      schedule_shifts: components["schemas"]["Kernel_KernelParticipantScheduleShiftResponse"][];
     };
     Kernel_KernelPlannedVisitResponse: {
       activity_id: string;
@@ -1782,6 +1925,26 @@ export interface components {
       participant_count: number | string;
       /** Format: int32 */
       active_study_count: number | string;
+    };
+    Kernel_KernelProjectionDatasetChangeResponse: {
+      dataset: string;
+      /** Format: int32 */
+      added_count: number | string;
+      /** Format: int32 */
+      removed_count: number | string;
+      /** Format: int32 */
+      changed_count: number | string;
+      samples: components["schemas"]["Kernel_KernelProjectionRecordChangeSampleResponse"][];
+    };
+    Kernel_KernelProjectionRecordChangeSampleResponse: {
+      record_key: string;
+      change: string;
+      before: null | {
+        [key: string]: string;
+      };
+      after: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelProposalAffectedResponse: {
       ref: string;
@@ -1835,6 +1998,14 @@ export interface components {
       decided_at: null | string;
       decided_by: null | string;
     };
+    Kernel_KernelProtocolAmendmentResponse: {
+      intent: string;
+      rationale: string;
+      classification: string;
+      summary_of_changes: string;
+      impacted_elements: string[];
+      transition_policy: string;
+    };
     Kernel_KernelProtocolDraftSummaryResponse: {
       version: components["schemas"]["Kernel_KernelProtocolVersionResponse"];
       title: string;
@@ -1847,6 +2018,8 @@ export interface components {
       imported_rule_pack?:
         | null
         | components["schemas"]["Kernel_KernelImportedRulePackSummaryResponse"];
+      amendment?:
+        null | components["schemas"]["Kernel_KernelProtocolAmendmentResponse"];
     };
     Kernel_KernelProtocolFormItemResponse: {
       id: string;
@@ -1994,6 +2167,12 @@ export interface components {
       rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
       footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
     };
+    Kernel_KernelScopeWriteLockResponse: {
+      study_exists: boolean;
+      locked: boolean;
+      lock_kind: null | string;
+      scope_kind: null | string;
+    };
     Kernel_KernelScreenEnrollmentRequest: {
       /** Format: uuid */
       participant_id: null | string;
@@ -2015,6 +2194,16 @@ export interface components {
       /** Format: double */
       rank: number | string;
     };
+    Kernel_KernelSimulatedValidationFindingResponse: {
+      rule_id: string;
+      /** Format: int32 */
+      rule_version: number | string;
+      severity: string;
+      stage: string;
+      dataset: string;
+      subject: string;
+      explanation: string;
+    };
     Kernel_KernelSimulationAsOfResponse: {
       /** Format: date-time */
       valid_at: string;
@@ -2035,6 +2224,13 @@ export interface components {
         null | components["schemas"]["Kernel_KernelDependentsResponse"];
       matrix_gaps: components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
       is_empty: boolean;
+      operational_impact?:
+        null | components["schemas"]["Kernel_KernelOperationalImpactResponse"];
+      projection_changes?:
+        | null
+        | components["schemas"]["Kernel_KernelProjectionDatasetChangeResponse"][];
+      validation_delta?:
+        null | components["schemas"]["Kernel_KernelValidationDeltaResponse"];
     };
     Kernel_KernelSiteSummaryResponse: {
       ref: string;
@@ -2131,6 +2327,7 @@ export interface components {
       /** Format: date-time */
       known_at: string;
       locks: components["schemas"]["Kernel_KernelLockResponse"][];
+      hidden: components["schemas"]["Kernel_KernelHiddenContentResponse"];
     };
     Kernel_KernelStudyRulePacksResponse: {
       study_ref: string;
@@ -2223,6 +2420,12 @@ export interface components {
     };
     Kernel_KernelUpgradeSubscriptionRequest: {
       tier: string;
+    };
+    Kernel_KernelValidationDeltaResponse: {
+      opening: components["schemas"]["Kernel_KernelSimulatedValidationFindingResponse"][];
+      resolving: components["schemas"]["Kernel_KernelSimulatedValidationFindingResponse"][];
+      /** Format: int32 */
+      unchanged_count: number | string;
     };
     Kernel_KernelValidationFindingDetailResponse: {
       finding: components["schemas"]["Kernel_KernelValidationFindingResponse"];
@@ -2329,7 +2532,10 @@ export interface components {
       locked_at: string;
       locked_by: string;
       reason_for_change: string;
+      /** @default false */
+      masked: boolean;
     };
+    Kernel_MaskReason: number;
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
     };
@@ -2423,6 +2629,14 @@ export interface components {
     };
     /** @enum {unknown} */
     Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
+    Kernel_SaveSimulationReportRequest: {
+      title: null | string;
+      result: null | components["schemas"]["Kernel_KernelSimulationResponse"];
+      /** Format: uuid */
+      artifact_id?: null | string;
+      /** Format: uuid */
+      artifact_version_id?: null | string;
+    };
     Kernel_SimulateProtocolRequest: {
       base_version_ref: null | string;
       stored_version_ref: null | string;
@@ -2431,6 +2645,11 @@ export interface components {
       valid_at?: null | string;
       /** Format: date-time */
       known_at?: null | string;
+      kind?: null | string;
+      study_ref?: null | string;
+      library_item_ref?: null | string;
+      base_library_item_ref?: null | string;
+      standard_version_ref?: null | string;
     };
   };
   responses: never;
@@ -3427,7 +3646,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Simulation.VersionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Simulation.LibraryItemUnknown`, `K.Simulation.StudyUnknown`, `K.Simulation.VersionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -3445,7 +3664,88 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`, `K.Simulation.MappingSpecificationInvalid`, `K.Simulation.RulePackInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelSaveSimulationReport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_SaveSimulationReportRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelArtifactResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Evidence.StudyUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Evidence.ContentInvalid`, `K.Evidence.KindInvalid`, `K.Evidence.SimulationReportInvalid`, `K.Evidence.TitleInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4109,7 +4409,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Identity.TenantUnknown`, `K.Knowledge.CodeSystemUnknown`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4136,7 +4436,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.NameRequired`, `K.Knowledge.CodeSystemUriInvalid`, `K.Knowledge.ConceptLabelRequired`, `K.Knowledge.DuplicateEntry`, `K.Knowledge.EntriesInvalid`, `K.Knowledge.ExternalCodeMismatch`, `K.Knowledge.LicenseMismatch`, `K.Knowledge.PackageInvalid`, `K.Knowledge.VersionRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4212,7 +4512,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Protocol.ReferenceUnknown`, `K.Protocol.UndeclaredImpactedElements`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4361,7 +4661,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`, `K.Protocol.SimulationReviewRequired`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -5085,7 +5385,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.RevisionStale`, `K.Command.IdempotencyConflict`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyVerified`, `K.Assertion.QueryOpen`, `K.Assertion.RevisionStale`, `K.Command.IdempotencyConflict`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -5288,6 +5588,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Observation.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
     };
   };
   KernelApplyLock: {
@@ -5440,6 +5749,40 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetScopeWriteLock: {
+    parameters: {
+      query?: {
+        study_code?: string;
+        site_code?: string;
+        subject_code?: string;
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelScopeWriteLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };
