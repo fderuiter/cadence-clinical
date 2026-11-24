@@ -21,7 +21,7 @@
       prefix="milestones"
       form-id="milestones-scope-form"
       aria-label="Site milestones scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-placeholder="Site code (optional)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -210,7 +210,8 @@ const workspace = useScopedWorkspaceSection(props, {
   fallbackErrorTitle: "Site milestones could not be loaded",
   fallbackErrorMessage: "Site milestones could not be loaded.",
 });
-const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
+const { authStore, toasts, isStudyLocked, syncActiveScope, recordLoadFailure } =
+  workspace;
 const {
   assignedStudies,
   assignedSites,

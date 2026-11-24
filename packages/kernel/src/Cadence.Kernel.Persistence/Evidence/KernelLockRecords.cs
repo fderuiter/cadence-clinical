@@ -867,6 +867,10 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
                         enrollmentId ??= coll.EnrollmentId;
                         studySiteId = coll.StudySiteId;
                     }
+                    else if (validAt is not null || knownAt is not null)
+                    {
+                        continue;
+                    }
 
                     break;
                 case NodeKinds.Observation:
@@ -876,15 +880,26 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
                     {
                         enrollmentId ??= obs.EnrollmentId;
                     }
+                    else if (validAt is not null || knownAt is not null)
+                    {
+                        continue;
+                    }
 
                     break;
             }
 
             string? subjectCode = null;
-            if (enrollmentId is { } eid && enrollments.TryGetValue(eid, out var enrollment))
+            if (enrollmentId is { } eid)
             {
-                studySiteId ??= enrollment.StudySiteId;
-                subjectCode = enrollment.SubjectCode.Value;
+                if (enrollments.TryGetValue(eid, out var enrollment))
+                {
+                    studySiteId ??= enrollment.StudySiteId;
+                    subjectCode = enrollment.SubjectCode.Value;
+                }
+                else if (validAt is not null || knownAt is not null)
+                {
+                    continue;
+                }
             }
 
             var attestationId = lockAssertion.AttestationId ?? AttestationId.Empty;

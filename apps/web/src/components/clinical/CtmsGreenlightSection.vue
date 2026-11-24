@@ -22,7 +22,7 @@
       prefix="greenlight"
       form-id="greenlight-scope-form"
       aria-label="Startup readiness scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-label="Site (optional for matrix)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -257,7 +257,8 @@ const workspace = useScopedWorkspaceSection(props, {
   fallbackErrorTitle: "Startup readiness could not be loaded",
   fallbackErrorMessage: "Startup readiness could not be loaded.",
 });
-const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
+const { authStore, toasts, isStudyLocked, syncActiveScope, recordLoadFailure } =
+  workspace;
 const {
   assignedStudies,
   assignedSites,

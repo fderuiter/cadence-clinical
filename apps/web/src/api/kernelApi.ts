@@ -45,6 +45,7 @@ export {
   KERNEL_SUBSCRIPTION_EXPIRED,
   SUBSCRIPTION_EXPIRED_GUIDANCE,
   triggerBrowserDownload,
+  type KernelHiddenContent,
   type KernelLineageWindow,
   type KernelStreamedArtifact,
 } from "./kernel/shared";
