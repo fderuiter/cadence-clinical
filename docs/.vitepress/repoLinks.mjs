@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
+import process from "process";
 
-import { BLOG_FEED_PATH, isDraftBlogPostFile } from "./blog.mjs";
+import {
+  BLOG_FEED_PATH,
+  EXCLUDED_PORTAL_DOCS,
+  isDraftBlogPostFile,
+  parseBlogFrontmatter,
+} from "./blog.mjs";
 import rootDocsModule from "./rootDocs.cjs";
 
 const { STAGED_ROOT_DOCS } = rootDocsModule;
@@ -10,9 +16,7 @@ const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
 const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
-export const EXCLUDED_PORTAL_DOCS = Object.freeze([
-  "SDLC/03_API_Integration_Specification.md",
-]);
+export { EXCLUDED_PORTAL_DOCS };
 
 export function isExcludedPortalDocFile(filePath, docsDir) {
   if (!filePath || !docsDir) return false;
@@ -282,20 +286,254 @@ export function dualHeadingAnchorsPlugin(md) {
   });
 }
 
+function isGeneratedStaticEndpoint(
+  cleanLink,
+  base = process.env.VITEPRESS_BASE || "/cadence-clinical/"
+) {
+  if (GENERATED_STATIC_ENDPOINTS.has(cleanLink)) {
+    return true;
+  }
+  const normalizedBase =
+    `/${String(base || "/").replace(/^\/+|\/+$/g, "")}/`.replace(/^\/\/$/, "/");
+  if (normalizedBase !== "/" && cleanLink.startsWith(normalizedBase)) {
+    const stripped = `/${cleanLink.slice(normalizedBase.length)}`;
+    return GENERATED_STATIC_ENDPOINTS.has(stripped);
+  }
+  return false;
+}
+
+function collectSamePageAnchors(state, currentFile) {
+  const anchors =
+    typeof state.src === "string"
+      ? extractMarkdownAnchors(state.src)
+      : fs.existsSync(currentFile)
+        ? new Set(getFileAnchors(currentFile))
+        : new Set();
+  for (const t of state.tokens ?? []) {
+    const tid = t.attrGet?.("id");
+    if (tid) anchors.add(tid);
+    for (const c of t.children ?? []) {
+      const cid = c.attrGet?.("id");
+      if (cid) anchors.add(cid);
+      if (c.type === "html_inline" && c.content) {
+        for (const m of c.content.matchAll(HTML_ID_ATTR_RE)) {
+          if (m[1]) anchors.add(m[1]);
+        }
+      }
+    }
+  }
+  return anchors;
+}
+
+function validateFrontmatterRelatedEntries(
+  rawRelated,
+  {
+    relativePath,
+    currentFile,
+    pageDir,
+    docsDir,
+    repoRoot,
+    isDevServer,
+    getSamePageAnchors,
+  }
+) {
+  if (!Array.isArray(rawRelated) || rawRelated.length === 0) return;
+
+  for (const entry of rawRelated) {
+    const rawLink =
+      typeof entry === "string"
+        ? entry.trim()
+        : entry && typeof entry === "object"
+          ? String(entry.link ?? entry.href ?? "").trim()
+          : "";
+    if (!rawLink || /^([a-z][a-z0-9+.-]*:)/i.test(rawLink)) {
+      continue;
+    }
+
+    const [rawTarget, rawAnchor = ""] = splitAnchor(rawLink);
+    const cleanTarget = rawTarget.split("?")[0].trim();
+    const fragment = decodeAnchorFragment(rawAnchor);
+
+    if (!cleanTarget) {
+      if (fragment && !getSamePageAnchors().has(fragment)) {
+        throw new Error(
+          `Broken heading anchor in frontmatter.related '${rawLink}' in docs/${relativePath}`
+        );
+      }
+      continue;
+    }
+
+    if (
+      isCohostedSubpathLink(rawLink) ||
+      isGeneratedStaticEndpoint(cleanTarget)
+    ) {
+      continue;
+    }
+
+    if (cleanTarget.startsWith("/")) {
+      let targetFile = resolveThemePagePath(docsDir, rawLink);
+      if (!targetFile) {
+        const rootKey = cleanTarget
+          .replace(/^\/+/, "")
+          .replace(/\.(?:html|md)$/i, "");
+        for (const [srcName, destName] of Object.entries(STAGED_ROOT_DOCS)) {
+          if (destName.replace(/\.md$/i, "") === rootKey) {
+            const rootCandidate = path.join(repoRoot, srcName);
+            if (fs.existsSync(rootCandidate)) {
+              targetFile = rootCandidate;
+              break;
+            }
+          }
+        }
+        if (!targetFile && rootKey) {
+          const excludedCandidate = path.join(docsDir, `${rootKey}.md`);
+          if (
+            isExcludedPortalDocFile(excludedCandidate, docsDir) &&
+            fs.existsSync(excludedCandidate)
+          ) {
+            targetFile = excludedCandidate;
+          }
+        }
+      }
+      if (!targetFile) {
+        throw new Error(
+          `Broken frontmatter.related link '${rawLink}' in docs/${relativePath}`
+        );
+      }
+      if (!isDevServer && isDraftBlogPostFile(targetFile)) {
+        throw new Error(
+          `Draft blog post referenced in frontmatter.related '${rawLink}' in docs/${relativePath}`
+        );
+      }
+      if (fragment && /\.md$/i.test(targetFile)) {
+        const targetAnchors = getFileAnchors(targetFile);
+        if (!targetAnchors.has(fragment)) {
+          throw new Error(
+            `Broken heading anchor in frontmatter.related '${rawLink}' in docs/${relativePath}`
+          );
+        }
+      }
+      continue;
+    }
+
+    const decoded = decodeURI(cleanTarget);
+    const absolute = decoded.startsWith("docs/")
+      ? path.resolve(repoRoot, decoded)
+      : path.resolve(pageDir, decoded);
+    const relToRepo = path.relative(repoRoot, absolute).replace(/\\/g, "/");
+    if (relToRepo.startsWith("..") || path.isAbsolute(relToRepo)) {
+      throw new Error(
+        `Broken frontmatter.related link '${rawLink}' in docs/${relativePath}`
+      );
+    }
+
+    let resolvedMdFile = null;
+    const stagedDest = STAGED_ROOT_DOCS[relToRepo];
+    if (stagedDest) {
+      const stagedInDocs = path.join(docsDir, stagedDest);
+      const sourceInRoot = path.join(repoRoot, relToRepo);
+      if (fs.existsSync(stagedInDocs)) {
+        resolvedMdFile = stagedInDocs;
+      } else if (fs.existsSync(sourceInRoot)) {
+        resolvedMdFile = /\.md$/i.test(sourceInRoot) ? sourceInRoot : null;
+      } else {
+        throw new Error(
+          `Broken frontmatter.related link '${rawLink}' in docs/${relativePath}`
+        );
+      }
+    } else if (fs.existsSync(absolute)) {
+      const stat = fs.statSync(absolute);
+      if (stat.isDirectory()) {
+        const indexCandidate = path.join(absolute, "index.md");
+        const readmeCandidate = path.join(absolute, "README.md");
+        if (fs.existsSync(indexCandidate)) {
+          resolvedMdFile = indexCandidate;
+        } else if (fs.existsSync(readmeCandidate)) {
+          resolvedMdFile = readmeCandidate;
+        }
+      } else if (/\.md$/i.test(absolute)) {
+        resolvedMdFile = absolute;
+      } else if (
+        /\.html$/i.test(absolute) &&
+        fs.existsSync(absolute.replace(/\.html$/i, ".md"))
+      ) {
+        resolvedMdFile = absolute.replace(/\.html$/i, ".md");
+      }
+    } else if (fs.existsSync(`${absolute}.md`)) {
+      resolvedMdFile = `${absolute}.md`;
+    } else if (
+      /\.html$/i.test(absolute) &&
+      fs.existsSync(absolute.replace(/\.html$/i, ".md"))
+    ) {
+      resolvedMdFile = absolute.replace(/\.html$/i, ".md");
+    } else {
+      throw new Error(
+        `Broken frontmatter.related link '${rawLink}' in docs/${relativePath}`
+      );
+    }
+
+    if (
+      !isDevServer &&
+      resolvedMdFile &&
+      path.resolve(resolvedMdFile) !== path.resolve(currentFile) &&
+      isDraftBlogPostFile(resolvedMdFile)
+    ) {
+      throw new Error(
+        `Draft blog post referenced in frontmatter.related '${rawLink}' in docs/${relativePath}`
+      );
+    }
+
+    if (fragment && resolvedMdFile && fs.existsSync(resolvedMdFile)) {
+      const targetAnchors = getFileAnchors(resolvedMdFile);
+      if (!targetAnchors.has(fragment)) {
+        throw new Error(
+          `Broken heading anchor in frontmatter.related '${rawLink}' in docs/${relativePath}`
+        );
+      }
+    }
+  }
+}
+
 /**
  * Markdown-it plugin: keeps staged root-guide links inside the VitePress portal, points non-portal
- * repository links at GitHub, and validates `#anchor` fragments on internal Markdown links.
+ * repository links at GitHub, and validates `#anchor` fragments and `frontmatter.related` links.
  *
  * @param {import("markdown-it")} md
- * @param {{ docsDir: string, repoRoot: string }} options
+ * @param {{ docsDir: string, repoRoot: string, isDevServer?: boolean }} options
  */
-export function repoLinksPlugin(md, { docsDir, repoRoot }) {
+export function repoLinksPlugin(
+  md,
+  { docsDir, repoRoot, isDevServer = false }
+) {
   md.core.ruler.push("cadence_repo_links", (state) => {
     const relativePath = state.env?.relativePath;
     if (!relativePath) return;
     const currentFile = path.join(docsDir, relativePath);
     const pageDir = path.dirname(currentFile);
     let samePageAnchors = null;
+    const getSamePageAnchors = () => {
+      if (!samePageAnchors) {
+        samePageAnchors = collectSamePageAnchors(state, currentFile);
+      }
+      return samePageAnchors;
+    };
+
+    const frontmatter =
+      state.env?.frontmatter ??
+      (typeof state.src === "string"
+        ? parseBlogFrontmatter(state.src).frontmatter
+        : null);
+    if (frontmatter?.related) {
+      validateFrontmatterRelatedEntries(frontmatter.related, {
+        relativePath,
+        currentFile,
+        pageDir,
+        docsDir,
+        repoRoot,
+        isDevServer,
+        getSamePageAnchors,
+      });
+    }
 
     for (const block of state.tokens) {
       for (const token of block.children ?? []) {
@@ -310,6 +548,17 @@ export function repoLinksPlugin(md, { docsDir, repoRoot }) {
           repoRoot,
           currentFile
         );
+        if (
+          !isDevServer &&
+          !resolution.samePage &&
+          (resolution.draftTargetFile ||
+            (resolution.portalTargetFile &&
+              isDraftBlogPostFile(resolution.portalTargetFile)))
+        ) {
+          throw new Error(
+            `Link targets draft blog post '${href}' in docs/${relativePath}`
+          );
+        }
         if (resolution.rewrittenHref) {
           token.attrSet("href", resolution.rewrittenHref);
         }
@@ -318,28 +567,7 @@ export function repoLinksPlugin(md, { docsDir, repoRoot }) {
         if (!fragment) continue;
 
         if (resolution.samePage) {
-          if (!samePageAnchors) {
-            samePageAnchors =
-              typeof state.src === "string"
-                ? extractMarkdownAnchors(state.src)
-                : fs.existsSync(currentFile)
-                  ? new Set(getFileAnchors(currentFile))
-                  : new Set();
-            for (const t of state.tokens) {
-              const tid = t.attrGet?.("id");
-              if (tid) samePageAnchors.add(tid);
-              for (const c of t.children ?? []) {
-                const cid = c.attrGet?.("id");
-                if (cid) samePageAnchors.add(cid);
-                if (c.type === "html_inline" && c.content) {
-                  for (const m of c.content.matchAll(HTML_ID_ATTR_RE)) {
-                    if (m[1]) samePageAnchors.add(m[1]);
-                  }
-                }
-              }
-            }
-          }
-          if (!samePageAnchors.has(fragment)) {
+          if (!getSamePageAnchors().has(fragment)) {
             throw new Error(
               `Broken heading anchor '${href}' in docs/${relativePath}`
             );
@@ -511,11 +739,16 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
               fs.existsSync(absolute.replace(/\.html$/i, ".md"))
             ? absolute.replace(/\.html$/i, ".md")
             : null;
-    if (
-      mdCandidate &&
-      (isDraftBlogPostFile(mdCandidate) ||
-        isExcludedPortalDocFile(mdCandidate, docsDir))
-    ) {
+    if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
+      return {
+        rewrittenHref: null,
+        portalTargetFile: null,
+        draftTargetFile: mdCandidate,
+        anchor,
+        samePage: path.resolve(mdCandidate) === path.resolve(currentFile || ""),
+      };
+    }
+    if (mdCandidate && isExcludedPortalDocFile(mdCandidate, docsDir)) {
       const excludedRelToRepo = path
         .relative(repoRoot, mdCandidate)
         .replace(/\\/g, "/");
@@ -620,6 +853,8 @@ function decodeAnchorFragment(anchor) {
 export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
   const cohostedSubpaths =
     options.cohostedSubpaths ?? COHOSTED_SUBPATH_PREFIXES;
+  const siteBase =
+    options.base ?? process.env.VITEPRESS_BASE ?? "/cadence-clinical/";
   const missingPages = [];
   const missingAnchors = [];
   const validatedLinks = new Set();
@@ -635,12 +870,12 @@ export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
       ) {
         validatedLinks.add(link);
         const [cleanLink, rawAnchor] = splitAnchor(link);
-        if (GENERATED_STATIC_ENDPOINTS.has(cleanLink)) {
+        if (isGeneratedStaticEndpoint(cleanLink, siteBase)) {
           visit(item.items);
           continue;
         }
         const filePath = resolveThemePagePath(docsDir, link);
-        if (!filePath) {
+        if (!filePath || isDraftBlogPostFile(filePath)) {
           missingPages.push(link);
         } else {
           const fragment = decodeAnchorFragment(rawAnchor);

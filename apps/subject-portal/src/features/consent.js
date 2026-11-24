@@ -21,7 +21,10 @@ import {
   resolveFriendlyStudyTitle,
 } from "../utils/participantCopy.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
-import { createClinicalRadioGrid } from "../widgets/clinical-fields.js";
+import {
+  bindDelegatedClinicalWidgets,
+  createClinicalRadioGrid,
+} from "../widgets/clinical-fields.js";
 import {
   clearFieldInvalid,
   markFieldInvalid,
@@ -339,6 +342,7 @@ export function renderConsentUI() {
     });
     formHtml += `</div>`;
     qContainer.innerHTML = formHtml;
+    bindDelegatedClinicalWidgets(qContainer);
   } else {
     qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
   }

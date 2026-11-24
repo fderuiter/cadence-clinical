@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Explanations;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
@@ -14,6 +17,8 @@ namespace Cadence.Security.Authentication;
 /// </summary>
 public sealed class AuditorWriteGuardMiddleware : IMiddleware
 {
+    public const string ReadOnlyDetail = "Forbidden: Auditor personas are restricted to read-only access.";
+
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         string method = context.Request.Method;
@@ -24,7 +29,22 @@ public sealed class AuditorWriteGuardMiddleware : IMiddleware
             && principal.Roles.Any(RoleNormalization.AUDITOR_ROLES.Contains))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("Forbidden: Auditor personas are restricted to read-only access.");
+            context.Response.ContentType = "application/problem+json";
+            var payload = new Dictionary<string, object?>
+            {
+                ["type"] = "https://tools.ietf.org/html/rfc9110#section-15.5.4", // deid-ignore
+                ["title"] = "Forbidden",
+                ["status"] = StatusCodes.Status403Forbidden,
+                ["detail"] = ReadOnlyDetail,
+                ["code"] = "FORBIDDEN_AUDITOR_READ_ONLY",
+                ["explanation"] = ProblemExplanation.From(RbacExplanationBuilder.ForAuditorReadOnly(ReadOnlyDetail)),
+            };
+            if (context.Request.Path.HasValue)
+            {
+                payload["instance"] = context.Request.Path.Value;
+            }
+
+            await JsonSerializer.SerializeAsync(context.Response.Body, payload, cancellationToken: context.RequestAborted);
             return;
         }
 

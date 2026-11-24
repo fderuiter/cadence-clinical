@@ -80,7 +80,9 @@ public sealed class KernelTenantFilter(IKernelTenantResolver resolver) : IEndpoi
         }
 
         KernelRequestTenant.Set(http, tenant);
-        return await next(context).ConfigureAwait(false);
+        var result = await next(context).ConfigureAwait(false);
+        await KernelErrorEndpoints.MaskProblemResultAsync(result, tenant, http, http.RequestAborted).ConfigureAwait(false);
+        return result;
     }
 }
 

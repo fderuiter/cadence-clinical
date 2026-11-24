@@ -346,6 +346,8 @@ export const ClinicalDrawer: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
+    docked?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -506,7 +508,7 @@ export interface ClinicalToastItem {
   duration?: number;
 }
 
-export const ClinicalToastHost: DefineComponent<
+export const ClinicalToastHost: DefineSlotsComponent<
   {
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
@@ -518,8 +520,9 @@ export const ClinicalToastHost: DefineComponent<
     onPause?: (id: string | number) => void;
     onResume?: (id: string | number) => void;
   },
-  {},
-  any
+  {
+    extra?: (props: { toast: any }) => any;
+  }
 >;
 
 export interface FocusTrapOptions {
@@ -992,9 +995,21 @@ export interface EntityLinkNodeRef {
   siteId?: string | null;
 }
 
-export const EntityLink: DefineComponent<
+export interface ParsedNodeRef {
+  raw: string;
+  masked: boolean;
+  kind: string;
+  kindLabel: string;
+  id: string | null;
+  version: number | null;
+  maskReason: string | null;
+  shortRef: string;
+  displayLabel: string;
+}
+
+export const EntityLink: DefineSlotsComponent<
   {
-    nodeRef?: EntityLinkNodeRef | null;
+    nodeRef?: string | EntityLinkNodeRef | null;
     entityType?: string;
     entityId?: string;
     label?: string;
@@ -1002,9 +1017,49 @@ export const EntityLink: DefineComponent<
     href?: string;
     preventNavigation?: boolean;
     tabular?: boolean;
+    compact?: boolean;
+    showCode?: boolean;
+    onPeek?: (payload: any) => void;
+    onSelect?: (payload: any) => void;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+  }
+>;
+
+export const ClinicalExplanation: DefineComponent<
+  {
+    explanation?: Record<string, any> | null;
+    fallbackReason?: string;
+    code?: string;
+    compact?: boolean;
+    onPeek?: (payload: any) => void;
   },
   {},
   any
+>;
+
+export const ClinicalGatedAction: DefineSlotsComponent<
+  {
+    permitted?: boolean;
+    explanation?: Record<string, any> | null;
+    reason?: string;
+    code?: string;
+    label?: string;
+    whyLabel?: string;
+    inline?: boolean;
+    defaultExpanded?: boolean;
+    onAction?: () => void;
+    onPeek?: (payload: any) => void;
+  },
+  {
+    default?: (props: {
+      disabled: boolean;
+      permitted: boolean;
+      ariaDisabled?: "true";
+      explanationId?: string;
+    }) => any;
+  }
 >;
 
 export const ClinicalIcon: DefineComponent<
@@ -1015,3 +1070,13 @@ export const ClinicalIcon: DefineComponent<
   {},
   any
 >;
+
+export function parseNodeRef(raw: string): ParsedNodeRef;
+export function stripRawPermissionTokens(text: string): string;
+export function registerEntityPeekHandler(
+  handler: (payload: Record<string, any>) => void
+): () => void;
+export function openEntityPeek(
+  nodeRef: string,
+  context?: Record<string, any>
+): boolean;

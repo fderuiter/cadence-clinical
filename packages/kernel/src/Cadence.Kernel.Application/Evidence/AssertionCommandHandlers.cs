@@ -180,15 +180,16 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
 }
 
 /// <summary>
-/// Handles <see cref="VerifyObservation"/>: under shared locks on the observation's covering scopes it refuses when a
-/// <see cref="AssertionKind.Locked"/> lock holds, then verifies the current revision only.
+/// Handles <see cref="VerifyObservation"/>: under an exclusive advisory lock on the observation and shared locks on its
+/// covering scopes, refuses when a <see cref="AssertionKind.Locked"/> lock holds, when the revision is stale, when an
+/// open query holds on the observation, or when the revision already holds an active verification (ADR-2621).
 /// </summary>
 internal sealed class VerifyObservationHandler : ICommandHandler<VerifyObservation, AssertionState>
 {
     public async Task<CommandResult<AssertionState>> HandleAsync(VerifyObservation command, ICommandContext context, CancellationToken cancellationToken)
     {
         var (observation, refused) = await ObservationAssertions.OpenAsync(
-            context, command.AssertionId, command.EnrollmentId, command.ObservationId, cancellationToken).ConfigureAwait(false);
+            context, command.AssertionId, command.EnrollmentId, command.ObservationId, cancellationToken, lockObservation: true).ConfigureAwait(false);
         if (observation is null)
         {
             return refused!;
@@ -198,6 +199,24 @@ internal sealed class VerifyObservationHandler : ICommandHandler<VerifyObservati
         {
             return AssertionErrors.RevisionStale.WithMessage(
                 $"The observation's current revision is {observation.Revision}, not {command.Revision}; reload it and verify the current value.");
+        }
+
+        var assertions = await context.Work.ReadAllAsync<Assertion>(
+            a => a.TargetKind == NodeKinds.Observation && a.TargetId == observation.Id.Value,
+            cancellationToken).ConfigureAwait(false);
+        var retractedIds = assertions
+            .Where(a => a.RetractsId is not null)
+            .Select(a => a.RetractsId!.Value)
+            .ToHashSet();
+
+        if (assertions.Any(a => a.Kind == AssertionKind.Queried && a.RetractsId is null && !retractedIds.Contains(a.Id)))
+        {
+            return AssertionErrors.QueryOpen;
+        }
+
+        if (assertions.Any(a => a.Kind == AssertionKind.Verified && a.RetractsId is null && a.TargetRevision == command.Revision && !retractedIds.Contains(a.Id)))
+        {
+            return AssertionErrors.AlreadyVerified;
         }
 
         var verified = Assertion.Verify(command.AssertionId, observation, command.Revision, context.Actor.Id, context.RecordedAt);
@@ -212,7 +231,7 @@ internal sealed class RaiseQueryHandler : ICommandHandler<RaiseQuery, AssertionS
     public async Task<CommandResult<AssertionState>> HandleAsync(RaiseQuery command, ICommandContext context, CancellationToken cancellationToken)
     {
         var (observation, refused) = await ObservationAssertions.OpenAsync(
-            context, command.AssertionId, command.EnrollmentId, command.ObservationId, cancellationToken).ConfigureAwait(false);
+            context, command.AssertionId, command.EnrollmentId, command.ObservationId, cancellationToken, lockObservation: true).ConfigureAwait(false);
         if (observation is null)
         {
             return refused!;
@@ -367,7 +386,12 @@ internal static class ObservationAssertions
     /// Returns the observation, or the error that refuses the command.
     /// </summary>
     public static async Task<(Observation? Observation, KernelError? Refused)> OpenAsync(
-        ICommandContext context, AssertionId assertion, EnrollmentId enrollmentId, ObservationId observationId, CancellationToken cancellationToken)
+        ICommandContext context,
+        AssertionId assertion,
+        EnrollmentId enrollmentId,
+        ObservationId observationId,
+        CancellationToken cancellationToken,
+        bool lockObservation = false)
     {
         if (await context.Work.ExistsAsync<Assertion>(assertion, cancellationToken).ConfigureAwait(false))
         {
@@ -379,14 +403,22 @@ internal static class ObservationAssertions
             return (null, KernelErrors.NotFound);
         }
 
+        if (lockObservation)
+        {
+            await context.Work.LockAsync<Observation>(observationId, cancellationToken).ConfigureAwait(false);
+        }
+
         var instance = await CollectionMembership.InstanceOfAsync(context.Work, observationId, cancellationToken).ConfigureAwait(false);
-        if (await LocksInForce.AnyAsync(
+        if (await LocksInForce.RefusalAsync(
             context.Work,
             LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, observationId, instance),
             LocksInForce.DenyingAssertions,
-            cancellationToken).ConfigureAwait(false))
+            AssertionErrors.Locked,
+            "Assertion",
+            NodeRef.For(observationId),
+            cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return (null, AssertionErrors.Locked);
+            return (null, locked);
         }
 
         return await context.Work.ReadAsync<Observation>(observationId, cancellationToken).ConfigureAwait(false) is { } observation

@@ -312,35 +312,29 @@ public static class KernelLockEndpoints
         IClock clock,
         CancellationToken cancellationToken)
     {
-        if (!NodeRef.TryParse(studyRef, out var studyNode))
-        {
-            return KernelProblems.InvalidNodeRef(studyRef);
-        }
-
-        if (studyNode.Kind != NodeKinds.Study || studyNode.Version is not null)
-        {
-            return KernelProblems.WrongKind(studyNode, NodeKinds.Study);
-        }
-
         var tenant = KernelRequestTenant.Get(context);
-        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is not { } resolvedStudy)
+        var resolvedStudy = await KernelStudyLookup.ResolveVisibleStudyAsync(
+            tenant,
+            studyRef,
+            context,
+            visibility,
+            actor,
+            (_, studyMask) => $"You may not see this study ({studyMask}), so its locks are not listed.",
+            allowVersionedStudyRef: false,
+            cancellationToken).ConfigureAwait(false);
+        if (resolvedStudy.Problem is { } studyProblem)
         {
-            return KernelProblems.NotFound(studyNode);
+            return studyProblem;
         }
 
-        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [resolvedStudy.Ref], cancellationToken).ConfigureAwait(false);
-        if (studyMasks.For(resolvedStudy.Ref) is { } studyMask)
-        {
-            return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its locks are not listed.");
-        }
-
+        var studyNode = resolvedStudy.Study.UnversionedRef;
         var now = clock.UtcNow;
         var effectiveValidAt = validAt ?? asOf ?? now;
         var effectiveKnownAt = knownAt ?? asOf ?? now;
 
         var list = await locks.ListByStudyAsync(
             tenant,
-            StudyId.FromGuid(studyNode.Id),
+            resolvedStudy.Study.StudyId,
             effectiveValidAt,
             effectiveKnownAt,
             activeOnly ?? false,
@@ -433,48 +427,48 @@ public static class KernelLockEndpoints
         ICurrentActor actor,
         CancellationToken cancellationToken)
     {
-        if (!NodeRef.TryParse(studyRef, out var studyNode))
+        NodeRef? explicitScope = null;
+        if (!string.IsNullOrWhiteSpace(scopeRef))
         {
-            return KernelProblems.InvalidNodeRef(studyRef);
-        }
+            if (!NodeRef.TryParse(scopeRef.Trim(), out var parsedScope) || !LockScopes.IsScope(parsedScope))
+            {
+                return KernelProblems.BadRequest(
+                    "Invalid lock scope",
+                    "Name scope_ref as an unversioned study, study_site, enrollment, collection_instance or observation NodeRef.");
+            }
 
-        if (studyNode.Kind != NodeKinds.Study || studyNode.Version is not null)
-        {
-            return KernelProblems.WrongKind(studyNode, NodeKinds.Study);
-        }
-
-        var targetScope = studyNode;
-        if (!string.IsNullOrWhiteSpace(scopeRef)
-            && (!NodeRef.TryParse(scopeRef.Trim(), out targetScope) || !LockScopes.IsScope(targetScope)))
-        {
-            return KernelProblems.BadRequest(
-                "Invalid lock scope",
-                "Name scope_ref as an unversioned study, study_site, enrollment, collection_instance or observation NodeRef.");
+            explicitScope = parsedScope;
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is not { } resolvedStudy)
+        var resolvedStudy = await KernelStudyLookup.ResolveVisibleStudyAsync(
+            tenant,
+            studyRef,
+            context,
+            visibility,
+            actor,
+            (_, studyMask) => $"You may not see this study ({studyMask}), so its lock readiness is not available.",
+            allowVersionedStudyRef: false,
+            cancellationToken).ConfigureAwait(false);
+        if (resolvedStudy.Problem is { } studyProblem)
         {
-            return KernelProblems.NotFound(studyNode);
+            return studyProblem;
         }
 
-        var initialNodes = targetScope == studyNode
-            ? new[] { resolvedStudy.Ref }
-            : new[] { resolvedStudy.Ref, targetScope };
-        var initialMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, initialNodes, cancellationToken).ConfigureAwait(false);
-        if (initialMasks.For(resolvedStudy.Ref) is { } studyMask)
+        var studyNode = resolvedStudy.Study.UnversionedRef;
+        var targetScope = explicitScope ?? studyNode;
+        if (targetScope != studyNode)
         {
-            return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its lock readiness is not available.");
-        }
-
-        if (targetScope != studyNode && initialMasks.For(targetScope) is { } scopeMask)
-        {
-            return KernelProblems.NotVisible($"You may not see this lock scope ({scopeMask}), so its lock readiness is not available.");
+            var scopeMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [targetScope], cancellationToken).ConfigureAwait(false);
+            if (scopeMasks.For(targetScope) is { } scopeMask)
+            {
+                return KernelProblems.NotVisible($"You may not see this lock scope ({scopeMask}), so its lock readiness is not available.");
+            }
         }
 
         var snapshot = await locks.ReadReadinessAsync(
             tenant,
-            StudyId.FromGuid(studyNode.Id),
+            resolvedStudy.Study.StudyId,
             targetScope,
             cancellationToken).ConfigureAwait(false);
         if (snapshot is null)

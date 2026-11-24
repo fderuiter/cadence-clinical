@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Explanations;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Authorization;
@@ -79,21 +80,28 @@ public sealed class ExpiredSubscriptionWriteGuardMiddleware : IMiddleware
             .Any(authorize => string.Equals(authorize.Policy, RegulatedExportPolicy, StringComparison.Ordinal));
     }
 
-    private static async Task WriteProblemDetailsAsync(HttpContext context)
+    private static Task WriteProblemDetailsAsync(HttpContext context)
     {
-        await using var writer = new Utf8JsonWriter(context.Response.Body);
-        writer.WriteStartObject();
-        writer.WriteString("type", "https://tools.ietf.org/html/rfc9110#section-15.5.4"); // deid-ignore
-        writer.WriteString("title", KernelErrors.SubscriptionExpired.Code);
-        writer.WriteNumber("status", StatusCodes.Status403Forbidden);
-        writer.WriteString("detail", KernelErrors.SubscriptionExpired.Message);
+        var explanation = RbacExplanationBuilder.ForSubscriptionDenial(
+            KernelErrors.SubscriptionExpired.Message,
+            "Renew or activate the workspace subscription before creating or updating clinical records.",
+            "Ask a workspace administrator to activate a commercial subscription.",
+            "subscription.activate");
+
+        var payload = new System.Collections.Generic.Dictionary<string, object?>
+        {
+            ["type"] = "https://tools.ietf.org/html/rfc9110#section-15.5.4", // deid-ignore
+            ["title"] = KernelErrors.SubscriptionExpired.Code,
+            ["status"] = StatusCodes.Status403Forbidden,
+            ["detail"] = KernelErrors.SubscriptionExpired.Message,
+            ["code"] = KernelErrors.SubscriptionExpired.Code,
+            ["explanation"] = ProblemExplanation.From(explanation),
+        };
         if (context.Request.Path.HasValue)
         {
-            writer.WriteString("instance", context.Request.Path.Value);
+            payload["instance"] = context.Request.Path.Value;
         }
 
-        writer.WriteString("code", KernelErrors.SubscriptionExpired.Code);
-        writer.WriteEndObject();
-        await writer.FlushAsync(context.RequestAborted).ConfigureAwait(false);
+        return JsonSerializer.SerializeAsync(context.Response.Body, payload, cancellationToken: context.RequestAborted);
     }
 }

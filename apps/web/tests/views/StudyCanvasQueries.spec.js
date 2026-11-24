@@ -61,6 +61,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       transition: vi.fn(),
       reassign: vi.fn(),
       listDigests: vi.fn(async () => []),
+      listSdvAlerts: vi.fn(async () => []),
       escalate: vi.fn(),
     },
   };
@@ -145,6 +146,7 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     });
     for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
     vi.mocked(ecrfQueriesApi.listDigests).mockResolvedValue([]);
+    vi.mocked(ecrfQueriesApi.listSdvAlerts).mockResolvedValue([]);
     vi.mocked(findKernelStudyRef).mockReset();
     vi.mocked(findKernelStudyRef).mockResolvedValue(`study:${STUDY_UUID}@2`);
     vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
@@ -868,5 +870,79 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
     expect(
       wrapper.find('[data-testid="study-queries-sla-outcome"]').text()
     ).toContain("14-day SLA check completed: 1 overdue query escalated");
+    vi.useRealTimers();
+  });
+
+  it("opens embedded ObservationView with open query threads directly from #query-observation-query-1 in QueriesSection", async () => {
+    signInWith(["cra"]);
+    vi.mocked(kernelApi.getObservation).mockResolvedValue({
+      ref: `observation:${OBS_1}@1`,
+      enrollment_ref: "enrollment:enrollment-1",
+      concept: "concept:diastolic@1",
+      value: {
+        type: "quantity",
+        value: 84,
+        unit: "mm[Hg]",
+        comparator: null,
+      },
+      observed_at: "2027-03-14T09:00:00Z",
+      version: 1,
+      form_ref: `collection_instance:${FORM_VS_1}`,
+      item_id: "DIABP",
+      locks: [],
+      revisions: [
+        {
+          number: 1,
+          value: {
+            type: "quantity",
+            value: 84,
+            unit: "mm[Hg]",
+            comparator: null,
+          },
+          reason_for_change: "Initial entry",
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+          recorded_until: null,
+        },
+      ],
+      assertions: [
+        {
+          assertion_id: "0192f3c4-5e6a-7b8c-9d0e-00000000c901",
+          kind: "Queried",
+          target: `observation:${OBS_1}`,
+          revision: 1,
+          text: "Diastolic BP is missing on source",
+          asserted_at: "2027-03-14T10:00:00Z",
+          asserted_by: "cra@example.test",
+          reason_for_change: "Manual monitor query",
+          retracted_at: null,
+          retracted_by: null,
+        },
+      ],
+      audit: [],
+    });
+
+    await open("/studies/CAD-101?stage=data&section=queries");
+
+    const obsLink = wrapper.find("#query-observation-query-1");
+    expect(obsLink.exists()).toBe(true);
+    await obsLink.trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "queries",
+      site: "017",
+      form: `collection_instance:${FORM_VS_1}`,
+      item: "DIABP",
+      observation: `observation:${OBS_1}`,
+    });
+    expect(wrapper.find("#section-observation").exists()).toBe(true);
+    expect(wrapper.find('[data-testid="observation-sdv-badge"]').text()).toBe(
+      "Unverified"
+    );
+    expect(
+      wrapper.find('[data-testid="observation-queries"]').text()
+    ).toContain("Diastolic BP is missing on source");
   });
 });

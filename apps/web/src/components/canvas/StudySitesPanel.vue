@@ -298,8 +298,10 @@ import {
 } from "../../api/kernelApi";
 import {
   clearKernelStudyCache,
+  seedKernelStudyRef,
   syncCallerSiteScope,
 } from "../../canvas/kernelStudy";
+import { seedNodeSummary } from "../../canvas/nodeResolver";
 import { buildScopedStudyLocation } from "../../canvas/palette";
 import { useAuthStore } from "../../stores/auth.js";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
@@ -428,6 +430,20 @@ async function loadAll(code: string) {
     const linked = await kernelApi.listStudySites(code);
     if (req !== requestEpoch) return;
     studySites.value = Array.isArray(linked) ? linked : [];
+    const firstStudyRef = studySites.value.find((s) => s.study_ref)?.study_ref;
+    if (firstStudyRef) {
+      seedKernelStudyRef(code, firstStudyRef);
+    }
+    for (const site of studySites.value) {
+      if (site.ref && !site.mask) {
+        seedNodeSummary(site.ref, {
+          kind: "study_site",
+          code: site.site_code ?? null,
+          title: site.site_name ?? null,
+          status: site.status ?? null,
+        });
+      }
+    }
     emit("changed", studySites.value);
 
     if (!props.compact && props.canManageSites) {

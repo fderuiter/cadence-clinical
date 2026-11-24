@@ -19,6 +19,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/locks` | KernelApplyLock | Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply). |
 | `GET` | `/api/v1/kernel/locks/in-force` | KernelGetScopeWriteLock | Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. |
 | `POST` | `/api/v1/kernel/locks/{lockRef}/release` | KernelReleaseLock | Releases a Frozen or Locked assertion with a signed retracting assertion (lock.release). |
+| `GET` | `/api/v1/kernel/nodes` | KernelGetNodes | Resolves up to 100 NodeRefs to their summaries in one batch. |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}` | KernelGetNode | Resolves a NodeRef to its summary. |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}/children` | KernelGetChildren | The children of a scope node, with their own child counts. |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}/commands` | KernelGetCommands | The kernel commands offered on an object, each with the caller's dry-run decision. |
@@ -45,7 +46,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review` | KernelSubmitProtocolVersionForReview | Freezes a draft protocol version's content, computes its content hash, and moves it to InReview (protocol.submit_for_review). |
 | `POST` | `/api/v1/kernel/protocols/matrix-gap-check` | KernelMatrixGapCheck | Performs immediate real-time matrix gap check on a candidate protocol design graph. |
 | `GET` | `/api/v1/kernel/search` | KernelSearch | Finds kernel objects in the caller's tenant by code or title. |
-| `POST` | `/api/v1/kernel/simulation/simulate` | KernelSimulateProtocol | Evaluates a candidate USDM protocol version in memory without database changes. |
+| `POST` | `/api/v1/kernel/simulation/simulate` | KernelSimulateProtocol | Evaluates a candidate protocol version, mapping specification, or rule pack in memory at a bitemporal (valid_at, known_at) instant without database changes. |
 | `GET` | `/api/v1/kernel/sites` | KernelListSites | Lists visible investigational sites in the caller's tenant. |
 | `POST` | `/api/v1/kernel/sites` | KernelCreateSite | Registers an investigational site under a site institution in the caller's tenant (site.register). |
 | `GET` | `/api/v1/kernel/status` | KernelStatus | Returns the Clinical Kernel API's operational status. |
@@ -53,6 +54,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/studies` | KernelCreateStudy | Registers a new study in the caller's tenant with a signed reason for change (study.register) and optional one-step site link. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/artifacts` | KernelListStudyArtifacts | Lists evidence artifacts registered for a study, newest first. |
 | `POST` | `/api/v1/kernel/studies/{studyRef}/artifacts` | KernelRegisterStudyArtifact | Registers an immutable study evidence artifact version such as an ethics approval, regulatory approval, or CTA acknowledgement (artifact.register). |
+| `GET` | `/api/v1/kernel/studies/{studyRef}/attention` | KernelGetStudyAttention | Lists a study's open proposals and active (Open or Investigating) validation findings in one attention read. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/effectivities` | KernelListStudyEffectivities | Lists bitemporal protocol-version effectivities declared for a study. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/exports` | KernelExportStudySnapshot | Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/locks` | KernelListStudyLocks | Lists Frozen and Locked assertions recorded for a study at an optional bitemporal as_of cut. |
@@ -62,10 +64,11 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/studies/{studyRef}/protocol-versions` | KernelListProtocolVersions | A study's protocol versions, newest first, without their content. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/rule-packs` | KernelListStudyRulePacks | Lists rule-pack library items in the tenant and indicates which versions are pinned on the study. |
 | `POST` | `/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview` | KernelPreviewStudyRulePack | Evaluates a draft or approved rule pack in memory over the study's current collection records without mutating state. |
+| `POST` | `/api/v1/kernel/studies/{studyRef}/simulation-reports` | KernelSaveSimulationReport | Registers an unmasked SimulationResult as an immutable SimulationReport artifact version for Part 11 review attestation (K-SIM-5). |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/sites` | KernelListStudySites | Lists visible investigational sites linked to a study together with their activation status and currently effective protocol versions. |
 | `POST` | `/api/v1/kernel/studies/{studyRef}/sites` | KernelLinkSiteToStudy | Links an investigational site (registering it inline when site details are supplied) to a study in the caller's tenant (site.register, study_site.link). |
 | `PUT` | `/api/v1/kernel/studies/{studyRef}/standards` | KernelDeclareStudyRulePacks | Declares or updates the approved rule-pack library items pinned on a study (study.declare_standards). |
-| `GET` | `/api/v1/kernel/studies/{studyRef}/validation/findings` | KernelListStudyValidationFindings | Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset. |
+| `GET` | `/api/v1/kernel/studies/{studyRef}/validation/findings` | KernelListStudyValidationFindings | Lists derived validation findings for a study, optionally filtered by stage, repeatable status, severity, rule pack or dataset. |
 | `POST` | `/api/v1/kernel/study-sites/{studySiteRef}/activate` | KernelActivateStudySite | Activates a kernel study site once at least one protocol version is effective there (study_site.activate, K-TIME-4). |
 | `GET` | `/api/v1/kernel/validation/findings/{findingRef}` | KernelGetValidationFinding | Returns one derived validation finding and its structured provenance explanation. |
 | `POST` | `/api/v1/kernel/validation/findings/{findingRef}/accept` | KernelAcceptValidationFinding | Accepts an open or investigating validation finding with a Responsibility electronic signature (validation_finding.accept). |

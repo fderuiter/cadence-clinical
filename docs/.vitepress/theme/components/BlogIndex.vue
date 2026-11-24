@@ -1,7 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { data as posts } from "../../../blog/posts.data.mjs";
-import { filterBlogPostsByTag, resolveBaseHref } from "../../blogShared.mjs";
+import {
+  filterBlogPostsByTag,
+  resolveBaseHref,
+  resolveBlogLinkRel,
+  resolveBlogLinkTarget,
+} from "../../blogShared.mjs";
 
 const selectedTag = ref("all");
 
@@ -24,6 +29,9 @@ const filteredPosts = computed(() =>
 function resolveHref(link) {
   return resolveBaseHref(link);
 }
+
+const resolveLinkTarget = resolveBlogLinkTarget;
+const resolveLinkRel = resolveBlogLinkRel;
 
 function selectTag(tag) {
   const normalized = String(tag ?? "all")
@@ -143,6 +151,8 @@ onMounted(() => {
             :key="rel.link"
             class="blog-related-link"
             :href="resolveHref(rel.link)"
+            :target="resolveLinkTarget(rel.link)"
+            :rel="resolveLinkRel(rel.link)"
           >
             {{ rel.text }}
           </a>
