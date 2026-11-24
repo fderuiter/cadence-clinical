@@ -21,7 +21,7 @@ namespace Cadence.UnitTests.Testing;
 /// Keeps container base image pins, non-root <c>USER</c> rules, <c>APP_NAME</c> targets, Hadolint discovery, CLI tool
 /// manifests, MSBuild cohort properties and skew targets, <c>pnpm</c> workspace catalog references,
 /// <see cref="DependencyValidatorService"/>, and Dependabot rules aligned with <c>global.json</c>,
-/// <c>Directory.Build.props</c>, ADR-2233, ADR-2327, and ADR-2527.
+/// <c>Directory.Build.props</c>, ADR-2233, ADR-2327, ADR-2527, and ADR-2528.
 /// </summary>
 public sealed partial class ContainerImagePinTests
 {
@@ -218,6 +218,10 @@ public sealed partial class ContainerImagePinTests
         ReadMsBuildProperty(propsDoc, "AspireHostingVersion").Should().Be("13.6.5");
         ReadMsBuildProperty(propsDoc, "IdentityModelVersion").Should().Be("8.23.0");
         ReadMsBuildProperty(propsDoc, "DotNetAiVersion").Should().Be("10.11.1");
+        ReadMsBuildProperty(propsDoc, "OpenTelemetryVersion").Should().Be("1.20.1");
+        ReadMsBuildProperty(propsDoc, "OpenTelemetryInstrumentationVersion").Should().Be("1.20.2");
+        ReadMsBuildProperty(propsDoc, "MassTransitVersion").Should().Be("8.5.12");
+        ReadMsBuildProperty(propsDoc, "FluentValidationVersion").Should().Be("12.2.0");
 
         var appHostDoc = XDocument.Load(Path.Combine(Root, "apps", "apphost", "src", "Cadence.AppHost.csproj"));
         string? appHostSdkVersion = appHostDoc.Descendants("Sdk")
@@ -265,6 +269,31 @@ public sealed partial class ContainerImagePinTests
             .ToList();
         literalVersions.Should().OnlyHaveUniqueItems(
             "shared NuGet cohorts must use MSBuild properties in Directory.Build.props instead of repeating literal versions");
+
+        packageVersions.Should().Contain(("TngTech.ArchUnitNET.xUnitV3", "0.13.5"),
+            "Cadence.ArchitectureTests must bind ArchUnitNET through TngTech.ArchUnitNET.xUnitV3");
+        packageVersions.Should().Contain(("xunit.v3", "4.0.3"));
+        packageVersions.Select(p => p.Id).Should().NotContain(
+            ["TngTech.ArchUnitNET.xUnit", "xunit", "xunit.assert", "xunit.core"],
+            "legacy xunit v2 packages must never coexist with xunit.v3");
+
+        string archAssetsPath = Path.Combine(Root, "tests", "Cadence.ArchitectureTests", "obj", "project.assets.json");
+        File.Exists(archAssetsPath).Should().BeTrue("Cadence.ArchitectureTests must be restored before running tests");
+        string archAssets = File.ReadAllText(archAssetsPath);
+        archAssets.Should().Contain("\"TngTech.ArchUnitNET.xUnitV3/0.13.5\"")
+            .And.Contain("\"TngTech.ArchUnitNET/0.13.5\"")
+            .And.Contain("\"xunit.v3.assert/4.0.3\"")
+            .And.NotContain("\"TngTech.ArchUnitNET.xUnit/")
+            .And.NotContain("\"xunit.assert/");
+
+        foreach (string assetsFile in Directory.EnumerateFiles(Path.Combine(Root, "tests"), "project.assets.json", SearchOption.AllDirectories))
+        {
+            string assetsContent = File.ReadAllText(assetsFile);
+            assetsContent.Should().NotContain("\"xunit.assert/",
+                $"{Path.GetRelativePath(Root, assetsFile)} must not resolve xunit.assert 2.x");
+            assetsContent.Should().NotContain("\"TngTech.ArchUnitNET.xUnit/",
+                $"{Path.GetRelativePath(Root, assetsFile)} must not resolve legacy TngTech.ArchUnitNET.xUnit");
+        }
     }
 
     [Fact]
@@ -287,6 +316,48 @@ public sealed partial class ContainerImagePinTests
             """<_PackageDependenciesDesignTime Include="Aspire.Hosting.AppHost/13.5.4" Name="Aspire.Hosting.AppHost" />""");
         aspireExit.Should().NotBe(0, "resolving an Aspire package version mismatched with $(AspireHostingVersion) must fail compilation");
         aspireOut.Should().Contain("CADDEP003");
+
+        var (legacyXunitAssertExit, legacyXunitAssertOut) = RunSkewProbeBuild(
+            """<ResolvedCompileFileDefinitions Include="xunit.assert.dll" NuGetPackageId="xunit.assert" NuGetPackageVersion="2.4.1" />""");
+        legacyXunitAssertExit.Should().NotBe(0, "resolving xunit.assert 2.x on net10.0 must fail compilation");
+        legacyXunitAssertOut.Should().Contain("CADDEP004");
+
+        var (legacyArchUnitExit, legacyArchUnitOut) = RunSkewProbeBuild(
+            """<ResolvedCompileFileDefinitions Include="ArchUnitNET.xUnit.dll" NuGetPackageId="TngTech.ArchUnitNET.xUnit" NuGetPackageVersion="0.13.5" />""");
+        legacyArchUnitExit.Should().NotBe(0, "resolving legacy TngTech.ArchUnitNET.xUnit must fail compilation");
+        legacyArchUnitOut.Should().Contain("CADDEP004");
+
+        var (legacyXunitCoreExit, legacyXunitCoreOut) = RunSkewProbeBuild(
+            """<_PackageDependenciesDesignTime Include="xunit.core/2.9.3" Name="xunit.core" />""");
+        legacyXunitCoreExit.Should().NotBe(0, "resolving legacy xunit.core 2.x must fail compilation");
+        legacyXunitCoreOut.Should().Contain("CADDEP004");
+
+        var (splitXunitV3Exit, splitXunitV3Out) = RunSkewProbeBuild(
+            """
+            <ResolvedCompileFileDefinitions Include="xunit.v3.core.dll" NuGetPackageId="xunit.v3.core" NuGetPackageVersion="4.0.3" />
+            <ResolvedCompileFileDefinitions Include="xunit.v3.assert.dll" NuGetPackageId="xunit.v3.assert" NuGetPackageVersion="4.0.0" />
+            """);
+        splitXunitV3Exit.Should().NotBe(0, "splitting xunit.v3 package versions must fail compilation");
+        splitXunitV3Out.Should().Contain("CADDEP004");
+
+        var (splitArchUnitExit, splitArchUnitOut) = RunSkewProbeBuild(
+            """
+            <ResolvedCompileFileDefinitions Include="ArchUnitNET.dll" NuGetPackageId="TngTech.ArchUnitNET" NuGetPackageVersion="0.13.5" />
+            <ResolvedCompileFileDefinitions Include="ArchUnitNET.xUnitV3.dll" NuGetPackageId="TngTech.ArchUnitNET.xUnitV3" NuGetPackageVersion="0.13.4" />
+            """);
+        splitArchUnitExit.Should().NotBe(0, "splitting TngTech.ArchUnitNET package versions must fail compilation");
+        splitArchUnitOut.Should().Contain("CADDEP004");
+
+        var (alignedXunitV3Exit, alignedXunitV3Out) = RunSkewProbeBuild(
+            """
+            <ResolvedCompileFileDefinitions Include="xunit.v3.core.dll" NuGetPackageId="xunit.v3.core" NuGetPackageVersion="4.0.3" />
+            <ResolvedCompileFileDefinitions Include="xunit.v3.assert.dll" NuGetPackageId="xunit.v3.assert" NuGetPackageVersion="4.0.3" />
+            <_PackageDependenciesDesignTime Include="xunit.analyzers/2.3.0" Name="xunit.analyzers" />
+            <_PackageDependenciesDesignTime Include="xunit.runner.visualstudio/4.0.1" Name="xunit.runner.visualstudio" />
+            <ResolvedCompileFileDefinitions Include="ArchUnitNET.dll" NuGetPackageId="TngTech.ArchUnitNET" NuGetPackageVersion="0.13.5" />
+            <ResolvedCompileFileDefinitions Include="ArchUnitNET.xUnitV3.dll" NuGetPackageId="TngTech.ArchUnitNET.xUnitV3" NuGetPackageVersion="0.13.5" />
+            """);
+        alignedXunitV3Exit.Should().Be(0, $"aligned xunit.v3 and TngTech.ArchUnitNET.xUnitV3 packages must pass: {alignedXunitV3Out}");
     }
 
     [Fact]
@@ -383,6 +454,12 @@ public sealed partial class ContainerImagePinTests
             .And.Contain("dotnet-ai:")
             .And.Contain("aspire:")
             .And.Contain("identitymodel:")
+            .And.Contain("opentelemetry:")
+            .And.Contain("masstransit:")
+            .And.Contain("fluentvalidation:")
+            .And.Contain("dotnet-testing:")
+            .And.Contain("analyzers:")
+            .And.Contain("anthropic:")
             .And.Contain("package-ecosystem: \"npm\"")
             .And.Contain("typescript-eslint:")
             .And.Contain("vitest:")
@@ -403,6 +480,18 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore version-update:semver-major for Microsoft.EntityFrameworkCore*");
         NugetDotnetEfMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for dotnet-ef");
+        NugetXunitMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for xunit*");
+        NugetTestSdkMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for Microsoft.NET.Test.Sdk");
+        NugetArchUnitMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for TngTech.ArchUnitNET*");
+        NugetCodeAnalysisMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for Microsoft.CodeAnalysis.*");
+        NugetSonarMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for SonarAnalyzer.CSharp");
+        NugetAnthropicMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for Anthropic*");
         NugetOpenTelemetryNet11IgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore OpenTelemetry >= 1.21.0 while targeting net10.0 (#5944, ADR-2527)");
         ScePythonIgnoreRule().IsMatch(dependabot).Should().BeTrue(
@@ -482,6 +571,56 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "MassTransit*"
+                    update-types: ["version-update:semver-major"]
+                  - dependency-name: "MassTransit*"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                      ]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0", ">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+              - package-ecosystem: "nuget"
+                directory: "/"
+            """);
 
         foreach (string testPackage in new[]
         {
@@ -526,6 +665,171 @@ public sealed partial class ContainerImagePinTests
         {
             Directory.Delete(cleanDevDepsDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void DependencyValidatorService_EnforcesMsBuildCohortsDependabotRulesAndPreCommitIndexBlobs()
+    {
+        AssertMalformedManifestFails("Directory.Build.props", "<Project><PropertyGroup>");
+        AssertMalformedManifestFails("Directory.Packages.props", "<Project><ItemGroup>");
+
+        string buildPropsContent = File.ReadAllText(Path.Combine(Root, "Directory.Build.props"));
+        string packagesPropsContent = File.ReadAllText(Path.Combine(Root, "Directory.Packages.props"));
+        string dependabotContent = File.ReadAllText(Path.Combine(Root, ".github", "dependabot.yml"));
+
+        AssertMsBuildCohortMutationFails(
+            buildPropsContent,
+            packagesPropsContent.Replace(
+                """<PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(DotNetServicingVersion)" />""",
+                """<PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />""",
+                StringComparison.Ordinal));
+
+        AssertMsBuildCohortMutationFails(
+            buildPropsContent,
+            packagesPropsContent.Replace(
+                "TngTech.ArchUnitNET.xUnitV3",
+                "TngTech.ArchUnitNET.xUnit",
+                StringComparison.Ordinal));
+
+        AssertMsBuildCohortMutationFails(
+            buildPropsContent,
+            packagesPropsContent.Replace(
+                """<PackageVersion Include="xunit.v3" Version="4.0.3" />""",
+                """
+                <PackageVersion Include="xunit.v3" Version="4.0.3" />
+                <PackageVersion Include="xunit.v3.assert" Version="4.0.0" />
+                """,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace("dotnet-testing:", "legacy-testing-group:", StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "- dependency-name: \"Anthropic*\"\n        update-types: [\"version-update:semver-major\"]",
+                string.Empty,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "- dependency-name: \"postgres\"",
+                "- dependency-name: \"postgres\"\n        update-types: [\"version-update:semver-major\"]",
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "- dependency-name: \"postgres\"",
+                "- dependency-name: \"postgres\"\n      - dependency-name: \"postgres\"",
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent + """
+
+              - package-ecosystem: "github-actions"
+                directory: "/"
+                schedule:
+                  interval: "weekly"
+            """);
+
+        VerifyPreCommitIndexValidation(buildPropsContent, packagesPropsContent);
+    }
+
+    private static void AssertMsBuildCohortMutationFails(string buildPropsContent, string mutatedPackagesPropsContent)
+    {
+        string tempDir = CreateTempDir();
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "Directory.Build.props"), buildPropsContent);
+            File.WriteAllText(Path.Combine(tempDir, "Directory.Packages.props"), mutatedPackagesPropsContent);
+
+            DependencyValidatorService.ValidateDependencies(tempDir).Should().Be(1,
+                "DependencyValidatorService must fail closed when Directory.Packages.props violates MSBuild cohort or xUnit v3 rules");
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private static void VerifyPreCommitIndexValidation(string buildPropsContent, string packagesPropsContent)
+    {
+        string tempGit = CreateTempDir();
+        try
+        {
+            RunGit(tempGit, "init", "-q", "-b", "main");
+            RunGit(tempGit, "config", "user.email", "fixture@example.invalid");
+            RunGit(tempGit, "config", "user.name", "Fixture");
+            RunGit(tempGit, "config", "commit.gpgsign", "false");
+
+            File.WriteAllText(Path.Combine(tempGit, "Directory.Build.props"), buildPropsContent);
+            File.WriteAllText(Path.Combine(tempGit, "Directory.Packages.props"), packagesPropsContent);
+            RunGit(tempGit, "add", "Directory.Build.props", "Directory.Packages.props");
+            RunGit(tempGit, "commit", "-q", "-m", "baseline manifests");
+
+            string driftedPackages = packagesPropsContent.Replace(
+                "TngTech.ArchUnitNET.xUnitV3",
+                "TngTech.ArchUnitNET.xUnit",
+                StringComparison.Ordinal);
+            File.WriteAllText(Path.Combine(tempGit, "Directory.Packages.props"), driftedPackages);
+            RunGit(tempGit, "add", "Directory.Packages.props");
+
+            // Restore the working-tree copy to clean content so only the staged Git index blob contains the drift.
+            File.WriteAllText(Path.Combine(tempGit, "Directory.Packages.props"), packagesPropsContent);
+
+            using (var reader = GitIndexReader.TryOpen(tempGit)!)
+            {
+                reader.Should().NotBeNull();
+                DependencyValidatorService.ValidateDependencies(
+                    tempGit,
+                    preCommit: true,
+                    indexReader: reader).Should().Be(1,
+                    "pre-commit dependency validation must inspect staged Git index blobs even when no C# files are staged and working-tree files are clean");
+            }
+
+            RunGit(tempGit, "add", "Directory.Packages.props");
+            using var cleanReader = GitIndexReader.TryOpen(tempGit)!;
+            cleanReader.Should().NotBeNull();
+            DependencyValidatorService.ValidateDependencies(
+                tempGit,
+                preCommit: true,
+                indexReader: cleanReader).Should().Be(0,
+                "pre-commit dependency validation must pass when staged manifests satisfy all cohort rules");
+        }
+        finally
+        {
+            foreach (var file in new DirectoryInfo(tempGit).EnumerateFiles("*", SearchOption.AllDirectories))
+            {
+                file.Attributes = FileAttributes.Normal;
+            }
+
+            Directory.Delete(tempGit, recursive: true);
+        }
+    }
+
+    private static void RunGit(string workingDirectory, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDirectory,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string stderr = process.StandardError.ReadToEnd();
+        process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {stderr}");
     }
 
     private static void AssertMalformedManifestFails(string relativePath, string content)
@@ -725,6 +1029,24 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""dotnet-ef""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
     private static partial Regex NugetDotnetEfMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""xunit\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetXunitMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""Microsoft\.NET\.Test\.Sdk""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetTestSdkMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""TngTech\.ArchUnitNET\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetArchUnitMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""Microsoft\.CodeAnalysis\.\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetCodeAnalysisMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""SonarAnalyzer\.CSharp""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetSonarMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""Anthropic\*""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NugetAnthropicMajorIgnoreRule();
 
     private sealed class DependabotIgnoreRuleBuilder
     {

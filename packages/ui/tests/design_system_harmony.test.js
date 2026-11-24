@@ -2125,7 +2125,7 @@ const tabs = [{ id: "a", label: "Alpha" }];
     });
   });
 
-  describe("Requirement 10: Semantic Role Separation, Workflow/Regulatory Badges & Zero Hardcoded Color Literals (ADR-2671)", () => {
+  describe("Requirement 10: Semantic Role Separation, Workflow/Regulatory Badges & Zero Hardcoded Color Literals (ADR-2672)", () => {
     const tokensCss = fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8");
     const lightTheme = parseCssBlockVars(tokensCss, /:root\s*\{/);
     const darkTheme = {

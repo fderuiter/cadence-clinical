@@ -1402,10 +1402,7 @@ function executeChairSignoff() {
 /* Modals */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: var(--semantic-color-backdrop-strong);
   display: flex;
   align-items: center;

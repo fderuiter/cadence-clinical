@@ -6,8 +6,9 @@ import {
 } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { resolveActiveWorkspaceScope } from "../canvas/palette";
+import { getRegisteredI18nApp } from "../i18n/runtime.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
-import { useOnboardingStore } from "../stores/onboarding.js";
+import { readPassiveOnboardingBypassOverview } from "../stores/onboardingSummary.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -117,8 +118,12 @@ const routes = [
       if (authStore.needsTrialOnboarding) {
         return { name: "trial-onboarding" };
       }
-      const onboardingStore = useOnboardingStore();
-      if (!onboardingStore.bypassOverview) {
+      if (
+        !readPassiveOnboardingBypassOverview(
+          getActivePinia(),
+          authStore.currentPersona
+        )
+      ) {
         return { name: "overview" };
       }
       const roles = authStore.normalizedRoles || [];
@@ -212,6 +217,7 @@ const routes = [
     component: () => import("../views/ICFBuilderView.vue"),
     meta: {
       requiresAuth: true,
+      requiresI18n: true,
     },
   },
   {
@@ -220,6 +226,7 @@ const routes = [
     component: () => import("../views/ConsentAuthoringView.vue"),
     meta: {
       requiresAuth: true,
+      requiresI18n: true,
       requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
     },
   },
@@ -276,6 +283,7 @@ const routes = [
     },
     meta: {
       requiresAuth: true,
+      requiresI18n: true,
       requiresRole: [
         "site_investigator",
         "crc",
@@ -736,5 +744,13 @@ router.beforeEach(async (to) => {
 
   if (to.name && !isScreenAvailable(to.name)) {
     return { name: "unavailable", query: { screen: String(to.name) } };
+  }
+
+  const requiresI18n = to.matched.some((record) => record.meta?.requiresI18n);
+  if (requiresI18n && !(to.name === "ecrf" && !isDemoBuild())) {
+    const requestedLocale =
+      typeof to.query?.lang === "string" ? to.query.lang.trim() : undefined;
+    const { ensureI18nInstalled } = await import("../i18n/index.js");
+    await ensureI18nInstalled(getRegisteredI18nApp(), requestedLocale);
   }
 });

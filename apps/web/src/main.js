@@ -11,7 +11,7 @@ import {
   setSessionEndedHandler,
 } from "./auth/sessionCoordinator.js";
 import { vKeyboardClick } from "./directives/keyboardClick";
-import { i18n } from "./i18n/index.js";
+import { registerI18nApp } from "./i18n/runtime.js";
 import { router } from "./router";
 import { useAuthStore } from "./stores/auth";
 import { stateTrackingPlugin } from "./stores/plugins.js";
@@ -19,7 +19,7 @@ import { isDemoBuild } from "./utils/demoMode";
 
 const app = createApp(App);
 app.directive("keyboard-click", vKeyboardClick);
-app.use(i18n);
+registerI18nApp(app);
 
 const pinia = createPinia();
 pinia.use(stateTrackingPlugin);

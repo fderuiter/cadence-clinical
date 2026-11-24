@@ -109,7 +109,7 @@ Every bucket above resolves to exactly one row in `02_bounded_contexts.md` §1 (
 Per the task's Step 5, `04_scaffold_solution.sh` was executed in this environment. The actual, unedited result:
 
 ```
-$ bash docs/migration/phase0/04_scaffold_solution.sh
+$ bash scripts/04_scaffold_solution.sh
 [1/6] Verifying .NET 10 SDK on PATH...
   [ERROR] dotnet SDK not found on PATH.
   This repo pins SDK 10.0.100 in global.json with rollForward=latestFeature.
@@ -127,7 +127,7 @@ $ echo $?
 
 This is stated explicitly, rather than silently omitted or asserted optimistically, because the most recent commit in this repository's own history (`docs/migration/Migration_Phase0_Readiness_Audit.md`, AUD-NET10-002) is a forensic finding that a prior Phase 0 pass certified remediations as complete on the basis of a markdown linter, not a functional check — repeating that pattern here (asserting a build result that was never produced) would be the same defect this baseline exists to not repeat.
 
-**Required follow-up before Phase 1 kickoff relies on this scaffold:** run `docs/migration/phase0/04_scaffold_solution.sh` in an environment with the .NET 10 SDK actually available (`docker/Dockerfile.dotnet` in this repository is built for exactly this purpose — it should be usable in a CI runner or a developer's machine even where it isn't usable in this particular sandboxed session), and confirm `dotnet build Cadence.sln --no-incremental` returns zero warnings and zero errors under the repository's `TreatWarningsAsErrors=true` policy (`Directory.Build.props`). Until that run happens and is recorded, treat the .NET solution scaffold as **authored and reasoned about, not build-verified**.
+**Required follow-up before Phase 1 kickoff relies on this scaffold:** run `scripts/04_scaffold_solution.sh` in an environment with the .NET 10 SDK actually available (`docker/Dockerfile.dotnet` in this repository is built for exactly this purpose — it should be usable in a CI runner or a developer's machine even where it isn't usable in this particular sandboxed session), and confirm `dotnet build Cadence.sln --no-incremental` returns zero warnings and zero errors under the repository's `TreatWarningsAsErrors=true` policy (`Directory.Build.props`). Until that run happens and is recorded, treat the .NET solution scaffold as **authored and reasoned about, not build-verified**.
 
 ---
 
