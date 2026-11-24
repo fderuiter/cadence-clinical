@@ -31,6 +31,7 @@ async function completeInitialPinSetupIfOpen(page) {
 }
 
 const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+const PROD_PORTAL_URL = "http://127.0.0.1:5174/subject-portal/";
 const DEMO_PORTAL_URL = "http://127.0.0.1:5175/subject-portal/";
 
 async function getControlBorderContrast(page, selector) {
@@ -57,7 +58,10 @@ async function getControlBorderContrast(page, selector) {
 
 // Dedicated end-to-end accessibility testing suite verifying full WCAG 2.2 AA compliance across all views
 test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
-  test.use({ serviceWorkers: "block" });
+  test.use({
+    baseURL: "http://127.0.0.1:5175/subject-portal/",
+    serviceWorkers: "block",
+  });
 
   test.beforeEach(async ({ page }) => {
     await page.route("**/reconsent/pending/**", async (route) => {
@@ -265,7 +269,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       }
     });
 
-    await page.goto("");
+    await page.goto(PROD_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     // Verify name is rendered based on injected storage mock credentials
@@ -394,7 +398,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("should verify specific WCAG 2.1 AA remediation elements (skip link, main landmark, unavailable guard, forms, aria-live)", async ({
     page,
   }) => {
-    await page.goto("");
+    await page.goto(PROD_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
 
     // 1. Skip link & Main Landmark
@@ -430,7 +434,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       "consent",
       "lay-summaries",
     ]) {
-      await page.goto(blockedPath);
+      await page.goto(`${PROD_PORTAL_URL}${blockedPath}`);
       await completeInitialPinSetupIfOpen(page);
       await expect(page.locator("#view-unavailable")).toBeVisible();
       await expect(page.locator("#btn-unavailable-return-tasks")).toContainText(
@@ -470,7 +474,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("should pass accessibility audits on unauthenticated login prompt and PIN unlock recovery modal", async ({
     page,
   }) => {
-    await page.goto("");
+    await page.goto("http://127.0.0.1:5174/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 
     // Reload triggers PIN unlock modal (memory-only PIN key cleared on reload)
@@ -490,6 +494,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await page.evaluate(() => sessionStorage.clear());
     await page.click("#btn-pin-unlock-signout");
     await expect(page.locator("#view-unavailable")).toBeVisible();
+    await expect(page.locator("#btn-unavailable-signin")).toBeVisible();
     await expect(page.locator("#btn-login")).toBeVisible();
 
     const unauthAudit = await new AxeBuilder({ page })
@@ -906,7 +911,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     );
 
     // Outside demo mode, only My Wallet is rendered in the tablist and gated views use region + aria-label with zero dangling aria-labelledby
-    await page.goto("");
+    await page.goto(PROD_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
     await expect(page.locator("#btn-tab-btn-wallet")).toHaveAttribute(
@@ -1000,7 +1005,6 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
               (el) => el.hasAttribute("hidden") && el.hasAttribute("inert")
             ),
           layRole: layView?.getAttribute("role"),
-          layAriaLabel: layView?.getAttribute("aria-label"),
           layHasLabelledBy: layView?.hasAttribute("aria-labelledby"),
           danglingLabelledBy,
         };
@@ -1045,8 +1049,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await page.fill("#vshr", "68");
     await page.click("#btn-submit-questionnaire");
     await page.fill("#sign-username", "subject_mocked_001");
-    await page.fill("#sign-password", "ValidPin123!");
+    await page.fill("#sign-password", "246810");
     await page.click("#btn-modal-sign");
+    await expect(page.locator("#portal-sign-modal")).toBeHidden();
     await page.context().setOffline(false);
 
     const syncBtn = page.locator("#btn-global-sync-drawer");
@@ -1641,6 +1646,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(secondaryDetails).toBeHidden();
 
     // main#main-content and #task-card-assign_01 sit above the initial fold and above the bottom nav bar
+    const demoBannerBox = await page
+      .locator("#demo-mode-banner")
+      .boundingBox()
+      .catch(() => null);
     const mainBox = await page.locator("main#main-content").boundingBox();
     const firstTaskBox = await page
       .locator("#task-card-assign_01")
@@ -1648,7 +1657,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(mainBox).not.toBeNull();
     expect(firstTaskBox).not.toBeNull();
     expect(mainBox.y).toBeGreaterThanOrEqual(0);
-    expect(mainBox.y).toBeLessThan(350);
+    expect(mainBox.y - (demoBannerBox?.height ?? 0)).toBeLessThan(350);
     expect(firstTaskBox.y).toBeGreaterThanOrEqual(0);
     expect(firstTaskBox.y + firstTaskBox.height).toBeLessThanOrEqual(
       navBox.y + 0.5

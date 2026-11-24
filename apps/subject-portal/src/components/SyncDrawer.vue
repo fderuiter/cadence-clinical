@@ -57,9 +57,8 @@
             sync.syncRetryInfo.remainingSeconds > 0
           "
           id="sync-drawer-retry-countdown"
-          class="retry-countdown-banner"
+          class="retry-countdown-banner tabular-nums"
           aria-hidden="true"
-          style="font-variant-numeric: tabular-nums"
         >
           <template v-if="sync.syncUpdatesPaused">
             Automatic retry paused (<strong

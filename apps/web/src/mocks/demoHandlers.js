@@ -640,6 +640,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           valid_at: now,
           known_at: now,
           locks,
+          hidden: { more_exist: false, reasons: [] },
         });
       }
     ),
@@ -780,34 +781,57 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
-      ({ params, request }) => {
+      async ({ params, request }) => {
         const url = new URL(request.url);
         const format = (url.searchParams.get("format") || "csv").toLowerCase();
         const studyRef = decodeURIComponent(String(params.studyRef));
-        const digestHeader = {
-          "X-Content-Sha256":
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
+        const generatedAt = demoNowIso();
+        const cutAt =
+          url.searchParams.get("known_at") ||
+          url.searchParams.get("as_of") ||
+          generatedAt;
+        const validAt = url.searchParams.get("valid_at") || cutAt;
+        const sha256Hex = async (bytes) => {
+          const digest = await globalThis.crypto.subtle.digest(
+            "SHA-256",
+            bytes
+          );
+          return Array.from(new Uint8Array(digest))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+        };
+        const textHeaders = async (bodyText, contentType, extra = {}) => {
+          const bytes = new TextEncoder().encode(bodyText);
+          return {
+            "Content-Type": contentType,
+            "X-Content-Sha256": await sha256Hex(bytes),
+            "X-Generated-At": generatedAt,
+            "X-Hidden-More-Exist": "false",
+            ...extra,
+          };
         };
         if (format === "odm_xml" || format === "odm" || format === "xml") {
-          return new HttpResponse(
-            `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="DEMO" CreationDateTime="${new Date().toISOString()}" ODMVersion="1.3.2"><Study OID="${studyRef}"/></ODM>`,
-            {
-              headers: {
-                "Content-Type": "application/xml",
-                ...digestHeader,
-              },
-            }
-          );
+          const xml = `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="DEMO.${studyRef}" CreationDateTime="${cutAt}" ODMVersion="1.3.2"><Study OID="${studyRef}"/></ODM>`;
+          return new HttpResponse(xml, {
+            headers: await textHeaders(xml, "application/xml"),
+          });
         }
         if (
           format === "dataset_json" ||
           format === "dataset-json" ||
           format === "json"
         ) {
-          return HttpResponse.json(
-            { study_ref: studyRef, records: [] },
-            { headers: digestHeader }
-          );
+          const jsonText = JSON.stringify({
+            datasetJSONCreationDateTime: cutAt,
+            study_ref: studyRef,
+            valid_at: validAt,
+            known_at: cutAt,
+            hidden: { more_exist: false, reasons: [] },
+            itemGroupData: {},
+          });
+          return new HttpResponse(jsonText, {
+            headers: await textHeaders(jsonText, "application/json"),
+          });
         }
         if (
           format === "sas_bundle" ||
@@ -823,65 +847,79 @@ export function createWebDemoHandlers(store = webDemoStore) {
             headers: {
               "Content-Type": "application/zip",
               "Content-Disposition": `attachment; filename="CAD-ONC-2026.${format}.zip"`,
-              ...digestHeader,
+              "X-Content-Sha256": await sha256Hex(eocd),
+              "X-Generated-At": generatedAt,
+              "X-Hidden-More-Exist": "false",
             },
           });
         }
-        return new HttpResponse("STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-1001\n", {
-          headers: {
-            "Content-Type": "text/csv",
-            ...digestHeader,
-          },
+        const csvText = "STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-1001\n";
+        return new HttpResponse(csvText, {
+          headers: await textHeaders(csvText, "text/csv"),
         });
       }
     ),
     http.get(
       "*/api/v1/kernel/enrollments/:enrollmentRef/casebook",
-      ({ params, request }) => {
+      async ({ params, request }) => {
         const url = new URL(request.url);
         const format = (url.searchParams.get("format") || "json").toLowerCase();
         const enrollmentRef = decodeURIComponent(String(params.enrollmentRef));
-        const digestHeader = {
-          "X-Content-Sha256":
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
+        const generatedAt = demoNowIso();
+        const cutAt =
+          url.searchParams.get("known_at") ||
+          url.searchParams.get("as_of") ||
+          generatedAt;
+        const validAt = url.searchParams.get("valid_at") || cutAt;
+        const sha256Hex = async (bytes) => {
+          const digest = await globalThis.crypto.subtle.digest(
+            "SHA-256",
+            bytes
+          );
+          return Array.from(new Uint8Array(digest))
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("");
+        };
+        const textHeaders = async (bodyText, contentType, extra = {}) => {
+          const bytes = new TextEncoder().encode(bodyText);
+          return {
+            "Content-Type": contentType,
+            "X-Content-Sha256": await sha256Hex(bytes),
+            "X-Generated-At": generatedAt,
+            ...extra,
+          };
         };
         if (format === "odm_xml" || format === "odm" || format === "xml") {
-          return new HttpResponse(
-            `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="CASEBOOK-DEMO" CreationDateTime="${new Date().toISOString()}" ODMVersion="1.3.2"><ClinicalData StudyOID="CAD-ONC-2026" MetaDataVersionOID="MDV.1"><SubjectData SubjectKey="${enrollmentRef}"/></ClinicalData></ODM>`,
-            {
-              headers: {
-                "Content-Type": "application/xml",
-                ...digestHeader,
-              },
-            }
-          );
+          const xml = `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="CASEBOOK.${enrollmentRef}" CreationDateTime="${cutAt}" ODMVersion="1.3.2"><Study OID="CAD-ONC-2026"><GlobalVariables><StudyName>CAD-ONC-2026</StudyName><StudyDescription>CAD-ONC-2026</StudyDescription><ProtocolName>CAD-ONC-2026</ProtocolName></GlobalVariables><MetaDataVersion OID="MDV.1" Name="Protocol v1"/></Study><ClinicalData StudyOID="CAD-ONC-2026" MetaDataVersionOID="MDV.1"><SubjectData SubjectKey="${enrollmentRef}"/></ClinicalData></ODM>`;
+          return new HttpResponse(xml, {
+            headers: await textHeaders(xml, "application/xml"),
+          });
         }
         if (format === "html") {
-          return new HttpResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Casebook ${enrollmentRef}</title></head><body><h1>Participant Casebook</h1><p>${enrollmentRef}</p></body></html>`,
-            {
-              headers: {
-                "Content-Type": "text/html; charset=utf-8",
-                ...digestHeader,
-              },
-            }
-          );
+          const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Casebook ${enrollmentRef}</title></head><body><h1>Participant Casebook</h1><p>${enrollmentRef}</p><p>Known at ${cutAt}</p></body></html>`;
+          return new HttpResponse(html, {
+            headers: await textHeaders(html, "text/html; charset=utf-8"),
+          });
         }
         if (format === "pdf") {
           // deid-ignore: PDF-1.7 10-digit xref byte offsets are structural PDF syntax, not telephone numbers
           const pdfText = `%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer << /Size 3 /Root 1 0 R >>\nstartxref\n115\n%%EOF\n`; // deid-ignore
           return new HttpResponse(pdfText, {
-            headers: {
-              "Content-Type": "application/pdf",
+            headers: await textHeaders(pdfText, "application/pdf", {
               "Content-Disposition": `attachment; filename="CAD-ONC-2026.${enrollmentRef.replace(/[^a-zA-Z0-9_-]/g, "_")}.casebook.pdf"`,
-              ...digestHeader,
-            },
+            }),
           });
         }
-        return HttpResponse.json(
-          { enrollment_ref: enrollmentRef, observations: [] },
-          { headers: digestHeader }
-        );
+        const jsonText = JSON.stringify({
+          enrollment_ref: enrollmentRef,
+          valid_at: validAt,
+          known_at: cutAt,
+          generated_at: cutAt,
+          observations: [],
+        });
+        return new HttpResponse(jsonText, {
+          headers: await textHeaders(jsonText, "application/json"),
+        });
       }
     ),
     http.get("*/api/v1/kernel/proposals/:proposalRef", ({ params }) =>
@@ -1119,27 +1157,83 @@ export function createWebDemoHandlers(store = webDemoStore) {
 
     // Execution — Stateful eCRF Forms, Values, Signatures, and Queries
     // Note: Register specific `/queries` routes BEFORE `:formId` catch-alls!
+    http.get("*/api/v1/execution/forms/queries/digests", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listQueryDigests(
+          {
+            studyId: url.searchParams.get("study_id"),
+            site: url.searchParams.get("site"),
+            recipientRole: url.searchParams.get("recipient_role"),
+          },
+          resolveDemoCaller(request)
+        )
+      );
+    }),
+    http.post("*/api/v1/execution/forms/queries/escalate", ({ request }) => {
+      const url = new URL(request.url);
+      const reason = decodeReasonHeader(request);
+      if (!reason) {
+        return HttpResponse.json(
+          {
+            title: "Reason for change required",
+            status: 422,
+            code: "K.Command.ReasonForChangeRequired",
+            detail: "X-Change-Reason header is required.",
+          },
+          { status: 422 }
+        );
+      }
+      return HttpResponse.json(
+        store.escalateStudyQueries(
+          url.searchParams.get("study_id"),
+          reason,
+          resolveDemoCaller(request)
+        )
+      );
+    }),
     http.get("*/api/v1/execution/forms/queries", ({ request }) => {
       const url = new URL(request.url);
       return HttpResponse.json(
-        store.listEnrollmentQueries({
-          enrollmentId: url.searchParams.get("enrollment_id"),
-          studyId: url.searchParams.get("study_id"),
-          status: url.searchParams.get("status"),
-          owner: url.searchParams.get("owner"),
-          origin: url.searchParams.get("origin"),
-          priority: url.searchParams.get("priority"),
-          escalated: url.searchParams.get("escalated"),
-          site: url.searchParams.get("site"),
-          participant: url.searchParams.get("participant"),
-          valueChanged: url.searchParams.get("value_changed"),
-        })
+        store.listEnrollmentQueries(
+          {
+            enrollmentId: url.searchParams.get("enrollment_id"),
+            studyId: url.searchParams.get("study_id"),
+            status: url.searchParams.get("status"),
+            owner: url.searchParams.get("owner"),
+            origin: url.searchParams.get("origin"),
+            priority: url.searchParams.get("priority"),
+            escalated: url.searchParams.get("escalated"),
+            assignee: url.searchParams.get("assignee"),
+            site: url.searchParams.get("site"),
+            participant: url.searchParams.get("participant"),
+            valueChanged: url.searchParams.get("value_changed"),
+          },
+          resolveDemoCaller(request)
+        )
       );
     }),
-    http.get("*/api/v1/execution/forms/:formId/queries", ({ params }) =>
-      HttpResponse.json(
-        store.listFormQueries(decodeURIComponent(String(params.formId)))
-      )
+    http.get("*/api/v1/execution/forms/sdv-alerts", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listSdvAlerts(
+          {
+            studyId: url.searchParams.get("study_id"),
+            enrollmentId: url.searchParams.get("enrollment_id"),
+          },
+          resolveDemoCaller(request)
+        )
+      );
+    }),
+    http.get(
+      "*/api/v1/execution/forms/:formId/queries",
+      ({ params, request }) =>
+        HttpResponse.json(
+          store.listFormQueries(
+            decodeURIComponent(String(params.formId)),
+            resolveDemoCaller(request)
+          )
+        )
     ),
     http.post(
       "*/api/v1/execution/forms/:formId/queries",

@@ -125,6 +125,7 @@ public sealed partial class TrialOnboardingService(
         "simulation.run",
         "study.export",
         "enrollment.export",
+        "simulation.save_report",
     ];
 
     private static readonly string[] SponsorDesignerCapabilities =
@@ -153,6 +154,7 @@ public sealed partial class TrialOnboardingService(
         "study.declare_standards",
         "validation_run.record",
         "attestation.sign",
+        "simulation.save_report",
     ];
 
     private static readonly string[] SiteInvestigatorCapabilities =
@@ -190,6 +192,8 @@ public sealed partial class TrialOnboardingService(
         ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "TRIAL_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
         ("execution-edit-checks", "TRIAL_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
+        ("execution-query-sla", "TRIAL_EXECUTION_QUERY_SLA", "Execution query SLA scheduler", ["execution.query.manage"]),
+        ("execution-sdv-alerts", "TRIAL_EXECUTION_SDV_ALERTS", "Execution SDV alerts consumer", ["execution.query.manage"]),
     ];
 
     public async Task<CommandResult<TrialOnboardingOutcome>> BootstrapAsync(

@@ -28,10 +28,32 @@
     </p>
 
     <ul
-      v-if="proposals.length || findings.length"
+      v-if="proposals.length || findings.length || sdvAlerts.length"
       id="needs-attention-list"
       class="attention-list"
     >
+      <li
+        v-for="(alert, i) in sdvAlerts"
+        :key="alert.alert_id"
+        class="attention-item attention-sdv-alert"
+        data-testid="needs-attention-sdv-alert"
+      >
+        <span class="attention-kind">SDV re-verification required</span>
+        <router-link
+          :id="`needs-attention-sdv-alert-${i}`"
+          class="attention-intent"
+          :to="sdvAlertLocation(alert)"
+        >
+          {{ alert.message }}
+        </router-link>
+        <span class="attention-when">
+          Rev {{ alert.superseded_revision }} verified by
+          {{ alert.verified_by }} · edited to rev
+          {{ alert.current_revision }} by {{ alert.modified_by }} ({{
+            when(alert.modified_at)
+          }})
+        </span>
+      </li>
       <li
         v-for="(proposal, i) in proposals"
         :key="proposal.ref ?? i"
@@ -84,6 +106,10 @@
 import { computed, ref } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
+  ecrfQueriesApi,
+  type FormSdvAlertResponse,
+} from "../../api/ecrfQueriesApi";
+import {
   kernelApi,
   type KernelProposal,
   type KernelValidationFinding,
@@ -92,6 +118,7 @@ import { isAgentProposal } from "../../ai/proposals";
 import {
   collectionInstanceRef,
   observationNodeRef,
+  parseNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
@@ -99,10 +126,10 @@ import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**
- * Needs Attention on study home (docs/ux/CLINICAL_CANVAS.md PX-10): the study's open proposals from the kernel, newest
- * first, each opening the review screen. An agent's proposal carries the AI label (UX-8). It shows whether AI
- * assistance is on or off: a proposal already made is a kernel record a person must still decide (ADR-2635).
- * Findings, signals and the other attention items join it as their kernel reads arrive.
+ * Needs Attention on study home (docs/ux/CLINICAL_CANVAS.md PX-10): the study's open proposals from the kernel and
+ * active CRA SDV modification alerts (`PRD-QRY-006`) from Execution, newest first. An agent's proposal carries the AI
+ * label (UX-8). It shows whether AI assistance is on or off: a proposal already made is a kernel record a person must
+ * still decide (ADR-2635).
  */
 const props = defineProps<{ studyCode: string }>();
 
@@ -110,6 +137,28 @@ const LIMIT = 20;
 
 const proposals = ref<KernelProposal[]>([]);
 const findings = ref<KernelValidationFinding[]>([]);
+const sdvAlerts = ref<FormSdvAlertResponse[]>([]);
+
+async function hydrateStudySdvAlerts(
+  studyRef: string,
+  isCurrent: () => boolean
+): Promise<void> {
+  const parsed = parseNodeRef(studyRef);
+  if (
+    parsed?.kind !== "study" ||
+    typeof ecrfQueriesApi?.listSdvAlerts !== "function"
+  ) {
+    return;
+  }
+  try {
+    const alerts = await ecrfQueriesApi.listSdvAlerts({ studyId: parsed.id });
+    if (isCurrent() && Array.isArray(alerts)) {
+      sdvAlerts.value = alerts;
+    }
+  } catch {
+    // Keep kernel proposals visible if execution SDV alerts are unavailable.
+  }
+}
 
 const {
   studyLoading: loading,
@@ -119,8 +168,10 @@ const {
   onReset: () => {
     proposals.value = [];
     findings.value = [];
+    sdvAlerts.value = [];
   },
   onResolved: async (studyRef, { isCurrent }) => {
+    void hydrateStudySdvAlerts(studyRef, isCurrent);
     const canReadFindings =
       typeof kernelApi.listStudyValidationFindings === "function";
     const [open, openFindingsPage, investigatingFindingsPage] =
@@ -173,7 +224,11 @@ const statusLine = computed(() => {
   if (noStudy.value) {
     return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
   }
-  if (!proposals.value.length && !findings.value.length) {
+  if (
+    !proposals.value.length &&
+    !findings.value.length &&
+    !sdvAlerts.value.length
+  ) {
     return "Nothing is waiting on a decision.";
   }
   return "";
@@ -204,6 +259,22 @@ function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
       section: "validation",
       ...(formRef ? { form: formRef } : {}),
       ...(formRef && finding.variable ? { item: finding.variable } : {}),
+      ...(obsRef ? { observation: obsRef } : {}),
+    },
+  };
+}
+
+function sdvAlertLocation(alert: FormSdvAlertResponse): RouteLocationRaw {
+  const obsRef = observationNodeRef(alert.observation_id);
+  const formRef = alert.form_id ? collectionInstanceRef(alert.form_id) : null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: {
+      stage: "conduct",
+      ...(alert.site_code ? { site: alert.site_code } : {}),
+      ...(formRef ? { form: formRef } : {}),
+      ...(alert.item_id ? { item: alert.item_id } : {}),
       ...(obsRef ? { observation: obsRef } : {}),
     },
   };
@@ -269,6 +340,10 @@ function maskWords(mask: string | null | undefined): string {
 
 .attention-finding {
   border-left: 4px solid var(--semantic-color-warning-dark);
+}
+
+.attention-sdv-alert {
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
 }
 
 .attention-kind,

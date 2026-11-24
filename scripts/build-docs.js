@@ -107,11 +107,11 @@ function runPreflightChecks() {
   try {
     execSync("pnpm -v", { stdio: "ignore", cwd: repoRoot });
     pnpmCmd = "pnpm";
-  } catch (e) {
+  } catch {
     try {
       execSync("npx pnpm -v", { stdio: "ignore", cwd: repoRoot });
       pnpmCmd = "npx pnpm";
-    } catch (err) {
+    } catch {
       console.error('\n[ERROR] Missing required tool: "pnpm" (or npx pnpm).');
       console.error("Please install pnpm or Node/npm and try again.");
       process.exit(1);
@@ -136,7 +136,7 @@ function runPreflightChecks() {
   for (const tool of tools) {
     try {
       execSync(tool.cmd, { stdio: "ignore", cwd: repoRoot });
-    } catch (err) {
+    } catch {
       console.error(
         `\n[ERROR] Missing required tool: "${tool.name}" (${tool.desc}).`
       );
@@ -637,7 +637,7 @@ if (require.main !== module) {
       );
 
       console.log("--- Docs Build Completed Successfully! ---");
-    } catch (error) {
+    } catch {
       console.error("Docs build pipeline failed.");
       // exitCode, not process.exit(): exiting here would skip the cleanup in `finally`
       // and leave the staged root docs behind to fail the next run's index check.

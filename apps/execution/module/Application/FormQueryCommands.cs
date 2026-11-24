@@ -56,6 +56,7 @@ public sealed record RaiseFormQuery(
 /// <param name="Text">The answer.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Verbatim reason why the query is answered.</param>
+/// <param name="Assignee">Optional replacement assignee for the monitor review; otherwise any stale site assignee is cleared.</param>
 [KernelCapability("execution.query.answer", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
@@ -66,7 +67,8 @@ public sealed record AnswerFormQuery(
     EnrollmentId EnrollmentId,
     string Text,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<FormQueryState>;
+    string ReasonForChange,
+    string? Assignee = null) : ICommand<FormQueryState>;
 
 /// <summary>
 /// Automatically transitions an open manual query to <see cref="FormQueryStatus.Answered"/> and assigns ownership to
@@ -101,6 +103,7 @@ public sealed record AutoAnswerFormQuery(
 /// <param name="Text">Why it is reopened, which the site answers.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
 /// <param name="ReasonForChange">Verbatim reason why the query is reopened.</param>
+/// <param name="Assignee">Optional replacement assignee for the site response; otherwise any stale monitor/DM assignee is cleared.</param>
 [KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
@@ -111,7 +114,34 @@ public sealed record ReopenFormQuery(
     EnrollmentId EnrollmentId,
     string Text,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<FormQueryState>;
+    string ReasonForChange,
+    string? Assignee = null) : ICommand<FormQueryState>;
+
+/// <summary>
+/// Reassigns an open or answered query's assignee (or clears it when null/empty) and optional owner role with full
+/// bitemporal period and message history (<c>PRD-QRY-001</c>).
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="QueryId">The query.</param>
+/// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
+/// <param name="Assignee">New assignee identifier, or null/empty to clear the current assignee.</param>
+/// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
+/// <param name="ReasonForChange">Verbatim reason for the reassignment.</param>
+/// <param name="OwnerRole">Optional updated owner role (<c>site</c>, <c>monitor</c>, <c>data_manager</c>).</param>
+/// <param name="Text">Optional note recorded in the query message thread.</param>
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
+[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
+public sealed record ReassignFormQuery(
+    TenantId TenantId,
+    FormQueryId QueryId,
+    EnrollmentId EnrollmentId,
+    string? Assignee,
+    string IdempotencyKey,
+    string ReasonForChange,
+    FormQueryOwnerRole? OwnerRole = null,
+    string? Text = null) : ICommand<FormQueryState>;
 
 /// <summary>
 /// Closes an answered manual query (with separation of duties) or an open/answered system query (<c>PRD-QRY-001</c>).

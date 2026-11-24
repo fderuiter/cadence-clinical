@@ -7,6 +7,8 @@
  * without persisting raw bearer tokens or unwrapped encryption keys in web storage.
  */
 
+import { decodeJwtPayloadClaims } from "./callerScope.js";
+
 export const DEFAULT_AUTH_RETURN_URL_KEY = "cadence_auth_return_url";
 export const MIN_SESSION_WARNING_LEAD_SECONDS = 20;
 export const DEFAULT_SESSION_WARNING_LEAD_SECONDS = 60;
@@ -257,27 +259,10 @@ function scrubKeycloakTokens(keycloakInstance) {
 }
 
 function decodeJwtPayloadExp(token) {
-  if (typeof token !== "string") return null;
-  const parts = token.split(".");
-  if (parts.length < 2 || !parts[1]) return null;
-  try {
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-    let jsonText = "";
-    if (typeof atob === "function") {
-      jsonText = atob(padded);
-    } else if (typeof Buffer !== "undefined") {
-      jsonText = Buffer.from(padded, "base64").toString("utf8");
-    } else {
-      return null;
-    }
-    const parsed = JSON.parse(jsonText);
-    return typeof parsed?.exp === "number" && Number.isFinite(parsed.exp)
-      ? parsed.exp
-      : null;
-  } catch {
-    return null;
-  }
+  const parsed = decodeJwtPayloadClaims(token);
+  return typeof parsed?.exp === "number" && Number.isFinite(parsed.exp)
+    ? parsed.exp
+    : null;
 }
 
 function extractTokenExpiryEpochMs(keycloakInstance, explicitToken = null) {

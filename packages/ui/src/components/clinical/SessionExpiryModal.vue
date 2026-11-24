@@ -144,7 +144,7 @@ function handleClose() {
       >
         <span class="countdown-label">Time remaining</span>
         <strong
-          class="countdown-digits"
+          class="countdown-digits tabular-nums"
           data-testid="session-expiry-countdown"
           >{{ formattedCountdown }}</strong
         >
@@ -216,7 +216,7 @@ function handleClose() {
   font-family: var(--font-mono);
   font-size: var(--font-size-lg);
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text);
 }
 

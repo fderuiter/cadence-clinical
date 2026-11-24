@@ -101,7 +101,7 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 
 const route = inject(routeLocationKey, null);
 const ui = useUiStore();
-const session = useSessionStore();
+const sessionStore = useSessionStore();
 const consent = useConsentStore();
 const wallet = useWalletStore();
 const inbox = useInboxStore();
@@ -109,14 +109,18 @@ const compliance = useComplianceStore();
 const audit = useAuditStore();
 const sync = useSyncStore();
 
-const isPeekDrawerOpen = computed(
+const isBlockedByModal = computed(
   () =>
-    Boolean(ui.peekRecord) &&
-    !session.pinSetup?.isOpen &&
-    !session.pinUnlock?.isOpen &&
-    !session.sessionWarning?.isOpen &&
-    !consent.reconsentModalOpen &&
-    !ui.signatureModalOpen
+    Boolean(sessionStore.pinSetup?.isOpen) ||
+    Boolean(sessionStore.pinUnlock?.isOpen) ||
+    Boolean(sessionStore.sessionWarning?.isOpen) ||
+    Boolean(consent.reconsentModalOpen) ||
+    Boolean(ui.signatureModalOpen) ||
+    Boolean(wallet.disburseModalOpen)
+);
+
+const isPeekDrawerOpen = computed(
+  () => Boolean(ui.peekRecord) && !isBlockedByModal.value
 );
 
 watch(

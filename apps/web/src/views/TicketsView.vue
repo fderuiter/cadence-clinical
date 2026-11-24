@@ -151,7 +151,7 @@
       >
         <span class="stat-icon alert-icon" aria-hidden="true">🎫</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ activeTicketsCount }}
           </span>
           <span class="stat-label">Active Clinical Issues</span>
@@ -164,7 +164,7 @@
       >
         <span class="stat-icon capa-icon" aria-hidden="true">🚨</span>
         <span class="stat-details">
-          <span class="stat-value text-danger">
+          <span class="stat-value text-danger tabular-nums">
             {{ criticalTicketsCount }}
           </span>
           <span class="stat-label">Critical GxP Deviations</span>
@@ -175,7 +175,7 @@
         <div class="stat-details">
           <div
             id="kpi-sla-compliance"
-            class="stat-value"
+            class="stat-value tabular-nums"
             :class="slaComplianceClass"
           >
             {{ slaComplianceDisplay }}
@@ -186,7 +186,7 @@
       <div class="stat-card">
         <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
-          <div id="kpi-mttr" class="stat-value">
+          <div id="kpi-mttr" class="stat-value tabular-nums">
             {{ mttrDisplay }}
           </div>
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
@@ -199,7 +199,7 @@
       >
         <span class="stat-icon breach-icon" aria-hidden="true">⏸</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ pausedTicketsCount }}
           </span>
           <span class="stat-label">SLA Paused (Waiting Site)</span>
@@ -283,6 +283,7 @@
           class="filter-select scope-filter-input"
           aria-label="Filter issues by study"
           placeholder="Study (all)"
+          @change="applyTicketScope"
         />
         <input
           id="tickets-site-filter"
@@ -291,6 +292,7 @@
           class="filter-select scope-filter-input"
           aria-label="Filter issues by site"
           placeholder="Site (all)"
+          @change="applyTicketScope"
         />
         <input
           id="tickets-subject-filter"
@@ -843,6 +845,10 @@ import {
 } from "../stores/knowledge.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useTicketMutationPermission } from "../utils/ticketPermissions";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
@@ -854,9 +860,13 @@ const authStore = useAuthStore();
 const { canMutateTicket, auditorReadOnlyExplanation } =
   useTicketMutationPermission(authStore);
 const scopeStore = useClinicalScopeStore();
+function getEffectiveRoute() {
+  return route ?? instance?.proxy?.$route ?? null;
+}
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
 const initialRouteScope = readRouteScopeQuery(route);
+const hydratedScope = resolveHydratedWorkspaceScope(getEffectiveRoute());
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
@@ -875,20 +885,25 @@ const searchQuery = ref("");
 const filterCategory = ref("ALL");
 const filterSeverity = ref("ALL");
 const filterStatus = ref("ALL");
-const filterStudyId = ref(initialRouteScope.studyId);
-const filterSiteId = ref(initialRouteScope.siteId);
+const filterStudyId = ref(initialRouteScope.studyId || hydratedScope.studyId);
+const filterSiteId = ref(initialRouteScope.siteId || hydratedScope.siteId);
 const filterSubjectId = ref(initialRouteScope.subjectId);
 
-if (route?.query) {
-  if (initialRouteScope.studyId) {
-    scopeStore.activeStudyId = initialRouteScope.studyId;
-  }
-  if (initialRouteScope.siteId) {
-    scopeStore.activeSiteId = initialRouteScope.siteId;
-  }
-  if (initialRouteScope.subjectId) {
-    scopeStore.activeSubjectId = initialRouteScope.subjectId;
-  }
+if (filterStudyId.value || filterSiteId.value) {
+  syncWorkspaceScope({
+    ...(filterStudyId.value ? { studyId: filterStudyId.value } : {}),
+    ...(filterSiteId.value || filterStudyId.value
+      ? { siteId: filterSiteId.value }
+      : {}),
+    router,
+    route: getEffectiveRoute(),
+    syncRouteQuery:
+      !demoBuild &&
+      Boolean(initialRouteScope.studyId || initialRouteScope.siteId),
+  });
+}
+if (route?.query && initialRouteScope.subjectId) {
+  scopeStore.activeSubjectId = initialRouteScope.subjectId;
 }
 
 // Selection & Batch Action State
@@ -999,7 +1014,7 @@ const initialMockTickets = [
     gxp_severity: "CRITICAL",
     priority: "CRITICAL",
     status: "OPEN",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: null,
     entity_type: "SUPPLY_KIT",
@@ -1021,8 +1036,8 @@ const initialMockTickets = [
     gxp_severity: "MAJOR",
     priority: "HIGH",
     status: "IN_PROGRESS",
-    study_id: "STUDY-ONC-202",
-    site_id: "SITE-102",
+    study_id: "CADENCE-101",
+    site_id: "SITE-101",
     subject_id: "SUBJ-8812",
     entity_type: "SUBJECT",
     entity_id: "SUBJ-8812",
@@ -1043,7 +1058,7 @@ const initialMockTickets = [
     gxp_severity: "MINOR",
     priority: "MEDIUM",
     status: "WAITING_ON_SITE",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: "SUBJ-8815",
     entity_type: "CRF_FORM",
@@ -1065,7 +1080,7 @@ const initialMockTickets = [
     gxp_severity: "MAJOR",
     priority: "HIGH",
     status: "RESOLVED",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: "SUBJ-8804",
     entity_type: "SUBJECT",
@@ -1098,9 +1113,9 @@ function mergeDemoEscalatedTickets(baseTickets) {
 }
 
 function getRouteRefParam() {
-  const proxyRoute = instance?.proxy?.$route;
+  const activeRoute = getEffectiveRoute();
   const raw =
-    proxyRoute?.query?.ref ??
+    activeRoute?.query?.ref ??
     (typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("ref")
       : null);
@@ -1162,15 +1177,22 @@ watch(
     route?.query?.subjectId,
     route?.query?.participant,
   ],
-  () => {
+  async () => {
     if (!route?.query) return;
     const nextScope = readRouteScopeQuery(route);
+    const prevStudy = filterStudyId.value;
+    const prevSite = filterSiteId.value;
     filterStudyId.value = nextScope.studyId;
     filterSiteId.value = nextScope.siteId;
     filterSubjectId.value = nextScope.subjectId;
-    scopeStore.activeStudyId = nextScope.studyId;
-    scopeStore.activeSiteId = nextScope.siteId;
+    syncWorkspaceScope({
+      studyId: nextScope.studyId,
+      siteId: nextScope.siteId,
+    });
     scopeStore.activeSubjectId = nextScope.subjectId;
+    if (nextScope.studyId !== prevStudy || nextScope.siteId !== prevSite) {
+      await fetchTicketsFromApi();
+    }
   }
 );
 
@@ -1180,8 +1202,10 @@ watch(
     const trimmedStudy = nextStudy.trim();
     const trimmedSite = nextSite.trim();
     const trimmedSubject = nextSubject.trim();
-    scopeStore.activeStudyId = trimmedStudy;
-    scopeStore.activeSiteId = trimmedSite;
+    syncWorkspaceScope({
+      studyId: trimmedStudy,
+      siteId: trimmedSite,
+    });
     scopeStore.activeSubjectId = trimmedSubject;
     void replaceRouteQueryParams(router, route, {
       studyId: trimmedStudy || null,
@@ -1192,7 +1216,7 @@ watch(
 );
 
 watch(
-  () => instance?.proxy?.$route?.query?.ref,
+  () => getEffectiveRoute()?.query?.ref,
   async (nextRef, prevRef) => {
     if (nextRef && nextRef !== prevRef) {
       await openDeepLinkedTicketIfRequested();
@@ -1200,9 +1224,30 @@ watch(
   }
 );
 
+const applyTicketScope = async () => {
+  const synced = syncWorkspaceScope({
+    studyId: filterStudyId.value.trim(),
+    siteId: filterSiteId.value.trim(),
+    router,
+    route: getEffectiveRoute(),
+    syncRouteQuery: true,
+  });
+  filterStudyId.value = synced.studyId;
+  filterSiteId.value = synced.siteId;
+  await fetchTicketsFromApi();
+};
+
 const fetchTicketsFromApi = async () => {
   try {
-    const res = await ticketsApi.listTickets();
+    const query = {};
+    const scopedStudy = filterStudyId.value.trim();
+    const scopedSite = filterSiteId.value.trim();
+    if (scopedStudy) query.study_id = scopedStudy;
+    if (scopedSite) query.site_id = scopedSite;
+    const res =
+      Object.keys(query).length > 0
+        ? await ticketsApi.listTickets(query)
+        : await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
       tickets.value = demoBuild ? mergeDemoEscalatedTickets(res) : res;
     }
@@ -1848,6 +1893,7 @@ const exportAuditTrail = (format) => {
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.2;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .stat-label {
@@ -1903,6 +1949,40 @@ const exportAuditTrail = (format) => {
   font-size: 0.85rem;
   width: 100%;
   min-height: var(--semantic-control-target-min, 24px);
+}
+
+.scope-filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-input {
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  width: 128px;
+}
+
+@media (pointer: coarse) {
+  .filter-input {
+    font-size: 1rem;
+    min-height: 44px;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .filter-group {
@@ -1992,6 +2072,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 10px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .column-cards {
@@ -2076,6 +2157,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .sla-tag-normal {
@@ -2255,6 +2337,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-info-light);
   padding: 4px 10px;
   border-radius: 12px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .bulk-actions {

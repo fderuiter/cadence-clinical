@@ -451,6 +451,42 @@ public sealed class AuthorityTests
             .Permitted.Should().BeTrue();
     }
 
+    /// <summary>
+    /// A site-scoped <c>study.export</c> grant permits evaluating the study-level export gate so rows can be filtered in
+    /// place to the caller's visible scope, whereas <c>enrollment.export</c> requires a grant whose scope covers the target
+    /// enrollment so unauthorized casebook downloads fail closed.
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_StudyExportPermitsSiteScopedHolder_WhileEnrollmentExportRequiresCoveringGrant")]
+    [KernelRule("K-AUTH-4")]
+    public async Task EvaluateStudyExportPermitsSiteScopedHolderWhileEnrollmentExportRequiresCoveringGrant()
+    {
+        var siteA2 = StudySiteId.New();
+        var enrollmentAtSiteA1 = EnrollmentId.New();
+        var enrollmentAtSiteA2 = EnrollmentId.New();
+        var studyExport = new Capability("study.export", VerbClass.Execute);
+        var enrollmentExport = new Capability("enrollment.export", VerbClass.Execute);
+
+        var siteStudyExportGrant = Issue(capability: "study.export", scope: AuthorityScope.StudySite(SiteA1)).Value!;
+        var siteEnrollmentExportGrant = Issue(capability: "enrollment.export", scope: AuthorityScope.StudySite(SiteA1)).Value!;
+        var store = new Store(siteStudyExportGrant, siteEnrollmentExportGrant)
+        {
+            EnrollmentSites = new Dictionary<EnrollmentId, StudySiteId>
+            {
+                [enrollmentAtSiteA1] = SiteA1,
+                [enrollmentAtSiteA2] = siteA2,
+            },
+        };
+
+        var studyDecision = await Evaluate(store, Crc, studyExport, NodeRef.For(StudyA));
+        var permittedCasebook = await Evaluate(store, Crc, enrollmentExport, NodeRef.For(enrollmentAtSiteA1));
+        var deniedCasebook = await Evaluate(store, Crc, enrollmentExport, NodeRef.For(enrollmentAtSiteA2));
+
+        studyDecision.Permitted.Should().BeTrue("site-scoped study.export enters the study export endpoint for in-place scope filtering");
+        permittedCasebook.Permitted.Should().BeTrue("the coordinator holds enrollment.export covering SiteA1");
+        deniedCasebook.Permitted.Should().BeFalse("a SiteA1 grant does not cover an enrollment at SiteA2");
+        deniedCasebook.Conditions.Should().ContainSingle(c => c.Code == AuthorityEvaluator.GrantCondition && !c.Met);
+    }
+
     private static CommandResult<Grant> Issue(
         Actor? grantee = null,
         string? capability = "observation.record",
@@ -687,6 +723,9 @@ public sealed class AuthorityTests
 
         public IReadOnlyList<QualificationRequirement> Requirements { get; init; } = [];
 
+        public IReadOnlyDictionary<EnrollmentId, StudySiteId> EnrollmentSites { get; init; } =
+            new Dictionary<EnrollmentId, StudySiteId>();
+
         public IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> Evidence { get; init; } =
             new Dictionary<NodeRef, EvidenceNodeClassification>();
 
@@ -710,9 +749,15 @@ public sealed class AuthorityTests
             {
                 NodeKinds.Study => new ScopePath(Sponsor, StudyId.FromGuid(resource.Id)),
                 NodeKinds.StudySite => new ScopePath(Sponsor, StudyA, "US", StudySiteId.FromGuid(resource.Id)),
-                NodeKinds.Grant => grants.Single(g => g.Id.Value == resource.Id).Scope.Level == ScopeLevel.Study
-                    ? new ScopePath(Sponsor, StudyA)
+                NodeKinds.Enrollment => EnrollmentSites.TryGetValue(EnrollmentId.FromGuid(resource.Id), out var siteId)
+                    ? new ScopePath(Sponsor, StudyA, "US", siteId)
                     : ScopePath.TenantWide,
+                NodeKinds.Grant => grants.Single(g => g.Id.Value == resource.Id).Scope switch
+                {
+                    { Level: ScopeLevel.Study, TargetId: { } studyId } => new ScopePath(Sponsor, StudyId.FromGuid(studyId)),
+                    { Level: ScopeLevel.StudySite, TargetId: { } studySiteId } => new ScopePath(Sponsor, StudyA, "US", StudySiteId.FromGuid(studySiteId)),
+                    _ => ScopePath.TenantWide,
+                },
                 _ => ScopePath.TenantWide,
             };
             return Task.FromResult(path);
@@ -726,7 +771,10 @@ public sealed class AuthorityTests
                 nodes.Select(n => n.Unversioned()).Where(Evidence.ContainsKey).Distinct().ToDictionary(n => n, n => Evidence[n]));
 
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<ScopePath>>([]);
+            Task.FromResult<IReadOnlyList<ScopePath>>(
+                node.Kind == NodeKinds.Study && node.Id == StudyA.Value
+                    ? [.. new[] { SiteA1 }.Concat(EnrollmentSites.Values).Distinct().Select(s => new ScopePath(Sponsor, StudyA, "US", s))]
+                    : []);
 
         public Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Qualification>>([.. Qualifications.Where(q => q.Holder == actor)]);

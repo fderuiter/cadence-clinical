@@ -90,6 +90,30 @@ public class ProtocolVersion : AggregateRoot<ProtocolVersionId>
     }
 
     /// <summary>
+    /// Creates a recovery draft numbered after terminal (<see cref="ProtocolVersionStatus.Withdrawn"/> or
+    /// <see cref="ProtocolVersionStatus.Superseded"/>) versions when no active or approved parent exists.
+    /// </summary>
+    public static CommandResult<ProtocolVersion> CreateRecoveryDraft(
+        ProtocolVersionId id,
+        TenantId tenantId,
+        StudyId studyId,
+        int number,
+        string content)
+    {
+        if (number <= 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(number), number, "A recovery draft is numbered after prior versions.");
+        }
+
+        if (CheckContent(content) is { } invalid)
+        {
+            return invalid;
+        }
+
+        return CommandResult<ProtocolVersion>.Success(new ProtocolVersion(id, tenantId, studyId, number, null, content, null));
+    }
+
+    /// <summary>
     /// Starts an amended draft from <paramref name="parent"/>, which must be approved and stays approved. The draft
     /// copies the parent's content.
     /// </summary>

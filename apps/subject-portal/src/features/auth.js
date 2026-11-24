@@ -145,7 +145,7 @@ function transitionParticipantScope(nextUserId) {
 }
 
 async function ensureEphemeralDemoSessionKey() {
-  if (isDemoModeActive() && !getInMemorySessionKey()) {
+  if (!state.session.token && isDemoModeActive() && !getInMemorySessionKey()) {
     const config = await getWrappedMasterKeyConfig();
     if (!config.wrappedKey) {
       const demoMaterial = state.session.userId || "demo-material";
@@ -442,8 +442,24 @@ export async function restoreSession() {
   transitionParticipantScope(state.session.userId);
   await clearSessionKeyFromDB(state.session.userId);
 
-  // Only explicit demo sessions with no PIN wrapper initialize an ephemeral in-memory demo key.
-  await ensureEphemeralDemoSessionKey();
+  // Only explicit demo sessions with no PIN wrapper and no injected auth token initialize an ephemeral in-memory demo key.
+  let hasInjectedAuth = false;
+  if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
+    try {
+      const storageUser =
+        sessionStorage.getItem("mock_user_id") ||
+        localStorage.getItem("mock_user_id");
+      const storageToken =
+        sessionStorage.getItem("mock_token") ||
+        localStorage.getItem("mock_token");
+      hasInjectedAuth = Boolean(storageUser && storageToken);
+    } catch {
+      hasInjectedAuth = false;
+    }
+  }
+  if (!hasInjectedAuth) {
+    await ensureEphemeralDemoSessionKey();
+  }
 }
 
 // Signs in through injected storage credentials or Keycloak (check-sso).
@@ -466,6 +482,9 @@ export async function signIn() {
     }
 
     if (storageUser && storageToken) {
+      if (state.session.userId !== storageUser) {
+        clearInMemoryKey();
+      }
       state.session.userId = storageUser;
       state.session.token = storageToken;
       state.session.isOfflineMode = false;
@@ -515,9 +534,15 @@ export async function signIn() {
             }
           };
 
+          const portalBase = (
+            import.meta.env?.BASE_URL || "/subject-portal/"
+          ).replace(/\/?$/, "/");
           await keycloak.init({
             onLoad: "check-sso",
             pkceMethod: "S256",
+            silentCheckSsoRedirectUri: `${window.location.origin}${portalBase}silent-check-sso.html`,
+            silentCheckSsoFallback: false,
+            messageReceiveTimeout: 1500,
           });
 
           if (keycloak.authenticated && keycloak.token) {
@@ -553,6 +578,8 @@ export async function signIn() {
         }
       } catch (err) {
         console.warn("Keycloak check-sso failed or unreachable:", err.message);
+        window.keycloakInstance = null;
+        portalSessionCoordinator.attachKeycloak(null);
       }
 
       // Unauthenticated in a non-demo build: preserve cached offline identity only when offline with a PIN wrapper.
@@ -830,6 +857,13 @@ export async function logout(options = {}) {
     renderTasks();
     renderCompliance();
     renderInbox();
+    if (
+      state.currentView === "view-wallet" ||
+      state.currentView === "view-tasks"
+    ) {
+      state.unavailableScreen = null;
+      showView("view-tasks");
+    }
   }
 
   await clearSessionKeyFromDB(prevUserId);

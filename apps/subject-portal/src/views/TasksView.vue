@@ -139,13 +139,9 @@
           sync.syncRetryInfo.remainingSeconds > 0
         "
         id="sync-queue-retry-countdown"
-        class="text-muted"
+        class="text-muted tabular-nums"
         aria-hidden="true"
-        style="
-          font-size: 13px;
-          margin: 0 0 12px 0;
-          font-variant-numeric: tabular-nums;
-        "
+        style="font-size: 13px; margin: 0 0 12px 0"
       >
         {{
           sync.syncUpdatesPaused

@@ -569,6 +569,99 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     expect(state.currentView).toBe("view-consent");
   });
 
+  it("defers peek bottom sheet focus trap while PIN setup modal is open on cold /wallet?claimId=... hydration and opens after PIN setup", async () => {
+    const userId = "subject_cold_01";
+    const jwt = encodeFakeJwt({
+      sub: userId,
+      study_id: "STUDY-CARDIO-2026",
+      site_id: "SITE-BOS-01",
+    });
+
+    state.session.isDemoMode = false;
+    state.session.isOfflineMode = false;
+    state.session.userId = userId;
+    state.session.token = jwt;
+    state.walletLoaded = false;
+    state.walletLoading = false;
+    state.expenseClaims = [];
+    state.recentTransactions = [];
+    setActiveUserId(userId);
+    clearInMemoryKey();
+
+    let resolveWalletResponse;
+    const delayedWalletPromise = new Promise((resolve) => {
+      resolveWalletResponse = resolve;
+    });
+
+    globalThis.fetch = vi.fn().mockImplementation((url) => {
+      if (String(url).includes("payments/participant/me/wallet")) {
+        return delayedWalletPromise;
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+
+    window.history.replaceState(
+      {},
+      "",
+      "/subject-portal/wallet?claimId=claim_cold_01"
+    );
+
+    await initializeApp();
+    await flushUi();
+
+    // PIN setup modal opens before delayed wallet hydration resolves
+    const pinSetupModal = document.getElementById("portal-pin-setup-modal");
+    expect(pinSetupModal).not.toBeNull();
+    expect(state.pinSetup.isOpen).toBe(true);
+
+    // Resolve delayed wallet response containing ?claimId=claim_cold_01 while PIN modal is open
+    resolveWalletResponse({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          wallet: {
+            id: "wal_cold_01",
+            studyId: "STUDY-CARDIO-2026",
+            siteId: "SITE-BOS-01",
+            currency: "USD",
+            currentBalance: 80,
+          },
+          expenseClaims: [
+            {
+              id: "claim_cold_01",
+              category: "PARKING",
+              merchantName: "Clinic Garage",
+              expenseDate: "2026-11-20",
+              grossAmount: 24,
+              netAmount: 24,
+              status: "PENDING_REVIEW",
+            },
+          ],
+          recentTransactions: [],
+        }),
+    });
+    await flushUi();
+
+    // Peek record is hydrated, but the teleported drawer must stay closed so PIN setup is never marked inert
+    expect(state.peekRecord?.id).toBe("claim_cold_01");
+    expect(document.getElementById("portal-peek-drawer")).toBeNull();
+    expect(pinSetupModal.hasAttribute("inert")).toBe(false);
+    expect(document.getElementById("app")?.hasAttribute("inert")).toBe(false);
+
+    // Completing PIN setup closes the modal and reveals the hydrated peek drawer with query param intact
+    const { handlePINSetupSubmit } = await import("../src/features/pin.js");
+    state.pinSetup.pin = "246810";
+    state.pinSetup.confirmPin = "246810";
+    await handlePINSetupSubmit();
+    await flushUi();
+
+    expect(state.pinSetup.isOpen).toBe(false);
+    expect(document.getElementById("portal-peek-drawer")).not.toBeNull();
+    expect(getPortalRouter().currentRoute.value.query.claimId).toBe(
+      "claim_cold_01"
+    );
+  });
+
   it("defers teleported PortalPeekSheet drawer while PIN or session-expiry modals are open so #app never becomes inert over blocking modals", async () => {
     await initializeApp();
     await flushUi();

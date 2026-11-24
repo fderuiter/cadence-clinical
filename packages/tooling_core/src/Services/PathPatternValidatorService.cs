@@ -28,7 +28,6 @@ public static class PathPatternValidatorService
             string[] forbiddenSubdirs = ["tmp", "temp", "scratch", "old_src"];
 
             System.Collections.Generic.List<string> relativeAllFiles;
-            System.Collections.Generic.List<string> relativeBoundaryFiles;
 
             if (files is not null)
             {
@@ -38,20 +37,37 @@ public static class PathPatternValidatorService
                                   (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
                     .Select(rel => rel!)
                     .ToList();
-                relativeBoundaryFiles = relativeAllFiles;
+            }
+            else if (reader is { HasAuthoritativeIndex: true })
+            {
+                relativeAllFiles = reader.Paths
+                    .Order(StringComparer.Ordinal)
+                    .ToList();
             }
             else
             {
-                relativeAllFiles = Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.AllDirectories)
-                    .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
-                                !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
-                    .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
-                    .ToList();
-                relativeBoundaryFiles = Directory.GetFiles(repoRoot, "*.*", SearchOption.TopDirectoryOnly)
-                    .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
-                    .ToList();
+                var tracked = GitRevisionScopeService.TryGetTrackedFiles(repoRoot);
+                if (tracked is { Count: > 0 })
+                {
+                    relativeAllFiles = tracked
+                        .Where(rel => File.Exists(Path.Combine(repoRoot, rel)))
+                        .Distinct(StringComparer.Ordinal)
+                        .Order(StringComparer.Ordinal)
+                        .ToList();
+                }
+                else
+                {
+                    relativeAllFiles = Directory.EnumerateFiles(repoRoot, "*", SearchOption.AllDirectories)
+                        .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}") &&
+                                    !f.Contains($"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}") &&
+                                    !f.Contains($"{Path.DirectorySeparatorChar}.cadence{Path.DirectorySeparatorChar}") &&
+                                    !f.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}") &&
+                                    !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
+                                    !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}"))
+                        .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
+                        .Order(StringComparer.Ordinal)
+                        .ToList();
+                }
             }
 
             // Rule 1: Check forbidden subdirectories across all files
@@ -66,8 +82,8 @@ public static class PathPatternValidatorService
                 }
             }
 
-            // Rule 2: Check Vue and Shell script boundaries
-            foreach (string rel in relativeBoundaryFiles)
+            // Rule 2: Check Vue and Shell script boundaries across all repository paths
+            foreach (string rel in relativeAllFiles)
             {
                 if (rel.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) &&
                     !rel.StartsWith("apps/", StringComparison.Ordinal) &&

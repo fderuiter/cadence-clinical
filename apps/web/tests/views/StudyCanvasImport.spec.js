@@ -513,4 +513,187 @@ describe("Clinical Canvas study directory, study creation, and ODM/USDM protocol
     });
     expect(alertSpy).not.toHaveBeenCalled();
   });
+
+  it("submits selected AmendmentClassification and TransitionPolicy alongside file and templateIds and renders amendment metadata", async () => {
+    const forkedVersion = {
+      ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000f2@1",
+      study: DEMO_STUDY.ref,
+      number: 2,
+      parent_version: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000f1@3",
+      status: "Draft",
+      content_hash: null,
+      amendment_intent: "Protocol design import",
+      approval_attestation: null,
+      withdrawal_reason: null,
+      mask: null,
+    };
+    const amendedSummary = {
+      version: forkedVersion,
+      title: "CADENCE-101 Amended Draft",
+      form_count: 2,
+      item_count: 2,
+      forms: [
+        {
+          id: "F_VITALS",
+          display_order: 1,
+          name: "Vital Signs",
+          item_count: 1,
+          required_item_count: 1,
+          items: [
+            {
+              id: "IT_SYSBP",
+              display_order: 1,
+              prompt: "Systolic Blood Pressure",
+              concept: "concept:0192f3c4-5e6a-7b8c-9d0e-0000000000c1@1",
+              required: true,
+              value_kind: "Quantity",
+              unit: "mm[Hg]",
+            },
+          ],
+        },
+        {
+          id: "DM",
+          display_order: 2,
+          name: "Demographics",
+          item_count: 1,
+          required_item_count: 1,
+          items: [
+            {
+              id: "BRTHDAT",
+              display_order: 1,
+              prompt: "Date of Birth",
+              concept: "concept:0192f3c4-5e6a-7b8c-9d0e-0000000000c9@1",
+              required: true,
+              value_kind: "DateTime",
+              unit: null,
+            },
+          ],
+        },
+      ],
+      import_notes: [],
+      amendment: {
+        intent: "Protocol design import",
+        rationale: "Substantial safety and demographics update",
+        classification: "Substantial",
+        summary_of_changes:
+          "Imported 2 protocol form specification(s) (2 impacted element(s)).",
+        impacted_elements: ["F_VITALS", "DM"],
+        transition_policy: "RequiresReconsent",
+      },
+    };
+
+    vi.mocked(kernelApi.importProtocolDraft).mockResolvedValue(amendedSummary);
+    vi.mocked(kernelApi.getProtocolDesignSummary).mockResolvedValue(
+      amendedSummary
+    );
+    vi.mocked(kernelApi.getProtocolVersion).mockResolvedValue(forkedVersion);
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
+      forkedVersion,
+    ]);
+
+    await open("/studies/CADENCE-101?stage=design&section=protocol-versions");
+
+    const fileInput = wrapper.find("#protocol-import-file");
+    const usdmFile = new File(['{"study":{}}'], "amendment.json", {
+      type: "application/json",
+    });
+    Object.defineProperty(fileInput.element, "files", {
+      value: [usdmFile],
+      configurable: true,
+    });
+    await fileInput.trigger("change");
+
+    await wrapper.find("#protocol-import-tpl-demographics-dm").setValue(true);
+    await wrapper
+      .find("#protocol-import-amendment-classification")
+      .setValue("Substantial");
+    await wrapper
+      .find("#protocol-import-transition-policy")
+      .setValue("RequiresReconsent");
+    await wrapper.find("#protocol-import-replace").setValue(true);
+    await wrapper
+      .find("#protocol-import-reason")
+      .setValue("Substantial safety and demographics update");
+
+    await wrapper.find("#protocol-import-form").trigger("submit");
+    await flushPromises();
+
+    expect(kernelApi.importProtocolDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: DEMO_STUDY.ref,
+        file: usdmFile,
+        templateIds: ["demographics-dm"],
+        replaceForms: true,
+        amendmentClassification: "Substantial",
+        transitionPolicy: "RequiresReconsent",
+        reason: "Substantial safety and demographics update",
+      })
+    );
+
+    const amendmentBox = wrapper.find(
+      '[data-testid="draft-amendment-summary"]'
+    );
+    expect(amendmentBox.exists()).toBe(true);
+    expect(amendmentBox.text()).toContain("Substantial");
+    expect(amendmentBox.text()).toContain("RequiresReconsent");
+    expect(amendmentBox.text()).toContain("F_VITALS");
+    expect(amendmentBox.text()).toContain("DM");
+  });
+
+  it("serializes file, template_ids, replace_forms, amendment_classification, and transition_policy in kernelStudiesApi.importProtocolDraft FormData", async () => {
+    const { kernelStudiesApi } = await import("../../src/api/kernel/studies");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          version: {
+            ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000f9@1",
+            study: DEMO_STUDY.ref,
+            number: 2,
+            parent_version: null,
+            status: "Draft",
+            content_hash: null,
+            amendment_intent: "Protocol design import",
+            approval_attestation: null,
+            withdrawal_reason: null,
+            mask: null,
+          },
+          title: "Combined",
+          form_count: 2,
+          item_count: 2,
+          forms: [],
+          import_notes: [],
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    const uploadFile = new File(["<ODM/>"], "custom.xml", {
+      type: "application/xml",
+    });
+    await kernelStudiesApi.importProtocolDraft({
+      studyRef: "CADENCE-101",
+      file: uploadFile,
+      templateIds: ["vital-signs-vs", "demographics-dm"],
+      replaceForms: true,
+      amendmentClassification: "UrgentSafetyMeasure",
+      transitionPolicy: "ByCohort",
+      reason: "Combined multipart import",
+      idempotencyKey: "key-multipart-1",
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [, options] = fetchSpy.mock.calls[0];
+    const formData = options.body;
+    expect(formData).toBeInstanceOf(FormData);
+    expect(formData.get("file")).toBe(uploadFile);
+    expect(formData.getAll("template_ids")).toEqual([
+      "vital-signs-vs",
+      "demographics-dm",
+    ]);
+    expect(formData.get("replace_forms")).toBe("true");
+    expect(formData.get("amendment_classification")).toBe(
+      "UrgentSafetyMeasure"
+    );
+    expect(formData.get("transition_policy")).toBe("ByCohort");
+  });
 });

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,17 +18,24 @@ using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Navigation;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 using Cadence.Modules.Execution.Application;
+using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -702,6 +710,339 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }
     }
 
+    /// <summary>
+    /// End-to-end verification of query assignee lifecycle, audited reassignment (<c>POST /{formId}/queries/{queryId}/reassign</c>),
+    /// role-flip stale assignee clearing (manual answer, auto-answer on value edit, and reopen), bitemporal <c>assignee</c>
+    /// filtering (<c>GET /queries?study_id=…&amp;assignee=…</c> current and <c>as_of</c>), and zero side-channel leakage on
+    /// blinded treatment items (<c>K-AUTH-4</c>).
+    /// </summary>
+    [Fact(DisplayName = "HostQuery_ReassignRoleFlipAndAssigneeFilter_EnforceAuditTemporalHistoryAndBlindedSafety")]
+    [GxPRequirement("PRD-QRY-001")]
+    [GxPRequirement("PRD-QRY-002")]
+    public async Task HostQueryReassignRoleFlipAndAssigneeFilterEnforceAuditTemporalHistoryAndBlindedSafety()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var previousClock = fixture.Clock.UtcNow;
+        var baseInstant = new DateTimeOffset(2026, 6, 1, 9, 0, 0, TimeSpan.Zero); // deid-ignore: fixed historical test instant
+        fixture.Clock.Set(baseInstant);
+        try
+        {
+            var world = await SeedBlindedMultiSiteWorldAsync(ct);
+            using var crcA = ClientWithSharedClock(world.Code, Crc);
+            using var monitor = ClientWithSharedClock(world.Code, Monitor);
+            using var unblindedPharm = ClientWithSharedClock(world.Code, "pharm.unblinded@execution-queries.test");
+
+            // 1. Raise a standard query with initial assignee crc.alice and a blinded treatment query with assignee pharm.secret.
+            var tRaise = baseInstant.AddMinutes(10);
+            fixture.Clock.Set(tRaise);
+            var sbpQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{world.FormA:D}/queries", "Monitor baseline SDV", new
+            {
+                observation_id = world.SystolicObservationA,
+                revision = 1,
+                text = "Confirm baseline systolic BP.",
+                assignee = "crc.alice",
+            }, HttpStatusCode.Created, ct);
+            sbpQuery.Assignee.Should().Be("crc.alice");
+            sbpQuery.OwnerRole.Should().Be("site");
+
+            var blindedQuery = await SendAsync<FormQueryResponse>(unblindedPharm, HttpMethod.Post, $"/{world.FormA:D}/queries", "Pharmacy kit check", new
+            {
+                observation_id = world.BlindedArmObservationA,
+                revision = 1,
+                text = "Confirm randomized arm kit.",
+                assignee = "pharm.secret",
+            }, HttpStatusCode.Created, ct);
+            blindedQuery.Assignee.Should().Be("pharm.secret");
+
+            // 2. Reassignment requires execution.query.manage, Idempotency-Key (422), and X-Change-Reason (422).
+            await ExpectDeniedAsync(crcA, HttpMethod.Post, $"/{world.FormA:D}/queries/{sbpQuery.QueryId:D}/reassign", new { assignee = "crc.bob" }, ct);
+
+            using (var missingKeyReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/{world.FormA:D}/queries/{sbpQuery.QueryId:D}/reassign", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new { assignee = "crc.bob" }),
+            })
+            {
+                missingKeyReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Handoff"));
+                using var missingKeyRes = await monitor.SendAsync(missingKeyReq, ct);
+                missingKeyRes.StatusCode.Should().Be((HttpStatusCode)422);
+            }
+
+            using (var missingReasonReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/{world.FormA:D}/queries/{sbpQuery.QueryId:D}/reassign", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new { assignee = "crc.bob" }),
+            })
+            {
+                missingReasonReq.Headers.Add(FormEndpoints.IdempotencyKeyHeader, KernelProtocolScenario.Key());
+                using var missingReasonRes = await monitor.SendAsync(missingReasonReq, ct);
+                missingReasonRes.StatusCode.Should().Be((HttpStatusCode)422);
+            }
+
+            // 3. Valid audited reassignment updates assignee and appends bitemporal period + Reassigned message.
+            var tReassign = tRaise.AddHours(1);
+            fixture.Clock.Set(tReassign);
+            var reassigned = await SendAsync<FormQueryResponse>(
+                monitor,
+                HttpMethod.Post,
+                $"/{world.FormA:D}/queries/{sbpQuery.QueryId:D}/reassign",
+                "Coordinator shift handoff",
+                new { assignee = "crc.bob", text = "Handed off to evening coordinator." },
+                HttpStatusCode.OK,
+                ct);
+            reassigned.Assignee.Should().Be("crc.bob");
+            reassigned.Messages[^1].Kind.Should().Be("reassigned");
+            reassigned.Messages[^1].Text.Should().Be("Handed off to evening coordinator.");
+            reassigned.Messages[^1].ReasonForChange.Should().Be("Coordinator shift handoff");
+
+            // 4. Server-side assignee filter works on current and historical as_of reads WITHOUT leaking blinded assignees.
+            (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={world.Study.Value:D}&assignee=crc.bob", null, null, HttpStatusCode.OK, ct))
+                .Select(q => q.QueryId).Should().Equal(sbpQuery.QueryId);
+            (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={world.Study.Value:D}&assignee=crc.alice", null, null, HttpStatusCode.OK, ct))
+                .Should().BeEmpty();
+            (await SendAsync<FormQueryResponse[]>(
+                monitor,
+                HttpMethod.Get,
+                $"/queries?study_id={world.Study.Value:D}&assignee=crc.alice&as_of={Uri.EscapeDataString(tRaise.AddMinutes(15).ToString("O"))}",
+                null,
+                null,
+                HttpStatusCode.OK,
+                ct))
+                .Select(q => q.QueryId).Should().Equal(sbpQuery.QueryId);
+
+            // Blinded monitor probing assignee=pharm.secret gets 0 rows (both current and as_of), whereas unblinded pharmacist gets blindedQuery!
+            (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={world.Study.Value:D}&assignee=pharm.secret", null, null, HttpStatusCode.OK, ct))
+                .Should().BeEmpty();
+            (await SendAsync<FormQueryResponse[]>(
+                monitor,
+                HttpMethod.Get,
+                $"/queries?study_id={world.Study.Value:D}&assignee=pharm.secret&as_of={Uri.EscapeDataString(tRaise.AddMinutes(15).ToString("O"))}",
+                null,
+                null,
+                HttpStatusCode.OK,
+                ct))
+                .Should().BeEmpty();
+            (await SendAsync<FormQueryResponse[]>(unblindedPharm, HttpMethod.Get, $"/queries?study_id={world.Study.Value:D}&assignee=pharm.secret", null, null, HttpStatusCode.OK, ct))
+                .Select(q => q.QueryId).Should().Equal(blindedQuery.QueryId);
+
+            // 5. Answering without replacement assignee flips Site -> Monitor and clears stale crc.bob.
+            var tAnswer = tReassign.AddHours(1);
+            fixture.Clock.Set(tAnswer);
+            var answered = await SendAsync<FormQueryResponse>(
+                crcA,
+                HttpMethod.Post,
+                $"/{world.FormA:D}/queries/{sbpQuery.QueryId:D}/answer",
+                "Checked source chart",
+                new { text = "Confirmed on source." },
+                HttpStatusCode.OK,
+                ct);
+            answered.OwnerRole.Should().Be("monitor");
+            answered.Assignee.Should().BeNull();
+
+            // Reopening with replacement assignee crc.carol sets Assignee = crc.carol on Monitor -> Site flip.
+            var tReopen = tAnswer.AddHours(1);
+            fixture.Clock.Set(tReopen);
+            var reopened = await SendAsync<FormQueryResponse>(
+                monitor,
+                HttpMethod.Post,
+                $"/{world.FormA:D}/queries/{sbpQuery.QueryId:D}/reopen",
+                "Please re-check cuff log",
+                new { text = "Cuff log lists 134 mm[Hg].", assignee = "crc.carol" },
+                HttpStatusCode.OK,
+                ct);
+            reopened.OwnerRole.Should().Be("site");
+            reopened.Assignee.Should().Be("crc.carol");
+
+            // Editing the queried value auto-answers via outbox and clears stale site assignee crc.carol!
+            var tEdit = tReopen.AddHours(1);
+            fixture.Clock.Set(tEdit);
+            await SendAsync<JsonElement>(crcA, HttpMethod.Put, $"/{world.FormA:D}/values", "Corrected from cuff log", new
+            {
+                values = new[] { new { item_id = Systolic, value = new { type = "quantity", value = 134m, unit = "mm[Hg]" }, expected_revision = 1 } },
+            }, HttpStatusCode.OK, ct);
+            await RelayOutboxAsync(world.Tenant, ct);
+
+            var afterAutoAnswer = (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/{world.FormA:D}/queries", null, null, HttpStatusCode.OK, ct))
+                .Single(q => q.QueryId == sbpQuery.QueryId);
+            afterAutoAnswer.Status.Should().Be("answered");
+            afterAutoAnswer.OwnerRole.Should().Be("monitor");
+            afterAutoAnswer.Assignee.Should().BeNull();
+        }
+        finally
+        {
+            fixture.Clock.Set(previousClock);
+        }
+    }
+
+    /// <summary>
+    /// End-to-end verification of the leader-locked daily scheduler (<see cref="FormQueryEscalationHostedService"/>) running as
+    /// <c>svc:execution-query-sla</c>, outbox <c>execution.FormQueryAgingDigestGenerated</c> idempotent de-identified alerts to
+    /// <c>study_lead</c> and <c>site_investigator</c> recipients (unconditionally redacting blinded items), scoped digest reads
+    /// (<c>GET /queries/digests</c>) redacting blinded items unless <c>enrollment.unblind</c> is held and hiding study-wide
+    /// digests from site-only callers, and manual <c>POST /queries/escalate</c> gating on <c>Idempotency-Key</c>,
+    /// <c>X-Change-Reason</c>, <c>execution.query.manage</c>, and active <c>Capture</c> subscription entitlement.
+    /// </summary>
+    [Fact(DisplayName = "HostQuery_ScheduledSweepDigestBlindingScopeVisibilityAlertsAndSubscriptionGate")]
+    [GxPRequirement("PRD-QRY-002")]
+    public async Task HostQueryScheduledSweepDigestBlindingScopeVisibilityAlertsAndSubscriptionGate()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var previousClock = fixture.Clock.UtcNow;
+        var baseInstant = new DateTimeOffset(2026, 7, 1, 8, 0, 0, TimeSpan.Zero); // deid-ignore: fixed historical test instant
+        fixture.Clock.Set(baseInstant);
+        try
+        {
+            var world = await SeedBlindedMultiSiteWorldAsync(ct);
+            using var crcA = ClientWithSharedClock(world.Code, Crc);
+            using var siteAInvestigator = ClientWithSharedClock(world.Code, "pi.sitea@execution-queries.test");
+            using var monitor = ClientWithSharedClock(world.Code, Monitor);
+            using var unblindedPharm = ClientWithSharedClock(world.Code, "pharm.unblinded@execution-queries.test");
+
+            // 1. Open both a normal Systolic query and a blinded treatment-arm query at Site A.
+            var t0 = baseInstant.AddMinutes(5);
+            fixture.Clock.Set(t0);
+            var sbpQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{world.FormA:D}/queries", "Baseline SDV", new
+            {
+                observation_id = world.SystolicObservationA,
+                revision = 1,
+                text = "Verify baseline systolic value.",
+                assignee = "crc.alice",
+            }, HttpStatusCode.Created, ct);
+
+            var blindedQuery = await SendAsync<FormQueryResponse>(unblindedPharm, HttpMethod.Post, $"/{world.FormA:D}/queries", "Pharmacy reconciliation", new
+            {
+                observation_id = world.BlindedArmObservationA,
+                revision = 1,
+                text = "Verify blinded treatment arm kit.",
+            }, HttpStatusCode.Created, ct);
+
+            // 2. Manual POST /queries/escalate enforces execution.query.manage (403), Idempotency-Key (422), and X-Change-Reason (422).
+            var tOverdue = t0.AddDays(15);
+            fixture.Clock.Set(tOverdue);
+            await ExpectDeniedAsync(crcA, HttpMethod.Post, $"/queries/escalate?study_id={world.Study.Value:D}", null, ct);
+
+            using (var escalateNoKey = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/queries/escalate?study_id={world.Study.Value:D}", UriKind.Relative)))
+            {
+                escalateNoKey.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Manual SLA check"));
+                using var res = await monitor.SendAsync(escalateNoKey, ct);
+                res.StatusCode.Should().Be((HttpStatusCode)422);
+            }
+
+            using (var escalateNoReason = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/queries/escalate?study_id={world.Study.Value:D}", UriKind.Relative)))
+            {
+                escalateNoReason.Headers.Add(FormEndpoints.IdempotencyKeyHeader, KernelProtocolScenario.Key());
+                using var res = await monitor.SendAsync(escalateNoReason, ct);
+                res.StatusCode.Should().Be((HttpStatusCode)422);
+            }
+
+            // 3. Leader-lock contention skips the scheduled sweep when another replica holds the PostgreSQL advisory lock.
+            var scheduler = _sharedClockHost!.Services.GetRequiredService<FormQueryEscalationHostedService>();
+            var peerLock = new KernelLeaderLock(new KernelConnectionString(fixture.ConnectionString!));
+            var contendedResult = default(FormQueryEscalationSweepSummary);
+            var acquiredByPeer = await peerLock.TryRunAsync(
+                FormQueryEscalationHostedService.JobName,
+                async innerCt =>
+                {
+                    contendedResult = await scheduler.RunSweepOnceAsync(innerCt);
+                },
+                ct);
+            acquiredByPeer.Should().BeTrue();
+            contendedResult!.AcquiredLeaderLock.Should().BeFalse();
+
+            // 4. Once released, the scheduled daily sweep executes under svc:execution-query-sla, escalates both queries, and saves digests!
+            var sweepSummary = await scheduler.RunSweepOnceAsync(ct);
+            sweepSummary.AcquiredLeaderLock.Should().BeTrue();
+            sweepSummary.EscalatedQueries.Should().BeGreaterThanOrEqualTo(2);
+            sweepSummary.DigestsGenerated.Should().BeGreaterThanOrEqualTo(2);
+
+            var escalatedRows = await SendAsync<FormQueryResponse[]>(
+                unblindedPharm,
+                HttpMethod.Get,
+                $"/queries?study_id={world.Study.Value:D}&escalated=true&assignee=crc.alice",
+                null,
+                null,
+                HttpStatusCode.OK,
+                ct);
+            escalatedRows.Select(q => q.QueryId).Should().Equal(sbpQuery.QueryId);
+
+            // 5. Outbox relay delivers execution.FormQueryAgingDigestGenerated -> idempotent de-identified alerts to study_lead & site_investigator,
+            // unconditionally redacting the blinded treatment item even when unblindedPharm is among study leads!
+            await RelayOutboxAsync(world.Tenant, ct);
+            var alerts = fixture.AlertDispatcher.GetSentAlerts(world.Tenant, world.Study);
+            alerts.Should().HaveCount(2);
+
+            var studyAlert = alerts.Single(a => a.StudySiteId is null);
+            studyAlert.RecipientRole.Should().Be("study_lead");
+            studyAlert.RecipientActorIds.Should().Contain([Monitor, "pharm.unblinded@execution-queries.test"]);
+            studyAlert.Entries.Should().HaveCount(2);
+            studyAlert.Entries.Should().ContainSingle(e => e.QueryId == sbpQuery.QueryId && e.ItemId == Systolic);
+            studyAlert.Entries.Should().ContainSingle(e =>
+                e.ItemId == FormQueryAgingDigestEntry.MaskedLiteral
+                && e.QueryId == Guid.Empty
+                && e.FormId == Guid.Empty);
+            studyAlert.Entries.Select(e => e.ItemId).Should().NotContain(world.BlindedItemId);
+
+            var siteAlert = alerts.Single(a => a.StudySiteId == world.SiteA);
+            siteAlert.RecipientRole.Should().Be("site_investigator");
+            siteAlert.RecipientActorIds.Should().Contain("pi.sitea@execution-queries.test");
+            siteAlert.Entries.Should().ContainSingle(e => e.ItemId == FormQueryAgingDigestEntry.MaskedLiteral && e.QueryId == Guid.Empty);
+
+            // Re-running the sweep on the same UTC date is idempotent and dispatches zero duplicate alerts.
+            await scheduler.RunSweepOnceAsync(ct);
+            await RelayOutboxAsync(world.Tenant, ct);
+            fixture.AlertDispatcher.GetSentAlerts(world.Tenant, world.Study).Should().HaveCount(2);
+
+            // 6. Scoped GET /queries/digests:
+            // - Site A Investigator (site-only grant) sees ONLY Site A's digest (never the study-wide StudySiteId == null digest), with blinded entry redacted.
+            var siteInvestigatorDigests = await SendAsync<FormQueryAgingDigestResponse[]>(
+                siteAInvestigator, HttpMethod.Get, $"/queries/digests?study_id={world.Study.Value:D}", null, null, HttpStatusCode.OK, ct);
+            siteInvestigatorDigests.Should().ContainSingle(d => d.StudySiteId == world.SiteA.Value);
+            siteInvestigatorDigests.Should().NotContain(d => d.StudySiteId == null);
+            siteInvestigatorDigests.Single().Entries.Should().ContainSingle(e => e.ItemId == FormQueryAgingDigestEntry.MaskedLiteral && e.QueryId == Guid.Empty);
+
+            // - Blinded Study Monitor sees BOTH study-wide and site digests, with blinded entry redacted.
+            var monitorDigests = await SendAsync<FormQueryAgingDigestResponse[]>(
+                monitor, HttpMethod.Get, $"/queries/digests?study_id={world.Study.Value:D}", null, null, HttpStatusCode.OK, ct);
+            monitorDigests.Should().HaveCount(2);
+            monitorDigests.Single(d => d.StudySiteId == null).Entries
+                .Should().ContainSingle(e => e.ItemId == FormQueryAgingDigestEntry.MaskedLiteral && e.QueryId == Guid.Empty);
+
+            // - Unblinded Pharmacist (holds enrollment.unblind) sees unredacted blinded entry in digests!
+            var unblindedDigests = await SendAsync<FormQueryAgingDigestResponse[]>(
+                unblindedPharm, HttpMethod.Get, $"/queries/digests?study_id={world.Study.Value:D}", null, null, HttpStatusCode.OK, ct);
+            unblindedDigests.Single(d => d.StudySiteId == null).Entries
+                .Should().ContainSingle(e => e.QueryId == blindedQuery.QueryId && e.ItemId == world.BlindedItemId);
+
+            // 7. Expiring the tenant's Capture subscription blocks manual POST /queries/escalate with 403 K.Subscription.Expired,
+            // while GET /queries/digests remains readable (200 OK).
+            await _scenario.Protocol.OkAsync(
+                new ProvisionSubscription(
+                    world.Tenant,
+                    SubscriptionId.New(),
+                    CommercialTier.Individual,
+                    SubscriptionStatus.Expired,
+                    tOverdue.AddDays(-1),
+                    KernelProtocolScenario.Key(),
+                    "Simulate expired trial"),
+                ct);
+
+            using (var expiredEscalate = await monitor.SendAsync(
+                Request(HttpMethod.Post, $"/queries/escalate?study_id={world.Study.Value:D}", "Manual SLA check after expiry", null), ct))
+            {
+                expiredEscalate.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+                (await ProblemCodeAsync(expiredEscalate, ct)).Should().Be(KernelErrors.SubscriptionExpired.Code);
+            }
+
+            (await SendAsync<FormQueryAgingDigestResponse[]>(
+                monitor, HttpMethod.Get, $"/queries/digests?study_id={world.Study.Value:D}", null, null, HttpStatusCode.OK, ct))
+                .Should().HaveCount(2);
+        }
+        finally
+        {
+            fixture.Clock.Set(previousClock);
+        }
+    }
+
     private static async Task ExpectDeniedAsync(HttpClient client, HttpMethod method, string path, object? body, CancellationToken ct)
     {
         using var denied = await client.SendAsync(Request(method, path, "Attempted step", body), ct);
@@ -813,7 +1154,9 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         {
             ("execution-forms", new[] { "execution.form.open" }),
             ("execution-queries", new[] { "observation.query", "observation.query.answer", "assertion.retract" }),
+            (AlertMonitorOnVerifiedObservationCorrected.Name, new[] { "execution.query.manage" }),
             (EvaluateEditChecksOnCollectionChanged.Name, new[] { "validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage" }),
+            (FormQueryEscalationHostedService.ServiceAccountName, new[] { "execution.query.manage" }),
         })
         {
             foreach (var capability in capabilities)
@@ -904,5 +1247,150 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }
 
         return request;
+    }
+
+    private sealed record BlindedMultiSiteWorld(
+        string Code,
+        TenantId Tenant,
+        StudyId Study,
+        StudySiteId SiteA,
+        StudySiteId SiteB,
+        Guid FormA,
+        Guid SystolicObservationA,
+        Guid BlindedArmObservationA,
+        string BlindedItemId);
+
+    private async Task<BlindedMultiSiteWorld> SeedBlindedMultiSiteWorldAsync(CancellationToken ct)
+    {
+        const string blindedItem = "RAND_ARM";
+        const string unblindedPharm = "pharm.unblinded@execution-queries.test";
+        const string siteAInvestigator = "pi.sitea@execution-queries.test";
+
+        var code = $"T-BSLA-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(tenant, code, "Blinded SLA and assignee query tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+
+        var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
+        var systolicConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+        var diastolicConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+        var treatmentConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(
+                tenant,
+                ConceptId.New(),
+                ConceptOrigin.Sponsor,
+                null,
+                ConceptKind.BiomedicalConcept,
+                "Randomized arm (randomization_treatment_assignment)",
+                "Randomized treatment allocation.",
+                KernelProtocolScenario.Key(),
+                "Defined"),
+            ct);
+
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity(
+                    VisitId,
+                    "Baseline visit",
+                    "ep.treatment",
+                    [ActivityLocation.Site],
+                    [SpecId],
+                    new ActivityTiming(1, 0, 2)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    SpecId,
+                    "Vital signs",
+                    [
+                        new CollectionItem(Systolic, systolicConcept, "mm[Hg]", Required: true),
+                        new CollectionItem(Diastolic, diastolicConcept, "mm[Hg]", Required: false),
+                        new CollectionItem(blindedItem, treatmentConcept, ValueKind: ObservationValueKind.Text, Required: false),
+                    ]),
+            ],
+        };
+
+        var versionId = ProtocolVersionId.New();
+        var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, versionId, ct, ProtocolDesignDocument.Write(design));
+        draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Ready"), ct);
+        var signature = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+
+        var effectivity = EffectivityId.New();
+        await _scenario.Protocol.OkAsync(
+            new DeclareEffectivity(tenant, effectivity, versionId, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
+        var ethicsBytes = Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
+        var ethicsVersion = ArtifactVersionId.New();
+        var ethicsContent = new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://evidence/ethics.pdf");
+        await _scenario.Protocol.OkAsync(
+            new RegisterArtifact(tenant, ArtifactId.New(), ethicsVersion, ArtifactKind.EthicsApproval, study, "Ethics approval", ethicsContent, KernelProtocolScenario.Key(), "Filed"), ct);
+        await _scenario.Protocol.OkAsync(
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"), ct);
+
+        StudySiteId siteA;
+        StudySiteId siteB;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var studyRow = await db.Studies.AsNoTracking().SingleAsync(s => s.Id == study, ct);
+            var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+            var rawSiteA = new Site(SiteId.New(), tenant, studyRow.SponsorId, $"SITE-A-{suffix}", "Site Alpha", "US", KernelPostgresFixture.ActorId, "Seeded Site A");
+            var rawSiteB = new Site(SiteId.New(), tenant, studyRow.SponsorId, $"SITE-B-{suffix}", "Site Beta", "US", KernelPostgresFixture.ActorId, "Seeded Site B");
+            var linkA = new StudySite(StudySiteId.New(), tenant, study, rawSiteA.Id, "Active", KernelPostgresFixture.ActorId, "Seeded Site A");
+            var linkB = new StudySite(StudySiteId.New(), tenant, study, rawSiteB.Id, "Active", KernelPostgresFixture.ActorId, "Seeded Site B");
+            await fixture.SeedAsync(rawSiteA, rawSiteB, linkA, linkB);
+            siteA = linkA.Id;
+            siteB = linkB.Id;
+        }
+
+        var participantA = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented A"), ct);
+        SubjectCode.TryFrom("SUBJ-A1", out var subjA);
+        var screenedA = await _scenario.Protocol.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participantA, siteA, subjA, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened A"), ct);
+
+        var participantB = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented B"), ct);
+        SubjectCode.TryFrom("SUBJ-B1", out var subjB);
+        await _scenario.Protocol.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participantB, siteB, subjB, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened B"), ct);
+
+        var subjectA = new KernelObservationScenario.Subject(tenant, study, siteA, screenedA.EnrollmentId);
+        var openedA = await _scenario.Protocol.OkAsync(Open(subjectA, CollectionInstanceId.New(), _scenario.Tick()), ct);
+        await RelayOutboxAsync(tenant, ct);
+
+        var savedA = await _scenario.Protocol.OkAsync(
+            Save(
+                new Form(subjectA, versionId, openedA.CollectionInstanceId),
+                Value(Systolic, Mmhg(128)),
+                Value(blindedItem, new TextValue("ACTIVE_DRUG_200MG"))),
+            ct);
+        var sbpObs = savedA.Values.Single(v => v.ItemId == Systolic).ObservationId.Value;
+        var armObs = savedA.Values.Single(v => v.ItemId == blindedItem).ObservationId.Value;
+
+        foreach (var (actor, capabilities, scope) in new (Actor, string[], AuthorityScope)[]
+        {
+            (Actor.Person(Crc), ["collection.record", "execution.query.answer"], AuthorityScope.StudySite(siteA)),
+            (Actor.Person(siteAInvestigator), ["collection.record", "collection.sign", "execution.query.answer"], AuthorityScope.StudySite(siteA)),
+            (Actor.Person(Monitor), ["collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Study(study)),
+            (Actor.Person(unblindedPharm), ["collection.record_unasked", "execution.query.raise", "execution.query.manage", "enrollment.unblind"], AuthorityScope.Study(study)),
+            (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount(FormQueryEscalationHostedService.ServiceAccountName), ["execution.query.manage"], AuthorityScope.Tenant()),
+        })
+        {
+            foreach (var cap in capabilities)
+            {
+                await _scenario.Protocol.OkAsync(
+                    new IssueGrant(tenant, GrantId.New(), actor, cap, null, scope, _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Test grant"),
+                    ct);
+            }
+        }
+
+        return new BlindedMultiSiteWorld(code, tenant, study, siteA, siteB, openedA.CollectionInstanceId.Value, sbpObs, armObs, blindedItem);
     }
 }

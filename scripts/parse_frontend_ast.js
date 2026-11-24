@@ -4,14 +4,14 @@ const path = require("path");
 let parser = null;
 try {
   parser = require("@babel/parser");
-} catch (e) {
+} catch {
   try {
     const webNodeModules = path.resolve(
       __dirname,
       "../apps/web/node_modules/@babel/parser"
     );
     parser = require(webNodeModules);
-  } catch (e2) {
+  } catch {
     parser = null;
   }
 }

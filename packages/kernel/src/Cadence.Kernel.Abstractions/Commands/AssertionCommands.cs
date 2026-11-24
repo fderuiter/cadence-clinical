@@ -88,11 +88,17 @@ public sealed record ReleaseLock(
 /// <summary>
 /// Verifies one revision of an observation's value against source (SDV, spec §8.2). It targets
 /// <c>(ObservationId, Revision)</c>, so a later correction is not verified (ADR-2621). Refused when the revision is
-/// not the current one, or when a <see cref="LockKind.Locked"/> lock covers the observation.
+/// not the current one, when an open query holds on the observation, when the revision is already verified, or when a
+/// <see cref="LockKind.Locked"/> lock covers the observation.
 /// </summary>
 [KernelCapability("observation.verify", VerbClass.Execute, Resource = nameof(VerifyObservation.EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
-[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.RevisionStale), nameof(AssertionErrors.Locked))]
+[RaisesKernelErrors(
+    typeof(AssertionErrors),
+    nameof(AssertionErrors.RevisionStale),
+    nameof(AssertionErrors.QueryOpen),
+    nameof(AssertionErrors.AlreadyVerified),
+    nameof(AssertionErrors.Locked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record VerifyObservation(
     TenantId TenantId,
@@ -231,6 +237,12 @@ public static class AssertionErrors
     public static readonly KernelError RevisionStale =
         new("K.Assertion.RevisionStale", 409, "The revision is not the observation's current one; reload it and judge the current value.");
 
+    public static readonly KernelError QueryOpen =
+        new("K.Assertion.QueryOpen", 409, "An open query holds on this observation; resolve and close the query before source data verification.");
+
+    public static readonly KernelError AlreadyVerified =
+        new("K.Assertion.AlreadyVerified", 409, "This observation revision is already verified against source.");
+
     public static readonly KernelError TextInvalid =
         new("K.Assertion.TextInvalid", 422, $"The text is required and at most {AssertionText.MaxLength} characters.");
 
@@ -242,5 +254,19 @@ public static class AssertionErrors
 
     /// <summary>Every assertion error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [ScopeInvalid, ScopeUnknown, AlreadyLocked, ScopeNotReady, AlreadyRetracted, NotRetractable, NotAQuery, RevisionStale, TextInvalid, Locked, AttestationRejected];
+    [
+        ScopeInvalid,
+        ScopeUnknown,
+        AlreadyLocked,
+        ScopeNotReady,
+        AlreadyRetracted,
+        NotRetractable,
+        NotAQuery,
+        RevisionStale,
+        QueryOpen,
+        AlreadyVerified,
+        TextInvalid,
+        Locked,
+        AttestationRejected,
+    ];
 }

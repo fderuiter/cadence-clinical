@@ -82,6 +82,8 @@ internal static partial class DevelopmentDemoData
         ("execution-forms", "DEMO_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "DEMO_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
         ("execution-edit-checks", "DEMO_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
+        ("execution-query-sla", "DEMO_EXECUTION_QUERY_SLA", "Execution query SLA scheduler", ["execution.query.manage"]),
+        ("execution-sdv-alerts", "DEMO_EXECUTION_SDV_ALERTS", "Execution SDV alerts consumer", ["execution.query.manage"]),
     ];
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>

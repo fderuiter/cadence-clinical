@@ -31,18 +31,17 @@
         <span
           v-if="queuedSubmissionsCount > 0"
           id="header-sync-badge"
-          class="sync-badge"
+          class="sync-badge tabular-nums"
           :class="{ 'sync-badge-quarantined': quarantinedSubmissionsCount > 0 }"
         >
           {{ queuedSubmissionsCount }}
         </span>
-        <span class="sync-btn-label"
+        <span class="sync-btn-label tabular-nums"
           ><span>{{ headerSyncBaseLabel }}</span
           ><span
             v-if="headerSyncCountdownSuffix"
-            class="sync-btn-countdown"
+            class="sync-btn-countdown tabular-nums"
             aria-hidden="true"
-            style="font-variant-numeric: tabular-nums"
             >{{ headerSyncCountdownSuffix }}</span
           ></span
         >

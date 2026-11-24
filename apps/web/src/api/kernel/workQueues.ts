@@ -1,10 +1,6 @@
-import { unwrapResponse } from "../client";
-import {
-  kernelClient,
-  mutationHeaders,
-  unversioned,
-  type KernelSchemas,
-} from "./shared";
+import type { KernelSchemas } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelWorkQueue = KernelSchemas["Kernel_KernelWorkQueueResponse"];
 export type KernelWorkQueuesPage =
@@ -34,48 +30,18 @@ export interface KernelDefineWorkQueueInput {
 
 export const kernelWorkQueuesApi = {
   /** Reads the caller's capability-keyed work queues (`GET /api/v1/kernel/work-queues`). */
-  listWorkQueues(
+  async listWorkQueues(
     query: KernelWorkQueuesQuery = {}
   ): Promise<KernelWorkQueuesPage> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/work-queues", {
-        params: {
-          query: {
-            within: query.within ? unversioned(query.within) : undefined,
-            code:
-              query.codes && query.codes.length > 0 ? query.codes : undefined,
-            limit: query.limit,
-          },
-        },
-      })
-    );
+    const { executeListWorkQueues } = await loadRouteTransport();
+    return executeListWorkQueues(query);
   },
 
   /** Defines the next version of a capability-keyed work queue (`POST /api/v1/kernel/work-queues`). */
-  defineWorkQueue({
-    code,
-    title,
-    capability,
-    verbClass,
-    source,
-    workQueueDefinitionId,
-    reason,
-    idempotencyKey,
-  }: KernelDefineWorkQueueInput): Promise<KernelWorkQueueDefinition> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/work-queues", {
-        body: {
-          code,
-          title,
-          capability,
-          verb_class: verbClass,
-          source,
-          ...(workQueueDefinitionId
-            ? { work_queue_definition_id: workQueueDefinitionId }
-            : {}),
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async defineWorkQueue(
+    input: KernelDefineWorkQueueInput
+  ): Promise<KernelWorkQueueDefinition> {
+    const { executeDefineWorkQueue } = await loadRouteTransport();
+    return executeDefineWorkQueue(input);
   },
 };

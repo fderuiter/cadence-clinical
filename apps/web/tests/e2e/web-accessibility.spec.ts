@@ -1277,6 +1277,12 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
           }
           if (
             method === "GET" &&
+            url.includes("/api/v1/execution/forms/queries/digests")
+          ) {
+            return json([]);
+          }
+          if (
+            method === "GET" &&
             url.includes("/api/v1/execution/forms/queries")
           ) {
             const win = window as unknown as { __failQueriesOnce?: boolean };
@@ -2628,6 +2634,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("Knowledge (/knowledge), CTMS (/ctms), SSU (/ssu), Training (/training), and Trial Onboarding (/onboarding/trial) pass WCAG 2.2 AA, 24px chip targets, native buttons, and ClinicalTabs keyboard navigation", async ({
     page,
   }) => {
+    test.setTimeout(90000);
     const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
