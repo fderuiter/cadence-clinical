@@ -73,6 +73,7 @@
             id="ecrf-draft-discard"
             type="button"
             class="btn btn-secondary"
+            :disabled="formState.saving"
             @click="onDiscardDraft"
           >
             Discard draft

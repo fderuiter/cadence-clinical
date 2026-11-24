@@ -60,11 +60,7 @@
                     !!formState.entries[item.item_id]?.missing
                   "
                   :aria-invalid="!!formState.itemErrors[item.item_id]"
-                  :aria-describedby="
-                    formState.comparingBaseline && formState.isEdited(item)
-                      ? `ecrf-committed-baseline-${item.item_id} ecrf-item-${item.item_id}-error`
-                      : `ecrf-item-${item.item_id}-error`
-                  "
+                  :aria-describedby="itemDescribedBy(item)"
                   @change="
                     emit(
                       'entry-text',
@@ -113,11 +109,7 @@
                     !!formState.entries[item.item_id]?.missing
                   "
                   :aria-invalid="!!formState.itemErrors[item.item_id]"
-                  :aria-describedby="
-                    formState.comparingBaseline && formState.isEdited(item)
-                      ? `ecrf-committed-baseline-${item.item_id} ecrf-item-${item.item_id}-error`
-                      : `ecrf-item-${item.item_id}-error`
-                  "
+                  :aria-describedby="itemDescribedBy(item)"
                   @input="
                     emit(
                       'entry-text',
@@ -130,17 +122,34 @@
                   item.unit
                 }}</span>
                 <div
-                  v-if="formState.comparingBaseline && formState.isEdited(item)"
-                  :id="`ecrf-committed-baseline-${item.item_id}`"
-                  :data-testid="`ecrf-committed-baseline-${item.item_id}`"
-                  class="ecrf-committed-baseline"
+                  v-if="formState.isEdited(item)"
+                  class="ecrf-item-draft"
+                  :data-testid="`ecrf-item-draft-${item.item_id}`"
                 >
-                  <span class="ecrf-committed-baseline-label"
-                    >Committed:{{ " " }}</span
+                  <div
+                    v-if="formState.comparingBaseline"
+                    :id="`ecrf-committed-baseline-${item.item_id}`"
+                    :data-testid="`ecrf-committed-baseline-${item.item_id}`"
+                    class="ecrf-committed-baseline"
                   >
-                  <span class="ecrf-committed-baseline-value">{{
-                    formState.formatCommittedBaseline(item)
-                  }}</span>
+                    <span class="ecrf-committed-baseline-label"
+                      >Committed:{{ " " }}</span
+                    >
+                    <span class="ecrf-committed-baseline-value">{{
+                      formState.formatCommittedBaseline(item)
+                    }}</span>
+                  </div>
+                  <button
+                    v-if="!formState.locked"
+                    :id="`ecrf-revert-${item.item_id}`"
+                    :data-testid="`ecrf-revert-${item.item_id}`"
+                    type="button"
+                    class="btn btn-secondary ecrf-revert-btn"
+                    :disabled="formState.saving"
+                    @click="revertRow(item.item_id)"
+                  >
+                    Revert<span class="sr-only"> {{ item.item_id }}</span>
+                  </button>
                 </div>
                 <p
                   :id="`ecrf-item-${item.item_id}-error`"
@@ -247,6 +256,17 @@
                       No value
                     </span>
                   </div>
+                  <span
+                    v-if="
+                      sdv.activeVerification(item) && formState.isEdited(item)
+                    "
+                    :id="`ecrf-sdv-draft-note-${item.item_id}`"
+                    class="ecrf-sdv-draft-note"
+                    :data-testid="`ecrf-sdv-draft-note-${item.item_id}`"
+                  >
+                    Verification applies only to saved revision
+                    {{ item.revision }}; unsaved draft is not verified.
+                  </span>
                   <div
                     v-if="canVerifySource && hasRecordedValue(item)"
                     class="ecrf-sdv-actions"
@@ -569,21 +589,17 @@ import {
 } from "vue";
 import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
-import {
-  formatObservationValue,
-  isUnrecordedValue,
-  MISSING_REASONS,
-  type KernelObservationValue,
-} from "../../api/observationValue";
+import { isUnrecordedValue, MISSING_REASONS } from "../../api/observationValue";
 import type { EcrfFormItem } from "../../api/ecrfFormsApi";
 import type {
   FormQueryOwnerRole,
   FormQueryPriority,
   FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
-import type {
-  EcrfUnsavedItem,
-  useEcrfForm,
+import {
+  formatUnsavedDraftEntry,
+  type EcrfUnsavedItem,
+  type useEcrfForm,
 } from "../../composables/useEcrfForm";
 import {
   hasRecordedValue,
@@ -748,18 +764,30 @@ const allPreviewWarnings = computed(() =>
   Object.values(props.formState.previewWarnings).flat()
 );
 
-function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
-  if (entry.missing) {
-    return formatObservationValue({
-      type: "missing",
-      reason: entry.missing as Extract<
-        KernelObservationValue,
-        { type?: "missing" }
-      >["reason"],
-    });
+function itemDescribedBy(item: EcrfFormItem): string {
+  const ids: string[] = [];
+  if (props.formState.comparingBaseline && props.formState.isEdited(item)) {
+    ids.push(`ecrf-committed-baseline-${item.item_id}`);
   }
-  const typed = entry.text.trim();
-  return entry.unit ? `${typed} ${entry.unit}` : typed;
+  ids.push(`ecrf-item-${item.item_id}-error`);
+  if (props.sdv.activeVerification(item) && props.formState.isEdited(item)) {
+    ids.push(`ecrf-sdv-draft-note-${item.item_id}`);
+  }
+  return ids.join(" ");
+}
+
+function revertRow(itemId: string) {
+  props.formState.revertItem(itemId);
+  void handoffFocus([
+    `#ecrf-item-${itemId}`,
+    `select[aria-label="Why ${itemId} is missing"]`,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
+  return formatUnsavedDraftEntry(entry);
 }
 </script>
 
@@ -864,8 +892,14 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 .ecrf-item-edited > td:first-child {
   border-left: 4px solid var(--semantic-color-edited-row-border);
 }
-.ecrf-committed-baseline {
+.ecrf-item-draft {
   margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ecrf-committed-baseline {
   font-size: 0.75rem;
   font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text-secondary);
@@ -876,6 +910,10 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 .ecrf-committed-baseline-label {
   font-weight: 600;
   color: var(--semantic-color-text);
+}
+.ecrf-revert-btn {
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
 .ecrf-item-highlighted {
   background-color: var(--semantic-color-info-bg);
@@ -892,6 +930,11 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+.ecrf-sdv-draft-note {
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.75rem;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 .ecrf-sdv-actions {
   display: flex;
