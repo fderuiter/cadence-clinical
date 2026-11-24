@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Econsent.Endpoints;
 
@@ -146,10 +147,21 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
+        IOptions<BiometricLivenessOptions> livenessOptions,
+        ISigTokenUseStore sigTokenUseStore,
         IClock clock,
         CancellationToken cancellationToken)
     {
-        return await ProcessCaptureConsentAsync(template_id, version_index, request, dbContext, httpContext, clock, cancellationToken);
+        return await ProcessCaptureConsentAsync(
+            template_id,
+            version_index,
+            request,
+            dbContext,
+            httpContext,
+            livenessOptions,
+            sigTokenUseStore,
+            clock,
+            cancellationToken);
     }
 
     private static async Task<IResult> CaptureConsentLegacyAsync(
@@ -157,10 +169,21 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
+        IOptions<BiometricLivenessOptions> livenessOptions,
+        ISigTokenUseStore sigTokenUseStore,
         IClock clock,
         CancellationToken cancellationToken)
     {
-        return await ProcessCaptureConsentAsync(template_id, 1, request, dbContext, httpContext, clock, cancellationToken);
+        return await ProcessCaptureConsentAsync(
+            template_id,
+            1,
+            request,
+            dbContext,
+            httpContext,
+            livenessOptions,
+            sigTokenUseStore,
+            clock,
+            cancellationToken);
     }
 
     public static async Task<IResult> ProcessCaptureConsentAsync(
@@ -169,9 +192,14 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
+        IOptions<BiometricLivenessOptions> livenessOptions,
+        ISigTokenUseStore sigTokenUseStore,
         IClock clock,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(livenessOptions);
+        ArgumentNullException.ThrowIfNull(sigTokenUseStore);
+
         if (request is null)
         {
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>
@@ -225,13 +253,19 @@ public static class EconsentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
+        byte[] livenessSecret = livenessOptions.Value.DecodeKey();
 
         BiometricLivenessTokenData? livenessData = null;
         if (string.IsNullOrWhiteSpace(request.LivenessToken))
         {
             errors["liveness_token"] = ["Valid liveness token is required."];
         }
-        else if (!BiometricLivenessTokenService.VerifyToken(request.LivenessToken, request.SubjectPseudonym, out livenessData, now: now))
+        else if (!BiometricLivenessTokenService.VerifyToken(
+            request.LivenessToken,
+            request.SubjectPseudonym,
+            out livenessData,
+            secret: livenessSecret,
+            now: now))
         {
             errors["liveness_token"] = ["Liveness token is invalid or expired."];
         }
@@ -244,6 +278,16 @@ public static class EconsentEndpoints
         if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } denied)
         {
             return denied;
+        }
+
+        DateTimeOffset retainUntil = DateTimeOffset.FromUnixTimeSeconds(livenessData!.ExpiresAtUnix) + BiometricLivenessTokenService.ClockSkew;
+        string useStoreKey = $"{BiometricLivenessTokenService.UseStoreKeyPrefix}{livenessData.Jti}";
+        if (!await sigTokenUseStore.TryRecordFirstUseAsync(useStoreKey, retainUntil, cancellationToken))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["liveness_token"] = ["Liveness token has already been used."]
+            });
         }
 
         // The participant or representative signs; the record is attributed to the signed-in staff member who captured it.

@@ -72,6 +72,144 @@ async function expectClinicalTabsKeyboardNavigation(
     2
   );
 
+  // Verify button resets (no native outset/inset borders), >= 44px hit height, >= 4.5:1 label contrast, and >= 3:1 active contrast
+  const visualMetrics = await tablist.evaluate((listEl) => {
+    type Rgba = [number, number, number, number];
+    function parseRgba(str: string): Rgba {
+      const m = str.match(
+        /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/
+      );
+      if (!m) return [255, 255, 255, 0];
+      return [
+        Number(m[1]),
+        Number(m[2]),
+        Number(m[3]),
+        m[4] === undefined ? 1 : Number(m[4]),
+      ];
+    }
+    function resolveEffectiveBg(
+      startEl: Element | null
+    ): [number, number, number] {
+      let cur: Element | null = startEl;
+      while (cur) {
+        const bg = parseRgba(window.getComputedStyle(cur).backgroundColor);
+        if (bg[3] >= 0.95) {
+          return [bg[0], bg[1], bg[2]];
+        }
+        cur = cur.parentElement;
+      }
+      const rootTheme = document.documentElement.getAttribute("data-theme");
+      return rootTheme === "dark" ? [15, 23, 42] : [255, 255, 255];
+    }
+    function luminance([r, g, b]: [number, number, number]) {
+      const [rl, gl, bl] = [r, g, b].map((v) => {
+        const s = v / 255;
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+    }
+    function contrast(
+      rgbA: [number, number, number],
+      rgbB: [number, number, number]
+    ) {
+      const l1 = luminance(rgbA);
+      const l2 = luminance(rgbB);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+
+    const tabs = Array.from(
+      listEl.querySelectorAll<HTMLElement>('[role="tab"]:not([disabled])')
+    );
+    const isUnderline = listEl.classList.contains("variant-underline");
+    const hostBg = resolveEffectiveBg(listEl);
+
+    const tabReports = tabs.map((tab) => {
+      const cs = window.getComputedStyle(tab);
+      const rect = tab.getBoundingClientRect();
+      const tabBgRgba = parseRgba(cs.backgroundColor);
+      const effectiveTabBg: [number, number, number] =
+        tabBgRgba[3] >= 0.95
+          ? [tabBgRgba[0], tabBgRgba[1], tabBgRgba[2]]
+          : hostBg;
+      const fgRgba = parseRgba(cs.color);
+      const fgRgb: [number, number, number] = [fgRgba[0], fgRgba[1], fgRgba[2]];
+      const borderBottomRgba = parseRgba(cs.borderBottomColor);
+      const indicatorRgb: [number, number, number] = isUnderline
+        ? [borderBottomRgba[0], borderBottomRgba[1], borderBottomRgba[2]]
+        : effectiveTabBg;
+      return {
+        id: tab.id,
+        selected: tab.getAttribute("aria-selected") === "true",
+        height: rect.height,
+        borderStyles: [
+          cs.borderTopStyle,
+          cs.borderRightStyle,
+          cs.borderBottomStyle,
+          cs.borderLeftStyle,
+        ],
+        borderBottomWidth: parseFloat(cs.borderBottomWidth || "0"),
+        labelContrast: contrast(fgRgb, effectiveTabBg),
+        indicatorContrastVsHost: contrast(indicatorRgb, hostBg),
+        effectiveTabBg,
+      };
+    });
+
+    const activeReport = tabReports.find((r) => r.selected) || null;
+    const inactiveReport = tabReports.find((r) => !r.selected) || null;
+    const activeVsInactiveContrast =
+      !isUnderline && activeReport && inactiveReport
+        ? contrast(activeReport.effectiveTabBg, inactiveReport.effectiveTabBg)
+        : null;
+
+    return {
+      isUnderline,
+      tabReports,
+      activeReport,
+      activeVsInactiveContrast,
+    };
+  });
+
+  for (const report of visualMetrics.tabReports) {
+    for (const bs of report.borderStyles) {
+      expect(
+        bs,
+        `${label} (${report.id}): native outset/inset border`
+      ).not.toBe("outset");
+      expect(
+        bs,
+        `${label} (${report.id}): native outset/inset border`
+      ).not.toBe("inset");
+    }
+    expect(
+      report.height,
+      `${label} (${report.id}): expected >= 44px tab height, got ${report.height}`
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      report.labelContrast,
+      `${label} (${report.id}): expected >= 4.5:1 label contrast, got ${report.labelContrast.toFixed(2)}`
+    ).toBeGreaterThanOrEqual(4.5);
+  }
+
+  expect(
+    visualMetrics.activeReport,
+    `${label}: expected an active [aria-selected="true"] tab`
+  ).not.toBeNull();
+  expect(
+    visualMetrics.activeReport!.indicatorContrastVsHost,
+    `${label}: expected >= 3:1 active indicator contrast, got ${visualMetrics.activeReport!.indicatorContrastVsHost.toFixed(2)}`
+  ).toBeGreaterThanOrEqual(3.0);
+  if (visualMetrics.isUnderline) {
+    expect(
+      visualMetrics.activeReport!.borderBottomWidth,
+      `${label}: expected underline active indicator width >= 2px`
+    ).toBeGreaterThanOrEqual(2);
+  } else if (visualMetrics.activeVsInactiveContrast !== null) {
+    expect(
+      visualMetrics.activeVsInactiveContrast,
+      `${label}: expected >= 3:1 active vs inactive tab fill contrast`
+    ).toBeGreaterThanOrEqual(3.0);
+  }
+
   // Verify roving tabindex invariant: exactly 1 tab has tabindex="0"
   await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
 
@@ -80,6 +218,27 @@ async function expectClinicalTabsKeyboardNavigation(
     await expect(tab).toBeFocused();
     await expect(tab).toHaveAttribute("aria-selected", "true");
     await expect(tab).toHaveAttribute("tabindex", "0");
+    const bounds = await tab.evaluate((el) => {
+      const list = el.closest('[role="tablist"]');
+      const tabRect = el.getBoundingClientRect();
+      const listRect = list
+        ? list.getBoundingClientRect()
+        : { left: 0, right: window.innerWidth };
+      return {
+        tabLeft: tabRect.left,
+        tabRight: tabRect.right,
+        listLeft: listRect.left,
+        listRight: listRect.right,
+      };
+    });
+    expect(
+      bounds.tabLeft,
+      `${label}: focused tab[${tabIndex}] clipped on left (${bounds.tabLeft} < ${bounds.listLeft})`
+    ).toBeGreaterThanOrEqual(bounds.listLeft - 1);
+    expect(
+      bounds.tabRight,
+      `${label}: focused tab[${tabIndex}] clipped on right (${bounds.tabRight} > ${bounds.listRight})`
+    ).toBeLessThanOrEqual(bounds.listRight + 1);
     const tabId = await tab.getAttribute("id");
     const panelId = await tab.getAttribute("aria-controls");
     expect(tabId, `${label}: tab id defined`).toBeTruthy();
@@ -398,8 +557,24 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(toggleBox!.width).toBeGreaterThanOrEqual(43.9);
     expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
 
+    const openChecklistTrigger = async () => {
+      if (
+        !(await page
+          .locator("#btn-onboarding-checklist-trigger")
+          .isVisible()
+          .catch(() => false)) &&
+        (await compactActionsBtn.isVisible().catch(() => false))
+      ) {
+        await compactActionsBtn.click();
+        await expect(
+          page.locator("#header-secondary-menu.is-open")
+        ).toBeVisible();
+      }
+      await page.locator("#btn-onboarding-checklist-trigger").click();
+    };
+
     await gotoHashRoute(page, "/overview");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openChecklistTrigger();
     await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
@@ -432,7 +607,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
     await page.locator("#persona-select").selectOption("site_crc");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openChecklistTrigger();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -2566,6 +2741,148 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(page.locator("#select-residency")).toBeVisible();
     await expect(page.locator("#select-trial-tier")).toBeVisible();
     await expectNoWcagViolations(page, "TrialSetupView (/onboarding/trial)");
+
+    // 6. StudyCanvasView embedded Start-stage ClinicalTabs (documents and training)
+    await gotoHashRoute(page, "/studies/DEMO-01?stage=start&section=documents");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="eTMF workspace views"]',
+      "StudyCanvasView documents tabs"
+    );
+
+    await gotoHashRoute(page, "/studies/DEMO-01?stage=start&section=training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expectClinicalTabsKeyboardNavigation(
+      page,
+      '[role="tablist"][aria-label="Protocol training workspace sections"]',
+      "StudyCanvasView training tabs"
+    );
+  });
+
+  test("ClinicalTabs overflow containment at 320x640 and 768x1024 keeps 0px horizontal overflow on /ctms and /ssu, preserves dark-theme contrast, and keeps #ticket-drawer-tab-attachments visible on ArrowRight", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 768, height: 1024 },
+    ]) {
+      await page.setViewportSize(vp);
+
+      // 1. /ctms: 0px horizontal overflow, >= 44px tab triggers, light & dark contrast
+      await gotoHashRoute(page, "/ctms");
+      await expect(page.locator("#section-ctms")).toBeVisible();
+      const ctmsScrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        ctmsScrollWidth,
+        `Expected 0px horizontal overflow on /ctms at ${vp.width}x${vp.height}, got scrollWidth=${ctmsScrollWidth}`
+      ).toBeLessThanOrEqual(vp.width);
+
+      await expectClinicalTabsKeyboardNavigation(
+        page,
+        '#section-ctms [role="tablist"]',
+        `CtmsView tabs at ${vp.width}x${vp.height}`
+      );
+      if (captureScreenshots && vp.width === 320) {
+        await page.screenshot({ path: "/tmp/ctms-tabs-320x640.png" });
+      }
+
+      // Verify dark-theme contrast on /ctms as well
+      await page.evaluate(() =>
+        document.documentElement.setAttribute("data-theme", "dark")
+      );
+      await expectClinicalTabsKeyboardNavigation(
+        page,
+        '#section-ctms [role="tablist"]',
+        `CtmsView tabs dark theme at ${vp.width}x${vp.height}`
+      );
+      await page.evaluate(() =>
+        document.documentElement.setAttribute("data-theme", "light")
+      );
+
+      // 2. /ssu: 0px horizontal overflow, >= 44px tab triggers, light & dark contrast
+      await gotoHashRoute(page, "/ssu");
+      await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+      const ssuScrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        ssuScrollWidth,
+        `Expected 0px horizontal overflow on /ssu at ${vp.width}x${vp.height}, got scrollWidth=${ssuScrollWidth}`
+      ).toBeLessThanOrEqual(vp.width);
+
+      await expectClinicalTabsKeyboardNavigation(
+        page,
+        '[role="tablist"][aria-label="Study startup view mode"]',
+        `SsuGreenlightConsole tabs at ${vp.width}x${vp.height}`
+      );
+      if (captureScreenshots && vp.width === 320) {
+        await page.screenshot({ path: "/tmp/ssu-tabs-320x640.png" });
+      }
+
+      // 3. /tickets -> TicketDetailDrawer: ArrowRight keeps #ticket-drawer-tab-attachments fully visible
+      await gotoHashRoute(page, "/tickets");
+      await expect(page.locator("button.ticket-card").first()).toBeVisible();
+      await page.locator("button.ticket-card").first().click();
+
+      const drawerTablist = page.locator(
+        '.drawer-panel[aria-labelledby="drawer-ticket-title"] [role="tablist"][aria-label="Ticket detail sections"]'
+      );
+      await expect(drawerTablist).toBeVisible();
+
+      const overviewTab = drawerTablist.locator("#ticket-drawer-tab-overview");
+      const attachmentsTab = drawerTablist.locator(
+        "#ticket-drawer-tab-attachments"
+      );
+      await overviewTab.focus();
+      await page.keyboard.press("Home");
+      await expect(overviewTab).toHaveAttribute("aria-selected", "true");
+
+      // Step through tabs with ArrowRight until reaching #ticket-drawer-tab-attachments (index 2)
+      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("ArrowRight");
+
+      await expect(attachmentsTab).toBeFocused();
+      await expect(attachmentsTab).toHaveAttribute("aria-selected", "true");
+
+      const attachmentBounds = await attachmentsTab.evaluate((el) => {
+        const list = el.closest('[role="tablist"]')!;
+        const tabRect = el.getBoundingClientRect();
+        const listRect = list.getBoundingClientRect();
+        return {
+          tabLeft: tabRect.left,
+          tabRight: tabRect.right,
+          tabHeight: tabRect.height,
+          listLeft: listRect.left,
+          listRight: listRect.right,
+          pageScrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+
+      expect(attachmentBounds.tabHeight).toBeGreaterThanOrEqual(44);
+      expect(
+        attachmentBounds.tabLeft,
+        `#ticket-drawer-tab-attachments clipped on left at ${vp.width}x${vp.height}`
+      ).toBeGreaterThanOrEqual(attachmentBounds.listLeft - 1);
+      expect(
+        attachmentBounds.tabRight,
+        `#ticket-drawer-tab-attachments clipped on right at ${vp.width}x${vp.height}`
+      ).toBeLessThanOrEqual(attachmentBounds.listRight + 1);
+      expect(attachmentBounds.pageScrollWidth).toBeLessThanOrEqual(vp.width);
+
+      if (captureScreenshots && vp.width === 320) {
+        await page.screenshot({
+          path: "/tmp/ticket-drawer-attachments-tab-320x640.png",
+        });
+      }
+
+      await page.keyboard.press("Escape");
+    }
   });
 
   test("ClinicalContextBar aligns [aria-current=page] into visible bounds with overflow cues and condensed mobile pills, and AppShell keeps #shell-context-bar sticky with <= 52px tablet chrome", async ({

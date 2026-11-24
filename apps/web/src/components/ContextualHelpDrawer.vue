@@ -799,13 +799,11 @@ import {
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   canonicalizeContextualRoute,
+  sanitizePseudonymousSubjectCode,
   useKnowledgeStore,
 } from "../stores/knowledge.js";
-import {
-  useAuthStore,
-  PERSONA_PRESETS,
-  normalizeRole,
-} from "../stores/auth.js";
+import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { compileSopMarkdownToHtml } from "../api/knowledge.js";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 
 function makeLucideIcon(nodes) {
@@ -909,23 +907,8 @@ const X = makeLucideIcon([
 ]);
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { useTicketMutationPermission } from "../utils/ticketPermissions";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
-
-const OPERATIONAL_MUTATION_ROLES = new Set([
-  "sponsor_admin",
-  "super_admin",
-  "sponsor_designer",
-  "data_manager",
-  "cra",
-  "monitor",
-  "safety_reviewer",
-  "safety_officer",
-  "sponsor_mm",
-  "crc",
-  "site_investigator",
-  "principal_investigator",
-  "investigator",
-]);
 
 const CLINICAL_ACRONYMS = {
   ecrf: "eCRF",
@@ -941,6 +924,7 @@ const CLINICAL_ACRONYMS = {
   usdm: "USDM",
   pi: "PI",
   sae: "SAE",
+  susar: "SUSAR",
   rtsm: "RTSM",
   irb: "IRB",
   iec: "IEC",
@@ -949,6 +933,32 @@ const CLINICAL_ACRONYMS = {
   capa: "CAPA",
   sla: "SLA",
   sop: "SOP",
+  rbac: "RBAC",
+  doa: "DoA",
+  edoa: "eDoA",
+  icf: "ICF",
+  siv: "SIV",
+  fpfv: "FPFV",
+  mvr: "MVR",
+  ip: "IP",
+  kri: "KRI",
+  qms: "QMS",
+  cec: "CEC",
+  dct: "DCT",
+  udi: "UDI",
+  dicom: "DICOM",
+  recist: "RECIST",
+  loinc: "LOINC",
+  cdisc: "CDISC",
+  odm: "ODM",
+  sdtm: "SDTM",
+  cra: "CRA",
+  crc: "CRC",
+  econsent: "eConsent",
+  epro: "ePRO",
+  ecoa: "eCOA",
+  meddra: "MedDRA",
+  whodrug: "WHODrug",
 };
 
 const LOWERCASE_CONNECTORS = new Set([
@@ -1007,18 +1017,32 @@ function resolveEscalationRoute() {
   return storeRoute;
 }
 
-function openHubRoute(path) {
+function resolveDrawerHubScope() {
   const scope = resolveWorkspaceNavigationScope(
     route,
     activeCanvasStore.value,
     undefined,
     activeStudyCode.value
   );
-  const scopedPath = buildScopedWorkflowPath(path, {
-    studyCode: scope.studyCode,
-    siteId: scope.siteId,
-    subjectCode: scope.subjectCode,
-  });
+  const storeScope = knowledgeStore.activeRouteScope || {};
+  const studyCode = scope.studyCode || storeScope.study_id || "";
+  const sameOrUnsetStoreStudy =
+    !studyCode || !storeScope.study_id || storeScope.study_id === studyCode;
+  const siteId =
+    scope.siteId || (sameOrUnsetStoreStudy ? storeScope.site_id || "" : "");
+  const rawSubject =
+    scope.subjectCode ||
+    (sameOrUnsetStoreStudy ? storeScope.subject_id || "" : "");
+  const subjectCode = sanitizePseudonymousSubjectCode(rawSubject);
+  return {
+    studyCode,
+    siteId,
+    subjectCode,
+  };
+}
+
+function openHubRoute(path) {
+  const scopedPath = buildScopedWorkflowPath(path, resolveDrawerHubScope());
   knowledgeStore.closeDrawer();
   const router =
     injectedRouter || instance?.appContext?.config?.globalProperties?.$router;
@@ -1031,26 +1055,8 @@ useEscapeClose(() => knowledgeStore.closeDrawer(), {
   isOpen: () => knowledgeStore.isOpen && !knowledgeStore.isEscalating,
 });
 
-const normalizedCallerRoles = computed(() =>
-  (authStore.rawRoles || []).map(normalizeRole).filter(Boolean)
-);
-
-const isReadOnlyAuditor = computed(() => {
-  if (authStore.currentPersona === "auditor") {
-    return true;
-  }
-  const roles = normalizedCallerRoles.value;
-  const hasAuditorRole = roles.some(
-    (r) => r === "auditor" || r === "tmf_auditor"
-  );
-  if (!hasAuditorRole) {
-    return false;
-  }
-  if (!authStore.isDemoMode) {
-    return true;
-  }
-  return !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r));
-});
+const { isReadOnlyTicketViewer: isReadOnlyAuditor } =
+  useTicketMutationPermission(authStore);
 
 const canonicalRoute = computed(() =>
   canonicalizeContextualRoute({
@@ -1075,6 +1081,18 @@ const displayedArticleHtml = computed(() => {
     knowledgeStore.primaryVersion?.body_html
   ) {
     return knowledgeStore.primaryVersion.body_html;
+  }
+  const fallbackMarkdown =
+    article.body_markdown ||
+    (!knowledgeStore.selectedArticle
+      ? knowledgeStore.primaryVersion?.body_markdown
+      : "") ||
+    "";
+  if (fallbackMarkdown) {
+    return compileSopMarkdownToHtml(
+      fallbackMarkdown,
+      knowledgeStore.activeSectionAnchor
+    );
   }
   return "";
 });
@@ -1319,6 +1337,11 @@ function handleTicketCreated(createdTicket) {
     ? ` (${createdTicket.assigned_queue})`
     : "";
   const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
+  const scopedTicketsBase = buildScopedWorkflowPath(
+    "/tickets",
+    resolveDrawerHubScope()
+  );
+  const refJoiner = scopedTicketsBase.includes("?") ? "&" : "?";
   toastStore.push({
     tone: "success",
     title: simulated
@@ -1329,7 +1352,7 @@ function handleTicketCreated(createdTicket) {
       refId && isScreenAvailable("tickets")
         ? {
             label: `Open ${refId}`,
-            to: `/tickets?ref=${encodeURIComponent(refId)}`,
+            to: `${scopedTicketsBase}${refJoiner}ref=${encodeURIComponent(refId)}`,
           }
         : null,
   });

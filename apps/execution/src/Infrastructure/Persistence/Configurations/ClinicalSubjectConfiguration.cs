@@ -128,6 +128,15 @@ public sealed class ClinicalSubjectConfiguration : IEntityTypeConfiguration<Clin
 
         builder.Property(x => x.EncryptedDemographics).HasMaxLength(int.MaxValue);
 
+        builder.Property(x => x.KernelEnrollmentId)
+            .HasColumnName("kernel_enrollment_id")
+            .HasColumnType("uuid");
+
+        builder.HasIndex(x => new { x.TenantId, x.KernelEnrollmentId })
+            .HasDatabaseName("IX_clinical_subjects_tenant_id_kernel_enrollment_id");
+
+        builder.Ignore(x => x.EnrollmentRef);
+
         // Rule 1 (LOCKED_FACTOR_MUTATION) is enforced once in the aggregate itself
         // (ClinicalSubject.UpdateStratFactors/UpdateDemographics) — this configuration only maps storage
         // shape, it does not re-enforce the guard; EF Core has no ORM-level `@validates`-equivalent trigger,

@@ -34,6 +34,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
+| 2660–2669 | Security (continued)                                                              |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -138,6 +139,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
 - [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) (2026-11-22)
 - [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) (2026-11-22)
+- [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) (2026-11-23)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)
@@ -462,7 +464,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
-- [ADR-2659: Active-Item Scroll Alignment, Overflow Cues, and Sticky Navigation Bars](2026-11-23-active-scroll-alignment-overflow-cues-and-sticky-navigation.md) (2026-11-23)
+- [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
+- [ADR-2661: Active-Item Scroll Alignment, Overflow Cues, and Sticky Navigation Bars](2026-11-23-active-scroll-alignment-overflow-cues-and-sticky-navigation.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -606,6 +609,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) (2026-10-19)
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
 - [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
+- [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) (2026-11-23)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

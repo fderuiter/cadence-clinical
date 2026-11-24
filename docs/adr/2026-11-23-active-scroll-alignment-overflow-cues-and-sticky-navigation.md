@@ -1,4 +1,4 @@
-# ADR-2659: Active-Item Scroll Alignment, Overflow Cues, and Sticky Navigation Bars
+# ADR-2661: Active-Item Scroll Alignment, Overflow Cues, and Sticky Navigation Bars
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

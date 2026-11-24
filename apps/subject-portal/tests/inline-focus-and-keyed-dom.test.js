@@ -20,6 +20,13 @@ import {
   renderSyncQueueList,
   resetSyncRetryInfo,
 } from "../src/index.js";
+import { retryInbox } from "../src/features/inbox.js";
+import { loadConsentDetails } from "../src/features/consent.js";
+import { retryTasks } from "../src/features/tasks.js";
+import {
+  MOCK_APPROVED_CONTENT,
+  MOCK_COMPREHENSION_CHECK,
+} from "../src/data/mock-data.js";
 import { logAuditRecord, renderLedger } from "../src/features/audit.js";
 import {
   clearAllSubmissions,
@@ -580,5 +587,207 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
     expect(document.activeElement?.id).toBe("unlock-pin");
     session.pinUnlock.isOpen = false;
     await settle();
+  });
+
+  it("hands off focus from #btn-retry-inbox to loaded inbox controls, heading on empty, or #btn-retry-inbox on repeated failure", async () => {
+    const session = useSessionStore();
+    session.session.isDemoMode = false;
+    session.session.token = "tok_live_retry";
+    session.session.userId = "subj_live_01";
+
+    showView("view-inbox");
+    state.notificationsLoading = false;
+    state.notificationsError = "Gateway unavailable";
+    renderInbox();
+    await settle();
+
+    const retryBtn = document.getElementById("btn-retry-inbox");
+    expect(retryBtn).not.toBeNull();
+    retryBtn.focus();
+    expect(document.activeElement).toBe(retryBtn);
+
+    // 1. Repeated failure keeps focus on #btn-retry-inbox
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Still offline"));
+    await retryInbox();
+    await settle();
+    expect(document.activeElement?.id).toBe("btn-retry-inbox");
+
+    // 2. Successful retry with unread notification focuses first interactive button in #inbox-container
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve([
+          {
+            id: "notif-recovered-1",
+            message: "Recovered study reminder",
+            channel: "IN_APP",
+            is_read: false,
+          },
+        ]),
+    });
+    retryBtn.focus();
+    await retryInbox();
+    await settle();
+    const container = document.getElementById("inbox-container");
+    expect(container?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(document.body);
+
+    // 3. Successful retry with empty notifications focuses #inbox-view-heading
+    state.notificationsError = "Temporary timeout";
+    renderInbox();
+    await settle();
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([]),
+    });
+    retryBtn.focus();
+    await retryInbox();
+    await settle();
+    expect(document.activeElement?.id).toBe("inbox-view-heading");
+  });
+
+  it("hands off focus from #btn-retry-consent on retry recovery/failure while keeping #consent-lang-selector focused during language changes", async () => {
+    const session = useSessionStore();
+    session.session.isDemoMode = false;
+    session.session.token = "tok_live_consent";
+    session.session.userId = "subj_live_01";
+
+    const mockConsentFetchSuccess = () => {
+      globalThis.fetch = vi.fn().mockImplementation(async (url) => {
+        if (String(url).includes("comprehension-checks")) {
+          return {
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve(
+                JSON.parse(JSON.stringify(MOCK_COMPREHENSION_CHECK))
+              ),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve(JSON.parse(JSON.stringify(MOCK_APPROVED_CONTENT))),
+        };
+      });
+    };
+
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("eConsent service unavailable"));
+
+    showView("view-consent");
+    await loadConsentDetails();
+    await settle();
+
+    const failureEl = document.getElementById("consent-failure");
+    const retryBtn = document.getElementById("btn-retry-consent");
+    expect(failureEl?.style.display).toBe("block");
+    expect(retryBtn).not.toBeNull();
+
+    // 1. Repeated failure restores focus to #btn-retry-consent
+    retryBtn.focus();
+    await loadConsentDetails();
+    await settle();
+    expect(document.activeElement?.id).toBe("btn-retry-consent");
+
+    // 2. Successful retry (unsigned) moves focus into #consent-content-wrapper interactive control
+    mockConsentFetchSuccess();
+    state.consentSigned = false;
+    retryBtn.focus();
+    await loadConsentDetails();
+    await settle();
+    const contentWrapper = document.getElementById("consent-content-wrapper");
+    expect(contentWrapper?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(document.body);
+
+    // 3. Language selector keeps focus in place during language switch
+    const langSelector = document.getElementById("consent-lang-selector");
+    expect(langSelector).not.toBeNull();
+    langSelector.focus();
+    langSelector.value = "es";
+    await loadConsentDetails();
+    await settle();
+    expect(document.activeElement).toBe(langSelector);
+
+    // 4. Successful retry when already signed moves focus to #consent-signed-heading
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("eConsent service unavailable"));
+    await loadConsentDetails();
+    await settle();
+    expect(failureEl?.style.display).toBe("block");
+
+    mockConsentFetchSuccess();
+    state.consentSigned = true;
+    retryBtn.focus();
+    await loadConsentDetails();
+    await settle();
+    expect(document.activeElement?.id).toBe("consent-signed-heading");
+  });
+
+  it("hands off focus from #btn-retry-tasks to recovered task controls or back to #btn-retry-tasks on repeated failure", async () => {
+    const session = useSessionStore();
+    session.session.isDemoMode = false;
+    session.session.token = "tok_live_tasks";
+    session.session.userId = "subj_live_01";
+
+    showView("view-tasks");
+    state.tasksLoading = false;
+    state.tasksError = "Unable to load study tasks";
+    state.assignmentsError = true;
+    renderTasks();
+    await settle();
+
+    const retryBtn = document.getElementById("btn-retry-tasks");
+    expect(retryBtn).not.toBeNull();
+
+    // 1. Repeated failure returns focus to #btn-retry-tasks
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error("Gateway unreachable"));
+    retryBtn.focus();
+    await retryTasks();
+    await settle();
+    expect(document.activeElement?.id).toBe("btn-retry-tasks");
+
+    // 2. Successful retry moves focus to first interactive control in #tasks-list-container
+    globalThis.fetch = vi.fn().mockImplementation(async (url) => {
+      if (String(url).includes("instruments")) {
+        return {
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve([
+              { id: "inst_recovered", name: "Morning Symptom Diary" },
+            ]),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve([
+            {
+              id: "task_recovered_1",
+              instrument_id: "inst_recovered",
+              status: "PENDING",
+              due_at: "2026-12-01T09:00:00Z",
+            },
+          ]),
+      };
+    });
+    retryBtn.focus();
+    await retryTasks();
+    await settle();
+
+    const tasksContainer = document.getElementById("tasks-list-container");
+    expect(tasksContainer?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement?.classList.contains("btn-start-task")).toBe(
+      true
+    );
   });
 });
