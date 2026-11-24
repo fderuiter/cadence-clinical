@@ -110,17 +110,11 @@ public sealed class ParallelBatchRuleValidator(
         if (records.Count > 0 && effectivePacks.Count > 0)
         {
             var sliceSize = Math.Max(1, (records.Count + parallelWorkers - 1) / parallelWorkers);
-            var slices = new List<IReadOnlyList<RuleRecord>>();
+            var slices = new List<(int Offset, int Count)>();
             for (var offset = 0; offset < records.Count; offset += sliceSize)
             {
                 var count = Math.Min(sliceSize, records.Count - offset);
-                var slice = new RuleRecord[count];
-                for (var i = 0; i < count; i++)
-                {
-                    slice[i] = records[offset + i];
-                }
-
-                slices.Add(slice);
+                slices.Add((offset, count));
             }
 
             var sliceCount = slices.Count;
@@ -135,20 +129,10 @@ public sealed class ParallelBatchRuleValidator(
                     var packIndex = slot / sliceCount;
                     var sliceIndex = slot % sliceCount;
                     var (packKey, pack) = effectivePacks[packIndex];
-                    var violations = evaluator.Evaluate(pack, context, slices[sliceIndex]);
-                    if (violations.Count == 0)
-                    {
-                        buffers[slot] = [];
-                        return ValueTask.CompletedTask;
-                    }
-
-                    var slotDetections = new ValidationDetection[violations.Count];
-                    for (var i = 0; i < violations.Count; i++)
-                    {
-                        slotDetections[i] = ValidationRunner.Detection(packKey, FindingTargetKind.DatasetRecord, violations[i]);
-                    }
-
-                    buffers[slot] = slotDetections;
+                    var (offset, count) = slices[sliceIndex];
+                    var sink = new SlotDetectionSink(packKey);
+                    evaluator.Evaluate(pack, context, new RuleRecordListCursor(records, offset, count), sink);
+                    buffers[slot] = sink.Detections;
                     return ValueTask.CompletedTask;
                 }).ConfigureAwait(false);
 
@@ -186,5 +170,18 @@ public sealed class ParallelBatchRuleValidator(
 
         jobStore.StoreJob(report);
         return report;
+    }
+
+    private sealed class SlotDetectionSink(string packKey) : IRuleViolationSink
+    {
+        private List<ValidationDetection>? _detections;
+
+        public IReadOnlyList<ValidationDetection> Detections => _detections ?? (IReadOnlyList<ValidationDetection>)[];
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            _detections ??= [];
+            _detections.Add(ValidationRunner.Detection(packKey, FindingTargetKind.DatasetRecord, violation));
+        }
     }
 }

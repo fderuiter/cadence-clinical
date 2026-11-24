@@ -54,8 +54,7 @@ signatures and audit digests shared by every Cadence service.
   ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md),
   [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
-- **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
-  used by `Cadence.Deid` for redaction manifests and de-identification certificates.
+- **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256), `AsymmetricSigner` (RSA/X.509, used by `Cadence.Deid` for redaction manifests and de-identification certificates), and `BiometricLivenessTokenService` + `BiometricLivenessOptions` (`AddCadenceBiometricLiveness()`, requiring `CADENCE_BIOMETRIC_LIVENESS_KEY` as base64 of 32 bytes at startup, bounding biometric liveness tokens to a 15-minute lifetime with 5-second clock skew on `IClock`, [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)).
 - **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `IAuditLogWriter`.
 - **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `AuditDigestEngine` take an
   `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one), and
