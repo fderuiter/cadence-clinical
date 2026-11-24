@@ -1,4 +1,3 @@
-import { unwrapResponse } from "../client";
 import {
   ASSERTION_ALREADY_LOCKED,
   ASSERTION_LOCKED,
@@ -8,13 +7,12 @@ import {
   extractKernelExplanation,
   KERNEL_AUTHORIZATION_DENIED,
   KERNEL_SUBSCRIPTION_EXPIRED,
-  kernelClient,
-  signedMutationHeaders,
-  streamKernelDownload,
   unversioned,
   type KernelSchemas,
   type KernelStreamedArtifact,
 } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelLock = KernelSchemas["Kernel_KernelLockResponse"];
 export type KernelStudyLocks = KernelSchemas["Kernel_KernelStudyLocksResponse"];
@@ -22,6 +20,13 @@ export type KernelLockReadiness =
   KernelSchemas["Kernel_KernelLockReadinessResponse"];
 export type KernelLockBlocker =
   KernelSchemas["Kernel_KernelLockBlockerResponse"];
+export type KernelLockBlockerKind =
+  | "OpenQuery"
+  | "MissingRequiredItem"
+  | "UnverifiedValue"
+  | "UnsignedForm"
+  | "UnopenedVisit"
+  | "ErrorFinding";
 export type KernelLockKind = KernelSchemas["Kernel_LockKind"];
 export type KernelLockMeaning = "Approved" | "Responsibility";
 export type StudyExportFormat =
@@ -151,7 +156,7 @@ export function describeLockError(error: unknown): string {
     if (parts.length > 0) {
       return parts.join(" ");
     }
-    return "This scope has open queries, missing required items, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
+    return "This scope has open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -165,152 +170,50 @@ export function describeLockError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function buildExportParams(
-  init: Record<string, string>,
-  q: { asOf?: string; validAt?: string; knownAt?: string }
-): string {
-  const params = new URLSearchParams(init);
-  if (q.asOf) params.set("as_of", q.asOf);
-  if (q.validAt) params.set("valid_at", q.validAt);
-  if (q.knownAt) params.set("known_at", q.knownAt);
-  return params.toString();
-}
-
-const STUDY_EXPORT_EXT: Record<StudyExportFormat, string> = {
-  csv: "csv",
-  odm_xml: "odm.xml",
-  dataset_json: "dataset.json",
-  sas_bundle: "sas_bundle.zip",
-  r_bundle: "r_bundle.zip",
-  study_archive: "study_archive.zip",
-};
-
-const CASEBOOK_EXPORT_EXT: Record<CasebookExportFormat, string> = {
-  json: "casebook.json",
-  odm_xml: "casebook.odm.xml",
-  html: "casebook.html",
-  pdf: "casebook.pdf",
-};
-
 export const kernelLocksApi = {
   /** Lists active and historical Frozen and Locked assertions in a study, masked per caller visibility and blinding (GET /api/v1/kernel/studies/{studyRef}/locks). */
-  listStudyLocks(
+  async listStudyLocks(
     studyRef: string,
     query: KernelStudyLocksQuery = {}
   ): Promise<KernelStudyLocks> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/locks", {
-        params: {
-          path: { studyRef: unversioned(studyRef) },
-          query: {
-            active_only: query.activeOnly,
-            as_of: query.asOf,
-            valid_at: query.validAt,
-            known_at: query.knownAt,
-          },
-        },
-      })
-    );
+    const { executeListStudyLocks } = await loadRouteTransport();
+    return executeListStudyLocks(studyRef, query);
   },
 
-  /** Evaluates lock readiness (open queries, missing required items, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
-  getStudyLockReadiness(
+  /** Evaluates all six lock readiness gates (open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  async getStudyLockReadiness(
     studyRef: string,
     scopeRef?: string
   ): Promise<KernelLockReadiness> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/locks/readiness", {
-        params: {
-          path: { studyRef: unversioned(studyRef) },
-          query: scopeRef ? { scope_ref: unversioned(scopeRef) } : undefined,
-        },
-      })
-    );
+    const { executeGetStudyLockReadiness } = await loadRouteTransport();
+    return executeGetStudyLockReadiness(studyRef, scopeRef);
   },
 
   /** Applies a signed Frozen or Locked assertion to a study, site, enrollment, form, or observation (POST /api/v1/kernel/locks). */
-  applyLock({
-    studyRef,
-    scopeRef,
-    kind,
-    meaning = "Approved",
-    lockId,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelApplyLock): Promise<KernelLock> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/locks", {
-        body: {
-          study_ref: unversioned(studyRef),
-          scope_ref: unversioned(scopeRef),
-          kind,
-          meaning,
-          ...(lockId ? { lock_id: lockId } : {}),
-          ...(attestationId ? { attestation_id: attestationId } : {}),
-        },
-        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
-      })
-    );
+  async applyLock(input: KernelApplyLock): Promise<KernelLock> {
+    const { executeApplyLock } = await loadRouteTransport();
+    return executeApplyLock(input);
   },
 
   /** Releases an active Frozen or Locked assertion with step-up re-authentication and reason (POST /api/v1/kernel/locks/{lockRef}/release). */
-  releaseLock({
-    lockRef,
-    studyRef,
-    meaning = "Responsibility",
-    assertionId,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelReleaseLock): Promise<KernelLock> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/locks/{lockRef}/release", {
-        params: { path: { lockRef: unversioned(lockRef) } },
-        body: {
-          study_ref: unversioned(studyRef),
-          meaning,
-          ...(assertionId ? { assertion_id: assertionId } : {}),
-          ...(attestationId ? { attestation_id: attestationId } : {}),
-        },
-        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
-      })
-    );
+  async releaseLock(input: KernelReleaseLock): Promise<KernelLock> {
+    const { executeReleaseLock } = await loadRouteTransport();
+    return executeReleaseLock(input);
   },
 
   /** Streams a study clinical snapshot or statistical/regulatory ZIP bundle at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
-  streamStudyExport({
-    studyRef,
-    format = "csv",
-    lockFilter = "locked_only",
-    asOf,
-    validAt,
-    knownAt,
-  }: KernelStudyExportQuery): Promise<KernelStreamedArtifact> {
-    const qs = buildExportParams(
-      { format, lock_filter: lockFilter },
-      { asOf, validAt, knownAt }
-    );
-    return streamKernelDownload(
-      `/api/v1/kernel/studies/${encodeURIComponent(unversioned(studyRef))}/exports?${qs}`,
-      `study-export.${STUDY_EXPORT_EXT[format] || "csv"}`
-    );
+  async streamStudyExport(
+    query: KernelStudyExportQuery
+  ): Promise<KernelStreamedArtifact> {
+    const { executeStreamStudyExport } = await loadRouteTransport();
+    return executeStreamStudyExport(query);
   },
 
   /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
-  streamEnrollmentCasebook({
-    enrollmentRef,
-    format = "json",
-    asOf,
-    validAt,
-    knownAt,
-  }: KernelCasebookExportQuery): Promise<KernelStreamedArtifact> {
-    const qs = buildExportParams({ format }, { asOf, validAt, knownAt });
-    return streamKernelDownload(
-      `/api/v1/kernel/enrollments/${encodeURIComponent(unversioned(enrollmentRef))}/casebook?${qs}`,
-      `participant.${CASEBOOK_EXPORT_EXT[format] || "casebook.json"}`
-    );
+  async streamEnrollmentCasebook(
+    query: KernelCasebookExportQuery
+  ): Promise<KernelStreamedArtifact> {
+    const { executeStreamEnrollmentCasebook } = await loadRouteTransport();
+    return executeStreamEnrollmentCasebook(query);
   },
 };

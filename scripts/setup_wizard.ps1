@@ -93,13 +93,6 @@ else {
             & pnpm install --frozen-lockfile
             if ($LASTEXITCODE -eq 0) {
                 Write-Ok "pnpm ${pnpmVersion}: workspace dependencies installed."
-                & pnpm --filter ui build
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Ok "packages/ui: shared UI package built."
-                }
-                else {
-                    Write-Blocking "pnpm --filter ui build failed — apps/web and apps/subject-portal import packages/ui/dist."
-                }
             }
             else {
                 Write-Blocking "pnpm install failed — see output above. Every 'pnpm cadence' command needs it."

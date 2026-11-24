@@ -111,7 +111,11 @@ import type {
   WorkspacePaletteOption,
 } from "../../canvas/palette";
 import { useAiAssistance } from "../../ai/aiAssistance";
-import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import {
+  participantNodeRef,
+  useStudyCanvasStore,
+} from "../../stores/studyCanvas";
+import { isDemoBuild } from "../../utils/demoMode";
 
 /**
  * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
@@ -159,6 +163,10 @@ const active = ref(0);
 // Execution accepts any non-blank study code up to 255 characters, compared exactly.
 const MAX_STUDY_CODE = 255;
 const MAX_RESULTS = 30;
+const DEMO_MAX_RESULTS = 80;
+const maxResults = computed(() =>
+  isDemoBuild() ? DEMO_MAX_RESULTS : MAX_RESULTS
+);
 const MAX_KERNEL_HITS = 5;
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DELAY_MS = 250;
@@ -382,7 +390,7 @@ const items = computed<PaletteItem[]>(() => {
   if (study) {
     for (const participant of allParticipants.value) {
       list.push({
-        key: `participant:${participant.id}`,
+        key: participantNodeRef(participant) || `participant:${participant.id}`,
         group: "Participant",
         label: participant.subject_id,
         detail: [
@@ -413,7 +421,7 @@ const results = computed<PaletteItem[]>(() => {
           .includes(needle)
       )
     : items.value;
-  const shown = [...matches.slice(0, MAX_RESULTS), ...studyHits.value];
+  const shown = [...matches.slice(0, maxResults.value), ...studyHits.value];
   // A sentence is a question for Assist, which answers by reading or proposing, never by writing (ADR-2635).
   if (
     aiEnabled.value &&

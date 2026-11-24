@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Devices;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -124,8 +129,7 @@ public static class DeviceEndpoints
         HttpContext httpContext,
         IDeviceApplicationService deviceService)
     {
-        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } denied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -138,11 +142,17 @@ public static class DeviceEndpoints
         DeviceInventoryCreateRequest request,
         HttpContext httpContext,
         IDeviceApplicationService deviceService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, request.StudyId, request.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await deviceService.RegisterInventoryAsync(request, ct).ConfigureAwait(false);
@@ -160,24 +170,38 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
 
         var result = await deviceService.ListInventoryAsync(study_id, effectiveSiteId, status, udi_di, lot_number, serial_number, ct).ConfigureAwait(false);
-        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
+        return TypedResults.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
     }
 
     private static async Task<IResult> DispenseDeviceAsync(
         DeviceDispensationRequest request,
         HttpContext httpContext,
         IDeviceApplicationService deviceService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, request.ScannedBarcode, ct) is { } denied)
+        var (denied, storedScope) = await GuardAndResolveDeviceMutationAsync(
+            httpContext,
+            deviceService,
+            request.StudyId,
+            request.SiteId,
+            request.DeviceInventoryId,
+            request.ScannedBarcode,
+            ct).ConfigureAwait(false);
+        if (denied is not null)
         {
             return denied;
+        }
+
+        if (await EnsureDeviceUnlockedAsync(lockGuard, request.StudyId, request.SiteId, request.SubjectId, storedScope, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         try
@@ -199,11 +223,25 @@ public static class DeviceEndpoints
         DeviceDeficiencyCreateRequest request,
         HttpContext httpContext,
         IDeviceApplicationService deviceService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, null, ct) is { } denied)
+        var (denied, storedScope) = await GuardAndResolveDeviceMutationAsync(
+            httpContext,
+            deviceService,
+            request.StudyId,
+            request.SiteId,
+            request.DeviceInventoryId,
+            null,
+            ct).ConfigureAwait(false);
+        if (denied is not null)
         {
             return denied;
+        }
+
+        if (await EnsureDeviceUnlockedAsync(lockGuard, request.StudyId, request.SiteId, request.SubjectId, storedScope, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await deviceService.LogDeficiencyAsync(request, ct).ConfigureAwait(false);
@@ -218,13 +256,13 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
 
         var result = await deviceService.ListDeficienciesAsync(study_id, effectiveSiteId, status, ct).ConfigureAwait(false);
-        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
+        return TypedResults.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
     }
 
     private static async Task<IResult> GetDeficiencyByIdAsync(
@@ -233,8 +271,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -250,7 +287,7 @@ public static class DeviceEndpoints
             return TypedResults.NotFound(new { code = "DEFICIENCY_NOT_FOUND", detail = $"Deficiency '{deficiency_id}' not found." });
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }
@@ -262,11 +299,25 @@ public static class DeviceEndpoints
         DeviceQuarantineCreateRequest request,
         HttpContext httpContext,
         IDeviceApplicationService deviceService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (await GuardDeviceMutationAsync(httpContext, deviceService, request.StudyId, request.SiteId, request.DeviceInventoryId, null, ct) is { } denied)
+        var (denied, storedScope) = await GuardAndResolveDeviceMutationAsync(
+            httpContext,
+            deviceService,
+            request.StudyId,
+            request.SiteId,
+            request.DeviceInventoryId,
+            null,
+            ct).ConfigureAwait(false);
+        if (denied is not null)
         {
             return denied;
+        }
+
+        if (await EnsureDeviceUnlockedAsync(lockGuard, request.StudyId, request.SiteId, null, storedScope, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await deviceService.InitiateQuarantineAsync(request, ct).ConfigureAwait(false);
@@ -281,32 +332,39 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, site_id, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
 
         var result = await deviceService.ListQuarantinesAsync(study_id, effectiveSiteId, status, ct).ConfigureAwait(false);
-        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
+        return TypedResults.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
     }
 
     private static async Task<IResult> ReleaseQuarantineAsync(
         DeviceQuarantineReleaseRequest request,
         HttpContext httpContext,
         IDeviceApplicationService deviceService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
 
         if (Guid.TryParse(request.QuarantineId, out var qGuid)
-            && await deviceService.GetQuarantineByIdAsync(qGuid, ct).ConfigureAwait(false) is { } quarantine
-            && ExecutionScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId) is { } recordDenied)
+            && await deviceService.GetQuarantineByIdAsync(qGuid, ct).ConfigureAwait(false) is { } quarantine)
         {
-            return recordDenied;
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, quarantine.StudyId, quarantine.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
+            {
+                return recordDenied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, quarantine.StudyId, quarantine.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
+            }
         }
 
         try
@@ -326,7 +384,7 @@ public static class DeviceEndpoints
         IDeviceApplicationService deviceService,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, study_id, null, out var siteFilter, out _) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, study_id, null, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -338,7 +396,7 @@ public static class DeviceEndpoints
         return TypedResults.Ok(result);
     }
 
-    private static async Task<IResult?> GuardDeviceMutationAsync(
+    private static async Task<(IResult? Denied, (string StudyId, string SiteId)? StoredScope)> GuardAndResolveDeviceMutationAsync(
         HttpContext httpContext,
         IDeviceApplicationService deviceService,
         string studyId,
@@ -347,14 +405,39 @@ public static class DeviceEndpoints
         string? scannedBarcode,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } requestDenied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
         {
-            return requestDenied;
+            return (requestDenied, null);
         }
 
         var storedScope = await deviceService.GetInventoryScopeAsync(studyId, deviceInventoryId, scannedBarcode, ct).ConfigureAwait(false);
-        return storedScope is { } s
-            ? ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId)
+        var storedDenied = storedScope is { } s
+            ? ClinicalScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
             : null;
+        return (storedDenied, storedScope);
+    }
+
+    private static async Task<IResult?> EnsureDeviceUnlockedAsync(
+        IKernelLockGuard? lockGuard,
+        string studyId,
+        string siteId,
+        string? subjectId,
+        (string StudyId, string SiteId)? storedScope,
+        CancellationToken ct)
+    {
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, studyId, siteId, subjectId, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
+        }
+
+        if (storedScope is { } s
+            && (!string.Equals(s.StudyId, studyId, StringComparison.Ordinal)
+                || !string.Equals(s.SiteId, siteId, StringComparison.Ordinal))
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, s.StudyId, s.SiteId, subjectId, ct).ConfigureAwait(false) is { } storedLocked)
+        {
+            return storedLocked;
+        }
+
+        return null;
     }
 }

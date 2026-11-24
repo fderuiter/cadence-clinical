@@ -2,9 +2,9 @@
 // inputs, radio grids, visual analog sliders) and their query flag and panel.
 
 const SLIDER_TOUCHED_BADGE_STYLE =
-  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-surface); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px;";
+  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-surface); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
 const SLIDER_UNTOUCHED_BADGE_STYLE =
-  "background: var(--semantic-color-surface); color: var(--semantic-color-text-secondary); border: 1px solid var(--semantic-color-border-control); padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 14px;";
+  "background: var(--semantic-color-surface); color: var(--semantic-color-text-secondary); border: 1px solid var(--semantic-color-border-control); padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
 
 export function markClinicalSliderTouched(inputEl, explicitValue = undefined) {
   if (!inputEl) return;
@@ -66,11 +66,11 @@ export function createClinicalSlider(
   </label>
   <div class="vas-slider-wrapper" style="background: var(--semantic-color-surface-muted); padding: 16px; border: 1px solid var(--semantic-color-border-control); border-radius: 8px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <span class="vas-min-label" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${minLabel}</span>
-      <span class="vas-value-badge" id="${id}_display" data-state="${initialBadgeState}" style="${initialBadgeStyle}">
+      <span class="vas-min-label tabular-nums" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${minLabel}</span>
+      <span class="vas-value-badge tabular-nums" id="${id}_display" data-state="${initialBadgeState}" style="${initialBadgeStyle}">
         ${initialDisplay}
       </span>
-      <span class="vas-max-label" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${maxLabel}</span>
+      <span class="vas-max-label tabular-nums" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${maxLabel}</span>
     </div>
     <div class="input-wrapper" style="position: relative;">
       <input
@@ -81,6 +81,7 @@ export function createClinicalSlider(
         max="${maxVal}"
         step="${stepVal}"
         value="${initialValue}"
+        data-tabular-nums="true"
         data-touched="${initialTouched}"${ariaValueTextAttr}
         class="vas-slider-input"
         style="width: 100%; cursor: pointer; accent-color: ${initialAccentColor}; min-height: var(--touch-target-min); height: var(--touch-target-min);"
@@ -105,10 +106,30 @@ export function createClinicalInput(
   const isNumeric =
     attributes.type === "numeric" || attributes.type === "number";
   const inputType = isNumeric ? "number" : attributes.type || "text";
-  const inputModeAttr =
-    attributes.inputmode || (isNumeric ? "numeric" : "")
-      ? ` inputmode="${attributes.inputmode || "numeric"}"`
-      : "";
+  const resolvedInputMode =
+    attributes.inputmode || (isNumeric ? "numeric" : "");
+  const inputModeAttr = resolvedInputMode
+    ? ` inputmode="${resolvedInputMode}"`
+    : "";
+  const explicitTabular = attributes["data-tabular-nums"];
+  const shouldUseTabularNums =
+    explicitTabular === false || explicitTabular === "false"
+      ? false
+      : explicitTabular !== undefined && explicitTabular !== null
+        ? true
+        : isNumeric ||
+          /^(date|datetime-local|time|month|week|tel|range)$/.test(inputType) ||
+          /^(numeric|decimal)$/.test(resolvedInputMode);
+  const tabularAttrValue =
+    explicitTabular !== undefined &&
+    explicitTabular !== null &&
+    explicitTabular !== "" &&
+    explicitTabular !== true
+      ? String(explicitTabular)
+      : "true";
+  const tabularNumsAttr = shouldUseTabularNums
+    ? ` data-tabular-nums="${tabularAttrValue}"`
+    : "";
 
   const containerAttrs = Object.entries(attributes)
     .filter(([k]) => k !== "type" && k !== "inputmode")
@@ -122,7 +143,7 @@ export function createClinicalInput(
 <div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${containerAttrs}>
   <label for="${id}">${label}</label>
   <div class="input-wrapper">
-    <input type="${inputType}" id="${id}" name="${id}" value="${value}"${inputModeAttr} />
+    <input type="${inputType}" id="${id}" name="${id}" value="${value}"${inputModeAttr}${tabularNumsAttr} />
     ${queryFlagHTML}
   </div>
   ${queryPanelHTML}

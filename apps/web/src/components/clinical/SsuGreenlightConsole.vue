@@ -4,10 +4,9 @@
     <ClinicalTabs
       :model-value="viewMode"
       :tabs="viewModeTabs"
+      variant="pills"
       aria-label="Study startup view mode"
       id-prefix="ssu-console"
-      list-class="view-mode-bar"
-      tab-class="view-tab-btn"
       @update:model-value="handleViewModeChange"
     />
 
@@ -100,7 +99,7 @@
               Jurisdiction: {{ activeCountry }}
             </span>
           </div>
-          <h2 class="console-title">
+          <h2 class="console-title" tabindex="-1">
             Country-Level Multi-Site Activation Matrix
           </h2>
           <p class="console-subtitle">
@@ -126,7 +125,10 @@
             @click="openBatchCertifyModal"
           >
             <span class="btn-icon">🛡️</span> Batch Certify Country Sites
-            <span v-if="selectedSiteIds.size > 0" class="btn-counter-badge">
+            <span
+              v-if="selectedSiteIds.size > 0"
+              class="btn-counter-badge tabular-nums"
+            >
               {{ selectedSiteIds.size }}
             </span>
           </button>
@@ -221,22 +223,30 @@
       <div class="metrics-row">
         <div class="metric-card">
           <span class="metric-label">Total Country Sites</span>
-          <span class="metric-value">{{ matrixSites.length }}</span>
+          <span class="metric-value tabular-nums">{{
+            matrixSites.length
+          }}</span>
           <span class="metric-sub">Cohort in {{ activeCountry }}</span>
         </div>
         <div class="metric-card metric-success">
           <span class="metric-label">Fully Compliant (100%)</span>
-          <span class="metric-value">{{ compliantSites.length }}</span>
+          <span class="metric-value tabular-nums">{{
+            compliantSites.length
+          }}</span>
           <span class="metric-sub">Ready for Batch Activation</span>
         </div>
         <div class="metric-card metric-danger">
           <span class="metric-label">Non-Compliant Exceptions</span>
-          <span class="metric-value">{{ nonCompliantSites.length }}</span>
+          <span class="metric-value tabular-nums">{{
+            nonCompliantSites.length
+          }}</span>
           <span class="metric-sub">Action Required</span>
         </div>
         <div class="metric-card metric-info">
           <span class="metric-label">Greenlight Certified</span>
-          <span class="metric-value">{{ certifiedSitesCount }}</span>
+          <span class="metric-value tabular-nums">{{
+            certifiedSitesCount
+          }}</span>
           <span class="metric-sub">Trial Execution Un-gated</span>
         </div>
       </div>
@@ -297,7 +307,7 @@
             class="btn-icon-only"
             label="Dismiss batch greenlight certification banner"
             title="Dismiss"
-            @click="batchSuccessData = null"
+            @click="dismissBatchSuccess"
           >
             ✖
           </ClinicalIconButton>
@@ -515,6 +525,7 @@
 
               <td class="col-action">
                 <button
+                  :id="`btn-inspect-site-${site.site_id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   title="Inspect 6-Facet Scorecard and Essential Documents"
@@ -679,7 +690,7 @@
               {{ greenlightStatusBadgeText }}
             </span>
           </div>
-          <h2 class="console-title">
+          <h2 class="console-title" tabindex="-1">
             Site Greenlight Console: {{ activeSiteId }}
           </h2>
           <p class="console-subtitle">
@@ -1066,7 +1077,13 @@
 </template>
 
 <script setup>
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+  handoffFocus,
+  useInlineFocusHandoff,
+} from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";
@@ -1406,14 +1423,46 @@ function openBatchCertifyModal() {
   showBatchCertifyModal.value = true;
 }
 
-function inspectSiteDetail(site) {
-  activeSiteId.value = site.site_id;
-  switchToSingleView();
+const siteInspectHandoff = useInlineFocusHandoff({
+  closeFallback: ".matrix-view-container .console-title",
+});
+
+function dismissBatchSuccess() {
+  batchSuccessData.value = null;
+  void handoffFocus(".matrix-view-container .console-title");
 }
 
-function switchToMatrixView() {
+function inspectSiteDetail(site) {
+  siteInspectHandoff.rememberTrigger(`[id="btn-inspect-site-${site.site_id}"]`);
+  activeSiteId.value = site.site_id;
+  switchToSingleView();
+  void siteInspectHandoff.handoff(".single-view-container .console-title");
+}
+
+async function switchToMatrixView() {
+  const startedInSingleView =
+    typeof document !== "undefined" &&
+    Boolean(
+      document
+        .querySelector(".single-view-container")
+        ?.contains(document.activeElement)
+    );
+  const returnCandidates = [
+    activeSiteId.value ? `[id="btn-inspect-site-${activeSiteId.value}"]` : null,
+    ".matrix-view-container .console-title",
+  ];
   viewMode.value = "matrix";
-  fetchCountryMatrix();
+  if (startedInSingleView) {
+    void siteInspectHandoff.restoreTrigger(returnCandidates);
+  }
+  await fetchCountryMatrix();
+  if (
+    startedInSingleView &&
+    typeof document !== "undefined" &&
+    (!document.activeElement || document.activeElement === document.body)
+  ) {
+    void siteInspectHandoff.restoreTrigger(returnCandidates);
+  }
 }
 
 function switchToSingleView() {
@@ -1624,36 +1673,22 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   padding: 24px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.view-mode-bar {
+.matrix-view-container,
+.single-view-container {
   display: flex;
-  gap: 12px;
-  border-bottom: 2px solid var(--semantic-color-border);
-  padding-bottom: 12px;
-}
-
-.view-tab-btn {
-  padding: 8px 16px;
-  background: var(--semantic-color-surface-header);
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.view-tab-btn.active {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
-  border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 2px 4px rgba(29, 78, 216, 0.2);
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .console-header {
@@ -1731,8 +1766,11 @@ onMounted(() => {
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .role-note {
@@ -1775,12 +1813,18 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group-inline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
@@ -1794,12 +1838,17 @@ onMounted(() => {
   font-size: 0.875rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .metric-card {
@@ -1843,18 +1892,26 @@ onMounted(() => {
 
 .batch-action-bar {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: space-between;
   align-items: center;
   background: var(--semantic-color-info-bg);
   padding: 12px 16px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-info-border);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .batch-selection-info {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .selection-count-text {
@@ -1913,9 +1970,13 @@ onMounted(() => {
 }
 
 .matrix-table-card {
+  position: relative;
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .matrix-table {
@@ -2219,12 +2280,16 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .facets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .facet-card {
@@ -2297,8 +2362,17 @@ onMounted(() => {
 
 .readiness-gauge {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .ssu-greenlight-console {
+    padding: 12px;
+  }
 }
 
 .gauge-bar-outer {

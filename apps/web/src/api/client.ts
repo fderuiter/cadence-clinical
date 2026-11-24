@@ -168,7 +168,9 @@ async function dispatchWithDynamicBase(
   return executeWithSingleFlightRetry(input, init);
 }
 
-export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
+export function createOpenApiClient<T extends {} = Record<string, unknown>>(
+  baseUrl?: string
+) {
   const hasExplicitBaseUrl = baseUrl !== undefined;
   let inner: ReturnType<typeof createClient<T>> | null = null;
   const pendingMiddleware: Middleware[] = [];

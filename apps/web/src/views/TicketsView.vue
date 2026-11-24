@@ -18,32 +18,127 @@
         </p>
       </div>
 
-      <div class="header-action-group">
-        <button
-          v-if="demoBuild"
-          class="btn btn-secondary"
-          title="Export Regulatory Audit Trail CSV"
-          @click="exportAuditTrail('csv')"
+      <div class="header-action-stack">
+        <div class="header-action-group">
+          <button
+            v-if="demoBuild"
+            type="button"
+            class="btn btn-secondary"
+            title="Export Regulatory Audit Trail CSV"
+            @click="exportAuditTrail('csv')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="btn-icon-svg"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+            <span>Export CSV</span>
+          </button>
+          <button
+            v-if="demoBuild"
+            type="button"
+            class="btn btn-secondary"
+            title="Export Regulatory Audit Trail JSON"
+            @click="exportAuditTrail('json')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="btn-icon-svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <path d="M14 2v6h6" />
+              <path
+                d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"
+              />
+              <path
+                d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"
+              />
+            </svg>
+            <span>Export JSON</span>
+          </button>
+          <button
+            id="btn-create-ticket"
+            type="button"
+            class="btn btn-primary"
+            :disabled="!canMutateTicket"
+            :aria-disabled="!canMutateTicket ? 'true' : undefined"
+            :aria-describedby="
+              !canMutateTicket ? 'tickets-auditor-readonly-note' : undefined
+            "
+            :title="
+              !canMutateTicket
+                ? auditorReadOnlyExplanation
+                : 'Log New Clinical Issue'
+            "
+            @click="openCreateTicketModal"
+          >
+            <svg
+              v-if="!canMutateTicket"
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="btn-icon-svg"
+              aria-hidden="true"
+            >
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <svg
+              v-else
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="btn-icon-svg"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+            <span>Log Issue</span>
+          </button>
+        </div>
+        <p
+          v-if="!canMutateTicket"
+          id="tickets-auditor-readonly-note"
+          class="auditor-readonly-note"
         >
-          <span class="btn-icon">📊</span> Export CSV
-        </button>
-        <button
-          v-if="demoBuild"
-          class="btn btn-secondary"
-          title="Export Regulatory Audit Trail JSON"
-          @click="exportAuditTrail('json')"
-        >
-          <span class="btn-icon">📄</span> Export JSON
-        </button>
-        <button
-          id="btn-create-ticket"
-          type="button"
-          class="btn btn-primary"
-          title="Log New Clinical Issue"
-          @click="isCreateModalOpen = true"
-        >
-          <span class="btn-icon">➕</span> Log Issue
-        </button>
+          {{ auditorReadOnlyExplanation }}
+        </p>
       </div>
     </div>
 
@@ -56,7 +151,7 @@
       >
         <span class="stat-icon alert-icon" aria-hidden="true">🎫</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ activeTicketsCount }}
           </span>
           <span class="stat-label">Active Clinical Issues</span>
@@ -69,7 +164,7 @@
       >
         <span class="stat-icon capa-icon" aria-hidden="true">🚨</span>
         <span class="stat-details">
-          <span class="stat-value text-danger">
+          <span class="stat-value text-danger tabular-nums">
             {{ criticalTicketsCount }}
           </span>
           <span class="stat-label">Critical GxP Deviations</span>
@@ -80,7 +175,7 @@
         <div class="stat-details">
           <div
             id="kpi-sla-compliance"
-            class="stat-value"
+            class="stat-value tabular-nums"
             :class="slaComplianceClass"
           >
             {{ slaComplianceDisplay }}
@@ -91,7 +186,7 @@
       <div class="stat-card">
         <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
-          <div id="kpi-mttr" class="stat-value">
+          <div id="kpi-mttr" class="stat-value tabular-nums">
             {{ mttrDisplay }}
           </div>
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
@@ -104,7 +199,7 @@
       >
         <span class="stat-icon breach-icon" aria-hidden="true">⏸</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ pausedTicketsCount }}
           </span>
           <span class="stat-label">SLA Paused (Waiting Site)</span>
@@ -188,6 +283,7 @@
           class="filter-select scope-filter-input"
           aria-label="Filter issues by study"
           placeholder="Study (all)"
+          @change="applyTicketScope"
         />
         <input
           id="tickets-site-filter"
@@ -196,6 +292,7 @@
           class="filter-select scope-filter-input"
           aria-label="Filter issues by site"
           placeholder="Site (all)"
+          @change="applyTicketScope"
         />
         <input
           id="tickets-subject-filter"
@@ -210,6 +307,7 @@
       <ClinicalTabs
         v-model="viewMode"
         :tabs="viewModeTabs"
+        variant="segmented"
         aria-label="Tickets workspace view mode"
         id-prefix="tickets-view"
         list-class="view-mode-toggle"
@@ -218,7 +316,10 @@
     </div>
 
     <!-- Bulk Action Toolbar (Demo mode only) -->
-    <div v-if="demoBuild && selectedTicketCount > 0" class="bulk-action-bar">
+    <div
+      v-if="demoBuild && canMutateTicket && selectedTicketCount > 0"
+      class="bulk-action-bar"
+    >
       <div class="bulk-info">
         <span class="bulk-count-badge"
           >{{ selectedTicketCount }} ticket(s) selected</span
@@ -707,7 +808,11 @@
 
     <!-- Ticket Create Modal -->
     <TicketCreateModal
+      v-if="canMutateTicket"
       :is-open="isCreateModalOpen"
+      :default-study-id="defaultCreateStudyId"
+      :default-site-id="defaultCreateSiteId"
+      :default-subject-id="defaultCreateSubjectId"
       @close="isCreateModalOpen = false"
       @created="handleTicketCreated"
     />
@@ -732,19 +837,36 @@ import {
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
+import { useAuthStore } from "../stores/auth.js";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
-import { useKnowledgeStore } from "../stores/knowledge.js";
+import {
+  sanitizePseudonymousSubjectCode,
+  useKnowledgeStore,
+} from "../stores/knowledge.js";
+import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { useTicketMutationPermission } from "../utils/ticketPermissions";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const demoBuild = isDemoBuild();
 const instance = getCurrentInstance();
 const { route, router } = resolveRouteAndRouter();
+const authStore = useAuthStore();
+const { canMutateTicket, auditorReadOnlyExplanation } =
+  useTicketMutationPermission(authStore);
 const scopeStore = useClinicalScopeStore();
+function getEffectiveRoute() {
+  return route ?? instance?.proxy?.$route ?? null;
+}
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
 const initialRouteScope = readRouteScopeQuery(route);
+const hydratedScope = resolveHydratedWorkspaceScope(getEffectiveRoute());
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
@@ -763,20 +885,25 @@ const searchQuery = ref("");
 const filterCategory = ref("ALL");
 const filterSeverity = ref("ALL");
 const filterStatus = ref("ALL");
-const filterStudyId = ref(initialRouteScope.studyId);
-const filterSiteId = ref(initialRouteScope.siteId);
+const filterStudyId = ref(initialRouteScope.studyId || hydratedScope.studyId);
+const filterSiteId = ref(initialRouteScope.siteId || hydratedScope.siteId);
 const filterSubjectId = ref(initialRouteScope.subjectId);
 
-if (route?.query) {
-  if (initialRouteScope.studyId) {
-    scopeStore.activeStudyId = initialRouteScope.studyId;
-  }
-  if (initialRouteScope.siteId) {
-    scopeStore.activeSiteId = initialRouteScope.siteId;
-  }
-  if (initialRouteScope.subjectId) {
-    scopeStore.activeSubjectId = initialRouteScope.subjectId;
-  }
+if (filterStudyId.value || filterSiteId.value) {
+  syncWorkspaceScope({
+    ...(filterStudyId.value ? { studyId: filterStudyId.value } : {}),
+    ...(filterSiteId.value || filterStudyId.value
+      ? { siteId: filterSiteId.value }
+      : {}),
+    router,
+    route: getEffectiveRoute(),
+    syncRouteQuery:
+      !demoBuild &&
+      Boolean(initialRouteScope.studyId || initialRouteScope.siteId),
+  });
+}
+if (route?.query && initialRouteScope.subjectId) {
+  scopeStore.activeSubjectId = initialRouteScope.subjectId;
 }
 
 // Selection & Batch Action State
@@ -830,6 +957,50 @@ const selectedTicket = ref({});
 const selectedTicketComments = ref([]);
 const selectedTicketAttachments = ref([]);
 const selectedTicketAuditLogs = ref([]);
+
+const defaultCreateStudyId = computed(
+  () =>
+    filterStudyId.value.trim() ||
+    scopeStore.activeStudyId.trim() ||
+    (getSyncedStudyScope() || "").trim()
+);
+
+const defaultCreateSiteId = computed(() => {
+  if (filterSiteId.value.trim()) {
+    return filterSiteId.value.trim();
+  }
+  const activeStudy = defaultCreateStudyId.value;
+  const storeStudy = scopeStore.activeStudyId.trim();
+  if (!activeStudy || !storeStudy || storeStudy === activeStudy) {
+    return scopeStore.activeSiteId.trim();
+  }
+  return "";
+});
+
+const defaultCreateSubjectId = computed(() => {
+  const candidate =
+    filterSubjectId.value.trim() ||
+    (!defaultCreateStudyId.value ||
+    !scopeStore.activeStudyId.trim() ||
+    scopeStore.activeStudyId.trim() === defaultCreateStudyId.value
+      ? scopeStore.activeSubjectId.trim()
+      : "");
+  return sanitizePseudonymousSubjectCode(candidate);
+});
+
+const openCreateTicketModal = () => {
+  if (!canMutateTicket.value) {
+    return;
+  }
+  isCreateModalOpen.value = true;
+};
+
+watch(canMutateTicket, (allowed) => {
+  if (!allowed) {
+    isCreateModalOpen.value = false;
+    clearSelection();
+  }
+});
 
 // Initial Seed Scenario Data for Demo Workspace
 const initialMockTickets = [
@@ -942,9 +1113,9 @@ function mergeDemoEscalatedTickets(baseTickets) {
 }
 
 function getRouteRefParam() {
-  const proxyRoute = instance?.proxy?.$route;
+  const activeRoute = getEffectiveRoute();
   const raw =
-    proxyRoute?.query?.ref ??
+    activeRoute?.query?.ref ??
     (typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("ref")
       : null);
@@ -1006,15 +1177,22 @@ watch(
     route?.query?.subjectId,
     route?.query?.participant,
   ],
-  () => {
+  async () => {
     if (!route?.query) return;
     const nextScope = readRouteScopeQuery(route);
+    const prevStudy = filterStudyId.value;
+    const prevSite = filterSiteId.value;
     filterStudyId.value = nextScope.studyId;
     filterSiteId.value = nextScope.siteId;
     filterSubjectId.value = nextScope.subjectId;
-    scopeStore.activeStudyId = nextScope.studyId;
-    scopeStore.activeSiteId = nextScope.siteId;
+    syncWorkspaceScope({
+      studyId: nextScope.studyId,
+      siteId: nextScope.siteId,
+    });
     scopeStore.activeSubjectId = nextScope.subjectId;
+    if (nextScope.studyId !== prevStudy || nextScope.siteId !== prevSite) {
+      await fetchTicketsFromApi();
+    }
   }
 );
 
@@ -1024,8 +1202,10 @@ watch(
     const trimmedStudy = nextStudy.trim();
     const trimmedSite = nextSite.trim();
     const trimmedSubject = nextSubject.trim();
-    scopeStore.activeStudyId = trimmedStudy;
-    scopeStore.activeSiteId = trimmedSite;
+    syncWorkspaceScope({
+      studyId: trimmedStudy,
+      siteId: trimmedSite,
+    });
     scopeStore.activeSubjectId = trimmedSubject;
     void replaceRouteQueryParams(router, route, {
       studyId: trimmedStudy || null,
@@ -1036,7 +1216,7 @@ watch(
 );
 
 watch(
-  () => instance?.proxy?.$route?.query?.ref,
+  () => getEffectiveRoute()?.query?.ref,
   async (nextRef, prevRef) => {
     if (nextRef && nextRef !== prevRef) {
       await openDeepLinkedTicketIfRequested();
@@ -1044,9 +1224,30 @@ watch(
   }
 );
 
+const applyTicketScope = async () => {
+  const synced = syncWorkspaceScope({
+    studyId: filterStudyId.value.trim(),
+    siteId: filterSiteId.value.trim(),
+    router,
+    route: getEffectiveRoute(),
+    syncRouteQuery: true,
+  });
+  filterStudyId.value = synced.studyId;
+  filterSiteId.value = synced.siteId;
+  await fetchTicketsFromApi();
+};
+
 const fetchTicketsFromApi = async () => {
   try {
-    const res = await ticketsApi.listTickets();
+    const query = {};
+    const scopedStudy = filterStudyId.value.trim();
+    const scopedSite = filterSiteId.value.trim();
+    if (scopedStudy) query.study_id = scopedStudy;
+    if (scopedSite) query.site_id = scopedSite;
+    const res =
+      Object.keys(query).length > 0
+        ? await ticketsApi.listTickets(query)
+        : await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
       tickets.value = demoBuild ? mergeDemoEscalatedTickets(res) : res;
     }
@@ -1597,9 +1798,29 @@ const exportAuditTrail = (format) => {
   margin: 0;
 }
 
+.header-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .header-action-group {
   display: flex;
   gap: 10px;
+}
+
+.btn-icon-svg {
+  flex-shrink: 0;
+}
+
+.auditor-readonly-note {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--semantic-color-text-secondary);
+  text-align: right;
 }
 
 /* Stats Cards Grid */
@@ -1672,6 +1893,7 @@ const exportAuditTrail = (format) => {
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.2;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .stat-label {
@@ -1729,6 +1951,40 @@ const exportAuditTrail = (format) => {
   min-height: var(--semantic-control-target-min, 24px);
 }
 
+.scope-filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-input {
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  width: 128px;
+}
+
+@media (pointer: coarse) {
+  .filter-input {
+    font-size: 1rem;
+    min-height: 44px;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .filter-group {
   display: flex;
   flex-wrap: wrap;
@@ -1747,30 +2003,6 @@ const exportAuditTrail = (format) => {
 .scope-filter-input {
   width: 132px;
   font-family: var(--font-mono);
-}
-
-.view-mode-toggle {
-  display: flex;
-  background: var(--semantic-color-surface-header);
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.view-toggle-btn {
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.view-toggle-btn.active {
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* KANBAN BOARD VIEW */
@@ -1840,6 +2072,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 10px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .column-cards {
@@ -1924,6 +2157,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .sla-tag-normal {
@@ -2103,6 +2337,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-info-light);
   padding: 4px 10px;
   border-radius: 12px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .bulk-actions {

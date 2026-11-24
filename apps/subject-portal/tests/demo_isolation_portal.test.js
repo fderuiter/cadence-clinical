@@ -1,7 +1,10 @@
 import "fake-indexeddb/auto";
+import { createApp, nextTick } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
 import { setupServer } from "msw/node";
 import { getApiBaseUrl } from "../src/api/client.js";
+import DemoBanner from "../src/components/DemoBanner.vue";
 import { login, logout } from "../src/features/auth.js";
 import {
   normalizePortalBasePath,
@@ -191,6 +194,40 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
       { memory: false, base: "/subject-portal/" }
     );
     expect(prodHistory.base).not.toContain("#");
+  });
+
+  it("renders DemoBanner cross-links to Documentation Portal and Staff Demo in demo mode and hides in standard mode", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    state.session.isDemoMode = true;
+    const demoContainer = document.createElement("div");
+    const demoApp = createApp(DemoBanner).use(pinia);
+    demoApp.mount(demoContainer);
+    await nextTick();
+
+    expect(demoContainer.querySelector("#demo-mode-banner")).not.toBeNull();
+    expect(
+      demoContainer
+        .querySelector("#participant-demo-link-docs")
+        ?.getAttribute("href")
+    ).toBe("/cadence-clinical/");
+    expect(
+      demoContainer
+        .querySelector("#participant-demo-link-staff")
+        ?.getAttribute("href")
+    ).toBe("/cadence-clinical/demo/");
+    demoApp.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+    state.session.isDemoMode = false;
+    const prodContainer = document.createElement("div");
+    const prodApp = createApp(DemoBanner).use(pinia);
+    prodApp.mount(prodContainer);
+    await nextTick();
+    expect(prodContainer.querySelector("#demo-mode-banner")).toBeNull();
+    prodApp.unmount();
   });
 
   describe("Fail-closed portal boundary & stateful session persistence", () => {

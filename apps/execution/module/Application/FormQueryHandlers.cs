@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +30,13 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             return KernelErrors.AlreadyExists;
         }
 
-        var record = await FormQueryScopes.ShareAsync(records, context, command.FormId, command.ObservationId, cancellationToken).ConfigureAwait(false);
+        var record = await FormQueryScopes.ShareAsync(
+            records,
+            context,
+            command.FormId,
+            command.ObservationId,
+            cancellationToken,
+            command.ResolvedHeader).ConfigureAwait(false);
         if (record is null || record.EnrollmentId != command.EnrollmentId)
         {
             return FormErrors.CollectionInstanceUnknown;
@@ -79,7 +86,8 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             version: 1,
             revision: value.Revision,
             actorId: context.Actor.Id,
-            reasonForChange: command.ReasonForChange);
+            reasonForChange: command.ReasonForChange,
+            scope: FormQueryScopes.ToScopeContext(record, value.Revision));
     }
 }
 
@@ -94,7 +102,7 @@ internal sealed class AnswerFormQueryHandler(ICollectionInstanceRecords records)
             command.EnrollmentId,
             (query, record) =>
             {
-                var step = query.Answer(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
+                var step = query.Answer(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange, command.Assignee);
                 if (step is null)
                 {
                     return FormQueryScopes.DeniedTransition(query.Status);
@@ -155,7 +163,7 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
             command.EnrollmentId,
             (query, record) =>
             {
-                var step = query.Reopen(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
+                var step = query.Reopen(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange, command.Assignee);
                 if (step is null)
                 {
                     return FormQueryScopes.DeniedTransition(query.Status);
@@ -163,6 +171,28 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
 
                 int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
+            },
+            cancellationToken);
+}
+
+/// <summary>Handles <see cref="ReassignFormQuery"/>.</summary>
+internal sealed class ReassignFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<ReassignFormQuery, FormQueryState>
+{
+    public Task<CommandResult<FormQueryState>> HandleAsync(ReassignFormQuery command, ICommandContext context, CancellationToken cancellationToken) =>
+        FormQueryScopes.StepAsync(
+            records,
+            context,
+            command.QueryId,
+            command.EnrollmentId,
+            (query, record) =>
+            {
+                if (!query.Reassign(command.Assignee, command.OwnerRole, context.Actor.Id, context.RecordedAt, command.ReasonForChange, command.Text))
+                {
+                    return FormQueryScopes.DeniedTransition(query.Status);
+                }
+
+                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                return FormQueryScopes.StepAllowed([], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
 }
@@ -293,6 +323,18 @@ internal sealed class GenerateFormQueryAgingDigestHandler : ICommandHandler<Gene
             command.SiteCode,
             command.Entries);
         context.Work.Add(digest);
+        context.Work.Raise(new FormQueryAgingDigestGenerated(
+            context.TenantId,
+            digest.Id,
+            digest.StudyId,
+            digest.StudySiteId,
+            digest.ScopeKey,
+            digest.RecipientRole,
+            digest.DigestDate,
+            digest.GeneratedAt,
+            digest.StudyCode,
+            digest.SiteCode,
+            digest.EscalatedCount));
         return CommandResult<FormQueryAgingDigestState>.Success(new FormQueryAgingDigestState(
             digest.Id,
             digest.StudyId,
@@ -319,24 +361,38 @@ internal static class FormQueryScopes
 
     /// <summary>
     /// Takes the shared locks on the scopes covering <paramref name="observation"/> of <paramref name="form"/>, widest
-    /// first (ADR-2621), and reads the form again under them, so its locks are the ones in force for this command.
+    /// first (ADR-2621), and reads the form's scope state under them, so its locks are the ones in force for this command.
     /// </summary>
-    public static async Task<CollectionInstanceRecord?> ShareAsync(
-        ICollectionInstanceRecords records, ICommandContext context, CollectionInstanceId form, ObservationId observation, CancellationToken cancellationToken)
+    public static async Task<CollectionInstanceScopeState?> ShareAsync(
+        ICollectionInstanceRecords records,
+        ICommandContext context,
+        CollectionInstanceId form,
+        ObservationId observation,
+        CancellationToken cancellationToken,
+        CollectionInstanceHeader? header = null)
     {
-        if (await records.FindAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false) is not { } record)
+        var resolvedHeader = header ?? await records.FindHeaderAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false);
+        if (resolvedHeader is null)
         {
             return null;
         }
 
         await context.Work.ShareScopesAsync(
-            LockScopes.Covering(record.StudyId, record.StudySiteId, record.EnrollmentId, observation, form), cancellationToken).ConfigureAwait(false);
-        return await records.FindAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false);
+            LockScopes.Covering(resolvedHeader.StudyId, resolvedHeader.StudySiteId, resolvedHeader.EnrollmentId, observation, form),
+            cancellationToken).ConfigureAwait(false);
+        return await records.FindScopeStateAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>True when a Locked lock covers <paramref name="observation"/>: one on the form or a wider scope, or on the value itself.</summary>
     public static bool IsLocked(CollectionInstanceRecord record, ObservationId observation) =>
-        record.Locks.Any(l => l.Kind == LockKind.Locked && (l.Scope.Kind != NodeKinds.Observation || l.Scope.Id == observation.Value));
+        IsLocked(record.Locks, observation);
+
+    /// <summary>True when a Locked lock covers <paramref name="observation"/>: one on the form or a wider scope, or on the value itself.</summary>
+    public static bool IsLocked(CollectionInstanceScopeState state, ObservationId observation) =>
+        IsLocked(state.Locks, observation);
+
+    private static bool IsLocked(IReadOnlyList<LockView> locks, ObservationId observation) =>
+        locks.Any(l => l.Kind == LockKind.Locked && (l.Scope.Kind != NodeKinds.Observation || l.Scope.Id == observation.Value));
 
     /// <summary>
     /// Loads the query for update, checks it belongs to <paramref name="enrollment"/> and that no Locked lock covers its
@@ -347,7 +403,7 @@ internal static class FormQueryScopes
         ICommandContext context,
         FormQueryId queryId,
         EnrollmentId enrollment,
-        Func<FormQuery, CollectionInstanceRecord?, (StepDecision? Allowed, KernelError? Error)> step,
+        Func<FormQuery, CollectionInstanceScopeState?, (StepDecision? Allowed, KernelError? Error)> step,
         CancellationToken cancellationToken)
     {
         await context.Work.LockAsync<FormQuery>(queryId, cancellationToken).ConfigureAwait(false);
@@ -369,9 +425,13 @@ internal static class FormQueryScopes
             return error ?? InvalidTransitionError(query.Status);
         }
 
+        FormQueryScopeContext? scope = null;
         if (record is not null)
         {
             context.Work.LinkInput(NodeRef.For(record.EnrollmentId, Math.Max(1L, record.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
+            var currentRevision = record.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision
+                ?? record.Values.FirstOrDefault(v => string.Equals(v.ItemId, query.ItemId, StringComparison.Ordinal))?.Revision;
+            scope = ToScopeContext(record, currentRevision);
         }
 
         return Changed(
@@ -381,8 +441,12 @@ internal static class FormQueryScopes
             query.VersionIndex + 1,
             allowed.Revision,
             allowed.ActorId,
-            allowed.ReasonForChange);
+            allowed.ReasonForChange,
+            scope);
     }
+
+    internal static FormQueryScopeContext ToScopeContext(CollectionInstanceScopeState state, int? currentRevision) =>
+        new(state.StudyId, state.StudySiteId, state.CollectionSpecId, state.PlannedActivityId, currentRevision);
 
     public static (StepDecision? Allowed, KernelError? Error) StepAllowed(
         System.Collections.Generic.IReadOnlyList<KernelAssertionStep> steps,
@@ -401,11 +465,12 @@ internal static class FormQueryScopes
     public static CommandResult<FormQueryState> Changed(
         ICommandContext context,
         FormQuery query,
-        System.Collections.Generic.IReadOnlyList<KernelAssertionStep> steps,
+        IReadOnlyList<KernelAssertionStep> steps,
         long version,
         int revision,
         string actorId,
-        string reasonForChange)
+        string reasonForChange,
+        FormQueryScopeContext? scope = null)
     {
         context.Work.Raise(new FormQueryChanged(
             context.TenantId,
@@ -421,7 +486,7 @@ internal static class FormQueryScopes
             actorId,
             reasonForChange,
             steps));
-        return CommandResult<FormQueryState>.Success(FormQueryState.Of(query, version));
+        return CommandResult<FormQueryState>.Success(FormQueryState.Of(query, version, scope));
     }
 }
 
@@ -451,6 +516,8 @@ internal sealed class AnswerFormQueryValidator : AbstractValidator<AnswerFormQue
     {
         RuleFor(c => c.QueryId).Must(id => !id.IsEmpty).WithMessage("Name the query.");
         RuleFor(c => c.Text).Must(FormQuery.IsText).WithMessage($"Write the answer, at most {AssertionText.MaxLength} characters.");
+        RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
+            .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
     }
 }
 
@@ -474,6 +541,26 @@ internal sealed class ReopenFormQueryValidator : AbstractValidator<ReopenFormQue
     {
         RuleFor(c => c.QueryId).Must(id => !id.IsEmpty).WithMessage("Name the query.");
         RuleFor(c => c.Text).Must(FormQuery.IsText).WithMessage($"Say why the query is reopened, at most {AssertionText.MaxLength} characters.");
+        RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
+            .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
+    }
+}
+
+/// <summary>Checks the shape of <see cref="ReassignFormQuery"/>.</summary>
+internal sealed class ReassignFormQueryValidator : AbstractValidator<ReassignFormQuery>
+{
+    public ReassignFormQueryValidator()
+    {
+        RuleFor(c => c.QueryId).Must(id => !id.IsEmpty).WithMessage("Name the query.");
+        RuleFor(c => c.EnrollmentId).Must(id => !id.IsEmpty).WithMessage("Name the enrollment.");
+        RuleFor(c => c.ReasonForChange).Must(FormQuery.IsText)
+            .WithMessage($"Say why the query is reassigned, at most {AssertionText.MaxLength} characters.");
+        RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
+            .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
+        RuleFor(c => c.OwnerRole).Must(r => r is null || Enum.IsDefined(r.Value))
+            .WithMessage("Choose a valid owner role.");
+        RuleFor(c => c.Text).Must(t => t is null || FormQuery.IsText(t))
+            .WithMessage($"Reassignment note may be at most {AssertionText.MaxLength} characters.");
     }
 }
 

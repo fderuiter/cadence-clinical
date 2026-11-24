@@ -444,7 +444,7 @@ export function createConstantFoldDemoModePlugin(appDir) {
 
       const literal = isDemo ? "(true)" : "(false)";
       const transformed = code.replace(
-        /(?<!function\s+)(?<![.\w$])isDemoBuild\(\s*\)/g,
+        /(?:(?:\$setup|_ctx)\.|(?<!function\s+)(?<![.\w$]))isDemoBuild\(\s*\)/g,
         literal
       );
       if (transformed === code) {

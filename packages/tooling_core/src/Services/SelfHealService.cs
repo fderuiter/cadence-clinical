@@ -91,7 +91,7 @@ public static class SelfHealService
         }
 
         Console.WriteLine("\n  7. Synchronizing OpenAPI Specifications, API Docs & Web Client Types...");
-        var (backendContractsChanged, targetServices, _) = PreCommitOpenApiService.AnalyzeBackendContractChanges(changedFiles);
+        var (backendContractsChanged, targetServices, _) = PreCommitOpenApiService.AnalyzeBackendContractChanges(changedFiles, repoRoot);
         bool openApiSpecsChangedOnDisk = changedFiles.Any(f =>
             f.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) &&
             f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
