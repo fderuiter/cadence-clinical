@@ -1,4 +1,4 @@
-# ADR-2649: Consolidate CTMS Delegation of Authority Ownership and Signed Cross-Service GxP Contracts
+# ADR-2660: Consolidate CTMS Delegation of Authority Ownership and Signed Cross-Service GxP Contracts
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

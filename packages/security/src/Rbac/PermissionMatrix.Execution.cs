@@ -69,6 +69,7 @@ public static partial class PermissionMatrix
         Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "randomization_scheme", "read");
         Grant(RoleNormalization.ROLE_INVESTIGATOR, "subject_enrollment", "randomize");
         Grant(RoleNormalization.ROLE_CRC, "subject_enrollment", "randomize");
+        Grant(RoleNormalization.ROLE_TRIAL_COORDINATOR, "subject_enrollment", "randomize");
     }
 
     /// <summary>Lab reference ranges, bulk range imports and toxicity review.</summary>
@@ -186,7 +187,7 @@ public static partial class PermissionMatrix
         foreach (string role in new[]
         {
             RoleNormalization.ROLE_SPONSOR_MM, RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC,
-            RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_AUDITOR_CANONICAL,
+            RoleNormalization.ROLE_TRIAL_COORDINATOR, RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_AUDITOR_CANONICAL,
         })
         {
             Grant(role, "site_compliance", "read");

@@ -15,7 +15,6 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
     setActivePinia(pinia);
     signInAs(useAuthStore(), ["Pharmacist"], {
       username: "pharmacist.site101",
-      displayName: "Dr. Alex Vance, RPh",
     });
 
     vi.spyOn(executionApi, "getSiteIpKitInventory").mockResolvedValue([

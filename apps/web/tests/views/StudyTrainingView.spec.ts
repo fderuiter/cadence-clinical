@@ -135,9 +135,16 @@ describe("StudyTrainingView.vue", () => {
         id: "asn-kpi-1",
         curriculum_id: "curr-2026-v2",
         user_id: "sponsor_dm",
+        user_name: "Sponsor DM",
+        user_role: "data_manager",
         study_id: "CAD-101",
         site_id: "SITE-101",
         status: "PENDING",
+        batch_transaction_id: null,
+        quiz_score: null,
+        time_spent_seconds: 0,
+        completed_at: null,
+        created_at: "2026-10-14T00:00:00Z",
       },
     ];
     const completedList = [{ ...pendingList[0], status: "COMPLETED" }];

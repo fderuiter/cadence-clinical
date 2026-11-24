@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
@@ -92,7 +93,8 @@ public static class LabToxicityEndpoints
         StagedAdverseEventActionRequest request,
         HttpContext httpContext,
         ILabToxicityGovernanceService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         var existing = await svc.GetReviewByIdAsync(reviewId, ct).ConfigureAwait(false);
         IResult? scopeDenied = existing is not null
@@ -106,6 +108,17 @@ public static class LabToxicityEndpoints
         if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (existing is not null
+            && await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                existing.StudyId,
+                existing.SiteId,
+                existing.SubjectId,
+                ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await svc.ExecuteActionAsync(reviewId, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);

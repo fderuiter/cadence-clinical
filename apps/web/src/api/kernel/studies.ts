@@ -22,8 +22,20 @@ export type KernelScreenEnrollmentResult =
   KernelSchemas["Kernel_KernelEnrollmentStateResponse"];
 export type KernelAmendmentImpact =
   KernelSchemas["Kernel_KernelAmendmentImpactResponse"];
-export type KernelSimulationResult = KernelSchemas["Kernel_SimulationResult"];
-export type KernelMatrixGapFinding = KernelSchemas["Kernel_MatrixGapFinding"];
+export type KernelSimulationResult =
+  KernelSchemas["Kernel_KernelSimulationResponse"];
+export type KernelMatrixGapFinding =
+  KernelSchemas["Kernel_KernelMatrixGapFindingResponse"];
+export type KernelScheduleChange =
+  KernelSchemas["Kernel_KernelScheduleChangeResponse"];
+export type KernelPlannedVisit =
+  KernelSchemas["Kernel_KernelPlannedVisitResponse"];
+export type KernelMaskedPart = KernelSchemas["Kernel_KernelMaskedPartResponse"];
+export type KernelSoaAmendmentDiff =
+  KernelSchemas["Kernel_KernelSoaAmendmentDiffResponse"];
+export type KernelSoaDirective =
+  KernelSchemas["Kernel_KernelSoaDirectiveResponse"];
+export type KernelSoaVisit = KernelSchemas["Kernel_KernelSoaVisitResponse"];
 export type KernelStudySummary =
   KernelSchemas["Kernel_KernelStudySummaryResponse"];
 export type KernelOrganizationSummary =
@@ -31,7 +43,9 @@ export type KernelOrganizationSummary =
 export type KernelSiteSummary =
   KernelSchemas["Kernel_KernelSiteSummaryResponse"];
 export type KernelStudySiteSummary =
-  KernelSchemas["Kernel_KernelStudySiteSummaryResponse"];
+  KernelSchemas["Kernel_KernelStudySiteSummaryResponse"] & {
+    mask?: string | null;
+  };
 export type KernelProtocolTemplate =
   KernelSchemas["Kernel_KernelProtocolTemplateResponse"];
 export type KernelProtocolDraftSummary =
@@ -68,7 +82,8 @@ export interface KernelCreateOrganizationInput {
 }
 
 export interface KernelCreateSiteInput {
-  siteCode: string;
+  siteCode?: string;
+  code?: string;
   name: string;
   country: string;
   institutionRef?: string | null;
@@ -82,6 +97,8 @@ export interface KernelLinkSiteToStudyInput {
   studyRef: string;
   siteRef?: string | null;
   siteCode?: string | null;
+  institutionRef?: string | null;
+  institutionCode?: string | null;
   reason: string;
   idempotencyKey: string;
 }
@@ -141,6 +158,7 @@ export const kernelStudiesApi = {
   /** Registers an investigational site with a 2-letter ISO country code, signed reason, and idempotency key (POST /api/v1/kernel/sites). */
   createSite({
     siteCode,
+    code,
     name,
     country,
     institutionRef,
@@ -149,10 +167,11 @@ export const kernelStudiesApi = {
     reason,
     idempotencyKey,
   }: KernelCreateSiteInput): Promise<KernelSiteSummary> {
+    const resolvedSiteCode = (siteCode ?? code ?? "").trim();
     return unwrapResponse(
       kernelClient.POST("/api/v1/kernel/sites", {
         body: {
-          site_code: siteCode,
+          site_code: resolvedSiteCode,
           name,
           country,
           institution_ref: institutionRef ?? null,
@@ -178,6 +197,8 @@ export const kernelStudiesApi = {
     studyRef,
     siteRef,
     siteCode,
+    institutionRef,
+    institutionCode,
     reason,
     idempotencyKey,
   }: KernelLinkSiteToStudyInput): Promise<KernelStudySiteSummary> {
@@ -187,6 +208,12 @@ export const kernelStudiesApi = {
         body: {
           site_ref: siteRef ?? null,
           site_code: siteCode ?? null,
+          ...(institutionRef !== undefined
+            ? { institution_ref: institutionRef }
+            : {}),
+          ...(institutionCode !== undefined
+            ? { institution_code: institutionCode }
+            : {}),
         },
         headers: mutationHeaders(reason, idempotencyKey),
       })

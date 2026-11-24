@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -11,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
@@ -72,6 +74,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
     private static readonly DateTimeOffset T0 = new(2026, 4, 10, 12, 0, 0, TimeSpan.Zero);
     private static readonly Actor Issuer = Actor.Person("sponsor-admin@sponsor.test");
     private static readonly Actor BlindedPerson = Actor.Person("crc-blinded@site.test");
+    private static readonly Actor BlindedStudyDmPerson = Actor.Person("dm-study-blinded@sponsor.test");
     private static readonly Actor PharmacistPerson = Actor.Person("pharmacist@site.test");
     private static readonly Actor UnqualifiedPharmacistPerson = Actor.Person("pharmacist-expired@site.test");
     private static readonly Actor McpAgentActor = Actor.AutomationAgent(IntelligenceMcp.AgentName);
@@ -322,6 +325,103 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         formPreviewBody.Should().NotContain(CanaryArm)
             .And.NotContain(BlindedRuleId)
             .And.Contain(NonBlindedRuleId);
+
+        // 9. Deterministic ValidationFindingId.For probe and decision routes (K-FIND-1, K-AUTH-4)
+        using var findingsDoc = JsonDocument.Parse(findingsBody);
+        var visibleFinding = findingsDoc.RootElement.GetProperty("findings")[0];
+        var discoveredPackKey = visibleFinding.GetProperty("pack_key").GetString()!;
+        var discoveredFormId = visibleFinding.GetProperty("record_key").GetString()!;
+        var discoveredTenant = _state.Tenant;
+        var state = _state;
+        var blindedClient = client;
+
+        var derivedActiveFindingId = ValidationFindingId.For(
+            discoveredTenant,
+            new FindingIdentity(
+                state.StudyId,
+                ValidationStage.Collection,
+                discoveredPackKey,
+                "EC-BLIND-01",
+                new FindingTarget(FindingTargetKind.DatasetRecord, "cs.day1", discoveredFormId, "trt_arm")));
+        var derivedPlaceboFindingId = ValidationFindingId.For(
+            discoveredTenant,
+            new FindingIdentity(
+                state.StudyId,
+                ValidationStage.Collection,
+                discoveredPackKey,
+                "EC-BLIND-PLACEBO",
+                new FindingTarget(FindingTargetKind.DatasetRecord, "cs.day1", discoveredFormId, "trt_arm")));
+
+        derivedActiveFindingId.Should().Be(_state.BlindedFindingId);
+
+        var derivedActiveNodeText = NodeRef.For(derivedActiveFindingId).ToString();
+        var derivedPlaceboNodeText = NodeRef.For(derivedPlaceboFindingId).ToString();
+        var derivedActiveRef = Uri.EscapeDataString(derivedActiveNodeText);
+        var derivedPlaceboRef = Uri.EscapeDataString(derivedPlaceboNodeText);
+
+        var acceptSigToken = TestSecurityContext.CreateSigToken(
+            blindedIdentity.UserId,
+            KernelValidationEndpoints.AcceptFindingAction(derivedActiveNodeText),
+            KernelValidationEndpoints.AcceptFindingSemanticAction,
+            blindedIdentity.Roles,
+            issuedAt: T0.AddMinutes(5));
+        var explainSigToken = TestSecurityContext.CreateSigToken(
+            blindedIdentity.UserId,
+            KernelValidationEndpoints.ExplainFindingAction(derivedActiveNodeText),
+            KernelValidationEndpoints.ExplainFindingSemanticAction,
+            blindedIdentity.Roles,
+            issuedAt: T0.AddMinutes(5));
+
+        var (_, canIActiveBody) = await SendAsync(blindedClient, HttpMethod.Get,
+            $"/api/v1/kernel/authorization/can-i?capability=validation_finding.investigate&resource={derivedActiveRef}", ct: ct);
+        var (_, canIPlaceboBody) = await SendAsync(blindedClient, HttpMethod.Get,
+            $"/api/v1/kernel/authorization/can-i?capability=validation_finding.investigate&resource={derivedPlaceboRef}", ct: ct);
+        var (_, cmdsActiveBody) = await SendAsync(blindedClient, HttpMethod.Get,
+            $"/api/v1/kernel/nodes/{derivedActiveRef}/commands", ct: ct);
+        var (_, cmdsPlaceboBody) = await SendAsync(blindedClient, HttpMethod.Get,
+            $"/api/v1/kernel/nodes/{derivedPlaceboRef}/commands", ct: ct);
+
+        _state.DispatchedCommands.Clear();
+        var (invCode, invBody) = await SendCommandAsync(blindedClient,
+            $"/api/v1/kernel/validation/findings/{derivedActiveRef}/investigate", "idem-inv-1", "Blinded DM", null, null, ct);
+        var (clsCode, clsBody) = await SendCommandAsync(blindedClient,
+            $"/api/v1/kernel/validation/findings/{derivedActiveRef}/classify", "idem-cls-1", "Blinded DM", null, "{\"classification\":\"DataIssue\"}", ct);
+        var (accCode, accBody) = await SendCommandAsync(blindedClient,
+            $"/api/v1/kernel/validation/findings/{derivedActiveRef}/accept", "idem-acc-1", "Blinded DM", acceptSigToken, "{\"rationale\":\"Accepted.\"}", ct);
+        var (reopenCode, reopenBody) = await SendCommandAsync(blindedClient,
+            $"/api/v1/kernel/validation/findings/{derivedActiveRef}/reopen", "idem-reopen-1", "Blinded DM", null, null, ct);
+        var (expCode, expBody) = await SendCommandAsync(blindedClient,
+            $"/api/v1/kernel/validation/findings/{derivedActiveRef}/explain", "idem-explain-1", "Blinded DM", explainSigToken, "{\"explanation\":\"Explained.\"}", ct);
+
+        canIActiveBody.Should().Contain("\"permitted\":false");
+        canIPlaceboBody.Should().Contain("\"permitted\":false");
+        cmdsActiveBody.Should().NotContain("\"permitted\":true");
+
+        // Uniform non-confirming GrantCondition denial across detected blinded and undetected findings (tenant-scoped caller).
+        canIPlaceboBody.Replace(derivedPlaceboNodeText, derivedActiveNodeText, StringComparison.Ordinal)
+            .Should().Be(canIActiveBody);
+        cmdsPlaceboBody.Replace(derivedPlaceboNodeText, derivedActiveNodeText, StringComparison.Ordinal)
+            .Should().Be(cmdsActiveBody);
+
+        foreach (var (code, body) in new[] { (invCode, invBody), (clsCode, clsBody), (accCode, accBody), (reopenCode, reopenBody), (expCode, expBody) })
+        {
+            code.Should().Be(HttpStatusCode.Forbidden);
+            body.Should().NotContain(CanaryArm);
+        }
+
+        // Hidden findings must be rejected before dispatching Attest or any finding decision command.
+        _state.DispatchedCommands.Should().BeEmpty();
+
+        // Also verify uniform non-confirming denials for a study-scoped blinded data manager.
+        var studyDmIdentity = blindedIdentity with { UserId = BlindedStudyDmPerson.Id, Roles = ["Data Manager"] };
+        using var studyDmClient = _factory.CreateKestrelSignedClient(studyDmIdentity);
+        var (_, dmCanIActive) = await SendAsync(studyDmClient, HttpMethod.Get,
+            $"/api/v1/kernel/authorization/can-i?capability=validation_finding.investigate&resource={derivedActiveRef}", ct: ct);
+        var (_, dmCanIPlacebo) = await SendAsync(studyDmClient, HttpMethod.Get,
+            $"/api/v1/kernel/authorization/can-i?capability=validation_finding.investigate&resource={derivedPlaceboRef}", ct: ct);
+        dmCanIActive.Should().Contain("\"permitted\":false");
+        dmCanIPlacebo.Replace(derivedPlaceboNodeText, derivedActiveNodeText, StringComparison.Ordinal)
+            .Should().Be(dmCanIActive);
     }
 
     /// <summary>
@@ -437,6 +537,110 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             ct: ct);
         expiredPreviewStatus.Should().Be(HttpStatusCode.OK, expiredPreviewBody);
         expiredPreviewBody.Should().NotContain(BlindedRuleId).And.NotContain(CanaryArm);
+
+        // Expired-qualification pharmacist is also denied on probe and finding decision routes without mutating state.
+        var blindedFindingNodeText = _state.BlindedFindingNode.ToString();
+        var expiredAcceptSig = TestSecurityContext.CreateSigToken(
+            expiredPharmacistIdentity.UserId,
+            KernelValidationEndpoints.AcceptFindingAction(blindedFindingNodeText),
+            KernelValidationEndpoints.AcceptFindingSemanticAction,
+            expiredPharmacistIdentity.Roles,
+            issuedAt: T0.AddMinutes(5));
+        var expiredExplainSig = TestSecurityContext.CreateSigToken(
+            expiredPharmacistIdentity.UserId,
+            KernelValidationEndpoints.ExplainFindingAction(blindedFindingNodeText),
+            KernelValidationEndpoints.ExplainFindingSemanticAction,
+            expiredPharmacistIdentity.Roles,
+            issuedAt: T0.AddMinutes(5));
+
+        var (_, expiredCanIBody) = await SendAsync(expiredClient, HttpMethod.Get,
+            $"/api/v1/kernel/authorization/can-i?capability=validation_finding.investigate&resource={blindedFindingRef}", ct: ct);
+        expiredCanIBody.Should().Contain("\"permitted\":false");
+
+        _state.DispatchedCommands.Clear();
+        var (expInvCode, expInvBody) = await SendCommandAsync(expiredClient,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/investigate", "idem-exp-inv", "Expired pharm", null, null, ct);
+        var (expAccCode, expAccBody) = await SendCommandAsync(expiredClient,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/accept", "idem-exp-acc", "Expired pharm", expiredAcceptSig, "{\"rationale\":\"Accepted.\"}", ct);
+        var (expExpCode, expExpBody) = await SendCommandAsync(expiredClient,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/explain", "idem-exp-explain", "Expired pharm", expiredExplainSig, "{\"explanation\":\"Explained.\"}", ct);
+
+        foreach (var (code, body) in new[] { (expInvCode, expInvBody), (expAccCode, expAccBody), (expExpCode, expExpBody) })
+        {
+            code.Should().Be(HttpStatusCode.Forbidden);
+            body.Should().NotContain(CanaryArm);
+        }
+
+        _state.DispatchedCommands.Should().BeEmpty();
+
+        // Qualified unblinded pharmacist receives permitted:true on probes and completes signed decisions on the blinded finding.
+        var (_, pharmCanIBody) = await SendAsync(client, HttpMethod.Get,
+            $"/api/v1/kernel/authorization/can-i?capability=validation_finding.investigate&resource={blindedFindingRef}", ct: ct);
+        pharmCanIBody.Should().Contain("\"permitted\":true");
+
+        var (_, pharmCmdsBody) = await SendAsync(client, HttpMethod.Get,
+            $"/api/v1/kernel/nodes/{blindedFindingRef}/commands", ct: ct);
+        pharmCmdsBody.Should().Contain("\"permitted\":true").And.NotContain("\"permitted\":false");
+
+        var pharmAcceptSig = TestSecurityContext.CreateSigToken(
+            pharmacistIdentity.UserId,
+            KernelValidationEndpoints.AcceptFindingAction(blindedFindingNodeText),
+            KernelValidationEndpoints.AcceptFindingSemanticAction,
+            pharmacistIdentity.Roles,
+            issuedAt: T0.AddMinutes(5));
+        var pharmExplainSig = TestSecurityContext.CreateSigToken(
+            pharmacistIdentity.UserId,
+            KernelValidationEndpoints.ExplainFindingAction(blindedFindingNodeText),
+            KernelValidationEndpoints.ExplainFindingSemanticAction,
+            pharmacistIdentity.Roles,
+            issuedAt: T0.AddMinutes(5));
+
+        var (pharmInvCode, pharmInvBody) = await SendCommandAsync(client,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/investigate", "idem-pharm-inv", "Pharmacist review", null, null, ct);
+        pharmInvCode.Should().Be(HttpStatusCode.OK, pharmInvBody);
+        pharmInvBody.Should().Contain("\"status\":\"Investigating\"").And.Contain(CanaryArm);
+
+        var (pharmClsCode, pharmClsBody) = await SendCommandAsync(client,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/classify", "idem-pharm-cls", "Pharmacist classify", null, "{\"classification\":\"DataIssue\"}", ct);
+        pharmClsCode.Should().Be(HttpStatusCode.OK, pharmClsBody);
+        pharmClsBody.Should().Contain("\"classification\":\"DataIssue\"");
+
+        var (pharmAccCode, pharmAccBody) = await SendCommandAsync(client,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/accept", "idem-pharm-acc", "Pharmacist accept", pharmAcceptSig, "{\"rationale\":\"Kit verified.\"}", ct);
+        pharmAccCode.Should().Be(HttpStatusCode.OK, pharmAccBody);
+        pharmAccBody.Should().Contain("\"status\":\"Accepted\"");
+
+        var (pharmReopenCode, pharmReopenBody) = await SendCommandAsync(client,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/reopen", "idem-pharm-reopen", "Pharmacist reopen", null, null, ct);
+        pharmReopenCode.Should().Be(HttpStatusCode.OK, pharmReopenBody);
+        pharmReopenBody.Should().Contain("\"status\":\"Open\"");
+
+        var (pharmExpCode, pharmExpBody) = await SendCommandAsync(client,
+            $"/api/v1/kernel/validation/findings/{blindedFindingRef}/explain", "idem-pharm-exp", "Pharmacist explain", pharmExplainSig, "{\"explanation\":\"Dispense confirmed.\"}", ct);
+        pharmExpCode.Should().Be(HttpStatusCode.OK, pharmExpBody);
+        pharmExpBody.Should().Contain("\"status\":\"Explained\"");
+    }
+
+    private static Task<(HttpStatusCode Status, string Body)> SendCommandAsync(
+        HttpClient client,
+        string path,
+        string idempotencyKey,
+        string reason,
+        string? sigToken,
+        string? jsonBody,
+        CancellationToken ct = default)
+    {
+        var headers = new List<(string Name, string Value)>
+        {
+            ("Idempotency-Key", idempotencyKey),
+            (GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode(reason)),
+        };
+        if (!string.IsNullOrWhiteSpace(sigToken))
+        {
+            headers.Add((GatewayHeaders.SigToken, sigToken));
+        }
+
+        return SendAsync(client, HttpMethod.Post, path, jsonBody, extraHeaders: headers, ct: ct);
     }
 
     private static string BuildMcpToolCall(string toolName, object arguments) =>
@@ -537,8 +741,16 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(new FakeClock(T0.AddMinutes(5)));
 
+                services.RemoveAll<ISigTokenUseStore>();
+                services.RemoveAll<IDurableSigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(state);
+                services.AddSingleton<IDurableSigTokenUseStore>(state);
+
                 services.RemoveAll<ITenantDirectory>();
                 services.AddSingleton<ITenantDirectory>(state);
+
+                services.RemoveAll<ITenantEntitlementReader>();
+                services.AddSingleton<ITenantEntitlementReader>(state);
 
                 services.RemoveAll<IAuthorityStore>();
                 services.AddSingleton<IAuthorityStore>(state);
@@ -583,6 +795,8 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
 
     private sealed class SeededClinicalState :
         ITenantDirectory,
+        ITenantEntitlementReader,
+        IDurableSigTokenUseStore,
         IAuthorityStore,
         IStudyDirectory,
         IKernelNavigator,
@@ -597,6 +811,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         IModuleTenantContextFactory<ExecutionModuleDbContext>
     {
         private readonly string _inMemoryDbName;
+        private readonly ConcurrentDictionary<string, DateTimeOffset> _usedSigTokens = new(StringComparer.Ordinal);
         private readonly Grant[] _grants;
         private readonly Qualification[] _qualifications;
         private readonly QualificationRequirement[] _unblindRequirements;
@@ -617,8 +832,10 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         private readonly EnrollmentCasebookSnapshot _casebookSnapshot;
         private readonly LibraryItemView _rulePackItem;
         private readonly StudyStandardsProfileView _standardsProfile;
-        private readonly ValidationFindingView _blindedFinding;
+        private ValidationFindingView _blindedFinding;
         private readonly ValidationFindingView _nonBlindedFinding;
+
+        public List<ICommand> DispatchedCommands { get; } = [];
 
         public SeededClinicalState(string treatmentArmValue, SeededClinicalState? shareIdsFrom = null)
         {
@@ -637,8 +854,16 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             SbpConceptRef = shareIdsFrom?.SbpConceptRef ?? ConceptRef.New();
             RulePackItemId = shareIdsFrom?.RulePackItemId ?? LibraryItemId.New();
             StandardsProfileId = shareIdsFrom?.StandardsProfileId ?? StudyStandardsProfileId.New();
-            BlindedFindingId = shareIdsFrom?.BlindedFindingId ?? ValidationFindingId.New();
-            NonBlindedFindingId = shareIdsFrom?.NonBlindedFindingId ?? ValidationFindingId.New();
+            var blindedFindingTarget = new FindingTarget(FindingTargetKind.DatasetRecord, "cs.day1", FormId.Value.ToString("D"), "trt_arm");
+            var nonBlindedFindingTarget = new FindingTarget(FindingTargetKind.DatasetRecord, "cs.day1", FormId.Value.ToString("D"), "sbp");
+            BlindedFindingId = shareIdsFrom?.BlindedFindingId
+                ?? ValidationFindingId.For(
+                    Tenant,
+                    new FindingIdentity(StudyId, ValidationStage.Collection, "pack.day1", BlindedRuleId, blindedFindingTarget));
+            NonBlindedFindingId = shareIdsFrom?.NonBlindedFindingId
+                ?? ValidationFindingId.For(
+                    Tenant,
+                    new FindingIdentity(StudyId, ValidationStage.Collection, "pack.day1", NonBlindedRuleId, nonBlindedFindingTarget));
             RunId = shareIdsFrom?.RunId ?? ValidationRunId.New();
 
             var blindedVerifyId = shareIdsFrom?._blindedObservation.Assertions[0].AssertionId ?? AssertionId.New();
@@ -657,15 +882,25 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             _studyEntry = new StudyDirectoryEntry(
                 StudyId, 1, "STD-BLIND-01", "Phase 3 Randomized Study", "Phase 3", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", 1);
             _siteEntry = new SiteDirectoryEntry(
-                PhysicalSiteId, 1, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "SITE-01", "Metro Clinical Site", "US");
+                PhysicalSiteId, 1, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "SITE-01", "Metro Clinical Site", "US", true, 1);
             _studySiteEntry = new StudySiteDirectoryEntry(
-                SiteId, 1, StudyId, PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "Active");
+                SiteId, 1, StudyId, PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "Active", "STD-BLIND-01", 1, true);
 
             // Grants:
             // - Blinded coordinator holds a tenant-wide observation.record grant (exact task scenario).
             // - Pharmacist holds observation.record + enrollment.unblind + active qualification.
             // - Expired pharmacist holds observation.record + enrollment.unblind, but an expired qualification (K-AUTH-5).
             // - agent:mcp holds observation.record + enrollment.unblind + active qualification (so K-AI-6 requester check decides).
+            string[] findingDecisionTokens =
+            [
+                "validation_finding.investigate",
+                "validation_finding.classify",
+                "validation_finding.accept",
+                "validation_finding.explain",
+                "validation_finding.reopen",
+                "attestation.sign",
+            ];
+
             _grants =
             [
                 Grant.Issue(
@@ -677,6 +912,12 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 Grant.Issue(
                     GrantId.New(), Tenant, BlindedPerson, "enrollment.export", null,
                     AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!,
+                .. findingDecisionTokens.Select(token => Grant.Issue(
+                    GrantId.New(), Tenant, BlindedPerson, token, null,
+                    AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!),
+                .. findingDecisionTokens.Select(token => Grant.Issue(
+                    GrantId.New(), Tenant, BlindedStudyDmPerson, token, null,
+                    AuthorityScope.Study(StudyId), T0, null, false, null, Issuer, T0).Value!),
                 Grant.Issue(
                     GrantId.New(), Tenant, PharmacistPerson, "observation.record", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
@@ -689,6 +930,9 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 Grant.Issue(
                     GrantId.New(), Tenant, PharmacistPerson, "enrollment.unblind", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
+                .. findingDecisionTokens.Select(token => Grant.Issue(
+                    GrantId.New(), Tenant, PharmacistPerson, token, null,
+                    AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!),
                 Grant.Issue(
                     GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "observation.record", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
@@ -701,6 +945,9 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 Grant.Issue(
                     GrantId.New(), Tenant, UnqualifiedPharmacistPerson, "enrollment.unblind", null,
                     AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!,
+                .. findingDecisionTokens.Select(token => Grant.Issue(
+                    GrantId.New(), Tenant, UnqualifiedPharmacistPerson, token, null,
+                    AuthorityScope.StudySite(SiteId), T0, null, false, null, Issuer, T0).Value!),
                 Grant.Issue(
                     GrantId.New(), Tenant, McpAgentActor, "observation.record", null,
                     AuthorityScope.Tenant(), T0, null, false, null, Issuer, T0).Value!,
@@ -1167,6 +1414,24 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>
             Task.FromResult(string.Equals(code, TestSecurityContext.TenantCode, StringComparison.Ordinal) ? (TenantId?)Tenant : null);
 
+        public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken) =>
+            Task.FromResult(_usedSigTokens.TryAdd(tokenId, retainUntil));
+
+        public Task<TenantEntitlementSnapshot> GetEntitlementsAsync(
+            TenantId tenantId,
+            DateTimeOffset asOf,
+            CancellationToken cancellationToken,
+            DateTimeOffset? knownAt = null) =>
+            Task.FromResult(new TenantEntitlementSnapshot(
+                tenantId,
+                SubscriptionId.New(),
+                CommercialTier.Complete,
+                SubscriptionStatus.Active,
+                T0.AddDays(-30),
+                null,
+                IsReadOnly: false,
+                CommercialCatalog.FamiliesForTier(CommercialTier.Complete)));
+
         public Task<IReadOnlyList<StudyDirectoryEntry>> ListStudiesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudyDirectoryEntry>>(tenant == Tenant ? [_studyEntry] : []);
 
@@ -1191,15 +1456,36 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(tenant == Tenant && siteId == PhysicalSiteId ? _siteEntry : null);
 
-        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult(tenant == Tenant && string.Equals(siteCode, "SITE-01", StringComparison.OrdinalIgnoreCase) ? _siteEntry : null);
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                tenant == Tenant
+                && string.Equals(siteCode, "SITE-01", StringComparison.OrdinalIgnoreCase)
+                && (institutionId is null || institutionId == SponsorId)
+                    ? _siteEntry
+                    : null);
 
-        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(
+            TenantId tenant,
+            StudyId studyId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>(tenant == Tenant && studyId == StudyId ? [_studySiteEntry] : []);
 
-        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(
+            TenantId tenant,
+            StudySiteId studySiteId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(tenant == Tenant && studySiteId == SiteId ? _studySiteEntry : null);
 
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(tenant == Tenant && studyId == StudyId && siteId == PhysicalSiteId ? _studySiteEntry : null);
         public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             if (tenant != Tenant)
@@ -1540,6 +1826,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             CommandMetadata? metadata,
             CancellationToken cancellationToken)
         {
+            DispatchedCommands.Add(command);
             return command switch
             {
                 ExportStudySnapshot exportStudy => Task.FromResult(
@@ -1560,8 +1847,34 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                         exportCasebook.ArtifactVersionId,
                         1,
                         exportCasebook.Content.ContentHash))),
+                Attest attest => Task.FromResult(
+                    CommandResult<TResult>.Success((TResult)(object)attest.AttestationId)),
+                InvestigateFinding inv when inv.FindingId == BlindedFindingId =>
+                    UpdateBlindedFinding<TResult>(_blindedFinding with { Status = FindingStatus.Investigating }),
+                ClassifyFinding cls when cls.FindingId == BlindedFindingId =>
+                    UpdateBlindedFinding<TResult>(_blindedFinding with { Classification = cls.Classification }),
+                AcceptFinding acc when acc.FindingId == BlindedFindingId =>
+                    UpdateBlindedFinding<TResult>(_blindedFinding with
+                    {
+                        Status = FindingStatus.Accepted,
+                        Decision = new FindingDecision(FindingStatus.Accepted, PharmacistPerson.Id, T0.AddMinutes(5), acc.Rationale, RunId, acc.AttestationId),
+                    }),
+                ReopenFinding reopen when reopen.FindingId == BlindedFindingId =>
+                    UpdateBlindedFinding<TResult>(_blindedFinding with { Status = FindingStatus.Open, Decision = null }),
+                ExplainFinding exp when exp.FindingId == BlindedFindingId =>
+                    UpdateBlindedFinding<TResult>(_blindedFinding with
+                    {
+                        Status = FindingStatus.Explained,
+                        Decision = new FindingDecision(FindingStatus.Explained, PharmacistPerson.Id, T0.AddMinutes(5), exp.Explanation, RunId, exp.AttestationId),
+                    }),
                 _ => throw new NotSupportedException($"Unexpected in-memory command {command.GetType().Name}."),
             };
+        }
+
+        private Task<CommandResult<TResult>> UpdateBlindedFinding<TResult>(ValidationFindingView updated)
+        {
+            _blindedFinding = updated;
+            return Task.FromResult(CommandResult<TResult>.Success((TResult)(object)BlindedFindingId));
         }
     }
 }

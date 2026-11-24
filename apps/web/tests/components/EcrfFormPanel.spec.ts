@@ -1293,6 +1293,16 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     expect(old.find('[data-testid="ecrf-signature-superseded"]').text()).toBe(
       "Superseded by a later correction"
     );
+    const signedScroll = old.find('[data-testid="ecrf-signed-values-scroll"]');
+    expect(signedScroll.exists()).toBe(true);
+    expect(signedScroll.attributes("role")).toBe("region");
+    expect(signedScroll.attributes("tabindex")).toBe("0");
+    expect(signedScroll.attributes("aria-label")).toContain(
+      "Superseded signed values"
+    );
+    expect(
+      signedScroll.find('[data-testid="ecrf-signed-values"]').exists()
+    ).toBe(true);
     const row = old.find('[data-signed-item="SYSBP"]');
     const cells = row.findAll("th, td").map((c) => c.text());
     expect(cells[0]).toBe("SYSBP");
@@ -1478,7 +1488,11 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     let queryFilterCalls = 0;
     const origFind = Array.prototype.find;
     const origFilter = Array.prototype.filter;
-    Array.prototype.find = function (predicate, thisArg) {
+    Array.prototype.find = function <T>(
+      this: T[],
+      predicate: (value: T, index: number, obj: T[]) => unknown,
+      thisArg?: unknown
+    ) {
       if (
         this.length > 0 &&
         this[0] &&
@@ -1489,8 +1503,12 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
         itemFindCalls += 1;
       }
       return origFind.call(this, predicate, thisArg);
-    };
-    Array.prototype.filter = function (predicate, thisArg) {
+    } as typeof Array.prototype.find;
+    Array.prototype.filter = function <T>(
+      this: T[],
+      predicate: (value: T, index: number, obj: T[]) => unknown,
+      thisArg?: unknown
+    ) {
       if (
         this.length > 0 &&
         this[0] &&
@@ -1500,7 +1518,7 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
         queryFilterCalls += 1;
       }
       return origFilter.call(this, predicate, thisArg);
-    };
+    } as typeof Array.prototype.filter;
 
     try {
       baselineTextReads = 0;
@@ -2827,5 +2845,62 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     } finally {
       getNodeSpy.mockRestore();
     }
+  });
+
+  it("renders Collection spec and Visit dropdowns when scheduleOptions exist even without enrollmentContext while still allowing direct form reference loading", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({ form_id: FORM_ID }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        scheduleOptions: {
+          collectionSpecs: [
+            {
+              id: "VS",
+              name: "Vital Signs",
+              plannedActivityIds: ["SCR", "W4"],
+            },
+            { id: "AE", name: "Adverse Events", plannedActivityIds: [] },
+          ],
+          plannedActivities: [
+            { id: "SCR", name: "Screening", studyDay: -7 },
+            { id: "W4", name: "Week 4", studyDay: 28 },
+          ],
+        },
+      },
+    });
+    await flushPromises();
+
+    // Raw Form id and Enrollment id are collapsed behind disclosure by default
+    const disclosures = wrapper.findAll("details.ecrf-direct-id-disclosure");
+    expect(disclosures.length).toBeGreaterThanOrEqual(2);
+    for (const disclosure of disclosures) {
+      expect(disclosure.attributes("open")).toBeUndefined();
+    }
+
+    // Collection spec and Visit render as structured <select> dropdowns
+    const specSelect = wrapper.find("#ecrf-collection-spec");
+    const visitSelect = wrapper.find("#ecrf-planned-activity");
+    expect(specSelect.element.tagName).toBe("SELECT");
+    expect(visitSelect.element.tagName).toBe("SELECT");
+    expect(
+      specSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "VS", "AE"]);
+
+    await specSelect.setValue("AE");
+    await nextTick();
+    // AE is unscheduled-only (plannedActivityIds: []) so only Unscheduled ("") is offered
+    expect(
+      visitSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual([""]);
+
+    // Users can still load an existing form directly when supplying a known form reference
+    await wrapper.find("#ecrf-form-id").setValue(FORM_ID);
+    await wrapper.find("form.ecrf-form-reuse-block").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledWith(FORM_ID);
+    expect(wrapper.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
   });
 });

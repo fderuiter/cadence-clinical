@@ -45,9 +45,11 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     status: "COMPLETED",
     findings: [
       {
+        id: "finding-1",
         text: "Temperature log signature missing on Day 3",
         severity: "MAJOR",
         resolution_status: "OPEN",
+        created_at: "2026-09-11T00:00:00Z",
       },
     ],
     created_at: "2026-09-01T00:00:00Z",
@@ -242,8 +244,6 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
       {
         id: "LTR-PERSISTED-1",
         visit_id: "visit-comp-1",
-        study_id: "CAD-101",
-        site_id: "SITE-101",
         letter_type: "follow_up_letter",
         rendered_content: "Persisted SIV follow-up body for SITE-101",
         status: "FINALIZED",

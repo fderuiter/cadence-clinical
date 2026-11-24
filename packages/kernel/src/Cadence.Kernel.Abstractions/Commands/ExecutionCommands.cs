@@ -29,6 +29,7 @@ public sealed record RegisterParticipant(
 [KernelCapability("participant.screen", VerbClass.Execute, Resource = nameof(ScreenParticipant.StudySiteId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked))]
 [RaisesKernelErrors(
     typeof(ExecutionErrors),
     nameof(ExecutionErrors.ParticipantUnknown),

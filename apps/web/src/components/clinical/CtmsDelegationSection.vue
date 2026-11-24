@@ -89,9 +89,9 @@
               <td>
                 <span
                   class="status-pill"
-                  :class="`doa-${rec.status.toLowerCase()}`"
+                  :class="`doa-${delegationStatus(rec).toLowerCase()}`"
                 >
-                  {{ formatClinicalStatus(rec.status) }}
+                  {{ formatClinicalStatus(delegationStatus(rec)) }}
                 </span>
                 <div v-if="rec.etmf_document_id" class="role-hint">
                   Filed in eTMF ({{ rec.etmf_document_id }})
@@ -109,25 +109,28 @@
               </td>
               <td class="action-cell">
                 <button
-                  v-if="canSignOff && rec.status === 'PENDING_PI_SIGNATURE'"
+                  v-if="
+                    canSignOff &&
+                    delegationStatus(rec) === 'PENDING_PI_SIGNATURE'
+                  "
                   :data-testid="`btn-doa-signoff-${rec.record_id}`"
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
                 >
                   PI sign-off<span class="sr-only">
-                    for {{ rec.staff_name || rec.staff_user_id }}</span
+                    for {{ rec.staff_user_id }}</span
                   >
                 </button>
                 <button
-                  v-if="canManage && rec.status !== 'REVOKED'"
+                  v-if="canManage && delegationStatus(rec) !== 'REVOKED'"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="prepareRevoke(rec)"
                 >
                   Revoke<span class="sr-only">
                     delegation for
-                    {{ rec.staff_name || rec.staff_user_id }}</span
+                    {{ rec.staff_user_id }}</span
                   >
                 </button>
               </td>
@@ -140,7 +143,7 @@
         v-if="
           !canSignOff &&
           doaLog.delegated_staff.some(
-            (r) => r.status === 'PENDING_PI_SIGNATURE'
+            (r) => delegationStatus(r) === 'PENDING_PI_SIGNATURE'
           )
         "
         id="doa-pi-separation-note"
@@ -153,9 +156,7 @@
       <div v-if="activeSignOffRecord && canSignOff" class="mutation-card">
         <h4>
           Principal Investigator sign-off for
-          {{
-            activeSignOffRecord.staff_name || activeSignOffRecord.staff_user_id
-          }}
+          {{ activeSignOffRecord.staff_user_id }}
         </h4>
         <div class="form-row">
           <label for="doa-signoff-reason">Part 11 attestation</label>
@@ -196,9 +197,7 @@
       <div v-if="activeRevokeRecord && canManage" class="mutation-card">
         <h4>
           Revoke delegation for
-          {{
-            activeRevokeRecord.staff_name || activeRevokeRecord.staff_user_id
-          }}
+          {{ activeRevokeRecord.staff_user_id }}
         </h4>
         <div class="form-row">
           <label for="doa-revoke-reason">Revocation justification</label>
@@ -388,6 +387,25 @@ const effectiveStudyCode = computed(
   () => (props.studyCode || clinicalStore.activeStudyId || "").trim() || null
 );
 
+function delegationStatus(
+  rec: DelegationRecord
+): "ACTIVE" | "PENDING_PI_SIGNATURE" | "REVOKED" {
+  if (
+    rec.status === "ACTIVE" ||
+    rec.status === "PENDING_PI_SIGNATURE" ||
+    rec.status === "REVOKED"
+  ) {
+    return rec.status;
+  }
+  if (!rec.is_active || rec.end_date) {
+    return "REVOKED";
+  }
+  if (!rec.signed_off) {
+    return "PENDING_PI_SIGNATURE";
+  }
+  return "ACTIVE";
+}
+
 async function loadDoaLog() {
   const site = siteInput.value.trim();
   if (!site) return;
@@ -398,10 +416,7 @@ async function loadDoaLog() {
   scopeGuidance.value = "";
 
   try {
-    doaLog.value = await ctmsApi.getSiteDoaLog(
-      site,
-      effectiveStudyCode.value || undefined
-    );
+    doaLog.value = await ctmsApi.getSiteDoaLog(site);
     loaded.value = true;
   } catch (err) {
     doaLog.value = null;
@@ -509,7 +524,7 @@ async function confirmSignOff() {
     toasts.push({
       tone: "success",
       title: "PI signature recorded",
-      message: `Delegation active for ${rec.staff_name || rec.staff_user_id}.`,
+      message: `Delegation active for ${rec.staff_user_id}.`,
     });
     await loadDoaLog();
   } catch (err) {
@@ -544,7 +559,7 @@ async function confirmRevoke() {
     toasts.push({
       tone: "success",
       title: "Delegation revoked",
-      message: `Delegation revoked for ${rec.staff_name || rec.staff_user_id}.`,
+      message: `Delegation revoked for ${rec.staff_user_id}.`,
     });
     await loadDoaLog();
   } catch (err) {
@@ -557,12 +572,10 @@ async function confirmRevoke() {
 async function exportPdf() {
   const site = siteInput.value.trim();
   if (!site) return;
+  syncActiveScope(effectiveStudyCode.value || undefined, site);
   exporting.value = true;
   try {
-    const blob = await ctmsApi.exportSiteDoaPdf(
-      site,
-      effectiveStudyCode.value || undefined
-    );
+    const blob = await ctmsApi.exportSiteDoaPdf(site);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

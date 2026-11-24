@@ -324,6 +324,31 @@ public class RulePackTests
 
     private static RuleRecord Record(string dataset, string key, params (string Name, decimal Value)[] values) =>
         new(dataset, key, values.ToDictionary(v => v.Name, v => RuleValue.FromNumber(v.Value), StringComparer.Ordinal));
+
+    [Fact(DisplayName = "RulePack_ApplicabilityVariable_RoundTripsAndOmittedWhenNull")]
+    [Trait("Category", "Unit")]
+    public void RulePackApplicabilityVariableRoundTripsAndOmittedWhenNull()
+    {
+        var basePack = SampleRulePacks.Sample();
+        var ruleWithVariable = basePack.Rules[0] with
+        {
+            Applicability = basePack.Rules[0].Applicability with { Variable = "SYS" },
+        };
+        var ruleWithoutVariable = basePack.Rules[1] with
+        {
+            Applicability = basePack.Rules[1].Applicability with { Variable = null },
+        };
+
+        var pack = basePack with { Rules = [ruleWithVariable, ruleWithoutVariable] };
+        var json = RulePackJson.ToJson(pack);
+
+        json.GetProperty("rules")[0].GetProperty("applicability").GetProperty("variable").GetString().Should().Be("SYS");
+        json.GetProperty("rules")[1].GetProperty("applicability").TryGetProperty("variable", out _).Should().BeFalse();
+
+        var parsed = RulePackJson.Parse(json);
+        parsed.Rules[0].Applicability.Variable.Should().Be("SYS");
+        parsed.Rules[1].Applicability.Variable.Should().BeNull();
+    }
 }
 
 /// <summary>Generates random, valid rule packs and records from a seed, for property tests and the benchmark.</summary>

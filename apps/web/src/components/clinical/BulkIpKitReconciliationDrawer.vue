@@ -631,13 +631,13 @@ const authenticatedSignerId = computed(
     "site_pharmacist"
 );
 
-const authenticatedSignerLabel = computed(
-  () =>
-    authStore.user?.displayName ||
-    authStore.user?.name ||
-    props.pharmacistName ||
-    authenticatedSignerId.value
-);
+const authenticatedSignerLabel = computed(() => {
+  const fullName = [authStore.user?.firstName, authStore.user?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || props.pharmacistName || authenticatedSignerId.value;
+});
 
 const drawerRef = ref<HTMLElement | null>(null);
 const barcodeInputRef = ref<HTMLInputElement | null>(null);

@@ -90,6 +90,7 @@ describe("ProtocolTrainingConsole.vue", () => {
       title: "Amendment 3.0 Delta",
       description: "Dosing window update",
       is_active: true,
+      created_at: "2026-10-15T00:00:00Z",
       modules: [
         {
           id: "mod-1",
@@ -154,10 +155,16 @@ describe("ProtocolTrainingConsole.vue", () => {
       id: "asn-101",
       curriculum_id: "curr-1",
       user_id: "site_investigator_01",
+      user_name: "Dr. Investigator",
       user_role: "principal_investigator",
       study_id: "STUDY-2026",
       site_id: "SITE-101",
       status: "PENDING",
+      batch_transaction_id: null,
+      quiz_score: null,
+      time_spent_seconds: 0,
+      completed_at: null,
+      created_at: "2026-10-14T00:00:00Z",
       curriculum: {
         ...mockCurriculum,
         modules: [
