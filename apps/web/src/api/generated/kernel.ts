@@ -1606,6 +1606,8 @@ export interface components {
       template_ids?: null | string[];
       /** @default false */
       replace_forms: boolean;
+      amendment_classification?: null | string;
+      transition_policy?: null | string;
     };
     Kernel_KernelLineageEdgeResponse: {
       from: string;
@@ -1879,6 +1881,14 @@ export interface components {
       decided_at: null | string;
       decided_by: null | string;
     };
+    Kernel_KernelProtocolAmendmentResponse: {
+      intent: string;
+      rationale: string;
+      classification: string;
+      summary_of_changes: string;
+      impacted_elements: string[];
+      transition_policy: string;
+    };
     Kernel_KernelProtocolDraftSummaryResponse: {
       version: components["schemas"]["Kernel_KernelProtocolVersionResponse"];
       title: string;
@@ -1891,6 +1901,8 @@ export interface components {
       imported_rule_pack?:
         | null
         | components["schemas"]["Kernel_KernelImportedRulePackSummaryResponse"];
+      amendment?:
+        null | components["schemas"]["Kernel_KernelProtocolAmendmentResponse"];
     };
     Kernel_KernelProtocolFormItemResponse: {
       id: string;
@@ -4161,7 +4173,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Identity.TenantUnknown`, `K.Knowledge.CodeSystemUnknown`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4188,7 +4200,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.NameRequired`, `K.Knowledge.CodeSystemUriInvalid`, `K.Knowledge.ConceptLabelRequired`, `K.Knowledge.DuplicateEntry`, `K.Knowledge.EntriesInvalid`, `K.Knowledge.ExternalCodeMismatch`, `K.Knowledge.LicenseMismatch`, `K.Knowledge.PackageInvalid`, `K.Knowledge.VersionRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;
