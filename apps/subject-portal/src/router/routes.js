@@ -1,15 +1,8 @@
 // One route per portal view, in the order the shell renders them. `viewId` is
 // the view's section id (and the value of `state.currentView`); `tab` puts the
 // view in the tab bar.
-import {
-  ClipboardList,
-  FileSignature,
-  Mail,
-  ScrollText,
-  TrendingUp,
-  Wallet,
-} from "lucide-vue-next";
-import { markRaw } from "vue";
+import { ClinicalIcon } from "ui";
+import { h, markRaw } from "vue";
 
 import ComplianceView from "../views/ComplianceView.vue";
 import ConsentView from "../views/ConsentView.vue";
@@ -19,6 +12,10 @@ import QuestionnaireView from "../views/QuestionnaireView.vue";
 import TasksView from "../views/TasksView.vue";
 import WalletView from "../views/WalletView.vue";
 
+function createPortalTabIcon(name) {
+  return markRaw((props) => h(ClinicalIcon, { ...props, name }));
+}
+
 export const viewRoutes = [
   {
     path: "/",
@@ -27,7 +24,11 @@ export const viewRoutes = [
     component: TasksView,
     meta: {
       viewId: "view-tasks",
-      tab: { id: "tasks", label: "My Tasks", icon: markRaw(ClipboardList) },
+      tab: {
+        id: "tasks",
+        label: "My Tasks",
+        icon: createPortalTabIcon("clipboard-list"),
+      },
     },
   },
   {
@@ -47,7 +48,7 @@ export const viewRoutes = [
       tab: {
         id: "compliance",
         label: "My Compliance",
-        icon: markRaw(TrendingUp),
+        icon: createPortalTabIcon("trending-up"),
       },
     },
   },
@@ -57,7 +58,11 @@ export const viewRoutes = [
     component: InboxView,
     meta: {
       viewId: "view-inbox",
-      tab: { id: "inbox", label: "My Inbox", icon: markRaw(Mail) },
+      tab: {
+        id: "inbox",
+        label: "My Inbox",
+        icon: createPortalTabIcon("mail"),
+      },
     },
   },
   {
@@ -69,7 +74,7 @@ export const viewRoutes = [
       tab: {
         id: "consent",
         label: "My Consent",
-        icon: markRaw(FileSignature),
+        icon: createPortalTabIcon("file-signature"),
       },
     },
   },
@@ -79,7 +84,11 @@ export const viewRoutes = [
     component: WalletView,
     meta: {
       viewId: "view-wallet",
-      tab: { id: "wallet", label: "My Wallet", icon: markRaw(Wallet) },
+      tab: {
+        id: "wallet",
+        label: "My Wallet",
+        icon: createPortalTabIcon("wallet"),
+      },
     },
   },
   {
@@ -91,7 +100,7 @@ export const viewRoutes = [
       tab: {
         id: "lay-summaries",
         label: "Trial Results",
-        icon: markRaw(ScrollText),
+        icon: createPortalTabIcon("scroll-text"),
       },
     },
   },

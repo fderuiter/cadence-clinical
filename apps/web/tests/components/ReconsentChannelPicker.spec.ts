@@ -8,11 +8,12 @@ import ReconsentChannelPicker from "../../src/components/econsent/ReconsentChann
 
 describe("ReconsentChannelPicker", () => {
   it("checks the channels in the model and emits the new selection", async () => {
-    const wrapper = mount(ReconsentChannelPicker, {
+    const wrapper: ReturnType<typeof mount> = mount(ReconsentChannelPicker, {
       props: {
         modelValue: ["SMS"],
-        "onUpdate:modelValue": (value: string[]) =>
-          wrapper.setProps({ modelValue: value }),
+        "onUpdate:modelValue": (value: unknown[]) => {
+          void wrapper.setProps({ modelValue: value as string[] });
+        },
       },
     });
 

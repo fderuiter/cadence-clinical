@@ -19,12 +19,40 @@
       :title="option.title"
       @click="handleSelect(option.value)"
     >
-      <component
-        :is="option.icon"
-        :size="iconSize"
-        :stroke-width="1.75"
+      <svg
+        class="clinical-icon lucide"
+        :width="iconSize"
+        :height="iconSize"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
         aria-hidden="true"
-      />
+        focusable="false"
+      >
+        <template v-if="option.value === 'light'">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2" />
+          <path d="M12 20v2" />
+          <path d="m4.93 4.93 1.41 1.41" />
+          <path d="m17.66 17.66 1.41 1.41" />
+          <path d="M2 12h2" />
+          <path d="M20 12h2" />
+          <path d="m6.34 17.66-1.41 1.41" />
+          <path d="m19.07 4.93-1.41 1.41" />
+        </template>
+        <path
+          v-else-if="option.value === 'dark'"
+          d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"
+        />
+        <template v-else>
+          <rect width="20" height="14" x="2" y="3" rx="2" />
+          <line x1="8" x2="16" y1="21" y2="21" />
+          <line x1="12" x2="12" y1="17" y2="21" />
+        </template>
+      </svg>
       <span v-if="showLabels" class="clinical-theme-switcher__label"
         >{{ option.shortLabel }}<span class="sr-only"> theme</span></span
       >
@@ -34,7 +62,6 @@
 
 <script setup>
 import { computed } from "vue";
-import { Monitor, Moon, Sun } from "lucide-vue-next";
 import { useTheme } from "../../composables/useTheme.js";
 
 const props = defineProps({
@@ -69,21 +96,18 @@ const themeOptions = [
     shortLabel: "Light",
     ariaLabel: "Light theme",
     title: "Use light theme",
-    icon: Sun,
   },
   {
     value: "dark",
     shortLabel: "Dark",
     ariaLabel: "Dark theme",
     title: "Use dark theme",
-    icon: Moon,
   },
   {
     value: "auto",
     shortLabel: "Auto",
     ariaLabel: "System theme (Auto)",
     title: "Follow system color scheme (Auto)",
-    icon: Monitor,
   },
 ];
 

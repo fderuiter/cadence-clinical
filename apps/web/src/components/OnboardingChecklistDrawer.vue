@@ -163,7 +163,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer } from "ui";
 import {
   resolveAuthorizedTaskRoute,
@@ -176,6 +176,12 @@ import { hasRequiredRole } from "../router";
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
+let route = null;
+try {
+  route = useRoute();
+} catch {
+  // Gracefully fallback in isolated unit test mounts without route injection
+}
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -233,6 +239,22 @@ function openOrientationHub() {
 function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
+  if (
+    route?.name === "forbidden" ||
+    route?.path === "/forbidden" ||
+    route?.name === "unavailable" ||
+    route?.path === "/unavailable"
+  ) {
+    const stepRoute = resolveAuthorizedTaskRoute(
+      { routeName: onboardingStore.currentStepConfig?.routeName || "overview" },
+      effectiveRoles.value
+    );
+    const nextPath =
+      stepRoute && canPushResolvedPath(stepRoute) ? stepRoute : "/overview";
+    if (canPushResolvedPath(nextPath)) {
+      router.push(nextPath);
+    }
+  }
 }
 </script>
 

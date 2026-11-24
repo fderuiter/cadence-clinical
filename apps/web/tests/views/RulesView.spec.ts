@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
@@ -191,7 +191,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     await flushPromises();
 
     // The editor should be shown
-    expect(wrapper.vm.showEditor).toBe(true);
+    expect((wrapper.vm as Record<string, any>).showEditor).toBe(true);
 
     // Verifying standard active visual fields are present in target selections
     const targetSelect = wrapper.find("#target-field-select");
@@ -220,8 +220,10 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
     await flushPromises();
 
+    const vm = wrapper.vm as Record<string, any>;
+
     // Fill parameters
-    wrapper.vm.targetField = "pulse";
+    vm.targetField = "pulse";
 
     // Find the Save Signed Rule button
     const saveBtn = wrapper
@@ -233,12 +235,12 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
     await flushPromises();
 
     // ReasonModal should be prompted
-    expect(wrapper.vm.showReasonModal).toBe(true);
+    expect(vm.showReasonModal).toBe(true);
 
     // Confirming transition with a valid reason registers a block in the compliance ledger
     const initialLedgerSize = clinicalStore.ledgerBlocks.length;
 
-    await wrapper.vm.confirmChangeReason(
+    await vm.confirmChangeReason(
       "Added logical safety check for pulse metrics"
     );
 
@@ -278,7 +280,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
       await flushPromises();
 
-      wrapper.vm.activeTab = "queries";
+      const vm = wrapper.vm as Record<string, any>;
+      vm.activeTab = "queries";
       await flushPromises();
 
       const searchInput = wrapper.find("#dm-dict-lookup-input");
@@ -299,7 +302,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
         expect.any(Object)
       );
 
-      expect(wrapper.vm.dictResults).toEqual([
+      expect(vm.dictResults).toEqual([
         { code: "10019211", name: "Hypertension", dictionary: "MedDRA v26.0" },
         {
           code: "10019218",
@@ -334,7 +337,8 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
       await flushPromises();
 
-      wrapper.vm.activeTab = "queries";
+      const vm = wrapper.vm as Record<string, any>;
+      vm.activeTab = "queries";
       await flushPromises();
 
       const searchInput = wrapper.find("#dm-dict-lookup-input");
@@ -356,7 +360,7 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
       );
 
       // dictResults must be empty, with zero fake mock codes (10023026, 10037340)
-      expect(wrapper.vm.dictResults).toEqual([]);
+      expect(vm.dictResults).toEqual([]);
       expect(wrapper.text()).not.toContain("10023026");
       expect(wrapper.text()).not.toContain("10037340");
     });
