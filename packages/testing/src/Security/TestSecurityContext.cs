@@ -44,6 +44,16 @@ public static class TestSecurityContext
     /// <summary>Test-only imaging UID pseudonymization key (base64 of 32 ASCII bytes) (#5399).</summary>
     public const string ImagingDeidPseudonymizationKeyBase64 = "Y2FkZW5jZS10ZXN0LWltYWdpbmctcHNldWRvbnltLTE="; // pragma: allowlist secret
 
+    /// <summary>Test-only biometric liveness HMAC key (base64 of 32 ASCII bytes) shared by kernel and econsent (ADR-2660).</summary>
+    public const string BiometricLivenessKeyBase64 = "Y2FkZW5jZS10ZXN0LWxpdmVuZXNzLWhtYWMta2V5LTA="; // pragma: allowlist secret
+
+    /// <summary>Decoded 32-byte test biometric liveness HMAC key.</summary>
+    public static byte[] BiometricLivenessKeyBytes => Convert.FromBase64String(BiometricLivenessKeyBase64);
+
+    /// <summary>Pre-configured <see cref="BiometricLivenessOptions"/> using <see cref="BiometricLivenessKeyBase64"/>.</summary>
+    public static IOptions<BiometricLivenessOptions> BiometricLivenessOptions { get; } =
+        Options.Create(new BiometricLivenessOptions { KeyBase64 = BiometricLivenessKeyBase64 });
+
     /// <summary>
     /// The tenant code test identities carry, as a sign-in token names one. There is no fallback tenant (#5038), so a
     /// test of a caller without a tenant says so with <c>identity with { TenantId = null }</c>.
@@ -235,4 +245,8 @@ public static class SignedClientExtensions
         builder
             .UseSetting("CADENCE_IMAGING_DEID_SIGNING_KEY", TestSecurityContext.ImagingDeidSigningKeyBase64)
             .UseSetting("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", TestSecurityContext.ImagingDeidPseudonymizationKeyBase64);
+
+    /// <summary>Supplies the test biometric liveness key (<c>CADENCE_BIOMETRIC_LIVENESS_KEY</c>) so kernel and econsent startup validation passes.</summary>
+    public static IWebHostBuilder UseTestBiometricLivenessKey(this IWebHostBuilder builder) =>
+        builder.UseSetting(BiometricLivenessOptions.ConfigurationKey, TestSecurityContext.BiometricLivenessKeyBase64);
 }

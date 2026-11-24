@@ -1,4 +1,4 @@
-# ADR-2832: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key
+# ADR-2661: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

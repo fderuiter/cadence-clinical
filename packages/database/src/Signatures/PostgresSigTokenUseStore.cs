@@ -32,15 +32,22 @@ public sealed class PostgresSigTokenUseStore<TContext>(IServiceScopeFactory scop
     public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
-        return TryRecordFirstUseBatchAsync([(tokenId, retainUntil)], cancellationToken);
+        return TryRecordFirstUseAsync([(tokenId, retainUntil)], cancellationToken);
     }
 
     /// <inheritdoc />
-    public async Task<bool> TryRecordFirstUseBatchAsync(
+    public Task<bool> TryRecordFirstUseBatchAsync(
         IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> tokens,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(tokens);
+        return TryRecordFirstUseAsync(tokens, cancellationToken);
+    }
+
+    private async Task<bool> TryRecordFirstUseAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> tokens,
+        CancellationToken cancellationToken)
+    {
         if (tokens.Count == 0)
         {
             return false;

@@ -18,7 +18,7 @@ The `usdm-schemas` package operates as a modular shared library within the Caden
 
 ## Public APIs / Exports
 
-Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
+Exports shared utilities, domain interfaces, and Zod validation models for `usdm-schemas`, including `WrapperSchema` / `Wrapper` for USDM v4 envelopes (`usdmVersion`, `systemName`, `systemVersion`, `study.versions[].studyDesigns[]`) and `USDMStudySchema` accepting both USDM v4 `Wrapper` and legacy USDM v3 payloads.
 
 #### Exposed CLI Commands
 

@@ -34,6 +34,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
+| 2660–2669 | Security (continued)                                                              |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -138,6 +139,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
 - [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) (2026-11-22)
 - [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) (2026-11-22)
+- [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) (2026-11-23)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)
@@ -432,7 +434,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-254: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md) (2026-08-03)
 - [ADR-2320: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md) (2026-08-03)
 - [ADR-2321: Implement class-based touch target optimization for dense layouts](2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md) (2026-08-03)
-- [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) (2026-08-03)
+- [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) (2026-08-03) _(Superseded by [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md))_
 - [ADR-2324: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md) (2026-08-03)
 - [ADR-2337: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md) (2026-08-04)
 - [ADR-2340: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md) (2026-08-04)
@@ -448,7 +450,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2424: Vue SPA Foundation and Tooling Setup](2026-08-30-vue-spa-foundation-tooling.md) (2026-08-30)
 - [ADR-328: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) (2026-09-11)
 - [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) (2026-11-19)
-- [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19)
+- [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19) _(Amended by [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md))_
 - [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 - [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](2026-11-20-share-session-logout-and-signature-primitives.md) (2026-11-20)
 - [ADR-2593: Extend Focus Primitives with Inline Focus Handoff](2026-11-22-extend-focus-primitives-with-inline-focus-handoff.md) (2026-11-22)
@@ -461,6 +463,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
 - [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
+- [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
+- [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -604,6 +608,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) (2026-10-19)
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
 - [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
+- [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) (2026-11-23)
+- [ADR-2661: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](2026-11-23-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) (2026-11-23)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)
@@ -650,4 +656,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) (2026-11-22)
 - [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) (2026-11-22)
 - [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) (2026-11-23)
-- [ADR-2832: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](2026-11-23-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) (2026-11-23)
+- [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) (2026-11-23)

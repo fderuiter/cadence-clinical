@@ -30,7 +30,7 @@ routes answer as the service being down.
 - `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
   `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (its own origin), `CADENCE_GATEWAY_URL`
   (the gateway, where its `/api` proxy forwards; the gateway sends no CORS headers, so the browser must not call it
-  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install --frozen-lockfile && pnpm --filter ui build` at the repository root first; the AppHost does not install packages or prebuild `packages/ui`.
+  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install --frozen-lockfile` at the repository root first; the AppHost does not install packages (`packages/ui` resolves directly from workspace source).
 - `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
   compose, in the `full` profile only (it calls interop and payments). Like `web`, it gets `VITE_API_BASE_URL` (its own
   origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. The dev realm's `cadence-web` client allows its redirect URI,
@@ -75,14 +75,18 @@ issuer never asks for the Keycloak admin):
   different key; it encrypts randomisation lists, allocations and kit arm labels, and execution refuses to start
   without one, ADR-2640);
 - `cgt-barcode-hmac-key`, passed to execution as `CGT_BARCODE_HMAC_KEY` (base64 of 32 bytes, a different key; it
-  verifies CGT chain-of-custody bag barcodes, and execution refuses to start without one);
+  verifies CGT chain-of-custody bag barcodes, and execution refuses to start without one,
+  [ADR-2661](../../docs/adr/2026-11-23-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md));
 - `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
   passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
 - `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock
   tokens, ADR-2515);
 - `imaging-deid-signing-key` and `imaging-deid-pseudonymization-key`, passed to imaging as
   `CADENCE_IMAGING_DEID_SIGNING_KEY` and `CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY` (base64 of 32 bytes each, two
-  different keys; they sign de-identification certificates and key the anonymized DICOM UIDs, #5399).
+  different keys; they sign de-identification certificates and key the anonymized DICOM UIDs, #5399);
+- `biometric-liveness-key`, passed to kernel (both `core` and `full`) and econsent (`full`) as
+  `CADENCE_BIOMETRIC_LIVENESS_KEY` (base64 of 32 bytes; signs and verifies 15-minute biometric liveness tokens,
+  [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)).
 
 The gateway's `OIDC_AUTHORITY` is the Keycloak `cadence` realm. Set the parameters once with user secrets (choose your own values):
 
@@ -95,11 +99,13 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:audit-log-secret-key" "<secret>"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:demographics-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:randomization-allocation-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:cgt-barcode-hmac-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-lookup-hash-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:sce-signing-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:imaging-deid-signing-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:imaging-deid-pseudonymization-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:biometric-liveness-key" "$(openssl rand -base64 32)"
 ```
 
 Or set `Parameters__minio-root-user` (and so on) as environment variables. The names contain hyphens, which
@@ -118,7 +124,7 @@ dashboard prompts for it before starting the containers.
 ## Run locally
 
 ```bash
-pnpm install --frozen-lockfile && pnpm --filter ui build       # once, for the web app and shared UI package
+pnpm install --frozen-lockfile                                 # once, for the frontend workspace
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj   # full profile
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
 ```
@@ -134,6 +140,8 @@ env AppHost__Profile=core \
     "Parameters__audit-log-secret-key=$(openssl rand -hex 24)" \
     "Parameters__demographics-encryption-key=$(openssl rand -base64 32)" \
     "Parameters__randomization-allocation-key=$(openssl rand -base64 32)" \
+    "Parameters__cgt-barcode-hmac-key=$(openssl rand -base64 32)" \
+    "Parameters__biometric-liveness-key=$(openssl rand -base64 32)" \
     ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
     dotnet run --project apps/apphost/src/Cadence.AppHost.csproj --launch-profile http
 ```

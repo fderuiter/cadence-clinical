@@ -403,6 +403,7 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", AppConnectionString)
             .UseSetting("Kernel:VaultMasterKey", VaultMasterKey)
             .UseSetting("Kernel:VaultRegion", "US")
@@ -421,7 +422,7 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         WebApplicationFactory<Cadence.Kernel.Host.Program> kernelHost) =>
         new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey();
+            builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey();
             builder.UseSetting("ConnectionStrings:cadence", AppConnectionString);
             builder.UseSetting("Database:MigrateOnStartup", "true");
             builder.UseSetting(HttpKernelEnrollmentSynchronizer.ConfigurationKey, "http://localhost");

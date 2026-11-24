@@ -61,9 +61,6 @@ up() {
   fi
   echo "keycloak  ok  (http://localhost:8080, admin/admin)"
 
-  # The web app's vite.config aliases "ui" to packages/ui/dist, which pnpm install does not build.
-  [ -f "$REPO/packages/ui/dist/index.js" ] || (cd "$REPO" && pnpm --filter ui build >/dev/null)
-
   # Secrets persist across restarts so execution can still decrypt the demographics it wrote.
   if [ ! -f "$STATE/secrets.env" ]; then
     {
@@ -77,6 +74,8 @@ up() {
     echo "Parameters__randomization-allocation-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
   grep -q '^Parameters__cgt-barcode-hmac-key=' "$STATE/secrets.env" ||
     echo "Parameters__cgt-barcode-hmac-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
+  grep -q '^Parameters__biometric-liveness-key=' "$STATE/secrets.env" ||
+    echo "Parameters__biometric-liveness-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
 
   if ! curl -sf http://localhost:8000/healthz/live >/dev/null; then
     tmux kill-session -t apphost 2>/dev/null || true

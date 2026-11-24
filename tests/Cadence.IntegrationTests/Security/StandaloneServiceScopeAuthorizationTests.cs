@@ -529,7 +529,8 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
 
         // 1. eConsent capture stamps verified tenant code on ConsentAuditLog and resolved UUID on PostgreSQL tenant_id.
         string actionPath = "/api/v1/econsent/templates/tpl-rls-1/capture-consent";
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-EC-1", 0.99m, true, now: SystemClock.Instance.UtcNow);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-EC-1", 0.99m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: SystemClock.Instance.UtcNow);
         var crcAlpha = new GatewayIdentity(
             UserId: "crc-ec-alpha",
             Roles: ["crc"],
@@ -841,6 +842,7 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys()
+                .UseTestBiometricLivenessKey()
                 .UseSetting("ConnectionStrings:cadence", cadenceAppConnectionString)
                 .UseSetting("Database:MigrateOnStartup", "false")
                 .ConfigureServices(services =>

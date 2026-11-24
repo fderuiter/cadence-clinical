@@ -63,7 +63,8 @@ internal static class ServiceHosts
                 .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
-                .UseTestImagingDeidentificationKeys();
+                .UseTestImagingDeidentificationKeys()
+                .UseTestBiometricLivenessKey();
             host.ConfigureTestServices(services =>
             {
                 foreach (var descriptor in services
