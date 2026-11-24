@@ -287,9 +287,12 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
     expect(shell.find("#nav-site-readiness").exists()).toBe(false);
 
     const overviewTitles = shell
-      .findAll(".launcher-title")
+      .findAll(".launcher-card:not(.demo-catalog-card) .launcher-title")
       .map((el) => el.text());
     expect(overviewTitles).toEqual(["Studies"]);
+    expect(shell.find("#demo-launch-ecrf").exists()).toBe(false);
+    expect(shell.find("#demo-launch-ctms").exists()).toBe(false);
+    expect(shell.find("#demo-launch-audit").exists()).toBe(true);
 
     const visibleTaskRoutes = onboardingStore.visibleTasks.map((t) => t.route);
     expect(visibleTaskRoutes).not.toContain("/ecrf");

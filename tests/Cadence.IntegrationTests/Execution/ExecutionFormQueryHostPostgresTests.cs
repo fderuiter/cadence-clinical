@@ -314,6 +314,8 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }, HttpStatusCode.OK, ct);
         await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Resolved missing diastolic", null, HttpStatusCode.OK, ct);
         await RelayHostOutboxAsync();
+        await _scenario.VerifyAndSignAsync(new Form(subject, formRecord.ProtocolVersionId, CollectionInstanceId.FromGuid(form)), ct);
+        await _scenario.VerifyAndSignAsync(new Form(subject, formRecord.ProtocolVersionId, openedSecond.CollectionInstanceId), ct);
 
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 
@@ -747,6 +749,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error a query endpoint returns must be one its command declares (ADR-2600 §4.5).
@@ -767,6 +770,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         _sharedClockHost ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {

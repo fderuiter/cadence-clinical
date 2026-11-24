@@ -1,4 +1,4 @@
-# ADR-2658: Unify Shared Persona Catalog, Account-Scoped Onboarding State, and Responsive Tour Anchoring
+# ADR-2670: Unify Shared Persona Catalog, Account-Scoped Onboarding State, and Responsive Tour Anchoring
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

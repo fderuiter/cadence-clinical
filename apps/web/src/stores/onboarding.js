@@ -6,12 +6,16 @@ import {
 } from "ui";
 import { registerOnboardingSessionBridge } from "../auth/sessionCoordinator.js";
 import {
+  DATA_COLLECTION_ROLES,
+  ETMF_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
   buildDataCollectionPath,
   buildScopedWorkflowPath,
   buildStudiesWorkspacePath,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import { isScreenAvailable } from "../router/availability";
+import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
@@ -33,47 +37,7 @@ import {
 
 export const ONBOARDING_STORAGE_NAMESPACE = "onboarding";
 
-const DATA_COLLECTION_ROLES = [
-  "principal_investigator",
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-
-const SITE_READINESS_SITE_ROLES = [
-  "principal_investigator",
-  "site_investigator",
-  "crc",
-];
-
-const ETMF_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "principal_investigator",
-  "site_investigator",
-  "crc",
-  "safety_reviewer",
-  "safety_officer",
-  "safety_physician",
-  "medical_monitor",
-  "sponsor_mm",
-  "auditor",
-  "tmf_auditor",
-  "sponsor_admin",
-];
-
-const SAFETY_ROLES = [
+export const SAFETY_ROLES = [
   "safety_reviewer",
   "safety_officer",
   "safety_physician",
@@ -95,6 +59,13 @@ const MDR_ROLES = [
   "sponsor_admin",
 ];
 const RULES_ROLES = ["sponsor_designer", "data_manager", "sponsor_admin"];
+
+const STUDY_FALLBACK_TASK_ROLES = {
+  safety: SAFETY_ROLES,
+  audit: AUDIT_ROLES,
+  mdr: MDR_ROLES,
+  rules: RULES_ROLES,
+};
 
 const NON_ONBOARDING_ROUTES = new Set([
   "landing",
@@ -165,20 +136,24 @@ function normalizeTaskRouteName(task) {
   if (task?.routeName) return task.routeName;
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
-  if (rawRoute === "/studies" || rawRoute.startsWith("/studies/")) {
+  const cleanPath = rawRoute.split("?")[0];
+  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
     return "study";
   }
-  if (rawRoute === "/overview") return "overview";
-  if (rawRoute === "/ecrf") return "ecrf";
-  if (rawRoute === "/ctms") return "ctms";
-  if (rawRoute === "/ssu") return "ssu";
-  if (rawRoute === "/etmf") return "etmf";
-  if (rawRoute === "/training") return "training";
-  if (rawRoute === "/safety") return "safety";
-  if (rawRoute === "/audit") return "audit";
-  if (rawRoute === "/mdr") return "mdr";
-  if (rawRoute === "/rules") return "rules";
-  return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
+  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
+    return "observation";
+  }
+  if (cleanPath === "/overview") return "overview";
+  if (cleanPath === "/ecrf") return "ecrf";
+  if (cleanPath === "/ctms") return "ctms";
+  if (cleanPath === "/ssu") return "ssu";
+  if (cleanPath === "/etmf") return "etmf";
+  if (cleanPath === "/training") return "training";
+  if (cleanPath === "/safety") return "safety";
+  if (cleanPath === "/audit") return "audit";
+  if (cleanPath === "/mdr") return "mdr";
+  if (cleanPath === "/rules") return "rules";
+  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
 }
 
 export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
@@ -289,10 +264,11 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
         })
       : null;
   }
-  if (routeName === "safety") {
-    if (!hasRequiredRole(userRoles, SAFETY_ROLES)) return null;
-    if (isScreenAvailable("safety")) {
-      return buildScopedWorkflowPath("/safety", {
+  const studyFallbackRoles = STUDY_FALLBACK_TASK_ROLES[routeName];
+  if (studyFallbackRoles) {
+    if (!hasRequiredRole(userRoles, studyFallbackRoles)) return null;
+    if (isScreenAvailable(routeName)) {
+      return buildScopedWorkflowPath(`/${routeName}`, {
         studyCode,
         siteId,
         subjectCode,
@@ -307,59 +283,16 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
         })
       : null;
   }
-  if (routeName === "audit") {
-    if (!hasRequiredRole(userRoles, AUDIT_ROLES)) return null;
-    if (isScreenAvailable("audit")) {
-      return buildScopedWorkflowPath("/audit", {
-        studyCode,
-        siteId,
-        subjectCode,
-      });
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(routeName)) return null;
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    ) {
+      return null;
     }
-    return isScreenAvailable("study")
-      ? buildStudiesWorkspacePath({
-          studyCode,
-          siteId,
-          subjectCode,
-          participantRef,
-        })
-      : null;
-  }
-  if (routeName === "mdr") {
-    if (!hasRequiredRole(userRoles, MDR_ROLES)) return null;
-    if (isScreenAvailable("mdr")) {
-      return buildScopedWorkflowPath("/mdr", {
-        studyCode,
-        siteId,
-        subjectCode,
-      });
-    }
-    return isScreenAvailable("study")
-      ? buildStudiesWorkspacePath({
-          studyCode,
-          siteId,
-          subjectCode,
-          participantRef,
-        })
-      : null;
-  }
-  if (routeName === "rules") {
-    if (!hasRequiredRole(userRoles, RULES_ROLES)) return null;
-    if (isScreenAvailable("rules")) {
-      return buildScopedWorkflowPath("/rules", {
-        studyCode,
-        siteId,
-        subjectCode,
-      });
-    }
-    return isScreenAvailable("study")
-      ? buildStudiesWorkspacePath({
-          studyCode,
-          siteId,
-          subjectCode,
-          participantRef,
-        })
-      : null;
+    return catalogEntry.defaultPath;
   }
   return null;
 }
@@ -386,12 +319,13 @@ export function isTourRouteAuthorized(routeName, userRoles) {
     return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
   }
   if (routeName === "observation") {
-    return hasRequiredRole(userRoles, [
+    const obsRoles = DEMO_MODULE_CATALOG.observation?.requiresRole || [
       "principal_investigator",
       "site_investigator",
       "crc",
       "data_manager",
-    ]);
+    ];
+    return hasRequiredRole(userRoles, obsRoles);
   }
   if (routeName === "ctms") {
     return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
@@ -401,6 +335,13 @@ export function isTourRouteAuthorized(routeName, userRoles) {
       ...SITE_READINESS_SPONSOR_ROLES,
       ...SITE_READINESS_SITE_ROLES,
     ]);
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    return (
+      catalogEntry.requiresRole.length === 0 ||
+      hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    );
   }
   return false;
 }

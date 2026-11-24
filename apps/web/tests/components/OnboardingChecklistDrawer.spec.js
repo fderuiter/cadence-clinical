@@ -9,6 +9,8 @@ import {
   useOnboardingStore,
   getOnboardingStorageKey,
   DEFAULT_SETUP_TASKS,
+  resolveAuthorizedTaskRoute,
+  isTourRouteAuthorized,
 } from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
 import {
@@ -473,5 +475,59 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     await navBtns[readinessIndex].trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/ssu");
     pushSpy.mockRestore();
+  });
+
+  it("unlocks authorized DEMO_MODULE_CATALOG task and guided-tour routes in demo builds while blocking unauthorized routes", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      authStore.switchPersona("sponsor_designer");
+
+      expect(
+        resolveAuthorizedTaskRoute(
+          { id: "demo_mdr", routeName: "mdr", route: "/mdr" },
+          authStore.normalizedRoles
+        )
+      ).toBe("/mdr");
+      expect(isTourRouteAuthorized("mdr", authStore.normalizedRoles)).toBe(
+        true
+      );
+      expect(isTourRouteAuthorized("safety", authStore.normalizedRoles)).toBe(
+        false
+      );
+
+      const onboardingStore = useOnboardingStore();
+      onboardingStore.openDrawer();
+      const wrapper = mount(OnboardingChecklistDrawer, {
+        global: { plugins: [router] },
+      });
+      const pushSpy = vi.spyOn(router, "push");
+      wrapper.vm.$.setupState.navigateToTask({
+        id: "demo_mdr",
+        routeName: "mdr",
+        route: "/mdr",
+      });
+      expect(pushSpy).toHaveBeenCalledWith("/mdr");
+
+      pushSpy.mockClear();
+      authStore.switchPersona("auditor");
+      expect(
+        resolveAuthorizedTaskRoute(
+          { id: "demo_mdr", routeName: "mdr", route: "/mdr" },
+          authStore.normalizedRoles
+        )
+      ).toBeNull();
+      wrapper.vm.$.setupState.navigateToTask({
+        id: "demo_mdr",
+        routeName: "mdr",
+        route: "/mdr",
+      });
+      expect(pushSpy).not.toHaveBeenCalled();
+      pushSpy.mockRestore();
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

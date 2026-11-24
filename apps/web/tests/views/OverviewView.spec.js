@@ -231,4 +231,58 @@ describe("OverviewView Orientation Hub Component", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("renders role-authorized #overview-demo-catalog family cards in demo builds without banned UX-1 acronyms", async () => {
+    const stdAuth = signInAs(useAuthStore(), ["Sponsor Admin"]);
+    stdAuth.currentPersona = "super_admin";
+    const stdWrapper = mount(OverviewView, {
+      global: { plugins: [router] },
+    });
+    expect(stdWrapper.find("#overview-demo-catalog").exists()).toBe(false);
+    stdWrapper.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      authStore.switchPersona("sponsor_designer");
+      await router.push("/overview");
+
+      const wrapper = mount(OverviewView, {
+        global: { plugins: [router] },
+      });
+
+      const catalog = wrapper.find("#overview-demo-catalog");
+      expect(catalog.exists()).toBe(true);
+      const designerText = catalog.text();
+      expect(designerText).toContain("Blueprint");
+      expect(designerText).toContain("Protocol & schedule designer");
+      expect(designerText).not.toContain("EDC");
+      expect(designerText).not.toContain("CTMS");
+      expect(designerText).not.toContain("eTMF");
+      expect(designerText).not.toContain("RTSM");
+      expect(designerText).not.toContain("P21");
+      expect(designerText).not.toContain("QMS");
+      expect(designerText).not.toContain("Safety system");
+
+      const mdrBtn = wrapper.find("#demo-launch-mdr");
+      expect(mdrBtn.exists()).toBe(true);
+      const pushSpy = vi.spyOn(router, "push");
+      await mdrBtn.trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith("/mdr");
+      await pushSpy.mock.results[0].value;
+      expect(router.currentRoute.value.path).toBe("/mdr");
+      pushSpy.mockRestore();
+
+      await router.push("/overview");
+      authStore.switchPersona("safety_officer");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#demo-launch-safety").exists()).toBe(true);
+      expect(wrapper.find("#demo-launch-mdr").exists()).toBe(false);
+
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
