@@ -183,6 +183,7 @@
         :can-answer-queries="effectiveCanAnswerQueries"
         :assertions-locked="formState.assertionsLocked"
         :act-query="queries.act"
+        :reassign-query="queries.reassign"
         :act-many-queries="queries.actMany"
         :current-form-titles="currentFormTitles"
         :query-form-link="queryFormLink"
@@ -591,7 +592,7 @@ onUnmounted(() => {
   padding: 10px 14px;
   border-radius: var(--radius-md, 8px);
   font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text);
 }
 .ecrf-draft-banner--restored {

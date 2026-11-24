@@ -31,15 +31,6 @@ public static class ImagingSegmentationEndpoints
         return routes;
     }
 
-    private static string Caller(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted segmentation request has no signed caller.");
-
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static async Task<IResult> SegmentRoiAsync(
         string studyUid,
         string seriesUid,
@@ -57,7 +48,7 @@ public static class ImagingSegmentationEndpoints
             studyUid,
             seriesUid,
             request,
-            Caller(httpContext),
+            CallerScope.RequiredUserId(httpContext, "An admitted segmentation request has no signed caller."),
             studyId => ClinicalScopeGuard.CanAccessStudy(httpContext, studyId),
             cancellationToken,
             siteId => string.IsNullOrWhiteSpace(siteId)
@@ -66,7 +57,7 @@ public static class ImagingSegmentationEndpoints
 
         return outcome.Status switch
         {
-            SegmentationStatus.OutsideCallerStudies => OutsideStudy(),
+            SegmentationStatus.OutsideCallerStudies => ClinicalScopeGuard.OutsideStudy(),
             SegmentationStatus.ModelUnavailable => TypedResults.Problem(
                 title: "Automatic segmentation is not available",
                 detail: "No segmentation model reads the image, so nothing was measured or stored. Measure the lesion with the calipers.",

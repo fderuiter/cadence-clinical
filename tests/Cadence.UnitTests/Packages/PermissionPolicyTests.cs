@@ -44,6 +44,9 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
         _app = builder.Build();
         _app.UseCadenceSecurity();
         _app.MapGet(Probe, () => TypedResults.Ok()).RequirePermission("study_design:create");
+        _app.MapPost("/tickets-write-probe", () => TypedResults.Ok()).RequirePermission("tickets:create");
+        _app.MapGet("/tickets-read-probe", () => TypedResults.Ok()).RequirePermission("tickets:read");
+        _app.MapPost("/subjects-write-probe", () => TypedResults.Ok()).RequirePermission("subject_enrollment:create");
         _app.MapGet("/signed-in", () => TypedResults.Ok()).RequireSignedInCaller("test route");
         _app.MapGet("/undeclared", () => TypedResults.Ok());
         _app.MapGet("/studies/{studyId}/probe", () => TypedResults.Ok())
@@ -234,11 +237,56 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
         (await provider.GetPolicyAsync("Unknown")).Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("trial-a1b2c3d4e5f6", HttpStatusCode.OK)]
+    [InlineData("trial-001122334455", HttpStatusCode.OK)]
+    [InlineData("trial-ABCDEF123456", HttpStatusCode.Forbidden)]
+    [InlineData("trial-a1b2c3", HttpStatusCode.Forbidden)]
+    [InlineData("tenant-enterprise-01", HttpStatusCode.Forbidden)]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task TrialCoordinatorWriteGrants_AreAdmittedOnlyInVerifiedTrialTenants_WhileReadGrantsRemainIntact(
+        string tenantId,
+        HttpStatusCode expectedWriteStatus)
+    {
+        var identity = TestSecurityContext.Identity($"tc-{Guid.NewGuid():N}", "trial_coordinator") with
+        {
+            TenantId = tenantId,
+        };
+        using var client = ClientForIdentity(identity);
+
+        var writeResponse = await client.PostAsync("/tickets-write-probe", content: null, Ct);
+        var readResponse = await client.GetAsync("/tickets-read-probe", Ct);
+
+        writeResponse.StatusCode.Should().Be(expectedWriteStatus);
+        readResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task MultiRoleEnterpriseCaller_RetainsSponsorGrants_WhileTrialCoordinatorOnlyWritesAreIgnored()
+    {
+        var identity = TestSecurityContext.Identity($"multi-{Guid.NewGuid():N}", "Sponsor Admin", "Trial Coordinator") with
+        {
+            TenantId = "tenant-enterprise-01",
+        };
+        using var client = ClientForIdentity(identity);
+
+        (await client.PostAsync("/tickets-write-probe", content: null, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.PostAsync("/subjects-write-probe", content: null, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    private HttpClient Client(string role)
+    private HttpClient Client(string role) =>
+        ClientForIdentity(TestSecurityContext.Identity($"user-{Guid.NewGuid():N}", role));
+
+    private HttpClient ClientForIdentity(GatewayIdentity identity)
     {
-        var handler = new TestSecurityContext.GatewaySigningHandler(TestSecurityContext.Identity($"user-{Guid.NewGuid():N}", role))
+        var handler = new TestSecurityContext.GatewaySigningHandler(identity)
         {
             InnerHandler = _app!.GetTestServer().CreateHandler(),
         };

@@ -9,6 +9,7 @@ import {
 import type { RouteLocationNormalized, Router } from "vue-router";
 import { registerDraftSource } from "ui";
 import { confirmDialog } from "./useConfirmDialog.js";
+import { shouldSuppressUnsavedNavigationGuard } from "./useRouteScopeSync";
 import { useAuthStore } from "../stores/auth.js";
 
 type MaybeFlag = boolean | Ref<boolean> | (() => boolean);
@@ -59,7 +60,7 @@ export interface UseUnsavedNavigationGuardOptions {
 }
 
 /**
- * Reusable dirty-state navigation guard across standalone views and Clinical Canvas workspaces (ADR-2661).
+ * Reusable dirty-state navigation guard across standalone views and Clinical Canvas workspaces (ADR-2671).
  *
  * Prompts via the accessible ConfirmationDialogHost modal (`role="alertdialog"`, never `window.confirm`),
  * blocks accidental browser tab unloads via `beforeunload`, integrates with `useSignOutGuard`, and stands down
@@ -93,25 +94,24 @@ export function useUnsavedNavigationGuard(
   }
 
   function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
-    if (
-      to &&
-      (to.name === "forbidden" ||
-        to.path === "/forbidden" ||
-        to.name === "login" ||
-        to.path === "/login")
-    ) {
-      return true;
-    }
     try {
       const authStore = useAuthStore();
       if (authStore.isAuthenticated) {
         seenAuthenticated = true;
-      } else if (seenAuthenticated) {
-        return true;
       }
-      return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+      return shouldSuppressUnsavedNavigationGuard(
+        {
+          isAuthenticated: authStore.isAuthenticated || !seenAuthenticated,
+          sessionExpired: authStore.sessionExpired,
+          isLoggingOut: authStore.isLoggingOut,
+        },
+        to
+      );
     } catch {
-      return false;
+      return shouldSuppressUnsavedNavigationGuard(
+        { isAuthenticated: true },
+        to
+      );
     }
   }
 

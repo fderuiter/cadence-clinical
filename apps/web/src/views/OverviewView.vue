@@ -72,7 +72,7 @@
             authStore.trialEndsAtFormatted
           "
           id="overview-trial-countdown"
-          class="overview-countdown-text"
+          class="overview-countdown-text tabular-nums"
         >
           Trial window:
           <strong
@@ -296,7 +296,6 @@
 import { computed, onMounted } from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
   buildDataCollectionPath,
   buildScopedWorkflowPath,
@@ -304,10 +303,12 @@ import {
   resolveSiteReadinessPath,
   resolveWorkspaceNavigationScope,
 } from "../canvas/palette";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import "../stores/workspaceScope";
 import {
   DEMO_MODULE_CATALOG,
   DEMO_PRODUCT_FAMILY_ORDER,
@@ -396,6 +397,9 @@ function normalizeSpecToRouteName(routeSpec) {
 
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
+  if (typeof routeSpec === "string" && routeSpec.includes("?")) {
+    return routeSpec;
+  }
   const scope = workspaceScope.value;
   const studyCode = scope.studyCode || activeStudyCode.value;
   const siteId = scope.siteId;
@@ -405,7 +409,11 @@ function resolveAuthorizedRoute(routeSpec) {
   const participantRef = scope.participantRef;
   const enrollmentId = scope.enrollmentId;
 
-  if (routeSpec === "study" || routeSpec === "/studies") {
+  if (
+    routeSpec === "study" ||
+    routeSpec === "/studies" ||
+    (typeof routeSpec === "string" && routeSpec.startsWith("/studies/"))
+  ) {
     if (!isScreenAvailable("study")) return null;
     return buildStudiesWorkspacePath({
       studyCode,
@@ -502,6 +510,20 @@ function resolveAuthorizedRoute(routeSpec) {
   if (routeSpec === "training" || routeSpec === "/training") {
     return isScreenAvailable("training")
       ? buildScopedWorkflowPath("/training", { studyCode, siteId, subjectCode })
+      : null;
+  }
+  if (routeSpec === "tickets" || routeSpec === "/tickets") {
+    return isScreenAvailable("tickets")
+      ? buildScopedWorkflowPath("/tickets", { studyCode, siteId, subjectCode })
+      : null;
+  }
+  if (routeSpec === "knowledge" || routeSpec === "/knowledge") {
+    return isScreenAvailable("knowledge")
+      ? buildScopedWorkflowPath("/knowledge", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   const normalizedName = normalizeSpecToRouteName(routeSpec);
@@ -1099,6 +1121,7 @@ function startGuidedTour() {
 .overview-countdown-text {
   font-size: 0.86rem;
   color: var(--semantic-color-text-dark);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .overview-expired-text {
@@ -1174,6 +1197,7 @@ function startGuidedTour() {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 12px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .subtitle-tag {

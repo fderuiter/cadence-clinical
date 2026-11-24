@@ -8,14 +8,14 @@
 # ------------------------------------------------------------------------------
 # Base images are pinned to an exact version and digest so every build uses the same bits.
 # Dependabot (.github/dependabot.yml) proposes updates; bump the SDK and runtime together.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:2b1e13a22e46b55117f9cdb4b38e73172de08a30370166c8227d06cdaff82473 AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS dev
 
 # Install curl, git, procps, and netcat-traditional for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    git \
-    procps \
-    netcat-traditional \
+    curl=8.5.0-2ubuntu10.16 \
+    git=1:2.43.0-1ubuntu7.4 \
+    procps=2:4.0.4-4ubuntu3.3 \
+    netcat-traditional=1.10-48 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install global tools in container
@@ -100,11 +100,11 @@ RUN env -u VERSION dotnet publish "${PROJECT_PATH}" --no-restore -c Release -o /
 # ------------------------------------------------------------------------------
 # 5. Production Runtime Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:0bfa6494dead26049c1e0d6c9dc890be79259cb7300f5f23ae1df1cdac3da7df AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS runtime
 
 # Install curl for container health check parity
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    curl=8.5.0-2ubuntu10.16 \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_NAME=gateway
@@ -127,7 +127,7 @@ EXPOSE 8080
 
 # Liveness only; orchestrators should gate traffic on /healthz/ready.
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
-    CMD curl -fsS http://localhost:8080/healthz/live || exit 1
+    CMD ["curl", "-fsS", "http://localhost:8080/healthz/live"]
 
 # The service's own assembly, recorded at publish time (a service can ship other Cadence.Apps.* assemblies).
 ENTRYPOINT ["sh", "-c", "exec dotnet \"$(cat entrypoint-assembly).dll\""]

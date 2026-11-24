@@ -237,7 +237,10 @@ async function setupAuthenticatedPortalRoutes(page, options = {}) {
 
 test.describe
   .serial("Subject Portal ePRO Sync, Draft, PIN & Support Recovery Suite", () => {
-  test.use({ serviceWorkers: "block" });
+  test.use({
+    baseURL: "http://127.0.0.1:5175/subject-portal/",
+    serviceWorkers: "block",
+  });
 
   test.afterAll(() => {
     const checkList = Object.values(auditChecks);

@@ -56,8 +56,8 @@ export function decodeJwtPayloadClaims(token) {
       const binary = atob(padded);
       const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
       jsonText = new TextDecoder("utf-8").decode(bytes);
-    } else if (typeof Buffer !== "undefined") {
-      jsonText = Buffer.from(padded, "base64").toString("utf8");
+    } else if (typeof globalThis.Buffer !== "undefined") {
+      jsonText = globalThis.Buffer.from(padded, "base64").toString("utf8");
     } else {
       return null;
     }

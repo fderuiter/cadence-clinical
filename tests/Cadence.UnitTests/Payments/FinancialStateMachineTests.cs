@@ -893,7 +893,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         var method = typeof(PaymentEndpoints).GetMethod("ReviewExpenseClaim",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
 
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["claim-001", req, db, caller])!;
+        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["claim-001", req, db, new DefaultHttpContext { User = caller }])!;
         var result = await task;
 
         var conflict = result as IStatusCodeHttpResult;
@@ -927,7 +927,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         var method = typeof(PaymentEndpoints).GetMethod("ExportInvoiceToErp",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
 
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-001", db, clock, caller, "SAP"])!;
+        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-001", db, clock, new DefaultHttpContext { User = caller }, "SAP"])!;
         var result = await task;
 
         var conflict = result as IStatusCodeHttpResult;
@@ -962,7 +962,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         var method = typeof(PaymentEndpoints).GetMethod("ReconcileInvoice",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
 
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-002", req, db, clock, caller])!;
+        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-002", req, db, clock, new DefaultHttpContext { User = caller }])!;
         var result = await task;
 
         var conflict = result as IStatusCodeHttpResult;
@@ -997,7 +997,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         var method = typeof(PaymentEndpoints).GetMethod("ApproveInvoice",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
 
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-003", db, clock, caller])!;
+        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-003", db, clock, new DefaultHttpContext { User = caller }])!;
         var result = await task;
 
         var conflict = result as IStatusCodeHttpResult;
@@ -1042,7 +1042,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         var method = typeof(PaymentEndpoints).GetMethod("SettleDisbursement",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
 
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["disb-001", db, clock, caller])!;
+        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["disb-001", db, clock, new DefaultHttpContext { User = caller }])!;
         var result = await task;
 
         var okResult = result as Ok<ParticipantDisbursement>;
@@ -1092,7 +1092,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         var method = typeof(PaymentEndpoints).GetMethod("SettleDisbursement",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
 
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["disb-002", db, clock, caller])!;
+        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["disb-002", db, clock, new DefaultHttpContext { User = caller }])!;
         var result = await task;
 
         var conflict = result as IStatusCodeHttpResult;
@@ -1165,7 +1165,7 @@ public sealed class FinancialStateMachineTests : IDisposable
         );
 
         var clock = new FakeClock();
-        var caller = PaymentEndpointsTestInvoker.FinanceOfficer;
+        var caller = PaymentEndpointsTestInvoker.FinanceOfficerContext();
 
         var method = typeof(PaymentEndpoints).GetMethod("CompileBillingCycle",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;

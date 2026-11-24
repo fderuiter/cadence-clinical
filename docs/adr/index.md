@@ -35,6 +35,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
 | 2660–2669 | Security (continued)                                                              |
+| 2670–2679 | Web and design system (continued)                                                 |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -465,7 +466,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
-- [ADR-2661: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
+- [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
+- [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -610,6 +612,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
 - [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
 - [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) (2026-11-23)
+- [ADR-2661: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) (2026-11-22)
+- [ADR-2662: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist](2026-11-23-enforce-trial-tenant-writes-and-sponsor-comment-allowlist.md) (2026-11-23)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)
@@ -631,6 +635,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) (2026-11-20)
 - [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) (2026-11-20)
 - [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](2026-11-21-kernel-site-setup-and-execution-tenancy.md) (2026-11-21)
+- [ADR-2553: Unify Root ESLint Gates, Explicit Runtime Globals, and Demo-Fixtures Typechecking](2026-11-23-unify-root-eslint-gates-globals-and-demo-fixtures-typecheck.md) (2026-11-23)
 - [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)
 - [ADR-2592: Dual Ecosystem Vulnerability Auditor and CEC Chair Adjudications Persistence](2026-09-30-dual-ecosystem-vulnerability-auditor-and-cec-chair-adjudications-persistence.md) (2026-09-30)
 - [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) (2026-10-01)
