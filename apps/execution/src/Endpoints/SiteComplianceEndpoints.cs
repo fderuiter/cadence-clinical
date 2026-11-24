@@ -7,7 +7,9 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -96,7 +98,7 @@ public static class SiteComplianceEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyId, payload.SiteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyId, payload.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -129,7 +131,7 @@ public static class SiteComplianceEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ExecutionScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -168,7 +170,7 @@ public static class SiteComplianceEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ExecutionScopeGuard.RequireStudyAndSite(http, studyId, siteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(http, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }

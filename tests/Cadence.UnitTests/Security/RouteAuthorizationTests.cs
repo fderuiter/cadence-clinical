@@ -62,6 +62,7 @@ public sealed class RouteAuthorizationTests
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries", "Sends RaiseFormQuery, which the kernel authorizes against the caller's grant on the form's enrollment (execution.query.raise)."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries/{queryId:guid}/answer", "Sends AnswerFormQuery, which the kernel authorizes against the caller's grant on the query's enrollment (execution.query.answer)."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries/{queryId:guid}/reopen", "Sends ReopenFormQuery, which the kernel authorizes against the caller's grant on the query's enrollment (execution.query.manage)."),
+        ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries/{queryId:guid}/reassign", "Sends ReassignFormQuery, which the kernel authorizes against the caller's grant on the query's enrollment (execution.query.manage)."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries/{queryId:guid}/close", "Sends CloseFormQuery, which the kernel authorizes against the caller's grant on the query's enrollment (execution.query.manage)."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries/{queryId:guid}/cancel", "Sends CancelFormQuery, which the kernel authorizes against the caller's grant on the query's enrollment (execution.query.manage)."),
         ("kernel", "POST /api/v1/ai/intent/route", "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller's signed roles."),

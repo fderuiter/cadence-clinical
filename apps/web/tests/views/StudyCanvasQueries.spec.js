@@ -59,6 +59,10 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       listForEnrollment: vi.fn(),
       listForStudy: vi.fn(),
       transition: vi.fn(),
+      reassign: vi.fn(),
+      listDigests: vi.fn(async () => []),
+      listSdvAlerts: vi.fn(async () => []),
+      escalate: vi.fn(),
     },
   };
 });
@@ -141,6 +145,8 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       counts: {},
     });
     for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
+    vi.mocked(ecrfQueriesApi.listDigests).mockResolvedValue([]);
+    vi.mocked(ecrfQueriesApi.listSdvAlerts).mockResolvedValue([]);
     vi.mocked(findKernelStudyRef).mockReset();
     vi.mocked(findKernelStudyRef).mockResolvedValue(`study:${STUDY_UUID}@2`);
     vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
@@ -763,6 +769,108 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       form: `collection_instance:${FORM_VS_1}`,
       item: "DIABP",
     });
+  });
+
+  it("filters by escalated and assignee, gates manual 14-day SLA check by canManage, and renders scoped aging digests with blinded redaction", async () => {
+    vi.useFakeTimers();
+    const digestPayload = [
+      {
+        digest_id: "digest-study-1",
+        study_id: STUDY_UUID,
+        study_site_id: null,
+        scope_key: "study",
+        recipient_role: "study_lead",
+        digest_date: "2027-03-30",
+        generated_at: "2027-03-30T08:00:00Z",
+        study_code: "CAD-101",
+        site_code: null,
+        escalated_count: 2,
+        entries: [
+          {
+            query_id: "query-1",
+            form_id: FORM_VS_1,
+            item_id: "DIABP",
+            site_code: "017",
+            subject_code: "017-0001",
+            owner_role: "site",
+            priority: "high",
+            opened_at: "2027-03-14T10:00:00Z",
+            due_at: "2027-03-28T10:00:00Z",
+            age_days: 16,
+          },
+          {
+            query_id: "00000000-0000-0000-0000-000000000000",
+            form_id: "00000000-0000-0000-0000-000000000000",
+            item_id: "masked",
+            site_code: "017",
+            subject_code: "017-0001",
+            owner_role: "site",
+            priority: "high",
+            opened_at: "2027-03-14T10:00:00Z",
+            due_at: "2027-03-28T10:00:00Z",
+            age_days: 16,
+          },
+        ],
+      },
+    ];
+
+    // Site coordinator sees digests but cannot trigger manual SLA escalation.
+    signInWith(["crc"]);
+    vi.mocked(ecrfQueriesApi.listDigests).mockResolvedValue(digestPayload);
+    await open("/studies/CAD-101?stage=data&section=queries");
+    expect(wrapper.find("#btn-run-sla-check").exists()).toBe(false);
+    expect(wrapper.find("#study-queries-digests").text()).toContain(
+      "Redacted (blinded treatment item)"
+    );
+    wrapper.unmount();
+
+    // Study monitor can filter by escalated + assignee and run an audited 14-day SLA check.
+    signInWith(["cra"]);
+    vi.mocked(ecrfQueriesApi.escalate).mockResolvedValue({
+      escalated_queries: 1,
+      digests: digestPayload,
+    });
+    await open("/studies/CAD-101?stage=data&section=queries");
+
+    await wrapper.find("#study-queries-escalated").setValue("true");
+    await flushPromises();
+    const assigneeInput = wrapper.find("#study-queries-assignee");
+    await assigneeInput.setValue("crc.alice");
+    vi.advanceTimersByTime(300);
+    await flushPromises();
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      stage: "data",
+      section: "queries",
+      escalated: "true",
+      assignee: "crc.alice",
+    });
+    expect(ecrfQueriesApi.listForStudy).toHaveBeenLastCalledWith(
+      STUDY_UUID,
+      expect.objectContaining({
+        escalated: true,
+        assignee: "crc.alice",
+      }),
+      { signal: expect.any(AbortSignal) }
+    );
+
+    await wrapper.find("#btn-run-sla-check").trigger("click");
+    await wrapper
+      .find("#study-queries-sla-reason")
+      .setValue("Manual 14-day SLA check before interim review");
+    await wrapper.find("#study-queries-sla-form").trigger("submit");
+    await flushPromises();
+
+    expect(ecrfQueriesApi.escalate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyId: STUDY_UUID,
+        reason: "Manual 14-day SLA check before interim review",
+      })
+    );
+    expect(
+      wrapper.find('[data-testid="study-queries-sla-outcome"]').text()
+    ).toContain("14-day SLA check completed: 1 overdue query escalated");
+    vi.useRealTimers();
   });
 
   it("opens embedded ObservationView with open query threads directly from #query-observation-query-1 in QueriesSection", async () => {

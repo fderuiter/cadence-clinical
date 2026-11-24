@@ -299,6 +299,8 @@ public static class PaymentEndpointsTestInvoker
     public static ClaimsPrincipal FinanceOfficer { get; } = TestSecurityContext.CreateScopedPrincipal(
         "finance-1", TestSecurityContext.AllStudies, [], "Grants Manager");
 
+    public static HttpContext FinanceOfficerContext() => new DefaultHttpContext { User = FinanceOfficer };
+
     public static async Task<BatchBillingCompilationResponse> InvokeBatchCompileAsync(
         BatchBillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)
     {
@@ -308,7 +310,7 @@ public static class PaymentEndpointsTestInvoker
 
         method.Should().NotBeNull("BatchCompileBillingCycles method should exist on PaymentEndpoints");
 
-        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficer })!;
+        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficerContext() })!;
         var result = await task;
 
         var createdResult = result as Created<BatchBillingCompilationResponse>;
@@ -325,7 +327,7 @@ public static class PaymentEndpointsTestInvoker
 
         method.Should().NotBeNull("CompileBillingCycle method should exist on PaymentEndpoints");
 
-        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficer })!;
+        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficerContext() })!;
         var result = await task;
 
         var createdResult = result as Created<SelfBillingInvoiceResponse>;

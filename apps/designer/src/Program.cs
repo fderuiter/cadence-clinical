@@ -40,10 +40,7 @@ protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResul
 {
     if (!string.IsNullOrWhiteSpace(request.StudyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId))
     {
-        return TypedResults.Problem(
-            title: "Outside your studies",
-            detail: ClinicalScopeGuard.StudyAccessDeniedDetail,
-            statusCode: StatusCodes.Status403Forbidden);
+        return ClinicalScopeGuard.OutsideStudy(ClinicalScopeGuard.StudyAccessDeniedDetail);
     }
 
     try

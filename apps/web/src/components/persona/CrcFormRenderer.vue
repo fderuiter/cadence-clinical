@@ -306,7 +306,7 @@
           <span>⚡ {{ $t("ecrf.form.liveEditChecks") }}</span>
           <span
             v-if="discrepancyAlertsCount > 0"
-            class="badge badge-discrepancy"
+            class="badge badge-discrepancy tabular-nums"
             style="
               background-color: var(--semantic-color-error);
               color: white;
@@ -323,7 +323,7 @@
           </span>
           <span
             v-if="warningAlertsCount > 0"
-            class="badge badge-warning"
+            class="badge badge-warning tabular-nums"
             style="
               background-color: var(--semantic-color-warning-action);
               color: white;

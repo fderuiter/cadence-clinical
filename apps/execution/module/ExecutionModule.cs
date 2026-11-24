@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cadence.Modules.Execution;
 
@@ -33,13 +34,14 @@ public static class ExecutionModule
     /// Registers the module: its commands with the kernel's authorization, its command store, migrations and tenant-scoped
     /// reads in the <c>execution</c> schema, its handlers and validators, the consumer that opens an Execution form when the
     /// kernel opens one, the consumer that states each query step as a kernel assertion, the edit-check and auto-answer
-    /// consumer, the 14-day SLA escalation service, and the durable single-use store for step-up signature tokens (ADR-2515).
+    /// consumer, the leader-locked 14-day SLA scheduler and de-identified digest alert consumer, the CRA SDV modification
+    /// alert consumer, and the durable single-use store for step-up signature tokens (ADR-2515).
     /// </summary>
     public static IServiceCollection AddCadenceExecutionModule(this IServiceCollection services, string connectionString)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        return services
+        services
             .AddCadenceModule(ExecutionModuleDbContext.Module, typeof(OpenFormInstance).Assembly, OpenApiDocument)
             .AddModuleCommandStore<ExecutionModuleDbContext>(
                 ExecutionModuleDbContext.Module,
@@ -59,6 +61,8 @@ public static class ExecutionModule
             .AddCommandValidator<AutoAnswerFormQuery, AutoAnswerFormQueryValidator>()
             .AddCommandHandler<ReopenFormQuery, FormQueryState, ReopenFormQueryHandler>()
             .AddCommandValidator<ReopenFormQuery, ReopenFormQueryValidator>()
+            .AddCommandHandler<ReassignFormQuery, FormQueryState, ReassignFormQueryHandler>()
+            .AddCommandValidator<ReassignFormQuery, ReassignFormQueryValidator>()
             .AddCommandHandler<CloseFormQuery, FormQueryState, CloseFormQueryHandler>()
             .AddCommandValidator<CloseFormQuery, CloseFormQueryValidator>()
             .AddCommandHandler<CancelFormQuery, FormQueryState, CancelFormQueryHandler>()
@@ -72,9 +76,16 @@ public static class ExecutionModule
             .AddScoped<IFormQueryEscalationService, FormQueryEscalationService>()
             .AddKernelEventConsumer<MirrorFormQueryToKernel>(MirrorFormQueryToKernel.Name)
             .AddKernelEventConsumer<EvaluateEditChecksOnCollectionChanged>(EvaluateEditChecksOnCollectionChanged.Name)
+            .AddKernelEventConsumer<SendFormQueryAgingDigestAlerts>(SendFormQueryAgingDigestAlerts.Name)
             .AddKernelEventConsumer<AlertMonitorOnVerifiedObservationCorrected>(AlertMonitorOnVerifiedObservationCorrected.Name)
             .AddDbContext<ExecutionSignatureTokenDbContext>(options => options.UseNpgsql(connectionString))
             .AddCadenceDurableSigTokenStore<ExecutionSignatureTokenDbContext>();
+
+        services.TryAddSingleton<IFormQueryAgingDigestAlertDispatcher, InMemoryFormQueryAgingDigestAlertDispatcher>();
+        services.TryAddSingleton<FormQueryEscalationOptions>();
+        services.TryAddSingleton<FormQueryEscalationHostedService>();
+        services.AddHostedService(sp => sp.GetRequiredService<FormQueryEscalationHostedService>());
+        return services;
     }
 
     /// <summary>Maps the module's routes under <c>/api/v1/execution/forms</c> in the <c>execution_forms</c> OpenAPI group.</summary>

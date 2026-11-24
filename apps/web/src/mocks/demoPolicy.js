@@ -386,6 +386,15 @@ export function isCallerBlinded(caller) {
 }
 
 /**
+ * True when the caller holds study-wide scope (unrestricted across sites).
+ */
+export function hasStudyWideScope(caller) {
+  if (!caller) return true;
+  if (hasSuperAdminAccess(caller)) return true;
+  return !Array.isArray(caller.siteIds) || caller.siteIds.length === 0;
+}
+
+/**
  * True when the caller is permitted to read/mutate clinical entities scoped to `siteCode`.
  * Empty `caller.siteIds` means study-wide / unrestricted site scope.
  */
@@ -714,6 +723,24 @@ export function evaluateCapabilityDecision(
       allowed ? undefined : "Auth.Forbidden"
     );
   }
+  if (cap.includes("query")) {
+    const isAnswer = cap.endsWith(".answer") || cap === "query.answer";
+    const allowed = hasAnyRole(
+      caller,
+      isAnswer ? QUERY_ANSWER_ROLES : QUERY_MANAGE_ROLES
+    );
+    return store.buildDecision(
+      capability,
+      res,
+      allowed,
+      allowed
+        ? undefined
+        : isAnswer
+          ? "Query response requires Site Investigator or CRC role"
+          : "Query management requires CRA or Data Manager role",
+      allowed ? undefined : "Auth.Forbidden"
+    );
+  }
   if (
     cap.includes("protocol") ||
     cap.includes("study") ||
@@ -956,7 +983,25 @@ export async function evaluateDemoRequestPolicy(request, store) {
     return null;
   }
 
-  // 3. Discrepancy queries: raise vs answer vs reopen/close/cancel
+  // 3. Discrepancy queries: raise, SLA escalate, answer, reopen/close/cancel/reassign
+  if (
+    method === "POST" &&
+    /\/api\/v1\/execution\/forms\/queries\/escalate\/?$/.test(pathname)
+  ) {
+    if (!hasAnyRole(caller, QUERY_MANAGE_ROLES)) {
+      return {
+        status: 403,
+        problem: buildProblemDetails(
+          403,
+          "Execution.Query.EscalateForbidden",
+          "Query SLA escalation not permitted",
+          "Only Clinical Monitors (CRA) and Data Managers may run manual 14-day query SLA escalations."
+        ),
+      };
+    }
+    return null;
+  }
+
   const queryRaiseMatch = pathname.match(
     /\/api\/v1\/execution\/forms\/([^/]+)\/queries$/
   );
