@@ -827,7 +827,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IClock>();

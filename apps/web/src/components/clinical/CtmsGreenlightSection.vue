@@ -243,25 +243,22 @@ import { computed, onMounted, ref } from "vue";
 import { handoffFocus } from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadReadiness(),
+  fallbackErrorTitle: "Startup readiness could not be loaded",
+  fallbackErrorMessage: "Startup readiness could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
@@ -270,15 +267,7 @@ const {
   loaded,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadReadiness();
-  },
-  fallbackErrorTitle: "Startup readiness could not be loaded",
-  fallbackErrorMessage: "Startup readiness could not be loaded.",
-});
+} = workspace;
 
 const canCertify = computed(() => canCertifyGreenlight(authStore));
 const countryCode = ref("US");

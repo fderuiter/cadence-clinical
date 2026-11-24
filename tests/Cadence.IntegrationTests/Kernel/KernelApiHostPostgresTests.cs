@@ -775,6 +775,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }

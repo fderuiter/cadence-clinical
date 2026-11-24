@@ -116,23 +116,24 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
         var diffSummary = new RuleDiffSummary(addedRules, removedRules, modifiedRules);
         var brokenRefs = FindBrokenAstReferences(targetPack.Pack.Rules, records, datasetSchemas);
 
-        var (baselineViolations, targetViolations) = EvaluateStageDelta(
-            evaluator,
-            stage,
-            asOf,
-            [baselinePack.Pack],
-            records,
-            [targetPack.Pack],
-            records);
+        var context = new RuleEvaluationContext(stage, asOf);
 
-        var baselineDetections = baselineViolations.Select(v => ValidationRunner.Detection(baselinePack.Key, FindingTargetKind.DatasetRecord, v)).ToList();
-        var targetDetections = targetViolations.Select(v => ValidationRunner.Detection(targetPack.Key, FindingTargetKind.DatasetRecord, v)).ToList();
+        var baselineSink = new BaselineRegressionSink(baselinePack.Key);
+        evaluator.Evaluate(baselinePack.Pack, context, new RuleRecordListCursor(records), baselineSink);
 
-        var baselineKeys = baselineDetections.Select(KeyOf).ToHashSet(StringComparer.Ordinal);
-        var targetKeys = targetDetections.Select(KeyOf).ToHashSet(StringComparer.Ordinal);
+        var targetSink = new TargetRegressionSink(targetPack.Key, baselineSink.Keys);
+        evaluator.Evaluate(targetPack.Pack, context, new RuleRecordListCursor(records), targetSink);
 
-        var newViolations = targetDetections.Where(d => !baselineKeys.Contains(KeyOf(d))).ToList();
-        var resolvedFindings = baselineDetections.Where(d => !targetKeys.Contains(KeyOf(d))).ToList();
+        var newViolations = targetSink.NewViolations;
+        var resolvedFindings = new List<ValidationDetection>();
+        for (var i = 0; i < baselineSink.Detections.Count; i++)
+        {
+            var detection = baselineSink.Detections[i];
+            if (!targetSink.Keys.Contains((detection.Target.Dataset, detection.Target.Key, detection.RuleId)))
+            {
+                resolvedFindings.Add(detection);
+            }
+        }
 
         sw.Stop();
         var completedAt = clock.UtcNow;
@@ -156,9 +157,9 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
     }
 
     /// <summary>
-    /// Pure multi-pack stage evaluation shared by <c>CompareAsync</c> and bitemporal simulation
-    /// (<c>K-SIM-2</c>, <c>K-RULE-4</c>): evaluates baseline and target rule packs over their respective records at
-    /// <paramref name="asOf"/> without clock or storage side effects.
+    /// Pure multi-pack stage evaluation shared by bitemporal simulation (<c>K-SIM-2</c>, <c>K-RULE-4</c>): streams
+    /// baseline and target rule packs over their respective records at <paramref name="asOf"/> without clock or storage
+    /// side effects.
     /// </summary>
     public static (IReadOnlyList<RuleViolation> BaselineViolations, IReadOnlyList<RuleViolation> TargetViolations) EvaluateStageDelta(
         IRuleEvaluator evaluator,
@@ -200,27 +201,64 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
             return [];
         }
 
-        var violations = new List<RuleViolation>();
-        var seen = new HashSet<(string RuleId, int RuleVersion, string Dataset, string RecordKey)>();
+        var sink = new StageDeltaSink();
         foreach (var context in contexts)
         {
             foreach (var pack in packs)
             {
-                foreach (var violation in evaluator.Evaluate(pack, context, records))
-                {
-                    if (seen.Add((violation.RuleId, violation.RuleVersion, violation.Dataset, violation.RecordKey)))
-                    {
-                        violations.Add(violation);
-                    }
-                }
+                evaluator.Evaluate(pack, context, new RuleRecordListCursor(records), sink);
             }
         }
 
-        return violations;
+        return sink.Violations;
     }
 
-    private static string KeyOf(ValidationDetection d) =>
-        $"{d.Target.Dataset}|{d.Target.Key}|{d.RuleId}";
+    private sealed class StageDeltaSink : IRuleViolationSink
+    {
+        private readonly HashSet<(string RuleId, int RuleVersion, string Dataset, string RecordKey)> _seen = [];
+
+        public List<RuleViolation> Violations { get; } = [];
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            if (_seen.Add((violation.RuleId, violation.RuleVersion, violation.Dataset, violation.RecordKey)))
+            {
+                Violations.Add(violation.ToViolation());
+            }
+        }
+    }
+
+    private sealed class BaselineRegressionSink(string packKey) : IRuleViolationSink
+    {
+        public HashSet<(string Dataset, string Key, string RuleId)> Keys { get; } = [];
+
+        public List<ValidationDetection> Detections { get; } = [];
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            Keys.Add((violation.Dataset, violation.RecordKey, violation.RuleId));
+            Detections.Add(ValidationRunner.Detection(packKey, FindingTargetKind.DatasetRecord, violation));
+        }
+    }
+
+    private sealed class TargetRegressionSink(
+        string packKey,
+        HashSet<(string Dataset, string Key, string RuleId)> baselineKeys) : IRuleViolationSink
+    {
+        public HashSet<(string Dataset, string Key, string RuleId)> Keys { get; } = [];
+
+        public List<ValidationDetection> NewViolations { get; } = [];
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            var key = (violation.Dataset, violation.RecordKey, violation.RuleId);
+            Keys.Add(key);
+            if (!baselineKeys.Contains(key))
+            {
+                NewViolations.Add(ValidationRunner.Detection(packKey, FindingTargetKind.DatasetRecord, violation));
+            }
+        }
+    }
 
     private static bool IsRuleModified(Rule baseline, Rule target) =>
         baseline.Version != target.Version

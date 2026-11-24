@@ -33,6 +33,7 @@ using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
 using Cadence.Rules;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Standards;
 using Cadence.Telemetry;
@@ -128,6 +129,7 @@ builder.Services.AddKernelGrantVisibility();
 
 // Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and
 // propose, a person approves, and AI is never required for clinical work (K-AI-8).
+builder.Services.AddCadenceBiometricLiveness();
 builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Environment, connectionString);
 
 // The Execution module: eCRF forms over kernel form instances (ADR-2622).

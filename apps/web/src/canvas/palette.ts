@@ -110,15 +110,6 @@ export interface WorkspaceScopeSnapshot {
   inspectorNodeParam?: string;
 }
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
 const SITE_READINESS_SPONSOR_ROLES = [
   "cra",
   "monitor",
@@ -126,6 +117,10 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const DATA_COLLECTION_ROLES = [
+  ...SITE_READINESS_SITE_ROLES,
+  ...SITE_READINESS_SPONSOR_ROLES,
+];
 const ETMF_ROLES = [
   "cra",
   "monitor",
