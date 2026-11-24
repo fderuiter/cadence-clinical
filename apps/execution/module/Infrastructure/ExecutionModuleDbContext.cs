@@ -38,6 +38,9 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
     /// <summary>The insert-only daily query aging digests table (<c>KA001</c>).</summary>
     public const string FormQueryAgingDigestsTable = "form_query_aging_digests";
 
+    /// <summary>The insert-only CRA SDV modification alerts table (<c>PRD-QRY-006</c>, <c>KA001</c>).</summary>
+    public const string FormSdvAlertsTable = "form_sdv_alerts";
+
     /// <summary>The field that holds a form's item order, mapped to <c>item_order</c>.</summary>
     public const string ItemOrderField = "_itemOrder";
 
@@ -55,6 +58,9 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
 
     /// <summary>The insert-only daily aging digests emitted for overdue open queries.</summary>
     public DbSet<FormQueryAgingDigest> FormQueryAgingDigests => Set<FormQueryAgingDigest>();
+
+    /// <summary>The insert-only CRA SDV modification alerts emitted when verified observations are corrected.</summary>
+    public DbSet<FormSdvAlert> FormSdvAlerts => Set<FormSdvAlert>();
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -212,6 +218,41 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
             digest.HasIndex(d => new { d.TenantId, d.StudyId, d.DigestDate, d.ScopeKey })
                 .IsUnique()
                 .HasDatabaseName("ux_form_query_aging_digests_study_date_scope");
+        });
+
+        modelBuilder.Entity<FormSdvAlert>(alert =>
+        {
+            alert.ToTable(FormSdvAlertsTable);
+            alert.HasKey(a => a.Id);
+            alert.Property(a => a.Id).HasColumnName("id").ValueGeneratedNever();
+            alert.Property(a => a.TenantId).HasColumnName("tenant_id").HasConversion(t => t.Value, v => new TenantId(v));
+            alert.Property(a => a.StudyId).HasColumnName("study_id").HasConversion(s => s.Value, v => StudyId.FromGuid(v));
+            alert.Property(a => a.StudySiteId).HasColumnName("study_site_id")
+                .HasConversion(s => s == null ? (Guid?)null : s.Value.Value, v => v == null ? null : StudySiteId.FromGuid(v.Value));
+            alert.Property(a => a.EnrollmentId).HasColumnName("enrollment_id").HasConversion(e => e.Value, v => EnrollmentId.FromGuid(v));
+            alert.Property(a => a.FormId).HasColumnName("form_id")
+                .HasConversion(f => f == null ? (Guid?)null : f.Value.Value, v => v == null ? null : CollectionInstanceId.FromGuid(v.Value));
+            alert.Property(a => a.ItemId).HasColumnName("item_id").HasMaxLength(FormInstance.ElementIdMaxLength);
+            alert.Property(a => a.ObservationId).HasColumnName("observation_id").HasConversion(o => o.Value, v => ObservationId.FromGuid(v));
+            alert.Property(a => a.SupersededRevision).HasColumnName("superseded_revision");
+            alert.Property(a => a.NewRevision).HasColumnName("new_revision");
+            alert.Property(a => a.VerifiedBy).HasColumnName("verified_by").HasMaxLength(256).IsRequired();
+            alert.Property(a => a.VerifiedAt).HasColumnName("verified_at");
+            alert.Property(a => a.ModifiedBy).HasColumnName("modified_by").HasMaxLength(256).IsRequired();
+            alert.Property(a => a.ModifiedAt).HasColumnName("modified_at");
+            alert.Property(a => a.ModifiedReason).HasColumnName("modified_reason").HasMaxLength(4000).IsRequired();
+            alert.HasCommandAuditColumns();
+            alert.Property(a => a.CreatedAt).HasColumnName("created_at");
+            alert.Property(a => a.CreatedBy).HasColumnName("created_by");
+            alert.Property(a => a.ReasonForChange).HasColumnName("reason_for_change");
+            alert.Property(a => a.VersionIndex).HasColumnName("version_index");
+            alert.HasIndex(a => new { a.TenantId, a.ObservationId, a.NewRevision })
+                .IsUnique()
+                .HasDatabaseName("ux_form_sdv_alerts_tenant_observation_revision");
+            alert.HasIndex(a => new { a.TenantId, a.StudyId, a.ModifiedAt })
+                .HasDatabaseName("ix_form_sdv_alerts_tenant_study_modified");
+            alert.HasIndex(a => new { a.TenantId, a.EnrollmentId, a.ModifiedAt })
+                .HasDatabaseName("ix_form_sdv_alerts_tenant_enrollment_modified");
         });
     }
 }
