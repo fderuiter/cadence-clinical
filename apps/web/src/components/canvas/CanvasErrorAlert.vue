@@ -1,5 +1,5 @@
 <template>
-  <div class="canvas-error-alert" role="alert">
+  <div ref="alertRootRef" class="canvas-error-alert" role="alert">
     <p class="canvas-error-message">{{ message }}</p>
     <div v-if="showRetry || showExplain" class="canvas-error-actions">
       <button
@@ -7,7 +7,7 @@
         type="button"
         class="canvas-error-btn"
         data-testid="canvas-error-retry"
-        @click="$emit('retry')"
+        @click="handleRetryClick"
       >
         {{ retryLabel }}
       </button>
@@ -32,9 +32,11 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
+import { handoffRetryFocus } from "ui";
 import SupportDetails from "./SupportDetails.vue";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     message: string;
     detail?: string | null;
@@ -46,6 +48,7 @@ withDefaults(
     explainLabel?: string;
     showRetry?: boolean;
     showExplain?: boolean;
+    onRetry?: () => unknown | Promise<unknown>;
   }>(),
   {
     detail: null,
@@ -57,13 +60,22 @@ withDefaults(
     explainLabel: "Explain",
     showRetry: true,
     showExplain: true,
+    onRetry: undefined,
   }
 );
 
 defineEmits<{
-  (e: "retry"): void;
   (e: "explain"): void;
 }>();
+
+const alertRootRef = ref<HTMLElement | null>(null);
+
+function handleRetryClick() {
+  void handoffRetryFocus(() => props.onRetry?.(), {
+    alertElement: alertRootRef,
+    errorTargets: ['[data-testid="canvas-error-retry"]', ".btn-retry"],
+  });
+}
 </script>
 
 <style scoped>

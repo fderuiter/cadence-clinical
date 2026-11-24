@@ -795,6 +795,8 @@ import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalDrawer,
   ClinicalIconButton,
+  handoffFocus,
+  handoffRetryFocus,
   hasActiveModalFocusTrap,
   useEscapeClose,
 } from "ui";
@@ -1008,7 +1010,23 @@ const toggleBodyBtnRef = ref(null);
 const sopBodyRef = ref(null);
 const isSearchOpen = ref(false);
 const searchInput = ref("");
+const lastSelectedTicketRef = ref("");
 let searchDebounceTimer = null;
+
+function resolveDrawerDialogContainer() {
+  return (
+    drawerRootRef.value?.querySelector?.("#contextual-help-drawer") ||
+    drawerRootRef.value
+  );
+}
+
+function escapeTicketSelectorValue(raw) {
+  if (!raw) return "";
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(String(raw));
+  }
+  return String(raw).replace(/(["\\])/g, "\\$1");
+}
 
 function resolveEscalationRoute() {
   const liveRoute = resolveActiveRouteLocation(route);
@@ -1225,21 +1243,103 @@ function switchTab(tab) {
 }
 
 async function handleRefreshDrawerTickets() {
-  if (knowledgeStore.selectedTicketId) {
-    await knowledgeStore.selectDrawerTicket(knowledgeStore.selectedTicketId);
-  }
-  await knowledgeStore.fetchDrawerTickets();
+  await handoffRetryFocus(
+    async () => {
+      if (knowledgeStore.selectedTicketId) {
+        await knowledgeStore.selectDrawerTicket(
+          knowledgeStore.selectedTicketId
+        );
+      }
+      await knowledgeStore.fetchDrawerTickets();
+    },
+    {
+      container: resolveDrawerDialogContainer,
+      includeDefaultFallbacks: false,
+      isError: () =>
+        Boolean(!knowledgeStore.selectedTicket && knowledgeStore.ticketsError),
+      errorTargets: [
+        "#btn-retry-drawer-tickets",
+        "#btn-refresh-drawer-tickets",
+        "#tab-contextual-tickets",
+      ],
+      successTargets: [
+        () =>
+          knowledgeStore.selectedTicket ? "#btn-back-to-ticket-list" : null,
+        ".drawer-ticket-card",
+        "#btn-refresh-drawer-tickets",
+        "#tab-contextual-tickets",
+      ],
+    }
+  );
 }
 
 async function handleSelectDrawerTicket(ticket) {
-  await knowledgeStore.selectDrawerTicket(ticket);
+  const refValue = String(ticket?.reference || ticket?.id || "");
+  if (refValue) {
+    lastSelectedTicketRef.value = refValue;
+  }
+  const selectPromise = knowledgeStore.selectDrawerTicket(ticket);
+  await handoffFocus(
+    [
+      "#btn-back-to-ticket-list",
+      "#btn-refresh-drawer-tickets",
+      "#tab-contextual-tickets",
+    ],
+    {
+      container: resolveDrawerDialogContainer,
+      includeDefaultFallbacks: false,
+    }
+  );
+  await selectPromise;
+  if (
+    typeof document !== "undefined" &&
+    (!document.activeElement || document.activeElement === document.body)
+  ) {
+    await handoffFocus(
+      [
+        "#btn-back-to-ticket-list",
+        "#btn-refresh-drawer-tickets",
+        "#tab-contextual-tickets",
+      ],
+      {
+        container: resolveDrawerDialogContainer,
+        includeDefaultFallbacks: false,
+      }
+    );
+  }
 }
 
 async function handleBackToTicketList() {
+  const previousRef =
+    String(
+      knowledgeStore.selectedTicket?.reference ||
+        knowledgeStore.selectedTicket?.id ||
+        lastSelectedTicketRef.value ||
+        ""
+    ) || "";
   knowledgeStore.clearSelectedDrawerTicket();
   if (!knowledgeStore.hasLoadedDrawerTickets) {
     await knowledgeStore.fetchDrawerTickets();
   }
+  await handoffFocus(
+    [
+      () => {
+        if (!previousRef) return null;
+        const root = resolveDrawerDialogContainer();
+        return root?.querySelector?.(
+          `.drawer-ticket-card[data-ticket-ref="${escapeTicketSelectorValue(previousRef)}"]`
+        );
+      },
+      ".drawer-ticket-card",
+      "#btn-retry-drawer-tickets",
+      "#btn-refresh-drawer-tickets",
+      "#tab-contextual-tickets",
+    ],
+    {
+      container: resolveDrawerDialogContainer,
+      includeDefaultFallbacks: false,
+    }
+  );
 }
 
 function formatTags(tags) {
@@ -1332,7 +1432,23 @@ function handleEscalate() {
 }
 
 async function handleRetry() {
-  await knowledgeStore.retryLastAction();
+  await handoffRetryFocus(() => knowledgeStore.retryLastAction(), {
+    container: resolveDrawerDialogContainer,
+    includeDefaultFallbacks: false,
+    isError: () => Boolean(knowledgeStore.error),
+    errorTargets: ["#btn-contextual-help-retry", "#tab-contextual-guidance"],
+    successTargets: [
+      () =>
+        isSearchOpen.value && searchInput.value.trim()
+          ? [".search-result-card", searchInputRef.value, "#help-search-input"]
+          : null,
+      toggleBodyBtnRef,
+      "#btn-jump-spotlight-section",
+      ".related-card",
+      ".empty-actions button:not([disabled])",
+      "#tab-contextual-guidance",
+    ],
+  });
 }
 
 function handleTicketCreated(createdTicket) {

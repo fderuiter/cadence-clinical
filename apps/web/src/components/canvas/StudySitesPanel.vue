@@ -289,6 +289,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { handoffFocus } from "ui";
 import {
   describeKernelError,
   kernelApi,
@@ -494,6 +495,7 @@ async function submitLinkExistingSite() {
   submitting.value = true;
   actionError.value = "";
   actionSuccess.value = "";
+  let linkedSiteCode = "";
   try {
     const linked = await kernelApi.linkSiteToStudy({
       studyRef: props.studyCode,
@@ -501,6 +503,7 @@ async function submitLinkExistingSite() {
       reason: linkSiteReason.value.trim(),
       idempotencyKey: nextIdempotencyKey("link-site"),
     });
+    linkedSiteCode = linked.site_code || "";
     await syncCallerSiteScope(authStore, linked.site_code);
     clearKernelStudyCache();
     linkSiteReason.value = "";
@@ -510,6 +513,23 @@ async function submitLinkExistingSite() {
     actionError.value = describeKernelError(err);
   } finally {
     submitting.value = false;
+  }
+
+  if (!actionError.value) {
+    await handoffFocus(
+      [
+        "#select-workspace-site",
+        () =>
+          linkedSiteCode
+            ? document.getElementById(`btn-site-participants-${linkedSiteCode}`)
+            : null,
+        "#select-site-institution",
+        "#study-sites-title",
+      ],
+      {
+        container: () => document.getElementById("study-sites-panel"),
+      }
+    );
   }
 }
 
@@ -582,6 +602,12 @@ async function submitRegisterSite() {
     actionError.value = describeKernelError(err);
   } finally {
     submitting.value = false;
+  }
+
+  if (!actionError.value) {
+    await handoffFocus(["#input-site-code", "#study-sites-title"], {
+      container: () => document.getElementById("study-sites-panel"),
+    });
   }
 }
 </script>

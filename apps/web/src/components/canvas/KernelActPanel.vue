@@ -1,6 +1,6 @@
 <template>
   <section id="kernel-act" class="act" aria-labelledby="kernel-act-title">
-    <h3 id="kernel-act-title">Actions</h3>
+    <h3 id="kernel-act-title" tabindex="-1">Actions</h3>
     <p v-if="loading" id="kernel-act-status" class="act-note" role="status">
       Checking available actions…
     </p>

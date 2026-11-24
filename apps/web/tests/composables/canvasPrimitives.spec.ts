@@ -393,5 +393,56 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
 
       await expect(wrapper.element).toBeAccessible();
     });
+
+    it("focuses the retry button on repeated error and recovered content on success via handoffRetryFocus", async () => {
+      const hasError = ref(true);
+      let shouldRecover = false;
+      const handleRetry = async () => {
+        hasError.value = false;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        if (!shouldRecover) {
+          hasError.value = true;
+        }
+      };
+      const Host = {
+        components: { CanvasErrorAlert },
+        setup() {
+          return { hasError, handleRetry };
+        },
+        template: `
+          <section id="test-canvas-section">
+            <h2 id="test-canvas-heading" tabindex="-1">Queries</h2>
+            <CanvasErrorAlert
+              v-if="hasError"
+              message="Load failed"
+              detail="Timeout"
+              @retry="handleRetry"
+            />
+            <div v-else class="recovered-panel">
+              <button id="btn-recovered-query-action" type="button">Open query</button>
+            </div>
+          </section>
+        `,
+      };
+
+      const wrapper = mount(Host, { attachTo: document.body });
+      const retryBtn = wrapper.find('[data-testid="canvas-error-retry"]')
+        .element as HTMLButtonElement;
+      retryBtn.focus();
+      await wrapper.find('[data-testid="canvas-error-retry"]').trigger("click");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(document.activeElement?.getAttribute("data-testid")).toBe(
+        "canvas-error-retry"
+      );
+
+      shouldRecover = true;
+      (document.activeElement as HTMLElement)?.focus();
+      await wrapper.find('[data-testid="canvas-error-retry"]').trigger("click");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(document.activeElement?.id).toBe("btn-recovered-query-action");
+      wrapper.unmount();
+    });
   });
 });

@@ -13,6 +13,8 @@ import {
   trapTabFocus,
   useInlineFocusHandoff,
   handoffFocus,
+  handoffRetryFocus,
+  useRetryFocusHandoff,
   useEscapeClose,
   getFocusableElements,
 } from "../index.js";
@@ -71,6 +73,40 @@ class MockElement {
     return child;
   }
 
+  removeChild(child) {
+    const idx = this.children.indexOf(child);
+    if (idx !== -1) {
+      this.children.splice(idx, 1);
+      child.parentElement = null;
+      if (globalThis.document?.activeElement === child) {
+        globalThis.document.activeElement = globalThis.document.body;
+      }
+      MockMutationObserver.notifyRemoved(this, [child]);
+    }
+    return child;
+  }
+
+  closest(selector) {
+    let cur = this;
+    while (cur) {
+      if (cur.matchesSelector(selector)) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
+  get nextElementSibling() {
+    if (!this.parentElement) return null;
+    const idx = this.parentElement.children.indexOf(this);
+    return idx >= 0 ? this.parentElement.children[idx + 1] || null : null;
+  }
+
+  get previousElementSibling() {
+    if (!this.parentElement) return null;
+    const idx = this.parentElement.children.indexOf(this);
+    return idx > 0 ? this.parentElement.children[idx - 1] || null : null;
+  }
+
   contains(target) {
     if (!target) return false;
     let cur = target;
@@ -109,10 +145,55 @@ class MockElement {
   }
 
   matchesSelector(selector) {
-    if (selector.startsWith("#")) {
-      return this.getAttribute("id") === selector.slice(1);
+    const parts = String(selector)
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length > 1) {
+      return parts.some((part) => this.matchesSelector(part));
+    }
+    const single = parts[0] || "";
+    if (single.startsWith("#")) {
+      return this.getAttribute("id") === single.slice(1);
+    }
+    if (single.startsWith(".")) {
+      const cls = this.getAttribute("class") || "";
+      return cls.split(/\s+/).includes(single.slice(1));
+    }
+    if (single === '[role="alert"]') {
+      return this.getAttribute("role") === "alert";
+    }
+    if (single === '[data-testid="canvas-error-retry"]') {
+      return this.getAttribute("data-testid") === "canvas-error-retry";
+    }
+    if (single === 'button[id*="retry"]') {
+      return (
+        this.tagName === "BUTTON" &&
+        String(this.getAttribute("id") || "").includes("retry")
+      );
+    }
+    if (/^h[1-4](\[tabindex="-1"\])?$/i.test(single)) {
+      const tag = single.slice(0, 2).toUpperCase();
+      if (this.tagName !== tag) return false;
+      if (single.includes("tabindex")) {
+        return this.getAttribute("tabindex") === "-1";
+      }
+      return true;
+    }
+    if (
+      ["SECTION", "ARTICLE", "ASIDE", "MAIN"].includes(single.toUpperCase())
+    ) {
+      return this.tagName === single.toUpperCase();
+    }
+    if (single === '[role="dialog"]' || single === '[role="alertdialog"]') {
+      const role = single.includes("alertdialog") ? "alertdialog" : "dialog";
+      return this.getAttribute("role") === role;
     }
     return this.matchesFocusable();
+  }
+
+  matches(selector) {
+    return this.matchesSelector(selector);
   }
 
   querySelectorAll(selector) {
@@ -136,6 +217,44 @@ class MockElement {
   querySelector(selector) {
     const all = this.querySelectorAll(selector);
     return all[0] || null;
+  }
+}
+
+class MockMutationObserver {
+  static activeObservers = new Set();
+
+  static notifyRemoved(targetParent, removedNodes) {
+    const record = { target: targetParent, removedNodes };
+    for (const entry of Array.from(MockMutationObserver.activeObservers)) {
+      if (
+        entry.target &&
+        (entry.target === targetParent || entry.target.contains(targetParent))
+      ) {
+        Promise.resolve().then(() => {
+          if (MockMutationObserver.activeObservers.has(entry)) {
+            entry.callback([record], entry.instance);
+          }
+        });
+      }
+    }
+  }
+
+  constructor(callback) {
+    this.callback = callback;
+    this._entry = null;
+  }
+
+  observe(target) {
+    this.disconnect();
+    this._entry = { target, callback: this.callback, instance: this };
+    MockMutationObserver.activeObservers.add(this._entry);
+  }
+
+  disconnect() {
+    if (this._entry) {
+      MockMutationObserver.activeObservers.delete(this._entry);
+      this._entry = null;
+    }
   }
 }
 
@@ -200,15 +319,19 @@ function createMockDom() {
 describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion tokens", () => {
   let origDocument;
   let origWindow;
+  let origMutationObserver;
   let dom;
   let activeScopes = [];
 
   beforeEach(() => {
     origDocument = globalThis.document;
     origWindow = globalThis.window;
+    origMutationObserver = globalThis.MutationObserver;
+    MockMutationObserver.activeObservers.clear();
     dom = createMockDom();
     globalThis.document = dom.doc;
     globalThis.window = dom.win;
+    globalThis.MutationObserver = MockMutationObserver;
     activeScopes = [];
   });
 
@@ -216,8 +339,10 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     for (const s of activeScopes) {
       s.stop();
     }
+    MockMutationObserver.activeObservers.clear();
     globalThis.document = origDocument;
     globalThis.window = origWindow;
+    globalThis.MutationObserver = origMutationObserver;
   });
 
   it("exports useFocusTrap, useInlineFocusHandoff, handoffFocus, useEscapeClose, getFocusableElements, ClinicalModal, and ClinicalDrawer from ui", () => {
@@ -1042,5 +1167,159 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
 
     await nextTick();
     expect(dom.doc.activeElement).toBe(drawerCloseBtn);
+  });
+
+  it("recovers focus inside the active top modal after nextTick when a focused child unmounts onto BODY, while yielding to handoffFocus and child modals (ADR-2676)", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    const openBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-open" })
+    );
+    const dialog = dom.body.appendChild(
+      new MockElement("div", {
+        id: "help-drawer",
+        role: "dialog",
+        tabindex: "-1",
+      })
+    );
+    const closeBtn = dialog.appendChild(
+      new MockElement("button", { id: "btn-close-drawer" })
+    );
+    const targetInput = dialog.appendChild(
+      new MockElement("input", { id: "qc-next-input", type: "text" })
+    );
+    const removableBtn = dialog.appendChild(
+      new MockElement("button", { id: "btn-unmounting-action" })
+    );
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(dialog), { isOpen });
+    });
+
+    openBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    // 1. Focused child unmounts with no explicit handoff -> recovers inside dialog after nextTick
+    removableBtn.focus();
+    expect(dom.doc.activeElement).toBe(removableBtn);
+    dialog.removeChild(removableBtn);
+    expect(dom.doc.activeElement).toBe(dom.body);
+
+    await Promise.resolve();
+    await nextTick();
+    await Promise.resolve();
+    expect(dialog.contains(dom.doc.activeElement)).toBe(true);
+    expect(dom.doc.activeElement).toBe(closeBtn);
+
+    // 2. Focused child unmounts alongside explicit handoffFocus -> yields to handoffFocus target
+    const secondRemovable = dialog.appendChild(
+      new MockElement("button", { id: "btn-second-unmount" })
+    );
+    secondRemovable.focus();
+    dialog.removeChild(secondRemovable);
+    const handoffPromise = handoffFocus(targetInput, {
+      container: dialog,
+      includeDefaultFallbacks: false,
+    });
+    await handoffPromise;
+    await Promise.resolve();
+    await nextTick();
+    await Promise.resolve();
+    expect(dom.doc.activeElement).toBe(targetInput);
+
+    // 3. Child modal stacked on top -> parent subtree removal yields to child modal
+    const thirdRemovable = dialog.appendChild(
+      new MockElement("button", { id: "btn-third-unmount" })
+    );
+    const childModal = dom.body.appendChild(
+      new MockElement("div", {
+        id: "child-sign-modal",
+        role: "dialog",
+        tabindex: "-1",
+      })
+    );
+    const childConfirmBtn = childModal.appendChild(
+      new MockElement("button", { id: "btn-child-confirm" })
+    );
+    const isChildOpen = ref(false);
+    scope.run(() => {
+      useFocusTrap(ref(childModal), { isOpen: isChildOpen });
+    });
+    isChildOpen.value = true;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(childConfirmBtn);
+
+    dialog.removeChild(thirdRemovable);
+    await Promise.resolve();
+    await nextTick();
+    await Promise.resolve();
+    expect(dom.doc.activeElement).toBe(childConfirmBtn);
+  });
+
+  it("handoffRetryFocus and useRetryFocusHandoff focus the retry control on error or recovered content / heading on success (ADR-2676)", async () => {
+    expect(handoffRetryFocus).toBeTypeOf("function");
+    expect(useRetryFocusHandoff).toBeTypeOf("function");
+
+    const section = dom.body.appendChild(
+      new MockElement("section", { id: "queries-section" })
+    );
+    const heading = section.appendChild(
+      new MockElement("h2", { id: "queries-heading", tabindex: "-1" })
+    );
+    const alertBox = section.appendChild(
+      new MockElement("div", { class: "canvas-error-alert", role: "alert" })
+    );
+    const retryBtn = alertBox.appendChild(
+      new MockElement("button", {
+        id: "btn-retry-queries",
+        "data-testid": "canvas-error-retry",
+      })
+    );
+
+    // 1. Repeated failure keeps focus on the retry button
+    retryBtn.focus();
+    const { retryWithFocus } = useRetryFocusHandoff({
+      container: section,
+      includeDefaultFallbacks: false,
+    });
+    await retryWithFocus(async () => {
+      section.removeChild(alertBox);
+      const nextAlert = section.appendChild(
+        new MockElement("div", { class: "canvas-error-alert", role: "alert" })
+      );
+      nextAlert.appendChild(retryBtn);
+    });
+    expect(dom.doc.activeElement).toBe(retryBtn);
+
+    // 2. Recovery with interactive content after anchor focuses recovered control
+    const recoveredAction = new MockElement("button", {
+      id: "btn-recovered-item",
+    });
+    await retryWithFocus(async () => {
+      const currentAlert = retryBtn.parentElement;
+      if (currentAlert) section.removeChild(currentAlert);
+      section.appendChild(recoveredAction);
+    });
+    expect(dom.doc.activeElement).toBe(recoveredAction);
+
+    // 3. Recovery with empty state (no interactive controls) focuses section heading
+    section.removeChild(recoveredAction);
+    const thirdAlert = section.appendChild(
+      new MockElement("div", { class: "canvas-error-alert", role: "alert" })
+    );
+    thirdAlert.appendChild(retryBtn);
+    retryBtn.focus();
+    await handoffRetryFocus(
+      async () => {
+        section.removeChild(thirdAlert);
+      },
+      { container: section, includeDefaultFallbacks: false }
+    );
+    expect(dom.doc.activeElement).toBe(heading);
   });
 });
