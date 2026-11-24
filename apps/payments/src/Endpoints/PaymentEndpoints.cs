@@ -1005,6 +1005,34 @@ public static class PaymentEndpoints
         });
     }
 
+    private static bool IsFourAsciiDigits(string? value) =>
+        !string.IsNullOrEmpty(value) && value.Length == 4 && value.All(char.IsAsciiDigit);
+
+    private static async Task<string?> ResolveLatestW9SubmitterAsync(
+        PaymentsDbContext dbContext,
+        ParticipantWallet wallet,
+        CancellationToken ct)
+    {
+        var submissionLogs = await dbContext.PaymentAuditLogs.AsNoTracking()
+            .Where(l => l.EntityType == "ParticipantWallet" && l.EntityId == wallet.Id && l.Action == "W9_FORM_SUBMITTED")
+            .Select(l => new { l.UserId, l.CreatedBy, l.CreatedAt, l.VersionIndex })
+            .ToListAsync(ct);
+
+        var latestSubmission = submissionLogs
+            .OrderByDescending(l => l.VersionIndex)
+            .ThenByDescending(l => l.CreatedAt)
+            .FirstOrDefault();
+
+        if (latestSubmission == null)
+        {
+            return wallet.CreatedBy;
+        }
+
+        return !string.IsNullOrWhiteSpace(latestSubmission.UserId)
+            ? latestSubmission.UserId
+            : latestSubmission.CreatedBy;
+    }
+
     private static async Task<IResult> SubmitW9Form(string walletId, SubmitW9RequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
         if (PaymentsCaller.From(user) is not { } caller)
@@ -1021,6 +1049,18 @@ public static class PaymentEndpoints
                 return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
             }
 
+            string? trimmedLegalName = request.FullLegalName?.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedLegalName))
+            {
+                return Results.UnprocessableEntity(new { detail = "Full legal name is required for Form W-9 submission." });
+            }
+
+            string? trimmedLastFour = request.TaxIdLastFour?.Trim();
+            if (!IsFourAsciiDigits(trimmedLastFour))
+            {
+                return Results.UnprocessableEntity(new { detail = "TIN format does not conform to IRS requirements: taxIdLastFour must be four digits." });
+            }
+
             if (!request.CertifyAccurate)
             {
                 return Results.UnprocessableEntity(new { detail = "W-9 certification must be agreed and verified as accurate." });
@@ -1028,9 +1068,10 @@ public static class PaymentEndpoints
 
             DateTimeOffset now = SystemClock.Instance.UtcNow;
             string priorStatus = wallet.W9Status;
-            wallet.TaxIdLastFour = request.TaxIdLastFour;
+            wallet.TaxIdLastFour = trimmedLastFour;
             wallet.W9Status = "SUBMITTED";
             wallet.W9SubmittedAt = now;
+            wallet.W9VerifiedAt = null;
             wallet.UpdatedAt = now;
             wallet.VersionIndex += 1;
 
@@ -1043,8 +1084,8 @@ public static class PaymentEndpoints
                 UserId = caller.UserId,
                 UserRoles = caller.RolesText,
                 PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
-                NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status, tax_id_last_four = request.TaxIdLastFour }),
-                Details = JsonSerializer.Serialize(new { full_legal_name = request.FullLegalName, tax_id_last_four = request.TaxIdLastFour, address = request.Address }),
+                NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status, tax_id_last_four = trimmedLastFour }),
+                Details = JsonSerializer.Serialize(new { full_legal_name = trimmedLegalName, tax_id_last_four = trimmedLastFour, address = request.Address }),
                 CreatedAt = now,
                 CreatedBy = caller.UserId,
                 ReasonForChange = "Form W-9 taxpayer identification certification submitted for the participant",
@@ -1071,6 +1112,24 @@ public static class PaymentEndpoints
             if (wallet == null || !Reaches(caller, wallet))
             {
                 return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+            }
+
+            if (!string.Equals(wallet.W9Status, "SUBMITTED", StringComparison.OrdinalIgnoreCase)
+                || !IsFourAsciiDigits(wallet.TaxIdLastFour?.Trim()))
+            {
+                return Results.Conflict(new
+                {
+                    detail = "Form W-9 can only be verified when a submitted Form W-9 with a four-digit taxpayer identification suffix is pending review."
+                });
+            }
+
+            // Form W-9 submission and verification share site clinical roles (crc, investigator), so two people must
+            // perform them: the user who submitted the latest Form W-9 may not also verify it (separation of duties).
+            string? submittedBy = await ResolveLatestW9SubmitterAsync(dbContext, wallet, ct);
+            if (!string.IsNullOrWhiteSpace(submittedBy)
+                && string.Equals(submittedBy, caller.UserId, StringComparison.Ordinal))
+            {
+                return Results.Conflict(new { detail = "The user who submitted this Form W-9 cannot also verify it." });
             }
 
             DateTimeOffset now = SystemClock.Instance.UtcNow;
@@ -4268,6 +4327,107 @@ public static class PaymentEndpoints
         return Results.Ok(disb);
     }
 
+    private static string ResolveDirectStipendIdempotencyKey(DisburseStipendRequest request)
+    {
+        if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
+        {
+            return request.IdempotencyKey.Trim();
+        }
+
+        return request.SequenceNumber.HasValue
+            ? $"seq_{request.SequenceNumber}_{request.SubjectId}"
+            : $"disburse_{request.SubjectId}_{Guid.NewGuid()}";
+    }
+
+    private static (ParticipantStipendRule? MatchingRule, IResult? RejectionResult) EvaluateDirectStipendPolicy(
+        decimal stipendAmount,
+        ParticipantWallet? wallet,
+        IReadOnlyList<ParticipantStipendRule> studyRules,
+        DisburseStipendRequest request)
+    {
+        string? diaryCode = !string.IsNullOrWhiteSpace(request.DiaryId)
+            ? request.DiaryId.Trim()
+            : request.AssignmentId?.Trim();
+
+        ParticipantStipendRule? matchingRule = null;
+        if (!string.IsNullOrEmpty(diaryCode))
+        {
+            matchingRule = studyRules.FirstOrDefault(r =>
+                string.Equals(r.VisitCode, diaryCode, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(r.ProcedureCode, diaryCode, StringComparison.OrdinalIgnoreCase));
+        }
+
+        matchingRule ??= studyRules.FirstOrDefault(r =>
+            string.Equals(r.VisitCode, "DIARY", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(r.VisitCode, "EPRO_DIARY", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(r.VisitCode, "DIARY_SYNC", StringComparison.OrdinalIgnoreCase));
+
+        decimal? ruleCap = matchingRule?.AntiCoercionCap;
+        if (!ruleCap.HasValue && studyRules.Any(r => r.AntiCoercionCap.HasValue))
+        {
+            ruleCap = studyRules.Where(r => r.AntiCoercionCap.HasValue).Max(r => r.AntiCoercionCap!.Value);
+        }
+
+        decimal? walletCap = wallet?.AntiCoercionCap;
+        if ((ruleCap.HasValue && stipendAmount > ruleCap.Value)
+            || (walletCap.HasValue && stipendAmount > walletCap.Value))
+        {
+            decimal effectiveCap = Math.Min(ruleCap ?? decimal.MaxValue, walletCap ?? decimal.MaxValue);
+            return (matchingRule, Results.UnprocessableEntity(new
+            {
+                detail = $"Stipend amount (${stipendAmount:F2}) exceeds IRB anti-coercion cap limit (${effectiveCap:F2})."
+            }));
+        }
+
+        decimal? ruleThreshold = matchingRule?.AutoDisbursementThreshold;
+        if (!ruleThreshold.HasValue && studyRules.Any(r => r.AutoDisbursementThreshold.HasValue))
+        {
+            ruleThreshold = studyRules.Where(r => r.AutoDisbursementThreshold.HasValue).Max(r => r.AutoDisbursementThreshold!.Value);
+        }
+
+        decimal? walletThreshold = wallet?.AutoDisbursementThreshold;
+        if ((ruleThreshold.HasValue && stipendAmount > ruleThreshold.Value)
+            || (walletThreshold.HasValue && stipendAmount > walletThreshold.Value))
+        {
+            decimal effectiveThreshold = Math.Min(ruleThreshold ?? decimal.MaxValue, walletThreshold ?? decimal.MaxValue);
+            return (matchingRule, Results.Conflict(new
+            {
+                detail = $"Stipend amount (${stipendAmount:F2}) exceeds configured auto-disbursement threshold limit (${effectiveThreshold:F2})."
+            }));
+        }
+
+        decimal potentialTaxableYtd = (wallet?.TaxableYtd ?? 0m) + stipendAmount;
+        string w9Status = wallet?.W9Status ?? "NOT_REQUIRED";
+        if (potentialTaxableYtd >= 600.00m && !string.Equals(w9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
+        {
+            return (matchingRule, Results.Conflict(new
+            {
+                detail = $"IRS $600.00 YTD tax threshold reached (YTD: ${potentialTaxableYtd:F2}) without a verified Form W-9. Direct disbursement halted until Form W-9 is verified."
+            }));
+        }
+
+        return (matchingRule, null);
+    }
+
+    private static IResult BuildDuplicateDirectStipendResponse(
+        ParticipantTransaction existingTx,
+        ParticipantWallet wallet,
+        string subjectId,
+        string idempotencyKey) =>
+        Results.Ok(new DisburseStipendResponse(
+            Success: true,
+            Id: existingTx.Id,
+            WalletId: wallet.Id,
+            SubjectId: subjectId,
+            Amount: existingTx.Amount,
+            NewBalance: wallet.CurrentBalance,
+            Currency: wallet.Currency,
+            Status: "DUPLICATE_SKIPPED",
+            ReferenceNumber: $"DISB-{existingTx.Id[..Math.Min(8, existingTx.Id.Length)]}",
+            IdempotencyKey: idempotencyKey,
+            DispatchedAt: existingTx.CreatedAt
+        ));
+
     private static async Task<IResult> DisburseStipendDirect(DisburseStipendRequest request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
         if (PaymentsCaller.From(user) is not { } caller)
@@ -4280,125 +4440,182 @@ public static class PaymentEndpoints
             return Results.BadRequest(new { detail = "subject_id is required for stipend disbursement." });
         }
 
-        string idempotencyKey = request.IdempotencyKey
-            ?? (request.SequenceNumber.HasValue ? $"seq_{request.SequenceNumber}_{request.SubjectId}" : $"disburse_{request.SubjectId}_{Guid.NewGuid()}");
-
-        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
+        decimal stipendAmount = request.Amount ?? 25.00m;
+        if (stipendAmount <= 0m)
         {
-            var subjectWallets = await LockWalletsBySubjectAsync(dbContext, request.SubjectId, ct);
-            var wallet = !string.IsNullOrWhiteSpace(request.StudyId)
-                ? subjectWallets.FirstOrDefault(w => string.Equals(w.StudyId, request.StudyId, StringComparison.Ordinal))
-                : subjectWallets.FirstOrDefault();
+            return Results.BadRequest(new { detail = "Stipend disbursement amount must be greater than zero." });
+        }
 
-            var existingLog = await dbContext.PaymentAuditLogs
-                .FirstOrDefaultAsync(l => l.Action == "AUTO_STIPEND_DISBURSEMENT" && l.Details != null && l.Details.Contains(idempotencyKey), ct);
+        string idempotencyKey = ResolveDirectStipendIdempotencyKey(request);
+        if (idempotencyKey.Length > 255)
+        {
+            return Results.BadRequest(new { detail = "idempotencyKey must not exceed 255 characters." });
+        }
 
-            if (existingLog != null)
+        try
+        {
+            return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
             {
-                if (wallet != null && !Reaches(caller, wallet))
+                var subjectWallets = await LockWalletsBySubjectAsync(dbContext, request.SubjectId, ct);
+                var wallet = !string.IsNullOrWhiteSpace(request.StudyId)
+                    ? subjectWallets.FirstOrDefault(w => string.Equals(w.StudyId, request.StudyId, StringComparison.Ordinal))
+                    : subjectWallets.FirstOrDefault();
+
+                string walletStudyId = wallet?.StudyId ?? request.StudyId ?? "STUDY-DCT-001";
+                string walletSiteId = wallet?.SiteId ?? request.SiteId ?? "SITE-101";
+                if (!caller.Reaches(walletStudyId, walletSiteId))
                 {
                     return OutsideScope();
                 }
 
-                decimal currentBal = wallet?.CurrentBalance ?? 0m;
-                string walletId = wallet?.Id ?? Guid.NewGuid().ToString();
+                if (wallet != null)
+                {
+                    var existingTx = await dbContext.ParticipantTransactions.AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.WalletId == wallet.Id && t.IdempotencyKey == idempotencyKey, ct);
+
+                    if (existingTx != null)
+                    {
+                        return BuildDuplicateDirectStipendResponse(existingTx, wallet, request.SubjectId, idempotencyKey);
+                    }
+                }
+
+                var studyRules = await dbContext.ParticipantStipendRules.AsNoTracking()
+                    .Where(r => r.IsActive && r.StudyId == walletStudyId)
+                    .ToListAsync(ct);
+
+                var (matchingRule, rejection) = EvaluateDirectStipendPolicy(stipendAmount, wallet, studyRules, request);
+                if (rejection != null)
+                {
+                    return rejection;
+                }
+
+                DateTimeOffset now = SystemClock.Instance.UtcNow;
+                bool isNewWallet = wallet == null;
+
+                if (wallet == null)
+                {
+                    wallet = new ParticipantWallet
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        SubjectId = request.SubjectId,
+                        StudyId = walletStudyId,
+                        SiteId = walletSiteId,
+                        CurrentBalance = 0m,
+                        LifetimeStipends = 0m,
+                        LifetimeReimbursements = 0m,
+                        LifetimeDisbursements = 0m,
+                        Currency = matchingRule?.Currency ?? "USD",
+                        Status = "ACTIVE",
+                        W9Status = "NOT_REQUIRED",
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        UpdatedAt = now,
+                        VersionIndex = 1
+                    };
+                    dbContext.ParticipantWallets.Add(wallet);
+                }
+
+                wallet.CurrentBalance += stipendAmount;
+                wallet.LifetimeStipends += stipendAmount;
+                wallet.TaxableYtd += stipendAmount;
+                if (wallet.TaxableYtd >= 600.00m)
+                {
+                    wallet.Is1099ThresholdExceeded = true;
+                }
+                wallet.UpdatedAt = now;
+                if (!isNewWallet)
+                {
+                    wallet.VersionIndex += 1;
+                }
+
+                string txType = matchingRule is { IsMilestone: true } ? "MILESTONE_CREDIT" : "STIPEND_CREDIT";
+                var tx = new ParticipantTransaction
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    WalletId = wallet.Id,
+                    SubjectId = request.SubjectId,
+                    StudyId = wallet.StudyId,
+                    TransactionType = txType,
+                    Amount = stipendAmount,
+                    BalanceAfter = wallet.CurrentBalance,
+                    ReferenceId = idempotencyKey,
+                    IdempotencyKey = idempotencyKey,
+                    Description = !string.IsNullOrWhiteSpace(request.DiaryId)
+                        ? $"Direct ePRO stipend credit ({request.DiaryId.Trim()})"
+                        : "Direct participant stipend credit",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    VersionIndex = 1
+                };
+                dbContext.ParticipantTransactions.Add(tx);
+
+                var auditDetails = JsonSerializer.Serialize(new
+                {
+                    subject_id = request.SubjectId,
+                    sequence_number = request.SequenceNumber,
+                    assignment_id = request.AssignmentId,
+                    diary_id = request.DiaryId,
+                    stipend_amount = stipendAmount,
+                    taxable_ytd = wallet.TaxableYtd,
+                    idempotency_key = idempotencyKey,
+                    transaction_id = tx.Id,
+                    new_balance = wallet.CurrentBalance,
+                    timestamp = now
+                });
+
+                var auditLog = new PaymentAuditLog
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "ParticipantWallet",
+                    EntityId = wallet.Id,
+                    Action = "AUTO_STIPEND_DISBURSEMENT",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = auditDetails,
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    ReasonForChange = "Automatic ePRO survey completion stipend payout",
+                    VersionIndex = wallet.VersionIndex
+                };
+
+                dbContext.PaymentAuditLogs.Add(auditLog);
+                await dbContext.SaveChangesAsync(ct);
 
                 return Results.Ok(new DisburseStipendResponse(
                     Success: true,
-                    Id: existingLog.Id,
-                    WalletId: walletId,
+                    Id: tx.Id,
+                    WalletId: wallet.Id,
                     SubjectId: request.SubjectId,
-                    Amount: request.Amount ?? 25.00m,
-                    NewBalance: currentBal,
-                    Currency: wallet?.Currency ?? "USD",
-                    Status: "DUPLICATE_SKIPPED",
-                    ReferenceNumber: $"DISB-{existingLog.Id[..Math.Min(8, existingLog.Id.Length)]}",
+                    Amount: stipendAmount,
+                    NewBalance: wallet.CurrentBalance,
+                    Currency: wallet.Currency,
+                    Status: "COMPLETED",
+                    ReferenceNumber: $"DISB-{tx.Id[..Math.Min(8, tx.Id.Length)]}",
                     IdempotencyKey: idempotencyKey,
-                    DispatchedAt: existingLog.CreatedAt
+                    DispatchedAt: now
                 ));
-            }
-
-            string walletStudyId = wallet?.StudyId ?? request.StudyId ?? "STUDY-DCT-001";
-            string walletSiteId = wallet?.SiteId ?? request.SiteId ?? "SITE-101";
-            if (!caller.Reaches(walletStudyId, walletSiteId))
-            {
-                return OutsideScope();
-            }
-
-            DateTimeOffset now = SystemClock.Instance.UtcNow;
-
-            if (wallet == null)
-            {
-                wallet = new ParticipantWallet
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    SubjectId = request.SubjectId,
-                    StudyId = walletStudyId,
-                    SiteId = walletSiteId,
-                    CurrentBalance = 0m,
-                    LifetimeStipends = 0m,
-                    LifetimeReimbursements = 0m,
-                    LifetimeDisbursements = 0m,
-                    Currency = "USD",
-                    Status = "ACTIVE",
-                    CreatedAt = now,
-                    CreatedBy = caller.UserId,
-                    UpdatedAt = now,
-                    VersionIndex = 1
-                };
-                dbContext.ParticipantWallets.Add(wallet);
-            }
-
-            decimal stipendAmount = request.Amount ?? 25.00m;
-            wallet.CurrentBalance += stipendAmount;
-            wallet.LifetimeStipends += stipendAmount;
-            wallet.LifetimeDisbursements += stipendAmount;
-            wallet.UpdatedAt = now;
-
-            var auditDetails = JsonSerializer.Serialize(new
-            {
-                subject_id = request.SubjectId,
-                sequence_number = request.SequenceNumber,
-                assignment_id = request.AssignmentId,
-                diary_id = request.DiaryId,
-                stipend_amount = stipendAmount,
-                idempotency_key = idempotencyKey,
-                new_balance = wallet.CurrentBalance,
-                timestamp = now
             });
-
-            var auditLog = new PaymentAuditLog
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex, "payments_participant_transactions"))
+        {
+            dbContext.ChangeTracker.Clear();
+            var racedWallets = await dbContext.ParticipantWallets.AsNoTracking()
+                .Where(w => w.SubjectId == request.SubjectId)
+                .ToListAsync();
+            var racedWallet = !string.IsNullOrWhiteSpace(request.StudyId)
+                ? racedWallets.FirstOrDefault(w => string.Equals(w.StudyId, request.StudyId, StringComparison.Ordinal))
+                : racedWallets.FirstOrDefault();
+            if (racedWallet != null)
             {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "AUTO_STIPEND_DISBURSEMENT",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = auditDetails,
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Automatic ePRO survey completion stipend payout",
-                VersionIndex = 1
-            };
-
-            dbContext.PaymentAuditLogs.Add(auditLog);
-            await dbContext.SaveChangesAsync(ct);
-
-            return Results.Ok(new DisburseStipendResponse(
-                Success: true,
-                Id: auditLog.Id,
-                WalletId: wallet.Id,
-                SubjectId: request.SubjectId,
-                Amount: stipendAmount,
-                NewBalance: wallet.CurrentBalance,
-                Currency: wallet.Currency,
-                Status: "COMPLETED",
-                ReferenceNumber: $"DISB-{auditLog.Id[..Math.Min(8, auditLog.Id.Length)]}",
-                IdempotencyKey: idempotencyKey,
-                DispatchedAt: now
-            ));
-        });
+                var racedTx = await dbContext.ParticipantTransactions.AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.WalletId == racedWallet.Id && t.IdempotencyKey == idempotencyKey);
+                if (racedTx != null)
+                {
+                    return BuildDuplicateDirectStipendResponse(racedTx, racedWallet, request.SubjectId, idempotencyKey);
+                }
+            }
+            throw;
+        }
     }
 
     private static async Task<IResult> GetAuditLogs(PaymentsDbContext dbContext, ClaimsPrincipal user, string? subjectId = null)

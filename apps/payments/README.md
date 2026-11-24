@@ -72,7 +72,14 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   remittance signature from the user who approved the invoice. Expense submission and expense review likewise share site
   clinical roles (`crc`, `investigator`), so `POST /participant/expenses/{claimId}/review` and `ParticipantExpenseClaim.Approve`
   refuse (`409`) an approval from the user who submitted the claim (`CreatedBy == caller.UserId`), bound `AdjustedAmount`
-  between `$0.01` and `claim.GrossAmount`, and recompute `TaxDeduction` and `NetAmount` on the server. Compiling with
+  between `$0.01` and `claim.GrossAmount`, and recompute `TaxDeduction` and `NetAmount` on the server. Form W-9
+  submission and verification also share site clinical roles (`crc`, `investigator`): `POST /participant/wallets/{walletId}/submit-w9`
+  requires a non-empty `FullLegalName` and a four-digit `TaxIdLastFour` (`422`), and `POST /participant/wallets/{walletId}/verify-w9`
+  requires `W9Status == SUBMITTED` with a four-digit `TaxIdLastFour` and refuses (`409`) verification by the user who
+  recorded the latest `W9_FORM_SUBMITTED` entry. Direct stipend disbursement (`POST /disburse`, `POST /participant/wallets/disburse`)
+  enforces positive amounts (`400`), IRB `AntiCoercionCap` (`422`), `AutoDisbursementThreshold` (`409`), and IRS `$600.00`
+  `TaxableYtd` verified W-9 holds (`409`), deduplicates per wallet on `ParticipantTransaction.IdempotencyKey`, and records
+  `ParticipantTransaction` stipend credits and `TaxableYtd` without inflating `LifetimeDisbursements`. Compiling with
   `auto_approve` also needs `payments_invoice:approve`.
 - **Identity in records.** Handlers take the actor from the signed principal (`PaymentsCaller`): the `sub` claim as the
   user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`) as
