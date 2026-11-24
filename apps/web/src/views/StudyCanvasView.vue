@@ -1087,6 +1087,7 @@ import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import * as kernelStudyModule from "../canvas/kernelStudy";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   enrollmentIdFromParticipant,
   participantNodeRef,
@@ -2642,6 +2643,23 @@ watch(callerAuthKey, (next, prev) => {
     canvas.clearParticipantAllocationCache();
   }
 });
+
+watch(
+  [studyCode, siteFilter, () => canvas.studyCode],
+  ([code, site, openCanvasCode], prev) => {
+    const prevSite = prev?.[1] ?? "";
+    if (code && !authStore.isLoggingOut && !authStore.sessionExpired) {
+      if (openCanvasCode !== code) {
+        canvas.openStudy(code);
+      }
+      syncWorkspaceScope({
+        studyId: code,
+        ...(site || prevSite ? { siteId: site } : {}),
+      });
+    }
+  },
+  { immediate: true }
+);
 
 watch(
   [

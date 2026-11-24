@@ -271,12 +271,16 @@ import {
   parseNodeRef,
   tryNodeRef,
 } from "../canvas/nodeRef";
-import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
+import {
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
 import {
   toCoveringScopeLocks,
   toDirectScopeLocks,
 } from "../canvas/kernelLocks";
+import { seedKernelStudyRef } from "../canvas/kernelStudy";
 import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
@@ -572,6 +576,84 @@ function resolveCanonicalParticipantParam(
   return candidate;
 }
 
+function fallbackStepCode(rawLabel: string): string {
+  const trimmed = rawLabel.trim();
+  if (!trimmed) return "";
+  const head = /\s+[—–-]\s+/.test(trimmed)
+    ? trimmed.split(/\s+[—–-]\s+/)[0].trim()
+    : trimmed;
+  return head && !/\s/.test(head) ? head : "";
+}
+
+function extractStepStudyRef(step: unknown): string | null {
+  if (!step || typeof step !== "object") return null;
+  const s = step as { ref?: unknown; node?: unknown };
+  if (typeof s.ref === "string" && s.ref.trim()) return s.ref.trim();
+  if (typeof s.node === "string" && s.node.trim()) return s.node.trim();
+  if (s.node && typeof s.node === "object") {
+    const n = s.node as { kind?: unknown; id?: unknown };
+    const parsed =
+      typeof n.kind === "string" && n.kind === "study"
+        ? tryNodeRef("study", n.id)
+        : null;
+    return parsed ? formatNodeRef(parsed) : null;
+  }
+  return null;
+}
+
+async function resolveCanonicalStepCode(
+  step:
+    | {
+        ref?: string | null;
+        node?: unknown;
+        label?: string | null;
+        mask?: unknown;
+      }
+    | undefined
+): Promise<string> {
+  if (!step || step.mask !== null) return "";
+  const fallbackLabel = typeof step.label === "string" ? step.label.trim() : "";
+  const stepRef =
+    typeof step.ref === "string" && step.ref.trim() ? step.ref.trim() : "";
+  if (!stepRef) return fallbackStepCode(fallbackLabel);
+  const expectedKind = parseNodeRef(stepRef)?.kind ?? stepRef.split(":")[0];
+  if (typeof kernelApi.getNode === "function") {
+    try {
+      const summary = await kernelApi.getNode(stepRef);
+      if (summary && typeof summary === "object") {
+        if (
+          (summary.ref && summary.ref !== stepRef) ||
+          (expectedKind && summary.kind && summary.kind !== expectedKind)
+        ) {
+          return fallbackStepCode(fallbackLabel);
+        }
+        if (summary.mask !== null && summary.mask !== undefined) {
+          return "";
+        }
+        seedNodeSummary(stepRef, {
+          kind: summary.kind,
+          code: summary.code,
+          title: summary.title,
+          status: summary.status,
+        });
+        if (typeof summary.code === "string") {
+          return summary.code.trim();
+        }
+        if ("code" in summary && summary.code === null) {
+          return "";
+        }
+      }
+    } catch (err) {
+      const status = (err as { status?: number | null } | null)?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        return "";
+      }
+      return fallbackStepCode(fallbackLabel);
+    }
+  }
+  return fallbackStepCode(fallbackLabel);
+}
+
 watch(
   observation,
   async (obs) => {
@@ -591,6 +673,23 @@ watch(
       explicitReturn.startsWith("/") &&
       !explicitReturn.startsWith("//")
     ) {
+      if (
+        !props.studyRef &&
+        !props.studyCode &&
+        typeof kernelApi.getZoomPath === "function"
+      ) {
+        const request = ++redirectRequest;
+        try {
+          const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
+          if (request !== redirectRequest) return;
+          const studyStep = steps.find(
+            (s) => s.level === "study" && s.mask === null
+          );
+          observationStudyRef.value = extractStepStudyRef(studyStep);
+        } catch {
+          // Keep standalone observation view when zoom path is unavailable.
+        }
+      }
       return;
     }
     const request = ++redirectRequest;
@@ -600,9 +699,7 @@ watch(
       const studyStep = steps.find(
         (s) => s.level === "study" && s.mask === null
       );
-      const legacyStudyNode =
-        (studyStep as { node?: string | null } | undefined)?.node ?? null;
-      const studyRef = studyStep?.ref ?? legacyStudyNode;
+      const studyRef = extractStepStudyRef(studyStep);
       if (!props.studyRef && !props.studyCode) {
         observationStudyRef.value = studyRef;
       }
@@ -612,22 +709,15 @@ watch(
       if (!enrollmentStep) {
         return;
       }
-      let lineageStudyCode = "";
-      if (studyStep?.ref && typeof kernelApi.getNode === "function") {
-        try {
-          const studyNode = await kernelApi.getNode(studyStep.ref);
-          if (request !== redirectRequest) return;
-          if (studyNode && studyNode.mask !== null) {
-            return;
-          }
-          lineageStudyCode = studyNode?.code?.trim() ?? "";
-        } catch {
-          // Fall back to unmasked zoom-path label when node detail lookup is unavailable.
-        }
-      }
-      if (!lineageStudyCode && studyStep?.label) {
-        lineageStudyCode = studyStep.label.split(/\s+[—–-]\s+/)[0].trim();
-      }
+      const siteStep = steps.find(
+        (s) =>
+          (s.level === "study_site" || s.level === "site") && s.mask === null
+      );
+      const [lineageStudyCode, canonicalSiteCode] = await Promise.all([
+        studyStep ? resolveCanonicalStepCode(studyStep) : Promise.resolve(""),
+        siteStep ? resolveCanonicalStepCode(siteStep) : Promise.resolve(""),
+      ]);
+      if (request !== redirectRequest) return;
       const demoMode = isDemoBuild();
       const explicitStudy = queryString("studyId") || queryString("study");
       const explicitSite = queryString("site") || queryString("siteId");
@@ -635,34 +725,28 @@ watch(
         queryString("participant") ||
         queryString("subjectId") ||
         queryString("subject");
-      const resolvedStudyCode = demoMode
+      const canonicalStudyCode = demoMode
         ? explicitStudy || lineageStudyCode
         : lineageStudyCode;
-      if (!resolvedStudyCode) return;
-      syncActiveStudyScope(resolvedStudyCode);
-      const siteStep = steps.find(
-        (s) =>
-          (s.level === "study_site" || s.level === "site") &&
-          s.mask === null &&
-          s.label
-      );
-      const canonicalSiteLabel = siteStep?.label
-        ? siteStep.label.split(" — ")[0].trim()
-        : "";
-      const siteVal = demoMode
-        ? explicitSite || canonicalSiteLabel
-        : canonicalSiteLabel || explicitSite;
+      if (!canonicalStudyCode) return;
+      syncActiveStudyScope(canonicalStudyCode);
       const studyOverridden = Boolean(
         demoMode &&
         explicitStudy &&
         lineageStudyCode &&
         explicitStudy.toUpperCase() !== lineageStudyCode.toUpperCase()
       );
+      if (studyRef && !studyOverridden) {
+        seedKernelStudyRef(canonicalStudyCode, studyRef);
+      }
+      const siteVal = demoMode
+        ? explicitSite || canonicalSiteCode
+        : canonicalSiteCode || explicitSite;
       const siteOverridden = Boolean(
         demoMode &&
         explicitSite &&
-        canonicalSiteLabel &&
-        explicitSite.toUpperCase() !== canonicalSiteLabel.toUpperCase()
+        canonicalSiteCode &&
+        explicitSite.toUpperCase() !== canonicalSiteCode.toUpperCase()
       );
       resolvedSiteLabel.value = siteVal || "";
       resolvedParticipantLabel.value =
@@ -673,7 +757,7 @@ watch(
         explicitParticipant ||
         (studyOverridden || siteOverridden ? "" : enrollmentStep.label || "");
       const participantVal = resolveCanonicalParticipantParam(
-        resolvedStudyCode,
+        canonicalStudyCode,
         participantCandidate
       );
       const rawForm = queryString("form") || queryString("formId");
@@ -687,7 +771,7 @@ watch(
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: resolvedStudyCode },
+        params: { studyCode: canonicalStudyCode },
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),
