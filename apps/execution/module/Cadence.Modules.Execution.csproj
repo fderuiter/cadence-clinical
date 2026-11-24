@@ -39,5 +39,6 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Cadence.UnitTests" />
     <InternalsVisibleTo Include="Cadence.IntegrationTests" />
+    <InternalsVisibleTo Include="Cadence.E2ETests" />
   </ItemGroup>
 </Project>
