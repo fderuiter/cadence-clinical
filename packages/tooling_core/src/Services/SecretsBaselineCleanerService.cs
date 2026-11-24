@@ -21,7 +21,18 @@ public static partial class SecretsBaselineCleanerService
     /// <see cref="DetectSecretsGateService"/>, <c>CiPlan</c>, and <c>.github/workflows/ci.yml</c>.
     /// </summary>
     public const string CanonicalExcludePattern =
-        @"(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|report.*\.xml|coverage.*\.xml|\.cadence/|baselines/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)";
+        @"(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|report.*\.xml|coverage.*\.xml|\.cadence/|baselines/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)";
+
+    /// <summary>
+    /// Canonical line-exclusion regexes shared by <c>baselines/secrets/config.json</c> (<c>should_exclude_line</c>)
+    /// to suppress Base64 high-entropy false positives on xUnit <c>DisplayName</c> attributes and EF Core
+    /// <c>[Migration("&lt;14digits&gt;_&lt;Name&gt;")]</c> metadata lines without excluding migration files from scanning.
+    /// </summary>
+    public static IReadOnlyList<string> CanonicalLineExcludePatterns { get; } =
+    [
+        "DisplayName = \"[A-Za-z0-9_]+\"",
+        @"^\s*\[Migration\(""[0-9]{14}_[A-Za-z0-9_]+""\)\]\s*$",
+    ];
 
     [GeneratedRegex(CanonicalExcludePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ExcludePatternRegex();
@@ -411,14 +422,24 @@ public static partial class SecretsBaselineCleanerService
 
     private static void EnsureCanonicalExcludeFilter(JsonObject root)
     {
-        const string filterPath = "detect_secrets.filters.regex.should_exclude_file";
-
         if (root["filters_used"] is not JsonArray filters)
         {
             filters = new JsonArray();
             root["filters_used"] = filters;
         }
 
+        UpsertRegexFilter(
+            filters,
+            "detect_secrets.filters.regex.should_exclude_file",
+            [CanonicalExcludePattern]);
+        UpsertRegexFilter(
+            filters,
+            "detect_secrets.filters.regex.should_exclude_line",
+            CanonicalLineExcludePatterns);
+    }
+
+    private static void UpsertRegexFilter(JsonArray filters, string filterPath, IReadOnlyList<string> canonicalPatterns)
+    {
         JsonObject? targetFilter = null;
         foreach (var entry in filters)
         {
@@ -430,7 +451,7 @@ public static partial class SecretsBaselineCleanerService
             }
         }
 
-        var patternArray = new JsonArray(JsonValue.Create(CanonicalExcludePattern));
+        var patternArray = new JsonArray(canonicalPatterns.Select(p => (JsonNode?)JsonValue.Create(p)).ToArray());
         if (targetFilter is not null)
         {
             targetFilter["pattern"] = patternArray;

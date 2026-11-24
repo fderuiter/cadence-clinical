@@ -57,6 +57,8 @@ public static class MigrationToolingService
             projectPath,
             "--output-dir",
             target.MigrationsRelativeDir,
+            "--context",
+            target.DbContextName,
         };
         AppendDesignTimeConnectionIfUnset(args);
 
@@ -64,7 +66,15 @@ public static class MigrationToolingService
         int exitCode = InvokeProcess(repoRoot, "dotnet", args, processRunner);
         if (exitCode == 0)
         {
-            Console.WriteLine($"✔ Migration '{migrationName.Trim()}' created under {target.GetMigrationsDirectory(repoRoot)}.");
+            string migrationsDir = target.GetMigrationsDirectory(repoRoot);
+            if (processRunner is null ||
+                (Directory.Exists(migrationsDir) &&
+                 !string.Equals(Path.GetFullPath(repoRoot), Path.GetFullPath(FindRepoRoot()), StringComparison.Ordinal)))
+            {
+                MigrationSnapshotCompactor.NormalizeModuleMigrations(migrationsDir);
+            }
+
+            Console.WriteLine($"✔ Migration '{migrationName.Trim()}' created under {migrationsDir}.");
         }
 
         return exitCode;
@@ -111,6 +121,8 @@ public static class MigrationToolingService
                 projectPath,
                 "--output",
                 outFile,
+                "--context",
+                target.DbContextName,
             };
             AppendDesignTimeConnectionIfUnset(args);
 
@@ -185,6 +197,8 @@ public static class MigrationToolingService
                 "list",
                 "--project",
                 projectPath,
+                "--context",
+                target.DbContextName,
             };
             if (!hasLiveConnection)
             {

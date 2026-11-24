@@ -3,8 +3,9 @@
 How Cadence persistence modules store data in PostgreSQL, how schema changes reach an environment, and what to do when
 they fail. The decisions behind it are [ADR-2247](adr/2026-09-29-clinical-kernel-single-database-schema-and-architecture-sentinel-hardening.md)
 (one database, schema per module), [ADR-2447](adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
-(how the schemas and migrations are applied), and [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)
-(unified 18-module migration tooling, fail-closed migration verification, and count-free schema documentation).
+(how the schemas and migrations are applied), [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)
+(unified 18-module migration tooling and count-free schema documentation), and [ADR-2824](adr/2026-11-23-split-model-snapshots-and-compact-designer-metadata.md)
+(per-entity `Migrations/Snapshots/` partials, compacted `.Designer.cs` metadata, and full DDL constraint uniqueness).
 
 ## Layout
 
@@ -90,28 +91,42 @@ pnpm cadence migrations list [module|all]
 pnpm cadence migrations verify [module|all]
 ```
 
+`pnpm cadence migrations add <module> <MigrationName>` (and `pnpm cadence fix`) scaffolds the migration via `dotnet ef`,
+splits `<DbContext>ModelSnapshot.cs` into a static root snapshot plus per-entity partial files under
+`Migrations/Snapshots/<EntityFullName>.Snapshot.cs` ([ADR-2824](adr/2026-11-23-split-model-snapshots-and-compact-designer-metadata.md)),
+and compacts every `*.Designer.cs` file to `[DbContext]` and `[Migration]` partial declarations without duplicated
+`BuildTargetModel` bodies so parallel branches merge without snapshot contention and all migration files remain covered
+by `detect-secrets`.
+
 `pnpm cadence migrations verify` (and `pnpm cadence check schema-doc`) runs `Cadence.SchemaDocExporter` across all 18
 persistence modules without opening a database connection, failing closed when:
 
 - any `DbContext` reports `HasPendingModelChanges() == true` against its `*ModelSnapshot`;
-- any migration lacks `[DbContext]`, `[Migration]`, `BuildTargetModel`, or its companion `.Designer.cs` file;
-- two migrations in a module duplicate a `CreateTable` or `AddColumn` target.
+- any `*ModelSnapshot.cs` file contains unsplit inline `modelBuilder.Entity(...)` blocks, misses an expected partial in
+  `Migrations/Snapshots/`, or leaves an orphan partial file under `Migrations/Snapshots/`;
+- any migration lacks `[DbContext]`, `[Migration]`, or its companion `.Designer.cs` file, or retains an uncompacted
+  `BuildTargetModel` body in `.Designer.cs`;
+- two migrations in a module duplicate an active `CreateTable`, `AddColumn`, index (`CreateIndex` / `RenameIndex`),
+  foreign key (`CreateTable.ForeignKeys` / `AddForeignKey`), unique constraint (`CreateTable.UniqueConstraints` /
+  `AddUniqueConstraint`), or check constraint (`CreateTable.CheckConstraints` / `AddCheckConstraint`).
 
 `tests/Cadence.UnitTests/Packages/MigrationUnitTests.cs` and `tests/Cadence.UnitTests/Kernel/KernelDbContextModelTests.cs`
 enforce the same `HasPendingModelChanges()` parity in the fast unit test suite across standalone services, `kernel`,
 `intelligence`, and `executionmodule`. Never hand-edit a generated migration without keeping its `.Designer.cs` and
-`*ModelSnapshot.cs` in sync, and never create another module's tables; each module owns only its schema.
+`Migrations/Snapshots/*.Snapshot.cs` partials in sync, and never create another module's tables; each module owns only its schema.
 
 Then run `pnpm cadence generate-schema-doc` and commit the updated [docs/schema](schema/README.md) pages, which describe
 every table, column, key, index, and check constraint per module without volatile table or column count matrices.
 
 ## Troubleshooting
 
-| Symptom                                                         | Cause                                                                     | Fix                                                                       |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `PendingModelChangesWarning` at startup or `schema-doc` failure | Model changed without a migration                                         | Run `pnpm cadence migrations add <module> <MigrationName>`                |
-| `missing its '*.Designer.cs' companion`                         | Hand-authored migration committed without EF Core `.Designer.cs` metadata | Scaffold via `pnpm cadence migrations add` so `.Designer.cs` is generated |
-| `duplicates CreateTable` / `duplicates AddColumn`               | Parallel branches added migrations creating the same table or column      | Re-scaffold the later branch's migration on top of the merged snapshot    |
-| `relation ... already exists`                                   | A local database created before ADR-2447 has tables in `public`           | Drop and recreate the local database (`docker compose down -v`)           |
-| Service exits with `No PostgreSQL connection string configured` | Neither connection key set outside Development                            | Set `ConnectionStrings__cadence`                                          |
-| `/healthz/ready` returns 503                                    | Database unreachable or credentials wrong                                 | Check connectivity from the service's network                             |
+| Symptom                                                                      | Cause                                                                             | Fix                                                                                  |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `PendingModelChangesWarning` at startup or `schema-doc` failure              | Model changed without a migration                                                 | Run `pnpm cadence migrations add <module> <MigrationName>`                           |
+| `Snapshot file ... is unsplit` or `contains an uncompacted BuildTargetModel` | `dotnet ef migrations add` was invoked directly instead of via `cadence`          | Run `pnpm cadence fix` to split the snapshot into `Snapshots/` and compact Designers |
+| `Orphan snapshot partial` under `Migrations/Snapshots/`                      | Entity was renamed or deleted without re-normalizing the module's snapshot        | Run `pnpm cadence migrations add <module> <MigrationName>` or remove the stale file  |
+| `missing its '*.Designer.cs' companion`                                      | Hand-authored migration committed without EF Core `.Designer.cs` metadata         | Scaffold via `pnpm cadence migrations add` so `.Designer.cs` is generated            |
+| `duplicates CreateTable` / `AddColumn` / `index` / `foreign key` / `check`   | Parallel branches added migrations creating the same table, column, or constraint | Re-scaffold the later branch's migration on top of the merged snapshot               |
+| `relation ... already exists`                                                | A local database created before ADR-2447 has tables in `public`                   | Drop and recreate the local database (`docker compose down -v`)                      |
+| Service exits with `No PostgreSQL connection string configured`              | Neither connection key set outside Development                                    | Set `ConnectionStrings__cadence`                                                     |
+| `/healthz/ready` returns 503                                                 | Database unreachable or credentials wrong                                         | Check connectivity from the service's network                                        |

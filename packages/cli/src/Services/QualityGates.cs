@@ -221,7 +221,7 @@ public static class QualityGates
             PreCommitNote = "runs `generate:api --check` and `tsc --noEmit` when staged files touch `docs/openapi` or frontend inputs; fails closed when `pnpm` or `apps/web/tsconfig.json` is missing",
         },
         new("schema-doc", ["auto-stage-schema-doc"],
-            "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
+            "`docs/schema` matches the EF Core models, and all 18 persistence modules pass split-snapshot, compacted `.Designer.cs`, attribute, and DDL constraint uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
         {
             TakesFiles = true,
@@ -407,7 +407,9 @@ public static class QualityGates
                     }
                 }
 
-                if (!ctx.PreCommit && groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
+                if (groups.Count >= 3 &&
+                    File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")) &&
+                    (!ctx.PreCommit || GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath).Count == 0))
                 {
                     var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore", "--include" };
                     slnArgs.AddRange(csFiles);

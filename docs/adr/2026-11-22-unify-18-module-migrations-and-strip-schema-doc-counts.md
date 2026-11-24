@@ -22,7 +22,7 @@ Cadence persists clinical state across 18 EF Core `DbContext` modules sharing th
 - Preserve `Cadence.SchemaDocExporter` as the sole build-time assembly referencing `Cadence.Kernel.Persistence` (`K-XS-2` in `KernelBoundaryRules.cs`), and keep `Cadence.Cli` 100% Native AOT-safe (`PublishAot=true` with zero `IL2xxx`/`IL3xxx` suppressions).
 - Do not introduce custom Git merge drivers or `.gitattributes` `merge=union` rules; `docs/schema` must merge cleanly under standard three-way `git merge-file`.
 - Keep all 18 `docs/schema/<module>.md` pages and `docs/schema/README.md` indexed for VitePress sidebar checks (`docs/.vitepress/navigation.test.mjs`).
-- Splitting EF Core `*ModelSnapshot.cs` files into per-entity partial files is out of scope.
+- Splitting EF Core `*ModelSnapshot.cs` files into per-entity partial files was out of scope in this ADR and is superseded by [ADR-2824](2026-11-23-split-model-snapshots-and-compact-designer-metadata.md).
 
 ## 3. Options Considered
 
@@ -48,7 +48,7 @@ Cadence persists clinical state across 18 EF Core `DbContext` modules sharing th
 1. Retired `packages/kernel/src/Cadence.Kernel.Persistence/Migrations/idempotent_migration.sql` and removed `Migrations/idempotent_migration\.sql$|` from `SecretsBaselineCleanerService.CanonicalExcludePattern` and `.secrets.baseline`.
 2. Added `PersistenceModuleCatalog` and `MigrationToolingService` in `packages/tooling_core/src/Services/`, registered `cadence migrations` (`add`, `script`, `list`, `verify`) in `packages/cli`, and routed `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` through `cadence migrations`, writing SQL review scripts to `TestResults/migrations/<module>.sql`.
 3. Removed the `Tables` count column from `Cadence.SchemaDocExporter.Program.Index` (`docs/schema/README.md`) and removed the top `| Table | Entity | Columns |` summary table from `SchemaDocumentation.Render`, preserving sorted `## <schema>.<table>` sections.
-4. Added `SchemaMigrationValidator` in `Cadence.SchemaDocExporter` and wired it into both `generate-schema-doc` (`check schema-doc`) and `cadence migrations verify` (`--verify-only`), failing closed on `HasPendingModelChanges()`, missing `[DbContext]`/`[Migration]`/`BuildTargetModel`, missing `.Designer.cs` companions, and duplicate `CreateTable`/`AddColumn` targets.
+4. Added `SchemaMigrationValidator` in `Cadence.SchemaDocExporter` and wired it into both `generate-schema-doc` (`check schema-doc`) and `cadence migrations verify` (`--verify-only`), failing closed on `HasPendingModelChanges()`, missing `[DbContext]`/`[Migration]`, missing `.Designer.cs` companions, and duplicate `CreateTable`/`AddColumn` targets. _(Note: the `BuildTargetModel` requirement and table/column-only scope are superseded by [ADR-2824](2026-11-23-split-model-snapshots-and-compact-designer-metadata.md), which compacts `*.Designer.cs` files to attribute-only partial classes, splits `*ModelSnapshot.cs` per entity under `Migrations/Snapshots/`, and enforces index, foreign-key, unique, and check constraint uniqueness.)_
 5. Backfilled `apps/ctms/src/Infrastructure/Persistence/Migrations/20261001180000_AddVisitLetterPdfAndDispatchFields.Designer.cs` and moved `[DbContext]`/`[Migration]` onto the `.Designer.cs` partial class.
 6. Added `IntelligenceDbContext_HasNoModelChangesMissingAMigration`, `ExecutionModuleDbContext_HasNoModelChangesMissingAMigration`, and 18-module catalog assertions to `MigrationUnitTests.cs`, and updated `docs/OPERATIONAL_DATABASE.md` to list all 18 module schemas and `cadence migrations` workflows.
 

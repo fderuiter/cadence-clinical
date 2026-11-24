@@ -21,7 +21,7 @@ public static class SelfHealService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine($"Executing Self-Healing Pipeline in '{repoRoot}'...\n");
 
-        bool ok = true;
+        bool ok = MigrationSnapshotCompactor.NormalizeAllModules(repoRoot) == 0;
         var changedFiles = PreCommitOpenApiService.GetChangedFilesForSelfHeal(repoRoot);
 
         Console.WriteLine("  1. Auto-formatting C# Codebase...");

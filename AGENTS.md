@@ -225,7 +225,7 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 
 - Add a migration across any of the 18 persistence modules: `pnpm cadence migrations add <module> <MigrationName>` (or `scripts/manage_migrations.sh` / `pwsh scripts/manage_migrations.ps1`).
 - Generate an idempotent SQL script for review (written to `TestResults/migrations/<module>.sql`): `pnpm cadence migrations script <module|all>`.
-- Verify snapshots, `.Designer.cs` companions, attributes, and DDL uniqueness offline: `pnpm cadence migrations verify` — and verify migrations against real PostgreSQL (see pattern 7).
+- Verify split snapshots, compacted `.Designer.cs` companions, attributes, and DDL constraint uniqueness offline: `pnpm cadence migrations verify` — and verify migrations against real PostgreSQL (see pattern 7).
 - Regenerate the schema reference after a model change: `pnpm cadence generate-schema-doc` rewrites
   [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it is stale or any module has pending model changes.
 
