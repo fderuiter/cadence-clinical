@@ -717,6 +717,16 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             return inner.FindAsync(tenant, instance, cancellationToken);
         }
 
+        public Task<CollectionInstanceRecord?> FindAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            Cadence.Kernel.Protocol.Design.ProtocolDesign? governingDesign,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _findCalls);
+            return inner.FindAsync(tenant, instance, governingDesign, cancellationToken);
+        }
+
         public Task<CollectionInstanceRecord?> FindForReaderAsync(TenantId tenant, CollectionInstanceId instance, bool unblinded, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _findCalls);
@@ -733,6 +743,23 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             return inner.FindForReaderAsync(tenant, instance, canUnblindAsync, cancellationToken);
         }
 
+        public Task<CollectionInstanceRecord?> FindForReaderAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            Cadence.Kernel.Protocol.Design.ProtocolDesign? governingDesign,
+            Func<EnrollmentId, CancellationToken, ValueTask<bool>> canUnblindAsync,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _findCalls);
+            return inner.FindForReaderAsync(tenant, instance, governingDesign, canUnblindAsync, cancellationToken);
+        }
+
+        public Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<CollectionInstanceId> instances,
+            CancellationToken cancellationToken) =>
+            inner.FindManyAsync(tenant, instances, cancellationToken);
+
         public Task<CollectionInstanceHeader?> FindHeaderAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref _findHeaderCalls);
@@ -745,12 +772,40 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             CancellationToken cancellationToken = default) =>
             inner.FindHeadersAsync(tenant, instances, cancellationToken);
 
+        public Task<CollectionQueryTarget?> FindQueryTargetAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            ObservationId? observation = null,
+            string? itemId = null,
+            bool checkLocks = true,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _findScopeStateCalls);
+            return inner.FindQueryTargetAsync(tenant, instance, observation, itemId, checkLocks, cancellationToken);
+        }
+
         public Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceQueryTarget>> FindQueryTargetsAsync(
             TenantId tenant,
             IReadOnlyCollection<CollectionInstanceId> instances,
             IReadOnlySet<EnrollmentId> unblindedEnrollments,
             CancellationToken cancellationToken = default) =>
             inner.FindQueryTargetsAsync(tenant, instances, unblindedEnrollments, cancellationToken);
+
+        public Task<FormAttestationView?> FindAttestationAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            AttestationId attestation,
+            CancellationToken cancellationToken = default) =>
+            inner.FindAttestationAsync(tenant, instance, attestation, cancellationToken);
+
+        public Task<FormAttestationView?> FindAttestationForReaderAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            AttestationId attestation,
+            bool unblinded,
+            ProtocolDesign? governingDesign = null,
+            CancellationToken cancellationToken = default) =>
+            inner.FindAttestationForReaderAsync(tenant, instance, attestation, unblinded, governingDesign, cancellationToken);
 
         public Task<CollectionInstanceScopeState?> FindScopeStateAsync(
             TenantId tenant,
@@ -788,5 +843,12 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             IReadOnlyCollection<CollectionInstanceId>? instances = null,
             CancellationToken cancellationToken = default) =>
             inner.FindObservationRevisionsAsync(tenant, observations, instances, cancellationToken);
+
+        public Task<IReadOnlyDictionary<ObservationId, CollectionObservationProjection>> FindObservationProjectionsAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ObservationId> observations,
+            IReadOnlyCollection<CollectionInstanceId>? instances = null,
+            CancellationToken cancellationToken = default) =>
+            inner.FindObservationProjectionsAsync(tenant, observations, instances, cancellationToken);
     }
 }

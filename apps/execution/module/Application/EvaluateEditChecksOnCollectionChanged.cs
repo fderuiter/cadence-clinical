@@ -441,12 +441,15 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             return;
         }
 
+        var enrollmentId = record.EnrollmentId;
         ObservationId targetObservation;
         int targetRevision;
+        bool isLocked;
         if (record.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)) is { } existingValue)
         {
             targetObservation = existingValue.ObservationId;
             targetRevision = existingValue.Revision;
+            isLocked = FormQueryScopes.IsLocked(record, targetObservation);
         }
         else
         {
@@ -455,7 +458,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 new RecordUnaskedCollectionItem(
                     tenant,
                     formId,
-                    record.EnrollmentId,
+                    enrollmentId,
                     itemId,
                     derivedObsId,
                     $"auto-query:unasked:{formId.Value:D}:{itemId}",
@@ -475,12 +478,19 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
             targetObservation = unasked.Value!.ObservationId;
             targetRevision = unasked.Value.Revision;
-            record = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
-            formRecordCache[formId] = record;
-            if (record is null)
+            formRecordCache.Remove(formId);
+            var seededTarget = await forms.FindQueryTargetAsync(
+                tenant,
+                formId,
+                observation: targetObservation,
+                checkLocks: true,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (seededTarget is null)
             {
                 return;
             }
+
+            isLocked = seededTarget.IsLocked;
         }
 
         var episode = 0;
@@ -510,7 +520,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             episode++;
         }
 
-        if (FormQueryScopes.IsLocked(record, targetObservation))
+        if (isLocked)
         {
             return;
         }
@@ -526,7 +536,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 tenant,
                 queryId,
                 formId,
-                record.EnrollmentId,
+                enrollmentId,
                 targetObservation,
                 targetRevision,
                 queryText,
@@ -540,9 +550,14 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
         if (raiseResult.Error?.Code == FormQueryErrors.RevisionStale.Code)
         {
-            var refreshed = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
-            formRecordCache[formId] = refreshed;
-            if (refreshed?.Values.FirstOrDefault(v => v.ObservationId == targetObservation) is { } latest)
+            formRecordCache.Remove(formId);
+            var refreshed = await forms.FindQueryTargetAsync(
+                tenant,
+                formId,
+                observation: targetObservation,
+                checkLocks: false,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (refreshed is { Revision: { } latestRevision })
             {
                 raiseResult = await sender.SendAsync(
                     new RaiseFormQuery(
@@ -551,9 +566,9 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                         formId,
                         refreshed.EnrollmentId,
                         targetObservation,
-                        latest.Revision,
+                        latestRevision,
                         queryText,
-                        $"auto-query:raise:{queryId.Value:D}:r{latest.Revision}",
+                        $"auto-query:raise:{queryId.Value:D}:r{latestRevision}",
                         reason,
                         Origin: FormQueryOrigin.System,
                         OwnerRole: FormQueryOwnerRole.Site,
