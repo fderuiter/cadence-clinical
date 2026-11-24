@@ -424,6 +424,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error a form endpoint returns must be one its command declares (ADR-2600 §4.5).

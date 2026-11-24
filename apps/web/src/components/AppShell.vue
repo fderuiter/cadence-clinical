@@ -18,6 +18,36 @@
       >Skip to main content</a
     >
 
+    <div
+      v-if="isDemoBuild()"
+      id="staff-demo-banner"
+      class="shell-demo-banner"
+      role="region"
+      aria-label="Interactive demo navigation"
+    >
+      <p class="shell-demo-banner-copy">
+        <strong>Demo Mode:</strong> Synthetic clinical workspace data. Changes
+        stay in this browser session.
+      </p>
+      <nav class="shell-demo-banner-links" aria-label="Co-hosted demo surfaces">
+        <a
+          id="staff-demo-link-docs"
+          href="/cadence-clinical/"
+          class="shell-demo-banner-link"
+        >
+          Documentation Portal
+        </a>
+        <span class="shell-demo-banner-sep" aria-hidden="true">&middot;</span>
+        <a
+          id="staff-demo-link-participant"
+          href="/cadence-clinical/subject-portal/"
+          class="shell-demo-banner-link"
+        >
+          Participant Demo
+        </a>
+      </nav>
+    </div>
+
     <header ref="headerRef" class="app-header">
       <div class="header-left">
         <router-link
@@ -156,11 +186,11 @@
             >
               <span>Account</span>
               <span
-                v-if="onboardingStore.totalTasksCount > 0"
+                v-if="onboardingSummary.totalTasksCount > 0"
                 class="setup-progress-pill"
               >
-                {{ onboardingStore.completedTasksCount }}/{{
-                  onboardingStore.totalTasksCount
+                {{ onboardingSummary.completedTasksCount }}/{{
+                  onboardingSummary.totalTasksCount
                 }}
               </span>
             </button>
@@ -171,19 +201,23 @@
               :class="{ 'is-open': isSecondaryMenuOpen }"
             >
               <button
-                v-if="onboardingStore.totalTasksCount > 0"
+                v-if="onboardingSummary.totalTasksCount > 0"
                 id="btn-onboarding-checklist-trigger"
                 type="button"
                 class="shell-control-btn"
-                :aria-expanded="onboardingStore.isDrawerOpen ? 'true' : 'false'"
+                :aria-expanded="
+                  onboardingSummary.isDrawerOpen || pendingChecklistOpen
+                    ? 'true'
+                    : 'false'
+                "
                 aria-controls="onboarding-checklist-drawer"
                 title="Open workspace orientation and setup checklist"
                 @click="handleToggleChecklist"
               >
                 <span>Orientation</span>
                 <span class="setup-progress-pill">
-                  {{ onboardingStore.completedTasksCount }}/{{
-                    onboardingStore.totalTasksCount
+                  {{ onboardingSummary.completedTasksCount }}/{{
+                    onboardingSummary.totalTasksCount
                   }}
                 </span>
               </button>
@@ -192,7 +226,7 @@
                 id="btn-contextual-help-trigger"
                 type="button"
                 class="shell-control-btn"
-                :aria-expanded="knowledgeStore.isOpen"
+                :aria-expanded="isContextualHelpOpen"
                 aria-label="Help & SOPs — Open contextual help and SOP guidance"
                 @click="handleToggleContextualHelp"
               >
@@ -373,13 +407,22 @@
       <slot />
     </main>
 
-    <OnboardingTour v-if="showOnboardingTour" :active-tab="activeTab" />
-    <OnboardingChecklistDrawer v-if="authStore.isAuthenticated" />
+    <OnboardingTour
+      v-if="showOnboardingTour && hasActivatedOnboardingTour"
+      :active-tab="activeTab"
+    />
+    <OnboardingChecklistDrawer
+      v-if="authStore.isAuthenticated && hasActivatedChecklistDrawer"
+      :open-on-mount="pendingChecklistOpen"
+      @mounted-open="pendingChecklistOpen = false"
+    />
     <CommandPaletteOverlay
+      v-if="authStore.isAuthenticated && hasActivatedCommandPalette"
       :is-open="isCommandPaletteOpen && authStore.isAuthenticated"
       @close="isCommandPaletteOpen = false"
     />
     <SignOutConfirmModal
+      v-if="hasActivatedSignOutModal"
       id="shell-signout-confirm-modal"
       v-model="isSignOutConfirmOpen"
       @confirm="confirmSignOut"
@@ -387,6 +430,24 @@
     />
   </div>
 </template>
+
+<script>
+import { defineLazyOverlay } from "../utils/lazyOverlay.js";
+
+const ClinicalContextBar = defineLazyOverlay(
+  () => import("./shell/LazyClinicalContextBar.js")
+);
+const SignOutConfirmModal = defineLazyOverlay(
+  () => import("./shell/LazySignOutConfirmModal.js")
+);
+const OnboardingTour = defineLazyOverlay(() => import("./OnboardingTour.vue"));
+const OnboardingChecklistDrawer = defineLazyOverlay(
+  () => import("./OnboardingChecklistDrawer.vue")
+);
+const CommandPaletteOverlay = defineLazyOverlay(
+  () => import("./CommandPaletteOverlay.vue")
+);
+</script>
 
 <script setup>
 import {
@@ -400,19 +461,16 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  ClinicalContextBar,
-  SignOutConfirmModal,
-  hasActiveModalFocusTrap,
-  useEscapeClose,
-  useSignOutGuard,
-} from "ui";
+import { useSignOutGuard } from "ui";
+import { rehydrateOnboardingPersona } from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
+import {
+  readPassiveOnboardingSummary,
+  readPassiveOnboardingTourActive,
+  resolveStorePinia,
+} from "../stores/onboardingSummary.js";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
-import { useKnowledgeStore } from "../stores/knowledge";
-import { useOnboardingStore } from "../stores/onboarding";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import { isRouteAuthorizedForRoles } from "../router";
@@ -427,9 +485,6 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
-import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
-import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 import {
   clearShellStickyHeaderHeight,
   ensureFocusedElementClearsStickyChrome,
@@ -445,13 +500,35 @@ const DemoResetBtn = isDemoBuild()
 provide("inAppShell", true);
 
 const authStore = useAuthStore();
-const knowledgeStore = useKnowledgeStore();
-const onboardingStore = useOnboardingStore();
-const canvasStore = useStudyCanvasStore();
+const pinia = resolveStorePinia(authStore);
 const route = useRoute();
 const router = useRouter();
 
 const isCommandPaletteOpen = ref(false);
+const hasActivatedCommandPalette = ref(false);
+const pendingChecklistOpen = ref(false);
+const hasActivatedChecklistDrawer = ref(false);
+const hasActivatedOnboardingTour = ref(false);
+const hasActivatedSignOutModal = ref(false);
+
+const onboardingSummary = computed(() =>
+  readPassiveOnboardingSummary(resolveStorePinia(authStore) || pinia, authStore)
+);
+const isOnboardingTourActive = computed(() =>
+  readPassiveOnboardingTourActive(
+    resolveStorePinia(authStore) || pinia,
+    authStore
+  )
+);
+const isContextualHelpOpen = computed(() =>
+  Boolean(
+    (resolveStorePinia(authStore) || pinia)?.state?.value?.knowledge?.isOpen
+  )
+);
+const passiveCanvasState = computed(
+  () =>
+    (resolveStorePinia(authStore) || pinia)?.state?.value?.studyCanvas || null
+);
 const isMobileMenuOpen = ref(false);
 const isSecondaryMenuOpen = ref(false);
 const secondaryMenuWrapperRef = ref(null);
@@ -509,7 +586,7 @@ const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
 const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
 const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore)
+  resolveActiveWorkspaceScope(route, passiveCanvasState.value)
 );
 const activeStudyCode = computed(
   () => workspaceScope.value.studyCode || syncedStudyCode.value
@@ -738,7 +815,7 @@ const showOnboardingTour = computed(
     route?.path !== "/plans" &&
     route?.name !== "trial-onboarding" &&
     route?.path !== "/onboarding/trial" &&
-    (onboardingStore.isActive ||
+    (isOnboardingTourActive.value ||
       (route?.name !== "forbidden" &&
         route?.path !== "/forbidden" &&
         route?.name !== "unavailable" &&
@@ -756,7 +833,10 @@ async function handlePersonaChange(event) {
   const nextPersona = event?.target?.value;
   if (nextPersona) {
     authStore.switchPersona(nextPersona);
-    onboardingStore.loadPersonaState(authStore.currentPersona || nextPersona);
+    rehydrateOnboardingPersona(
+      authStore.currentPersona || nextPersona,
+      resolveStorePinia(authStore) || pinia
+    );
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
     statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
     await checkActiveRouteAuth();
@@ -797,6 +877,64 @@ const {
   },
 });
 
+watch(
+  () => authStore.isAuthenticated && onboardingSummary.value.isDrawerOpen,
+  (open) => {
+    if (open) {
+      hasActivatedChecklistDrawer.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => isCommandPaletteOpen.value && Boolean(authStore.isAuthenticated),
+  (open) => {
+    if (open) {
+      hasActivatedCommandPalette.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  isSignOutConfirmOpen,
+  (open) => {
+    if (open) {
+      hasActivatedSignOutModal.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => showOnboardingTour.value && isOnboardingTourActive.value,
+  (active) => {
+    if (active) {
+      hasActivatedOnboardingTour.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(showOnboardingTour, (allowed) => {
+  if (!allowed) {
+    hasActivatedOnboardingTour.value = false;
+  }
+});
+
+watch(
+  () => authStore.isAuthenticated,
+  (authenticated) => {
+    if (!authenticated) {
+      hasActivatedOnboardingTour.value = false;
+      hasActivatedChecklistDrawer.value = false;
+      pendingChecklistOpen.value = false;
+      hasActivatedCommandPalette.value = false;
+    }
+  }
+);
+
 function closeMobileMenu({ restoreFocus = false } = {}) {
   if (!isMobileMenuOpen.value) return;
   isMobileMenuOpen.value = false;
@@ -806,10 +944,6 @@ function closeMobileMenu({ restoreFocus = false } = {}) {
     });
   }
 }
-
-useEscapeClose(() => closeMobileMenu({ restoreFocus: true }), {
-  isOpen: () => isMobileMenuOpen.value,
-});
 
 function closeSecondaryMenu({ restoreFocus = false } = {}) {
   if (!isSecondaryMenuOpen.value) return;
@@ -827,12 +961,34 @@ function toggleSecondaryMenu() {
 
 function handleToggleChecklist() {
   isSecondaryMenuOpen.value = false;
-  onboardingStore.toggleDrawer();
+  const targetPinia = resolveStorePinia(authStore) || pinia;
+  const mountedOnboarding = targetPinia?._s?.get("onboarding");
+  if (
+    mountedOnboarding &&
+    typeof mountedOnboarding.toggleDrawer === "function"
+  ) {
+    hasActivatedChecklistDrawer.value = true;
+    mountedOnboarding.toggleDrawer();
+    return;
+  }
+  hasActivatedChecklistDrawer.value = true;
+  pendingChecklistOpen.value = true;
 }
 
 function handleToggleContextualHelp() {
   isSecondaryMenuOpen.value = false;
-  knowledgeStore.toggleDrawer();
+  const targetPinia = resolveStorePinia(authStore) || pinia;
+  const mountedKnowledge = targetPinia?._s?.get("knowledge");
+  if (mountedKnowledge && typeof mountedKnowledge.toggleDrawer === "function") {
+    mountedKnowledge.toggleDrawer();
+    return;
+  }
+  void import("../stores/knowledge").then(({ useKnowledgeStore }) => {
+    const store = targetPinia
+      ? useKnowledgeStore(targetPinia)
+      : useKnowledgeStore();
+    store.toggleDrawer();
+  });
 }
 
 function handleLogoutClick() {
@@ -853,19 +1009,53 @@ function handleDocumentPointerDown(event) {
   }
 }
 
-useEscapeClose(() => closeSecondaryMenu({ restoreFocus: true }), {
-  isOpen: () => isSecondaryMenuOpen.value,
-});
+function hasBlockingModalOverlay(excludeId = "") {
+  if (typeof document === "undefined") return false;
+  const dialogs = document.querySelectorAll(
+    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
+  );
+  for (const dialog of dialogs) {
+    if (
+      excludeId &&
+      (dialog.id === excludeId || dialog.closest?.(`#${excludeId}`))
+    ) {
+      continue;
+    }
+    if (
+      dialog.hasAttribute?.("hidden") ||
+      dialog.getAttribute?.("aria-hidden") === "true"
+    ) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
 
 function handleGlobalKeydown(event) {
+  if (event.key === "Escape" && !event.defaultPrevented) {
+    if (isSecondaryMenuOpen.value || isMobileMenuOpen.value) {
+      if (!hasBlockingModalOverlay()) {
+        event.preventDefault();
+        if (isSecondaryMenuOpen.value) {
+          closeSecondaryMenu({ restoreFocus: true });
+        } else if (isMobileMenuOpen.value) {
+          closeMobileMenu({ restoreFocus: true });
+        }
+      }
+    }
+    return;
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
-    canvasStore.handleExplainShortcut(event);
+    (resolveStorePinia(authStore) || pinia)?._s
+      ?.get("studyCanvas")
+      ?.handleExplainShortcut?.(event);
     return;
   }
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
-    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+    if (hasBlockingModalOverlay("canvas-palette")) {
       return;
     }
     isCommandPaletteOpen.value = !isCommandPaletteOpen.value;
@@ -984,6 +1174,52 @@ onUnmounted(() => {
   font-weight: 600;
   text-decoration: none;
   z-index: 100;
+}
+
+.shell-demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 6px 20px;
+  background-color: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
+  border-bottom: 1px solid var(--semantic-color-warning);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.shell-demo-banner-copy {
+  margin: 0;
+}
+
+.shell-demo-banner-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.shell-demo-banner-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border-radius: var(--semantic-radius-sm, 6px);
+  color: var(--semantic-color-warning);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.shell-demo-banner-link:hover {
+  background-color: var(--semantic-color-warning-bg-badge);
+}
+
+.shell-demo-banner-sep {
+  color: var(--semantic-color-warning);
 }
 
 .app-header {
@@ -1246,6 +1482,7 @@ onUnmounted(() => {
 .setup-progress-pill {
   font-size: 0.75rem;
   font-weight: 600;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--semantic-color-info-bg);

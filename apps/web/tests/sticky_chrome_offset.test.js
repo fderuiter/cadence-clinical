@@ -12,7 +12,7 @@ import {
   updateShellStickyHeaderHeight,
 } from "../src/utils/stickyChromeOffset";
 
-describe("stickyChromeOffset synchronization (ADR-2658)", () => {
+describe("stickyChromeOffset synchronization (ADR-2663)", () => {
   const originalInnerHeight = window.innerHeight;
   const originalInnerWidth = window.innerWidth;
 

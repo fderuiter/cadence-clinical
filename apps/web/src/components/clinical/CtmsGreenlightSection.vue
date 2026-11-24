@@ -22,7 +22,7 @@
       prefix="greenlight"
       form-id="greenlight-scope-form"
       aria-label="Startup readiness scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-label="Site (optional for matrix)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -240,27 +240,26 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { handoffFocus } from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadReadiness(),
+  fallbackErrorTitle: "Startup readiness could not be loaded",
+  fallbackErrorMessage: "Startup readiness could not be loaded.",
+});
+const { authStore, toasts, isStudyLocked, syncActiveScope, recordLoadFailure } =
+  workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
@@ -269,15 +268,7 @@ const {
   loaded,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadReadiness();
-  },
-  fallbackErrorTitle: "Startup readiness could not be loaded",
-  fallbackErrorMessage: "Startup readiness could not be loaded.",
-});
+} = workspace;
 
 const canCertify = computed(() => canCertifyGreenlight(authStore));
 const countryCode = ref("US");
@@ -407,6 +398,7 @@ async function certifySingleSite() {
       message: "Startup greenlight certification recorded.",
     });
     await loadReadiness();
+    void handoffFocus("#ctms-greenlight-title");
   } catch (err) {
     toasts.apiError("Site certification failed", err);
   } finally {
@@ -443,6 +435,7 @@ async function certifyBatch() {
       message: `Country ${res.country_code} startup greenlight updated.`,
     });
     await loadReadiness();
+    void handoffFocus("#ctms-greenlight-title");
   } catch (err) {
     toasts.apiError("Batch certification failed", err);
   } finally {

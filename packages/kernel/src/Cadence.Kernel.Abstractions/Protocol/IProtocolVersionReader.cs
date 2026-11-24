@@ -32,6 +32,18 @@ public interface IProtocolVersionReader
     /// </summary>
     Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
         Task.FromResult<ProtocolDesign?>(null);
+
+    /// <summary>
+    /// The raw serialized content stored on one version, or null when the tenant has no such version.
+    /// </summary>
+    Task<string?> GetContentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+        Task.FromResult<string?>(null);
+
+    /// <summary>
+    /// The full <see cref="ProtocolAmendment"/> metadata stored on one forked version, or null when none is set.
+    /// </summary>
+    Task<ProtocolAmendment?> GetAmendmentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+        Task.FromResult<ProtocolAmendment?>(null);
 }
 
 /// <summary>A protocol version without its content.</summary>

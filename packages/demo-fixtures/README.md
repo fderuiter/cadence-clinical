@@ -20,10 +20,11 @@ Regenerate after modifying any of those seed files (also run automatically by `p
 pnpm cadence generate-demo-manifest
 ```
 
-Verify parity without modifying files (also run by `pnpm cadence check`):
+Verify parity and declaration types without modifying files (also run by `pnpm cadence check` and `pnpm typecheck`):
 
 ```bash
 pnpm cadence check demo-manifest
+pnpm --filter demo-fixtures typecheck
 ```
 
 ## Production Bundle Isolation

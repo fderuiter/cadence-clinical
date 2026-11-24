@@ -19,6 +19,7 @@ using Cadence.Deid;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Imaging.Services;
 
@@ -94,19 +95,59 @@ public record BatchIngestionResult(
 
 public sealed class DicomIngestionService : IDicomIngestionService
 {
+    public const long MaxFrameSizeBytes = 64L * 1024 * 1024; // 64 MiB
+
     private readonly ImagingDbContext _dbContext;
     private readonly IClock _clock;
     private readonly DicomDeidentifier _deidentifier;
+    private readonly BatchArchiveQuotas _quotas;
 
     /// <summary>
     /// Creates the service. <paramref name="deidentifier"/> carries the configured signing and pseudonymization keys
     /// (<c>AddImagingDeidentification</c>, #5399); certificates and batch manifests are signed with it.
     /// </summary>
+    [ActivatorUtilitiesConstructor]
     public DicomIngestionService(ImagingDbContext dbContext, DicomDeidentifier deidentifier, IClock? clock = null)
+        : this(dbContext, deidentifier, clock, quotas: null)
+    {
+    }
+
+    public DicomIngestionService(
+        ImagingDbContext dbContext,
+        DicomDeidentifier deidentifier,
+        IClock? clock,
+        BatchArchiveQuotas? quotas)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _deidentifier = deidentifier ?? throw new ArgumentNullException(nameof(deidentifier));
         _clock = clock ?? SystemClock.Instance;
+        _quotas = quotas ?? BatchArchiveQuotas.Default;
+    }
+
+    public static void ValidateFrameDimensions(int rows, int columns, int bitsAllocated = 16)
+    {
+        if (rows <= 0 || columns <= 0)
+        {
+            throw new DicomInvalidDimensionsException(
+                $"DICOM Rows and Columns must be positive (got {rows}x{columns}).");
+        }
+
+        if (bitsAllocated <= 0 || bitsAllocated > 64)
+        {
+            throw new DicomInvalidDimensionsException(
+                $"DICOM BitsAllocated ({bitsAllocated}) must be between 1 and 64.");
+        }
+
+        long bytesPerPixel = Math.Max(2L, (bitsAllocated + 7L) / 8L);
+        long pixelCount = (long)rows * columns;
+        if (pixelCount <= 0 || pixelCount > MaxFrameSizeBytes / bytesPerPixel)
+        {
+            long frameBytes = pixelCount > long.MaxValue / bytesPerPixel
+                ? long.MaxValue
+                : pixelCount * bytesPerPixel;
+            throw new DicomInvalidDimensionsException(
+                $"DICOM frame buffer ({rows}x{columns}, {frameBytes} bytes) exceeds maximum {MaxFrameSizeBytes} byte (64 MB) limit.");
+        }
     }
 
     public async Task<IngestionResult> IngestInstanceAsync(
@@ -123,9 +164,13 @@ public sealed class DicomIngestionService : IDicomIngestionService
             throw new ArgumentException("DICOM payload cannot be empty.", nameof(dicomBytes));
         }
 
-        subjectId = string.IsNullOrWhiteSpace(subjectId) ? "SUBJ-001" : subjectId;
-        siteId = string.IsNullOrWhiteSpace(siteId) ? "SITE-001" : siteId;
-        studyId = string.IsNullOrWhiteSpace(studyId) ? "STUDY-001" : studyId;
+        if (dicomBytes.Length > _quotas.MaxEntryUncompressedBytes)
+        {
+            throw new BatchPayloadTooLargeException(
+                $"DICOM instance payload ({dicomBytes.Length} bytes) exceeds maximum {_quotas.MaxEntryUncompressedBytes} byte limit.");
+        }
+
+        ValidateScopeIdentifiers(subjectId, siteId, studyId);
         string opIdentity = string.IsNullOrWhiteSpace(operatorIdentity) ? "cadence.imaging.pipeline" : operatorIdentity;
 
         DateTimeOffset now = _clock.UtcNow;
@@ -139,6 +184,33 @@ public sealed class DicomIngestionService : IDicomIngestionService
             deidentifiedAt: now,
             applyPixelMask: true,
             operatorIdentity: opIdentity);
+
+        ValidateFrameDimensions(deidResult.Rows, deidResult.Columns, deidResult.BitsAllocated);
+
+        // Fetch or create Study Envelope and verify ownership against (studyId, siteId, subjectId)
+        var studyEnvelope = await _dbContext.ImagingStudyEnvelopes
+            .FirstOrDefaultAsync(s => s.StudyInstanceUid == deidResult.AnonymizedStudyUid, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (studyEnvelope != null)
+        {
+            EnsureStudyEnvelopeOwnership(studyEnvelope, studyId, siteId, subjectId);
+        }
+
+        var existingSopStudyOwner = await (
+                from inst in _dbContext.ImagingInstanceEnvelopes
+                join series in _dbContext.ImagingSeriesEnvelopes on inst.SeriesEnvelopeId equals series.Id
+                join study in _dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
+                where inst.SopInstanceUid == deidResult.AnonymizedSopUid
+                select new { study.StudyId, study.SiteId, study.SubjectId })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existingSopStudyOwner != null
+            && !IsMatchingScope(existingSopStudyOwner.StudyId, existingSopStudyOwner.SiteId, existingSopStudyOwner.SubjectId, studyId, siteId, subjectId))
+        {
+            throw new InvalidOperationException("Existing imaging instance envelope ownership does not match the requested study, site, and subject.");
+        }
 
         var certEntity = new DeidentificationCertificate
         {
@@ -165,11 +237,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
         _dbContext.DeidentificationCertificates.Add(certEntity);
 
-        // Fetch or create Study Envelope
-        var studyEnvelope = await _dbContext.ImagingStudyEnvelopes
-            .FirstOrDefaultAsync(s => s.StudyInstanceUid == deidResult.AnonymizedStudyUid, cancellationToken)
-            .ConfigureAwait(false);
-
+        bool isNewStudyEnvelope = studyEnvelope == null;
         if (studyEnvelope == null)
         {
             studyEnvelope = new ImagingStudyEnvelope
@@ -196,6 +264,16 @@ public sealed class DicomIngestionService : IDicomIngestionService
         else
         {
             studyEnvelope.InstanceCount++;
+            if (!string.IsNullOrEmpty(deidResult.Modality))
+            {
+                var existingModalities = JsonSerializer.Deserialize<List<string>>(studyEnvelope.ModalitiesJson) ?? [];
+                if (!existingModalities.Contains(deidResult.Modality, StringComparer.Ordinal))
+                {
+                    existingModalities.Add(deidResult.Modality);
+                    studyEnvelope.ModalitiesJson = JsonSerializer.Serialize(existingModalities);
+                }
+            }
+
             studyEnvelope.UpdatedAt = now;
         }
 
@@ -208,12 +286,17 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
         if (seriesEnvelope == null)
         {
+            if (!isNewStudyEnvelope)
+            {
+                studyEnvelope.SeriesCount++;
+            }
+
             seriesEnvelope = new ImagingSeriesEnvelope
             {
                 Id = Guid.NewGuid().ToString(),
                 StudyEnvelopeId = studyEnvelope.Id,
                 SeriesInstanceUid = deidResult.AnonymizedSeriesUid,
-                SeriesNumber = 1,
+                SeriesNumber = studyEnvelope.SeriesCount,
                 Modality = deidResult.Modality,
                 SeriesDescription = $"{deidResult.Modality} Series",
                 InstanceCount = 1
@@ -271,10 +354,11 @@ public sealed class DicomIngestionService : IDicomIngestionService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ValidateScopeIdentifiers(request.SubjectId, request.SiteId, request.StudyId);
 
-        string subjectId = string.IsNullOrWhiteSpace(request.SubjectId) ? "SUBJ-001" : request.SubjectId;
-        string siteId = string.IsNullOrWhiteSpace(request.SiteId) ? "SITE-001" : request.SiteId;
-        string studyId = string.IsNullOrWhiteSpace(request.StudyId) ? "STUDY-001" : request.StudyId;
+        string subjectId = request.SubjectId;
+        string siteId = request.SiteId;
+        string studyId = request.StudyId;
         string opIdentity = string.IsNullOrWhiteSpace(request.OperatorIdentity) ? "cadence.imaging.pipeline" : request.OperatorIdentity;
 
         DateTimeOffset now = _clock.UtcNow;
@@ -323,111 +407,170 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 Signature: emptyManifest.Signature);
         }
 
-        string mainAnonymizedStudyUid = validList[0].DeidResult.AnonymizedStudyUid;
+        var studyGroups = validList
+            .GroupBy(x => x.DeidResult.AnonymizedStudyUid, StringComparer.Ordinal)
+            .ToList();
 
-        var studyEnvelope = await _dbContext.ImagingStudyEnvelopes
-            .FirstOrDefaultAsync(s => s.StudyInstanceUid == mainAnonymizedStudyUid, cancellationToken)
+        var existingEnvelopesByUid = new Dictionary<string, ImagingStudyEnvelope?>(studyGroups.Count, StringComparer.Ordinal);
+        foreach (var studyGroup in studyGroups)
+        {
+            var existingStudy = await _dbContext.ImagingStudyEnvelopes
+                .FirstOrDefaultAsync(s => s.StudyInstanceUid == studyGroup.Key, cancellationToken)
+                .ConfigureAwait(false);
+            if (existingStudy != null)
+            {
+                EnsureStudyEnvelopeOwnership(existingStudy, studyId, siteId, subjectId);
+            }
+
+            existingEnvelopesByUid[studyGroup.Key] = existingStudy;
+        }
+
+        var candidateSopUids = validList
+            .Select(x => x.DeidResult.AnonymizedSopUid)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var existingSopOwners = await (
+                from inst in _dbContext.ImagingInstanceEnvelopes
+                join series in _dbContext.ImagingSeriesEnvelopes on inst.SeriesEnvelopeId equals series.Id
+                join study in _dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
+                where candidateSopUids.Contains(inst.SopInstanceUid)
+                select new { study.StudyId, study.SiteId, study.SubjectId })
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var allModalities = validList.Select(x => x.DeidResult.Modality).Where(m => !string.IsNullOrEmpty(m)).Distinct().ToList();
-        var seriesGroups = validList.GroupBy(x => x.DeidResult.AnonymizedSeriesUid).ToList();
-
-        if (studyEnvelope == null)
+        if (existingSopOwners.Any(owner => !IsMatchingScope(owner.StudyId, owner.SiteId, owner.SubjectId, studyId, siteId, subjectId)))
         {
-            studyEnvelope = new ImagingStudyEnvelope
-            {
-                Id = Guid.NewGuid().ToString(),
-                StudyInstanceUid = mainAnonymizedStudyUid,
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                ModalitiesJson = JsonSerializer.Serialize(allModalities),
-                StudyDate = now.ToString("yyyyMMdd"),
-                StudyDescription = "Anonymized Clinical Trial DICOM Study",
-                SeriesCount = seriesGroups.Count,
-                InstanceCount = validList.Count,
-                Status = "STORED",
-                AdjudicationStatus = "UNASSIGNED",
-                CreatedAt = now,
-                CreatedBy = opIdentity,
-                UpdatedAt = now,
-                VersionIndex = 1
-            };
-            _dbContext.ImagingStudyEnvelopes.Add(studyEnvelope);
-        }
-        else
-        {
-            studyEnvelope.InstanceCount += validList.Count;
-            studyEnvelope.SeriesCount = Math.Max(studyEnvelope.SeriesCount, seriesGroups.Count);
-            var existingModalities = JsonSerializer.Deserialize<List<string>>(studyEnvelope.ModalitiesJson) ?? [];
-            var mergedModalities = existingModalities.Union(allModalities).Distinct().ToList();
-            studyEnvelope.ModalitiesJson = JsonSerializer.Serialize(mergedModalities);
-            studyEnvelope.UpdatedAt = now;
+            throw new InvalidOperationException("Existing imaging instance envelope ownership does not match the requested study, site, and subject.");
         }
 
         var seriesSummaries = new List<SeriesIngestionSummary>();
-        int seriesIndex = 1;
+        ImagingStudyEnvelope? primaryStudyEnvelope = null;
+        string mainAnonymizedStudyUid = studyGroups[0].Key;
 
-        foreach (var seriesGroup in seriesGroups)
+        foreach (var studyGroup in studyGroups)
         {
-            string seriesUid = seriesGroup.Key;
-            var firstInstance = seriesGroup.First().DeidResult;
+            string studyUid = studyGroup.Key;
+            var studySlices = studyGroup.ToList();
+            var studyModalities = studySlices
+                .Select(x => x.DeidResult.Modality)
+                .Where(m => !string.IsNullOrEmpty(m))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var seriesGroups = studySlices
+                .GroupBy(x => x.DeidResult.AnonymizedSeriesUid, StringComparer.Ordinal)
+                .ToList();
 
-            var seriesEnvelope = await _dbContext.ImagingSeriesEnvelopes
-                .FirstOrDefaultAsync(s => s.StudyEnvelopeId == studyEnvelope.Id && s.SeriesInstanceUid == seriesUid, cancellationToken)
-                .ConfigureAwait(false);
+            var studyEnvelope = existingEnvelopesByUid[studyUid];
+            bool isNewStudyEnvelope = studyEnvelope == null;
 
-            if (seriesEnvelope == null)
+            if (studyEnvelope == null)
             {
-                seriesEnvelope = new ImagingSeriesEnvelope
+                studyEnvelope = new ImagingStudyEnvelope
                 {
                     Id = Guid.NewGuid().ToString(),
-                    StudyEnvelopeId = studyEnvelope.Id,
-                    SeriesInstanceUid = seriesUid,
-                    SeriesNumber = seriesIndex++,
-                    Modality = firstInstance.Modality,
-                    SeriesDescription = $"{firstInstance.Modality} Series",
-                    InstanceCount = seriesGroup.Count()
+                    StudyInstanceUid = studyUid,
+                    StudyId = studyId,
+                    SiteId = siteId,
+                    SubjectId = subjectId,
+                    ModalitiesJson = JsonSerializer.Serialize(studyModalities),
+                    StudyDate = now.ToString("yyyyMMdd"),
+                    StudyDescription = "Anonymized Clinical Trial DICOM Study",
+                    SeriesCount = seriesGroups.Count,
+                    InstanceCount = studySlices.Count,
+                    Status = "STORED",
+                    AdjudicationStatus = "UNASSIGNED",
+                    CreatedAt = now,
+                    CreatedBy = opIdentity,
+                    UpdatedAt = now,
+                    VersionIndex = 1
                 };
-                _dbContext.ImagingSeriesEnvelopes.Add(seriesEnvelope);
+                _dbContext.ImagingStudyEnvelopes.Add(studyEnvelope);
             }
             else
             {
-                seriesEnvelope.InstanceCount += seriesGroup.Count();
+                studyEnvelope.InstanceCount += studySlices.Count;
+                var existingModalities = JsonSerializer.Deserialize<List<string>>(studyEnvelope.ModalitiesJson) ?? [];
+                var mergedModalities = existingModalities.Union(studyModalities, StringComparer.Ordinal).ToList();
+                studyEnvelope.ModalitiesJson = JsonSerializer.Serialize(mergedModalities);
+                studyEnvelope.UpdatedAt = now;
             }
 
-            seriesSummaries.Add(new SeriesIngestionSummary(
-                SeriesEnvelopeId: seriesEnvelope.Id,
-                AnonymizedSeriesUid: seriesUid,
-                Modality: firstInstance.Modality,
-                InstanceCount: seriesEnvelope.InstanceCount));
+            primaryStudyEnvelope ??= studyEnvelope;
 
-            int instNum = 1;
-            foreach (var (_, deidResult) in seriesGroup)
+            int seriesIndex = isNewStudyEnvelope ? 1 : studyEnvelope.SeriesCount + 1;
+
+            foreach (var seriesGroup in seriesGroups)
             {
-                var instEnvelope = new ImagingInstanceEnvelope
+                string seriesUid = seriesGroup.Key;
+                var seriesSlices = seriesGroup.ToList();
+                var firstInstance = seriesSlices[0].DeidResult;
+
+                var seriesEnvelope = await _dbContext.ImagingSeriesEnvelopes
+                    .FirstOrDefaultAsync(s => s.StudyEnvelopeId == studyEnvelope.Id && s.SeriesInstanceUid == seriesUid, cancellationToken)
+                    .ConfigureAwait(false);
+
+                int startingInstanceNumber;
+                if (seriesEnvelope == null)
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    SeriesEnvelopeId = seriesEnvelope.Id,
-                    SopInstanceUid = deidResult.AnonymizedSopUid,
-                    SopClassUid = "1.2.840.10008.5.1.4.1.1.2", // deid-ignore
-                    InstanceNumber = instNum++,
-                    Rows = deidResult.Rows,
-                    Columns = deidResult.Columns,
-                    BitsAllocated = deidResult.BitsAllocated,
-                    PixelSpacingJson = JsonSerializer.Serialize(deidResult.PixelSpacing),
-                    SliceThickness = deidResult.SliceThickness,
-                    SliceLocation = deidResult.SliceLocation,
-                    WindowCenter = deidResult.WindowCenter,
-                    WindowWidth = deidResult.WindowWidth,
-                    ObjectKey = $"dicom/{studyEnvelope.Id}/{seriesEnvelope.Id}/{deidResult.AnonymizedSopUid}.dcm",
-                    ChecksumSha256 = deidResult.TargetSha256,
-                    SizeBytes = deidResult.DeidentifiedSizeBytes,
-                    BurnedInPhiMasked = deidResult.PixelMaskApplied
-                };
-                _dbContext.ImagingInstanceEnvelopes.Add(instEnvelope);
+                    if (!isNewStudyEnvelope)
+                    {
+                        studyEnvelope.SeriesCount++;
+                    }
+
+                    seriesEnvelope = new ImagingSeriesEnvelope
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        StudyEnvelopeId = studyEnvelope.Id,
+                        SeriesInstanceUid = seriesUid,
+                        SeriesNumber = seriesIndex++,
+                        Modality = firstInstance.Modality,
+                        SeriesDescription = $"{firstInstance.Modality} Series",
+                        InstanceCount = seriesSlices.Count
+                    };
+                    _dbContext.ImagingSeriesEnvelopes.Add(seriesEnvelope);
+                    startingInstanceNumber = 1;
+                }
+                else
+                {
+                    startingInstanceNumber = seriesEnvelope.InstanceCount + 1;
+                    seriesEnvelope.InstanceCount += seriesSlices.Count;
+                }
+
+                seriesSummaries.Add(new SeriesIngestionSummary(
+                    SeriesEnvelopeId: seriesEnvelope.Id,
+                    AnonymizedSeriesUid: seriesUid,
+                    Modality: firstInstance.Modality,
+                    InstanceCount: seriesEnvelope.InstanceCount));
+
+                int instNum = startingInstanceNumber;
+                foreach (var (_, deidResult) in seriesSlices)
+                {
+                    var instEnvelope = new ImagingInstanceEnvelope
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        SeriesEnvelopeId = seriesEnvelope.Id,
+                        SopInstanceUid = deidResult.AnonymizedSopUid,
+                        SopClassUid = "1.2.840.10008.5.1.4.1.1.2", // deid-ignore
+                        InstanceNumber = instNum++,
+                        Rows = deidResult.Rows,
+                        Columns = deidResult.Columns,
+                        BitsAllocated = deidResult.BitsAllocated,
+                        PixelSpacingJson = JsonSerializer.Serialize(deidResult.PixelSpacing),
+                        SliceThickness = deidResult.SliceThickness,
+                        SliceLocation = deidResult.SliceLocation,
+                        WindowCenter = deidResult.WindowCenter,
+                        WindowWidth = deidResult.WindowWidth,
+                        ObjectKey = $"dicom/{studyEnvelope.Id}/{seriesEnvelope.Id}/{deidResult.AnonymizedSopUid}.dcm",
+                        ChecksumSha256 = deidResult.TargetSha256,
+                        SizeBytes = deidResult.DeidentifiedSizeBytes,
+                        BurnedInPhiMasked = deidResult.PixelMaskApplied
+                    };
+                    _dbContext.ImagingInstanceEnvelopes.Add(instEnvelope);
+                }
             }
         }
+
+        var primaryEnvelope = primaryStudyEnvelope!;
 
         var distinctScrubbedTags = validList
             .SelectMany(x => x.DeidResult.ScrubbedTags)
@@ -445,7 +588,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         var manifest = new BatchDeidentificationManifest
         {
             ManifestId = Guid.NewGuid().ToString(),
-            StudyEnvelopeId = studyEnvelope.Id,
+            StudyEnvelopeId = primaryEnvelope.Id,
             StudyId = studyId,
             SiteId = siteId,
             SubjectId = subjectId,
@@ -468,7 +611,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         var certEntity = new DeidentificationCertificate
         {
             Id = manifest.ManifestId,
-            StudyEnvelopeId = studyEnvelope.Id,
+            StudyEnvelopeId = primaryEnvelope.Id,
             SourceSha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(signature))),
             TargetSha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(manifest.ManifestId))),
             StudyId = studyId,
@@ -493,7 +636,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new BatchIngestionResult(
-            StudyEnvelopeId: studyEnvelope.Id,
+            StudyEnvelopeId: primaryEnvelope.Id,
             CertificateId: certEntity.Id,
             AnonymizedStudyUid: mainAnonymizedStudyUid,
             TotalFilesReceived: totalFilesProcessed,
@@ -555,9 +698,11 @@ public sealed class DicomIngestionService : IDicomIngestionService
                                 studyId: studyId,
                                 applyPixelMask: true);
 
+                            ValidateFrameDimensions(sliceResult.Rows, sliceResult.Columns, sliceResult.BitsAllocated);
+
                             successfulSlices.Add(new SliceIngestionMetadata(workItem.FileName, sliceResult));
                         }
-                        catch (DicomPixelDeidException ex)
+                        catch (Exception ex) when (ex is DicomPixelDeidException or DicomInvalidDimensionsException or ArgumentException)
                         {
                             Interlocked.CompareExchange(ref fatalDeidException, ExceptionDispatchInfo.Capture(ex), null);
                             await linkedCts.CancelAsync().ConfigureAwait(false);
@@ -587,6 +732,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 channel.Writer,
                 skippedNonDicomFiles,
                 count => Interlocked.Add(ref totalFilesProcessed, count),
+                new BatchQuotaTracker(_quotas),
                 workerCt).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !workerCt.IsCancellationRequested || cancellationToken.IsCancellationRequested)
@@ -623,15 +769,17 @@ public sealed class DicomIngestionService : IDicomIngestionService
         ChannelWriter<QueuedSliceWorkItem> writer,
         ConcurrentBag<string> skippedNonDicomFiles,
         Action<int> incrementTotalFiles,
+        BatchQuotaTracker quotaTracker,
         CancellationToken cancellationToken)
     {
-        await foreach (var item in EnumerateUnifiedBatchStreamsAsync(request, skippedNonDicomFiles, incrementTotalFiles, cancellationToken).ConfigureAwait(false))
+        await foreach (var item in EnumerateUnifiedBatchStreamsAsync(request, skippedNonDicomFiles, incrementTotalFiles, quotaTracker, cancellationToken).ConfigureAwait(false))
         {
             byte[] headerBytes = new byte[4];
             int headerRead = await item.ContentStream.ReadAtLeastAsync(headerBytes, headerBytes.Length, throwOnEndOfStream: false, cancellationToken).ConfigureAwait(false);
 
             if (headerRead == 0)
             {
+                quotaTracker.RecordEntry();
                 incrementTotalFiles(1);
                 skippedNonDicomFiles.Add(item.FileName);
                 continue;
@@ -640,8 +788,9 @@ public sealed class DicomIngestionService : IDicomIngestionService
             bool isZipCandidate = headerRead >= 4 && IsZipSignatureOrExtension(item.FileName, item.IsZipHint, headerBytes);
             if (!isZipCandidate)
             {
+                quotaTracker.RecordEntry();
                 await using var combined = new PrefixReadStream(headerBytes, headerRead, item.ContentStream);
-                var (pooledSlice, sha256) = await PooledBlockStream.CopyAndHashAsync(combined, cancellationToken).ConfigureAwait(false);
+                var (pooledSlice, sha256, _) = await quotaTracker.CopyAndHashSliceBoundedAsync(combined, item.FileName, cancellationToken).ConfigureAwait(false);
                 try
                 {
                     incrementTotalFiles(1);
@@ -656,110 +805,170 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 continue;
             }
 
-            string? tempZipPath = null;
-            FileStream? tempZipStream = null;
+            await ProcessZipCandidateAsync(
+                item,
+                headerBytes,
+                headerRead,
+                writer,
+                skippedNonDicomFiles,
+                incrementTotalFiles,
+                quotaTracker,
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task ProcessZipCandidateAsync(
+        BatchStreamItem item,
+        byte[] headerBytes,
+        int headerRead,
+        ChannelWriter<QueuedSliceWorkItem> writer,
+        ConcurrentBag<string> skippedNonDicomFiles,
+        Action<int> incrementTotalFiles,
+        BatchQuotaTracker quotaTracker,
+        CancellationToken cancellationToken)
+    {
+        string? tempZipPath = null;
+        FileStream? tempZipStream = null;
+        try
+        {
+            Stream seekableZipStream;
+            long archiveStartPosition = 0;
+
+            if (item.ContentStream.CanSeek)
+            {
+                archiveStartPosition = item.ContentStream.Position - headerRead;
+                item.ContentStream.Position = archiveStartPosition;
+                quotaTracker.ValidateCompressedArchiveLength(item.ContentStream.Length - archiveStartPosition);
+                seekableZipStream = item.ContentStream;
+            }
+            else
+            {
+                tempZipPath = Path.Combine(Path.GetTempPath(), $"cadence-dicom-batch-{Guid.NewGuid():N}.zip");
+                tempZipStream = new FileStream(
+                    tempZipPath,
+                    FileMode.CreateNew,
+                    FileAccess.ReadWrite,
+                    FileShare.None,
+                    bufferSize: BatchStreamHelpers.PooledBufferSize,
+                    FileOptions.Asynchronous);
+
+                await tempZipStream.WriteAsync(headerBytes.AsMemory(0, headerRead), cancellationToken).ConfigureAwait(false);
+                await quotaTracker.CopySpooledArchiveBoundedAsync(item.ContentStream, tempZipStream, headerRead, cancellationToken).ConfigureAwait(false);
+                await tempZipStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                tempZipStream.Position = 0;
+                seekableZipStream = tempZipStream;
+            }
+
+            ZipArchive? zip = null;
             try
             {
-                Stream seekableZipStream;
-                long archiveStartPosition = 0;
-
-                if (item.ContentStream.CanSeek)
-                {
-                    archiveStartPosition = item.ContentStream.Position - headerRead;
-                    item.ContentStream.Position = archiveStartPosition;
-                    seekableZipStream = item.ContentStream;
-                }
-                else
-                {
-                    tempZipPath = Path.Combine(Path.GetTempPath(), $"cadence-dicom-batch-{Guid.NewGuid():N}.zip");
-                    tempZipStream = new FileStream(
-                        tempZipPath,
-                        FileMode.CreateNew,
-                        FileAccess.ReadWrite,
-                        FileShare.None,
-                        bufferSize: BatchStreamHelpers.PooledBufferSize,
-                        FileOptions.Asynchronous);
-
-                    await tempZipStream.WriteAsync(headerBytes.AsMemory(0, headerRead), cancellationToken).ConfigureAwait(false);
-                    await BatchStreamHelpers.CopyPooledAsync(item.ContentStream, tempZipStream, cancellationToken).ConfigureAwait(false);
-                    await tempZipStream.FlushAsync(cancellationToken).ConfigureAwait(false);
-                    tempZipStream.Position = 0;
-                    seekableZipStream = tempZipStream;
-                }
-
-                ZipArchive? zip = null;
+                zip = await ZipArchive.CreateAsync(seekableZipStream, ZipArchiveMode.Read, leaveOpen: true, entryNameEncoding: null, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException and not BatchPayloadTooLargeException)
+            {
+                quotaTracker.RecordEntry();
+                seekableZipStream.Position = archiveStartPosition;
+                var (fallbackSlice, fallbackSha256, _) = await quotaTracker.CopyAndHashSliceBoundedAsync(seekableZipStream, item.FileName, cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    zip = await ZipArchive.CreateAsync(seekableZipStream, ZipArchiveMode.Read, leaveOpen: true, entryNameEncoding: null, cancellationToken).ConfigureAwait(false);
+                    incrementTotalFiles(1);
+                    await writer.WriteAsync(new QueuedSliceWorkItem(item.FileName, fallbackSlice, fallbackSha256), cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException and not BatchPayloadTooLargeException)
+                catch
                 {
-                    seekableZipStream.Position = archiveStartPosition;
-                    var (fallbackSlice, fallbackSha256) = await PooledBlockStream.CopyAndHashAsync(seekableZipStream, cancellationToken).ConfigureAwait(false);
-                    try
-                    {
-                        incrementTotalFiles(1);
-                        await writer.WriteAsync(new QueuedSliceWorkItem(item.FileName, fallbackSlice, fallbackSha256), cancellationToken).ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        await fallbackSlice.DisposeAsync().ConfigureAwait(false);
-                        throw;
-                    }
-                }
-
-                if (zip is not null)
-                {
-                    await using (zip.ConfigureAwait(false))
-                    {
-                        foreach (var entry in zip.Entries)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
-                            {
-                                continue;
-                            }
-
-                            incrementTotalFiles(1);
-                            PooledBlockStream? entryPooled = null;
-                            string entrySha256;
-                            try
-                            {
-                                await using var entryStream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
-                                (entryPooled, entrySha256) = await PooledBlockStream.CopyAndHashAsync(entryStream, cancellationToken).ConfigureAwait(false);
-                            }
-                            catch (Exception ex) when (ex is not OperationCanceledException and not BatchPayloadTooLargeException)
-                            {
-                                if (entryPooled is not null)
-                                {
-                                    await entryPooled.DisposeAsync().ConfigureAwait(false);
-                                }
-
-                                skippedNonDicomFiles.Add(entry.FullName);
-                                continue;
-                            }
-
-                            try
-                            {
-                                await writer.WriteAsync(new QueuedSliceWorkItem(entry.FullName, entryPooled, entrySha256), cancellationToken).ConfigureAwait(false);
-                            }
-                            catch
-                            {
-                                await entryPooled.DisposeAsync().ConfigureAwait(false);
-                                throw;
-                            }
-                        }
-                    }
+                    await fallbackSlice.DisposeAsync().ConfigureAwait(false);
+                    throw;
                 }
             }
-            finally
+
+            if (zip is not null)
             {
-                if (tempZipStream is not null)
+                await using (zip.ConfigureAwait(false))
                 {
-                    await tempZipStream.DisposeAsync().ConfigureAwait(false);
+                    long compressedArchiveBytes = Math.Max(1L, seekableZipStream.Length - archiveStartPosition);
+                    await EnumerateZipEntriesBoundedAsync(
+                        zip,
+                        compressedArchiveBytes,
+                        writer,
+                        skippedNonDicomFiles,
+                        incrementTotalFiles,
+                        quotaTracker,
+                        cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+        finally
+        {
+            if (tempZipStream is not null)
+            {
+                await tempZipStream.DisposeAsync().ConfigureAwait(false);
+            }
+
+            BatchStreamHelpers.DeleteTempFileSafely(tempZipPath);
+        }
+    }
+
+    private static async Task EnumerateZipEntriesBoundedAsync(
+        ZipArchive zip,
+        long compressedArchiveBytes,
+        ChannelWriter<QueuedSliceWorkItem> writer,
+        ConcurrentBag<string> skippedNonDicomFiles,
+        Action<int> incrementTotalFiles,
+        BatchQuotaTracker quotaTracker,
+        CancellationToken cancellationToken)
+    {
+        quotaTracker.ValidateDeclaredArchiveEntryCount(zip.Entries.Count);
+        long archiveUncompressedBytes = 0;
+
+        foreach (var entry in zip.Entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+            {
+                continue;
+            }
+
+            quotaTracker.RecordEntry();
+            quotaTracker.ValidateDeclaredEntryLength(entry.FullName, entry.Length);
+
+            incrementTotalFiles(1);
+            PooledBlockStream? entryPooled = null;
+            string entrySha256;
+            long effectiveEntryCompressedBytes = entry.CompressedLength > 0
+                ? Math.Min(entry.CompressedLength, compressedArchiveBytes)
+                : compressedArchiveBytes;
+
+            try
+            {
+                await using var entryStream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
+                (entryPooled, entrySha256, long entryBytesRead) = await quotaTracker.CopyAndHashZipEntryBoundedAsync(
+                    entryStream,
+                    entryName: entry.FullName,
+                    effectiveEntryCompressedBytes: effectiveEntryCompressedBytes,
+                    compressedArchiveBytes: compressedArchiveBytes,
+                    archiveUncompressedBeforeEntry: archiveUncompressedBytes,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                archiveUncompressedBytes += entryBytesRead;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException and not BatchPayloadTooLargeException)
+            {
+                if (entryPooled is not null)
+                {
+                    await entryPooled.DisposeAsync().ConfigureAwait(false);
                 }
 
-                BatchStreamHelpers.DeleteTempFileSafely(tempZipPath);
+                skippedNonDicomFiles.Add(entry.FullName);
+                continue;
+            }
+
+            try
+            {
+                await writer.WriteAsync(new QueuedSliceWorkItem(entry.FullName, entryPooled, entrySha256), cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                await entryPooled.DisposeAsync().ConfigureAwait(false);
+                throw;
             }
         }
     }
@@ -768,10 +977,12 @@ public sealed class DicomIngestionService : IDicomIngestionService
         BatchIngestionRequest request,
         ConcurrentBag<string> skippedNonDicomFiles,
         Action<int> incrementTotalFiles,
+        BatchQuotaTracker quotaTracker,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (request.Files is { Count: > 0 })
         {
+            quotaTracker.ValidateDeclaredArchiveEntryCount(request.Files.Count);
             foreach (var file in request.Files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -782,6 +993,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
                 if (file.Content is null || file.Content.Length == 0)
                 {
+                    quotaTracker.RecordEntry();
                     incrementTotalFiles(1);
                     skippedNonDicomFiles.Add(file.FileName);
                     continue;
@@ -823,6 +1035,36 @@ public sealed class DicomIngestionService : IDicomIngestionService
             && headerBytes[1] == 0x4B
             && ((headerBytes[2] == 0x03 && headerBytes[3] == 0x04)
                 || (headerBytes[2] == 0x05 && headerBytes[3] == 0x06));
+    }
+
+    private static void ValidateScopeIdentifiers(string subjectId, string siteId, string studyId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(siteId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(studyId);
+    }
+
+    private static bool IsMatchingScope(
+        string storedStudy,
+        string storedSite,
+        string storedSubject,
+        string expectedStudy,
+        string expectedSite,
+        string expectedSubject) =>
+        string.Equals(storedStudy, expectedStudy, StringComparison.Ordinal)
+        && string.Equals(storedSite, expectedSite, StringComparison.Ordinal)
+        && string.Equals(storedSubject, expectedSubject, StringComparison.Ordinal);
+
+    private static void EnsureStudyEnvelopeOwnership(
+        ImagingStudyEnvelope studyEnvelope,
+        string studyId,
+        string siteId,
+        string subjectId)
+    {
+        if (!IsMatchingScope(studyEnvelope.StudyId, studyEnvelope.SiteId, studyEnvelope.SubjectId, studyId, siteId, subjectId))
+        {
+            throw new InvalidOperationException("Existing imaging study envelope ownership does not match the requested study, site, and subject.");
+        }
     }
 
     private sealed record QueuedSliceWorkItem(

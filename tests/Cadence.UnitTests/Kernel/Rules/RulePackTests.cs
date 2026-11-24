@@ -349,6 +349,125 @@ public class RulePackTests
         parsed.Rules[0].Applicability.Variable.Should().Be("SYS");
         parsed.Rules[1].Applicability.Variable.Should().BeNull();
     }
+
+    [Fact(DisplayName = "Evaluator_StreamingOverload_MatchesBufferedEvaluateAndDefaultFallback")]
+    [Trait("Category", "Unit")]
+    [KernelRule("K-RULE-4")]
+    public void EvaluatorStreamingOverloadMatchesBufferedEvaluateAndDefaultFallback()
+    {
+        for (var seed = 1; seed <= 100; seed++)
+        {
+            var random = new Random(seed);
+            var pack = RandomRuleGenerator.Pack(random, rules: 8);
+            var records = RandomRuleGenerator.Records(random, count: 40);
+            var context = new RuleEvaluationContext(ValidationStage.Collection, AsOf);
+
+            var evaluator = new DotNetRuleEvaluator();
+            var expected = Describe(evaluator.Evaluate(pack, context, records));
+
+            var streamed = new CollectingViolationSink();
+            evaluator.Evaluate(pack, context, new ListRuleRecordCursor(records), streamed);
+            Describe(streamed.Violations).Should().Equal(expected, $"seed {seed}: DotNetRuleEvaluator streaming");
+
+            IRuleEvaluator customEvaluator = new BufferedOnlyCustomEvaluator(evaluator);
+            var fallbackSink = new CollectingViolationSink();
+            customEvaluator.Evaluate(pack, context, new ListRuleRecordCursor(records), fallbackSink);
+            Describe(fallbackSink.Violations).Should().Equal(expected, $"seed {seed}: default interface fallback");
+        }
+    }
+
+    [Fact(DisplayName = "Evaluator_StreamingOneMillionFiringRecords_AllocatesZeroLargeObjectHeapArrays")]
+    [Trait("Category", "Unit")]
+    public void EvaluatorStreamingOneMillionFiringRecordsAllocatesZeroLargeObjectHeapArrays()
+    {
+        const int LargeObjectHeapThresholdBytes = 85_000;
+        var pack = SampleRulePacks.Sample();
+        var evaluator = new DotNetRuleEvaluator();
+
+        // Warm up compilation and tiered JIT before measuring thread-local allocations.
+        var warmupSink = new CountingViolationSink();
+        evaluator.Evaluate(pack, Standardization, new FiringSyntheticCursor(1_000), warmupSink);
+        warmupSink.Count.Should().Be(1_750);
+
+        var millionCursor = new FiringSyntheticCursor(1_000_000);
+        var millionSink = new CountingViolationSink();
+
+        var beforeBytes = GC.GetAllocatedBytesForCurrentThread();
+        evaluator.Evaluate(pack, Standardization, millionCursor, millionSink);
+        var allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - beforeBytes;
+
+        // 75% VITALS rows fire R1 + R2 (2 * 750,000 = 1,500,000); 25% OTHER rows fire R2 (250,000) => 1,750,000 hits.
+        millionSink.Count.Should().Be(1_750_000);
+        millionSink.ObservedChecksum.Should().BeGreaterThan(0);
+        allocatedBytes.Should().BeLessThan(4 * 1024, "streaming 1,000,000 firing records must allocate zero per-hit objects and zero >=85KB LOH arrays");
+        allocatedBytes.Should().BeLessThan(LargeObjectHeapThresholdBytes);
+    }
+
+    private sealed class ListRuleRecordCursor(IReadOnlyList<RuleRecord> records) : IRuleRecordCursor
+    {
+        private int _index = -1;
+
+        public string Dataset => records[_index].Dataset;
+
+        public string Key => records[_index].Key;
+
+        public RuleValue this[string name] => records[_index][name];
+
+        public bool MoveNext() => ++_index < records.Count;
+    }
+
+    private sealed class CollectingViolationSink : IRuleViolationSink
+    {
+        public List<RuleViolation> Violations { get; } = [];
+
+        public void OnViolation(RuleViolationHit violation) => Violations.Add(violation.ToViolation());
+    }
+
+    private sealed class CountingViolationSink : IRuleViolationSink
+    {
+        public int Count { get; private set; }
+
+        public long ObservedChecksum { get; private set; }
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            Count++;
+            ObservedChecksum += violation.Observed.Length;
+        }
+    }
+
+    private sealed class BufferedOnlyCustomEvaluator(DotNetRuleEvaluator inner) : IRuleEvaluator
+    {
+        public IReadOnlyList<RuleViolation> Evaluate(RulePack pack, RuleEvaluationContext context, IEnumerable<RuleRecord> records) =>
+            inner.Evaluate(pack, context, records);
+    }
+
+    private sealed class FiringSyntheticCursor(int count) : IRuleRecordCursor
+    {
+        private int _index;
+
+        public string Dataset => (_index & 3) == 0 ? "OTHER" : "VITALS";
+
+        public string Key => "row-key";
+
+        public RuleValue this[string name] => name switch
+        {
+            "SYS" => RuleValue.FromNumber(80m),
+            "DIA" => RuleValue.FromNumber(100m),
+            _ => RuleValue.Null,
+        };
+
+        public bool MoveNext()
+        {
+            if (_index >= count)
+            {
+                return false;
+            }
+
+            _index++;
+            return true;
+        }
+    }
 }
 
 /// <summary>Generates random, valid rule packs and records from a seed, for property tests and the benchmark.</summary>

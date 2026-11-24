@@ -113,9 +113,9 @@
       <ClinicalTabs
         :model-value="activeTab"
         :tabs="trainingTabs"
+        variant="underline"
         aria-label="Protocol training workspace sections"
         id-prefix="training-console"
-        list-class="tab-bar"
         tab-class="tab-btn"
         @update:model-value="handleTrainingTabChange"
       />
@@ -164,7 +164,7 @@
                 <span class="badge badge-delta">{{
                   formatClinicalEnum(currentModule.module_type)
                 }}</span>
-                <h3 class="reader-title">
+                <h3 class="reader-title" tabindex="-1">
                   {{ currentModule.title }}
                 </h3>
               </div>
@@ -182,6 +182,8 @@
 
             <div class="reader-footer">
               <button
+                id="btn-prev-training-module"
+                type="button"
                 class="btn btn-secondary"
                 :disabled="selectedModuleIndex <= 0"
                 @click="selectModule(selectedModuleIndex - 1)"
@@ -193,6 +195,8 @@
                   activeCurriculum.modules &&
                   selectedModuleIndex < activeCurriculum.modules.length - 1
                 "
+                id="btn-next-training-module"
+                type="button"
                 class="btn btn-primary"
                 @click="selectModule(selectedModuleIndex + 1)"
               >
@@ -206,7 +210,7 @@
                 <span class="badge badge-delta"
                   >v{{ activeCurriculum.protocol_version }}</span
                 >
-                <h3 class="reader-title">
+                <h3 class="reader-title" tabindex="-1">
                   {{ activeCurriculum.title }}
                 </h3>
               </div>
@@ -687,7 +691,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal, ClinicalTabs } from "ui";
+import { ClinicalModal, ClinicalTabs, handoffFocus } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
@@ -855,7 +859,24 @@ function onCurriculumChange() {
 }
 
 function selectModule(index) {
+  const activeEl =
+    typeof document !== "undefined" ? document.activeElement : null;
+  const fromFooterNav = Boolean(activeEl?.closest?.(".reader-footer"));
   selectedModuleIndex.value = index;
+  const total = activeCurriculum.value?.modules?.length ?? 0;
+  const prevDisabled = index <= 0;
+  const nextUnmounted = index >= total - 1;
+  if (
+    fromFooterNav &&
+    ((activeEl?.id === "btn-next-training-module" && nextUnmounted) ||
+      (activeEl?.id === "btn-prev-training-module" && prevDisabled))
+  ) {
+    void handoffFocus([
+      ".reader-title",
+      "#btn-next-training-module",
+      "#btn-prev-training-module",
+    ]);
+  }
 }
 
 watch(
@@ -1181,34 +1202,6 @@ async function handleExecuteBulkSignOff() {
 
 .status-failed {
   color: var(--semantic-color-error);
-}
-
-.tab-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 16px;
-  min-width: 0;
-}
-
-.tab-btn {
-  padding: 10px 18px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  margin-bottom: -2px;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
 }
 
 .modules-layout {

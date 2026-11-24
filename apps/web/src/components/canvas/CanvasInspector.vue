@@ -768,7 +768,7 @@ import {
   type KernelScheduleChange,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
-import { parseNodeRef } from "../../canvas/nodeRef";
+import { formatNodeRef, parseNodeRef } from "../../canvas/nodeRef";
 import {
   ensureNodesResolved,
   formatCommandTitle,
@@ -974,8 +974,18 @@ const headerTitle = computed(() => {
   return genericDisplay.value?.label ?? "Record";
 });
 
+const canonicalParticipantEnrollmentRef = computed(() => {
+  if (!props.participant) return "";
+  const parsed = parseNodeRef(props.participant.enrollment_ref);
+  return parsed?.kind === "enrollment"
+    ? formatNodeRef({ kind: "enrollment", id: parsed.id })
+    : "";
+});
+
 const activeNodeRef = computed(() => {
-  if (props.participant) return props.nodeRef;
+  if (props.participant) {
+    return canonicalParticipantEnrollmentRef.value || props.nodeRef;
+  }
   if (props.protocolVersion?.ref) return props.protocolVersion.ref;
   if (props.genericNode?.ref) return props.genericNode.ref;
   return genericDisplay.value?.ref ?? "";
@@ -1024,6 +1034,9 @@ const NO_RECORD_REF =
 /** The selection's canonical reference when Trace, Impact, Explain, Act, and Assist can query it. */
 const kernelRef = computed(() => {
   if (props.participant) {
+    if (canonicalParticipantEnrollmentRef.value) {
+      return canonicalParticipantEnrollmentRef.value;
+    }
     return parseNodeRef(props.nodeRef) ? props.nodeRef : "";
   }
   const version = props.protocolVersion?.ref;
