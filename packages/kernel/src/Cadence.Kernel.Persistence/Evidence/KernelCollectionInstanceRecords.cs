@@ -936,7 +936,8 @@ internal sealed class KernelCollectionInstanceRecords(
         var openQueryCount = activeQueryAssertionIds.Count - answeredQueryAssertionIds.Count;
         var answeredQueryCount = answeredQueryAssertionIds.Count;
         var openErrorFindingCount = CountFormErrorFindings(instance.Id.Value, memberGuids, activeErrorTargets);
-        var complete = CollectionReadiness.IsComplete(missingRequiredCount, openQueryCount, answeredQueryCount, openErrorFindingCount);
+        var complete = (itemCount == 0 || recordedCount > 0)
+            && CollectionReadiness.IsComplete(missingRequiredCount, openQueryCount, answeredQueryCount, openErrorFindingCount);
         var blockers = CollectionReadiness.BuildBlockers(
             missingRequired,
             missingRequiredCount,
@@ -1094,7 +1095,8 @@ internal sealed class KernelCollectionInstanceRecords(
             .ToList();
         var (openQueries, answeredQueries) = CountActiveQueries(assertions);
         var errorFindings = CountFormErrorFindings(instanceGuid, memberGuids, activeErrorTargets);
-        var complete = CollectionReadiness.IsComplete(missingRequired.Count, openQueries, answeredQueries, errorFindings);
+        var complete = (items.Count == 0 || recordedItems.Count > 0)
+            && CollectionReadiness.IsComplete(missingRequired.Count, openQueries, answeredQueries, errorFindings);
         var blockers = CollectionReadiness.BuildBlockers(missingRequired, missingRequired.Count, openQueries, answeredQueries, errorFindings);
         return (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers);
     }
