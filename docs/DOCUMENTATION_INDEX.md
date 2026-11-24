@@ -628,6 +628,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
 | [ADR-2663: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](adr/2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) | Current | - Status: Accepted |
 | [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](adr/2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) | Current | - Status: Accepted |
+| [ADR-2626: Observation Assertion Audit Coverage, SDV Precondition Guards, and CRA Modification Alerts](adr/2026-11-23-observation-assertions-sdv-guards-and-cra-alerts.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
