@@ -105,12 +105,52 @@ public sealed class KernelNavigatorTests
         children.Should().Equal(child);
     }
 
-    /// <summary>A hierarchy that points at a missing parent or loops is reported, not silently cut short.</summary>
-    [Fact(DisplayName = "ZoomPath_BrokenHierarchyThrows")]
-    public async Task ZoomPathBrokenHierarchyThrows()
+    /// <summary>
+    /// A node whose intermediate parent row is absent falls back to its declared fallback parent (for example its
+    /// study) or to the tenant root without throwing <see cref="InvalidOperationException"/>.
+    /// </summary>
+    [Fact(DisplayName = "ZoomPath_MissingParent_FallsBackToFallbackOrTenantRoot")]
+    [KernelRule("K-ID-7")]
+    public async Task ZoomPathMissingParentFallsBackToFallbackOrTenantRoot()
     {
-        var orphan = NodeRef.For(StudySiteId.New());
-        _graph.Add(new ScopeNode(new NodeSummary(orphan, "Orphan"), NodeRef.For(StudyId.New())));
+        var orphanSite = NodeRef.For(StudySiteId.New());
+        _graph.Add(new ScopeNode(new NodeSummary(orphanSite, "Orphan site", "DE-999"), NodeRef.For(StudyId.New()), Group: "DE"));
+
+        var orphanFindingWithStudyFallback = NodeRef.For(Cadence.Kernel.Validation.ValidationFindingId.New());
+        _graph.Add(new ScopeNode(
+            new NodeSummary(orphanFindingWithStudyFallback, "Orphan finding", "R1"),
+            NodeRef.For(CollectionInstanceId.New()),
+            FallbackParent: StudyNode));
+
+        var orphanWithMissingFallback = NodeRef.For(CollectionInstanceId.New());
+        _graph.Add(new ScopeNode(
+            new NodeSummary(orphanWithMissingFallback, "Orphan form", "VS"),
+            NodeRef.For(EnrollmentId.New()),
+            FallbackParent: NodeRef.For(StudyId.New())));
+
+        var navigator = new KernelNavigator(_graph);
+        var ct = TestContext.Current.CancellationToken;
+
+        var orphanPath = await navigator.GetZoomPathAsync(Tenant, orphanSite, ct);
+        orphanPath.Should().NotBeNull();
+        orphanPath!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, ZoomLevels.Country, NodeKinds.StudySite);
+        orphanPath[0].Ref.Should().Be(TenantNode);
+
+        var studyFallbackPath = await navigator.GetZoomPathAsync(Tenant, orphanFindingWithStudyFallback, ct);
+        studyFallbackPath.Should().NotBeNull();
+        studyFallbackPath!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.ValidationFinding);
+        studyFallbackPath.Select(s => s.Ref).Should().Equal(TenantNode, StudyNode, orphanFindingWithStudyFallback);
+
+        var missingFallbackPath = await navigator.GetZoomPathAsync(Tenant, orphanWithMissingFallback, ct);
+        missingFallbackPath.Should().NotBeNull();
+        missingFallbackPath!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, NodeKinds.CollectionInstance);
+        missingFallbackPath.Select(s => s.Ref).Should().Equal(TenantNode, orphanWithMissingFallback);
+    }
+
+    /// <summary>A hierarchy that loops is reported, not silently cut short.</summary>
+    [Fact(DisplayName = "ZoomPath_Cycle_ThrowsInvalidOperationException")]
+    public async Task ZoomPathCycleThrowsInvalidOperationException()
+    {
         var loopA = NodeRef.For(StudyId.New());
         var loopB = NodeRef.For(StudyId.New());
         _graph.Add(new ScopeNode(new NodeSummary(loopA, "A"), loopB));
@@ -118,7 +158,6 @@ public sealed class KernelNavigatorTests
         var navigator = new KernelNavigator(_graph);
         var ct = TestContext.Current.CancellationToken;
 
-        await FluentActions.Awaiting(() => navigator.GetZoomPathAsync(Tenant, orphan, ct)).Should().ThrowAsync<InvalidOperationException>();
         await FluentActions.Awaiting(() => navigator.GetZoomPathAsync(Tenant, loopA, ct)).Should().ThrowAsync<InvalidOperationException>();
     }
 

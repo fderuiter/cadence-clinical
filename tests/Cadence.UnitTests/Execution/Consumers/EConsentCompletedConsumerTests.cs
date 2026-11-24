@@ -113,6 +113,11 @@ public class EConsentCompletedConsumerTests
         public Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken) =>
             Task.FromResult(store.Subjects.SingleOrDefault(s => s.SubjectCode.Value == code));
 
+        public Task<ClinicalSubject?> GetByKernelEnrollmentIdAsync(Guid enrollmentId, CancellationToken cancellationToken) =>
+            Task.FromResult(enrollmentId == Guid.Empty
+                ? null
+                : store.Subjects.SingleOrDefault(s => s.KernelEnrollmentId == enrollmentId));
+
         // The consumer never lists subjects; the fake only has to satisfy the port.
         public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken) =>
             throw new NotSupportedException("EConsentCompletedConsumer does not list subjects.");

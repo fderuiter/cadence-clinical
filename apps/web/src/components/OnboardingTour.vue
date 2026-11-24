@@ -12,6 +12,7 @@
     ref="clinicalModalRef"
     :is-open="isTourOpen"
     :modal="isModalStep"
+    :restore-focus="false"
     :teleport="false"
     :show-header="false"
     :show-footer="false"
@@ -96,7 +97,7 @@
 <script setup>
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { ClinicalModal } from "ui";
+import { ClinicalModal, handoffFocus, useInlineFocusHandoff } from "ui";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
@@ -239,6 +240,47 @@ const showArrow = computed(() =>
   )
 );
 
+const tourHandoff = useInlineFocusHandoff({
+  closeFallback: [".btn-start-tour", "#btn-onboarding-checklist-trigger"],
+});
+let launchedFromChecklistDrawer = false;
+let pendingAnchoredFocus = false;
+
+watch(
+  isTourOpen,
+  (open, prevOpen) => {
+    if (open && !prevOpen) {
+      const activeEl =
+        typeof document !== "undefined" ? document.activeElement : null;
+      launchedFromChecklistDrawer = Boolean(
+        onboardingStore.isDrawerOpen ||
+        (activeEl &&
+          activeEl !== document.body &&
+          (activeEl.id === "btn-drawer-start-tour" ||
+            activeEl.id === "btn-onboarding-checklist-trigger" ||
+            activeEl.closest?.(
+              ".checklist-drawer, #onboarding-checklist-drawer"
+            )))
+      );
+      tourHandoff.rememberTrigger(
+        launchedFromChecklistDrawer
+          ? "#btn-onboarding-checklist-trigger"
+          : activeEl && activeEl !== document.body
+            ? activeEl
+            : null
+      );
+      pendingAnchoredFocus = Boolean(currentStepConfig.value?.targetSelector);
+    } else if (!open && prevOpen) {
+      pendingAnchoredFocus = false;
+      const fallbackOrder = launchedFromChecklistDrawer
+        ? ["#btn-onboarding-checklist-trigger", ".btn-start-tour"]
+        : [".btn-start-tour", "#btn-onboarding-checklist-trigger"];
+      launchedFromChecklistDrawer = false;
+      void tourHandoff.restoreTrigger(fallbackOrder);
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
 function buildCenteredPopoverStyle(cssZoomScale = 1) {
   const style = {
     position: "fixed",
@@ -590,8 +632,16 @@ const updatePosition = () => {
           nextStyle.maxHeight = `${maxAllowedHeight}px`;
         }
         popoverStyle.value = nextStyle;
+        const wasTargetElement = hasTargetElement.value;
         hasTargetElement.value = true;
         currentRafId = null;
+        if ((!wasTargetElement || pendingAnchoredFocus) && !isModalStep.value) {
+          pendingAnchoredFocus = false;
+          void handoffFocus(popoverRef, {
+            scrollIfOffscreen: false,
+            includeDefaultFallbacks: false,
+          });
+        }
         return;
       }
     }
@@ -604,6 +654,13 @@ const updatePosition = () => {
       isArrowDetached.value = true;
       popoverStyle.value = buildCenteredPopoverStyle(zoomScale);
       currentRafId = null;
+      if (pendingAnchoredFocus && !isModalStep.value) {
+        pendingAnchoredFocus = false;
+        void handoffFocus(popoverRef, {
+          scrollIfOffscreen: false,
+          includeDefaultFallbacks: false,
+        });
+      }
     }
   };
 
@@ -646,6 +703,16 @@ const handleComplete = () => {
   onboardingStore.nextStep(stepTargetDescription.value);
   onboardingStore.disableTour();
 };
+
+watch(
+  currentStep,
+  (step, prevStep) => {
+    if (step !== prevStep && isTourOpen.value) {
+      pendingAnchoredFocus = Boolean(currentStepConfig.value?.targetSelector);
+    }
+  },
+  { flush: "sync" }
+);
 
 watch(currentStep, async () => {
   if (popoverRef.value) {

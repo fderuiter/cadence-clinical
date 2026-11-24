@@ -465,16 +465,6 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
-.modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: 12px;
-  border: 1px solid var(--semantic-color-border);
-  box-shadow: var(--semantic-shadow-xl);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -816,3 +806,5 @@ function formatDate(dateStr) {
   word-break: break-all;
 }
 </style>
+
+<style scoped src="../shared/regulatedPreviewModal.css"></style>

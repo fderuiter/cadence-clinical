@@ -270,6 +270,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  defaultSubjectId: {
+    type: String,
+    default: "",
+  },
   initialData: {
     type: Object,
     default: () => ({}),
@@ -289,7 +293,7 @@ const form = reactive({
   priority: "MEDIUM",
   study_id: props.defaultStudyId || "",
   site_id: props.defaultSiteId || "",
-  subject_id: "",
+  subject_id: props.defaultSubjectId || "",
   entity_type: "",
   entity_id: "",
   reason_for_change: "Initial clinical issue logged",
@@ -304,7 +308,7 @@ function applyInitialData() {
   form.priority = init.priority || "MEDIUM";
   form.study_id = init.study_id ?? props.defaultStudyId ?? "";
   form.site_id = init.site_id ?? props.defaultSiteId ?? "";
-  form.subject_id = init.subject_id || "";
+  form.subject_id = init.subject_id ?? props.defaultSubjectId ?? "";
   form.entity_type = init.entity_type || "";
   form.entity_id = init.entity_id || "";
   form.reason_for_change =
@@ -434,49 +438,12 @@ const handleSubmit = async () => {
   flex: 2;
 }
 
-.text-danger {
-  color: var(--semantic-color-error);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.form-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-body);
-}
-
 .form-control {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: var(--semantic-color-text-dark);
-  background: var(--semantic-color-surface);
   transition: border-color 0.15s;
 }
 
 .form-control:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
-}
-
-.form-control:disabled {
-  background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-secondary);
-  cursor: not-allowed;
-}
-
-.btn {
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 .modal-footer {
@@ -529,3 +496,5 @@ const handleSubmit = async () => {
   }
 }
 </style>
+
+<style scoped src="./ticketModalControls.css"></style>

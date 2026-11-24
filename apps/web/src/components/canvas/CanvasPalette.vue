@@ -107,6 +107,7 @@ import type {
   WorkspacePaletteOption,
 } from "../../canvas/palette";
 import { useAiAssistance } from "../../ai/aiAssistance";
+import { participantNodeRef } from "../../canvas/nodeRef";
 import {
   getLoadedStudyCanvasStore,
   loadStudyCanvasStore,
@@ -392,7 +393,7 @@ const items = computed<PaletteItem[]>(() => {
   if (study) {
     for (const participant of allParticipants.value) {
       list.push({
-        key: `participant:${participant.id}`,
+        key: participantNodeRef(participant) || `participant:${participant.id}`,
         group: "Participant",
         label: participant.subject_id,
         detail: [

@@ -541,9 +541,9 @@
           <ClinicalTabs
             :model-value="activeReaderTab"
             :tabs="readerTabs"
+            variant="underline"
             aria-label="SOP document inspection tabs"
             id-prefix="knowledge-reader"
-            list-class="reader-tab-nav"
             tab-class="reader-tab-btn"
             @update:model-value="handleReaderTabChange"
           />
@@ -558,16 +558,10 @@
             tabindex="0"
           >
             <div
-              v-if="selectedArticle.body_html"
+              v-if="selectedArticleRenderedHtml"
               class="prose-content"
-              v-html="selectedArticle.body_html"
+              v-html="selectedArticleRenderedHtml"
             />
-            <div
-              v-else-if="selectedArticle.body_markdown"
-              class="prose-content markdown-fallback"
-            >
-              <pre>{{ selectedArticle.body_markdown }}</pre>
-            </div>
             <div v-else class="prose-empty">
               <p>No content has been authored for this SOP draft.</p>
             </div>
@@ -1110,6 +1104,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
 import {
   knowledgeService,
+  compileSopMarkdownToHtml,
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
 } from "../api/knowledge.js";
@@ -1413,19 +1408,19 @@ export default {
 
     function renderPreviewHtml(markdown) {
       if (!markdown) return "<p>No content to preview.</p>";
-      let html = markdown
-        .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-        .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-        .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-        .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
-        .replace(/\*(.*)\*/gim, "<em>$1</em>")
-        .replace(/`([^`]+)`/gim, "<code>$1</code>")
-        .replace(/^\* (.*$)/gim, "<li>$1</li>")
-        .replace(/^\d+\. (.*$)/gim, "<li>$1</li>")
-        .replace(/\n\n+/g, "</p><p>")
-        .replace(/\n/g, "<br>");
-      return `<p>${html}</p>`;
+      return compileSopMarkdownToHtml(markdown);
     }
+
+    const selectedArticleRenderedHtml = computed(() => {
+      if (!selectedArticle.value) return "";
+      if (selectedArticle.value.body_html) {
+        return selectedArticle.value.body_html;
+      }
+      if (selectedArticle.value.body_markdown) {
+        return compileSopMarkdownToHtml(selectedArticle.value.body_markdown);
+      }
+      return "";
+    });
 
     // Actions & Selection
     function selectCategory(catId) {
@@ -1932,6 +1927,7 @@ export default {
       draftArticlesCount,
       availableTags,
       readerTabs,
+      selectedArticleRenderedHtml,
 
       // Methods
       getTagList,
@@ -2628,47 +2624,6 @@ export default {
   color: var(--semantic-color-text-secondary);
 }
 
-/* Reader Tab Navigation */
-.reader-tab-nav,
-:deep(.reader-tab-nav) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  background-color: var(--semantic-color-surface-header);
-  border-bottom: 1px solid var(--border);
-  padding: 0 16px;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.reader-tab-btn,
-:deep(.reader-tab-btn) {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--neutral-dark);
-  cursor: pointer;
-  transition: all 0.15s;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.reader-tab-btn:hover,
-:deep(.reader-tab-btn:hover) {
-  color: var(--primary);
-}
-
-.reader-tab-btn.active,
-:deep(.reader-tab-btn.active) {
-  color: var(--semantic-color-primary);
-  border-bottom-color: var(--semantic-color-primary);
-  background-color: var(--semantic-color-surface);
-}
-
 .reader-body-card {
   padding: 24px;
   flex: 1;
@@ -3151,11 +3106,6 @@ export default {
 
   .reader-header-card {
     padding: 14px 16px;
-  }
-
-  .reader-tab-nav,
-  :deep(.reader-tab-nav) {
-    padding: 0 12px;
   }
 
   .reader-body-card {
