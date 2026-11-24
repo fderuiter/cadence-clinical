@@ -158,6 +158,10 @@ useFocusTrap(drawerRef, {
       : props.fallbackFocus,
   onEscape: closeDrawer,
 });
+
+defineExpose({
+  drawerRef,
+});
 </script>
 
 <template>

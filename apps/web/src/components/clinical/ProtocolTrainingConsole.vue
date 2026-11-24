@@ -164,7 +164,7 @@
                 <span class="badge badge-delta">{{
                   formatClinicalEnum(currentModule.module_type)
                 }}</span>
-                <h3 class="reader-title">
+                <h3 class="reader-title" tabindex="-1">
                   {{ currentModule.title }}
                 </h3>
               </div>
@@ -182,6 +182,8 @@
 
             <div class="reader-footer">
               <button
+                id="btn-prev-training-module"
+                type="button"
                 class="btn btn-secondary"
                 :disabled="selectedModuleIndex <= 0"
                 @click="selectModule(selectedModuleIndex - 1)"
@@ -193,6 +195,8 @@
                   activeCurriculum.modules &&
                   selectedModuleIndex < activeCurriculum.modules.length - 1
                 "
+                id="btn-next-training-module"
+                type="button"
                 class="btn btn-primary"
                 @click="selectModule(selectedModuleIndex + 1)"
               >
@@ -206,7 +210,7 @@
                 <span class="badge badge-delta"
                   >v{{ activeCurriculum.protocol_version }}</span
                 >
-                <h3 class="reader-title">
+                <h3 class="reader-title" tabindex="-1">
                   {{ activeCurriculum.title }}
                 </h3>
               </div>
@@ -687,7 +691,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal, ClinicalTabs } from "ui";
+import { ClinicalModal, ClinicalTabs, handoffFocus } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
@@ -855,7 +859,24 @@ function onCurriculumChange() {
 }
 
 function selectModule(index) {
+  const activeEl =
+    typeof document !== "undefined" ? document.activeElement : null;
+  const fromFooterNav = Boolean(activeEl?.closest?.(".reader-footer"));
   selectedModuleIndex.value = index;
+  const total = activeCurriculum.value?.modules?.length ?? 0;
+  const prevDisabled = index <= 0;
+  const nextUnmounted = index >= total - 1;
+  if (
+    fromFooterNav &&
+    ((activeEl?.id === "btn-next-training-module" && nextUnmounted) ||
+      (activeEl?.id === "btn-prev-training-module" && prevDisabled))
+  ) {
+    void handoffFocus([
+      ".reader-title",
+      "#btn-next-training-module",
+      "#btn-prev-training-module",
+    ]);
+  }
 }
 
 watch(
