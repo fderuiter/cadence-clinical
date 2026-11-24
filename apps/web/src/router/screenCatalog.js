@@ -2,8 +2,7 @@
  * Metadata for workspace routes, mapping each unmigrated screen to its product family
  * in docs/strategy/PRODUCT_CATALOG.md and its pre-release delivery status.
  */
-
-export const SCREEN_CATALOG = /*#__PURE__*/ Object.freeze({
+export const SCREEN_CATALOG = /* @__PURE__ */ Object.freeze({
   overview: {
     title: "Overview & Orientation Hub",
     family: "Cadence Core",

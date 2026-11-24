@@ -96,7 +96,7 @@ function listLocalStorageKeys(): string[] {
   return keys;
 }
 
-describe("Staff Persona Catalog & Account-Scoped Onboarding Unification (ADR-2658)", () => {
+describe("Staff Persona Catalog & Account-Scoped Onboarding Unification (ADR-2671)", () => {
   let pinia: ReturnType<typeof createPinia>;
 
   beforeEach(async () => {

@@ -43,12 +43,26 @@ internal sealed class KernelProtocolVersionReader(KernelTenantDbContextFactory c
 
     public async Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
     {
+        var content = await GetContentAsync(tenant, version, cancellationToken).ConfigureAwait(false);
+        return content is not null ? ProtocolDesignDocument.Read(content).Design : null;
+    }
+
+    public async Task<string?> GetContentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+    {
         await using var db = contexts.Create(tenant);
-        var content = await db.ProtocolVersions.AsNoTracking()
+        return await db.ProtocolVersions.AsNoTracking()
             .Where(v => v.TenantId == tenant && v.Id == version)
             .Select(v => v.Content)
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        return content is not null ? ProtocolDesignDocument.Read(content).Design : null;
+    }
+
+    public async Task<ProtocolAmendment?> GetAmendmentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await db.ProtocolVersions.AsNoTracking()
+            .Where(v => v.TenantId == tenant && v.Id == version)
+            .Select(v => v.Amendment)
+            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static ProtocolVersionSummary Summary(ProtocolVersion version) =>

@@ -120,7 +120,7 @@
       aria-label="Active trial countdown status"
     >
       <div>
-        <h2>
+        <h2 class="tabular-nums">
           Active {{ authStore.activeTier }} Trial<template
             v-if="
               authStore.trialDaysRemaining !== null &&

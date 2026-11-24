@@ -510,17 +510,23 @@ export function getCompiledExpression(node) {
 }
 
 /**
+ * @typedef {Object} EvaluableFieldMeta
+ * @property {string} id
+ * @property {Record<string, unknown> | null} [relevant]
+ */
+
+/**
  * Pure evaluation function for dynamic forms.
  * Determines field visibility, performs cascading dependent nullification,
  * and tracks field values and audit logs.
  *
- * @param {Array<Record<string, any>>} fields - Array of field metadata objects
- * @param {Record<string, any>} currentValues - Current state of form values
- * @param {((fieldId: string, oldVal: any, reason: string) => void) | null} [logPurge=null] - Callback function to log field purges in the audit trail
- * @returns {{ visibleFields: Record<string, boolean>, updatedValues: Record<string, any> }}
+ * @param {Array<EvaluableFieldMeta & Record<string, unknown>>} fields - Array of field metadata objects
+ * @param {Record<string, unknown>} currentValues - Current state of form values
+ * @param {((fieldId: string, oldVal: unknown, reason: string) => void) | null} [logPurge] - Callback function to log field purges in the audit trail
+ * @returns {{ visibleFields: Record<string, boolean>, updatedValues: Record<string, unknown> }}
  */
 export function renderFormFromJSON(fields, currentValues, logPurge = null) {
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, unknown>} */
   const updatedValues = { ...currentValues };
   /** @type {Record<string, boolean>} */
   const visibleFields = {};
@@ -576,11 +582,23 @@ export function validateField(fieldMeta, val, context = {}) {
 }
 
 /**
+ * @typedef {Object} ASTExpressionNode
+ * @property {string} [node_type]
+ * @property {string} [type]
+ * @property {unknown} [value]
+ * @property {string} [operator]
+ * @property {{ field_id?: string } | null} [field_ref]
+ * @property {ASTExpressionNode[]} [children]
+ * @property {ASTExpressionNode[]} [operands]
+ * @property {ASTExpressionNode[]} [args]
+ */
+
+/**
  * @typedef {Object} ASTTraceNode
  * @property {string} type
- * @property {any} val
- * @property {string} [fieldId]
+ * @property {unknown} val
  * @property {string} [operator]
+ * @property {string} [fieldId]
  * @property {ASTTraceNode[]} [children]
  * @property {string} description
  * @property {string[]} referencedFields
@@ -590,10 +608,10 @@ export function validateField(fieldMeta, val, context = {}) {
  * Traces AST evaluation recursively and produces a detailed execution tree with
  * intermediate truth values, operand evaluations, and referenced field dependencies.
  *
- * @param {Record<string, any> | null | undefined} node - AST ExpressionNode
- * @param {Record<string, any>} [context={}] - Data payload (field_id -> value)
- * @param {Record<string, number>} [currentIndices={}] - Map of repeat indices
- * @returns {ASTTraceNode} Trace node { type, val, operator, children, description, referencedFields }
+ * @param {ASTExpressionNode | Record<string, unknown> | null | undefined} node - AST ExpressionNode
+ * @param {Record<string, unknown>} [context] - Data payload (field_id -> value)
+ * @param {Record<string, number>} [currentIndices] - Map of repeat indices
+ * @returns {ASTTraceNode}
  */
 export function traceASTEvaluation(node, context = {}, currentIndices = {}) {
   if (!node) {

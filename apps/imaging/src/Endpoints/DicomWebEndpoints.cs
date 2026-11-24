@@ -82,16 +82,6 @@ public static class DicomWebEndpoints
         return routes;
     }
 
-    // The operator recorded on a de-identification certificate is the signed caller, never a request header (ADR-2516).
-    private static string OperatorIdentity(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted imaging upload has no signed caller.");
-
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static IResult PayloadTooLargeResult(string? detail = null) =>
         TypedResults.Problem(
             detail: string.IsNullOrWhiteSpace(detail) ? BatchPayloadTooLargeException.DefaultMessage : detail,
@@ -99,6 +89,21 @@ public static class DicomWebEndpoints
 
     private static IResult EmptyBatchPayloadResult() =>
         TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Batch payload cannot be empty." });
+
+    private static IResult MissingUploadScopeResult() =>
+        TypedResults.BadRequest(new
+        {
+            code = "MISSING_SCOPE",
+            message = "studyId, siteId, and subjectId are required and cannot be empty."
+        });
+
+    private static bool IsMissingUploadScope(string? studyValue, string? siteValue, string? subjectValue) =>
+        string.IsNullOrWhiteSpace(studyValue)
+        || string.IsNullOrWhiteSpace(siteValue)
+        || string.IsNullOrWhiteSpace(subjectValue);
+
+    private static bool HasCompleteUploadScope(BatchRequestMetadata metadata) =>
+        !IsMissingUploadScope(metadata.StudyValue, metadata.SiteValue, metadata.SubjectValue);
 
     public static async Task<IResult> StoreInstancesAsync(
         HttpRequest request,
@@ -113,15 +118,30 @@ public static class DicomWebEndpoints
             return PayloadTooLargeResult($"Payload exceeds maximum {MaxSingleInstanceSizeBytes / (1024 * 1024)} MB single-instance size limit.");
         }
 
-        string subjectId = request.Query["subjectId"].ToString();
-        string siteId = request.Query["siteId"].ToString();
-        string studyId = request.Query["studyId"].ToString();
+        string subjectId = request.Query["subjectId"].ToString().Trim();
+        string siteId = request.Query["siteId"].ToString().Trim();
+        string studyId = request.Query["studyId"].ToString().Trim();
 
         await using var pooledPayload = new PooledBlockStream();
         try
         {
             if (request.HasFormContentType && request.Form.Files.Count > 0)
             {
+                if (string.IsNullOrWhiteSpace(subjectId))
+                {
+                    subjectId = request.Form["subjectId"].ToString().Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(siteId))
+                {
+                    siteId = request.Form["siteId"].ToString().Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(studyId))
+                {
+                    studyId = request.Form["studyId"].ToString().Trim();
+                }
+
                 var file = request.Form.Files[0];
                 if (file.Length > MaxSingleInstanceSizeBytes)
                 {
@@ -148,9 +168,14 @@ public static class DicomWebEndpoints
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, studyId, siteId) is not null)
+        if (IsMissingUploadScope(studyId, siteId, subjectId))
         {
-            return OutsideStudy();
+            return MissingUploadScopeResult();
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, studyId, siteId) is not null)
+        {
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         pooledPayload.Position = 0;
@@ -164,7 +189,7 @@ public static class DicomWebEndpoints
                 subjectId: subjectId,
                 siteId: siteId,
                 studyId: studyId,
-                operatorIdentity: OperatorIdentity(request.HttpContext),
+                operatorIdentity: CallerScope.RequiredUserId(request.HttpContext, "An admitted imaging upload has no signed caller."),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
@@ -199,10 +224,10 @@ public static class DicomWebEndpoints
 
         var metadata = new BatchRequestMetadata
         {
-            SubjectValue = request.Query["subjectId"].ToString(),
-            SiteValue = request.Query["siteId"].ToString(),
-            StudyValue = request.Query["studyId"].ToString(),
-            TimepointName = request.Query["timepointName"].ToString()
+            SubjectValue = request.Query["subjectId"].ToString().Trim(),
+            SiteValue = request.Query["siteId"].ToString().Trim(),
+            StudyValue = request.Query["studyId"].ToString().Trim(),
+            TimepointName = request.Query["timepointName"].ToString().Trim()
         };
 
         try
@@ -307,7 +332,7 @@ public static class DicomWebEndpoints
             }
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        if (!HasCompleteUploadScope(metadata))
         {
             if (!request.ContentLength.HasValue)
             {
@@ -319,7 +344,22 @@ public static class DicomWebEndpoints
                 }
             }
 
-            return OutsideStudy();
+            return MissingUploadScopeResult();
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                foreach (var file in form.Files)
+                {
+                    await using var rawStream = file.OpenReadStream();
+                    await using var guarded = new BudgetedReadStream(rawStream, budget);
+                    await BatchStreamHelpers.DrainAsync(guarded, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var state = new FormEnumerationState();
@@ -424,9 +464,9 @@ public static class DicomWebEndpoints
             return EmptyBatchPayloadResult();
         }
 
-        if (!string.IsNullOrWhiteSpace(metadata.StudyValue))
+        if (HasCompleteUploadScope(metadata))
         {
-            if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+            if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
             {
                 if (!request.ContentLength.HasValue)
                 {
@@ -435,7 +475,7 @@ public static class DicomWebEndpoints
                     await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
                 }
 
-                return OutsideStudy();
+                return ClinicalScopeGuard.OutsideStudy();
             }
 
             var batchRequest = CreateStreamingBatchRequest(
@@ -539,9 +579,14 @@ public static class DicomWebEndpoints
 
             await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
 
-            if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+            if (!HasCompleteUploadScope(metadata))
             {
-                return OutsideStudy();
+                return MissingUploadScopeResult();
+            }
+
+            if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+            {
+                return ClinicalScopeGuard.OutsideStudy();
             }
 
             var batchRequest = CreateStreamingBatchRequest(
@@ -593,14 +638,24 @@ public static class DicomWebEndpoints
             return EmptyBatchPayloadResult();
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        if (!HasCompleteUploadScope(metadata))
         {
             if (!request.ContentLength.HasValue)
             {
                 await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
             }
 
-            return OutsideStudy();
+            return MissingUploadScopeResult();
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+            }
+
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         bool isZipContent = request.ContentType?.Contains("zip", StringComparison.OrdinalIgnoreCase) ?? false;
@@ -634,7 +689,7 @@ public static class DicomWebEndpoints
             SiteId: metadata.SiteValue,
             StudyId: metadata.StudyValue,
             TimepointName: metadata.TimepointName,
-            OperatorIdentity: OperatorIdentity(httpContext))
+            OperatorIdentity: CallerScope.RequiredUserId(httpContext, "An admitted imaging upload has no signed caller."))
         {
             StreamFiles = streamFiles
         };
@@ -717,21 +772,22 @@ public static class DicomWebEndpoints
             return;
         }
 
+        string trimmed = value.Trim();
         if (fieldName.Equals("subjectId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.SubjectValue))
         {
-            metadata.SubjectValue = value;
+            metadata.SubjectValue = trimmed;
         }
         else if (fieldName.Equals("siteId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.SiteValue))
         {
-            metadata.SiteValue = value;
+            metadata.SiteValue = trimmed;
         }
         else if (fieldName.Equals("studyId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.StudyValue))
         {
-            metadata.StudyValue = value;
+            metadata.StudyValue = trimmed;
         }
         else if (fieldName.Equals("timepointName", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.TimepointName))
         {
-            metadata.TimepointName = value;
+            metadata.TimepointName = trimmed;
         }
     }
 
@@ -793,13 +849,14 @@ public static class DicomWebEndpoints
         }
     }
 
-    private static async Task<IResult> GetStudyByUidAsync(
+    public static async Task<IResult> GetStudyByUidAsync(
         string studyUid,
         ImagingDbContext dbContext,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var study = await dbContext.ImagingStudyEnvelopes
+            .AsNoTracking()
             .FirstOrDefaultAsync(s => s.StudyInstanceUid == studyUid || s.Id == studyUid, cancellationToken)
             .ConfigureAwait(false);
 
@@ -821,27 +878,42 @@ public static class DicomWebEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        _ = studyUid;
-        _ = seriesUid;
         _ = frameList;
+
+        if (string.IsNullOrWhiteSpace(studyUid)
+            || string.IsNullOrWhiteSpace(seriesUid)
+            || string.IsNullOrWhiteSpace(instanceUid))
+        {
+            return TypedResults.NotFound(new { code = "INSTANCE_NOT_FOUND", message = $"Instance '{instanceUid}' not found." });
+        }
 
         var instance = await dbContext.ImagingInstanceEnvelopes
             .AsNoTracking()
             .FirstOrDefaultAsync(i => i.SopInstanceUid == instanceUid || i.Id == instanceUid, cancellationToken)
             .ConfigureAwait(false);
 
-        var parentStudy = instance == null
+        var parentEnvelope = instance == null
             ? null
             : await (from series in dbContext.ImagingSeriesEnvelopes.AsNoTracking()
                      join study in dbContext.ImagingStudyEnvelopes.AsNoTracking() on series.StudyEnvelopeId equals study.Id
                      where series.Id == instance.SeriesEnvelopeId
-                     select new { study.StudyId, study.SiteId })
+                     select new
+                     {
+                         study.Id,
+                         study.StudyInstanceUid,
+                         study.StudyId,
+                         study.SiteId,
+                         SeriesEnvelopeId = series.Id,
+                         series.SeriesInstanceUid
+                     })
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
         if (instance == null
-            || parentStudy == null
-            || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, parentStudy.StudyId, parentStudy.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
+            || parentEnvelope == null
+            || (parentEnvelope.StudyInstanceUid != studyUid && parentEnvelope.Id != studyUid)
+            || (parentEnvelope.SeriesInstanceUid != seriesUid && parentEnvelope.SeriesEnvelopeId != seriesUid)
+            || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, parentEnvelope.StudyId, parentEnvelope.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { code = "INSTANCE_NOT_FOUND", message = $"Instance '{instanceUid}' not found." });
         }

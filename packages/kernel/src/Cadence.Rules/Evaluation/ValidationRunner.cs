@@ -79,8 +79,7 @@ public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evalu
         }
 
         var datasets = request.Datasets ?? [.. request.Records.Select(r => r.Dataset).Distinct(StringComparer.Ordinal)];
-        var covered = datasets.ToHashSet(StringComparer.Ordinal);
-        var records = request.Datasets is null ? request.Records : [.. request.Records.Where(r => covered.Contains(r.Dataset))];
+        var covered = request.Datasets is null ? null : datasets.ToHashSet(StringComparer.Ordinal);
         var effectiveClock = clock ?? SystemClock.Instance;
         var started = effectiveClock.UtcNow;
         var context = new RuleEvaluationContext(request.Stage, request.AsOf)
@@ -92,10 +91,8 @@ public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evalu
         var detections = new List<ValidationDetection>();
         foreach (var pack in packs)
         {
-            foreach (var violation in evaluator.Evaluate(pack.Pack, context, records))
-            {
-                detections.Add(Detection(pack.Key, request.TargetKind, violation));
-            }
+            var sink = new ValidationDetectionSink(pack.Key, request.TargetKind, detections);
+            evaluator.Evaluate(pack.Pack, context, new RuleRecordListCursor(request.Records, covered), sink);
         }
 
         var completed = effectiveClock.UtcNow;
@@ -140,6 +137,44 @@ public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evalu
             [.. violation.Observed.Select(o => new ObservedVariable(o.Variable, o.Value.IsNull ? null : Shorten(o.Value.ToString())))]);
     }
 
+    /// <summary>The detection a streamed violation hit records. Observed values longer than a detection holds are shortened.</summary>
+    public static ValidationDetection Detection(string packKey, FindingTargetKind targetKind, RuleViolationHit violation)
+    {
+        ObservedVariable[] observed;
+        if (violation.Observed.Length == 0)
+        {
+            observed = [];
+        }
+        else
+        {
+            observed = new ObservedVariable[violation.Observed.Length];
+            for (var i = 0; i < violation.Observed.Length; i++)
+            {
+                var item = violation.Observed[i];
+                observed[i] = new ObservedVariable(item.Variable, item.Value.IsNull ? null : Shorten(item.Value.ToString()));
+            }
+        }
+
+        return new ValidationDetection(
+            packKey,
+            violation.RuleId,
+            violation.RuleVersion,
+            violation.Severity,
+            new FindingTarget(targetKind, violation.Dataset, violation.RecordKey),
+            violation.Explanation,
+            Expected: null,
+            observed);
+    }
+
     private static string Shorten(string value) =>
         value.Length <= ValidationDetection.MaxTextLength ? value : string.Concat(value.AsSpan(0, ValidationDetection.MaxTextLength - 1), "…");
+
+    private sealed class ValidationDetectionSink(
+        string packKey,
+        FindingTargetKind targetKind,
+        List<ValidationDetection> detections) : IRuleViolationSink
+    {
+        public void OnViolation(RuleViolationHit violation) =>
+            detections.Add(Detection(packKey, targetKind, violation));
+    }
 }

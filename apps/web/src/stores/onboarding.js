@@ -16,7 +16,7 @@ import {
   PERSONA_TOUR_SEQUENCES,
   getPersonaOnboardingEntry,
 } from "../catalog/staffPersonaOnboarding.js";
-import { isScreenAvailable } from "../router/availability";
+import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
@@ -134,27 +134,107 @@ export function effectiveRolesForPersonaLens(personaKey, authStoreOverride) {
   return resolveLensEffectiveRoles(personaKey, authStore?.rawRoles || []);
 }
 
-function normalizeTaskRouteName(task) {
+function extractObservationRefFromTask(task) {
   const raw =
     typeof task === "string"
       ? task.trim()
-      : task?.routeName
-        ? ""
-        : typeof task?.route === "string"
-          ? task.route.trim()
-          : "";
-  if (typeof task === "object" && task?.routeName) return task.routeName;
-  if (!raw) return null;
-  if (raw === "/studies" || raw.startsWith("/studies/")) return "study";
-  if (raw.startsWith("/observations/")) return "observation";
-  const withoutQuery = raw.split("?")[0];
-  return withoutQuery.startsWith("/") ? withoutQuery.slice(1) : withoutQuery;
+      : typeof task?.route === "string"
+        ? task.route.trim()
+        : "";
+  const cleanPath = raw.split("?")[0];
+  if (!cleanPath.startsWith("/observations/")) return "";
+  return decodeURIComponent(cleanPath.slice("/observations/".length)).trim();
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
+function normalizeTaskRouteName(task) {
+  if (typeof task === "object" && task?.routeName) return task.routeName;
+  const raw =
+    typeof task === "string"
+      ? task.trim()
+      : typeof task?.route === "string"
+        ? task.route.trim()
+        : "";
+  if (!raw) return null;
+  const cleanPath = raw.split("?")[0];
+  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
+    return "study";
+  }
+  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
+    return "observation";
+  }
+  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
+}
+
+function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
+  if (explicitScope && typeof explicitScope === "object") {
+    const siteId = String(explicitScope.siteId || "").trim();
+    return {
+      studyCode: String(explicitScope.studyCode || "").trim(),
+      siteId,
+      explicitSiteId:
+        explicitScope.explicitSiteId !== undefined
+          ? String(explicitScope.explicitSiteId || "").trim()
+          : siteId,
+      subjectCode: String(explicitScope.subjectCode || "").trim(),
+      participantRef: String(explicitScope.participantRef || "").trim(),
+      enrollmentId: String(explicitScope.enrollmentId || "").trim(),
+      observationRef: String(explicitScope.observationRef || "").trim(),
+    };
+  }
+  const piniaState = (explicitPinia || getActivePinia())?.state?.value;
+  if (!piniaState) {
+    return {
+      studyCode: "",
+      siteId: "",
+      explicitSiteId: "",
+      subjectCode: "",
+      participantRef: "",
+      enrollmentId: "",
+      observationRef: "",
+    };
+  }
+  const demo = isDemoBuild();
+  const canvasState = piniaState.studyCanvas;
+  const clinicalState = piniaState.clinicalScope ?? piniaState.clinical;
+  const canvasStudy = String(canvasState?.studyCode || "").trim();
+  const clinicalStudy = !demo
+    ? String(clinicalState?.activeStudyId || "").trim()
+    : "";
+  const studyCode = canvasStudy || clinicalStudy;
+  let siteId = "";
+  if (studyCode) {
+    if (canvasStudy === studyCode) {
+      siteId = String(canvasState?.participantsFilter?.siteId || "").trim();
+    }
+    if (
+      !siteId &&
+      !demo &&
+      String(clinicalState?.activeStudyId || "").trim() === studyCode
+    ) {
+      siteId = String(clinicalState?.activeSiteId || "").trim();
+    }
+  }
+  return {
+    studyCode,
+    siteId,
+    explicitSiteId: siteId,
+    subjectCode: "",
+    participantRef: "",
+    enrollmentId: "",
+    observationRef: "",
+  };
+}
+
+export function resolveAuthorizedTaskRoute(
+  task,
+  userRoles,
+  explicitScope,
+  explicitPinia
+) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
+  const scope = readOnboardingWorkspaceScope(explicitScope, explicitPinia);
 
   const studyCode = scope?.studyCode?.trim() || "";
   const siteId = scope?.siteId?.trim() || "";
@@ -199,11 +279,16 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   }
   if (routeName === "observation") {
     if (!isTourRouteAuthorized("observation", userRoles)) return null;
-    if (observationRef) {
+    const resolvedObsRef =
+      observationRef || extractObservationRefFromTask(task);
+    if (resolvedObsRef) {
       return buildScopedWorkflowPath(
-        `/observations/${encodeURIComponent(observationRef)}`,
+        `/observations/${encodeURIComponent(resolvedObsRef)}`,
         workflowScope
       );
+    }
+    if (isDemoBuild() && DEMO_MODULE_CATALOG.observation?.defaultPath) {
+      return DEMO_MODULE_CATALOG.observation.defaultPath;
     }
     return isScreenAvailable("study")
       ? buildStudiesWorkspacePath({ ...workflowScope, participantRef })
@@ -214,19 +299,40 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
       ? buildScopedWorkflowPath(`/${routeName}`, workflowScope)
       : null;
   }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(routeName)) return null;
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    ) {
+      return null;
+    }
+    if (catalogEntry.routeName === "observation") {
+      return catalogEntry.defaultPath;
+    }
+    return buildScopedWorkflowPath(catalogEntry.defaultPath, workflowScope);
+  }
   return null;
 }
 
 export function isTourRouteAuthorized(routeName, userRoles) {
   if (!routeName) return true;
-  if (
-    NON_ONBOARDING_ROUTES.has(routeName) ||
-    !(routeName in ROUTE_REQUIRED_ROLES)
-  ) {
+  if (NON_ONBOARDING_ROUTES.has(routeName)) {
     return false;
   }
   if (!isScreenAvailable(routeName)) return false;
-  return hasRequiredRole(userRoles, ROUTE_REQUIRED_ROLES[routeName]);
+  if (routeName in ROUTE_REQUIRED_ROLES) {
+    return hasRequiredRole(userRoles, ROUTE_REQUIRED_ROLES[routeName]);
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    return (
+      catalogEntry.requiresRole.length === 0 ||
+      hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    );
+  }
+  return false;
 }
 
 function getActivePersona() {
@@ -476,10 +582,17 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForPersonaLens(state.currentPersona);
+      const storePinia =
+        /** @type {{ _p?: import("pinia").Pinia } | undefined} */ (this)?._p;
       /** @type {typeof DEFAULT_SETUP_TASKS} */
       const visible = [];
       for (const task of state.tasks || []) {
-        const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+        const resolvedRoute = resolveAuthorizedTaskRoute(
+          task,
+          roles,
+          undefined,
+          storePinia
+        );
         if (resolvedRoute) {
           visible.push({ ...task, route: resolvedRoute });
         }

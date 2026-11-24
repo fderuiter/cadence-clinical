@@ -668,10 +668,11 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       expect(headers["Authorization"]).toBeUndefined();
     });
 
-    it("surfaces an error state on authenticated (non-demo) dispatch failures instead of falling back silently to mocks", async () => {
+    it("skips unmounted interop/econsent endpoints during authenticated non-demo boot and surfaces error states instead of mocks on direct loader failure", async () => {
       const portal = await import("../src/index.js");
       portal.state.session.isDemoMode = false;
       portal.state.session.isOfflineMode = false;
+      portal.state.session.userId = "subject_live_001";
       portal.state.session.token = "some_token";
 
       // Mock fetch rejection
@@ -684,7 +685,8 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Initialize application under non-demo, online authenticated context
       await portal.initializeApp();
 
-      // Startup skips unbacked interop/econsent fetches outside demo mode and loads zero mocks
+      // Startup skips unbacked interop/econsent fetches outside demo mode, opens wallet, and loads zero mocks
+      expect(portal.state.currentView).toBe("view-wallet");
       expect(portal.state.assignments).toEqual([]);
       expect(portal.state.notifications).toEqual([]);
       const startupUrls = globalThis.fetch.mock.calls.map((c) => String(c[0]));

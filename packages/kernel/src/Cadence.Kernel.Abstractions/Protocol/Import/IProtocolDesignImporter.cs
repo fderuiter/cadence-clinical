@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 
@@ -66,20 +67,54 @@ public delegate ValueTask<ProtocolConceptResolution> ProtocolConceptResolver(
     ProtocolConceptCandidate candidate,
     CancellationToken cancellationToken);
 
+/// <summary>
+/// Candidate terminology codelist or external dictionary binding requested by an imported collection item so the host can
+/// resolve an existing <c>CodeSystemVersion</c> or import a pinned codelist version into the tenant's Concept Registry.
+/// </summary>
+/// <param name="SourceKey">Deterministic source identifier for the codelist or property value set.</param>
+/// <param name="CodelistCode">Optional codelist group code to bind on <see cref="TerminologyBinding.Codelist"/>.</param>
+/// <param name="CodelistName">Human-readable name of the codelist or value set.</param>
+/// <param name="CodeSystemUri">Optional canonical URI or dictionary identifier of the source code system.</param>
+/// <param name="CodeSystemName">Optional display name of the source code system.</param>
+/// <param name="CodeSystemVersion">Optional version label of the source code system.</param>
+/// <param name="Entries">Inline codelist entries supplied by the imported document, when enumerated.</param>
+public sealed record ProtocolTerminologyCandidate(
+    string SourceKey,
+    string? CodelistCode,
+    string CodelistName,
+    string? CodeSystemUri,
+    string? CodeSystemName,
+    string? CodeSystemVersion,
+    IReadOnlyList<CodeSystemEntryData> Entries);
+
+/// <summary>Result of resolving or registering a <see cref="TerminologyBinding"/> in the tenant's Concept Registry.</summary>
+/// <param name="Binding">Resolved terminology binding, or null when unresolved or empty.</param>
+/// <param name="ErrorMessage">Blocking error message when terminology registration failed.</param>
+public sealed record ProtocolTerminologyResolution(
+    TerminologyBinding? Binding,
+    string? ErrorMessage = null);
+
+/// <summary>Delegate invoked by <see cref="IProtocolDesignImporter"/> to resolve or register pinned terminology bindings.</summary>
+public delegate ValueTask<ProtocolTerminologyResolution> ProtocolTerminologyResolver(
+    ProtocolTerminologyCandidate candidate,
+    CancellationToken cancellationToken);
+
 /// <summary>Input specification for synchronous protocol design import.</summary>
 /// <param name="RawBytes">Uploaded file payload bytes, when importing an uploaded ODM v1.3.2 XML or USDM v4 JSON file.</param>
 /// <param name="FileName">Original file name of the uploaded document, when present.</param>
 /// <param name="Format">Requested import format, or <see cref="ProtocolImportFormat.Auto"/>.</param>
 /// <param name="TemplateIds">Selected bundled template identifiers to import, when assembling from library templates.</param>
-/// <param name="BaseDesign">Existing draft design to merge forms into when revising or appending forms, or null for a fresh draft.</param>
+/// <param name="BaseDesign">Existing draft design to merge into or preserve non-form sections from, or null for a fresh draft.</param>
 /// <param name="FallbackTitle">Study title used when the imported forms do not carry a protocol title.</param>
+/// <param name="ReplaceForms">True to replace existing <see cref="ProtocolDesign.CollectionSpecs"/> while preserving non-form sections.</param>
 public sealed record ProtocolDesignImportRequest(
     byte[]? RawBytes = null,
     string? FileName = null,
     ProtocolImportFormat Format = ProtocolImportFormat.Auto,
     IReadOnlyList<string>? TemplateIds = null,
     ProtocolDesign? BaseDesign = null,
-    string? FallbackTitle = null);
+    string? FallbackTitle = null,
+    bool ReplaceForms = false);
 
 /// <summary>Compiled <c>RulePack</c> library item payload produced during ODM v1.3.2 protocol import.</summary>
 /// <param name="Key">Stable library item key derived from the protocol metadata.</param>
@@ -125,5 +160,6 @@ public interface IProtocolDesignImporter
     Task<ProtocolDesignImportResult> ImportAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null);
 }

@@ -62,6 +62,17 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
         return Task.FromResult(subject);
     }
 
+    public Task<ClinicalSubject?> GetByKernelEnrollmentIdAsync(Guid enrollmentId, CancellationToken cancellationToken)
+    {
+        if (enrollmentId == Guid.Empty)
+        {
+            return Task.FromResult<ClinicalSubject?>(null);
+        }
+
+        var match = _store.Values.FirstOrDefault(s => s.KernelEnrollmentId == enrollmentId);
+        return Task.FromResult(match);
+    }
+
     public Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(code))

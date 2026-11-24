@@ -106,7 +106,13 @@
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
 import { getActivePinia } from "pinia";
 import { useRouter, useRoute } from "vue-router";
-import { useFocusTrap, useEscapeClose } from "ui";
+import {
+  handoffFocus,
+  useEscapeClose,
+  useFocusTrap,
+  useInlineFocusHandoff,
+} from "ui";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import { resolveLensEffectiveRoles } from "../catalog/staffPersonaCore.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
@@ -266,8 +272,15 @@ const showArrow = computed(() =>
   )
 );
 
+const tourHandoff = useInlineFocusHandoff({
+  closeFallback: [".btn-start-tour", "#btn-onboarding-checklist-trigger"],
+});
+let launchedFromChecklistDrawer = false;
+let pendingAnchoredFocus = false;
+
 useFocusTrap(popoverRef, {
   isOpen: isModalStep,
+  restoreFocus: false,
   onEscape: () => onboardingStore.dismissTour(),
 });
 
@@ -304,6 +317,42 @@ function resolveViewportMetrics(zoomScale = 1) {
     vpOffsetTop: (vv?.offsetTop || 0) / effectiveZoom,
   };
 }
+
+watch(
+  isTourOpen,
+  (open, prevOpen) => {
+    if (open && !prevOpen) {
+      const activeEl =
+        typeof document !== "undefined" ? document.activeElement : null;
+      launchedFromChecklistDrawer = Boolean(
+        onboardingStore.isDrawerOpen ||
+        (activeEl &&
+          activeEl !== document.body &&
+          (activeEl.id === "btn-drawer-start-tour" ||
+            activeEl.id === "btn-onboarding-checklist-trigger" ||
+            activeEl.closest?.(
+              ".checklist-drawer, #onboarding-checklist-drawer"
+            )))
+      );
+      tourHandoff.rememberTrigger(
+        launchedFromChecklistDrawer
+          ? "#btn-onboarding-checklist-trigger"
+          : activeEl && activeEl !== document.body
+            ? activeEl
+            : null
+      );
+      pendingAnchoredFocus = Boolean(currentStepConfig.value?.targetSelector);
+    } else if (!open && prevOpen) {
+      pendingAnchoredFocus = false;
+      const fallbackOrder = launchedFromChecklistDrawer
+        ? ["#btn-onboarding-checklist-trigger", ".btn-start-tour"]
+        : [".btn-start-tour", "#btn-onboarding-checklist-trigger"];
+      launchedFromChecklistDrawer = false;
+      void tourHandoff.restoreTrigger(fallbackOrder);
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
 
 function buildCenteredPopoverStyle(cssZoomScale = 1) {
   const { vpWidth, vpHeight, vpOffsetLeft, vpOffsetTop } =
@@ -493,12 +542,15 @@ async function syncStepRoute() {
       if (!canNavigateToTourRoute(targetRouteName)) {
         return;
       }
+      const scope = resolveActiveWorkspaceScope(route, activeCanvasStore.value);
+      const effectiveStudyCode = scope.studyCode || studyCode;
+      const effectiveSiteId = scope.siteId || "";
       const isAlreadyOnRedirectedConductCanvas =
         !isDemoBuild() &&
         targetRouteName === "ecrf" &&
         route.name === "study" &&
         route.query?.stage === "conduct" &&
-        (!studyCode || route.params?.studyCode === studyCode);
+        (!effectiveStudyCode || route.params?.studyCode === effectiveStudyCode);
 
       if (
         !isAlreadyOnRedirectedConductCanvas &&
@@ -520,11 +572,15 @@ async function syncStepRoute() {
         if (targetRouteName === "study") {
           delete nextQuery.studyCode;
           delete nextQuery.studyId;
+          delete nextQuery.siteId;
+          if (effectiveSiteId && !nextQuery.site) {
+            nextQuery.site = effectiveSiteId;
+          }
           await router.push(
-            studyCode
+            effectiveStudyCode
               ? {
                   name: targetRouteName,
-                  params: { studyCode },
+                  params: { studyCode: effectiveStudyCode },
                   query: nextQuery,
                 }
               : { name: targetRouteName, query: nextQuery }
@@ -532,14 +588,22 @@ async function syncStepRoute() {
           return;
         }
 
+        delete nextQuery.site;
         if (
-          studyCode &&
+          effectiveStudyCode &&
           targetRouteName !== "overview" &&
           !nextQuery.studyCode &&
           !nextQuery.studyId
         ) {
           nextQuery[targetRouteName === "ecrf" ? "studyCode" : "studyId"] =
-            studyCode;
+            effectiveStudyCode;
+        }
+        if (
+          effectiveSiteId &&
+          targetRouteName !== "overview" &&
+          !nextQuery.siteId
+        ) {
+          nextQuery.siteId = effectiveSiteId;
         }
         await router.push({ name: targetRouteName, query: nextQuery });
         return;
@@ -737,8 +801,16 @@ const updatePosition = () => {
           nextStyle.maxHeight = `${maxAllowedHeight}px`;
         }
         popoverStyle.value = nextStyle;
+        const wasTargetElement = hasTargetElement.value;
         hasTargetElement.value = true;
         currentRafId = null;
+        if ((!wasTargetElement || pendingAnchoredFocus) && !isModalStep.value) {
+          pendingAnchoredFocus = false;
+          void handoffFocus(popoverRef, {
+            scrollIfOffscreen: false,
+            includeDefaultFallbacks: false,
+          });
+        }
         return;
       }
     }
@@ -751,6 +823,13 @@ const updatePosition = () => {
       isArrowDetached.value = true;
       popoverStyle.value = buildCenteredPopoverStyle(zoomScale);
       currentRafId = null;
+      if (pendingAnchoredFocus && !isModalStep.value) {
+        pendingAnchoredFocus = false;
+        void handoffFocus(popoverRef, {
+          scrollIfOffscreen: false,
+          includeDefaultFallbacks: false,
+        });
+      }
     }
   };
 
@@ -805,6 +884,16 @@ const handleComplete = () => {
   onboardingStore.nextStep(stepTargetDescription.value);
   onboardingStore.disableTour();
 };
+
+watch(
+  currentStep,
+  (step, prevStep) => {
+    if (step !== prevStep && isTourOpen.value) {
+      pendingAnchoredFocus = Boolean(currentStepConfig.value?.targetSelector);
+    }
+  },
+  { flush: "sync" }
+);
 
 watch(currentStep, async () => {
   if (popoverRef.value) {
@@ -993,7 +1082,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .onboarding-popover-body {

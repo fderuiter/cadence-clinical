@@ -1,4 +1,4 @@
-# ADR-2658: Unify Staff Persona Catalog and Account-Scoped Onboarding
+# ADR-2671: Unify Staff Persona Catalog and Account-Scoped Onboarding
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
