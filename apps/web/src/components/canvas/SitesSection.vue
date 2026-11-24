@@ -40,80 +40,74 @@
       {{ feedbackBanner }}
     </div>
 
-    <div v-if="studySites.length > 0" class="table-wrap">
-      <table id="study-sites-table" class="sites-table">
-        <thead>
-          <tr>
-            <th scope="col">Site</th>
-            <th scope="col">Name</th>
-            <th scope="col">Country</th>
-            <th scope="col">Institution</th>
-            <th scope="col">Status</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="entry in studySites"
-            :id="entry.site_code ? `study-site-${entry.site_code}` : undefined"
-            :key="entry.ref || entry.site_code || 'masked'"
-            :class="{
-              selected:
-                Boolean(siteId) &&
-                Boolean(entry.site_code) &&
-                entry.site_code === siteId,
-            }"
+    <ClinicalDataTable
+      v-if="studySites.length > 0"
+      title="Sites"
+      labelled-by="sites-section-title"
+      hide-header
+      plain
+      wrapper-class="table-wrap"
+      table-id="study-sites-table"
+      table-class="sites-table"
+      :columns="siteColumns"
+      :data="studySites"
+      :row-key="(entry, idx) => entry.ref || entry.site_code || `masked-${idx}`"
+      :row-id="
+        (entry) =>
+          entry.site_code ? `study-site-${entry.site_code}` : undefined
+      "
+      :row-class="
+        (entry) => ({
+          selected:
+            Boolean(siteId) &&
+            Boolean(entry.site_code) &&
+            entry.site_code === siteId,
+        })
+      "
+      :is-row-masked="(entry) => Boolean(entry.mask)"
+      external-pagination
+    >
+      <template #masked-row="{ row }">
+        Masked study site ({{ row.mask }})
+      </template>
+      <template #cell-site_code="{ row }">
+        <strong>{{ row.site_code }}</strong>
+      </template>
+      <template #cell-institution="{ row }">
+        <span v-if="row.institution_name">
+          {{ row.institution_name }}
+          <span v-if="row.institution_code" class="muted-code">
+            ({{ row.institution_code }})
+          </span>
+        </span>
+        <span v-else class="muted-code">—</span>
+      </template>
+      <template #cell-status="{ row }">
+        <span class="status-pill">{{ row.status || "Selected" }}</span>
+      </template>
+      <template #cell-actions="{ row }">
+        <div class="actions-cell">
+          <button
+            v-if="row.site_code"
+            :id="`btn-site-participants-${row.site_code}`"
+            type="button"
+            class="btn btn-secondary btn-compact"
+            @click="emit('openParticipants', row.site_code)"
           >
-            <template v-if="entry.mask">
-              <td colspan="6" class="masked-cell">
-                Masked study site ({{ entry.mask }})
-              </td>
-            </template>
-            <template v-else>
-              <td class="code-cell">
-                <strong>{{ entry.site_code }}</strong>
-              </td>
-              <td>{{ entry.site_name }}</td>
-              <td>{{ entry.country }}</td>
-              <td>
-                <span v-if="entry.institution_name">
-                  {{ entry.institution_name }}
-                  <span v-if="entry.institution_code" class="muted-code">
-                    ({{ entry.institution_code }})
-                  </span>
-                </span>
-                <span v-else class="muted-code">—</span>
-              </td>
-              <td>
-                <span class="status-pill">{{
-                  entry.status || "Selected"
-                }}</span>
-              </td>
-              <td class="actions-cell">
-                <button
-                  v-if="entry.site_code"
-                  :id="`btn-site-participants-${entry.site_code}`"
-                  type="button"
-                  class="btn btn-secondary btn-compact"
-                  @click="emit('openParticipants', entry.site_code)"
-                >
-                  Participants
-                </button>
-                <button
-                  v-if="entry.site_code"
-                  :id="`btn-site-activation-${entry.site_code}`"
-                  type="button"
-                  class="btn btn-secondary btn-compact"
-                  @click="emit('openActivation', entry.site_code)"
-                >
-                  Site activation
-                </button>
-              </td>
-            </template>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            Participants
+          </button>
+          <button
+            v-if="row.site_code"
+            :id="`btn-site-activation-${row.site_code}`"
+            type="button"
+            class="btn btn-secondary btn-compact"
+            @click="emit('openActivation', row.site_code)"
+          >
+            Site activation
+          </button>
+        </div>
+      </template>
+    </ClinicalDataTable>
 
     <section
       v-if="unlinkedSites.length > 0"
@@ -144,35 +138,38 @@
         @submit.prevent="submitLinkExisting"
       >
         <div class="form-grid">
-          <div class="field">
-            <label for="link-site-picker">Workspace site</label>
-            <select
-              id="link-site-picker"
-              v-model="selectedExistingSiteRef"
-              :disabled="linking"
+          <ClinicalInput
+            id="link-site-picker"
+            v-model="selectedExistingSiteRef"
+            label="Workspace site"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field"
+            :disabled="linking"
+          >
+            <option
+              v-for="site in unlinkedSites"
+              :key="site.ref"
+              :value="site.ref"
             >
-              <option
-                v-for="site in unlinkedSites"
-                :key="site.ref"
-                :value="site.ref"
-              >
-                {{ site.code }} — {{ site.name }} ({{ site.country }})
-              </option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="link-site-reason">Reason for change (required)</label>
-            <input
-              id="link-site-reason"
-              v-model="linkReason"
-              type="text"
-              maxlength="500"
-              autocomplete="off"
-              placeholder="e.g. Select site for clinical study conduct"
-              :disabled="linking"
-              required
-            />
-          </div>
+              {{ site.code }} — {{ site.name }} ({{ site.country }})
+            </option>
+          </ClinicalInput>
+          <ClinicalInput
+            id="link-site-reason"
+            v-model="linkReason"
+            label="Reason for change (required)"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field"
+            :maxlength="500"
+            autocomplete="off"
+            placeholder="e.g. Select site for clinical study conduct"
+            :disabled="linking"
+            required
+          />
         </div>
         <button
           id="btn-link-existing-site"
@@ -211,101 +208,100 @@
         @submit.prevent="submitRegisterSite"
       >
         <div class="form-grid">
-          <div class="field">
-            <label for="register-site-code">Site code</label>
-            <input
-              id="register-site-code"
-              v-model="newSiteCode"
-              type="text"
-              maxlength="64"
-              autocomplete="off"
-              placeholder="e.g. SITE-01"
-              :disabled="registering"
-              required
-            />
-          </div>
+          <ClinicalInput
+            id="register-site-code"
+            v-model="newSiteCode"
+            label="Site code"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field"
+            :maxlength="64"
+            autocomplete="off"
+            placeholder="e.g. SITE-01"
+            :disabled="registering"
+            required
+          />
 
-          <div class="field">
-            <label for="register-site-country">
-              Country (2-letter ISO 3166-1)
-            </label>
-            <input
-              id="register-site-country"
-              v-model="newSiteCountry"
-              type="text"
-              maxlength="2"
-              autocomplete="off"
-              placeholder="US"
-              :disabled="registering"
-              required
-            />
-          </div>
+          <ClinicalInput
+            id="register-site-country"
+            v-model="newSiteCountry"
+            label="Country (2-letter ISO 3166-1)"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field"
+            :maxlength="2"
+            autocomplete="off"
+            placeholder="US"
+            :disabled="registering"
+            required
+          />
 
-          <div class="field field-wide">
-            <label for="register-site-name">Site name</label>
-            <input
-              id="register-site-name"
-              v-model="newSiteName"
-              type="text"
-              maxlength="200"
-              autocomplete="off"
-              placeholder="e.g. Metro Cardiology Research Center"
-              :disabled="registering"
-              required
-            />
-          </div>
+          <ClinicalInput
+            id="register-site-name"
+            v-model="newSiteName"
+            label="Site name"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field field-wide"
+            :maxlength="200"
+            autocomplete="off"
+            placeholder="e.g. Metro Cardiology Research Center"
+            :disabled="registering"
+            required
+          />
 
-          <div class="field field-wide">
-            <label for="register-site-institution-choice">
-              Site institution
-            </label>
-            <select
-              id="register-site-institution-choice"
-              v-model="selectedInstitutionChoice"
-              :disabled="registering"
+          <ClinicalInput
+            id="register-site-institution-choice"
+            v-model="selectedInstitutionChoice"
+            label="Site institution"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field field-wide"
+            :disabled="registering"
+          >
+            <option
+              v-for="org in siteInstitutions"
+              :key="org.ref"
+              :value="org.ref"
             >
-              <option
-                v-for="org in siteInstitutions"
-                :key="org.ref"
-                :value="org.ref"
-              >
-                {{ org.name }} ({{ org.code }})
-              </option>
-              <option value="__new__">Register new site institution…</option>
-            </select>
-          </div>
+              {{ org.name }} ({{ org.code }})
+            </option>
+            <option value="__new__">Register new site institution…</option>
+          </ClinicalInput>
 
           <template v-if="selectedInstitutionChoice === '__new__'">
-            <div class="field">
-              <label for="register-site-institution-name">
-                Institution name
-              </label>
-              <input
-                id="register-site-institution-name"
-                v-model="newInstitutionName"
-                type="text"
-                maxlength="200"
-                autocomplete="off"
-                placeholder="e.g. Metro University Hospital"
-                :disabled="registering"
-                required
-              />
-            </div>
+            <ClinicalInput
+              id="register-site-institution-name"
+              v-model="newInstitutionName"
+              label="Institution name"
+              type="text"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="field"
+              :maxlength="200"
+              autocomplete="off"
+              placeholder="e.g. Metro University Hospital"
+              :disabled="registering"
+              required
+            />
 
-            <div class="field">
-              <label for="register-site-institution-code">
-                Institution code (optional)
-              </label>
-              <input
-                id="register-site-institution-code"
-                v-model="newInstitutionCode"
-                type="text"
-                maxlength="64"
-                autocomplete="off"
-                placeholder="e.g. METRO-HOSP"
-                :disabled="registering"
-              />
-            </div>
+            <ClinicalInput
+              id="register-site-institution-code"
+              v-model="newInstitutionCode"
+              label="Institution code (optional)"
+              type="text"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="field"
+              :maxlength="64"
+              autocomplete="off"
+              placeholder="e.g. METRO-HOSP"
+              :disabled="registering"
+            />
           </template>
 
           <div class="field field-wide checkbox-field">
@@ -320,21 +316,20 @@
             </label>
           </div>
 
-          <div class="field field-wide">
-            <label for="register-site-reason">
-              Reason for change (required)
-            </label>
-            <input
-              id="register-site-reason"
-              v-model="registerReason"
-              type="text"
-              maxlength="500"
-              autocomplete="off"
-              placeholder="e.g. Register clinical site for study startup and participant screening"
-              :disabled="registering"
-              required
-            />
-          </div>
+          <ClinicalInput
+            id="register-site-reason"
+            v-model="registerReason"
+            label="Reason for change (required)"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field field-wide"
+            :maxlength="500"
+            autocomplete="off"
+            placeholder="e.g. Register clinical site for study startup and participant screening"
+            :disabled="registering"
+            required
+          />
         </div>
 
         <button
@@ -352,6 +347,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { ClinicalDataTable, ClinicalInput } from "ui";
 import {
   describeKernelError,
   kernelApi,
@@ -380,6 +376,15 @@ const emit = defineEmits<{
   openParticipants: [siteCode: string];
   openActivation: [siteCode: string];
 }>();
+
+const siteColumns = [
+  { key: "site_code", label: "Site", cellClass: "code-cell" },
+  { key: "site_name", label: "Name" },
+  { key: "country", label: "Country" },
+  { key: "institution", label: "Institution" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions" },
+];
 
 const loading = ref(false);
 const authStore = useAuthStore();
@@ -709,51 +714,24 @@ onMounted(() => {
   font-size: 0.92rem;
 }
 
-.table-wrap {
+:deep(.table-wrap) {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
 }
 
-.sites-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.sites-table th,
-.sites-table td {
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.sites-table th {
-  font-weight: 600;
+:deep(.sites-table tr.selected) {
   background: var(--semantic-color-surface-muted);
 }
 
-.sites-table tr:last-child td {
-  border-bottom: none;
-}
-
-.sites-table tr.selected {
-  background: var(--semantic-color-surface-muted);
-}
-
-.code-cell {
+:deep(.code-cell) {
   white-space: nowrap;
 }
 
 .muted-code {
   color: var(--semantic-color-text-secondary);
   font-size: 0.84rem;
-}
-
-.masked-cell {
-  color: var(--semantic-color-text-secondary);
-  font-style: italic;
 }
 
 .status-pill {
@@ -814,24 +792,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-bottom: 0;
 }
 
 .field-wide {
   grid-column: 1 / -1;
-}
-
-.field label {
-  font-weight: 600;
-  font-size: 0.88rem;
-}
-
-.field input,
-.field select {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text);
 }
 
 .checkbox-field {

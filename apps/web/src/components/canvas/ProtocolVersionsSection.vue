@@ -19,48 +19,47 @@
       {{ statusLine }}
     </p>
 
-    <div v-if="versions.length" class="scrollable-table-wrapper">
-      <table class="versions-table">
-        <thead>
-          <tr>
-            <th scope="col" class="numeric">Version</th>
-            <th scope="col">Status</th>
-            <th scope="col">Amends</th>
-            <th scope="col">Amendment intent</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(version, index) in versions"
-            :key="version.ref ?? `masked-${index}`"
-            :class="{
-              selected:
-                version.ref !== null && version.ref === activeSummaryVersionRef,
-            }"
-          >
-            <template v-if="version.ref !== null">
-              <th scope="row" class="numeric">
-                <button
-                  :id="`protocol-version-${version.number}`"
-                  type="button"
-                  class="row-select"
-                  :aria-pressed="version.ref === activeSummaryVersionRef"
-                  @click="emit('select', version)"
-                >
-                  {{ version.number }}
-                </button>
-              </th>
-              <td>{{ version.status }}</td>
-              <td>{{ parentNumber(version) }}</td>
-              <td>{{ version.amendment_intent || "None recorded" }}</td>
-            </template>
-            <td v-else colspan="4" class="masked-row">
-              A version you may not see ({{ maskWords(version.mask) }})
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ClinicalDataTable
+      v-if="versions.length"
+      title="Protocol versions"
+      labelled-by="protocol-versions-title"
+      hide-header
+      plain
+      wrapper-class="scrollable-table-wrapper"
+      table-class="versions-table"
+      :columns="versionColumns"
+      :data="versions"
+      :row-key="(version, index) => version.ref ?? `masked-${index}`"
+      :row-class="
+        (version) => ({
+          selected:
+            version.ref !== null && version.ref === activeSummaryVersionRef,
+        })
+      "
+      :is-row-masked="(version) => version.ref === null"
+      external-pagination
+    >
+      <template #masked-row="{ row }">
+        A version you may not see ({{ maskWords(row.mask) }})
+      </template>
+      <template #cell-number="{ row }">
+        <button
+          :id="`protocol-version-${row.number}`"
+          type="button"
+          class="row-select"
+          :aria-pressed="row.ref === activeSummaryVersionRef"
+          @click="emit('select', row)"
+        >
+          {{ row.number }}
+        </button>
+      </template>
+      <template #cell-parent="{ row }">
+        {{ parentNumber(row) }}
+      </template>
+      <template #cell-amendment_intent="{ row }">
+        {{ row.amendment_intent || "None recorded" }}
+      </template>
+    </ClinicalDataTable>
 
     <div
       v-if="governanceActionMessage"
@@ -114,20 +113,18 @@
         id="protocol-lifecycle-controls"
         class="gov-controls"
       >
-        <div class="gov-field">
-          <label for="protocol-governance-reason" class="gov-label">
-            Reason for change (required for review or return to draft)
-          </label>
-          <input
-            id="protocol-governance-reason"
-            v-model="lifecycleReason"
-            type="text"
-            class="gov-input"
-            maxlength="500"
-            placeholder="e.g. Freeze protocol design v1 for sponsor clinical and QA review"
-            :disabled="governanceBusy"
-          />
-        </div>
+        <ClinicalInput
+          id="protocol-governance-reason"
+          v-model="lifecycleReason"
+          label="Reason for change (required for review or return to draft)"
+          type="text"
+          density="compact"
+          :show-query-flag="false"
+          extra-class="gov-field"
+          :maxlength="500"
+          placeholder="e.g. Freeze protocol design v1 for sponsor clinical and QA review"
+          :disabled="governanceBusy"
+        />
 
         <div class="gov-actions">
           <button
@@ -210,49 +207,49 @@
         @submit.prevent="registerArtifact"
       >
         <div class="gov-grid">
-          <div class="gov-field">
-            <label for="protocol-artifact-kind" class="gov-label">
-              Evidence kind
-            </label>
-            <select
-              id="protocol-artifact-kind"
-              v-model="artifactForm.kind"
-              class="gov-select"
-              :disabled="governanceBusy"
-            >
-              <option value="EthicsApproval">
-                Ethics / IRB approval (EthicsApproval)
-              </option>
-              <option value="RegulatoryApproval">
-                Regulatory approval (RegulatoryApproval)
-              </option>
-              <option value="CtaAcknowledgement">
-                CTA acknowledgement (CtaAcknowledgement)
-              </option>
-            </select>
-          </div>
+          <ClinicalInput
+            id="protocol-artifact-kind"
+            v-model="artifactForm.kind"
+            label="Evidence kind"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :disabled="governanceBusy"
+          >
+            <option value="EthicsApproval">
+              Ethics / IRB approval (EthicsApproval)
+            </option>
+            <option value="RegulatoryApproval">
+              Regulatory approval (RegulatoryApproval)
+            </option>
+            <option value="CtaAcknowledgement">
+              CTA acknowledgement (CtaAcknowledgement)
+            </option>
+          </ClinicalInput>
 
-          <div class="gov-field">
-            <label for="protocol-artifact-title" class="gov-label">
-              Document title
-            </label>
-            <input
-              id="protocol-artifact-title"
-              v-model="artifactForm.title"
-              type="text"
-              class="gov-input"
-              maxlength="500"
-              placeholder="e.g. Central IRB Approval Letter v1.0"
-              :disabled="governanceBusy"
-            />
-          </div>
+          <ClinicalInput
+            id="protocol-artifact-title"
+            v-model="artifactForm.title"
+            label="Document title"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="500"
+            placeholder="e.g. Central IRB Approval Letter v1.0"
+            :disabled="governanceBusy"
+          />
         </div>
 
         <div class="gov-grid">
-          <div class="gov-field">
-            <label for="protocol-artifact-file" class="gov-label">
-              Compute SHA-256 from file (optional)
-            </label>
+          <ClinicalFieldLayout
+            id="protocol-artifact-file"
+            label="Compute SHA-256 from file (optional)"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+          >
             <input
               id="protocol-artifact-file"
               type="file"
@@ -260,52 +257,46 @@
               :disabled="governanceBusy"
               @change="onArtifactFileSelected"
             />
-          </div>
+          </ClinicalFieldLayout>
 
-          <div class="gov-field">
-            <label for="protocol-artifact-hash" class="gov-label">
-              Content SHA-256 digest
-            </label>
-            <input
-              id="protocol-artifact-hash"
-              v-model="artifactForm.contentHash"
-              type="text"
-              class="gov-input"
-              placeholder="sha256:<64 lower-case hex characters>"
-              :disabled="governanceBusy"
-            />
-          </div>
+          <ClinicalInput
+            id="protocol-artifact-hash"
+            v-model="artifactForm.contentHash"
+            label="Content SHA-256 digest"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            placeholder="sha256:<64 lower-case hex characters>"
+            :disabled="governanceBusy"
+          />
         </div>
 
         <div class="gov-grid">
-          <div class="gov-field">
-            <label for="protocol-artifact-storage" class="gov-label">
-              Storage reference
-            </label>
-            <input
-              id="protocol-artifact-storage"
-              v-model="artifactForm.storageRef"
-              type="text"
-              class="gov-input"
-              placeholder="e.g. s3://cadence-etmf/irb-approval-v1.pdf"
-              :disabled="governanceBusy"
-            />
-          </div>
+          <ClinicalInput
+            id="protocol-artifact-storage"
+            v-model="artifactForm.storageRef"
+            label="Storage reference"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            placeholder="e.g. s3://cadence-etmf/irb-approval-v1.pdf"
+            :disabled="governanceBusy"
+          />
 
-          <div class="gov-field">
-            <label for="protocol-artifact-reason" class="gov-label">
-              Reason for registration
-            </label>
-            <input
-              id="protocol-artifact-reason"
-              v-model="artifactForm.reason"
-              type="text"
-              class="gov-input"
-              maxlength="500"
-              placeholder="e.g. Record central IRB approval for protocol go-live"
-              :disabled="governanceBusy"
-            />
-          </div>
+          <ClinicalInput
+            id="protocol-artifact-reason"
+            v-model="artifactForm.reason"
+            label="Reason for registration"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="500"
+            placeholder="e.g. Record central IRB approval for protocol go-live"
+            :disabled="governanceBusy"
+          />
         </div>
 
         <div class="gov-actions">
@@ -370,43 +361,40 @@
             class="gov-transition-box"
           >
             <div class="gov-grid">
-              <div class="gov-field">
-                <label
-                  :for="`effectivity-target-status-${eff.effectivity_id}`"
-                  class="gov-label"
-                >
-                  Target status
-                </label>
-                <select
-                  :id="`effectivity-target-status-${eff.effectivity_id}`"
-                  v-model="targetStatusByRef[eff.effectivity_ref]"
-                  class="gov-select"
-                  :disabled="governanceBusy"
-                >
-                  <option value="Effective">Effective</option>
-                  <option value="EthicsApproved">EthicsApproved</option>
-                  <option value="RegulatoryApproved">RegulatoryApproved</option>
-                  <option value="Withdrawn">Withdrawn</option>
-                </select>
-              </div>
+              <ClinicalInput
+                :id="`effectivity-target-status-${eff.effectivity_id}`"
+                :model-value="getTargetStatus(eff.effectivity_ref)"
+                label="Target status"
+                type="select"
+                density="compact"
+                :show-query-flag="false"
+                extra-class="gov-field"
+                :disabled="governanceBusy"
+                @update:model-value="
+                  setTargetStatus(eff.effectivity_ref, String($event ?? ''))
+                "
+              >
+                <option value="Effective">Effective</option>
+                <option value="EthicsApproved">EthicsApproved</option>
+                <option value="RegulatoryApproved">RegulatoryApproved</option>
+                <option value="Withdrawn">Withdrawn</option>
+              </ClinicalInput>
 
-              <div class="gov-field">
-                <label
-                  :for="`effectivity-reason-${eff.effectivity_id}`"
-                  class="gov-label"
-                >
-                  Reason for status transition
-                </label>
-                <input
-                  :id="`effectivity-reason-${eff.effectivity_id}`"
-                  v-model="transitionReasonByRef[eff.effectivity_ref]"
-                  type="text"
-                  class="gov-input"
-                  maxlength="500"
-                  placeholder="e.g. Mark protocol effective following IRB approval"
-                  :disabled="governanceBusy"
-                />
-              </div>
+              <ClinicalInput
+                :id="`effectivity-reason-${eff.effectivity_id}`"
+                :model-value="getTransitionReason(eff.effectivity_ref)"
+                label="Reason for status transition"
+                type="text"
+                density="compact"
+                :show-query-flag="false"
+                extra-class="gov-field"
+                :maxlength="500"
+                placeholder="e.g. Mark protocol effective following IRB approval"
+                :disabled="governanceBusy"
+                @update:model-value="
+                  setTransitionReason(eff.effectivity_ref, String($event ?? ''))
+                "
+              />
             </div>
 
             <fieldset
@@ -458,7 +446,7 @@
                 {{
                   governanceBusy
                     ? "Updating…"
-                    : `Mark ${targetStatusByRef[eff.effectivity_ref] || "Effective"}`
+                    : `Mark ${getTargetStatus(eff.effectivity_ref)}`
                 }}
               </button>
             </div>
@@ -476,46 +464,45 @@
         @submit.prevent="declareEffectivity"
       >
         <div class="gov-grid">
-          <div class="gov-field">
-            <label for="effectivity-scope-level" class="gov-label">
-              Scope for Version {{ activeVersion.number }}
-            </label>
-            <select
-              id="effectivity-scope-level"
-              v-model="declareForm.scopeLevel"
-              class="gov-select"
-              :disabled="governanceBusy"
-            >
-              <option value="Study">Whole study (Study)</option>
-              <option value="Country">Country (ISO alpha-2)</option>
-              <option value="StudySite">Single study site</option>
-            </select>
-          </div>
+          <ClinicalInput
+            id="effectivity-scope-level"
+            v-model="declareScopeLevel"
+            :label="`Scope for Version ${activeVersion.number}`"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :disabled="governanceBusy"
+          >
+            <option value="Study">Whole study (Study)</option>
+            <option value="Country">Country (ISO alpha-2)</option>
+            <option value="StudySite">Single study site</option>
+          </ClinicalInput>
 
-          <div v-if="declareForm.scopeLevel === 'Country'" class="gov-field">
-            <label for="effectivity-country" class="gov-label">
-              Country code (ISO 3166-1 alpha-2)
-            </label>
-            <input
-              id="effectivity-country"
-              v-model="declareForm.country"
-              type="text"
-              class="gov-input"
-              maxlength="2"
-              placeholder="US"
-              :disabled="governanceBusy"
-            />
-          </div>
+          <ClinicalInput
+            v-if="declareScopeLevel === 'Country'"
+            id="effectivity-country"
+            v-model="declareCountry"
+            label="Country code (ISO 3166-1 alpha-2)"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="2"
+            placeholder="US"
+            :disabled="governanceBusy"
+          />
 
-          <div v-if="declareForm.scopeLevel === 'StudySite'" class="gov-field">
-            <label for="effectivity-study-site" class="gov-label">
-              Study site
-            </label>
-            <select
+          <template v-if="declareScopeLevel === 'StudySite'">
+            <ClinicalInput
               v-if="studySites.length"
               id="effectivity-study-site"
-              v-model="declareForm.studySiteRef"
-              class="gov-select"
+              v-model="declareStudySiteRef"
+              label="Study site"
+              type="select"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="gov-field"
               :disabled="governanceBusy"
             >
               <option value="">Select a linked study site</option>
@@ -526,32 +513,33 @@
               >
                 {{ site.site_code || site.study_site_ref }} ({{ site.status }})
               </option>
-            </select>
-            <input
+            </ClinicalInput>
+            <ClinicalInput
               v-else
               id="effectivity-study-site"
-              v-model="declareForm.studySiteRef"
+              v-model="declareStudySiteRef"
+              label="Study site"
               type="text"
-              class="gov-input"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="gov-field"
               placeholder="study_site:<uuid>"
               :disabled="governanceBusy"
             />
-          </div>
+          </template>
 
-          <div class="gov-field">
-            <label for="effectivity-declare-reason" class="gov-label">
-              Reason for declaration
-            </label>
-            <input
-              id="effectivity-declare-reason"
-              v-model="declareForm.reason"
-              type="text"
-              class="gov-input"
-              maxlength="500"
-              placeholder="e.g. Declare study-wide effectivity for approved v1"
-              :disabled="governanceBusy"
-            />
-          </div>
+          <ClinicalInput
+            id="effectivity-declare-reason"
+            v-model="declareReason"
+            label="Reason for declaration"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="500"
+            placeholder="e.g. Declare study-wide effectivity for approved v1"
+            :disabled="governanceBusy"
+          />
         </div>
 
         <div class="gov-actions">
@@ -597,6 +585,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
+import { ClinicalDataTable, ClinicalFieldLayout, ClinicalInput } from "ui";
 import {
   describeKernelError,
   isMasked,
@@ -628,6 +617,13 @@ import SupportDetails from "./SupportDetails.vue";
  */
 const props = defineProps<{ studyCode: string; selectedRef: string }>();
 const emit = defineEmits<{ select: [version: KernelProtocolVersion] }>();
+
+const versionColumns = [
+  { key: "number", label: "Version", align: "right", rowHeader: true },
+  { key: "status", label: "Status" },
+  { key: "parent", label: "Amends" },
+  { key: "amendment_intent", label: "Amendment intent" },
+];
 
 const APPROVAL_EVIDENCE_KINDS = new Set([
   "EthicsApproval",
@@ -703,16 +699,30 @@ const artifactForm = reactive({
   reason: "",
 });
 
-const declareForm = reactive({
-  scopeLevel: "Study" as "Study" | "Country" | "StudySite",
-  country: "US",
-  studySiteRef: "",
-  reason: "",
-});
+const declareScopeLevel = ref<"Study" | "Country" | "StudySite">("Study");
+const declareCountry = ref("US");
+const declareStudySiteRef = ref("");
+const declareReason = ref("");
 
 const targetStatusByRef = reactive<Record<string, string>>({});
 const transitionReasonByRef = reactive<Record<string, string>>({});
 const selectedEvidenceByRef = reactive<Record<string, string[]>>({});
+
+function getTargetStatus(effectivityRef: string): string {
+  return targetStatusByRef[effectivityRef] || "Effective";
+}
+
+function setTargetStatus(effectivityRef: string, status: string) {
+  targetStatusByRef[effectivityRef] = status;
+}
+
+function getTransitionReason(effectivityRef: string): string {
+  return transitionReasonByRef[effectivityRef] ?? "";
+}
+
+function setTransitionReason(effectivityRef: string, reason: string) {
+  transitionReasonByRef[effectivityRef] = reason;
+}
 
 const canGovern = computed(() => canGovernProtocols(authStore));
 
@@ -777,13 +787,13 @@ const canSubmitArtifact = computed(
 );
 
 const canDeclareEffectivity = computed(() => {
-  if (!activeVersion.value?.ref || !declareForm.reason.trim()) return false;
+  if (!activeVersion.value?.ref || !declareReason.value.trim()) return false;
   if (activeVersion.value.status === "Withdrawn") return false;
-  if (declareForm.scopeLevel === "Country") {
-    return /^[A-Za-z]{2}$/.test(declareForm.country.trim());
+  if (declareScopeLevel.value === "Country") {
+    return /^[A-Za-z]{2}$/.test(declareCountry.value.trim());
   }
-  if (declareForm.scopeLevel === "StudySite") {
-    return Boolean(declareForm.studySiteRef.trim());
+  if (declareScopeLevel.value === "StudySite") {
+    return Boolean(declareStudySiteRef.value.trim());
   }
   return true;
 });
@@ -1116,19 +1126,19 @@ async function declareEffectivity() {
   try {
     const declared = await kernelGovernanceApi.declareProtocolEffectivity({
       versionRef: target.ref,
-      scopeLevel: declareForm.scopeLevel,
+      scopeLevel: declareScopeLevel.value,
       country:
-        declareForm.scopeLevel === "Country"
-          ? declareForm.country.trim().toUpperCase()
+        declareScopeLevel.value === "Country"
+          ? declareCountry.value.trim().toUpperCase()
           : null,
       studySiteRef:
-        declareForm.scopeLevel === "StudySite"
-          ? declareForm.studySiteRef.trim()
+        declareScopeLevel.value === "StudySite"
+          ? declareStudySiteRef.value.trim()
           : null,
-      reason: declareForm.reason.trim(),
+      reason: declareReason.value.trim(),
       idempotencyKey: nextIdempotencyKey(),
     });
-    declareForm.reason = "";
+    declareReason.value = "";
     if (studyNodeRef.value) {
       await refreshGovernanceLists(studyNodeRef.value);
     } else {
@@ -1202,6 +1212,8 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .versions h2 {
@@ -1214,24 +1226,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   color: var(--neutral-dark);
 }
 
-.versions-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.versions-table th,
-.versions-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-.versions-table .numeric {
-  text-align: right;
-}
-
-.versions-table tr.selected {
+:deep(.versions-table tr.selected) {
   background: var(--neutral-light);
 }
 
@@ -1249,11 +1244,6 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   color: var(--primary);
   cursor: pointer;
   box-sizing: border-box;
-}
-
-.masked-row {
-  color: var(--neutral-dark);
-  font-style: italic;
 }
 .gov-banner {
   padding: 10px 12px;
@@ -1281,6 +1271,9 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .gov-card-header h3 {
@@ -1292,6 +1285,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   margin: 0;
   font-size: 0.85rem;
   color: var(--neutral-dark);
+  overflow-wrap: anywhere;
 }
 
 .gov-controls,
@@ -1299,18 +1293,24 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .gov-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .gov-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-bottom: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .gov-label {
@@ -1318,19 +1318,12 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   font-weight: 600;
 }
 
-.gov-input,
-.gov-select {
-  padding: 7px 9px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  font: inherit;
-  font-size: 0.88rem;
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text);
-}
-
 .gov-file-input {
   font-size: 0.84rem;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .gov-actions {
@@ -1358,6 +1351,9 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   font-size: 0.88rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .gov-effectivity-summary {

@@ -49,15 +49,14 @@ const hasDetails = computed(() =>
 
 .support-details-summary {
   cursor: pointer;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 3px 2px;
   font-weight: 500;
   color: var(--semantic-color-text-muted);
-}
-
-.support-details-summary:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
-  outline-offset: 2px;
   border-radius: 3px;
+  box-sizing: border-box;
 }
 
 .support-details-body {

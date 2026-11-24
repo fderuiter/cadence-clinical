@@ -15,62 +15,71 @@
       @submit.prevent="checkStatus"
     >
       <template v-if="!isStudyLocked">
-        <label for="site-activation-study">Study</label>
-        <input
+        <ClinicalInput
           id="site-activation-study"
           v-model="studyCode"
+          label="Study"
           type="text"
           autocomplete="off"
           placeholder="Study code"
           :list="
-            assignedStudies.length
-              ? 'site-activation-assigned-studies'
-              : undefined
+            assignedStudies.length ? 'site-activation-assigned-studies' : ''
           "
-        />
-        <datalist
-          v-if="assignedStudies.length"
-          id="site-activation-assigned-studies"
+          density="compact"
+          :show-query-flag="false"
         >
-          <option
-            v-for="study in assignedStudies"
-            :key="study"
-            :value="study"
-          />
-        </datalist>
+          <template v-if="assignedStudies.length" #after-input>
+            <datalist id="site-activation-assigned-studies">
+              <option
+                v-for="study in assignedStudies"
+                :key="study"
+                :value="study"
+              />
+            </datalist>
+          </template>
+        </ClinicalInput>
       </template>
-      <label for="site-activation-site-picker">Pick site</label>
-      <select
+      <ClinicalFieldLayout
         id="site-activation-site-picker"
-        :value="pickerValue"
-        class="site-picker"
-        aria-label="Pick a study site"
-        @focus="loadStudySites"
-        @change="onPickSite"
+        label="Pick site"
+        density="compact"
+        :show-query-flag="false"
       >
-        <option value="">Custom / enter site code</option>
-        <option
-          v-for="option in siteOptions"
-          :key="option.code"
-          :value="option.code"
+        <select
+          id="site-activation-site-picker"
+          :value="pickerValue"
+          class="clinical-input-control site-picker"
+          aria-label="Pick a study site"
+          @focus="loadStudySites"
+          @change="onPickSite"
         >
-          {{ option.label }}
-        </option>
-      </select>
-      <label for="site-activation-site">Site</label>
-      <input
+          <option value="">Custom / enter site code</option>
+          <option
+            v-for="option in siteOptions"
+            :key="option.code"
+            :value="option.code"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </ClinicalFieldLayout>
+      <ClinicalInput
         id="site-activation-site"
         v-model="siteCode"
+        label="Site"
         type="text"
         autocomplete="off"
         placeholder="Site code"
-        :list="
-          assignedSites.length ? 'site-activation-assigned-sites' : undefined
-        "
-      />
-      <datalist v-if="assignedSites.length" id="site-activation-assigned-sites">
-        <option v-for="site in assignedSites" :key="site" :value="site" />
-      </datalist>
+        :list="assignedSites.length ? 'site-activation-assigned-sites' : ''"
+        density="compact"
+        :show-query-flag="false"
+      >
+        <template v-if="assignedSites.length" #after-input>
+          <datalist id="site-activation-assigned-sites">
+            <option v-for="site in assignedSites" :key="site" :value="site" />
+          </datalist>
+        </template>
+      </ClinicalInput>
       <button
         id="btn-check-site-compliance"
         type="submit"
@@ -101,73 +110,76 @@
         {{ quickSiteError }}
       </p>
       <div class="quick-site-grid">
-        <div class="quick-field">
-          <label for="site-activation-new-code">Site code</label>
-          <input
-            id="site-activation-new-code"
-            v-model="newSiteCode"
-            type="text"
-            maxlength="64"
-            autocomplete="off"
-            placeholder="e.g. SITE-01"
-            :disabled="creatingQuickSite"
-            required
-          />
-        </div>
-        <div class="quick-field">
-          <label for="site-activation-new-country">Country (ISO-2)</label>
-          <input
-            id="site-activation-new-country"
-            v-model="newSiteCountry"
-            type="text"
-            maxlength="2"
-            autocomplete="off"
-            placeholder="US"
-            :disabled="creatingQuickSite"
-            required
-          />
-        </div>
-        <div class="quick-field">
-          <label for="site-activation-new-name">Site name</label>
-          <input
-            id="site-activation-new-name"
-            v-model="newSiteName"
-            type="text"
-            maxlength="200"
-            autocomplete="off"
-            placeholder="e.g. Metro Cardiology Research Center"
-            :disabled="creatingQuickSite"
-            required
-          />
-        </div>
-        <div class="quick-field">
-          <label for="site-activation-new-institution">Site institution</label>
-          <input
-            id="site-activation-new-institution"
-            v-model="newSiteInstitution"
-            type="text"
-            maxlength="200"
-            autocomplete="off"
-            placeholder="e.g. Metro University Hospital"
-            :disabled="creatingQuickSite"
-            required
-          />
-        </div>
-        <div class="quick-field quick-field-wide">
-          <label for="site-activation-new-reason">
-            Reason for change (required)
-          </label>
-          <input
-            id="site-activation-new-reason"
-            v-model="newSiteReason"
-            type="text"
-            maxlength="500"
-            autocomplete="off"
-            placeholder="e.g. Register clinical site for study startup"
-            :disabled="creatingQuickSite"
-            required
-          />
-        </div>
+        <ClinicalInput
+          id="site-activation-new-code"
+          v-model="newSiteCode"
+          label="Site code"
+          type="text"
+          maxlength="64"
+          autocomplete="off"
+          placeholder="e.g. SITE-01"
+          :disabled="creatingQuickSite"
+          required
+          density="compact"
+          :show-query-flag="false"
+          extra-class="quick-field"
+        />
+        <ClinicalInput
+          id="site-activation-new-country"
+          v-model="newSiteCountry"
+          label="Country (ISO-2)"
+          type="text"
+          maxlength="2"
+          autocomplete="off"
+          placeholder="US"
+          :disabled="creatingQuickSite"
+          required
+          density="compact"
+          :show-query-flag="false"
+          extra-class="quick-field"
+        />
+        <ClinicalInput
+          id="site-activation-new-name"
+          v-model="newSiteName"
+          label="Site name"
+          type="text"
+          maxlength="200"
+          autocomplete="off"
+          placeholder="e.g. Metro Cardiology Research Center"
+          :disabled="creatingQuickSite"
+          required
+          density="compact"
+          :show-query-flag="false"
+          extra-class="quick-field"
+        />
+        <ClinicalInput
+          id="site-activation-new-institution"
+          v-model="newSiteInstitution"
+          label="Site institution"
+          type="text"
+          maxlength="200"
+          autocomplete="off"
+          placeholder="e.g. Metro University Hospital"
+          :disabled="creatingQuickSite"
+          required
+          density="compact"
+          :show-query-flag="false"
+          extra-class="quick-field"
+        />
+        <ClinicalInput
+          id="site-activation-new-reason"
+          v-model="newSiteReason"
+          label="Reason for change (required)"
+          type="text"
+          maxlength="500"
+          autocomplete="off"
+          placeholder="e.g. Register clinical site for study startup"
+          :disabled="creatingQuickSite"
+          required
+          density="compact"
+          :show-query-flag="false"
+          extra-class="quick-field quick-field-wide"
+        />
       </div>
       <div class="quick-site-actions">
         <button
@@ -297,12 +309,15 @@
 
     <div v-if="compliance && !compliance.is_activated" class="activate">
       <template v-if="isActivationAllowed">
-        <label for="site-activation-reason">Reason for activation</label>
-        <textarea
+        <ClinicalInput
           id="site-activation-reason"
           v-model="reason"
-          rows="2"
+          as="textarea"
+          label="Reason for activation"
+          :rows="2"
           placeholder="Why the site is being activated (recorded in the audit trail)"
+          density="compact"
+          :show-query-flag="false"
         />
       </template>
       <p
@@ -430,17 +445,17 @@
           v-if="matchedKernelSite.status !== 'Active' && canManageKernelSites"
           class="activate"
         >
-          <label for="kernel-site-activate-reason">
-            Reason for kernel site activation
-          </label>
-          <input
+          <ClinicalInput
             id="kernel-site-activate-reason"
             v-model="kernelSiteReason"
+            label="Reason for kernel site activation"
             type="text"
-            class="kernel-input"
+            control-class="kernel-input"
             maxlength="500"
             placeholder="e.g. Activate study site in kernel with effective protocol v1"
             :disabled="kernelBusy"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-activate-kernel-site"
@@ -470,41 +485,44 @@
 
         <div v-if="canManageKernelSites" class="kernel-link-controls">
           <div class="kernel-link-grid">
-            <div class="kernel-field">
-              <label for="kernel-site-name">Site name</label>
-              <input
-                id="kernel-site-name"
-                v-model="kernelSiteName"
-                type="text"
-                class="kernel-input"
-                placeholder="e.g. General Clinical Research Center"
-                :disabled="kernelBusy"
-              />
-            </div>
-            <div class="kernel-field">
-              <label for="kernel-site-country">Country (ISO alpha-2)</label>
-              <input
-                id="kernel-site-country"
-                v-model="kernelSiteCountry"
-                type="text"
-                class="kernel-input"
-                maxlength="2"
-                placeholder="US"
-                :disabled="kernelBusy"
-              />
-            </div>
-            <div class="kernel-field">
-              <label for="kernel-site-link-reason">Reason for linking</label>
-              <input
-                id="kernel-site-link-reason"
-                v-model="kernelSiteReason"
-                type="text"
-                class="kernel-input"
-                maxlength="500"
-                placeholder="e.g. Link clinical site for startup and enrollment"
-                :disabled="kernelBusy"
-              />
-            </div>
+            <ClinicalInput
+              id="kernel-site-name"
+              v-model="kernelSiteName"
+              label="Site name"
+              type="text"
+              control-class="kernel-input"
+              placeholder="e.g. General Clinical Research Center"
+              :disabled="kernelBusy"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="kernel-field"
+            />
+            <ClinicalInput
+              id="kernel-site-country"
+              v-model="kernelSiteCountry"
+              label="Country (ISO alpha-2)"
+              type="text"
+              control-class="kernel-input"
+              maxlength="2"
+              placeholder="US"
+              :disabled="kernelBusy"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="kernel-field"
+            />
+            <ClinicalInput
+              id="kernel-site-link-reason"
+              v-model="kernelSiteReason"
+              label="Reason for linking"
+              type="text"
+              control-class="kernel-input"
+              maxlength="500"
+              placeholder="e.g. Link clinical site for startup and enrollment"
+              :disabled="kernelBusy"
+              density="compact"
+              :show-query-flag="false"
+              extra-class="kernel-field"
+            />
           </div>
           <button
             id="btn-link-kernel-site"
@@ -534,7 +552,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import * as VueRouter from "vue-router";
-import { handoffFocus } from "ui";
+import { ClinicalFieldLayout, ClinicalInput, handoffFocus } from "ui";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
@@ -1170,14 +1188,27 @@ defineExpose({ checkStatus, loadStudySites });
   font-weight: bold;
 }
 
-.scope input,
-.site-picker {
-  flex: 0 1 12rem;
+.scope :deep(.clinical-input) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.scope :deep(.clinical-input label) {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.scope :deep(.clinical-input-control) {
+  width: 12rem;
   min-width: 0;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--semantic-color-surface);
+}
+
+.quick-field,
+.kernel-field {
+  margin-bottom: 0;
 }
 
 .assigned-scope {

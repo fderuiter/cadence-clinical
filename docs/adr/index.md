@@ -468,10 +468,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
-- [ADR-2663: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) (2026-11-23)
+- [ADR-2665: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) (2026-11-23)
 - [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
 - [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
 - [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
+- [ADR-2673: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives](2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md) (2026-11-24)
 
 ### 7. DevOps, Tooling & CI/CD
 

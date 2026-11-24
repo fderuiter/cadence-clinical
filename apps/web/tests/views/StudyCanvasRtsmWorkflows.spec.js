@@ -521,7 +521,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-unblind-001",
     });
     await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
@@ -533,7 +533,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
         semanticAction: "execution.subject.unblind",
@@ -595,7 +595,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-unblind-er-001",
     });
     await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
@@ -607,7 +607,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
         semanticAction: "execution.subject.unblind",
@@ -649,7 +649,7 @@ describe("Clinical Canvas RTSM workflows", () => {
         return { ...participants[0] };
       }
     );
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-withdraw-001",
     });
 
@@ -686,7 +686,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
         semanticAction: "execution.subject.withdraw",

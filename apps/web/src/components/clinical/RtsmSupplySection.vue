@@ -33,15 +33,15 @@
       @submit="loadSupplyOverview"
     >
       <template #after-site>
-        <label for="rtsm-subject"
-          >Participant (optional for custody trace)</label
-        >
-        <input
+        <ClinicalInput
           id="rtsm-subject"
           v-model="subjectInput"
+          label="Participant (optional for custody trace)"
           type="text"
           autocomplete="off"
           placeholder="Participant code"
+          density="compact"
+          :show-query-flag="false"
         />
       </template>
     </CtmsSectionScopeBar>
@@ -86,26 +86,32 @@
       >
         <h5>Initiate apheresis custody record</h5>
         <div class="form-row">
-          <label for="cgt-aph-subject">Participant</label>
-          <input
+          <ClinicalInput
             id="cgt-aph-subject"
             v-model="aphSubject"
+            label="Participant"
             type="text"
             placeholder="Participant code"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="cgt-aph-din">ISBT-128 DIN</label>
-          <input
+          <ClinicalInput
             id="cgt-aph-din"
             v-model="aphDin"
+            label="ISBT-128 DIN"
             type="text"
             placeholder="ISBT-128 DIN code"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="cgt-aph-reason">Reason for change</label>
-          <input
+          <ClinicalInput
             id="cgt-aph-reason"
             v-model="aphReason"
+            label="Reason for change"
             type="text"
             placeholder="Apheresis collection intake"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-record-apheresis"
@@ -147,28 +153,30 @@
               Open batch return reconciliation
             </button>
           </div>
-          <div v-if="kitInventory.length" class="table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Kit number</th>
-                  <th scope="col">Lot</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Expiration</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="kit in kitInventory" :key="kit.kit_number">
-                  <td>
-                    <strong>{{ kit.kit_number }}</strong>
-                  </td>
-                  <td>{{ kit.lot_number }}</td>
-                  <td>{{ formatClinicalStatus(kit.status) }}</td>
-                  <td>{{ kit.expiration_date || "—" }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <ClinicalDataTable
+            v-if="kitInventory.length"
+            hide-header
+            plain
+            aria-label="Site investigational product kit inventory"
+            wrapper-class="table-wrap"
+            table-class="data-table"
+            :columns="kitColumns"
+            :data="kitInventory"
+            row-key="kit_number"
+          >
+            <template #cell-kit_number="{ row: kit }">
+              <strong>{{ kit.kit_number }}</strong>
+            </template>
+            <template #cell-lot_number="{ row: kit }">
+              {{ kit.lot_number }}
+            </template>
+            <template #cell-status="{ row: kit }">
+              {{ formatClinicalStatus(kit.status) }}
+            </template>
+            <template #cell-expiration_date="{ row: kit }">
+              {{ kit.expiration_date || "—" }}
+            </template>
+          </ClinicalDataTable>
         </template>
       </template>
       <p v-else id="rtsm-pharmacist-separation-note" class="readonly-note">
@@ -184,35 +192,49 @@
       >
         <h5>Seed initial site kit inventory</h5>
         <div class="form-row">
-          <label for="seed-kit-number">Kit number</label>
-          <input
+          <ClinicalInput
             id="seed-kit-number"
             v-model="seedKitNumber"
+            label="Kit number"
             type="text"
             placeholder="KIT-1001"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="seed-lot-number">Lot number</label>
-          <input
+          <ClinicalInput
             id="seed-lot-number"
             v-model="seedLotNumber"
+            label="Lot number"
             type="text"
             placeholder="LOT-ALPHA"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="seed-treatment-arm">Treatment arm</label>
-          <input
+          <ClinicalInput
             id="seed-treatment-arm"
             v-model="seedTreatmentArm"
+            label="Treatment arm"
             type="text"
             placeholder="ACTIVE"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="seed-expiry">Expiration</label>
-          <input id="seed-expiry" v-model="seedExpiry" type="date" />
-          <label for="seed-reason">Reason for change</label>
-          <input
+          <ClinicalInput
+            id="seed-expiry"
+            v-model="seedExpiry"
+            label="Expiration"
+            type="date"
+            density="compact"
+            :show-query-flag="false"
+          />
+          <ClinicalInput
             id="seed-reason"
             v-model="seedReason"
+            label="Reason for change"
             type="text"
             placeholder="Initial depot release"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-seed-kit-inventory"
@@ -261,52 +283,68 @@
       >
         <h5>Draft randomization scheme</h5>
         <div class="form-row">
-          <label for="scheme-method">Method</label>
-          <select id="scheme-method" v-model="schemeMethod">
+          <ClinicalInput
+            id="scheme-method"
+            v-model="schemeMethod"
+            as="select"
+            label="Method"
+            density="compact"
+            :show-query-flag="false"
+          >
             <option value="permuted_block">Permuted block</option>
             <option value="minimization">Pocock-Simon minimization</option>
-          </select>
-          <label for="scheme-arms">Arms (CODE:ratio)</label>
-          <input
+          </ClinicalInput>
+          <ClinicalInput
             id="scheme-arms"
             v-model="schemeArmsInput"
+            label="Arms (CODE:ratio)"
             type="text"
             placeholder="PLACEBO:1, ACTIVE:1"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="scheme-strat-factors">
-            Stratification factors (optional)
-          </label>
-          <input
+          <ClinicalInput
             id="scheme-strat-factors"
             v-model="schemeStratFactorsInput"
+            label="Stratification factors (optional)"
             type="text"
             placeholder="age_group=<65,>=65; stage=II,III"
+            density="compact"
+            :show-query-flag="false"
           />
           <template v-if="schemeMethod === 'permuted_block'">
-            <label for="scheme-block-sizes">Block sizes</label>
-            <input
+            <ClinicalInput
               id="scheme-block-sizes"
               v-model="schemeBlockSizesInput"
+              label="Block sizes"
               type="text"
               placeholder="4"
+              density="compact"
+              :show-query-flag="false"
             />
-            <label for="scheme-slots-per-stratum">Slots per stratum</label>
-            <input
+            <ClinicalInput
               id="scheme-slots-per-stratum"
-              v-model.number="schemeSlotsPerStratum"
+              :model-value="schemeSlotsPerStratum"
+              label="Slots per stratum"
               type="number"
               min="2"
+              density="compact"
+              :show-query-flag="false"
+              @update:model-value="schemeSlotsPerStratum = Number($event)"
             />
           </template>
           <template v-else>
-            <label for="scheme-preferred-prob">Preferred arm probability</label>
-            <input
+            <ClinicalInput
               id="scheme-preferred-prob"
-              v-model.number="schemePreferredProbability"
+              :model-value="schemePreferredProbability"
+              label="Preferred arm probability"
               type="number"
               step="0.05"
               min="0.5"
               max="1"
+              density="compact"
+              :show-query-flag="false"
+              @update:model-value="schemePreferredProbability = Number($event)"
             />
           </template>
           <label class="checkbox-label" for="scheme-requires-kit">
@@ -317,12 +355,14 @@
             />
             Requires site IP kit assignment
           </label>
-          <label for="scheme-draft-reason">Reason for change</label>
-          <input
+          <ClinicalInput
             id="scheme-draft-reason"
             v-model="schemeDraftReason"
+            label="Reason for change"
             type="text"
             placeholder="Initial SAP randomization specification"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-submit-draft-scheme"
@@ -343,53 +383,58 @@
       <p v-if="!schemes.length" class="muted-status">
         No randomization schemes configured yet for {{ studyInput.trim() }}.
       </p>
-      <div v-else class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Version</th>
-              <th scope="col">Method</th>
-              <th scope="col">Status</th>
-              <th scope="col">Requires kit</th>
-              <th scope="col">Drafted by</th>
-              <th scope="col">Approved by</th>
-              <th v-if="canManageSchemes" scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="scheme in schemes" :key="scheme.id">
-              <td>v{{ scheme.version }}</td>
-              <td>{{ formatClinicalEnum(scheme.method) }}</td>
-              <td>{{ formatClinicalStatus(scheme.status) }}</td>
-              <td>{{ scheme.requires_kit ? "Yes" : "No" }}</td>
-              <td>{{ scheme.drafted_by || "—" }}</td>
-              <td>{{ scheme.approved_by || "—" }}</td>
-              <td v-if="canManageSchemes">
-                <template v-if="scheme.status === 'DRAFT'">
-                  <button
-                    :id="`btn-approve-scheme-${scheme.id}`"
-                    data-testid="btn-approve-scheme"
-                    type="button"
-                    class="btn btn-primary btn-sm"
-                    :disabled="saving || isSelfDraftedScheme(scheme)"
-                    @click="openApproveSchemeModal(scheme)"
-                  >
-                    Approve scheme
-                  </button>
-                  <span
-                    v-if="isSelfDraftedScheme(scheme)"
-                    data-testid="self-approval-blocked-note"
-                    class="self-approval-note"
-                  >
-                    Requires second-person statistician approval
-                  </span>
-                </template>
-                <span v-else class="muted-status">—</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ClinicalDataTable
+        v-else
+        hide-header
+        plain
+        aria-label="Randomization schemes"
+        wrapper-class="table-wrap"
+        table-class="data-table"
+        :columns="schemeColumns"
+        :data="schemes"
+        row-key="id"
+      >
+        <template #cell-version="{ row: scheme }">
+          v{{ scheme.version }}
+        </template>
+        <template #cell-method="{ row: scheme }">
+          {{ formatClinicalEnum(scheme.method) }}
+        </template>
+        <template #cell-status="{ row: scheme }">
+          {{ formatClinicalStatus(scheme.status) }}
+        </template>
+        <template #cell-requires_kit="{ row: scheme }">
+          {{ scheme.requires_kit ? "Yes" : "No" }}
+        </template>
+        <template #cell-drafted_by="{ row: scheme }">
+          {{ scheme.drafted_by || "—" }}
+        </template>
+        <template #cell-approved_by="{ row: scheme }">
+          {{ scheme.approved_by || "—" }}
+        </template>
+        <template #cell-actions="{ row: scheme }">
+          <template v-if="scheme.status === 'DRAFT'">
+            <button
+              :id="`btn-approve-scheme-${scheme.id}`"
+              data-testid="btn-approve-scheme"
+              type="button"
+              class="btn btn-primary btn-sm"
+              :disabled="saving || isSelfDraftedScheme(scheme)"
+              @click="openApproveSchemeModal(scheme)"
+            >
+              Approve scheme
+            </button>
+            <span
+              v-if="isSelfDraftedScheme(scheme)"
+              data-testid="self-approval-blocked-note"
+              class="self-approval-note"
+            >
+              Requires second-person statistician approval
+            </span>
+          </template>
+          <span v-else class="muted-status">—</span>
+        </template>
+      </ClinicalDataTable>
     </div>
 
     <p id="rtsm-dose-escalation-scope-note" class="unavailable-note">
@@ -429,7 +474,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { handoffFocus, useInlineFocusHandoff } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalInput,
+  handoffFocus,
+  useInlineFocusHandoff,
+} from "ui";
 import { ApiError } from "../../api/client";
 import {
   executionApi,
@@ -498,6 +548,27 @@ const canReadSchemes = computed(() => canReadRandomizationSchemes(authStore));
 const canManageSchemes = computed(() =>
   canManageRandomizationSchemes(authStore)
 );
+
+const kitColumns = [
+  { key: "kit_number", label: "Kit number", rowHeader: true },
+  { key: "lot_number", label: "Lot" },
+  { key: "status", label: "Status" },
+  { key: "expiration_date", label: "Expiration" },
+];
+
+const schemeColumns = computed(() => {
+  const cols = [
+    { key: "version", label: "Version", rowHeader: true },
+    { key: "method", label: "Method" },
+    { key: "status", label: "Status" },
+    { key: "requires_kit", label: "Requires kit" },
+    { key: "drafted_by", label: "Drafted by" },
+    { key: "approved_by", label: "Approved by" },
+  ];
+  return canManageSchemes.value
+    ? [...cols, { key: "actions", label: "Actions" }]
+    : cols;
+});
 
 const SCHEME_APPROVAL_REASONS = [
   "Independent second-person verification and approval of randomization scheme",

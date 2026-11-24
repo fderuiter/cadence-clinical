@@ -290,6 +290,21 @@ main {
   transition: all 0.2s;
 }
 
+:where(.can-hover)
+  .btn:where(
+    :not(.btn-primary):not(.btn-danger):not(.btn-success):not(.btn-warning):not(
+        :disabled
+      ):not([aria-disabled="true"])
+  ):hover {
+  background-color: var(--semantic-color-surface-header);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .error-banner {
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
