@@ -91,6 +91,7 @@ import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
 import { formatNodeRef, tryNodeRef } from "../../canvas/nodeRef";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import { isDemoBuild } from "../../utils/demoMode";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
@@ -135,6 +136,7 @@ const emit = defineEmits<{
 }>();
 
 const canvas = useStudyCanvasStore();
+const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
 
 onUnmounted(() => {
   emit("dirty-change", false);
@@ -170,24 +172,17 @@ const resolvedNewFormCellLocation = computed(() => {
     const node = props.participant
       ? tryNodeRef("participant", props.participant.id)
       : null;
-    const query: Record<string, string> = {
+    return scopedStudyLocation({
       stage: "conduct",
+      section: "",
       form: "new",
-    };
-    if (node) {
-      query.participant = formatNodeRef(node);
-    }
-    if (specId) {
-      query.spec = specId;
-    }
-    if (visitId) {
-      query.visit = visitId;
-    }
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query,
-    };
+      ...(props.participant?.site_id
+        ? { site: props.participant.site_id }
+        : {}),
+      ...(node ? { participant: formatNodeRef(node) } : {}),
+      ...(specId ? { spec: specId } : {}),
+      ...(visitId ? { visit: visitId } : {}),
+    });
   };
 });
 

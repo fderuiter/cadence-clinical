@@ -137,14 +137,19 @@ import {
 import { seedKernelStudyRef } from "../../canvas/kernelStudy";
 import {
   collectionInstanceRef,
+  formatNodeRef,
   observationNodeRef,
+  tryNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords } from "../../canvas/nodeResolver";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import SupportDetails from "./SupportDetails.vue";
 
 const props = defineProps<{
   studyCode: string;
 }>();
+
+const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
 
 const hasWorkQueueService = computed(
   () => typeof kernelApi.listWorkQueues === "function"
@@ -195,109 +200,88 @@ function formatSince(value: string): string {
 
 function workItemLocation(item: KernelWorkItem): RouteLocationRaw {
   const target = item.target;
+  const targetEnrollmentNode = target?.enrollment_id
+    ? tryNodeRef("enrollment", target.enrollment_id)
+    : null;
+  const targetEnrollmentParticipant = targetEnrollmentNode
+    ? formatNodeRef(targetEnrollmentNode)
+    : undefined;
+
   if (target?.proposal_ref) {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: { proposal: target.proposal_ref },
-    };
+    return scopedStudyLocation({ proposal: target.proposal_ref });
   }
   if (target?.protocol_version_ref) {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: {
-        stage: "design",
-        section: "protocol-versions",
-        node: target.protocol_version_ref,
-      },
-    };
+    return scopedStudyLocation({
+      stage: "design",
+      section: "protocol-versions",
+      node: target.protocol_version_ref,
+    });
   }
   if (target?.finding_ref) {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: {
-        stage: "data",
-        section: "validation",
-      },
-    };
+    return scopedStudyLocation({
+      stage: "data",
+      section: "validation",
+    });
   }
   if (target?.form_id) {
     const formRef = collectionInstanceRef(target.form_id);
     if (formRef) {
-      return {
-        name: "study",
-        params: { studyCode: props.studyCode },
-        query: {
-          stage: "conduct",
-          form: formRef,
-        },
-      };
+      return scopedStudyLocation({
+        stage: "conduct",
+        form: formRef,
+        ...(targetEnrollmentParticipant
+          ? { participant: targetEnrollmentParticipant }
+          : {}),
+      });
     }
   }
   if (target?.observation_ref) {
     const obsRef = observationNodeRef(target.observation_ref);
     if (obsRef) {
-      return {
-        name: "study",
-        params: { studyCode: props.studyCode },
-        query: { stage: "conduct", observation: obsRef },
-      };
+      return scopedStudyLocation({
+        stage: "conduct",
+        observation: obsRef,
+        ...(targetEnrollmentParticipant
+          ? { participant: targetEnrollmentParticipant }
+          : {}),
+      });
     }
   }
   if (item.subject?.startsWith("proposal:")) {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: { proposal: item.subject },
-    };
+    return scopedStudyLocation({ proposal: item.subject });
   }
   if (item.subject?.startsWith("protocol_version:")) {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: {
-        stage: "design",
-        section: "protocol-versions",
-        node: item.subject,
-      },
-    };
+    return scopedStudyLocation({
+      stage: "design",
+      section: "protocol-versions",
+      node: item.subject,
+    });
   }
   if (item.subject?.startsWith("validation_finding:")) {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: {
-        stage: "data",
-        section: "validation",
-      },
-    };
+    return scopedStudyLocation({
+      stage: "data",
+      section: "validation",
+    });
   }
   if (item.subject?.startsWith("collection_instance:")) {
     const formRef = collectionInstanceRef(item.subject);
     if (formRef) {
-      return {
-        name: "study",
-        params: { studyCode: props.studyCode },
-        query: { stage: "conduct", form: formRef },
-      };
+      return scopedStudyLocation({
+        stage: "conduct",
+        form: formRef,
+      });
     }
   }
   if (item.subject?.startsWith("observation:")) {
     const obsRef = observationNodeRef(item.subject);
     if (obsRef) {
-      return {
-        name: "study",
-        params: { studyCode: props.studyCode },
-        query: { stage: "conduct", observation: obsRef },
-      };
+      return scopedStudyLocation({
+        stage: "conduct",
+        observation: obsRef,
+      });
     }
   }
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-  };
+  return scopedStudyLocation();
 }
 
 let requestSeq = 0;

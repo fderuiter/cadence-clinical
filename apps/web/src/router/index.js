@@ -754,7 +754,23 @@ router.beforeEach(async (to) => {
   }
 
   if (to.name && !isScreenAvailable(to.name)) {
-    return { name: "unavailable", query: { screen: String(to.name) } };
+    const pick = (v) =>
+      typeof (Array.isArray(v) ? v[0] : v) === "string"
+        ? (Array.isArray(v) ? v[0] : v).trim()
+        : "";
+    const q = to.query || {};
+    const studyId =
+      pick(q.studyId) || pick(q.study) || pick(to.params?.studyCode);
+    const siteId = pick(q.siteId) || pick(q.site);
+    const rawSubj = pick(q.subjectId) || pick(q.subject);
+    const subjectId = rawSubj && !rawSubj.includes(":") ? rawSubj : "";
+    const participant = !subjectId ? pick(q.participant) : "";
+    const query = { screen: String(to.name) };
+    if (studyId) query.studyId = studyId;
+    if (siteId) query.siteId = siteId;
+    if (subjectId) query.subjectId = subjectId;
+    else if (participant) query.participant = participant;
+    return { name: "unavailable", query };
   }
 
   const requiresI18n = to.matched.some((record) => record.meta?.requiresI18n);
