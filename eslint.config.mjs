@@ -2358,7 +2358,7 @@ const noUnscopedClinicalTabsCssRule = {
   },
 };
 
-// Exempt 2D multi-header clinical matrices and inline cell grids from ClinicalDataTable replacement (ADR-2672).
+// Exempt 2D multi-header clinical matrices and inline cell grids from ClinicalDataTable replacement (ADR-2673).
 const EXEMPT_2D_CLINICAL_MATRICES = new Set([
   "components/canvas/ParticipantFormsPanel.vue",
   "components/clinical/ClinicalSoAMatrix.vue",
@@ -2370,7 +2370,7 @@ const EXEMPT_2D_CLINICAL_MATRICES = new Set([
 ]);
 
 // Shrink-only legacy allowlist of unmigrated apps/web table views. Do not add new entries;
-// migrate clinical dataset tables to ClinicalDataTable from "ui" (ADR-2656 / ADR-2672).
+// migrate clinical dataset tables to ClinicalDataTable from "ui" (ADR-2656 / ADR-2673).
 const LEGACY_WEB_RAW_TABLE_ALLOWLIST = new Set([
   "components/CodingQueueTable.vue",
   "components/SynonymImportDrawer.vue",
@@ -2413,12 +2413,12 @@ const noRawClinicalTableRule = {
     type: "problem",
     docs: {
       description:
-        "Disallow raw <table> markup in migrated clinical hubs and apps/subject-portal; require ClinicalDataTable from packages/ui unless exempted as a 2D clinical matrix (ADR-2672).",
+        "Disallow raw <table> markup in migrated clinical hubs and apps/subject-portal; require ClinicalDataTable from packages/ui unless exempted as a 2D clinical matrix (ADR-2673).",
       category: "Accessibility",
     },
     messages: {
       noRawClinicalTable:
-        'Raw <table> markup is prohibited outside exempted 2D clinical matrices. Use ClinicalDataTable from "ui" to preserve keyboard sorting, focusable row activation, sr-only captions, and polite pagination status (ADR-2656 / ADR-2672).',
+        'Raw <table> markup is prohibited outside exempted 2D clinical matrices. Use ClinicalDataTable from "ui" to preserve keyboard sorting, focusable row activation, sr-only captions, and polite pagination status (ADR-2656 / ADR-2673).',
     },
   },
   create(context) {
@@ -2466,7 +2466,7 @@ const noRawClinicalTableRule = {
 };
 
 // Shrink-only legacy allowlist of unmigrated apps/web Vue files with untyped <button> elements
-// or unguarded button :hover selectors. Do not add new entries (ADR-2672).
+// or unguarded button :hover selectors. Do not add new entries (ADR-2673).
 const LEGACY_WEB_UNGUARDED_BUTTON_ALLOWLIST = new Set([
   "components/AppShell.vue",
   "components/CodingQueueTable.vue",
@@ -2585,14 +2585,14 @@ const noUnguardedButtonStateRule = {
     type: "problem",
     docs: {
       description:
-        "Require explicit button type attributes and :not(:disabled) hover guards on button and .btn selectors across packages/ui, apps/subject-portal, and migrated apps/web views (ADR-2672).",
+        "Require explicit button type attributes and :not(:disabled) hover guards on button and .btn selectors across packages/ui, apps/subject-portal, and migrated apps/web views (ADR-2673).",
       category: "Accessibility",
     },
     messages: {
       missingButtonType:
-        'Native <button> is missing an explicit type ("button", "submit", or "reset"). Unspecified buttons default to type="submit" (ADR-2672).',
+        'Native <button> is missing an explicit type ("button", "submit", or "reset"). Unspecified buttons default to type="submit" (ADR-2673).',
       unguardedButtonHover:
-        'Button hover selector "{{selector}}" is missing a :not(:disabled) guard, allowing disabled buttons to highlight on hover (ADR-2672).',
+        'Button hover selector "{{selector}}" is missing a :not(:disabled) guard, allowing disabled buttons to highlight on hover (ADR-2673).',
     },
   },
   create(context) {

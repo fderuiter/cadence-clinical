@@ -40,7 +40,11 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
             return Task.CompletedTask;
         }
 
-        context.Fail();
+        string actionPhrase = PermissionMatrix.DescribePermission(requirement.Permission);
+        string allowedRoles = PermissionMatrix.DescribeRoles(PermissionMatrix.RolesHolding(requirement.Permission));
+        context.Fail(new AuthorizationFailureReason(
+            this,
+            $"Your current study role cannot {actionPhrase}. Assign a {allowedRoles} role to proceed."));
         return Task.CompletedTask;
     }
 
@@ -84,7 +88,7 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
             RoleNormalization.ROLE_TRIAL_COORDINATOR,
             StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsReadPermission(string permission)
+    internal static bool IsReadPermission(string permission)
     {
         int separatorIndex = permission.IndexOf(':', StringComparison.Ordinal);
         if (separatorIndex < 0 || separatorIndex == permission.Length - 1)
@@ -162,7 +166,10 @@ public class RoleAuthorizationHandler : AuthorizationHandler<RoleRequirement>
             return Task.CompletedTask;
         }
 
-        context.Fail();
+        string requiredRoles = PermissionMatrix.DescribeRoles(requirement.RequiredRoles);
+        context.Fail(new AuthorizationFailureReason(
+            this,
+            $"This clinical action requires a {requiredRoles} role."));
         return Task.CompletedTask;
     }
 }
@@ -390,7 +397,9 @@ public class ChangeJustificationAuthorizationHandler : AuthorizationHandler<Chan
             }
         }
 
-        context.Fail();
+        context.Fail(new AuthorizationFailureReason(
+            this,
+            "Provide a 21 CFR Part 11 reason for change before modifying regulated clinical records."));
         return Task.CompletedTask;
     }
 }
@@ -417,7 +426,9 @@ public class AuditorReadOnlyAuthorizationHandler : AuthorizationHandler<AuditorR
 
                 if (isAuditor && isWrite)
                 {
-                    context.Fail();
+                    context.Fail(new AuthorizationFailureReason(
+                        this,
+                        "Regulatory Auditor accounts have read-only inspection access and cannot modify clinical records."));
                     return Task.CompletedTask;
                 }
             }

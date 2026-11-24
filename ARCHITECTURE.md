@@ -209,7 +209,7 @@ sequenceDiagram
     G->>G: Validate JWT (OIDC_AUTHORITY), strip client identity headers
     G->>S: Forward with signed X-User-*, X-Tenant-Id, X-Timestamp, X-Gateway-Signature
     S->>S: CadenceGateway scheme verifies HMAC (GATEWAY_SECRET) and timestamp (2 min)
-    S-->>C: Response (401 if unsigned, forged or stale; 403 if role not allowed)
+    S-->>C: Response (401 if unsigned, forged or stale#59; 403 if role not allowed)
 ```
 
 Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md):

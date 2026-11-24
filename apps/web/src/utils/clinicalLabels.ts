@@ -51,6 +51,7 @@ const ROLE_SLUG_LABELS: Record<string, string> = {
   study_coordinator: "Clinical Research Coordinator",
   coordinator: "Clinical Research Coordinator",
   clinical_research_coordinator: "Clinical Research Coordinator",
+  trial_coordinator: "Trial Coordinator",
   cra: "Clinical Research Associate",
   clinical_research_associate: "Clinical Research Associate",
   cra_monitor: "Clinical Research Associate",

@@ -11,6 +11,7 @@ import {
   findStudySites,
   invalidateStudySitesCache,
   resetKernelStudySession,
+  seedKernelStudyRef,
 } from "../../src/canvas/kernelStudy";
 import {
   clearNodeResolutionCache,
@@ -735,5 +736,46 @@ describe("kernelStudy session cache", () => {
     ]);
     expect(siteRef).toBe("study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002");
     expect(kernelApi.getChildren).toHaveBeenCalledTimes(1);
+  });
+
+  it("seeds study_ref via seedKernelStudyRef without kernelApi.search and clears across persona or logout boundaries", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.currentPersona = "data_manager";
+    auth.user = {
+      id: "dm-1",
+      username: "dm",
+      tenantId: "tenant-1",
+    } as never;
+
+    resetKernelStudySession("CAD-101");
+    seedKernelStudyRef("CAD-101", STUDY_REF);
+
+    // Same-study session resets (stage transitions) preserve the seeded study_ref
+    resetKernelStudySession("CAD-101");
+    await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
+    expect(kernelApi.search).not.toHaveBeenCalled();
+
+    // Switching persona invalidates the seeded study_ref so caller scope never leaks
+    auth.currentPersona = "cra";
+    vi.mocked(kernelApi.search).mockResolvedValueOnce([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        code: "CAD-101",
+        title: "Cadence 101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    await expect(findKernelStudyRef("CAD-101")).resolves.toBe(STUDY_REF);
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+
+    // Logout clears all seeded study refs
+    runLogoutCleanups();
+    vi.mocked(kernelApi.search).mockResolvedValueOnce([]);
+    await expect(findKernelStudyRef("CAD-101")).resolves.toBeNull();
+    expect(kernelApi.search).toHaveBeenCalledTimes(2);
   });
 });

@@ -386,6 +386,8 @@ export const ClinicalDrawer: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
+    docked?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -616,7 +618,7 @@ export interface ClinicalToastItem {
   duration?: number;
 }
 
-export const ClinicalToastHost: DefineComponent<
+export const ClinicalToastHost: DefineSlotsComponent<
   {
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
@@ -628,8 +630,9 @@ export const ClinicalToastHost: DefineComponent<
     onPause?: (id: string | number) => void;
     onResume?: (id: string | number) => void;
   },
-  {},
-  any
+  {
+    extra?: (props: { toast: any }) => any;
+  }
 >;
 
 export interface FocusTrapOptions {
@@ -928,6 +931,31 @@ export interface StepUpVerificationPayload {
 export function buildStepUpVerificationPayload(
   input: StepUpVerificationPayloadInput
 ): StepUpVerificationPayload;
+export const STEP_UP_VERIFICATION_PATH: "/api/v1/auth/signature-verification";
+export function resolveDefaultSemanticAction(action?: string | null): string;
+export interface StepUpSignatureRequestInput {
+  username?: string | null;
+  password?: string;
+  totp?: string | null;
+  action: string;
+  semanticAction?: string;
+  semantic_action?: string;
+  batchId?: string | null;
+  batch_id?: string | null;
+}
+export interface StepUpSignatureRequestOptions<
+  TResponse = { sig_token: string; expires_in?: number },
+> {
+  post: (path: string, body: StepUpVerificationPayload) => Promise<TResponse>;
+  requireSigToken?: boolean;
+  missingTokenMessage?: string;
+}
+export function requestStepUpSignature<
+  TResponse = { sig_token: string; expires_in?: number },
+>(
+  input: StepUpSignatureRequestInput,
+  options: StepUpSignatureRequestOptions<TResponse>
+): Promise<TResponse>;
 
 export const SIGNATURE_OTHER_REASON: "Other";
 export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{
@@ -1102,9 +1130,21 @@ export interface EntityLinkNodeRef {
   siteId?: string | null;
 }
 
-export const EntityLink: DefineComponent<
+export interface ParsedNodeRef {
+  raw: string;
+  masked: boolean;
+  kind: string;
+  kindLabel: string;
+  id: string | null;
+  version: number | null;
+  maskReason: string | null;
+  shortRef: string;
+  displayLabel: string;
+}
+
+export const EntityLink: DefineSlotsComponent<
   {
-    nodeRef?: EntityLinkNodeRef | null;
+    nodeRef?: string | EntityLinkNodeRef | null;
     entityType?: string;
     entityId?: string;
     label?: string;
@@ -1112,9 +1152,49 @@ export const EntityLink: DefineComponent<
     href?: string;
     preventNavigation?: boolean;
     tabular?: boolean;
+    compact?: boolean;
+    showCode?: boolean;
+    onPeek?: (payload: any) => void;
+    onSelect?: (payload: any) => void;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+  }
+>;
+
+export const ClinicalExplanation: DefineComponent<
+  {
+    explanation?: Record<string, any> | null;
+    fallbackReason?: string;
+    code?: string;
+    compact?: boolean;
+    onPeek?: (payload: any) => void;
   },
   {},
   any
+>;
+
+export const ClinicalGatedAction: DefineSlotsComponent<
+  {
+    permitted?: boolean;
+    explanation?: Record<string, any> | null;
+    reason?: string;
+    code?: string;
+    label?: string;
+    whyLabel?: string;
+    inline?: boolean;
+    defaultExpanded?: boolean;
+    onAction?: () => void;
+    onPeek?: (payload: any) => void;
+  },
+  {
+    default?: (props: {
+      disabled: boolean;
+      permitted: boolean;
+      ariaDisabled?: "true";
+      explanationId?: string;
+    }) => any;
+  }
 >;
 
 export const ClinicalIcon: DefineComponent<
@@ -1125,3 +1205,13 @@ export const ClinicalIcon: DefineComponent<
   {},
   any
 >;
+
+export function parseNodeRef(raw: string): ParsedNodeRef;
+export function stripRawPermissionTokens(text: string): string;
+export function registerEntityPeekHandler(
+  handler: (payload: Record<string, any>) => void
+): () => void;
+export function openEntityPeek(
+  nodeRef: string,
+  context?: Record<string, any>
+): boolean;

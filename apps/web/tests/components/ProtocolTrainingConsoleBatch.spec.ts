@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { soaClient } from "../../src/api/soaClient";
+import * as signatureVerification from "../../src/api/signatureVerification";
 import { trainingApi } from "../../src/api/training";
 import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
 import { useAuthStore } from "../../src/stores/auth";
@@ -199,9 +199,11 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     signInAs(useAuthStore(), ["Principal Investigator"], {
       username: "pi_vance",
     });
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
-      sig_token: "step-up-token",
-    });
+    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
+      {
+        sig_token: "step-up-token",
+      }
+    );
     vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
       batch_transaction_id: "tx-del-888",
       total_requested: 2,
@@ -235,7 +237,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       .trigger("click");
     await flushPromises();
 
-    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+    expect(signatureVerification.requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         password: "SecurePassword123!", // pragma: allowlist secret
         action: "/api/v1/training/delegations/bulk-signoff",
@@ -271,9 +273,11 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       mockDelegations[0],
       { ...mockDelegations[1], site_id: "SITE-102" },
     ]);
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
-      sig_token: "step-up-token",
-    });
+    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
+      {
+        sig_token: "step-up-token",
+      }
+    );
     vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
       batch_transaction_id: "tx-del-889",
       total_requested: 2,

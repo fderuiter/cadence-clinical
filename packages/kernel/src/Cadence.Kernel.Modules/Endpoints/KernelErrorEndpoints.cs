@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
+using Cadence.Kernel.References;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 
 namespace Cadence.Kernel.Modules;
@@ -81,7 +83,7 @@ public static class KernelErrorEndpoints
     /// A kernel error as RFC 9457 problem details: its status, its stable code as the title and as the <c>code</c>
     /// member, its message as the detail, and the invalid fields as the <c>errors</c> member when validation failed.
     /// </summary>
-    public static ProblemHttpResult Problem(KernelError error)
+    public static ProblemHttpResult Problem(KernelError error, IReadOnlyDictionary<NodeRef, MaskReason>? masks = null)
     {
         ArgumentNullException.ThrowIfNull(error);
         var extensions = new Dictionary<string, object?> { ["code"] = error.Code };
@@ -92,44 +94,48 @@ public static class KernelErrorEndpoints
 
         if (error.Explanation is { } explanation)
         {
-            extensions["explanation"] = ProblemExplanation.From(explanation);
+            extensions["explanation"] = ProblemExplanation.From(explanation, masks);
         }
 
-        return TypedResults.Problem(title: error.Code, detail: error.Message, statusCode: error.HttpStatus, extensions: extensions);
+        var detail = ExplanationMasking.ScrubInlineRefs(error.Message, masks);
+        return TypedResults.Problem(title: error.Code, detail: detail, statusCode: error.HttpStatus, extensions: extensions);
     }
 
-    private sealed record ProblemExplanation(
-        [property: JsonPropertyName("subject")] string? Subject,
-        [property: JsonPropertyName("claim")] string Claim,
-        [property: JsonPropertyName("producer")] string Producer,
-        [property: JsonPropertyName("steps")] IReadOnlyList<ProblemExplanationStep> Steps,
-        [property: JsonPropertyName("conditions")] IReadOnlyList<ProblemCondition> Conditions,
-        [property: JsonPropertyName("next_actions")] IReadOnlyList<ProblemNextAction> NextActions)
+    internal static async ValueTask MaskProblemResultAsync(
+        object? endpointResult,
+        TenantId tenant,
+        HttpContext http,
+        CancellationToken cancellationToken)
     {
-        public static ProblemExplanation From(Explanation explanation) =>
-            new(
-                explanation.Subject?.ToString(),
-                explanation.Claim,
-                explanation.Producer,
-                [.. explanation.Steps.Select(s => new ProblemExplanationStep(s.Claim, [.. s.Evidence.Select(r => r.ToString())]))],
-                [.. explanation.Conditions.Select(c => new ProblemCondition(c.Code, c.Description, c.Met, [.. c.Evidence.Select(r => r.ToString())]))],
-                [.. explanation.NextActions.Select(a => new ProblemNextAction(a.Description, a.Capability, a.Target?.ToString()))]);
+        var unwrapped = endpointResult is INestedHttpResult nested ? nested.Result : endpointResult;
+        if (unwrapped is not ProblemHttpResult problem
+            || !problem.ProblemDetails.Extensions.TryGetValue("explanation", out var raw)
+            || raw is not ProblemExplanation { Source: { } source })
+        {
+            return;
+        }
+
+        var nodes = ExplanationMasking.CollectNodes(source);
+        if (nodes.Count == 0)
+        {
+            return;
+        }
+
+        var masker = http.RequestServices.GetService<IKernelExplanationMasker>();
+        if (masker is null)
+        {
+            return;
+        }
+
+        var masks = await masker.MaskAsync(tenant, nodes, cancellationToken).ConfigureAwait(false);
+        if (masks.Count == 0)
+        {
+            return;
+        }
+
+        problem.ProblemDetails.Extensions["explanation"] = ProblemExplanation.From(source, masks);
+        problem.ProblemDetails.Detail = ExplanationMasking.ScrubInlineRefs(problem.ProblemDetails.Detail, masks);
     }
-
-    private sealed record ProblemExplanationStep(
-        [property: JsonPropertyName("claim")] string Claim,
-        [property: JsonPropertyName("evidence")] IReadOnlyList<string> Evidence);
-
-    private sealed record ProblemCondition(
-        [property: JsonPropertyName("code")] string Code,
-        [property: JsonPropertyName("description")] string Description,
-        [property: JsonPropertyName("met")] bool Met,
-        [property: JsonPropertyName("evidence")] IReadOnlyList<string> Evidence);
-
-    private sealed record ProblemNextAction(
-        [property: JsonPropertyName("description")] string Description,
-        [property: JsonPropertyName("capability")] string? Capability,
-        [property: JsonPropertyName("target")] string? Target);
 
     private static KernelError[] Declare(IEnumerable<KernelError> errors)
     {

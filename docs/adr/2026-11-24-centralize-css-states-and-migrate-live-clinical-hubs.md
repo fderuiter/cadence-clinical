@@ -1,4 +1,4 @@
-# ADR-2672: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives
+# ADR-2673: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives
 
 - **Status:** Accepted
 - **Date:** 2026-11-24

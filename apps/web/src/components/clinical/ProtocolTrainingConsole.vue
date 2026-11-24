@@ -693,7 +693,7 @@
 <script setup>
 import { ClinicalModal, ClinicalTabs, handoffFocus } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
-import { soaClient } from "../../api/soaClient";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { trainingApi } from "../../api/training";
 import {
   TRAINING_ASSIGN_ROLE_REASON,
@@ -1017,7 +1017,7 @@ async function handleExecuteBulkSignOff() {
   bulkSignError.value = "";
   try {
     const delegationIds = [...selectedDelegationIds.value];
-    const verification = await soaClient.verifySignature({
+    const verification = await requestStepUpSignature({
       username: authStore.identity?.username || "",
       password: bulkSignForm.value.password,
       action: DELEGATION_SIGN_OFF_ACTION,

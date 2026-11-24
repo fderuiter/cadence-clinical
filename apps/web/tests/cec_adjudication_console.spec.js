@@ -3,7 +3,12 @@ import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CecAdjudicationConsole from "../src/components/clinical/CecAdjudicationConsole.vue";
 import { apiClient } from "../src/api/apiClient";
+import { requestStepUpSignature } from "../src/api/signatureVerification";
 import { useToastStore } from "../src/stores/toasts";
+
+vi.mock("../src/api/signatureVerification", () => ({
+  requestStepUpSignature: vi.fn(),
+}));
 
 vi.mock("../src/api/apiClient", () => {
   return {
@@ -55,19 +60,18 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
         message: expect.stringContaining("re-authentication password"),
       }),
     ]);
+    expect(requestStepUpSignature).not.toHaveBeenCalled();
     expect(apiClient.post).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
   });
 
   it("calls /api/v1/auth/signature-verification for X-Sig-Token and submits chair adjudication with X-Sig-Token header", async () => {
-    apiClient.post.mockImplementation((url, payload, options) => {
-      if (url === "/api/v1/auth/signature-verification") {
-        return Promise.resolve({
-          sig_token: "test-sig-token-12345",
-          expires_in: 60,
-        });
-      }
+    requestStepUpSignature.mockResolvedValue({
+      sig_token: "test-sig-token-12345",
+      expires_in: 60,
+    });
+    apiClient.post.mockImplementation((url) => {
       if (url.includes("/chair-adjudicate")) {
         return Promise.resolve({
           determination_id: "DET-98765",
@@ -117,14 +121,17 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
 
     await wrapper.vm.submitChairAdjudication();
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/auth/signature-verification",
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         username: "Dr. Adjudication Chair",
         password: "SignOffPassword123!", // pragma: allowlist secret
         action:
           "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate", // pragma: allowlist secret
-        semantic_action: "execution.cec.chair_adjudicate",
+        semanticAction: "execution.cec.chair_adjudicate",
+      }),
+      expect.objectContaining({
+        missingTokenMessage:
+          "Re-authentication failed: missing signature token",
       })
     );
 
@@ -151,7 +158,7 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
   it("handles HTTP 401 / REAUTHENTICATION_REQUIRED error during signature verification or submission", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
 
-    apiClient.post.mockRejectedValue({
+    requestStepUpSignature.mockRejectedValue({
       status: 401,
       data: {
         code: "REAUTHENTICATION_REQUIRED",

@@ -70,9 +70,11 @@ describe("StudyTrainingView.vue", () => {
     await batchTab!.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find("#training-assign-role-note").text()).toContain(
-      "training_curriculum:assign"
+    const assignRoleNote = wrapper.find("#training-assign-role-note").text();
+    expect(assignRoleNote).toContain(
+      "Requires Sponsor Data Manager or System Administrator role."
     );
+    expect(assignRoleNote).not.toContain("training_curriculum:assign");
   });
 
   it("passes siteId prop to training assignments and delegations when embedded in Clinical Canvas", async () => {

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
+using Cadence.Kernel.References;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
@@ -41,7 +42,7 @@ public static class CtmsScopeGuard
 
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, conditionCode: RbacExplanationBuilder.SiteScopeCondition);
         }
 
         return null;
@@ -50,12 +51,22 @@ public static class CtmsScopeGuard
     public static ProblemHttpResult? RequireStudy(HttpContext? httpContext, string? studyId) =>
         CanAccessStudy(httpContext, studyId)
             ? null
-            : Forbidden($"Caller is not authorized for study '{studyId ?? string.Empty}'.", "Outside your studies");
+            : Forbidden(
+                $"Caller is not authorized for study '{studyId ?? string.Empty}'.",
+                "Outside your studies",
+                RbacExplanationBuilder.StudyScopeCondition,
+                NodeKinds.Study,
+                studyId);
 
     public static ProblemHttpResult? RequireSite(HttpContext? httpContext, string? siteId) =>
         CanAccessSite(httpContext, siteId)
             ? null
-            : Forbidden($"Caller is not authorized for site '{siteId ?? string.Empty}'.", "Outside your sites");
+            : Forbidden(
+                $"Caller is not authorized for site '{siteId ?? string.Empty}'.",
+                "Outside your sites",
+                RbacExplanationBuilder.SiteScopeCondition,
+                NodeKinds.StudySite,
+                siteId);
 
     public static ProblemHttpResult? RequireStudyAndSite(HttpContext? httpContext, string? studyId, string? siteId) =>
         RequireStudy(httpContext, studyId) ?? RequireSite(httpContext, siteId);
@@ -88,7 +99,7 @@ public static class CtmsScopeGuard
 
         siteFilter = null;
         return string.IsNullOrWhiteSpace(siteId)
-            ? Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, "Outside your sites")
+            ? Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, "Outside your sites", RbacExplanationBuilder.SiteScopeCondition)
             : RequireSite(httpContext, siteId);
     }
 
@@ -165,7 +176,10 @@ public static class CtmsScopeGuard
         {
             var forbidden = Forbidden(
                 $"Caller is not authorized for the study governing site '{trimmedSite}'.",
-                "Outside your studies");
+                "Outside your studies",
+                RbacExplanationBuilder.StudyScopeCondition,
+                NodeKinds.StudySite,
+                trimmedSite);
             return new DoaSiteScopeResult(forbidden, []);
         }
 
@@ -272,6 +286,11 @@ public static class CtmsScopeGuard
         ClinicalScopeGuard.ApplyFilters(items, studyFilter, siteFilter, studySelector, siteSelector)
             .ToList();
 
-    public static ProblemHttpResult Forbidden(string detail, string title = "Forbidden") =>
-        ClinicalScopeGuard.Forbidden(detail, title, ForbiddenCode);
+    public static ProblemHttpResult Forbidden(
+        string detail,
+        string title = "Forbidden",
+        string conditionCode = RbacExplanationBuilder.StudyScopeCondition,
+        string? targetKind = null,
+        string? targetIdentifier = null) =>
+        ClinicalScopeGuard.Forbidden(detail, title, ForbiddenCode, conditionCode, targetKind, targetIdentifier);
 }

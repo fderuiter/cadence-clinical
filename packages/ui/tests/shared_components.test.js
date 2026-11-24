@@ -359,6 +359,43 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       videoState.prevPdfPage();
       expect(videoState.pdfPage.value).toBe(1);
     });
+
+    it("converts PDF data URIs to blob: URLs for iframe rendering without emitting data: frame sources", async () => {
+      const createSpy = vi
+        .spyOn(URL, "createObjectURL")
+        .mockReturnValue("blob:https://cadence.example/pdf-preview-1");
+      const revokeSpy = vi
+        .spyOn(URL, "revokeObjectURL")
+        .mockImplementation(() => {});
+
+      const pdfDataUri = "data:application/pdf;base64,JVBERi0xLjQK";
+      const html = await renderToString(
+        createSSRApp(MediaPlayer, {
+          src: pdfDataUri,
+          mimeType: "application/pdf",
+          title: "Protocol Synopsis PDF",
+        })
+      );
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(html).toContain(
+        'src="blob:https://cadence.example/pdf-preview-1"'
+      );
+      expect(html).not.toContain("data:application/pdf");
+
+      const passthroughHtml = await renderToString(
+        createSSRApp(MediaPlayer, {
+          src: "blob:https://cadence.example/existing-pdf",
+          mimeType: "application/pdf",
+        })
+      );
+      expect(passthroughHtml).toContain(
+        'src="blob:https://cadence.example/existing-pdf"'
+      );
+
+      createSpy.mockRestore();
+      revokeSpy.mockRestore();
+    });
   });
 
   describe("EmptyState & ClinicalFieldLayout", () => {
@@ -407,7 +444,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(fieldsetHtml).toContain("<legend");
     });
 
-    it("supports compact staff density, required markers, hints, and select/textarea rendering in ClinicalFieldLayout and ClinicalInput (ADR-2672)", async () => {
+    it("supports compact staff density, required markers, hints, and select/textarea rendering in ClinicalFieldLayout and ClinicalInput (ADR-2673)", async () => {
       const defaultInputHtml = await renderToString(
         createSSRApp(ClinicalInput, {
           id: "portal-given-name",
