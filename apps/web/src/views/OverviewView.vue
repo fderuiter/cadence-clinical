@@ -458,7 +458,7 @@ function resolveAuthorizedRoute(routeSpec) {
             subjectCode,
             enrollmentId,
           })
-        : "/studies"
+        : buildStudiesWorkspacePath({})
       : null;
   }
   if (routeSpec === "site-readiness") {
@@ -545,9 +545,6 @@ function resolveAuthorizedRoute(routeSpec) {
       !hasRequiredRole(effectiveRoles.value, catalogEntry.requiresRole)
     ) {
       return null;
-    }
-    if (catalogEntry.routeName === "observation") {
-      return catalogEntry.defaultPath;
     }
     return buildScopedWorkflowPath(catalogEntry.defaultPath, {
       studyCode,

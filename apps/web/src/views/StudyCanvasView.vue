@@ -276,7 +276,10 @@
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
-                  studyLocation({ stage: 'conduct', section: 'participants' })
+                  scopedStudyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                  })
                 "
               >
                 Find it in Participants </router-link
@@ -355,7 +358,10 @@
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
-                  studyLocation({ stage: 'conduct', section: 'participants' })
+                  scopedStudyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                  })
                 "
               >
                 Find it in Participants </router-link
@@ -1070,6 +1076,7 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import {
+  promoteParticipantInspectorNode,
   readInstantiatedClinicalScope,
   syncInstantiatedClinicalScope,
   type PaletteTarget,
@@ -2063,11 +2070,15 @@ function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
   const preservedSite = siteFilter.value || zoomSite.value || undefined;
   const preservedParticipant = activeParticipantScopeParam.value || undefined;
   const preservedNode = activeInspectorParticipantNodeParam.value || undefined;
+  const promotedParticipant = promoteParticipantInspectorNode(
+    preservedNode,
+    query.node
+  );
   return studyLocation(
     {
       site: preservedSite,
-      participant: preservedParticipant,
-      node: preservedNode,
+      participant: preservedParticipant || promotedParticipant || undefined,
+      node: promotedParticipant ? undefined : preservedNode,
       ...query,
     },
     code
@@ -2489,7 +2500,7 @@ async function onObservationLoaded(obs: KernelObservation) {
 async function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
   await router.push(
-    studyLocation({
+    scopedStudyLocation({
       stage: "design",
       section: "protocol-versions",
       node: version.ref,
@@ -2546,7 +2557,7 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
 
 function drillToParticipants(status: string) {
   router.push(
-    studyLocation({ stage: "conduct", section: "participants", status })
+    scopedStudyLocation({ stage: "conduct", section: "participants", status })
   );
 }
 

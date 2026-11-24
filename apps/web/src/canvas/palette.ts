@@ -1,3 +1,4 @@
+import { DEMO_PARTICIPANTS, DEMO_STUDY } from "demo-fixtures";
 import { getActivePinia } from "pinia";
 import {
   isNavigationFailure,
@@ -275,6 +276,33 @@ export interface ScopedStudyLocationOptions {
   targetParticipant?: SubjectSummary | null;
 }
 
+export function promoteParticipantInspectorNode(
+  inspectorNode: string | undefined,
+  nextExplicitNode: string | undefined
+): string {
+  const cleanInspector = cleanQueryString(inspectorNode);
+  const cleanNext =
+    nextExplicitNode !== undefined
+      ? cleanQueryString(nextExplicitNode)
+      : undefined;
+  if (!cleanInspector || !cleanNext) return "";
+  const parsedInspector = parseNodeRef(cleanInspector);
+  if (
+    parsedInspector?.kind !== "enrollment" &&
+    parsedInspector?.kind !== "participant"
+  ) {
+    return "";
+  }
+  const parsedNext = parseNodeRef(cleanNext);
+  if (parsedNext?.kind === "enrollment" || parsedNext?.kind === "participant") {
+    return "";
+  }
+  return formatNodeRef({
+    kind: parsedInspector.kind,
+    id: parsedInspector.id,
+  });
+}
+
 export function buildScopedStudyLocation(
   targetStudyCode: string,
   options: ScopedStudyLocationOptions = {},
@@ -322,9 +350,16 @@ export function buildScopedStudyLocation(
       currentScope?.recordParticipantParam
     );
     const inspectorNode = cleanQueryString(currentScope?.inspectorNodeParam);
+    const nextExplicitNode =
+      options.node !== undefined ? cleanQueryString(options.node) : undefined;
+    const promotedInspectorParticipant = promoteParticipantInspectorNode(
+      inspectorNode,
+      nextExplicitNode
+    );
     const fallbackParticipant =
-      !recordParticipant && !inspectorNode
-        ? cleanQueryString(currentScope?.participantRef) ||
+      !recordParticipant && (!inspectorNode || promotedInspectorParticipant)
+        ? promotedInspectorParticipant ||
+          cleanQueryString(currentScope?.participantRef) ||
           cleanQueryString(currentScope?.subjectCode)
         : "";
     const participant =
@@ -332,9 +367,7 @@ export function buildScopedStudyLocation(
         ? cleanQueryString(options.participant)
         : recordParticipant || fallbackParticipant;
     const node =
-      options.node !== undefined
-        ? cleanQueryString(options.node)
-        : inspectorNode;
+      nextExplicitNode !== undefined ? nextExplicitNode : inspectorNode;
 
     if (site) query.site = site;
     if (participant) query.participant = participant;
@@ -537,13 +570,42 @@ export function resolveActiveWorkspaceScope(
     activeStudyId?: string;
     activeSiteId?: string;
     activeSubjectId?: string;
-    subjects?: Array<{ id?: string }>;
+    subjects?: ReadonlyArray<{
+      id?: string;
+      recordId?: string;
+      siteId?: string;
+      site_id?: string;
+    }>;
   } | null
 ): WorkspaceScopeSnapshot {
   const effectiveClinical =
     clinicalStore !== undefined
       ? clinicalStore
       : readInstantiatedClinicalScope();
+  const piniaRoot = getActivePinia()?.state.value as
+    | {
+        clinicalScope?: {
+          subjects?: ReadonlyArray<{
+            id?: string;
+            recordId?: string;
+            siteId?: string;
+            site_id?: string;
+          }>;
+        };
+        clinical?: {
+          subjects?: ReadonlyArray<{
+            id?: string;
+            recordId?: string;
+            siteId?: string;
+            site_id?: string;
+          }>;
+        };
+      }
+    | undefined;
+  const clinicalSubjects =
+    clinicalStore?.subjects ??
+    piniaRoot?.clinicalScope?.subjects ??
+    piniaRoot?.clinical?.subjects;
   const allowClinicalFallback = Boolean(effectiveClinical);
   const routeParamStudy = cleanQueryString(route?.params?.studyCode);
   const routeQueryStudy =
@@ -564,22 +626,46 @@ export function resolveActiveWorkspaceScope(
   const routeSite =
     cleanQueryString(route?.query?.site) ||
     cleanQueryString(route?.query?.siteId);
+  const extractedRouteParticipantNode =
+    extractParticipantNodeFromQueryValue(route?.query?.participant) ??
+    extractParticipantNodeFromQueryValue(route?.query?.node);
+  const matchedClinicalSubject =
+    extractedRouteParticipantNode && Array.isArray(clinicalSubjects)
+      ? clinicalSubjects.find(
+          (item) => item?.recordId === extractedRouteParticipantNode.id
+        )
+      : undefined;
+  const matchedDemoParticipant =
+    isDemoBuild() &&
+    extractedRouteParticipantNode &&
+    studyCode === DEMO_STUDY.code
+      ? DEMO_PARTICIPANTS.find(
+          (item) =>
+            item.enrollmentUuid === extractedRouteParticipantNode.id ||
+            item.participantUuid === extractedRouteParticipantNode.id
+        )
+      : undefined;
 
   let participantSite = "";
   if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
-    const extractedNode =
-      extractParticipantNodeFromQueryValue(route?.query?.participant) ??
-      extractParticipantNodeFromQueryValue(route?.query?.node);
-    if (extractedNode?.kind === "enrollment") {
+    if (extractedRouteParticipantNode?.kind === "enrollment") {
       const known =
-        canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
-        canvasStore.knownParticipants?.[extractedNode.id];
+        canvasStore.knownParticipantsByEnrollmentId?.[
+          extractedRouteParticipantNode.id
+        ] ?? canvasStore.knownParticipants?.[extractedRouteParticipantNode.id];
       participantSite = cleanQueryString(known?.site_id);
-    } else if (extractedNode?.kind === "participant") {
+    } else if (extractedRouteParticipantNode?.kind === "participant") {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[extractedNode.id]?.site_id
+        canvasStore.knownParticipants?.[extractedRouteParticipantNode.id]
+          ?.site_id
       );
     }
+  }
+  if (!routeSite && !participantSite && extractedRouteParticipantNode) {
+    participantSite =
+      cleanQueryString(
+        matchedClinicalSubject?.siteId ?? matchedClinicalSubject?.site_id
+      ) || cleanQueryString(matchedDemoParticipant?.siteCode);
   }
 
   let storeSite = "";
@@ -618,24 +704,27 @@ export function resolveActiveWorkspaceScope(
   const rawClinicalSubject = cleanQueryString(
     effectiveClinical?.activeSubjectId
   );
-  const clinicalSubjects =
-    clinicalStore?.subjects ??
-    (
-      getActivePinia()?.state.value as
-        { clinical?: { subjects?: Array<{ id?: string }> } } | undefined
-    )?.clinical?.subjects;
   const verifiedClinicalSubject =
     rawClinicalSubject &&
     (rawClinicalSubject !== "SUBJ-001" ||
       Boolean(clinicalSubjects?.some((s) => s?.id === rawClinicalSubject)))
       ? rawClinicalSubject
       : "";
+  const resolvedNodeSubjectCode =
+    cleanQueryString(matchedClinicalSubject?.id) ||
+    cleanQueryString(matchedDemoParticipant?.subjectCode);
+  const clinicalSiteId = cleanQueryString(effectiveClinical?.activeSiteId);
+  const siteMatchesClinicalStore =
+    !routeSite || !clinicalSiteId || clinicalSiteId === routeSite;
 
   const subjectCode =
     routeSubject ||
     canvasParticipant.subjectCode ||
+    resolvedNodeSubjectCode ||
     (allowClinicalFallback &&
     !hasExplicitStandaloneStudyQuery &&
+    !extractedRouteParticipantNode &&
+    siteMatchesClinicalStore &&
     studyCode &&
     cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
       ? verifiedClinicalSubject
@@ -975,14 +1064,11 @@ export function buildWorkspacePaletteItems(options: {
       ) {
         continue;
       }
-      const routePath =
-        mod.routeName === "observation"
-          ? mod.defaultPath
-          : buildScopedWorkflowPath(mod.defaultPath, {
-              studyCode: options.activeStudyCode,
-              siteId: options.activeSiteId,
-              subjectCode: options.activeSubjectCode,
-            });
+      const routePath = buildScopedWorkflowPath(mod.defaultPath, {
+        studyCode: options.activeStudyCode,
+        siteId: options.activeSiteId,
+        subjectCode: options.activeSubjectCode,
+      });
       items.push({
         key: `preview:${mod.routeName}`,
         group: "Preview",

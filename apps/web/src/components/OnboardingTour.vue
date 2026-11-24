@@ -111,13 +111,16 @@ import {
   useFocusTrap,
   useInlineFocusHandoff,
 } from "ui";
-import { resolveActiveWorkspaceScope } from "../canvas/palette";
+import { getActivePinia } from "pinia";
+import {
+  buildScopedStudyLocation,
+  resolveActiveWorkspaceScope,
+} from "../canvas/palette";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
@@ -127,6 +130,12 @@ const NON_SHELL_TOUR_ROUTES = new Set([
   "forbidden",
   "unavailable",
 ]);
+
+const STRIPPED_TOUR_QUERY_KEYS = new Set(
+  "stage,section,site,participant,node,form,item,observation,proposal,ask,status,q,spec,visit,studyId,study,siteId,subjectId,subject,enrollmentId,visitId".split(
+    ","
+  )
+);
 
 const VIEWPORT_MARGIN_PX = 12;
 const ANCHOR_GAP_PX = 12;
@@ -147,7 +156,6 @@ const emit = defineEmits(["update:activeTab"]);
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
-const canvasStore = useStudyCanvasStore();
 let router;
 let route;
 
@@ -156,6 +164,11 @@ try {
   route = useRoute();
 } catch {
   // Gracefully fallback if router is not provided in isolated unit test environments
+}
+
+function readTourWorkspaceScope() {
+  const canvasState = getActivePinia()?.state.value?.studyCanvas ?? null;
+  return resolveActiveWorkspaceScope(route ?? undefined, canvasState);
 }
 
 const currentStep = computed(() => onboardingStore.currentStep);
@@ -440,41 +453,57 @@ async function syncStepRoute() {
         return;
       }
       if (route.name !== targetRouteName) {
-        const scope = resolveActiveWorkspaceScope(route, canvasStore);
-        const query = config.query
-          ? { ...route.query, ...config.query }
-          : { ...route.query };
+        const scope = readTourWorkspaceScope();
         if (targetRouteName === "study") {
-          delete query.studyId;
-          delete query.siteId;
-          if (scope.siteId && !query.site) {
-            query.site = scope.siteId;
-          }
-          if (scope.studyCode) {
-            await router.push({
-              name: targetRouteName,
-              params: { studyCode: scope.studyCode },
-              query,
-            });
-            return;
-          }
-        } else if (
-          targetRouteName === "ecrf" ||
-          targetRouteName === "ctms" ||
-          targetRouteName === "ssu" ||
-          targetRouteName === "training" ||
-          targetRouteName === "tickets" ||
-          targetRouteName === "etmf"
-        ) {
-          delete query.site;
-          if (scope.studyCode && !query.studyId) {
-            query.studyId = scope.studyCode;
-          }
-          if (scope.siteId && !query.siteId) {
-            query.siteId = scope.siteId;
+          const baseLocation = buildScopedStudyLocation(
+            scope.studyCode,
+            {},
+            {
+              studyCode: scope.studyCode,
+              siteId: scope.siteId,
+              explicitSiteId: scope.explicitSiteId,
+              participantRef: scope.participantRef,
+              subjectCode: scope.subjectCode,
+              enrollmentId: scope.enrollmentId,
+              recordParticipantParam: scope.recordParticipantParam,
+              inspectorNodeParam: scope.inspectorNodeParam,
+            }
+          );
+          const {
+            stage: _stage,
+            section: _section,
+            ...cleanBaseQuery
+          } = baseLocation.query || {};
+          const nextQuery = config.query
+            ? { ...cleanBaseQuery, ...config.query }
+            : cleanBaseQuery;
+          await router.push(
+            scope.studyCode
+              ? { ...baseLocation, query: nextQuery }
+              : { name: "study", query: nextQuery }
+          );
+          return;
+        }
+
+        const standaloneQuery = {};
+        for (const [key, value] of Object.entries(route.query || {})) {
+          if (!STRIPPED_TOUR_QUERY_KEYS.has(key) && value !== undefined) {
+            standaloneQuery[key] = value;
           }
         }
-        await router.push({ name: targetRouteName, query });
+        if (scope.studyCode) {
+          standaloneQuery.studyId = scope.studyCode;
+        }
+        if (scope.siteId) {
+          standaloneQuery.siteId = scope.siteId;
+        }
+        if (scope.subjectCode && !scope.subjectCode.includes(":")) {
+          standaloneQuery.subjectId = scope.subjectCode;
+        }
+        if (config.query) {
+          Object.assign(standaloneQuery, config.query);
+        }
+        await router.push({ name: targetRouteName, query: standaloneQuery });
         return;
       }
     }
@@ -495,6 +524,9 @@ async function syncStepRoute() {
       if (needsUpdate) {
         await router.push({
           name: queryRouteName,
+          ...(route.params && Object.keys(route.params).length > 0
+            ? { params: { ...route.params } }
+            : {}),
           query: newQuery,
         });
       }

@@ -95,6 +95,7 @@ import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal, proposalSources } from "../../ai/proposals";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -165,12 +166,21 @@ const statusLine = computed(() => {
   return "";
 });
 
+const { workspaceScope, scopedStudyLocation } = useScopedNavigation(
+  () => props.studyCode
+);
+
 function reviewLocation(ref: string): RouteLocationRaw {
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: { proposal: ref },
-  };
+  const fallbackNode =
+    !workspaceScope.value.inspectorNodeParam &&
+    !workspaceScope.value.recordParticipantParam &&
+    props.nodeRef
+      ? props.nodeRef
+      : undefined;
+  return scopedStudyLocation({
+    proposal: ref,
+    ...(fallbackNode ? { node: fallbackNode } : {}),
+  });
 }
 
 watch(

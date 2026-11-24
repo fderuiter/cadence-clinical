@@ -124,6 +124,7 @@ import {
   observationNodeRef,
   parseNodeRef,
 } from "../../canvas/nodeRef";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -310,12 +311,10 @@ const statusLine = computed(() => {
   return "";
 });
 
+const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
+
 function reviewLocation(ref: string): RouteLocationRaw {
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: { proposal: ref },
-  };
+  return scopedStudyLocation({ proposal: ref });
 }
 
 function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
@@ -327,33 +326,25 @@ function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
     finding.target_kind === "Observation"
       ? observationNodeRef(finding.record_key)
       : null;
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: {
-      stage: "data",
-      section: "validation",
-      ...(formRef ? { form: formRef } : {}),
-      ...(formRef && finding.variable ? { item: finding.variable } : {}),
-      ...(obsRef ? { observation: obsRef } : {}),
-    },
-  };
+  return scopedStudyLocation({
+    stage: "data",
+    section: "validation",
+    ...(formRef ? { form: formRef } : {}),
+    ...(formRef && finding.variable ? { item: finding.variable } : {}),
+    ...(obsRef ? { observation: obsRef } : {}),
+  });
 }
 
 function sdvAlertLocation(alert: FormSdvAlertResponse): RouteLocationRaw {
   const obsRef = observationNodeRef(alert.observation_id);
   const formRef = alert.form_id ? collectionInstanceRef(alert.form_id) : null;
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: {
-      stage: "conduct",
-      ...(alert.site_code ? { site: alert.site_code } : {}),
-      ...(formRef ? { form: formRef } : {}),
-      ...(alert.item_id ? { item: alert.item_id } : {}),
-      ...(obsRef ? { observation: obsRef } : {}),
-    },
-  };
+  return scopedStudyLocation({
+    stage: "conduct",
+    ...(alert.site_code ? { site: alert.site_code } : {}),
+    ...(formRef ? { form: formRef } : {}),
+    ...(alert.item_id ? { item: alert.item_id } : {}),
+    ...(obsRef ? { observation: obsRef } : {}),
+  });
 }
 
 function when(value: string): string {
