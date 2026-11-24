@@ -6,9 +6,14 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Protocol;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
 using Cadence.TestSupport.Kernel.Protocol;
@@ -372,6 +377,109 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
 
         results.Should().OnlyContain(r => r.IsSuccess);
         results.Select(r => r.Value!.Number).Should().BeEquivalentTo(Enumerable.Range(2, count));
+    }
+
+    /// <summary>
+    /// Validates ADR-2475, K-PROT-2, and K-SIM-5 on PostgreSQL: submitting a forked draft with undeclared schedule or
+    /// eligibility changes refuses with structured undeclared element IDs; approving a forked amendment requires a
+    /// verified Reviewed attestation on an unmasked SimulationReport artifact matching both parent and amended hashes,
+    /// and returning the amendment to draft invalidates prior simulation attestations.
+    /// </summary>
+    [Fact(DisplayName = "ForkedAmendment_EnforcesSoaDirectiveCheck_AndAttestedSimulationReportGate")]
+    [KernelRule("K-PROT-2")]
+    [KernelRule("K-SIM-5")]
+    public async Task ForkedAmendmentEnforcesSoaDirectiveCheckAndAttestedSimulationReportGate()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var (parent, _) = await _scenario.ApprovedAsync(tenant, study, ct);
+
+        var forkId = ProtocolVersionId.New();
+        var baseDesign = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+        };
+        var amendedDesign = baseDesign with
+        {
+            PlannedActivities =
+            [
+                new PlannedActivity("visit.day15", "Day 15 Visit", "ep.treatment", [ActivityLocation.Site], [], new ActivityTiming(15, 1, 1)),
+            ],
+            EligibilityCriteria =
+            [
+                new EligibilityCriterion("crit.inc1", CriterionCategory.Inclusion, "Confirmed diagnosis", []),
+            ],
+        };
+
+        var incompleteAmendment = new ProtocolAmendment(
+            "Add Day 15 visit and inclusion check",
+            "Safety monitoring update",
+            AmendmentClassification.Substantial,
+            "Adds Day 15 visit and inclusion criterion",
+            ["ep.treatment"],
+            TransitionPolicy.RequiresReconsent);
+
+        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent.ProtocolVersionId, forkId, incompleteAmendment, KernelProtocolScenario.Key(), "Fork v2"), ct);
+        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, forkId, ProtocolDesignDocument.Write(amendedDesign), incompleteAmendment, KernelProtocolScenario.Key(), "Add Day 15"), ct);
+
+        // 1. SubmitProtocolVersionForReview refuses undeclared SoA/eligibility elements.
+        var refusedSubmit = await _scenario.SubmitAsync(tenant, forkId, ct);
+        refusedSubmit.Error!.Code.Should().Be(ProtocolErrors.UndeclaredImpactedElements.Code);
+        refusedSubmit.Error.Errors.Should().ContainKey("impactedElements");
+        refusedSubmit.Error.Errors!["impactedElements"].Should().BeEquivalentTo("crit.inc1", "visit.day15");
+        refusedSubmit.Error.Explanation.Should().NotBeNull();
+
+        // 2. Declare all impacted elements and submit -> InReview.
+        var completeAmendment = incompleteAmendment with
+        {
+            ImpactedElements = ["ep.treatment", "visit.day15", "crit.inc1"],
+        };
+        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, forkId, ProtocolDesignDocument.Write(amendedDesign), completeAmendment, KernelProtocolScenario.Key(), "Declare elements"), ct);
+        var frozenV2 = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, forkId, KernelProtocolScenario.Key(), "Submit v2"), ct);
+        var approvedSigV2 = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(frozenV2)), ct);
+
+        // 3. Approve without SimulationReport -> SimulationReviewRequired.
+        (await _scenario.ApproveAsync(tenant, forkId, approvedSigV2, ct)).Error!.Code.Should().Be(ProtocolErrors.SimulationReviewRequired.Code);
+
+        // 4. Save SimulationReport without Reviewed attestation -> still SimulationReviewRequired; Approved meaning on report -> still refused.
+        var sim = (await fixture.Simulation.SimulateAsync(tenant, new SimulationRequest(SimulationCandidate.StoredProtocolVersion(forkId)), ct)).Value!;
+        var savedReport = await _scenario.OkAsync(
+            new SaveSimulationReport(tenant, study, ArtifactId.New(), ArtifactVersionId.New(), "v2 Simulation Report", sim, KernelProtocolScenario.Key(), "Save report"),
+            ct);
+        (await _scenario.ApproveAsync(tenant, forkId, approvedSigV2, ct)).Error!.Code.Should().Be(ProtocolErrors.SimulationReviewRequired.Code);
+
+        var reportTarget = new AttestationTarget(NodeKinds.ArtifactVersion, savedReport.LatestVersionId.Value, savedReport.LatestContentHash);
+        var wrongMeaningOnReport = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, reportTarget), ct);
+        (await _scenario.ApproveAsync(tenant, forkId, approvedSigV2, ct, wrongMeaningOnReport)).Error!.Code.Should().Be(ProtocolErrors.SimulationReviewRequired.Code);
+
+        // 5. Sign Reviewed on report, then ReturnToDraft + Revise + Submit -> prior Reviewed attestation is stale and refused!
+        var staleReviewedSig = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Reviewed, reportTarget), ct);
+        await _scenario.OkAsync(new ReturnProtocolVersionToDraft(tenant, forkId, KernelProtocolScenario.Key(), "Adjust window"), ct);
+        var revisedDesign2 = amendedDesign with
+        {
+            PlannedActivities =
+            [
+                new PlannedActivity("visit.day15", "Day 15 Visit", "ep.treatment", [ActivityLocation.Site], [], new ActivityTiming(16, 1, 2)),
+            ],
+        };
+        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, forkId, ProtocolDesignDocument.Write(revisedDesign2), completeAmendment, KernelProtocolScenario.Key(), "Move to Day 16"), ct);
+        var reFrozenV2 = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, forkId, KernelProtocolScenario.Key(), "Resubmit v2"), ct);
+        var newApprovedSigV2 = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(reFrozenV2)), ct);
+
+        (await _scenario.ApproveAsync(tenant, forkId, newApprovedSigV2, ct, staleReviewedSig)).Error!.Code.Should().Be(ProtocolErrors.SimulationReviewRequired.Code);
+
+        // 6. Simulate & attest Reviewed on current frozen v2 -> Approve succeeds and records DerivedFrom lineage!
+        var (_, currentReport, validReviewedSig) = await _scenario.SimulateAndAttestReviewAsync(tenant, study, forkId, ct);
+        var approvedV2 = await _scenario.ApproveAsync(tenant, forkId, newApprovedSigV2, ct, validReviewedSig);
+        approvedV2.IsSuccess.Should().BeTrue(approvedV2.Error?.Message);
+        approvedV2.Value!.Status.Should().Be(ProtocolVersionStatus.Approved);
+
+        await using var db = fixture.CreateContext(tenant);
+        var derivedEdges = await db.Set<LineageEdgeRecord>().AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.Artifact && e.ToId == currentReport.ArtifactId.Value && e.Kind == LineageEdgeKind.DerivedFrom)
+            .ToListAsync(ct);
+        derivedEdges.Should().ContainSingle().Which.FromId.Should().Be(forkId.Value);
     }
 
     private async Task ExecuteAsAdminAsync(string sql, CancellationToken ct)

@@ -469,5 +469,39 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         removeListenerSpy.mock.calls.some((call) => call[0] === "beforeunload")
       ).toBe(true);
     });
+
+    it("does not mark untouched demo eCRF dirty when switching #role-tester-select persona", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const authStore = useAuthStore();
+      authStore.startDemoSession("super_admin");
+
+      const wrapper = mount(EcrfView, {
+        global: {
+          plugins: [pinia, i18n],
+          stubs: {
+            StudySubjectsBar: true,
+            SubjectEnrollmentForm: true,
+            EcrfFormPanel: true,
+            DesignerSchemaPanel: true,
+            ReasonModal: true,
+            EhrReconciliationDrawer: true,
+            "router-link": true,
+          },
+        },
+      });
+      await flushPromises();
+      await nextTick();
+
+      const roleSelect = wrapper.find("#role-tester-select");
+      expect(roleSelect.exists()).toBe(true);
+      await roleSelect.setValue("cra");
+      await flushPromises();
+      await nextTick();
+
+      const confirmStore = useConfirmStore();
+      const leaveResult = await routeLeaveHandler({ path: "/knowledge" });
+      expect(leaveResult).toBeUndefined();
+      expect(confirmStore.activeRequest).toBeNull();
+    });
   });
 });

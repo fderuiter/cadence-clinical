@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,7 +33,7 @@ internal static class KernelActivityEndpoints
         reads.MapGet("/activity", ReadAsync)
             .WithName("KernelActivity")
             .WithSummary("What happened in a scope, newest first.")
-            .WithDescription("scope is any NodeRef (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page's next cursor; limit 1 to 200 (default 50). Entries about objects you may not see are masked in place.")
+            .WithDescription("scope is any NodeRef or study code (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page's next cursor; limit 1 to 200 (default 50); include_nodes=true embeds resolved summaries for unmasked entry subjects. Entries about objects you may not see are masked in place.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -46,6 +47,7 @@ internal static class KernelActivityEndpoints
         [FromQuery] DateTimeOffset? from,
         [FromQuery] string? before,
         [FromQuery] int? limit,
+        [FromQuery(Name = "include_nodes")] bool? includeNodes,
         HttpContext context,
         IKernelNavigator navigator,
         INodeVisibility visibility,
@@ -53,15 +55,9 @@ internal static class KernelActivityEndpoints
         ICurrentActor currentActor,
         CancellationToken cancellationToken)
     {
-        NodeRef? scopeRef = null;
-        if (scope is not null)
+        if (scope is not null && KernelStudyLookup.ValidateScopeOrStudyCodeSyntax(scope) is { } invalidScope)
         {
-            if (!NodeRef.TryParse(scope, out var parsed))
-            {
-                return KernelProblems.InvalidNodeRef(scope);
-            }
-
-            scopeRef = parsed;
+            return invalidScope;
         }
 
         var families = new HashSet<EventFamily>();
@@ -97,21 +93,28 @@ internal static class KernelActivityEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        NodeRef? scopeRef = null;
         NodeRef gate = NodeRef.For(tenant);
-        if (scopeRef is not null)
+        if (scope is not null)
         {
-            if (await navigator.ResolveAsync(tenant, scopeRef, cancellationToken).ConfigureAwait(false) is not { } summary)
+            var (resolvedScope, scopeProblem) = await KernelStudyLookup
+                .ResolveScopeOrStudyCodeAsync(tenant, scope, context, navigator, cancellationToken)
+                .ConfigureAwait(false);
+            if (scopeProblem is not null)
             {
-                return KernelProblems.NotFound(scopeRef);
+                return scopeProblem;
             }
 
-            gate = summary.Ref;
+            scopeRef = resolvedScope.ScopeRef;
+            gate = resolvedScope.PinnedRef;
         }
 
         // A scope's activity describes the scope, so a scope the reader may not see is refused, not masked (as for a
         // hidden study's protocol versions). The tenant is reference data any grant in effect shows (ADR-2457).
-        var masks = await KernelReadMasking.MaskAsync(visibility, currentActor, tenant, [gate], cancellationToken).ConfigureAwait(false);
-        if (masks.For(gate) is { } mask)
+        var masks = await KernelReadMasking
+            .MaskAsync(visibility, currentActor, tenant, [gate, gate.Unversioned()], cancellationToken)
+            .ConfigureAwait(false);
+        if ((masks.For(gate) ?? masks.For(gate.Unversioned())) is { } mask)
         {
             return KernelProblems.NotVisible(scopeRef is null
                 ? $"You hold no grant in effect in this tenant ({mask}), so its activity is not shown."
@@ -122,7 +125,22 @@ internal static class KernelActivityEndpoints
             tenant,
             new ActivityQuery(scopeRef, families.Count == 0 ? null : families, actor, from, cursor, pageSize),
             cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelActivityPageResponse.From(page));
+
+        IReadOnlyDictionary<string, KernelNodeResponse>? nodes = null;
+        if (includeNodes is true)
+        {
+            var subjectRequests = page.Entries
+                .Where(e => e.Masked is null && e.Subject is not null)
+                .Select(e => e.Subject!)
+                .Distinct()
+                .Select(subject => (subject.ToString(), subject))
+                .ToList();
+            nodes = await KernelReadEndpoints
+                .ResolveMaskedNodesAsync(tenant, subjectRequests, navigator, visibility, currentActor, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return TypedResults.Ok(KernelActivityPageResponse.From(page, nodes));
     }
 }
 
@@ -171,13 +189,21 @@ internal static class ActivityCursorToken
     }
 }
 
-/// <summary>A page of activity; <c>next</c> is the cursor for the following page, or null on the last page.</summary>
-public sealed record KernelActivityPageResponse(IReadOnlyList<KernelActivityEntryResponse> Entries, string? Next)
+/// <summary>
+/// A page of activity; <c>next</c> is the cursor for the following page, or null on the last page. When
+/// <c>include_nodes=true</c> is requested, <c>nodes</c> carries summaries keyed by each unmasked entry subject's
+/// <see cref="NodeRef"/> while keeping <see cref="ActivityEntry"/> payload-free (ADR-2485).
+/// </summary>
+public sealed record KernelActivityPageResponse(
+    IReadOnlyList<KernelActivityEntryResponse> Entries,
+    string? Next,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyDictionary<string, KernelNodeResponse>? Nodes = null)
 {
-    internal static KernelActivityPageResponse From(ActivityPage page) =>
+    internal static KernelActivityPageResponse From(ActivityPage page, IReadOnlyDictionary<string, KernelNodeResponse>? nodes = null) =>
         new(
             [.. page.Entries.Select(KernelActivityEntryResponse.From)],
-            page.Next is { } next ? ActivityCursorToken.Write(next) : null);
+            page.Next is { } next ? ActivityCursorToken.Write(next) : null,
+            nodes);
 }
 
 /// <summary>

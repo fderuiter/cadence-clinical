@@ -1,9 +1,12 @@
+import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createMarkdownRenderer } from "vitepress";
 import { afterEach, describe, expect, it } from "vitest";
+
+import { buildPortalCspContent, injectHashedPortalCsp } from "./csp.mjs";
 
 import {
   assertThemeLinksExist,
@@ -483,6 +486,51 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
     expect(anchors.has("duplicate")).toBe(true);
     expect(anchors.has("duplicate-1")).toBe(true);
+  });
+
+  it("hoists hashed Content-Security-Policy <meta> before all <script> and <link> tags and removes trailing placeholders", () => {
+    const inlineBody =
+      "(() => { const saved = localStorage.getItem('vitepress-theme-appearance'); })();";
+    const expectedDigest = crypto
+      .createHash("sha256")
+      .update(inlineBody, "utf8")
+      .digest("base64");
+
+    const vitepressSampleHtml = [
+      "<!DOCTYPE html>",
+      '<html lang="en-US" dir="ltr">',
+      "  <head>",
+      '    <meta charset="utf-8">',
+      '    <meta name="viewport" content="width=device-width,initial-scale=1">',
+      "    <title>Architecture | Cadence Clinical Portal</title>",
+      '    <link rel="preload" href="/cadence-clinical/assets/style.abc123.css" as="style">',
+      '    <script type="module" src="/cadence-clinical/assets/app.BhpmuQal.js"></script>',
+      '    <link rel="modulepreload" href="/cadence-clinical/assets/chunks/framework.xyz.js">',
+      `    <meta http-equiv="Content-Security-Policy" content="${buildPortalCspContent()}">`,
+      `    <script id="check-dark-mode">${inlineBody}</script>`,
+      "  </head>",
+      '  <body><div id="app"></div></body>',
+      "</html>",
+    ].join("\n");
+
+    const transformed = injectHashedPortalCsp(vitepressSampleHtml);
+    const cspMatches = [
+      ...transformed.matchAll(
+        /<meta\b[^>]*\bhttp-equiv=["']Content-Security-Policy["'][^>]*>/gi
+      ),
+    ];
+    expect(cspMatches).toHaveLength(1);
+
+    const cspIndex = cspMatches[0].index;
+    const firstScriptIndex = transformed.search(/<script\b/i);
+    const firstLinkIndex = transformed.search(/<link\b/i);
+
+    expect(cspIndex).toBeGreaterThan(0);
+    expect(cspIndex).toBeLessThan(firstLinkIndex);
+    expect(cspIndex).toBeLessThan(firstScriptIndex);
+    expect(cspMatches[0][0]).toContain(`'sha256-${expectedDigest}'`);
+    expect(cspMatches[0][0]).toContain("frame-src 'self'");
+    expect(cspMatches[0][0]).not.toContain("'unsafe-inline' 'sha256-");
   });
 
   it("excludes Baseline, Historical, and superseded/pre-kernel ADRs from search while boosting Normative and Kernel docs", () => {

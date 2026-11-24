@@ -12,7 +12,7 @@
         <select
           id="activity-family"
           v-model="family"
-          :disabled="!studyRef"
+          :disabled="noStudy || !props.studyCode.trim()"
           @change="reload"
         >
           <option value="">Everything</option>
@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, ref } from "vue";
+import { computed, getCurrentInstance, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   isMasked,
@@ -92,8 +92,8 @@ import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   ensureNodesResolved,
   formatMaskedNode,
+  seedResolvedNodes,
 } from "../../canvas/nodeResolver";
-import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
 
@@ -126,40 +126,73 @@ const PAGE_SIZE = 25;
 const family = ref<KernelEventFamily | "">("");
 const entries = ref<KernelActivityEntry[]>([]);
 const next = ref<string | null>(null);
+const loading = ref(false);
+const error = ref<string | null>(null);
+const noStudy = ref(false);
+
+let requestSeq = 0;
 
 async function fetchActivityPage(
-  scope: string,
-  before: string | null,
-  isCurrent: () => boolean
-) {
-  const page = await kernelApi.activity({
-    scope,
-    families: family.value ? [family.value] : undefined,
-    before: before ?? undefined,
-    limit: PAGE_SIZE,
-  });
-  if (!isCurrent()) return;
-  entries.value = before ? [...entries.value, ...page.entries] : page.entries;
-  next.value = page.next;
-  ensureNodesResolved(
-    entries.value.filter((e) => !isMasked(e)).map((e) => e.subject)
-  );
-}
+  rawCode: string,
+  before: string | null
+): Promise<void> {
+  const seq = ++requestSeq;
+  const scope = rawCode.trim();
+  error.value = null;
+  noStudy.value = false;
 
-const {
-  studyRef,
-  studyLoading: loading,
-  studyError: error,
-  noStudy,
-  runForCurrentStudy,
-} = useKernelStudyRef(() => props.studyCode, {
-  onReset: () => {
+  if (!scope) {
     entries.value = [];
     next.value = null;
+    noStudy.value = true;
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const page = await kernelApi.activity({
+      scope,
+      families: family.value ? [family.value] : undefined,
+      before: before ?? undefined,
+      limit: PAGE_SIZE,
+      includeNodes: true,
+    });
+    if (seq !== requestSeq) return;
+    if (page?.nodes) {
+      seedResolvedNodes(page.nodes);
+    }
+    const pageEntries = page?.entries ?? [];
+    entries.value = before ? [...entries.value, ...pageEntries] : pageEntries;
+    next.value = page?.next ?? null;
+    ensureNodesResolved(
+      entries.value.filter((e) => !isMasked(e)).map((e) => e.subject)
+    );
+  } catch (err) {
+    if (seq !== requestSeq) return;
+    if ((err as { status?: number | null } | null)?.status === 404) {
+      entries.value = [];
+      next.value = null;
+      noStudy.value = true;
+      return;
+    }
+    error.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    if (seq === requestSeq) {
+      loading.value = false;
+    }
+  }
+}
+
+watch(
+  () => props.studyCode,
+  (code) => {
+    entries.value = [];
+    next.value = null;
+    void fetchActivityPage(code ?? "", null);
   },
-  onResolved: (scope, { isCurrent }) =>
-    fetchActivityPage(scope, null, isCurrent),
-});
+  { immediate: true }
+);
 
 const statusLine = computed(() => {
   if (loading.value && !entries.value.length) return "Reading activity...";
@@ -221,16 +254,13 @@ function subjectLink(entry: KernelActivityEntry): RouteLocationRaw | null {
 function reload() {
   entries.value = [];
   next.value = null;
-  void runForCurrentStudy((scope, isCurrent) =>
-    fetchActivityPage(scope, null, isCurrent)
-  );
+  void fetchActivityPage(props.studyCode ?? "", null);
 }
 
 function loadOlder() {
   const cursor = next.value;
-  void runForCurrentStudy((scope, isCurrent) =>
-    fetchActivityPage(scope, cursor, isCurrent)
-  );
+  if (!cursor) return;
+  void fetchActivityPage(props.studyCode ?? "", cursor);
 }
 </script>
 

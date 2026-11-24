@@ -13,12 +13,12 @@ const props = defineProps({
   },
   title: {
     type: String,
-    default: "Sign Out With Unsaved Drafts?",
+    default: "Sign Out With Unsaved Changes?",
   },
   description: {
     type: String,
     default:
-      "You have unsaved local form or questionnaire edits in this browser. Pending keystrokes have been saved locally, but signing out now will close your active session and clear account-scoped workspace drafts.",
+      "You have unsaved changes in this session. Signing out now will close your active session, discard uncommitted edits, and clear account-scoped workspace drafts.",
   },
   stayLabel: {
     type: String,

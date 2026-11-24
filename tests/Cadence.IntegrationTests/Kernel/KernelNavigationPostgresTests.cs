@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
@@ -17,6 +18,7 @@ using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -338,6 +340,99 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         (await navigator.ResolveAsync(world.Tenant, NodeRef.For(world.AttestedTaskConfiguration), ct))
             .Should().Be(new NodeSummary(NodeRef.For(world.AttestedTaskConfiguration, 1), "Task configuration", Code: null));
         (await navigator.ResolveAsync(world.Tenant, NodeRef.For(world.UnattestedTaskConfiguration), ct)).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Batched <see cref="IKernelNavigator.ResolveManyAsync"/> over <see cref="KernelScopeGraph.FindManyAsync"/> returns
+    /// identical <see cref="NodeSummary"/> values to single-item <see cref="IKernelNavigator.ResolveAsync"/> across
+    /// governance, knowledge, execution, evidence, validation, proposal, and attestation node kinds without leaking
+    /// across tenants.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_ResolveManyAsync_MatchesSingleResolveAcrossAllNodeKinds")]
+    [KernelRule("K-ID-2")]
+    [KernelRule("K-ID-7")]
+    public async Task NavigationResolveManyAsyncMatchesSingleResolveAcrossAllNodeKinds()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var world = await new KernelSignedTargetsScenario(fixture).CreateAsync(ct);
+        var other = await SeedTenantAsync("NAVM");
+
+        NodeRef protocolElementRef;
+        NodeRef validationRunRef;
+        NodeRef organizationRef;
+        NodeRef siteRef;
+        await using (var db = fixture.CreateContext(world.Tenant))
+        {
+            var elementGuid = await db.LineageEdges.AsNoTracking()
+                .Where(e => e.TenantId == world.Tenant && e.ToKind == NodeKinds.ProtocolElement)
+                .Select(e => e.ToId)
+                .FirstAsync(ct);
+            protocolElementRef = NodeRef.For(ProtocolElementId.FromGuid(elementGuid));
+
+            var runId = await db.Set<ValidationRun>().AsNoTracking()
+                .Where(r => r.TenantId == world.Tenant && r.StudyId == world.Study)
+                .Select(r => r.Id)
+                .FirstAsync(ct);
+            validationRunRef = NodeRef.For(runId);
+
+            var orgId = await db.Organizations.AsNoTracking()
+                .Where(o => o.TenantId == world.Tenant)
+                .Select(o => o.Id)
+                .FirstAsync(ct);
+            organizationRef = NodeRef.For(orgId);
+
+            var sId = await db.Sites.AsNoTracking()
+                .Where(s => s.TenantId == world.Tenant)
+                .Select(s => s.Id)
+                .FirstAsync(ct);
+            siteRef = NodeRef.For(sId);
+        }
+
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+        var refs = new[]
+        {
+            NodeRef.For(world.Tenant),
+            organizationRef,
+            siteRef,
+            NodeRef.For(world.Study),
+            NodeRef.For(world.StudySite),
+            NodeRef.For(world.Enrollment),
+            NodeRef.For(world.ProtocolVersion),
+            protocolElementRef,
+            NodeRef.For(world.StandardVersion),
+            NodeRef.For(world.LibraryItem),
+            NodeRef.For(world.StudyArtifact),
+            NodeRef.For(world.StudyArtifactVersion),
+            NodeRef.For(world.TenantArtifact),
+            NodeRef.For(world.TenantArtifactVersion),
+            NodeRef.For(world.CollectionInstance),
+            NodeRef.For(world.FormObservation),
+            NodeRef.For(world.StandaloneObservation),
+            NodeRef.For(world.VerificationAssertion),
+            NodeRef.For(world.RecordedLockAssertion),
+            NodeRef.For(world.Proposal),
+            validationRunRef,
+            NodeRef.For(world.ValidationFinding),
+            NodeRef.For(world.AttestedTaskConfiguration),
+            NodeRef.For(world.UnattestedTaskConfiguration),
+            NodeRef.For(world.ProtocolVersionAttestation),
+            NodeRef.For(world.ProposalAttestation),
+            NodeRef.For(world.ValidationFindingAttestation),
+            NodeRef.For(other.Study),
+            NodeRef.For(StudyId.New()),
+        };
+
+        var batched = await navigator.ResolveManyAsync(world.Tenant, refs, ct);
+
+        foreach (var target in refs)
+        {
+            var single = await navigator.ResolveAsync(world.Tenant, target, ct);
+            batched.GetValueOrDefault(target).Should().Be(single, $"batched summary for {target} must match single ResolveAsync");
+        }
+
+        batched.Should().NotContainKey(NodeRef.For(other.Study));
+        batched.Should().NotContainKey(NodeRef.For(world.UnattestedTaskConfiguration));
     }
 
     private async Task<SeededTenant> SeedTenantAsync(string code)
