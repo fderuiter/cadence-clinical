@@ -126,7 +126,7 @@ public static class SiteMilestoneEndpoints
             return problem!;
         }
 
-        var (user, role) = ResolveCaller(httpContext);
+        var (user, role) = CallerScope.ResolveActor(httpContext);
         DateTimeOffset now = clock.UtcNow;
 
         CtmsSiteMilestoneStatus initialStatus = CtmsSiteMilestoneStatus.Planned;
@@ -203,7 +203,7 @@ public static class SiteMilestoneEndpoints
             return problem!;
         }
 
-        var (user, role) = ResolveCaller(httpContext);
+        var (user, role) = CallerScope.ResolveActor(httpContext);
         DateTimeOffset now = clock.UtcNow;
 
         if (request is not null)
@@ -252,17 +252,6 @@ public static class SiteMilestoneEndpoints
         await db.SaveChangesAsync(ct);
 
         return TypedResults.Ok(ToResponseDto(milestone));
-    }
-
-    private static (string User, string Role) ResolveCaller(HttpContext httpContext)
-    {
-        string user = CallerScope.UserId(httpContext) ?? (httpContext.User?.Identity?.Name is { Length: > 0 } n ? n : "system");
-        string role = CallerScope.Roles(httpContext);
-        if (string.IsNullOrWhiteSpace(role))
-        {
-            role = "SYSTEM";
-        }
-        return (user, role);
     }
 
     public static SiteMilestoneResponseDto ToResponseDto(CtmsSiteMilestone milestone) =>

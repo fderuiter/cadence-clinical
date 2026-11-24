@@ -348,12 +348,12 @@ public static class CiPlan
             new("lint-and-static", "Build frontend workspace") { Commands = [Pnpm("build")] },
             new("lint-and-static", "Run frontend style and lint")
             {
+                EnvironmentIfPassed = NativeAotCacheHit,
                 Commands =
                 [
                     Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
                         with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
-                    Pnpm("-r", "lint"),
-                    Pnpm("exec", "eslint", "--max-warnings", "0", "."),
+                    NodeCli("check", "eslint"),
                     Pnpm("-r", "typecheck"),
                 ],
             },
