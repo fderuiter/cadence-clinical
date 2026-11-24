@@ -212,12 +212,8 @@ internal static class FormSdvAlertEndpoints
             .Distinct()
             .ToList();
         var formsById = formIds.Count > 0
-            ? await forms.FindManyForReaderAsync(
-                tenant,
-                formIds,
-                (eId, ct) => access.CanUnblindAsync(tenant, eId, ct),
-                cancellationToken).ConfigureAwait(false)
-            : new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
+            ? await forms.FindHeadersAsync(tenant, formIds, cancellationToken).ConfigureAwait(false)
+            : new Dictionary<CollectionInstanceId, CollectionInstanceHeader>();
 
         var nodesToResolve = new List<NodeRef>();
         foreach (var (alert, obs, _) in activeCandidates)
@@ -246,14 +242,14 @@ internal static class FormSdvAlertEndpoints
             {
                 var (alert, obs, currentRevision) = candidate;
                 var resolvedFormId = alert.FormId ?? obs.CollectionInstanceId;
-                var formRecord = resolvedFormId is { IsEmpty: false } fId ? formsById.GetValueOrDefault(fId) : null;
+                var formHeader = resolvedFormId is { IsEmpty: false } fId ? formsById.GetValueOrDefault(fId) : null;
                 var itemId = alert.ItemId ?? obs.ItemId;
 
                 var studySummary = summaries.GetValueOrDefault(NodeRef.For(alert.StudyId));
                 var studyCode = studySummary?.Code ?? studySummary?.Title;
 
                 Guid? studySiteGuid = alert.StudySiteId?.Value
-                    ?? (formRecord is { StudySiteId.IsEmpty: false } ? formRecord.StudySiteId.Value : null);
+                    ?? (formHeader is { StudySiteId.IsEmpty: false } ? formHeader.StudySiteId.Value : null);
                 string? siteCode = null;
                 string? subjectCode = null;
 
@@ -289,8 +285,8 @@ internal static class FormSdvAlertEndpoints
                 var message = FormatAlertMessage(
                     subjectCode,
                     alert.EnrollmentId,
-                    formRecord?.PlannedActivityId,
-                    formRecord?.CollectionSpecId,
+                    formHeader?.PlannedActivityId,
+                    formHeader?.CollectionSpecId,
                     itemId);
 
                 return new FormSdvAlertResponse(
@@ -303,8 +299,8 @@ internal static class FormSdvAlertEndpoints
                     studyCode,
                     siteCode,
                     subjectCode,
-                    formRecord?.CollectionSpecId,
-                    formRecord?.PlannedActivityId,
+                    formHeader?.CollectionSpecId,
+                    formHeader?.PlannedActivityId,
                     itemId,
                     alert.SupersededRevision,
                     currentRevision,

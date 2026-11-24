@@ -911,7 +911,7 @@ export function createWebDemoStore() {
         PROPOSAL_1_REF,
         {
           ref: PROPOSAL_1_REF,
-          study: STUDY_REF,
+          study: canonicalStudyEntry.ref,
           intent: "Extend Week 4 visit window from +/-2 days to +/-3 days",
           plan: {
             ref: "plan:00000000-0000-0000-0000-000000004101", // deid-ignore
@@ -925,15 +925,17 @@ export function createWebDemoStore() {
           simulated_impact:
             "2 scheduled visit windows updated; 0 re-consents required.",
           requested_capabilities: ["protocol.amend"],
-          proposed_at: "2026-08-03T10:00:00Z",
-          expires_at: "2026-09-03T10:00:00Z",
-          proposed_by: "usr-designer-01",
-          proposed_by_kind: "human",
-          requested_by: "usr-designer-01",
-          model_id: null,
-          confidence_score: null,
+          proposed_at: demoNowIso(),
+          expires_at: demoNowIso(30, 86_400_000),
+          proposed_by: "agent:protocol-visit-window",
+          proposed_by_kind: "AutomationAgent",
+          requested_by:
+            getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+            "designer_demo",
+          model_id: "cadence-protocol-guardian-1.2",
+          confidence_score: 0.89,
           content_hash: "sha256-demo-prop-4001",
-          status: "PENDING",
+          status: "Open",
           decided_at: null,
           decided_by: null,
           approval_attestation: null,
@@ -1826,6 +1828,44 @@ export function createWebDemoStore() {
           status: "PUBLISHED",
           mask: null,
         };
+      }
+      if (String(nodeRef).startsWith("plan:")) {
+        const unversionedPlan = String(nodeRef).split("@")[0];
+        const matchingProposal = [...state.proposals.values()].find(
+          (p) => String(p.plan?.ref || "").split("@")[0] === unversionedPlan
+        );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "plan",
+            title:
+              matchingProposal?.plan?.title ||
+              "Protocol Amendment 2 Visit Window Adjustment",
+            code: `v${matchingProposal?.plan?.number ?? 2}`,
+            status: "PROPOSED",
+            mask: null,
+          },
+          caller
+        );
+      }
+      if (String(nodeRef).startsWith("proposal:")) {
+        const unversionedProp = String(nodeRef).split("@")[0];
+        const matchingProposal =
+          state.proposals.get(unversionedProp) ||
+          [...state.proposals.values()].find(
+            (p) => String(p.ref || "").split("@")[0] === unversionedProp
+          );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "proposal",
+            title: matchingProposal?.intent || "Protocol Amendment Proposal",
+            code: String(unversionedProp).split(":")[1]?.slice(-4) || "4001",
+            status: matchingProposal?.status || "Open",
+            mask: null,
+          },
+          caller
+        );
       }
       if (String(nodeRef).startsWith("study_site:")) {
         const siteCode = resolveSiteCodeFromRef(
@@ -3246,30 +3286,64 @@ export function createWebDemoStore() {
       };
     },
 
-    listProposals() {
-      return cloneJson([...state.proposals.values()]);
+    listProposals({ status, limit } = {}) {
+      let items = [...state.proposals.values()];
+      const normalizedStatus = String(status || "")
+        .trim()
+        .toLowerCase();
+      if (normalizedStatus) {
+        items = items.filter(
+          (item) =>
+            String(item.status || "")
+              .trim()
+              .toLowerCase() === normalizedStatus
+        );
+      }
+      const maxItems = Number(limit);
+      if (Number.isFinite(maxItems) && maxItems > 0) {
+        items = items.slice(0, maxItems);
+      }
+      return cloneJson(items);
     },
 
     getProposal(proposalRef) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       return cloneJson(
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0]
+        state.proposals.get(cleanRef) ||
+          state.proposals.get(proposalRef) ||
+          [...state.proposals.values()][0]
       );
     },
 
-    rejectProposal(proposalRef, reason = "Rejected in demo review") {
+    rejectProposal(
+      proposalRef,
+      reason = "Rejected in demo review",
+      caller = null
+    ) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       const existing =
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0];
-      const now = new Date().toISOString();
-      existing.status = "REJECTED";
+        state.proposals.get(cleanRef) ||
+        state.proposals.get(proposalRef) ||
+        [...state.proposals.values()][0];
+      const now = demoNowIso(nextCounter());
+      const personaUsername = caller?.persona
+        ? getDemoPersonaForWorkspace(caller.persona)?.username
+        : null;
+      const actor =
+        personaUsername ||
+        caller?.userId ||
+        getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+        "designer_demo";
+      existing.status = "Rejected";
       existing.decided_at = now;
-      existing.decided_by = "usr-demo-operator";
+      existing.decided_by = actor;
       existing.decision_reason = reason;
       recordActivity(
         "proposal.rejected",
         "governance",
         "proposal",
         existing.ref,
-        "usr-demo-operator"
+        actor
       );
       return {
         ref: existing.ref,
@@ -5122,6 +5196,8 @@ export function createWebDemoStore() {
       const blockers = [];
       let openQueryCount = 0;
       let missingRequiredItemCount = 0;
+      let unverifiedValueCount = 0;
+      let unsignedFormCount = 0;
 
       for (const q of state.queries.values()) {
         const status = String(q.status || "").toLowerCase();
@@ -5200,10 +5276,175 @@ export function createWebDemoStore() {
         }
       }
 
+      const checkedObservationRefs = new Set();
+      for (const f of state.forms.values()) {
+        if (scopeKind !== "observation" && !matchesScope(f)) continue;
+        const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+        const collectionTitle =
+          f.collection_title ||
+          resolveCollectionTitle(f.collection_spec_id) ||
+          null;
+        const formAssertions = Array.isArray(f.assertions) ? f.assertions : [];
+        const activeFormVerified = formAssertions.some(
+          (a) =>
+            !a.retracted_at &&
+            String(a.kind).toLowerCase() === "verified" &&
+            !String(a.target || "").startsWith("observation:")
+        );
+        const itemsList = Array.isArray(f.items) ? f.items : [];
+        let recordedItemCount = 0;
+
+        for (const it of itemsList) {
+          if (
+            !it.observation_id ||
+            it.value === null ||
+            it.value === undefined
+          ) {
+            continue;
+          }
+          if (
+            scopeKind === "observation" &&
+            String(it.observation_id) !== scopeUuid
+          ) {
+            continue;
+          }
+          recordedItemCount += 1;
+          const obsRef = `observation:${it.observation_id}`;
+          checkedObservationRefs.add(obsRef);
+          if (activeFormVerified) continue;
+
+          const obs = state.observations.get(obsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const currentRevision = Number(it.revision ?? obs?.version ?? 1);
+          const isObsVerified =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                a.target === obsRef &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            );
+          if (!isObsVerified) {
+            unverifiedValueCount += 1;
+            const itemLabel = it.concept || it.item_id || obsRef;
+            blockers.push({
+              kind: "UnverifiedValue",
+              owner: "Monitor / Data Management",
+              target_ref: obsRef,
+              target_kind: "observation",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: it.item_id || null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting source verification`,
+              next_action: `Monitor / Data Management: verify revision ${currentRevision} of '${itemLabel}' (${obsRef}) against source records.`,
+              next_capability: "observation.verify",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+
+        if (scopeKind !== "observation" && recordedItemCount > 0) {
+          const sigs = Array.isArray(f.signatures) ? f.signatures : [];
+          const signed =
+            sigs.length > 0 &&
+            sigs.some(
+              (s) => !s.superseded && s.content_hash === f.content_hash
+            );
+          if (!signed) {
+            unsignedFormCount += 1;
+            const formRef = `collection_instance:${f.form_id}`;
+            const titleLabel =
+              collectionTitle || f.collection_spec_id || formRef;
+            const signatureSuperseded = sigs.length > 0;
+            blockers.push({
+              kind: "UnsignedForm",
+              owner: "Principal Investigator",
+              target_ref: formRef,
+              target_kind: "collection_instance",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: null,
+              item_label: titleLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              signature_superseded: signatureSuperseded,
+              next_action: `Principal Investigator: sign form '${titleLabel}' (${formRef}) at its current content revision.`,
+              next_capability: "collection.sign",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
+      if (scopeKind === "observation") {
+        const singleObsRef = `observation:${scopeUuid}`;
+        if (
+          !checkedObservationRefs.has(singleObsRef) &&
+          state.observations.has(singleObsRef)
+        ) {
+          const obs = state.observations.get(singleObsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const currentRevision = Number(obs?.version ?? 1);
+          const isObsVerified = obsAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "verified" &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          );
+          if (!isObsVerified) {
+            unverifiedValueCount += 1;
+            const itemLabel = obs?.concept || singleObsRef;
+            blockers.push({
+              kind: "UnverifiedValue",
+              owner: "Monitor / Data Management",
+              target_ref: singleObsRef,
+              target_kind: "observation",
+              subject_code: null,
+              collection_spec_id: null,
+              collection_title: null,
+              item_id: null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting source verification`,
+              next_action: `Monitor / Data Management: verify revision ${currentRevision} of '${itemLabel}' (${singleObsRef}) against source records.`,
+              next_capability: "observation.verify",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
       const readyForLock = blockers.length === 0;
       const claim = readyForLock
-        ? `Scope ${cleanScopeRef} has 0 open queries and 0 missing required items and is ready for Locked.`
-        : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"} and ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"} remain unresolved (Frozen remains available).`;
+        ? `Scope ${cleanScopeRef} satisfies all lock readiness gates and is ready for Locked.`
+        : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"}, ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"}, ${unverifiedValueCount} unverified ${unverifiedValueCount === 1 ? "value" : "values"}, and ${unsignedFormCount} unsigned ${unsignedFormCount === 1 ? "form" : "forms"} remain unresolved (Frozen remains available).`;
 
       return {
         study_ref: cleanStudyRef,
@@ -5214,8 +5455,8 @@ export function createWebDemoStore() {
         can_freeze: true,
         open_query_count: openQueryCount,
         missing_required_item_count: missingRequiredItemCount,
-        unverified_value_count: 0,
-        unsigned_form_count: 0,
+        unverified_value_count: unverifiedValueCount,
+        unsigned_form_count: unsignedFormCount,
         unopened_visit_count: 0,
         open_error_finding_count: 0,
         blocker_count: blockers.length,
@@ -5230,7 +5471,7 @@ export function createWebDemoStore() {
           })),
           conditions: [
             {
-              code: "NO_OPEN_QUERIES",
+              code: "lock.queries_closed",
               description: "Zero open queries remain in target scope.",
               met: openQueryCount === 0,
               evidence: blockers
@@ -5238,7 +5479,7 @@ export function createWebDemoStore() {
                 .map((b) => b.target_ref),
             },
             {
-              code: "REQUIRED_ITEMS_COMPLETE",
+              code: "lock.required_items_complete",
               description:
                 "All required collection items are recorded in target scope.",
               met: missingRequiredItemCount === 0,
@@ -5246,9 +5487,27 @@ export function createWebDemoStore() {
                 .filter((b) => b.kind === "MissingRequiredItem" && b.target_ref)
                 .map((b) => b.target_ref),
             },
+            {
+              code: "lock.observations_verified",
+              description:
+                "All recorded observation revisions in target scope are source-verified.",
+              met: unverifiedValueCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "UnverifiedValue" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
+            {
+              code: "lock.forms_signed",
+              description:
+                "All populated forms in target scope carry a current investigator signature.",
+              met: unsignedFormCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "UnsignedForm" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
           ],
           next_actions: blockers.map((b) => ({
-            action: b.next_action,
+            description: b.next_action,
             capability: b.next_capability,
             target: b.target_ref,
           })),

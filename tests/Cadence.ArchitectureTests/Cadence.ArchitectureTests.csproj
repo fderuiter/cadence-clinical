@@ -4,6 +4,7 @@
     <RootNamespace>Cadence.ArchitectureTests</RootNamespace>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,11 +20,23 @@
     <ProjectReference Include="..\..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\packages\testing\src\Cadence.Testing.csproj" />
-    <!-- K-XS-1/K-MOD-1 (tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryTests.cs) scan every Cadence.* assembly deployed next to
-         this test binary, so every non-kernel production library must be referenced here to be covered. -->
+    <!-- Every production Cadence.* project in Cadence.sln must be referenced here so compiled IL, EF Core model,
+         and boundary sentinels inspect 100% of production assemblies deployed next to this test binary. -->
+    <ProjectReference Include="..\..\packages\compliance\src\Cadence.Compliance.csproj" />
     <ProjectReference Include="..\..\packages\contracts\src\Cadence.Contracts.csproj" />
+    <ProjectReference Include="..\..\packages\ddf\src\Cadence.Ddf.csproj" />
+    <ProjectReference Include="..\..\packages\deid\src\Cadence.Deid.csproj" />
     <ProjectReference Include="..\..\packages\storage\src\Cadence.Storage.csproj" />
+    <ProjectReference Include="..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
+    <ProjectReference Include="..\..\packages\templating\src\Cadence.Templating.csproj" />
+    <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
+    <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.DatabaseMigrator\Cadence.DatabaseMigrator.csproj" />
+    <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.OpenApiExporter\Cadence.OpenApiExporter.csproj" />
+    <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.SchemaDocExporter\Cadence.SchemaDocExporter.csproj" />
+    <ProjectReference Include="..\..\packages\topology\src\Cadence.Topology.csproj" />
     <ProjectReference Include="..\..\packages\cli\src\Cadence.Cli.csproj" />
+    <ProjectReference Include="..\..\apps\apphost\src\Cadence.AppHost.csproj" />
+    <ProjectReference Include="..\..\apps\kernel-api\src\Cadence.Kernel.Host.csproj" />
     <ProjectReference Include="..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
     <ProjectReference Include="..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
     <ProjectReference Include="..\..\apps\execution\module\Cadence.Modules.Execution.csproj" />

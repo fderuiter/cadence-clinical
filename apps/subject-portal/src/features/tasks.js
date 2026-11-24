@@ -1,5 +1,5 @@
 // 1. My Tasks: the assigned questionnaires list, its loading and retry.
-import { createSrOnlyActionButton } from "ui";
+import { createSrOnlyActionButton, handoffFocus } from "ui";
 import {
   fetchAssignedInstruments,
   fetchAssignments,
@@ -308,6 +308,11 @@ export async function loadAssignedInstruments(userId) {
 
 // Retry button on the task list failure state.
 export async function retryTasks() {
+  const startedInFailure =
+    typeof document !== "undefined" &&
+    Boolean(
+      document.getElementById("tasks-failure")?.contains(document.activeElement)
+    );
   state.tasksLoading = true;
   state.tasksError = null;
   state.assignmentsError = false;
@@ -363,5 +368,23 @@ export async function retryTasks() {
   } finally {
     state.tasksLoading = false;
     renderTasks();
+    if (startedInFailure) {
+      if (state.tasksError || state.assignmentsError) {
+        void handoffFocus([
+          "#btn-retry-tasks",
+          "#tasks-view-heading",
+          "#main-content",
+        ]);
+      } else {
+        void handoffFocus([
+          () =>
+            document.querySelector(
+              "#tasks-list-container button:not([disabled]), #tasks-list-container a[href], #tasks-list-container input:not([disabled])"
+            ),
+          "#tasks-view-heading",
+          "#main-content",
+        ]);
+      }
+    }
   }
 }

@@ -50,10 +50,10 @@ internal sealed class AlertMonitorOnVerifiedObservationCorrected(
 
         StudySiteId? studySiteId = null;
         if (observation.CollectionInstanceId is { IsEmpty: false } formId
-            && await forms.FindAsync(payload.TenantId, formId, cancellationToken).ConfigureAwait(false) is { } formRecord
-            && !formRecord.StudySiteId.IsEmpty)
+            && await forms.FindHeaderAsync(payload.TenantId, formId, cancellationToken).ConfigureAwait(false) is { } formHeader
+            && !formHeader.StudySiteId.IsEmpty)
         {
-            studySiteId = formRecord.StudySiteId;
+            studySiteId = formHeader.StudySiteId;
         }
 
         var modifiedBy = !string.IsNullOrWhiteSpace(correctingRevision?.RecordedBy)

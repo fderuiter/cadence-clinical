@@ -182,6 +182,11 @@ public sealed class HttpKernelEnrollmentSynchronizer(
         {
             HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized => DomainError.Forbidden(code, detail),
             HttpStatusCode.NotFound => DomainError.NotFound(code, detail),
+            HttpStatusCode.Locked => DomainError.Conflict(
+                code is "K.Observation.Locked" or "K.Assertion.Locked" or "KERNEL_SCOPE_LOCKED"
+                    ? code
+                    : "K.Observation.Locked",
+                detail),
             HttpStatusCode.Conflict => DomainError.Conflict(code, detail),
             _ => DomainError.Validation(code, detail),
         };

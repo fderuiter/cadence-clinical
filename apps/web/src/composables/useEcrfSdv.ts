@@ -40,13 +40,21 @@ export interface BulkSdvItemResult {
   message: string;
 }
 
-function matchingTarget(
-  target: string | null | undefined,
-  observationId: string
-): boolean {
-  if (!target) return false;
-  const prefix = `observation:${observationId}`;
-  return target === prefix || target.startsWith(`${prefix}@`);
+const OBSERVATION_TARGET_PREFIX = "observation:";
+
+interface IndexedObservationVerifications {
+  byRevision: Map<number, EcrfFormAssertion>;
+  minNonNullRevision: number | null;
+}
+
+function observationTargetId(target: string | null | undefined): string | null {
+  if (!target || !target.startsWith(OBSERVATION_TARGET_PREFIX)) {
+    return null;
+  }
+  const rest = target.slice(OBSERVATION_TARGET_PREFIX.length);
+  const atIndex = rest.indexOf("@");
+  const id = atIndex < 0 ? rest : rest.slice(0, atIndex);
+  return id.length > 0 ? id : null;
 }
 
 export function hasRecordedValue(item: EcrfFormItem): boolean {
@@ -69,37 +77,64 @@ export function useEcrfSdv(options: {
   const sdvBusy = ref(false);
   const sdvOutcome = ref<SdvOutcome | null>(null);
   const selectedSdvItems = ref<string[]>([]);
+  const selectedSdvItemSet = computed(() => new Set(selectedSdvItems.value));
   const bulkSdvReason = ref("");
   const bulkSdvResults = ref<BulkSdvItemResult[]>([]);
 
-  function activeVerification(item: EcrfFormItem): EcrfFormAssertion | null {
-    if (!hasRecordedValue(item) || !item.observation_id) return null;
-    const assertions = form.value?.assertions ?? [];
-    for (let i = assertions.length - 1; i >= 0; i--) {
-      const a = assertions[i];
+  const verifiedByObservationId = computed(() => {
+    const index = new Map<string, IndexedObservationVerifications>();
+    const assertions = form.value?.assertions;
+    if (!assertions || assertions.length === 0) return index;
+
+    for (const a of assertions) {
+      if (a.retracted_at || a.kind.toLowerCase() !== "verified") continue;
+      const observationId = observationTargetId(a.target);
+      if (!observationId) continue;
+
+      const numericRevision = Number(a.revision);
+      if (Number.isNaN(numericRevision)) continue;
+
+      let entry = index.get(observationId);
+      if (!entry) {
+        entry = {
+          byRevision: new Map<number, EcrfFormAssertion>(),
+          minNonNullRevision: null,
+        };
+        index.set(observationId, entry);
+      }
+
+      entry.byRevision.set(numericRevision, a);
       if (
-        a.kind.toLowerCase() === "verified" &&
-        matchingTarget(a.target, item.observation_id) &&
-        !a.retracted_at &&
-        Number(a.revision) === Number(item.revision)
+        a.revision !== null &&
+        (entry.minNonNullRevision === null ||
+          numericRevision < entry.minNonNullRevision)
       ) {
-        return a;
+        entry.minNonNullRevision = numericRevision;
       }
     }
-    return null;
+    return index;
+  });
+
+  function activeVerification(item: EcrfFormItem): EcrfFormAssertion | null {
+    if (!hasRecordedValue(item) || !item.observation_id) return null;
+    return (
+      verifiedByObservationId.value
+        .get(item.observation_id)
+        ?.byRevision.get(Number(item.revision)) ?? null
+    );
   }
 
   function needsReverification(item: EcrfFormItem): boolean {
     if (!hasRecordedValue(item) || !item.observation_id) return false;
-    if (activeVerification(item)) return false;
-    return (form.value?.assertions ?? []).some(
-      (a) =>
-        a.kind.toLowerCase() === "verified" &&
-        matchingTarget(a.target, item.observation_id as string) &&
-        !a.retracted_at &&
-        a.revision !== null &&
-        Number(a.revision) < Number(item.revision)
-    );
+    const entry = verifiedByObservationId.value.get(item.observation_id);
+    if (!entry || entry.minNonNullRevision === null) return false;
+    const itemRevision = Number(item.revision);
+    if (entry.byRevision.has(itemRevision)) return false;
+    return entry.minNonNullRevision < itemRevision;
+  }
+
+  function isSdvSelected(itemId: string): boolean {
+    return selectedSdvItemSet.value.has(itemId);
   }
 
   const unverifiedItems = computed(() =>
@@ -123,7 +158,7 @@ export function useEcrfSdv(options: {
 
   function toggleSdvItem(itemId: string, checked: boolean) {
     if (checked) {
-      if (!selectedSdvItems.value.includes(itemId)) {
+      if (!selectedSdvItemSet.value.has(itemId)) {
         selectedSdvItems.value = [...selectedSdvItems.value, itemId];
       }
     } else {
@@ -265,7 +300,7 @@ export function useEcrfSdv(options: {
     ) {
       return;
     }
-    const selected = new Set(selectedSdvItems.value);
+    const selected = selectedSdvItemSet.value;
     const targets = unverifiedItems.value.filter(
       (i) => selected.has(i.item_id) && Boolean(i.observation_id)
     );
@@ -341,6 +376,7 @@ export function useEcrfSdv(options: {
     sdvBusy,
     sdvOutcome,
     selectedSdvItems,
+    isSdvSelected,
     bulkSdvReason,
     bulkSdvResults,
     hasRecordedValue,
