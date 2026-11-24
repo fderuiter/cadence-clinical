@@ -17245,11 +17245,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                  }
+                ]
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {

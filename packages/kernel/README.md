@@ -671,8 +671,12 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   delegation under the grant stops counting.
 - **Evaluation.** `AuthorityEvaluator` permits when a grant held by the actor carries the capability (directly or
   through its role), covers the resource's scope path and is in effect at `(at, known_at)` with every grant above
-  it. Automation agents are denied Execute and Approve. Platform operators (`svc:` accounts) hold only
-  `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through the pipeline.
+  it; when `ResolveVisibilityBatchAsync` classifies an `observation`, `validation_finding`, `assertion`, or `form_query`
+  resource as blinded treatment data (K-AUTH-4), non-unblinding capabilities also require an in-effect
+  `enrollment.unblind` grant and current K-AUTH-5 qualifications over the evidence scope, denying with the uniform
+  `grant.active` condition otherwise. Automation agents are denied Execute and Approve. Platform operators (`svc:`
+  accounts) hold only `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through
+  the pipeline.
 - **Recording.** Each decision names its conditions (`grant.active`, `grant.delegable`, `grant.delegator`,
   `actor.platform_operator`, `actor.agent_verb`). The command's provenance activity stores them in
   `authorization`.
