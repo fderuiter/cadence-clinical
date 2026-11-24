@@ -3,6 +3,8 @@ using System;
 using Cadence.Database.Signatures;
 using Cadence.Kernel;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 
 using Microsoft.EntityFrameworkCore;
@@ -118,6 +120,13 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
             query.Property(q => q.KernelQueryId).HasColumnName("kernel_query_id").HasConversion(a => a.Value, v => AssertionId.FromGuid(v));
             query.Property(q => q.KernelAnswerId).HasColumnName("kernel_answer_id")
                 .HasConversion(a => a == null ? (Guid?)null : a.Value.Value, v => v == null ? null : AssertionId.FromGuid(v.Value));
+            query.Property(q => q.ValidationFindingId).HasColumnName("validation_finding_id")
+                .HasConversion(f => f == null ? (Guid?)null : f.Value.Value, v => v == null ? null : ValidationFindingId.FromGuid(v.Value));
+            query.Property(q => q.RulePackId).HasColumnName("rule_pack_id")
+                .HasConversion(p => p == null ? (Guid?)null : p.Value.Value, v => v == null ? null : LibraryItemId.FromGuid(v.Value));
+            query.Property(q => q.PackKey).HasColumnName("pack_key").HasMaxLength(FormQuery.PackKeyMaxLength);
+            query.Property(q => q.RuleId).HasColumnName("rule_id").HasMaxLength(FormQuery.RuleIdMaxLength);
+            query.Property(q => q.RuleVersion).HasColumnName("rule_version");
 
             query.HasMany(q => q.Periods).WithOne()
                 .HasForeignKey(p => new { p.TenantId, p.QueryId })
@@ -137,6 +146,7 @@ public sealed class ExecutionModuleDbContext(DbContextOptions<ExecutionModuleDbC
             query.Property(q => q.ReasonForChange).HasColumnName("reason_for_change");
             query.Property(q => q.VersionIndex).HasColumnName("version_index");
             query.HasIndex(q => new { q.TenantId, q.FormId }).HasDatabaseName("ix_form_queries_tenant_form");
+            query.HasIndex(q => new { q.TenantId, q.FormId, q.ValidationFindingId }).HasDatabaseName("ix_form_queries_tenant_form_finding");
             query.HasIndex(q => new { q.TenantId, q.EnrollmentId, q.Status }).HasDatabaseName("ix_form_queries_tenant_enrollment_status");
             query.HasIndex(q => new { q.TenantId, q.ObservationId, q.Status }).HasDatabaseName("ix_form_queries_tenant_observation_status");
         });

@@ -523,6 +523,7 @@
             :priority="queryPriorityFilter"
             :site="siteFilter"
             :participant="queryParticipantFilter"
+            :participant-scope="activeParticipantScopeParam || undefined"
             :changed="queryChangedFilter"
             @filter="applyStudyQueryFilter"
           />
@@ -539,7 +540,11 @@
             :study-code="studyCode"
             :can-manage-rules="canManageRules"
             :site="siteFilter || zoomSite"
-            :participant="activeParticipantScopeParam"
+            :participant="
+              activeParticipantScopeParam ||
+              queryParticipantFilter ||
+              zoomParticipantCode
+            "
             :node="activeInspectorParticipantNodeParam"
           />
 
@@ -2223,6 +2228,11 @@ const formBackLocation = computed(() => {
       stage: "data",
       section: section.value.id,
       site: siteFilter.value || undefined,
+      participant: activeParticipantScopeParam.value || undefined,
+      subject:
+        section.value.id === "queries"
+          ? queryParticipantFilter.value || undefined
+          : undefined,
     });
   }
   if (activeFormParticipant.value) {
@@ -2258,6 +2268,11 @@ const observationReturnLocation = computed(() => {
       stage: "data",
       section: section.value!.id,
       site: siteFilter.value || undefined,
+      participant: activeParticipantScopeParam.value || undefined,
+      subject:
+        section.value!.id === "queries"
+          ? queryParticipantFilter.value || undefined
+          : undefined,
     });
   }
   if (activeFormParticipant.value) {

@@ -23,6 +23,8 @@ export type KernelValidationFindingPage =
   KernelSchemas["Kernel_KernelValidationFindingPageResponse"];
 export type KernelValidationFindingDetail =
   KernelSchemas["Kernel_KernelValidationFindingDetailResponse"];
+export type KernelFindingTargetKind = KernelSchemas["Kernel_FindingTargetKind"];
+export type FindingTargetKind = KernelFindingTargetKind;
 export type KernelFindingClassification =
   "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 

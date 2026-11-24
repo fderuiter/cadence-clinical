@@ -1,14 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Validation;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -378,6 +386,195 @@ public class ValidationFindingTests
         detection.Observed[1].Value.Should().BeNull();
     }
 
+    [Fact(DisplayName = "DatasetRecordTarget_ResolvesCollectionInstanceNode_WithoutChangingFindingIdentityHash")]
+    [Trait("Category", "Unit")]
+    public void DatasetRecordTargetResolvesCollectionInstanceNodeWithoutChangingFindingIdentityHash()
+    {
+        var formGuid = Guid.Parse("01950000-0000-7000-8000-000000002002");
+        var formKey = formGuid.ToString("D");
+        var uuidTarget = new FindingTarget(FindingTargetKind.DatasetRecord, Vitals, formKey, "HR");
+        var emptyTarget = new FindingTarget(FindingTargetKind.DatasetRecord, Vitals, Guid.Empty.ToString("D"), "HR");
+        var syntheticTarget = new FindingTarget(FindingTargetKind.DatasetRecord, Vitals, "row-42", "HR");
+
+        uuidTarget.Node.Should().Be(new NodeRef(NodeKinds.CollectionInstance, formGuid));
+        emptyTarget.Node.Should().BeNull();
+        syntheticTarget.Node.Should().BeNull();
+
+        var identity = new FindingIdentity(Study, ValidationStage.Collection, Pack, "VS_HR_RANGE", uuidTarget);
+        identity.Components(Tenant).Should().Equal(
+            Tenant.ToString(),
+            Study.ToString(),
+            "Collection",
+            Pack,
+            "VS_HR_RANGE",
+            "DatasetRecord",
+            Vitals,
+            formKey,
+            "HR");
+    }
+
+    [Fact(DisplayName = "View_Explain_DatasetRecordUuidTarget_PopulatesNodeEvidenceAndNextActionTargetWithoutRawUuid")]
+    [Trait("Category", "Unit")]
+    public void ViewExplainDatasetRecordUuidTargetPopulatesNodeEvidenceAndNextActionTargetWithoutRawUuid()
+    {
+        var run = ValidationRunId.New();
+        var formId = CollectionInstanceId.FromGuid(Guid.Parse("01950000-0000-7000-8000-000000002002")); // deid-ignore
+        var formRef = NodeRef.For(formId);
+        var rawUuid = formId.Value.ToString("D");
+        var view = new ValidationFindingView(
+            FindingId("VS_HR_RANGE", rawUuid),
+            Study,
+            ValidationStage.Collection,
+            Pack,
+            LibraryItemId.New(),
+            "VS_HR_RANGE",
+            1,
+            ValidationSeverity.Error,
+            new FindingTarget(FindingTargetKind.DatasetRecord, Vitals, rawUuid, "HR"),
+            "Resting heart rate exceeds 100 /min.",
+            "50 to 100",
+            [new ObservedVariable("HR", "108")],
+            null,
+            null,
+            null,
+            FindingStatus.Open,
+            run,
+            run,
+            null,
+            null,
+            null);
+
+        var explanation = view.Explain();
+
+        explanation.Claim.Should().NotContain(rawUuid);
+        explanation.Steps.Select(s => s.Claim).Should().AllSatisfy(claim => claim.Should().NotContain(rawUuid));
+        explanation.Steps[1].Evidence.Should().Equal(formRef);
+        explanation.NextActions[0].Target.Should().Be(formRef);
+        explanation.NextActions[0].Description.Should().NotContain(rawUuid);
+    }
+
+    [Fact(DisplayName = "CollectionValidationService_PopulatesSortedVersionedCollectionAndObservationInputs")]
+    [Trait("Category", "Unit")]
+    public async Task CollectionValidationServicePopulatesSortedVersionedCollectionAndObservationInputs()
+    {
+        var packItemId = LibraryItemId.FromGuid(Guid.Parse("01950000-0000-7000-8000-000000000055")); // deid-ignore
+        var rulePack = new RulePack(
+            RuleAuthority.Study,
+            "Vital Signs Checks",
+            [
+                new Rule(
+                    "VS_HR_MAX",
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation("Study Edit Check Spec", "1.0", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, Vitals),
+                    ValidationSeverity.Error,
+                    new ComparisonExpression(
+                        ComparisonOperator.Greater,
+                        new VariableExpression("HR"),
+                        new LiteralExpression(RuleValue.FromNumber(100m))),
+                    "Heart rate exceeds 100 /min.",
+                    null,
+                    EffectivePeriod.Always),
+            ]);
+        var libraryItem = new LibraryItemView(
+            packItemId,
+            LibraryItemKind.RulePack,
+            Pack,
+            1,
+            "Vital Signs Checks",
+            RulePackJson.ToJson(rulePack),
+            "sha256:" + new string('a', 64),
+            GovernanceStatus.Approved,
+            [],
+            AttestationId.New(),
+            null);
+        var profile = new StudyStandardsProfileView(
+            StudyStandardsProfileId.New(),
+            Study,
+            1,
+            [],
+            [],
+            [packItemId]);
+
+        var formA = CollectionInstanceId.FromGuid(Guid.Parse("01950000-0000-7000-8000-000000002002")); // deid-ignore
+        var formB = CollectionInstanceId.FromGuid(Guid.Parse("01950000-0000-7000-8000-000000002001")); // deid-ignore
+        var obsHr = ObservationId.FromGuid(Guid.Parse("01950000-0000-7000-8000-000000003005")); // deid-ignore
+        var obsSbp = ObservationId.FromGuid(Guid.Parse("01950000-0000-7000-8000-000000003001")); // deid-ignore
+        var enrollment = EnrollmentId.New();
+        var participant = ParticipantId.New();
+        var site = StudySiteId.New();
+        var protocolVersion = ProtocolVersionId.New();
+
+        var instanceA = new CollectionInstanceRecord(
+            formA,
+            enrollment,
+            participant,
+            Study,
+            site,
+            protocolVersion,
+            Vitals,
+            "VISIT-1",
+            T0,
+            "crc-1",
+            T0,
+            Version: 3,
+            [],
+            [
+                new CollectedValueView("HR", obsHr, default, new QuantityValue(108m, "/min"), T0, 2, "crc-1", T0),
+                new CollectedValueView("TEMP", default, default, new MissingValue(NullFlavor.NotAsked), T0, 0, "crc-1", T0),
+            ],
+            [],
+            [],
+            [],
+            "hash-a");
+        var instanceB = new CollectionInstanceRecord(
+            formB,
+            enrollment,
+            participant,
+            Study,
+            site,
+            protocolVersion,
+            "DM",
+            "VISIT-1",
+            T0,
+            "crc-1",
+            T0,
+            Version: 1,
+            [],
+            [
+                new CollectedValueView("SYSBP", obsSbp, default, new QuantityValue(120m, "mm[Hg]"), T0, 4, "crc-1", T0),
+            ],
+            [],
+            [],
+            [],
+            "hash-b");
+
+        var registry = new StubRulePackStandardsRegistry(profile, libraryItem);
+        var loader = new RulePackLoader(registry);
+        var evaluator = new DotNetRuleEvaluator();
+        var collections = new StubCollectionInstanceRecords([instanceA, instanceB]);
+        var findingsStore = new StubValidationFindingsStore();
+        var sender = new CapturingCommandSender();
+        var service = new CollectionValidationService(
+            loader,
+            registry,
+            evaluator,
+            collections,
+            findingsStore,
+            sender);
+
+        var result = await service.ValidateStudyCollectionsAsync(Tenant, Study, new DateOnly(2026, 9, 30), T0, "idem-inputs-1", "Verify ValidatedBy inputs", cancellationToken: TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        sender.RecordedRun.Should().NotBeNull();
+        sender.RecordedRun!.Inputs.Should().Equal(
+            NodeRef.For(formB, 1),
+            NodeRef.For(formA, 3),
+            NodeRef.For(obsSbp, 4),
+            NodeRef.For(obsHr, 2));
+    }
+
     private static FindingIdentity Identity(string rule, string key) =>
         new(Study, ValidationStage.Standardization, Pack, rule, new FindingTarget(FindingTargetKind.DatasetRecord, Vitals, key));
 
@@ -401,4 +598,73 @@ public class ValidationFindingTests
     private static RecordValidationRun Command(IReadOnlyList<ValidationDetection> detections) =>
         new(Tenant, ValidationRunId.New(), Study, ValidationStage.Standardization, [LibraryItemId.New()], new DateOnly(2026, 9, 30),
             "SDTMIG", "3.4", null, [], [Vitals, "DM"], T0, T0.AddMinutes(5), detections, "key", "Validation test");
+
+    private sealed class StubRulePackStandardsRegistry(StudyStandardsProfileView profile, LibraryItemView item) : IStandardsRegistry
+    {
+        public Task<IReadOnlyList<StandardVersionSummary>> ListStandardVersionsAsync(TenantId tenant, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<StandardVersionSummary>>([]);
+
+        public Task<StandardVersionSummary?> FindStandardVersionAsync(TenantId tenant, StandardVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardVersionSummary?>(null);
+
+        public Task<StandardVersionSummary?> FindStandardVersionAsync(TenantId tenant, string standardCode, string version, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardVersionSummary?>(null);
+
+        public Task<StandardPackage?> GetStandardPackageAsync(TenantId tenant, StandardVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardPackage?>(null);
+
+        public Task<LibraryItemView?> FindLibraryItemAsync(TenantId tenant, LibraryItemId id, CancellationToken cancellationToken) =>
+            Task.FromResult<LibraryItemView?>(id == item.Id ? item : null);
+
+        public Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LibraryItemView>>(kind == item.Kind && key == item.Key ? [item] : []);
+
+        public Task<StudyStandardsProfileView?> FindStudyStandardsAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult<StudyStandardsProfileView?>(study == profile.StudyId ? profile : null);
+    }
+
+    private sealed class StubCollectionInstanceRecords(IReadOnlyList<CollectionInstanceRecord> records) : ICollectionInstanceRecords
+    {
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
+            Task.FromResult(records.FirstOrDefault(r => r.CollectionInstanceId == instance));
+
+        public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<CollectionInstanceSummary>>([]);
+
+        public Task<IReadOnlyList<CollectionInstanceRecord>> ListRecordsForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([.. records.Where(r => r.EnrollmentId == enrollment)]);
+
+        public Task<IReadOnlyList<CollectionInstanceRecord>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([.. records.Where(r => r.StudyId == study)]);
+    }
+
+    private sealed class StubValidationFindingsStore : IValidationFindings
+    {
+        public Task<ValidationFindingView?> FindAsync(TenantId tenant, ValidationFindingId finding, CancellationToken cancellationToken) =>
+            Task.FromResult<ValidationFindingView?>(null);
+
+        public Task<FindingPage> ListAsync(TenantId tenant, FindingQuery query, CancellationToken cancellationToken) =>
+            Task.FromResult(new FindingPage([], 0));
+
+        public Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken) =>
+            Task.FromResult<ValidationRunSummary?>(null);
+    }
+
+    private sealed class CapturingCommandSender : IKernelCommandSender
+    {
+        public RecordValidationRun? RecordedRun { get; private set; }
+
+        public Task<CommandResult<TResult>> SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (command is RecordValidationRun run)
+            {
+                RecordedRun = run;
+            }
+
+            return Task.FromResult(CommandResult<TResult>.Success(default!));
+        }
+    }
 }

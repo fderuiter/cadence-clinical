@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
@@ -14,6 +15,7 @@ using Cadence.Kernel.Indicators;
 using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Indicators;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
@@ -249,11 +251,12 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
             .Where(f => ids.Contains(f.Id))
             .ToDictionaryAsync(f => f.Id, cancellationToken).ConfigureAwait(false);
 
-        var (enrollmentByFinding, blindedVarsByFinding, blindedObsByFinding) = await ResolveBlindingContextAsync(
-            db,
-            states,
-            detections,
-            cancellationToken).ConfigureAwait(false);
+        var (enrollmentByFinding, blindedVarsByFinding, blindedObsByFinding, targetLabelByFinding, targetEvidenceByFinding) =
+            await ResolveFindingContextAsync(
+                db,
+                states,
+                detections,
+                cancellationToken).ConfigureAwait(false);
 
         return [.. states.Select(state =>
         {
@@ -266,6 +269,8 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
             enrollmentByFinding.TryGetValue(state.Finding, out var enrollment);
             blindedVarsByFinding.TryGetValue(state.Finding, out var blindedVars);
             blindedObsByFinding.TryGetValue(state.Finding, out var blindedObs);
+            targetLabelByFinding.TryGetValue(state.Finding, out var targetLabel);
+            targetEvidenceByFinding.TryGetValue(state.Finding, out var targetEvidence);
             return new ValidationFindingView(
                 state.Finding,
                 detection.StudyId,
@@ -290,11 +295,18 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
                 decision,
                 enrollment,
                 blindedVars,
-                blindedObs);
+                blindedObs,
+                targetLabel,
+                targetEvidence);
         })];
     }
 
-    private static async Task<(Dictionary<ValidationFindingId, EnrollmentId> Enrollments, Dictionary<ValidationFindingId, IReadOnlySet<string>> BlindedVariables, Dictionary<ValidationFindingId, ObservationId> BlindedObservations)> ResolveBlindingContextAsync(
+    private static async Task<(
+        Dictionary<ValidationFindingId, EnrollmentId> Enrollments,
+        Dictionary<ValidationFindingId, IReadOnlySet<string>> BlindedVariables,
+        Dictionary<ValidationFindingId, ObservationId> BlindedObservations,
+        Dictionary<ValidationFindingId, string> TargetLabels,
+        Dictionary<ValidationFindingId, IReadOnlyList<NodeRef>> TargetEvidence)> ResolveFindingContextAsync(
         KernelDbContext db,
         IReadOnlyList<FindingState> states,
         IReadOnlyDictionary<(ValidationRunId RunId, ValidationFindingId FindingId), ValidationDetectionRecord> detections,
@@ -302,29 +314,35 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
     {
         var formTargetIds = new HashSet<CollectionInstanceId>();
         var obsTargetIds = new HashSet<ObservationId>();
+        var hasDesignTargets = false;
 
         foreach (var state in states)
         {
             var target = detections[(state.LastDetectedRun, state.Finding)].Target;
-            if (target.Kind == FindingTargetKind.DatasetRecord && Guid.TryParse(target.Key, out var fg))
+            if (target.TryGetCollectionInstanceId(out var formId))
             {
-                formTargetIds.Add(CollectionInstanceId.FromGuid(fg));
+                formTargetIds.Add(formId);
             }
-            else if (target.Kind == FindingTargetKind.Observation && Guid.TryParse(target.Key, out var og))
+            else if (target.TryGetObservationId(out var obsId))
             {
-                obsTargetIds.Add(ObservationId.FromGuid(og));
+                obsTargetIds.Add(obsId);
+            }
+            else if (target.Kind == FindingTargetKind.DesignElement && NodeRef.TryParse(target.Key, out _))
+            {
+                hasDesignTargets = true;
             }
         }
 
-        if (formTargetIds.Count == 0 && obsTargetIds.Count == 0)
+        if (formTargetIds.Count == 0 && obsTargetIds.Count == 0 && !hasDesignTargets)
         {
-            return ([], [], []);
+            return ([], [], [], [], []);
         }
 
         var formTargetList = formTargetIds.ToList();
         var targetForms = formTargetList.Count == 0
             ? []
             : await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
                 .Where(c => formTargetList.Contains(c.Id))
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
@@ -341,26 +359,29 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
             .Concat(targetObservations.Values.Select(o => o.EnrollmentId))
             .Distinct()
             .ToList();
-        if (enrollmentIds.Count == 0)
-        {
-            return ([], [], []);
-        }
 
-        var enrollmentForms = await db.CollectionInstances.AsNoTracking()
-            .Where(c => enrollmentIds.Contains(c.EnrollmentId))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var enrollmentForms = enrollmentIds.Count == 0
+            ? []
+            : await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
+                .Where(c => enrollmentIds.Contains(c.EnrollmentId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
         var formsById = enrollmentForms.ToDictionary(c => c.Id);
+        var formsByEnrollment = enrollmentForms
+            .GroupBy(c => c.EnrollmentId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstance>)g.ToList());
 
         var studyIds = detections.Values.Select(d => d.StudyId).Distinct().ToList();
         var rawVersions = await db.ProtocolVersions.AsNoTracking()
             .Where(v => studyIds.Contains(v.StudyId))
-            .Select(v => new { v.Id, v.StudyId, v.Content })
+            .Select(v => new { v.Id, v.StudyId, v.Number, v.Content })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var designsByVersion = rawVersions.ToDictionary(
             v => v.Id,
             v => ProtocolDesignDocument.Read(v.Content).Design);
+        var versionNumbersById = rawVersions.ToDictionary(v => v.Id, v => v.Number);
         var designsByStudy = rawVersions
             .Select(v => (v.StudyId, Design: designsByVersion[v.Id]))
             .Where(x => x.Design is not null)
@@ -469,6 +490,10 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
         var enrollmentMap = new Dictionary<ValidationFindingId, EnrollmentId>();
         var blindedVarsMap = new Dictionary<ValidationFindingId, IReadOnlySet<string>>();
         var blindedObsMap = new Dictionary<ValidationFindingId, ObservationId>();
+        var targetLabelMap = new Dictionary<ValidationFindingId, string>();
+        var targetEvidenceMap = new Dictionary<ValidationFindingId, IReadOnlyList<NodeRef>>();
+        var elementLabelsByStudy = new Dictionary<StudyId, Dictionary<Guid, string>>();
+
         foreach (var state in states)
         {
             var detection = detections[(state.LastDetectedRun, state.Finding)];
@@ -477,19 +502,104 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
             ObservationId? directObsId = null;
             var isDirectBlindedObs = false;
 
-            if (target.Kind == FindingTargetKind.DatasetRecord
-                && Guid.TryParse(target.Key, out var fg)
-                && formsById.TryGetValue(CollectionInstanceId.FromGuid(fg), out var targetForm))
+            if (target.TryGetCollectionInstanceId(out var targetFormId)
+                && formsById.TryGetValue(targetFormId, out var targetForm))
             {
                 enrollmentId = targetForm.EnrollmentId;
+                var design = designsByVersion.GetValueOrDefault(targetForm.ProtocolVersionId);
+                var formTitle = FormatCollectionInstanceTitle(targetForm, design);
+                var siblings = formsByEnrollment.GetValueOrDefault(targetForm.EnrollmentId) ?? [targetForm];
+                var itemLabel = ResolveVariableLabel(target.Variable, targetForm, siblings, designsByVersion, concepts);
+                targetLabelMap[state.Finding] = string.IsNullOrWhiteSpace(itemLabel)
+                    ? formTitle
+                    : $"{formTitle} · {itemLabel}";
+                var evidence = new List<NodeRef> { NodeRef.For(targetForm.Id) };
+                evidence.AddRange(ResolveReferencedObservationRefs(detection, targetForm, siblings));
+                targetEvidenceMap[state.Finding] = evidence.Distinct().ToArray();
             }
-            else if (target.Kind == FindingTargetKind.Observation
-                && Guid.TryParse(target.Key, out var og)
-                && allObservations.TryGetValue(ObservationId.FromGuid(og), out var targetObs))
+            else if (target.TryGetObservationId(out var targetObsId)
+                && allObservations.TryGetValue(targetObsId, out var targetObs))
             {
                 enrollmentId = targetObs.EnrollmentId;
                 directObsId = targetObs.Id;
                 isDirectBlindedObs = blindedObsSet.Contains(targetObs.Id);
+
+                var parentForm = (formsByEnrollment.GetValueOrDefault(targetObs.EnrollmentId) ?? [])
+                    .FirstOrDefault(c => c.Members.Any(m => m.ObservationId == targetObs.Id));
+                var evidence = new List<NodeRef> { NodeRef.For(targetObs.Id) };
+                string? formTitle = null;
+                string? itemLabel = null;
+                if (parentForm is not null)
+                {
+                    evidence.Add(NodeRef.For(parentForm.Id));
+                    var design = designsByVersion.GetValueOrDefault(parentForm.ProtocolVersionId);
+                    formTitle = FormatCollectionInstanceTitle(parentForm, design);
+                    var memberItemId = parentForm.Members.FirstOrDefault(m => m.ObservationId == targetObs.Id)?.ItemId;
+                    var specItem = design?.CollectionSpecs
+                        .FirstOrDefault(s => string.Equals(s.Id, parentForm.CollectionSpecId, StringComparison.Ordinal))
+                        ?.Items.FirstOrDefault(i => string.Equals(i.Id, memberItemId, StringComparison.Ordinal));
+                    if (!string.IsNullOrWhiteSpace(specItem?.Prompt))
+                    {
+                        itemLabel = specItem.Prompt.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(memberItemId))
+                    {
+                        itemLabel = memberItemId;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(itemLabel) && concepts.TryGetValue(targetObs.ConceptId, out var obsConcept))
+                {
+                    itemLabel = !string.IsNullOrWhiteSpace(obsConcept.PreferredLabel)
+                        ? obsConcept.PreferredLabel.Trim()
+                        : obsConcept.ExternalCode;
+                }
+
+                itemLabel ??= target.Variable;
+                targetLabelMap[state.Finding] = !string.IsNullOrWhiteSpace(formTitle) && !string.IsNullOrWhiteSpace(itemLabel)
+                    ? $"{formTitle} · {itemLabel}"
+                    : (itemLabel ?? formTitle ?? target.Dataset);
+                targetEvidenceMap[state.Finding] = evidence.Distinct().ToArray();
+            }
+            else if (target.Kind == FindingTargetKind.DesignElement
+                && NodeRef.TryParse(target.Key, out var designNode))
+            {
+                var unversionedDesign = designNode.Unversioned();
+                targetEvidenceMap[state.Finding] = [unversionedDesign];
+                if (unversionedDesign.Kind == NodeKinds.ProtocolVersion
+                    && versionNumbersById.TryGetValue(ProtocolVersionId.FromGuid(unversionedDesign.Id), out var verNumber))
+                {
+                    targetLabelMap[state.Finding] = $"Protocol version {verNumber}";
+                }
+                else if (unversionedDesign.Kind == NodeKinds.ProtocolElement)
+                {
+                    if (!elementLabelsByStudy.TryGetValue(detection.StudyId, out var elementMap))
+                    {
+                        elementMap = [];
+                        foreach (var rv in rawVersions.Where(v => v.StudyId == detection.StudyId))
+                        {
+                            var diff = ProtocolStructuralDiff.Compare(null, rv.Content);
+                            if (!diff.IsSuccess)
+                            {
+                                continue;
+                            }
+
+                            foreach (var change in diff.Value!)
+                            {
+                                if (change.ElementId != ProtocolStructuralDiff.RootId)
+                                {
+                                    elementMap.TryAdd(ProtocolElementId.For(detection.StudyId, change.ElementId).Value, change.ElementId);
+                                }
+                            }
+                        }
+
+                        elementLabelsByStudy[detection.StudyId] = elementMap;
+                    }
+
+                    targetLabelMap[state.Finding] = elementMap.TryGetValue(unversionedDesign.Id, out var elementCode)
+                        ? $"Protocol element {elementCode}"
+                        : $"Protocol element ({target.Dataset})";
+                }
             }
 
             if (enrollmentId is not { } eid)
@@ -536,7 +646,110 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
             }
         }
 
-        return (enrollmentMap, blindedVarsMap, blindedObsMap);
+        return (enrollmentMap, blindedVarsMap, blindedObsMap, targetLabelMap, targetEvidenceMap);
+    }
+
+    private static string FormatCollectionInstanceTitle(CollectionInstance instance, ProtocolDesign? design)
+    {
+        var specName = design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal))?.Name;
+        var formTitle = string.IsNullOrWhiteSpace(specName) ? instance.CollectionSpecId : specName.Trim();
+
+        if (string.IsNullOrWhiteSpace(instance.PlannedActivityId))
+        {
+            return formTitle;
+        }
+
+        var activityName = design?.PlannedActivities
+            .FirstOrDefault(a => string.Equals(a.Id, instance.PlannedActivityId, StringComparison.Ordinal))?.Name;
+        var visitTitle = string.IsNullOrWhiteSpace(activityName) ? instance.PlannedActivityId.Trim() : activityName.Trim();
+        return $"{formTitle} ({visitTitle})";
+    }
+
+    private static string? ResolveVariableLabel(
+        string? variable,
+        CollectionInstance targetForm,
+        IReadOnlyList<CollectionInstance> siblingForms,
+        IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign?> designsByVersion,
+        IReadOnlyDictionary<ConceptId, Concept> concepts)
+    {
+        if (string.IsNullOrWhiteSpace(variable))
+        {
+            return null;
+        }
+
+        var specId = targetForm.CollectionSpecId;
+        var itemId = variable.Trim();
+        var dot = itemId.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < itemId.Length - 1)
+        {
+            specId = itemId[..dot];
+            itemId = itemId[(dot + 1)..];
+        }
+
+        var matchingForm = siblingForms.FirstOrDefault(f => string.Equals(f.CollectionSpecId, specId, StringComparison.Ordinal))
+            ?? targetForm;
+        var specItem = designsByVersion.GetValueOrDefault(matchingForm.ProtocolVersionId)?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, matchingForm.CollectionSpecId, StringComparison.Ordinal))
+            ?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+        if (!string.IsNullOrWhiteSpace(specItem?.Prompt))
+        {
+            return specItem.Prompt.Trim();
+        }
+
+        if (specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var concept)
+            && !string.IsNullOrWhiteSpace(concept.PreferredLabel))
+        {
+            return concept.PreferredLabel.Trim();
+        }
+
+        return itemId;
+    }
+
+    private static IEnumerable<NodeRef> ResolveReferencedObservationRefs(
+        ValidationDetectionRecord detection,
+        CollectionInstance targetForm,
+        IReadOnlyList<CollectionInstance> siblingForms)
+    {
+        var candidateVariables = new List<string>();
+        if (!string.IsNullOrWhiteSpace(detection.Variable))
+        {
+            candidateVariables.Add(detection.Variable);
+        }
+
+        candidateVariables.AddRange(detection.ObservedValues.Select(o => o.Variable));
+
+        foreach (var rawVar in candidateVariables.Distinct(StringComparer.Ordinal))
+        {
+            var dot = rawVar.IndexOf('.', StringComparison.Ordinal);
+            if (dot > 0 && dot < rawVar.Length - 1)
+            {
+                var specId = rawVar[..dot];
+                var itemId = rawVar[(dot + 1)..];
+                foreach (var form in siblingForms.Where(f => string.Equals(f.CollectionSpecId, specId, StringComparison.Ordinal)))
+                {
+                    foreach (var member in form.Members.Where(m => string.Equals(m.ItemId, itemId, StringComparison.Ordinal)))
+                    {
+                        yield return NodeRef.For(member.ObservationId);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var member in targetForm.Members.Where(m => string.Equals(m.ItemId, rawVar, StringComparison.Ordinal)))
+                {
+                    yield return NodeRef.For(member.ObservationId);
+                }
+
+                foreach (var form in siblingForms.Where(f => f.Id != targetForm.Id))
+                {
+                    foreach (var member in form.Members.Where(m => string.Equals(m.ItemId, rawVar, StringComparison.Ordinal)))
+                    {
+                        yield return NodeRef.For(member.ObservationId);
+                    }
+                }
+            }
+        }
     }
 
     private static DateTimeOffset Utc(DateTime value) => new(DateTime.SpecifyKind(value, DateTimeKind.Utc));

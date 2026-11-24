@@ -65,12 +65,17 @@ Entity: `FormQuery`
 | `opened_at` | `timestamp with time zone` | no |  |  |
 | `origin` | `character varying(16)` | no |  |  |
 | `owner_role` | `character varying(24)` | no |  |  |
+| `pack_key` | `character varying(128)` | yes |  |  |
 | `priority` | `character varying(16)` | no |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
 | `revision` | `integer` | no |  |  |
+| `rule_id` | `character varying(64)` | yes |  |  |
+| `rule_pack_id` | `uuid` | yes |  |  |
+| `rule_version` | `integer` | yes |  |  |
 | `status` | `character varying(16)` | no |  |  |
 | `status_since` | `timestamp with time zone` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
+| `validation_finding_id` | `uuid` | yes |  |  |
 | `version_index` | `bigint` | no |  |  |
 
 Indexes:
@@ -78,6 +83,7 @@ Indexes:
 - `AK_form_queries_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `ix_form_queries_tenant_enrollment_status`: (`tenant_id`, `enrollment_id`, `status`)
 - `ix_form_queries_tenant_form`: (`tenant_id`, `form_id`)
+- `ix_form_queries_tenant_form_finding`: (`tenant_id`, `form_id`, `validation_finding_id`)
 - `ix_form_queries_tenant_observation_status`: (`tenant_id`, `observation_id`, `status`)
 
 ## execution.form_query_aging_digests

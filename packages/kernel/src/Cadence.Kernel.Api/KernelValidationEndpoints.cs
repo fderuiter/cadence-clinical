@@ -14,6 +14,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
@@ -56,6 +57,7 @@ public static class KernelValidationEndpoints
     private static readonly Capability AcceptFindingCapability = new("validation_finding.accept", VerbClass.Approve);
     private static readonly Capability ExplainFindingCapability = new("validation_finding.explain", VerbClass.Approve);
     private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+    private static readonly FrozenSet<LineageEdgeKind> DerivedFromOnly = new[] { LineageEdgeKind.DerivedFrom }.ToFrozenSet();
 
     /// <summary>The canonical concrete action path for approving a library item reference.</summary>
     public static string ApproveLibraryItemAction(string itemRef) =>
@@ -284,12 +286,23 @@ public static class KernelValidationEndpoints
             unblindedEnrollments,
             cancellationToken).ConfigureAwait(false);
 
+        var hydratedViolations = await HydratePreviewViolationsAsync(
+            tenant,
+            resolved.StudyId,
+            item,
+            preview.Violations,
+            context.RequestServices,
+            visibility,
+            actor,
+            unblindedEnrollments,
+            cancellationToken).ConfigureAwait(false);
+
         return TypedResults.Ok(new KernelRulePackPreviewResponse(
             NodeRef.For(itemId).ToString(),
             preview.FormsEvaluated,
             preview.RulesEvaluated,
-            preview.Violations.Count,
-            [.. preview.Violations.Select(KernelRulePackPreviewViolationResponse.From)]));
+            hydratedViolations.Count,
+            hydratedViolations));
     }
 
     internal static async Task<Results<Ok<KernelRulePackResponse>, ProblemHttpResult>> ApproveLibraryItemAsync(
@@ -583,10 +596,19 @@ public static class KernelValidationEndpoints
             actor,
             cancellationToken).ConfigureAwait(false);
         var take = limit ?? 100;
+        var paged = visibleFindings.Take(take).ToList();
+        var hydrated = await HydrateFindingsAsync(
+            tenant,
+            resolved.StudyId,
+            paged,
+            context.RequestServices,
+            visibility,
+            actor,
+            cancellationToken).ConfigureAwait(false);
 
         return TypedResults.Ok(new KernelValidationFindingPageResponse(
             visibleFindings.Count,
-            [.. visibleFindings.Take(take).Select(KernelValidationFindingResponse.From)]));
+            [.. hydrated.Select(h => h.Response)]));
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingDetailResponse>, ProblemHttpResult>> GetFindingAsync(
@@ -629,9 +651,19 @@ public static class KernelValidationEndpoints
             return KernelProblems.NotVisible($"You may not see validation finding {node}.");
         }
 
+        var hydratedList = await HydrateFindingsAsync(
+            tenant,
+            view.Study,
+            visibleFindings,
+            context.RequestServices,
+            visibility,
+            actor,
+            cancellationToken).ConfigureAwait(false);
+        var hydrated = hydratedList[0];
+
         return TypedResults.Ok(new KernelValidationFindingDetailResponse(
-            KernelValidationFindingResponse.From(view),
-            view.Explain()));
+            hydrated.Response,
+            hydrated.View.Explain(hydrated.Response.TargetLabel, hydrated.ExtraEvidence)));
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> InvestigateFindingAsync(
@@ -1107,7 +1139,15 @@ public static class KernelValidationEndpoints
             return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
         }
 
-        return TypedResults.Ok(KernelValidationFindingResponse.From(updated));
+        var hydrated = await HydrateFindingsAsync(
+            tenant,
+            updated.Study,
+            [updated],
+            services,
+            visibility,
+            actor,
+            cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(hydrated[0].Response);
     }
 
     private static bool TryParseFinding(string text, out ValidationFindingId findingId)
@@ -1142,7 +1182,7 @@ public static class KernelValidationEndpoints
             var navigator = context.RequestServices.GetService<IKernelNavigator>();
             var directory = context.RequestServices.GetService<IStudyDirectory>();
             var existsInNav = navigator is not null && await navigator.ResolveAsync(tenant, NodeRef.For(studyId), cancellationToken).ConfigureAwait(false) is not null;
-            var existsInDir = directory is not null && await directory.FindStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false) is not null;
+            var existsInDir = !existsInNav && directory is not null && await directory.FindStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false) is not null;
             if (!existsInNav && !existsInDir)
             {
                 return (default, KernelProblems.NotFound(NodeRef.For(studyId)));
@@ -1543,6 +1583,962 @@ public static class KernelValidationEndpoints
         }
 
         return resolved;
+    }
+
+    private sealed record HydratedFindingResult(
+        ValidationFindingView View,
+        KernelValidationFindingResponse Response,
+        IReadOnlyList<NodeRef> ExtraEvidence);
+
+    private sealed record ResolvedFormQueryLink(NodeRef? Ref, bool IsMasked);
+
+    private static async Task<IReadOnlyList<HydratedFindingResult>> HydrateFindingsAsync(
+        TenantId tenant,
+        StudyId studyId,
+        IReadOnlyList<ValidationFindingView> views,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        if (views.Count == 0)
+        {
+            return [];
+        }
+
+        var collections = services.GetService<ICollectionInstanceRecords>();
+        var protocols = services.GetService<IProtocolVersionReader>();
+        var navigator = services.GetService<IKernelNavigator>();
+        var lineage = services.GetService<IKernelLineage>();
+        var probe = services.GetService<IAuthorizationProbe>();
+
+        var studyForms = collections is not null
+            ? await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false)
+            : [];
+        var formsById = studyForms.ToDictionary(f => f.CollectionInstanceId);
+        var formsByEnrollment = studyForms
+            .GroupBy(f => f.EnrollmentId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstanceRecord>)g.ToList());
+        var formByObservation = new Dictionary<ObservationId, (CollectionInstanceRecord Form, CollectedValueView Value)>();
+        foreach (var form in studyForms)
+        {
+            foreach (var val in form.Values)
+            {
+                formByObservation.TryAdd(val.ObservationId, (form, val));
+            }
+        }
+
+        var designsByVersion = await LoadDesignsByVersionAsync(tenant, studyId, protocols, studyForms, cancellationToken).ConfigureAwait(false);
+        var enrollmentDirectory = navigator is not null
+            ? (await navigator.GetStudyEnrollmentsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false) ?? [])
+                .ToDictionary(e => e.EnrollmentId)
+            : new Dictionary<EnrollmentId, StudyEnrollmentNode>();
+
+        var unblindByEnrollment = new Dictionary<EnrollmentId, bool>();
+        async Task<bool> CanUnblindEnrollmentAsync(EnrollmentId enrollmentId)
+        {
+            if (probe is null)
+            {
+                return true;
+            }
+
+            if (unblindByEnrollment.TryGetValue(enrollmentId, out var cached))
+            {
+                return cached;
+            }
+
+            var decision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false);
+            unblindByEnrollment[enrollmentId] = decision.Permitted;
+            return decision.Permitted;
+        }
+
+        var perFindingContext = new Dictionary<ValidationFindingId, (
+            ValidationFindingView EffectiveView,
+            EnrollmentId? EnrollmentId,
+            StudySiteId? SiteId,
+            CollectionInstanceRecord? Form,
+            string? ItemId,
+            string? ItemLabel,
+            ObservationId? PrimaryObsId,
+            IReadOnlyList<ObservationId> AllObsIds,
+            bool CanUnblind)>(views.Count);
+
+        var nodesToResolve = new HashSet<NodeRef>();
+        foreach (var rawView in views)
+        {
+            EnrollmentId? enrollmentId = rawView.Enrollment;
+            CollectionInstanceRecord? rawForm = null;
+            ObservationId? directObsId = null;
+
+            if (rawView.Target.TryGetCollectionInstanceId(out var formId)
+                && formsById.TryGetValue(formId, out var matchedForm))
+            {
+                rawForm = matchedForm;
+                enrollmentId ??= matchedForm.EnrollmentId;
+            }
+            else if (rawView.Target.TryGetObservationId(out var obsId))
+            {
+                directObsId = obsId;
+                if (formByObservation.TryGetValue(obsId, out var owner))
+                {
+                    rawForm = owner.Form;
+                    enrollmentId ??= owner.Form.EnrollmentId;
+                }
+            }
+
+            var canUnblind = enrollmentId is not { } eid || await CanUnblindEnrollmentAsync(eid).ConfigureAwait(false);
+            var effectiveView = canUnblind ? rawView : rawView.MaskBlinded();
+            var effectiveForm = rawForm is not null && !canUnblind ? rawForm.MaskBlinded() : rawForm;
+
+            StudySiteId? siteId = effectiveForm?.StudySiteId;
+            if (siteId is null && enrollmentId is { } enrolled && enrollmentDirectory.TryGetValue(enrolled, out var dirEntry))
+            {
+                siteId = dirEntry.StudySiteId;
+            }
+
+            string? itemId = null;
+            string? itemLabel = null;
+            ObservationId? primaryObsId = directObsId;
+            var allObsIds = new List<ObservationId>();
+
+            if (effectiveForm is not null)
+            {
+                var rawSiblings = formsByEnrollment.GetValueOrDefault(effectiveForm.EnrollmentId) ?? [effectiveForm];
+                var siblings = canUnblind ? rawSiblings : [.. rawSiblings.Select(s => s.MaskBlinded())];
+                var resolvedObs = ResolveReferencedObservationIds(effectiveView, effectiveForm, siblings);
+                allObsIds.AddRange(resolvedObs);
+
+                if (directObsId is { } dObs)
+                {
+                    if (!allObsIds.Contains(dObs))
+                    {
+                        allObsIds.Insert(0, dObs);
+                    }
+
+                    itemId = effectiveForm.Values.FirstOrDefault(v => v.ObservationId == dObs)?.ItemId ?? effectiveView.Target.Variable;
+                }
+                else
+                {
+                    itemId = ResolvePrimaryFindingItemId(effectiveView, effectiveForm, siblings);
+                    if (primaryObsId is null && !string.IsNullOrWhiteSpace(itemId))
+                    {
+                        primaryObsId = MatchVariableObservations(effectiveForm.CollectionSpecId, itemId, effectiveForm, siblings)
+                            .FirstOrDefault();
+                        if (primaryObsId is { IsEmpty: true })
+                        {
+                            primaryObsId = null;
+                        }
+                    }
+
+                    primaryObsId ??= resolvedObs.Count > 0 ? resolvedObs[0] : null;
+                }
+
+                itemLabel = ResolveCollectionItemLabel(effectiveForm, siblings, designsByVersion, itemId);
+            }
+            else if (directObsId is { } standaloneObs)
+            {
+                allObsIds.Add(standaloneObs);
+                itemId = effectiveView.Target.Variable;
+            }
+
+            nodesToResolve.Add(NodeRef.For(effectiveView.RulePack));
+            if (effectiveView.Target.Node is { } tNode)
+            {
+                nodesToResolve.Add(tNode.Unversioned());
+            }
+
+            if (siteId is { IsEmpty: false } sId)
+            {
+                nodesToResolve.Add(NodeRef.For(sId));
+            }
+
+            if (enrollmentId is { IsEmpty: false } eId)
+            {
+                nodesToResolve.Add(NodeRef.For(eId));
+            }
+
+            if (effectiveForm is not null)
+            {
+                nodesToResolve.Add(NodeRef.For(effectiveForm.CollectionInstanceId));
+            }
+
+            foreach (var oId in allObsIds.Where(o => !o.IsEmpty))
+            {
+                nodesToResolve.Add(NodeRef.For(oId));
+            }
+
+            perFindingContext[effectiveView.Id] = (
+                effectiveView,
+                enrollmentId,
+                siteId,
+                effectiveForm,
+                NormalizeItemCode(itemId),
+                itemLabel,
+                primaryObsId,
+                allObsIds,
+                canUnblind);
+        }
+
+        var queryByFinding = new Dictionary<ValidationFindingId, ResolvedFormQueryLink>();
+        if (lineage is not null && actor.Actor is { } reader)
+        {
+            var obsQueryCache = new Dictionary<ObservationId, ResolvedFormQueryLink?>();
+            foreach (var rawView in views)
+            {
+                var ctx = perFindingContext[rawView.Id];
+                var (fromFinding, findingLineageOk) = await TraceFormQueryAsync(lineage, tenant, reader, NodeRef.For(rawView.Id), cancellationToken).ConfigureAwait(false);
+                if (!findingLineageOk)
+                {
+                    break;
+                }
+
+                if (fromFinding is null && ctx.PrimaryObsId is { IsEmpty: false } pObs)
+                {
+                    if (!obsQueryCache.TryGetValue(pObs, out var cachedObsQuery))
+                    {
+                        var (obsQuery, obsLineageOk) = await TraceFormQueryAsync(lineage, tenant, reader, NodeRef.For(pObs), cancellationToken).ConfigureAwait(false);
+                        if (!obsLineageOk)
+                        {
+                            break;
+                        }
+
+                        cachedObsQuery = obsQuery;
+                        obsQueryCache[pObs] = cachedObsQuery;
+                    }
+
+                    fromFinding = cachedObsQuery;
+                }
+
+                if (fromFinding is not null)
+                {
+                    queryByFinding[rawView.Id] = fromFinding;
+                    if (fromFinding.Ref is { } qRef)
+                    {
+                        nodesToResolve.Add(qRef.Unversioned());
+                    }
+                }
+            }
+        }
+
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [.. nodesToResolve], cancellationToken).ConfigureAwait(false);
+        var summaries = navigator is not null && nodesToResolve.Count > 0
+            ? await navigator.ResolveManyAsync(tenant, [.. nodesToResolve], cancellationToken).ConfigureAwait(false)
+            : new Dictionary<NodeRef, NodeSummary>();
+
+        var results = new List<HydratedFindingResult>(views.Count);
+        foreach (var rawView in views)
+        {
+            var ctx = perFindingContext[rawView.Id];
+            var view = ctx.EffectiveView;
+
+            var packNode = NodeRef.For(view.RulePack);
+            string rulePackLabel;
+            if (masks.For(packNode) is not null)
+            {
+                rulePackLabel = ValidationFindingView.MaskedValue;
+            }
+            else if (summaries.TryGetValue(packNode, out var packSummary) && !string.IsNullOrWhiteSpace(packSummary.Title))
+            {
+                rulePackLabel = packSummary.Title;
+            }
+            else
+            {
+                rulePackLabel = view.PackKey;
+            }
+
+            string? siteRef = null;
+            string? siteLabel = null;
+            if (ctx.SiteId is { IsEmpty: false } sId)
+            {
+                var siteNode = NodeRef.For(sId);
+                if (masks.For(siteNode) is not null)
+                {
+                    siteLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    siteRef = siteNode.ToString();
+                    summaries.TryGetValue(siteNode, out var siteSummary);
+                    siteLabel = FormatSiteLabel(
+                        siteSummary,
+                        ctx.EnrollmentId is { } eid && enrollmentDirectory.TryGetValue(eid, out var de) ? de.SiteCode : null);
+                }
+            }
+
+            string? participantRef = null;
+            string? participantId = null;
+            string? participantLabel = null;
+            if (ctx.EnrollmentId is { IsEmpty: false } eId)
+            {
+                var enrollmentNode = NodeRef.For(eId);
+                if (masks.For(enrollmentNode) is not null)
+                {
+                    participantLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    participantRef = enrollmentNode.ToString();
+                    if (ctx.Form is { ParticipantId.IsEmpty: false } formWithParticipant)
+                    {
+                        participantId = NodeRef.For(formWithParticipant.ParticipantId).ToString();
+                    }
+
+                    summaries.TryGetValue(enrollmentNode, out var enrollmentSummary);
+                    participantLabel = enrollmentSummary?.Code
+                        ?? enrollmentSummary?.Title
+                        ?? (enrollmentDirectory.TryGetValue(eId, out var de) ? de.SubjectCode : null);
+                }
+            }
+
+            string? plannedActivityId = null;
+            string? visitLabel = null;
+            string? formRef = null;
+            string? formIdText = null;
+            string? formLabel = null;
+            string? collectionSpecId = null;
+            if (ctx.Form is { } form)
+            {
+                var formNode = NodeRef.For(form.CollectionInstanceId);
+                var design = designsByVersion.GetValueOrDefault(form.ProtocolVersionId);
+                if (masks.For(formNode) is not null)
+                {
+                    formLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    formRef = formNode.ToString();
+                    formIdText = form.CollectionInstanceId.Value.ToString("D");
+                    collectionSpecId = form.CollectionSpecId;
+                    plannedActivityId = form.PlannedActivityId;
+                    visitLabel = ResolveVisitLabel(form.PlannedActivityId, design);
+                    summaries.TryGetValue(formNode, out var formSummary);
+                    formLabel = ResolveFormLabel(form, design, formSummary);
+                }
+            }
+
+            string? observationRef = null;
+            string? observationLabel = null;
+            if (ctx.PrimaryObsId is { IsEmpty: false } pObsId)
+            {
+                var obsNode = NodeRef.For(pObsId);
+                var obsIsBlinded = !ctx.CanUnblind
+                    && ((ctx.Form is not null && ctx.ItemId is not null && ctx.Form.IsValueBlinded(ctx.ItemId, pObsId))
+                        || (view.BlindedVariables is not null && ctx.ItemId is not null && view.BlindedVariables.Contains(ctx.ItemId)));
+                if (masks.For(obsNode) is not null)
+                {
+                    observationLabel = ValidationFindingView.MaskedValue;
+                }
+                else if (obsIsBlinded)
+                {
+                    observationRef = obsNode.ToString();
+                    observationLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    observationRef = obsNode.ToString();
+                    summaries.TryGetValue(obsNode, out var obsSummary);
+                    observationLabel = obsSummary?.Title ?? ctx.ItemLabel ?? ctx.ItemId;
+                }
+            }
+
+            string? queryRef = null;
+            Guid? queryId = null;
+            string? queryLabel = null;
+            if (queryByFinding.TryGetValue(rawView.Id, out var qLink))
+            {
+                var queryBlinded = !ctx.CanUnblind
+                    && ctx.Form is not null
+                    && ctx.ItemId is not null
+                    && ctx.PrimaryObsId is { } qObs
+                    && ctx.Form.IsQueryBlinded(ctx.ItemId, qObs);
+                if (qLink.IsMasked || queryBlinded || qLink.Ref is null || masks.For(qLink.Ref.Unversioned()) is not null)
+                {
+                    queryLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    var unversionedQuery = qLink.Ref.Unversioned();
+                    queryRef = unversionedQuery.ToString();
+                    queryId = unversionedQuery.Id;
+                    summaries.TryGetValue(unversionedQuery, out var querySummary);
+                    queryLabel = !string.IsNullOrWhiteSpace(querySummary?.Title)
+                        ? querySummary.Title
+                        : $"Query ({view.RuleId})";
+                }
+            }
+
+            var extraEvidence = new List<NodeRef>();
+            if (formRef is not null && NodeRef.TryParse(formRef, out var visibleFormNode))
+            {
+                extraEvidence.Add(visibleFormNode);
+            }
+
+            foreach (var obsCandidate in ctx.AllObsIds.Where(o => !o.IsEmpty))
+            {
+                var candNode = NodeRef.For(obsCandidate);
+                if (masks.For(candNode) is null)
+                {
+                    extraEvidence.Add(candNode);
+                }
+            }
+
+            if (queryRef is not null && NodeRef.TryParse(queryRef, out var visibleQueryNode))
+            {
+                extraEvidence.Add(visibleQueryNode);
+            }
+
+            string? targetNodeRef = null;
+            string? targetLabel = view.TargetLabel;
+            if (view.Target.Kind == FindingTargetKind.DatasetRecord)
+            {
+                targetNodeRef = formRef ?? (view.Target.Node is { } tn && masks.For(tn) is null ? tn.ToString() : null);
+                targetLabel = BuildTargetDisplayLabel(formLabel, visitLabel, ctx.ItemLabel ?? ctx.ItemId) ?? targetLabel;
+            }
+            else if (view.Target.Kind == FindingTargetKind.Observation)
+            {
+                targetNodeRef = observationRef ?? (view.Target.Node is { } tn && masks.For(tn) is null ? tn.ToString() : null);
+                targetLabel = observationLabel == ValidationFindingView.MaskedValue
+                    ? ValidationFindingView.MaskedValue
+                    : (BuildTargetDisplayLabel(formLabel, visitLabel, ctx.ItemLabel ?? observationLabel) ?? observationLabel ?? targetLabel);
+            }
+            else if (view.Target.Kind == FindingTargetKind.DesignElement && view.Target.Node is { } designNode)
+            {
+                var unversionedDesign = designNode.Unversioned();
+                if (masks.For(unversionedDesign) is not null)
+                {
+                    targetLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    targetNodeRef = unversionedDesign.ToString();
+                    extraEvidence.Add(unversionedDesign);
+                    if (summaries.TryGetValue(unversionedDesign, out var designSummary) && !string.IsNullOrWhiteSpace(designSummary.Title))
+                    {
+                        targetLabel = designSummary.Title;
+                    }
+                }
+            }
+
+            var baseResponse = KernelValidationFindingResponse.From(view);
+            var enriched = baseResponse with
+            {
+                RulePackLabel = rulePackLabel,
+                TargetNodeRef = targetNodeRef,
+                TargetLabel = targetLabel,
+                SiteRef = siteRef,
+                SiteLabel = siteLabel,
+                ParticipantRef = participantRef,
+                ParticipantId = participantId,
+                ParticipantLabel = participantLabel,
+                PlannedActivityId = plannedActivityId,
+                VisitLabel = visitLabel,
+                FormRef = formRef,
+                FormId = formIdText,
+                FormLabel = formLabel,
+                CollectionSpecId = collectionSpecId ?? view.Target.Dataset,
+                ItemId = ctx.ItemId ?? view.Target.Variable,
+                ItemLabel = ctx.ItemLabel,
+                ObservationRef = observationRef,
+                ObservationLabel = observationLabel,
+                QueryRef = queryRef,
+                QueryId = queryId,
+                QueryLabel = queryLabel,
+            };
+
+            results.Add(new HydratedFindingResult(view, enriched, extraEvidence.Distinct().ToArray()));
+        }
+
+        return results;
+    }
+
+    private static async Task<IReadOnlyList<KernelRulePackPreviewViolationResponse>> HydratePreviewViolationsAsync(
+        TenantId tenant,
+        StudyId studyId,
+        LibraryItemView rulePack,
+        IReadOnlyList<CollectionRulePackPreviewViolation> violations,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments,
+        CancellationToken cancellationToken)
+    {
+        if (violations.Count == 0)
+        {
+            return [];
+        }
+
+        var collections = services.GetService<ICollectionInstanceRecords>();
+        var protocols = services.GetService<IProtocolVersionReader>();
+        var navigator = services.GetService<IKernelNavigator>();
+        var lineage = services.GetService<IKernelLineage>();
+
+        var studyForms = collections is not null
+            ? await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false)
+            : [];
+        var formsById = studyForms.ToDictionary(f => f.CollectionInstanceId);
+        var formsByEnrollment = studyForms
+            .GroupBy(f => f.EnrollmentId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstanceRecord>)g.ToList());
+        var designsByVersion = await LoadDesignsByVersionAsync(tenant, studyId, protocols, studyForms, cancellationToken).ConfigureAwait(false);
+        var enrollmentDirectory = navigator is not null
+            ? (await navigator.GetStudyEnrollmentsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false) ?? [])
+                .ToDictionary(e => e.EnrollmentId)
+            : new Dictionary<EnrollmentId, StudyEnrollmentNode>();
+
+        var rulePackRef = NodeRef.For(rulePack.Id).ToString();
+        var rulePackLabel = !string.IsNullOrWhiteSpace(rulePack.Title) ? rulePack.Title : rulePack.Key;
+
+        var nodesToResolve = new HashSet<NodeRef>();
+        var primaryObsByIndex = new ObservationId?[violations.Count];
+        var itemLabelByIndex = new string?[violations.Count];
+        var effectiveFormByIndex = new CollectionInstanceRecord?[violations.Count];
+        var canUnblindByIndex = new bool[violations.Count];
+
+        for (var i = 0; i < violations.Count; i++)
+        {
+            var violation = violations[i];
+            if (!formsById.TryGetValue(violation.FormId, out var rawForm))
+            {
+                continue;
+            }
+
+            var canUnblind = unblindedEnrollments is null || unblindedEnrollments.Contains(rawForm.EnrollmentId);
+            canUnblindByIndex[i] = canUnblind;
+            var form = canUnblind ? rawForm : rawForm.MaskBlinded();
+            effectiveFormByIndex[i] = form;
+
+            var rawSiblings = formsByEnrollment.GetValueOrDefault(form.EnrollmentId) ?? [form];
+            var siblings = canUnblind ? rawSiblings : [.. rawSiblings.Select(s => s.MaskBlinded())];
+
+            nodesToResolve.Add(NodeRef.For(form.CollectionInstanceId));
+            nodesToResolve.Add(NodeRef.For(form.EnrollmentId));
+            if (!form.StudySiteId.IsEmpty)
+            {
+                nodesToResolve.Add(NodeRef.For(form.StudySiteId));
+            }
+
+            var normalizedItem = NormalizeItemCode(violation.ItemId);
+            itemLabelByIndex[i] = ResolveCollectionItemLabel(form, siblings, designsByVersion, violation.ItemId);
+            if (!string.IsNullOrWhiteSpace(violation.ItemId))
+            {
+                var obsId = MatchVariableObservations(form.CollectionSpecId, violation.ItemId, form, siblings).FirstOrDefault();
+                if (!obsId.IsEmpty)
+                {
+                    primaryObsByIndex[i] = obsId;
+                    nodesToResolve.Add(NodeRef.For(obsId));
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(normalizedItem))
+            {
+                var obsVal = form.Values.FirstOrDefault(v => string.Equals(v.ItemId, normalizedItem, StringComparison.Ordinal));
+                if (obsVal is not null && !obsVal.ObservationId.IsEmpty)
+                {
+                    primaryObsByIndex[i] = obsVal.ObservationId;
+                    nodesToResolve.Add(NodeRef.For(obsVal.ObservationId));
+                }
+            }
+        }
+
+        var obsQueryCache = new Dictionary<ObservationId, ResolvedFormQueryLink?>();
+        if (lineage is not null && actor.Actor is { } reader)
+        {
+            foreach (var obsId in primaryObsByIndex.Where(o => o is { IsEmpty: false }).Select(o => o!.Value).Distinct())
+            {
+                var (qLink, lineageOk) = await TraceFormQueryAsync(lineage, tenant, reader, NodeRef.For(obsId), cancellationToken).ConfigureAwait(false);
+                if (!lineageOk)
+                {
+                    break;
+                }
+
+                obsQueryCache[obsId] = qLink;
+                if (qLink?.Ref is { } qRef)
+                {
+                    nodesToResolve.Add(qRef.Unversioned());
+                }
+            }
+        }
+
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [.. nodesToResolve], cancellationToken).ConfigureAwait(false);
+        var summaries = navigator is not null && nodesToResolve.Count > 0
+            ? await navigator.ResolveManyAsync(tenant, [.. nodesToResolve], cancellationToken).ConfigureAwait(false)
+            : new Dictionary<NodeRef, NodeSummary>();
+
+        var responses = new List<KernelRulePackPreviewViolationResponse>(violations.Count);
+        for (var i = 0; i < violations.Count; i++)
+        {
+            var violation = violations[i];
+            var baseResp = KernelRulePackPreviewViolationResponse.From(violation) with
+            {
+                RulePackRef = rulePackRef,
+                RulePackLabel = rulePackLabel,
+            };
+
+            if (effectiveFormByIndex[i] is not { } form)
+            {
+                responses.Add(baseResp);
+                continue;
+            }
+
+            var canUnblind = canUnblindByIndex[i];
+            var design = designsByVersion.GetValueOrDefault(form.ProtocolVersionId);
+
+            string? siteRef = null;
+            string? siteLabel = null;
+            if (!form.StudySiteId.IsEmpty)
+            {
+                var siteNode = NodeRef.For(form.StudySiteId);
+                if (masks.For(siteNode) is not null)
+                {
+                    siteLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    siteRef = siteNode.ToString();
+                    summaries.TryGetValue(siteNode, out var siteSummary);
+                    siteLabel = FormatSiteLabel(
+                        siteSummary,
+                        enrollmentDirectory.TryGetValue(form.EnrollmentId, out var de) ? de.SiteCode : null);
+                }
+            }
+
+            string? participantRef = null;
+            string? participantId = null;
+            string? participantLabel = null;
+            var enrollmentNode = NodeRef.For(form.EnrollmentId);
+            if (masks.For(enrollmentNode) is not null)
+            {
+                participantLabel = ValidationFindingView.MaskedValue;
+            }
+            else
+            {
+                participantRef = enrollmentNode.ToString();
+                if (!form.ParticipantId.IsEmpty)
+                {
+                    participantId = NodeRef.For(form.ParticipantId).ToString();
+                }
+
+                summaries.TryGetValue(enrollmentNode, out var enrollmentSummary);
+                participantLabel = enrollmentSummary?.Code
+                    ?? enrollmentSummary?.Title
+                    ?? (enrollmentDirectory.TryGetValue(form.EnrollmentId, out var de) ? de.SubjectCode : null);
+            }
+
+            var formNode = NodeRef.For(form.CollectionInstanceId);
+            string? formRef = null;
+            string? formLabel = null;
+            string? plannedActivityId = null;
+            string? visitLabel = null;
+            if (masks.For(formNode) is not null)
+            {
+                formLabel = ValidationFindingView.MaskedValue;
+            }
+            else
+            {
+                formRef = formNode.ToString();
+                plannedActivityId = form.PlannedActivityId;
+                visitLabel = ResolveVisitLabel(form.PlannedActivityId, design);
+                summaries.TryGetValue(formNode, out var formSummary);
+                formLabel = ResolveFormLabel(form, design, formSummary);
+            }
+
+            var normalizedItem = NormalizeItemCode(violation.ItemId);
+            string? observationRef = null;
+            string? observationLabel = null;
+            string? queryRef = null;
+            Guid? queryId = null;
+            string? queryLabel = null;
+
+            if (primaryObsByIndex[i] is { IsEmpty: false } pObsId)
+            {
+                var obsNode = NodeRef.For(pObsId);
+                var obsBlinded = !canUnblind && normalizedItem is not null && form.IsValueBlinded(normalizedItem, pObsId);
+                if (masks.For(obsNode) is not null)
+                {
+                    observationLabel = ValidationFindingView.MaskedValue;
+                }
+                else if (obsBlinded)
+                {
+                    observationRef = obsNode.ToString();
+                    observationLabel = ValidationFindingView.MaskedValue;
+                }
+                else
+                {
+                    observationRef = obsNode.ToString();
+                    summaries.TryGetValue(obsNode, out var obsSummary);
+                    observationLabel = obsSummary?.Title ?? itemLabelByIndex[i] ?? normalizedItem;
+                }
+
+                if (obsQueryCache.TryGetValue(pObsId, out var qLink) && qLink is not null)
+                {
+                    var qBlinded = !canUnblind && normalizedItem is not null && form.IsQueryBlinded(normalizedItem, pObsId);
+                    if (qLink.IsMasked || qBlinded || qLink.Ref is null || masks.For(qLink.Ref.Unversioned()) is not null)
+                    {
+                        queryLabel = ValidationFindingView.MaskedValue;
+                    }
+                    else
+                    {
+                        var unversionedQuery = qLink.Ref.Unversioned();
+                        queryRef = unversionedQuery.ToString();
+                        queryId = unversionedQuery.Id;
+                        summaries.TryGetValue(unversionedQuery, out var querySummary);
+                        queryLabel = !string.IsNullOrWhiteSpace(querySummary?.Title)
+                            ? querySummary.Title
+                            : $"Query ({violation.RuleId})";
+                    }
+                }
+            }
+
+            responses.Add(baseResp with
+            {
+                ItemId = normalizedItem ?? violation.ItemId,
+                SiteRef = siteRef,
+                SiteLabel = siteLabel,
+                ParticipantRef = participantRef,
+                ParticipantId = participantId,
+                ParticipantLabel = participantLabel,
+                PlannedActivityId = plannedActivityId,
+                VisitLabel = visitLabel,
+                FormRef = formRef,
+                FormLabel = formLabel,
+                CollectionSpecId = form.CollectionSpecId,
+                ItemLabel = itemLabelByIndex[i],
+                ObservationRef = observationRef,
+                ObservationLabel = observationLabel,
+                QueryRef = queryRef,
+                QueryId = queryId,
+                QueryLabel = queryLabel,
+            });
+        }
+
+        return responses;
+    }
+
+    private static async Task<(ResolvedFormQueryLink? Link, bool Available)> TraceFormQueryAsync(
+        IKernelLineage lineage,
+        TenantId tenant,
+        Actor reader,
+        NodeRef startNode,
+        CancellationToken cancellationToken)
+    {
+        LineageGraph graph;
+        try
+        {
+            graph = await lineage.TraceAsync(
+                tenant,
+                reader,
+                new LineageQuery(startNode, LineageDirection.Forward, Depth: 1, EdgeKinds: DerivedFromOnly),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested && IsTransientDatabaseException(ex))
+        {
+            return (null, false);
+        }
+
+        var queryNodes = graph.Nodes
+            .Where(n => n.Distance > 0 && n.Kind == NodeKinds.FormQuery)
+            .ToList();
+        if (queryNodes.Count == 0)
+        {
+            return (null, true);
+        }
+
+        var visible = queryNodes.LastOrDefault(n => !n.IsMasked && n.Ref is not null);
+        if (visible is not null)
+        {
+            return (new ResolvedFormQueryLink(visible.Ref!.Unversioned(), IsMasked: false), true);
+        }
+
+        return (new ResolvedFormQueryLink(null, IsMasked: true), true);
+    }
+
+    private static bool IsTransientDatabaseException(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is System.Data.Common.DbException)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static async Task<Dictionary<ProtocolVersionId, ProtocolDesign>> LoadDesignsByVersionAsync(
+        TenantId tenant,
+        StudyId studyId,
+        IProtocolVersionReader? protocols,
+        IReadOnlyCollection<CollectionInstanceRecord> forms,
+        CancellationToken cancellationToken)
+    {
+        var map = new Dictionary<ProtocolVersionId, ProtocolDesign>();
+        if (protocols is null)
+        {
+            return map;
+        }
+
+        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
+        {
+            if (await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                map[versionId] = design;
+            }
+        }
+
+        if (map.Count == 0)
+        {
+            var summaries = await protocols.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+            foreach (var summary in summaries)
+            {
+                if (await protocols.GetDesignAsync(tenant, summary.Id, cancellationToken).ConfigureAwait(false) is { } design)
+                {
+                    map[summary.Id] = design;
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static string? ResolvePrimaryFindingItemId(
+        ValidationFindingView view,
+        CollectionInstanceRecord targetForm,
+        IReadOnlyList<CollectionInstanceRecord> siblings)
+    {
+        if (!string.IsNullOrWhiteSpace(view.Target.Variable))
+        {
+            return view.Target.Variable;
+        }
+
+        foreach (var obs in view.Observed)
+        {
+            if (string.IsNullOrWhiteSpace(obs.Variable))
+            {
+                continue;
+            }
+
+            var normalized = NormalizeItemCode(obs.Variable);
+            if (targetForm.Items.Any(i => string.Equals(i.Id, normalized, StringComparison.Ordinal))
+                || targetForm.Values.Any(v => string.Equals(v.ItemId, normalized, StringComparison.Ordinal))
+                || siblings.Any(f => f.Items.Any(i => string.Equals(i.Id, normalized, StringComparison.Ordinal))))
+            {
+                return obs.Variable;
+            }
+        }
+
+        return view.Observed.FirstOrDefault()?.Variable;
+    }
+
+    private static string? NormalizeItemCode(string? variable)
+    {
+        if (string.IsNullOrWhiteSpace(variable))
+        {
+            return null;
+        }
+
+        var trimmed = variable.Trim();
+        var dot = trimmed.IndexOf('.', StringComparison.Ordinal);
+        return dot > 0 && dot < trimmed.Length - 1 ? trimmed[(dot + 1)..] : trimmed;
+    }
+
+    private static string? ResolveCollectionItemLabel(
+        CollectionInstanceRecord targetForm,
+        IReadOnlyList<CollectionInstanceRecord> siblings,
+        IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign> designsByVersion,
+        string? rawVariable)
+    {
+        if (string.IsNullOrWhiteSpace(rawVariable))
+        {
+            return null;
+        }
+
+        var specId = targetForm.CollectionSpecId;
+        var itemId = rawVariable.Trim();
+        var dot = itemId.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < itemId.Length - 1)
+        {
+            specId = itemId[..dot];
+            itemId = itemId[(dot + 1)..];
+        }
+
+        var form = siblings.FirstOrDefault(f => string.Equals(f.CollectionSpecId, specId, StringComparison.Ordinal)) ?? targetForm;
+        var item = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal))
+            ?? (designsByVersion.TryGetValue(form.ProtocolVersionId, out var design)
+                ? design.CollectionSpecs
+                    .FirstOrDefault(s => string.Equals(s.Id, form.CollectionSpecId, StringComparison.Ordinal))
+                    ?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal))
+                : null);
+
+        return !string.IsNullOrWhiteSpace(item?.Prompt) ? item.Prompt.Trim() : itemId;
+    }
+
+    private static string? ResolveVisitLabel(string? plannedActivityId, ProtocolDesign? design)
+    {
+        if (string.IsNullOrWhiteSpace(plannedActivityId))
+        {
+            return null;
+        }
+
+        var name = design?.PlannedActivities
+            .FirstOrDefault(a => string.Equals(a.Id, plannedActivityId, StringComparison.Ordinal))?.Name;
+        return !string.IsNullOrWhiteSpace(name) ? name.Trim() : plannedActivityId.Trim();
+    }
+
+    private static string ResolveFormLabel(CollectionInstanceRecord form, ProtocolDesign? design, NodeSummary? summary)
+    {
+        if (!string.IsNullOrWhiteSpace(form.CollectionTitle))
+        {
+            return form.CollectionTitle.Trim();
+        }
+
+        var specName = design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, form.CollectionSpecId, StringComparison.Ordinal))?.Name;
+        if (!string.IsNullOrWhiteSpace(specName))
+        {
+            return specName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(summary?.Title))
+        {
+            return summary.Title.Trim();
+        }
+
+        return form.CollectionSpecId;
+    }
+
+    private static string? FormatSiteLabel(NodeSummary? summary, string? fallbackSiteCode)
+    {
+        var code = !string.IsNullOrWhiteSpace(summary?.Code) ? summary.Code.Trim() : fallbackSiteCode?.Trim();
+        var title = !string.IsNullOrWhiteSpace(summary?.Title) ? summary.Title.Trim() : null;
+        if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(title) && !string.Equals(code, title, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{code} · {title}";
+        }
+
+        return code ?? title;
+    }
+
+    private static string? BuildTargetDisplayLabel(string? formLabel, string? visitLabel, string? itemLabel)
+    {
+        if (formLabel == ValidationFindingView.MaskedValue)
+        {
+            return ValidationFindingView.MaskedValue;
+        }
+
+        string? formWithVisit = null;
+        if (!string.IsNullOrWhiteSpace(formLabel))
+        {
+            formWithVisit = !string.IsNullOrWhiteSpace(visitLabel) && !formLabel.Contains(visitLabel, StringComparison.Ordinal)
+                ? $"{formLabel} ({visitLabel})"
+                : formLabel;
+        }
+
+        if (!string.IsNullOrWhiteSpace(formWithVisit) && !string.IsNullOrWhiteSpace(itemLabel))
+        {
+            return $"{formWithVisit} · {itemLabel}";
+        }
+
+        return formWithVisit ?? itemLabel;
     }
 
     private static Guid DeriveGuid(TenantId tenant, string kind, string seed)

@@ -351,6 +351,17 @@ public sealed class CollectionValidationService(
             }
         }
 
+        var inputs = instances
+            .Select(i => NodeRef.For(i.CollectionInstanceId, Math.Max(1L, i.Version)))
+            .Concat(instances
+                .SelectMany(i => i.Values)
+                .Where(v => !v.ObservationId.IsEmpty && v.Revision >= 1)
+                .Select(v => NodeRef.For(v.ObservationId, v.Revision)))
+            .Distinct()
+            .OrderBy(n => n.ToString(), StringComparer.Ordinal)
+            .Take(RecordValidationRun.MaxInputs)
+            .ToList();
+
         var runId = DeriveRunId(tenant, studyId, idempotencyKey);
         var runResult = await commands.SendAsync(
             new RecordValidationRun(
@@ -363,7 +374,7 @@ public sealed class CollectionValidationService(
                 Standard: null,
                 StandardVersion: null,
                 Agency: null,
-                Inputs: [],
+                Inputs: inputs,
                 datasets,
                 stampedAt,
                 stampedAt,

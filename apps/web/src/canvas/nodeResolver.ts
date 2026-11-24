@@ -316,6 +316,11 @@ const KIND_LABELS: Record<string, string> = {
   grant: "Role grant",
   role: "Role",
   query: "Query",
+  form_query: "Query",
+  validation_finding: "Validation finding",
+  validation_run: "Validation run",
+  library_item: "Rule pack",
+  study_standards_profile: "Standards profile",
   protocol_element: "Protocol element",
   form_version_snapshot: "Form snapshot",
   subscription: "Subscription",
@@ -402,18 +407,19 @@ export function getNodeDisplay(
   fallbackTitle?: string | null
 ): NodeDisplaySummary {
   const parsed = parseLookupNodeRef(nodeRefText);
+  const explicitMasked = fallbackTitle?.trim().toLowerCase() === "masked";
   if (!parsed) {
     const label = fallbackTitle?.trim() || nodeRefText.trim() || "Record";
     return {
       ref: nodeRefText,
       kind: "record",
       kindLabel: "Record",
-      label,
+      label: explicitMasked ? "masked" : label,
       code: null,
-      title: fallbackTitle ?? null,
+      title: explicitMasked ? null : (fallbackTitle ?? null),
       status: null,
-      masked: false,
-      maskReason: null,
+      masked: explicitMasked,
+      maskReason: explicitMasked ? "blinded" : null,
       resolved: Boolean(fallbackTitle),
       loading: false,
     };
@@ -424,6 +430,22 @@ export function getNodeDisplay(
   const entry = resolvedEntries[key] ?? resolvedEntries[baseKey];
   const hint = localHints[key] ?? localHints[baseKey];
   const node = entry?.node ?? null;
+
+  if (explicitMasked || hint?.title?.trim().toLowerCase() === "masked") {
+    return {
+      ref: key,
+      kind: node?.kind || parsed.kind,
+      kindLabel: formatKindTitle(node?.kind || parsed.kind),
+      label: "masked",
+      code: null,
+      title: null,
+      status: null,
+      masked: true,
+      maskReason: "blinded",
+      resolved: true,
+      loading: false,
+    };
+  }
 
   if (node && node.mask !== null) {
     return {

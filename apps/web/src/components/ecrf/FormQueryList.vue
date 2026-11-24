@@ -50,6 +50,8 @@
         :show-form="showForm"
         :show-context="showContext"
         :study-code="studyCode"
+        :site-scope="siteScope"
+        :participant-scope="participantScope"
         :subject-code="subjectCode"
         :form-titles="formTitles"
         :form-to="formTo"
@@ -100,6 +102,8 @@ const props = withDefaults(
     /** Show each query's site and participant codes, for a study-wide worklist. */
     showContext?: boolean;
     studyCode?: string;
+    siteScope?: string;
+    participantScope?: string;
     subjectCode?: string;
     formTitles?: Record<string, string>;
     assertionsLocked?: boolean;

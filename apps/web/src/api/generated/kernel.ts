@@ -1261,6 +1261,8 @@ export interface components {
       claim: string;
       evidence: unknown[];
     };
+    /** @enum {unknown} */
+    Kernel_FindingTargetKind: "DatasetRecord" | "Observation" | "DesignElement";
     Kernel_KernelAcceptFindingRequest: {
       rationale: string;
       /** Format: uuid */
@@ -1996,6 +1998,25 @@ export interface components {
       item_id: null | string;
       message: string;
       remediation_guidance: null | string;
+      rule_pack_ref?: null | string;
+      rule_pack_label?: null | string;
+      site_ref?: null | string;
+      site_label?: null | string;
+      participant_ref?: null | string;
+      participant_id?: null | string;
+      participant_label?: null | string;
+      planned_activity_id?: null | string;
+      visit_label?: null | string;
+      form_ref?: null | string;
+      form_label?: null | string;
+      collection_spec_id?: null | string;
+      item_label?: null | string;
+      observation_ref?: null | string;
+      observation_label?: null | string;
+      query_ref?: null | string;
+      /** Format: uuid */
+      query_id?: null | string;
+      query_label?: null | string;
     };
     Kernel_KernelRulePackResponse: {
       ref: string;
@@ -2295,7 +2316,7 @@ export interface components {
       severity: string;
       status: string;
       blocks: boolean;
-      target_kind: string;
+      target_kind: components["schemas"]["Kernel_FindingTargetKind"];
       dataset: string;
       record_key: string;
       variable: null | string;
@@ -2308,6 +2329,28 @@ export interface components {
       classification: null | string;
       decision?:
         null | components["schemas"]["Kernel_KernelFindingDecisionResponse"];
+      rule_pack_label?: null | string;
+      target_node_ref?: null | string;
+      target_label?: null | string;
+      site_ref?: null | string;
+      site_label?: null | string;
+      participant_ref?: null | string;
+      participant_id?: null | string;
+      participant_label?: null | string;
+      planned_activity_id?: null | string;
+      visit_label?: null | string;
+      form_ref?: null | string;
+      form_id?: null | string;
+      form_label?: null | string;
+      collection_spec_id?: null | string;
+      item_id?: null | string;
+      item_label?: null | string;
+      observation_ref?: null | string;
+      observation_label?: null | string;
+      query_ref?: null | string;
+      /** Format: uuid */
+      query_id?: null | string;
+      query_label?: null | string;
     };
     Kernel_KernelVerifyObservationRequest: {
       enrollment_ref: string;

@@ -8369,6 +8369,13 @@
           }
         }
       },
+      "Kernel_FindingTargetKind": {
+        "enum": [
+          "DatasetRecord",
+          "Observation",
+          "DesignElement"
+        ]
+      },
       "Kernel_KernelAcceptFindingRequest": {
         "required": [
           "rationale"
@@ -11661,6 +11668,115 @@
               "null",
               "string"
             ]
+          },
+          "rule_pack_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rule_pack_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "query_label": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13031,7 +13147,7 @@
             "type": "boolean"
           },
           "target_kind": {
-            "type": "string"
+            "$ref": "#/components/schemas/Kernel_FindingTargetKind"
           },
           "dataset": {
             "type": "string"
@@ -13086,6 +13202,133 @@
               {
                 "$ref": "#/components/schemas/Kernel_KernelFindingDecisionResponse"
               }
+            ]
+          },
+          "rule_pack_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target_node_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "query_label": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }

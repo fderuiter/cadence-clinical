@@ -95,3 +95,74 @@ export function observationNodeRef(value: unknown): string | null {
     ? formatNodeRef({ kind: "observation", id: parsed.id })
     : null;
 }
+
+/** Canonical `validation_finding:<id>` reference from a finding UUID or NodeRef, or null. */
+export function validationFindingRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed =
+    parseNodeRef(trimmed) ?? tryNodeRef("validation_finding", trimmed);
+  return parsed?.kind === "validation_finding"
+    ? formatNodeRef({
+        kind: "validation_finding",
+        id: parsed.id,
+        version: parsed.version,
+      })
+    : null;
+}
+
+/** Canonical `form_query:<id>` reference from a query UUID or NodeRef, or null. */
+export function formQueryRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed = parseNodeRef(trimmed) ?? tryNodeRef("form_query", trimmed);
+  return parsed?.kind === "form_query"
+    ? formatNodeRef({
+        kind: "form_query",
+        id: parsed.id,
+        version: parsed.version,
+      })
+    : null;
+}
+
+/** Canonical `library_item:<id>` reference from a library item UUID or NodeRef, or null. */
+export function libraryItemRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed = parseNodeRef(trimmed) ?? tryNodeRef("library_item", trimmed);
+  return parsed?.kind === "library_item"
+    ? formatNodeRef({
+        kind: "library_item",
+        id: parsed.id,
+        version: parsed.version,
+      })
+    : null;
+}
+
+/** Canonical `study_site:<id>` reference from a study-site UUID or NodeRef, or null. */
+export function studySiteRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed = parseNodeRef(trimmed) ?? tryNodeRef("study_site", trimmed);
+  return parsed?.kind === "study_site"
+    ? formatNodeRef({
+        kind: "study_site",
+        id: parsed.id,
+        version: parsed.version,
+      })
+    : null;
+}
+
+/** Canonical `enrollment:<id>` reference from an enrollment UUID or NodeRef, or null. */
+export function enrollmentNodeRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed = parseNodeRef(trimmed) ?? tryNodeRef("enrollment", trimmed);
+  return parsed?.kind === "enrollment"
+    ? formatNodeRef({
+        kind: "enrollment",
+        id: parsed.id,
+        version: parsed.version,
+      })
+    : null;
+}

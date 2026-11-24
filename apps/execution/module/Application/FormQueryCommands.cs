@@ -6,6 +6,8 @@ using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 
 namespace Cadence.Modules.Execution.Application;
@@ -27,6 +29,11 @@ namespace Cadence.Modules.Execution.Application;
 /// <param name="OwnerRole">Role initially responsible for acting on the query (defaults to <see cref="FormQueryOwnerRole.Site"/>).</param>
 /// <param name="Priority">Initial query priority (defaults to <see cref="FormQueryPriority.Normal"/>).</param>
 /// <param name="Assignee">Optional specific assignee identifier.</param>
+/// <param name="ValidationFindingId">Optional validation finding that triggered this query.</param>
+/// <param name="RulePackId">Optional library rule-pack version that defined the rule for this query.</param>
+/// <param name="PackKey">Optional stable rule-pack key.</param>
+/// <param name="RuleId">Optional rule identifier within the rule pack.</param>
+/// <param name="RuleVersion">Optional positive rule version within the rule pack.</param>
 /// <param name="ResolvedHeader">Optional pre-resolved form header passed from the HTTP endpoint to avoid re-reading it.</param>
 [KernelCapability("execution.query.raise", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
@@ -47,6 +54,11 @@ public sealed record RaiseFormQuery(
     FormQueryOwnerRole OwnerRole = FormQueryOwnerRole.Site,
     FormQueryPriority Priority = FormQueryPriority.Normal,
     string? Assignee = null,
+    ValidationFindingId? ValidationFindingId = null,
+    LibraryItemId? RulePackId = null,
+    string? PackKey = null,
+    string? RuleId = null,
+    int? RuleVersion = null,
     [property: JsonIgnore] CollectionInstanceHeader? ResolvedHeader = null) : ICommand<FormQueryState>;
 
 /// <summary>The site answers an open query (#5461). Refused when the query is not open or a Locked lock covers its value.</summary>
@@ -209,6 +221,7 @@ public sealed record FormQueryAgingDigestState(
 public sealed record FormQueryScopeContext(
     StudyId StudyId,
     StudySiteId StudySiteId,
+    ProtocolVersionId ProtocolVersionId,
     string CollectionSpecId,
     string? PlannedActivityId,
     int? CurrentRevision);
@@ -233,6 +246,11 @@ public sealed record FormQueryState(
     string? LastAnsweredBy,
     IReadOnlyList<FormQueryMessage> Messages,
     long Version,
+    ValidationFindingId? ValidationFindingId = null,
+    LibraryItemId? RulePackId = null,
+    string? PackKey = null,
+    string? RuleId = null,
+    int? RuleVersion = null,
     [property: JsonIgnore] FormQueryScopeContext? Scope = null)
 {
     /// <summary>The current state of <paramref name="query"/> at <paramref name="version"/>.</summary>
@@ -258,6 +276,11 @@ public sealed record FormQueryState(
             query.LastAnsweredBy,
             [.. query.Messages],
             version,
+            query.ValidationFindingId,
+            query.RulePackId,
+            query.PackKey,
+            query.RuleId,
+            query.RuleVersion,
             scope);
     }
 
@@ -284,7 +307,12 @@ public sealed record FormQueryState(
             snapshot.EscalatedAt,
             snapshot.LastAnsweredBy,
             snapshot.Messages,
-            query.VersionIndex);
+            query.VersionIndex,
+            query.ValidationFindingId,
+            query.RulePackId,
+            query.PackKey,
+            query.RuleId,
+            query.RuleVersion);
     }
 }
 
@@ -306,7 +334,12 @@ public sealed record FormQueryChanged(
     FormQueryPriority Priority,
     string ActorId,
     string ReasonForChange,
-    IReadOnlyList<KernelAssertionStep> Steps);
+    IReadOnlyList<KernelAssertionStep> Steps,
+    ValidationFindingId? ValidationFindingId = null,
+    LibraryItemId? RulePackId = null,
+    string? PackKey = null,
+    string? RuleId = null,
+    int? RuleVersion = null);
 
 /// <summary>The errors Execution's query commands raise (ADR-2600 §4.5).</summary>
 public static class FormQueryErrors

@@ -771,12 +771,212 @@ export function createWebDemoHandlers(store = webDemoStore) {
         { status: 201 }
       );
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/validation/findings", () => {
-      return HttpResponse.json({
-        total: 0,
-        findings: [],
-      });
+    http.get("*/api/v1/kernel/studies/:studyRef/rule-packs", ({ params }) => {
+      const studyRef = decodeURIComponent(String(params.studyRef));
+      return HttpResponse.json(store.listStudyRulePacks(studyRef));
     }),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/rule-packs/:itemRef/preview",
+      ({ params }) => {
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const itemRef = decodeURIComponent(String(params.itemRef));
+        const result = store.previewStudyRulePack(studyRef, itemRef);
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/library-items/:itemRef/approve",
+      async ({ params, request }) => {
+        const itemRef = decodeURIComponent(String(params.itemRef));
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          request.headers.get("X-Signature-Token") ||
+          request.headers.get("x-signature-token") ||
+          "";
+        const result = store.approveLibraryItem(itemRef, body, {
+          reason,
+          sigToken,
+        });
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.put(
+      "*/api/v1/kernel/studies/:studyRef/standards",
+      async ({ params, request }) => {
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const result = store.declareStudyRulePacks(studyRef, body, { reason });
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/validation/findings",
+      ({ params, request }) => {
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const url = new URL(request.url);
+        return HttpResponse.json(
+          store.listStudyValidationFindings(studyRef, {
+            stage: url.searchParams.get("stage") || undefined,
+            status: url.searchParams.get("status") || undefined,
+            severity: url.searchParams.get("severity") || undefined,
+            dataset: url.searchParams.get("dataset") || undefined,
+            packKey: url.searchParams.get("pack_key") || undefined,
+            limit: url.searchParams.get("limit") || undefined,
+          })
+        );
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/validation/findings/:findingRef",
+      ({ params }) => {
+        const findingRef = decodeURIComponent(String(params.findingRef));
+        const result = store.getValidationFinding(findingRef);
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/validation/findings/:findingRef/investigate",
+      ({ params, request }) => {
+        const findingRef = decodeURIComponent(String(params.findingRef));
+        const reason = readRequiredReasonHeader(request);
+        const result = store.transitionValidationFinding(
+          findingRef,
+          "investigate",
+          {},
+          { reason }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/validation/findings/:findingRef/classify",
+      async ({ params, request }) => {
+        const findingRef = decodeURIComponent(String(params.findingRef));
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const result = store.transitionValidationFinding(
+          findingRef,
+          "classify",
+          body,
+          { reason }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/validation/findings/:findingRef/accept",
+      async ({ params, request }) => {
+        const findingRef = decodeURIComponent(String(params.findingRef));
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          request.headers.get("X-Signature-Token") ||
+          request.headers.get("x-signature-token") ||
+          "";
+        const result = store.transitionValidationFinding(
+          findingRef,
+          "accept",
+          body,
+          { reason, sigToken }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/validation/findings/:findingRef/explain",
+      async ({ params, request }) => {
+        const findingRef = decodeURIComponent(String(params.findingRef));
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          request.headers.get("X-Signature-Token") ||
+          request.headers.get("x-signature-token") ||
+          "";
+        const result = store.transitionValidationFinding(
+          findingRef,
+          "explain",
+          body,
+          { reason, sigToken }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/validation/findings/:findingRef/reopen",
+      ({ params, request }) => {
+        const findingRef = decodeURIComponent(String(params.findingRef));
+        const reason = readRequiredReasonHeader(request);
+        const result = store.transitionValidationFinding(
+          findingRef,
+          "reopen",
+          {},
+          { reason }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+            headers: { "Content-Type": "application/problem+json" },
+          });
+        }
+        return HttpResponse.json(result.data);
+      }
+    ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
       ({ params, request }) => {

@@ -167,6 +167,8 @@
         :can-answer="canAnswer"
         :busy="queries.busy"
         :study-code="studyCode"
+        :site-scope="appliedSite || undefined"
+        :participant-scope="participantScope || appliedParticipant || undefined"
         :form-to="queryFormLocation"
         :observation-to="queryObservationLocation"
         :act="queries.act"
@@ -203,8 +205,10 @@ import type {
 } from "../../api/ecrfQueriesApi";
 import {
   collectionInstanceRef,
+  formQueryRef,
   observationNodeRef,
 } from "../../canvas/nodeRef";
+import { seedNodeSummary } from "../../canvas/nodeResolver";
 import { useFormQueries } from "../../composables/useFormQueries";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
@@ -248,10 +252,12 @@ const props = withDefaults(
     priority?: string;
     site?: string;
     participant?: string;
+    participantScope?: string;
     changed?: string;
   }>(),
   {
     canAnswer: undefined,
+    participantScope: undefined,
   }
 );
 
@@ -379,14 +385,22 @@ const hasActiveFilter = computed(() =>
 );
 
 function queryFormLocation(query: FormQueryResponse): RouteLocationRaw {
-  const formRef = collectionInstanceRef(query.form_id) ?? query.form_id;
+  const formRef =
+    collectionInstanceRef(query.form_id) ?? query.form_ref ?? query.form_id;
+  const siteParam = query.site_code || appliedSite.value || undefined;
+  const participantParam = props.participantScope?.trim() || undefined;
   return {
     name: "study",
     params: { studyCode: props.studyCode },
     query: {
       stage: "data",
       section: "queries",
-      ...(query.site_code ? { site: query.site_code } : {}),
+      ...(siteParam ? { site: siteParam } : {}),
+      ...(participantParam
+        ? { participant: participantParam }
+        : appliedParticipant.value
+          ? { subject: appliedParticipant.value }
+          : {}),
       form: formRef,
       item: query.item_id,
     },
@@ -396,16 +410,24 @@ function queryFormLocation(query: FormQueryResponse): RouteLocationRaw {
 function queryObservationLocation(
   query: FormQueryResponse
 ): RouteLocationRaw | null {
-  const obsRef = observationNodeRef(query.observation_id);
+  const obsRef =
+    observationNodeRef(query.observation_id) ?? query.observation_ref ?? null;
   if (!obsRef) return null;
-  const formRef = collectionInstanceRef(query.form_id);
+  const formRef = collectionInstanceRef(query.form_id) ?? query.form_ref;
+  const siteParam = query.site_code || appliedSite.value || undefined;
+  const participantParam = props.participantScope?.trim() || undefined;
   return {
     name: "study",
     params: { studyCode: props.studyCode },
     query: {
       stage: "data",
       section: "queries",
-      ...(query.site_code ? { site: query.site_code } : {}),
+      ...(siteParam ? { site: siteParam } : {}),
+      ...(participantParam
+        ? { participant: participantParam }
+        : appliedParticipant.value
+          ? { subject: appliedParticipant.value }
+          : {}),
       ...(formRef ? { form: formRef } : {}),
       ...(query.item_id ? { item: query.item_id } : {}),
       observation: obsRef,
@@ -581,6 +603,64 @@ async function refreshQueries() {
     if (q.subject_code && !seenParticipants.value.includes(q.subject_code)) {
       seenParticipants.value.push(q.subject_code);
     }
+    seedQueryNodes(q);
+  }
+}
+
+function seedQueryNodes(q: FormQueryResponse) {
+  const qRef = formQueryRef(q.query_id);
+  if (qRef) {
+    const label =
+      q.item_label === "masked"
+        ? "masked"
+        : `Query · ${q.item_label || q.item_id}`;
+    seedNodeSummary(qRef, {
+      kind: "form_query",
+      title: label,
+      code: q.item_id,
+    });
+  }
+  if (q.site_ref && q.site_label) {
+    seedNodeSummary(q.site_ref, {
+      kind: "study_site",
+      title: q.site_label,
+      code: q.site_code ?? null,
+    });
+  }
+  if (q.participant_ref && q.participant_label) {
+    seedNodeSummary(q.participant_ref, {
+      kind: "enrollment",
+      title: q.participant_label,
+      code: q.subject_code ?? null,
+    });
+  }
+  if (q.form_ref && q.form_label) {
+    seedNodeSummary(q.form_ref, {
+      kind: "collection_instance",
+      title: q.form_label,
+      code: q.collection_spec_id ?? null,
+    });
+  }
+  if (q.observation_ref && q.observation_label) {
+    seedNodeSummary(q.observation_ref, {
+      kind: "observation",
+      title: q.observation_label,
+      code: q.item_id,
+    });
+  }
+  if (q.validation_finding_ref && q.validation_finding_label) {
+    seedNodeSummary(q.validation_finding_ref, {
+      kind: "validation_finding",
+      title: q.validation_finding_label,
+      code: q.rule_id ?? null,
+    });
+  }
+  if (q.rule_pack_ref && q.rule_pack_label) {
+    seedNodeSummary(q.rule_pack_ref, {
+      kind: "library_item",
+      title: q.rule_pack_label,
+      code: q.pack_key ?? null,
+    });
   }
 }
 

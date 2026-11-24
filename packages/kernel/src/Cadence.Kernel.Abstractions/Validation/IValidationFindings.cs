@@ -115,6 +115,8 @@ public sealed record ValidationRunPackView(LibraryItemId LibraryItemId, string K
 /// <param name="Enrollment">The owning enrollment when the target resolves to one, or null for study-level findings.</param>
 /// <param name="BlindedVariables">Variable identifiers on this finding that carry blinded treatment information.</param>
 /// <param name="BlindedObservation">Representative blinded observation on this finding's enrollment for visibility probing.</param>
+/// <param name="TargetLabel">Human-readable label for <see cref="Target"/>, free of raw UUIDs when resolved.</param>
+/// <param name="TargetEvidence">Resolved kernel <see cref="NodeRef"/>s backing <see cref="Target"/> and its referenced observations.</param>
 public sealed record ValidationFindingView(
     ValidationFindingId Id,
     StudyId Study,
@@ -139,7 +141,9 @@ public sealed record ValidationFindingView(
     FindingDecision? Decision,
     EnrollmentId? Enrollment = null,
     IReadOnlySet<string>? BlindedVariables = null,
-    ObservationId? BlindedObservation = null)
+    ObservationId? BlindedObservation = null,
+    string? TargetLabel = null,
+    IReadOnlyList<NodeRef>? TargetEvidence = null)
 {
     /// <summary>Placeholder substituted for blinded observed values when the reader lacks <c>enrollment.unblind</c>.</summary>
     public const string MaskedValue = "masked";
@@ -156,11 +160,16 @@ public sealed record ValidationFindingView(
         }
 
         var maskedMessage = Message;
+        var maskedTargetLabel = TargetLabel;
         foreach (var raw in Observed
                      .Where(o => BlindedVariables.Contains(o.Variable) && !string.IsNullOrWhiteSpace(o.Value))
                      .Select(o => o.Value!))
         {
             maskedMessage = maskedMessage.Replace(raw, MaskedValue, StringComparison.Ordinal);
+            if (maskedTargetLabel is not null)
+            {
+                maskedTargetLabel = maskedTargetLabel.Replace(raw, MaskedValue, StringComparison.Ordinal);
+            }
         }
 
         IReadOnlyList<ObservedVariable> maskedObserved =
@@ -182,6 +191,7 @@ public sealed record ValidationFindingView(
             Expected = maskedExpected,
             Observed = maskedObserved,
             Decision = maskedDecision,
+            TargetLabel = maskedTargetLabel,
         };
     }
 
@@ -193,17 +203,36 @@ public sealed record ValidationFindingView(
     /// it. The evidence names the rule pack version, the target when it is a kernel object, the runs and the attestation,
     /// so the root cause can be followed through lineage (K-FIND-3).
     /// </summary>
-    public Explanation Explain()
+    /// <param name="targetLabelOverride">Optional hydrated human-readable target label override.</param>
+    /// <param name="extraTargetEvidence">Optional additional target evidence <see cref="NodeRef"/>s.</param>
+    public Explanation Explain(string? targetLabelOverride = null, IReadOnlyList<NodeRef>? extraTargetEvidence = null)
     {
         var packRef = NodeRef.For(RulePack);
         var firstRun = NodeRef.For(FirstDetectedRun);
         var lastRun = NodeRef.For(LastDetectedRun);
-        var targetEvidence = Target.Node is { } node ? new[] { node } : [];
+        var evidenceBuilder = new List<NodeRef>();
+        if (Target.Node is { } node)
+        {
+            evidenceBuilder.Add(node);
+        }
+
+        if (TargetEvidence is not null)
+        {
+            evidenceBuilder.AddRange(TargetEvidence);
+        }
+
+        if (extraTargetEvidence is not null)
+        {
+            evidenceBuilder.AddRange(extraTargetEvidence);
+        }
+
+        var targetEvidence = evidenceBuilder.Distinct().ToArray();
+        var (stepTargetLabel, claimTargetLabel) = FormatTargetLabels(Target, targetLabelOverride ?? TargetLabel);
         var observed = Observed.Count == 0 ? "no values" : string.Join(", ", Observed.Select(o => $"{o.Variable} = {o.Value ?? "null"}"));
         var steps = new List<ExplanationStep>
         {
             new($"Rule {RuleId} v{RuleVersion} of rule pack {PackKey} reported: {Message}", [packRef]),
-            new($"It read {observed} on {Target.Dataset} record {Target.Key}{(Target.Variable is null ? string.Empty : $", variable {Target.Variable}")}.", targetEvidence),
+            new($"It read {observed} on {stepTargetLabel}.", targetEvidence),
             new(FirstDetectedRun == LastDetectedRun
                 ? "One run detected it."
                 : "Runs have detected it since the first one.", FirstDetectedRun == LastDetectedRun ? [lastRun] : [firstRun, lastRun]),
@@ -227,20 +256,47 @@ public sealed record ValidationFindingView(
 
         var claim = Status switch
         {
-            FindingStatus.Resolved => $"Rule {RuleId} no longer finds this problem on {Target.Dataset} {Target.Key}.",
-            _ when Blocks => $"Rule {RuleId} finds an error on {Target.Dataset} {Target.Key} that blocks {Stage}.",
-            _ => $"Rule {RuleId} finds a {Severity.ToString().ToLowerInvariant()} on {Target.Dataset} {Target.Key}; it is {Status.ToString().ToLowerInvariant()}.",
+            FindingStatus.Resolved => $"Rule {RuleId} no longer finds this problem on {claimTargetLabel}.",
+            _ when Blocks => $"Rule {RuleId} finds an error on {claimTargetLabel} that blocks {Stage}.",
+            _ => $"Rule {RuleId} finds a {Severity.ToString().ToLowerInvariant()} on {claimTargetLabel}; it is {Status.ToString().ToLowerInvariant()}.",
         };
 
         var next = new List<NextAction>();
         if (Status is FindingStatus.Open or FindingStatus.Investigating)
         {
-            next.Add(new NextAction("Correct the source, mapping or metadata and validate again", Target: Target.Node));
+            var fixTarget = Target.Node ?? (targetEvidence.Length > 0 ? targetEvidence[0] : NodeRef.For(Id));
+            next.Add(new NextAction("Correct the source, mapping or metadata and validate again", Target: fixTarget));
             next.Add(new NextAction("Explain the finding for the reviewer guide", "validation_finding.explain", NodeRef.For(Id)));
             next.Add(new NextAction("Accept the finding as it is", "validation_finding.accept", NodeRef.For(Id)));
         }
 
         return new Explanation(NodeRef.For(Id), claim, Producer, steps, conditions, next);
+    }
+
+    private static (string StepTargetLabel, string ClaimTargetLabel) FormatTargetLabels(FindingTarget target, string? resolvedLabel)
+    {
+        if (!string.IsNullOrWhiteSpace(resolvedLabel))
+        {
+            var clean = resolvedLabel.Trim();
+            return (clean, clean);
+        }
+
+        var keyIsOpaqueId = Guid.TryParse(target.Key, out _) || NodeRef.TryParse(target.Key, out _);
+        if (keyIsOpaqueId)
+        {
+            var step = string.IsNullOrWhiteSpace(target.Variable)
+                ? $"{target.Dataset} record"
+                : $"{target.Dataset} record, variable {target.Variable}";
+            var claim = string.IsNullOrWhiteSpace(target.Variable)
+                ? target.Dataset
+                : $"{target.Dataset} ({target.Variable})";
+            return (step, claim);
+        }
+
+        var rowStep = string.IsNullOrWhiteSpace(target.Variable)
+            ? $"{target.Dataset} record {target.Key}"
+            : $"{target.Dataset} record {target.Key}, variable {target.Variable}";
+        return (rowStep, $"{target.Dataset} {target.Key}");
     }
 }
 

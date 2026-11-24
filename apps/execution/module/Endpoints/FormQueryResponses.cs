@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Cadence.Kernel;
+using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Domain;
 
@@ -35,14 +36,25 @@ public sealed record FormQueryTextRequest(string Text);
 /// <param name="Text">Optional closing or cancellation note.</param>
 public sealed record FormQueryNoteRequest(string? Text = null);
 
-/// <summary>Study, site, participant and form metadata attached to a query response when resolved.</summary>
+/// <summary>Study, site, participant, form, observation, and rule provenance metadata attached to a query response when resolved.</summary>
 internal sealed record FormQueryContext(
     Guid? StudyId = null,
     Guid? StudySiteId = null,
     string? SiteCode = null,
     string? SubjectCode = null,
     string? CollectionSpecId = null,
-    string? PlannedActivityId = null);
+    string? PlannedActivityId = null,
+    string? SiteRef = null,
+    string? SiteLabel = null,
+    string? ParticipantRef = null,
+    string? ParticipantLabel = null,
+    string? VisitLabel = null,
+    string? FormRef = null,
+    string? FormLabel = null,
+    IReadOnlyDictionary<string, string>? ItemLabels = null,
+    IReadOnlyDictionary<ObservationId, string>? ObservationLabels = null,
+    IReadOnlyDictionary<Guid, string>? FindingLabels = null,
+    IReadOnlyDictionary<Guid, string>? RulePackLabels = null);
 
 /// <summary>A data query about one revision of one eCRF value (#5461, <c>PRD-QRY-001</c>, <c>PRD-QRY-002</c>).</summary>
 public sealed record FormQueryResponse(
@@ -74,7 +86,26 @@ public sealed record FormQueryResponse(
     DateTimeOffset? StatusSince = null,
     DateTimeOffset? DueAt = null,
     DateTimeOffset? EscalatedAt = null,
-    string? LastAnsweredBy = null)
+    string? LastAnsweredBy = null,
+    Guid? ValidationFindingId = null,
+    string? ValidationFindingRef = null,
+    string? ValidationFindingLabel = null,
+    Guid? RulePackId = null,
+    string? RulePackRef = null,
+    string? RulePackLabel = null,
+    string? PackKey = null,
+    string? RuleId = null,
+    int? RuleVersion = null,
+    string? SiteRef = null,
+    string? SiteLabel = null,
+    string? ParticipantRef = null,
+    string? ParticipantLabel = null,
+    string? VisitLabel = null,
+    string? FormRef = null,
+    string? FormLabel = null,
+    string? ItemLabel = null,
+    string? ObservationRef = null,
+    string? ObservationLabel = null)
 {
     private const string MaskedLiteral = "masked";
 
@@ -101,6 +132,63 @@ public sealed record FormQueryResponse(
             ?? (revisions.TryGetValue(state.ObservationId, out var revision) ? revision : null);
         var raised = state.Messages[0];
         var question = state.Messages.Last(m => m.Kind is FormQueryMessageKind.Raised or FormQueryMessageKind.Reopened);
+
+        var itemLabel = context?.ItemLabels is not null && context.ItemLabels.TryGetValue(state.ItemId, out var resolvedItemLabel)
+            ? resolvedItemLabel
+            : state.ItemId;
+        var observationRef = maskBlinded || state.ObservationId.IsEmpty ? null : NodeRef.For(state.ObservationId).ToString();
+        string? observationLabel;
+        if (maskBlinded)
+        {
+            observationLabel = MaskedLiteral;
+        }
+        else if (context?.ObservationLabels is not null && context.ObservationLabels.TryGetValue(state.ObservationId, out var resolvedObsLabel))
+        {
+            observationLabel = resolvedObsLabel;
+        }
+        else
+        {
+            observationLabel = itemLabel;
+        }
+
+        Guid? findingGuid = !maskBlinded && state.ValidationFindingId is { IsEmpty: false } fId ? fId.Value : null;
+        string? findingRef = !maskBlinded && state.ValidationFindingId is { IsEmpty: false } fNode ? NodeRef.For(fNode).ToString() : null;
+        string? findingLabel = null;
+        if (state.ValidationFindingId is { IsEmpty: false } presentFinding)
+        {
+            if (maskBlinded)
+            {
+                findingLabel = MaskedLiteral;
+            }
+            else if (context?.FindingLabels is not null && context.FindingLabels.TryGetValue(presentFinding.Value, out var resolvedFindingLabel))
+            {
+                findingLabel = resolvedFindingLabel;
+            }
+            else
+            {
+                findingLabel = !string.IsNullOrWhiteSpace(state.RuleId) ? $"{state.RuleId} finding" : "Validation finding";
+            }
+        }
+
+        Guid? rulePackGuid = !maskBlinded && state.RulePackId is { IsEmpty: false } pId ? pId.Value : null;
+        string? rulePackRef = !maskBlinded && state.RulePackId is { IsEmpty: false } pNode ? NodeRef.For(pNode).ToString() : null;
+        string? rulePackLabel = null;
+        if (state.RulePackId is { IsEmpty: false } presentPack)
+        {
+            if (maskBlinded)
+            {
+                rulePackLabel = MaskedLiteral;
+            }
+            else if (context?.RulePackLabels is not null && context.RulePackLabels.TryGetValue(presentPack.Value, out var resolvedPackLabel))
+            {
+                rulePackLabel = resolvedPackLabel;
+            }
+            else
+            {
+                rulePackLabel = !string.IsNullOrWhiteSpace(state.PackKey) ? state.PackKey : "Rule pack";
+            }
+        }
+
         return new FormQueryResponse(
             state.QueryId.Value,
             state.FormId.Value,
@@ -135,7 +223,26 @@ public sealed record FormQueryResponse(
             state.StatusSince,
             state.DueAt,
             state.EscalatedAt,
-            maskBlinded && state.LastAnsweredBy is not null ? MaskedLiteral : state.LastAnsweredBy);
+            maskBlinded && state.LastAnsweredBy is not null ? MaskedLiteral : state.LastAnsweredBy,
+            findingGuid,
+            findingRef,
+            findingLabel,
+            rulePackGuid,
+            rulePackRef,
+            rulePackLabel,
+            maskBlinded && state.PackKey is not null ? MaskedLiteral : state.PackKey,
+            maskBlinded && state.RuleId is not null ? MaskedLiteral : state.RuleId,
+            maskBlinded ? null : state.RuleVersion,
+            context?.SiteRef ?? (context?.StudySiteId is { } siteGuid && siteGuid != Guid.Empty ? NodeRef.For(Cadence.Kernel.StudySiteId.FromGuid(siteGuid)).ToString() : null),
+            context?.SiteLabel ?? context?.SiteCode,
+            context?.ParticipantRef ?? NodeRef.For(state.EnrollmentId).ToString(),
+            context?.ParticipantLabel ?? context?.SubjectCode,
+            context?.VisitLabel ?? context?.PlannedActivityId,
+            context?.FormRef ?? NodeRef.For(state.FormId).ToString(),
+            context?.FormLabel ?? context?.CollectionSpecId,
+            maskBlinded ? MaskedLiteral : itemLabel,
+            observationRef,
+            observationLabel);
     }
 
     private static string Lower<T>(T value)

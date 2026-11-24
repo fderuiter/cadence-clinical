@@ -683,7 +683,11 @@
         }
       },
       "Designer_FindingTargetKind": {
-        "type": "integer"
+        "enum": [
+          "DatasetRecord",
+          "Observation",
+          "DesignElement"
+        ]
       },
       "Designer_NodeRef": {},
       "Designer_ObservedVariable": {

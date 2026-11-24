@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Kernel.Commands;
 
@@ -126,7 +128,9 @@ public sealed record RaiseQuery(
     string IdempotencyKey,
     string ReasonForChange,
     int? Revision = null,
-    string? AssertedBy = null) : ICommand<AssertionState>;
+    string? AssertedBy = null,
+    ValidationFindingId? ValidationFindingId = null,
+    LibraryItemId? RulePackId = null) : ICommand<AssertionState>;
 
 /// <summary>
 /// Answers an open query (spec §8.2). Service-account forwarders may supply <c>AssertedBy</c> and <c>Revision</c> to

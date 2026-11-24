@@ -47,9 +47,19 @@ const OBS_1_UUID = "00000000-0000-0000-0000-000000000001"; // deid-ignore
 const OBS_2_UUID = "00000000-0000-0000-0000-000000000002"; // deid-ignore
 const OBS_3_UUID = "00000000-0000-0000-0000-000000000003"; // deid-ignore
 const OBS_4_UUID = "00000000-0000-0000-0000-000000000004"; // deid-ignore
+const OBS_5_UUID = "00000000-0000-0000-0000-000000000005"; // deid-ignore
 const DEFAULT_FORM_UUID = "00000000-0000-0000-0000-000000002001"; // deid-ignore
+const FORM_2002_UUID = "00000000-0000-0000-0000-000000002002"; // deid-ignore
 const DEFAULT_QUERY_UUID = "00000000-0000-0000-0000-000000003001"; // deid-ignore
+const SYSTEM_QUERY_UUID = "00000000-0000-0000-0000-000000003003"; // deid-ignore
 const PROPOSAL_1_REF = "proposal:00000000-0000-0000-0000-000000004001"; // deid-ignore
+const RULE_PACK_VITALS_UUID = "00000000-0000-0000-0000-000000006001"; // deid-ignore
+const RULE_PACK_HEMODYNAMICS_UUID = "00000000-0000-0000-0000-000000006002"; // deid-ignore
+const STANDARDS_PROFILE_UUID = "00000000-0000-0000-0000-000000006101"; // deid-ignore
+const VALIDATION_RUN_1_UUID = "00000000-0000-0000-0000-000000006201"; // deid-ignore
+const VALIDATION_FINDING_1_UUID = "00000000-0000-0000-0000-000000006301"; // deid-ignore
+const VALIDATION_FINDING_2_UUID = "00000000-0000-0000-0000-000000006302"; // deid-ignore
+const VALIDATION_FINDING_3_UUID = "00000000-0000-0000-0000-000000006303"; // deid-ignore
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -175,6 +185,18 @@ function createInitialObservations() {
         { type: "quantity", value: "72", unit: "/min", comparator: null },
         "2026-08-01T09:17:00Z"
       ),
+    ],
+    [
+      `observation:${OBS_5_UUID}`,
+      {
+        ...makeObs(
+          `observation:${OBS_5_UUID}`,
+          "HR",
+          { type: "quantity", value: "108", unit: "/min", comparator: null },
+          "2026-08-10T07:55:00Z"
+        ),
+        enrollment_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
+      },
     ],
   ]);
 }
@@ -761,7 +783,85 @@ export function createWebDemoStore() {
     ];
 
     const initialForm = createInitialForm();
-    state.forms = new Map([[initialForm.form_id, initialForm]]);
+    const secondFormItems = [
+      {
+        item_id: "item-sysbp",
+        concept: "SYSBP",
+        unit: "mm[Hg]",
+        value_kind: "quantity",
+        required: true,
+        value: {
+          type: "quantity",
+          value: "136",
+          unit: "mm[Hg]",
+          comparator: null,
+        },
+        observation_id: OBS_1_UUID,
+        revision: 1,
+        recorded_by: "usr-crc-01",
+        recorded_at: "2026-08-04T09:10:00Z",
+      },
+      {
+        item_id: "item-diabp",
+        concept: "DIABP",
+        unit: "mm[Hg]",
+        value_kind: "quantity",
+        required: true,
+        value: {
+          type: "quantity",
+          value: "84",
+          unit: "mm[Hg]",
+          comparator: null,
+        },
+        observation_id: OBS_2_UUID,
+        revision: 2,
+        recorded_by: "usr-crc-01",
+        recorded_at: "2026-08-05T14:20:00Z",
+      },
+      {
+        item_id: "item-hr",
+        concept: "HR",
+        unit: "/min",
+        value_kind: "quantity",
+        required: true,
+        value: {
+          type: "quantity",
+          value: "108",
+          unit: "/min",
+          comparator: null,
+        },
+        observation_id: OBS_5_UUID,
+        revision: 1,
+        recorded_by: "usr-crc-01",
+        recorded_at: "2026-08-10T07:55:00Z",
+      },
+    ];
+    const secondForm = {
+      form_id: FORM_2002_UUID,
+      enrollment_id: ENROLLMENT_1002_UUID,
+      participant_id: "00000000-0000-0000-0000-000000005002", // deid-ignore
+      study_id: STUDY_UUID,
+      study_site_id: SITE_102_UUID,
+      protocol_version_id: VERSION_V2_UUID,
+      collection_spec_id: "form-vital-signs",
+      collection_title: "Vital Signs (CDASH VS)",
+      planned_activity_id: "visit-baseline",
+      collected_at: "2026-08-04T09:10:00Z",
+      opened_by: "usr-crc-01",
+      opened_at: "2026-08-04T09:00:00Z",
+      version: 2,
+      complete: true,
+      missing_required: [],
+      items: secondFormItems,
+      locks: [],
+      assertions: [],
+      signatures: [],
+      content_hash: computeContentHash(secondFormItems),
+    };
+    state.forms = new Map([
+      [initialForm.form_id, initialForm],
+      [secondForm.form_id, secondForm],
+    ]);
 
     state.queries = new Map([
       [
@@ -811,13 +911,23 @@ export function createWebDemoStore() {
           subject_code: "SUBJ-1001",
           collection_spec_id: "form-vital-signs",
           planned_activity_id: "visit-baseline",
+          site_ref: `study_site:${SITE_101_UUID}`,
+          site_label: "Site SITE-101",
+          participant_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+          participant_label: "SUBJ-1001",
+          visit_label: "Baseline Visit (Day 1)",
+          form_ref: `collection_instance:${DEFAULT_FORM_UUID}`,
+          form_label: "Vital Signs (CDASH VS) · Baseline Visit",
+          item_label: "Systolic Blood Pressure",
+          observation_ref: `observation:${OBS_1_UUID}@1`,
+          observation_label: "Systolic Blood Pressure (SYSBP): 128 mm[Hg]",
         },
       ],
       [
         "00000000-0000-0000-0000-000000003002", // deid-ignore
         {
           query_id: "00000000-0000-0000-0000-000000003002", // deid-ignore
-          form_id: "00000000-0000-0000-0000-000000002002", // deid-ignore
+          form_id: FORM_2002_UUID,
           enrollment_id: ENROLLMENT_1002_UUID,
           item_id: "item-diabp",
           observation_id: OBS_2_UUID,
@@ -860,16 +970,26 @@ export function createWebDemoStore() {
           subject_code: "SUBJ-1002",
           collection_spec_id: "form-vital-signs",
           planned_activity_id: "visit-baseline",
+          site_ref: `study_site:${SITE_102_UUID}`,
+          site_label: "Site SITE-102",
+          participant_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
+          participant_label: "SUBJ-1002",
+          visit_label: "Baseline Visit (Day 1)",
+          form_ref: `collection_instance:${FORM_2002_UUID}`,
+          form_label: "Vital Signs (CDASH VS) · Baseline Visit",
+          item_label: "Diastolic Blood Pressure",
+          observation_ref: `observation:${OBS_2_UUID}@2`,
+          observation_label: "Diastolic Blood Pressure (DIABP): 84 mm[Hg]",
         },
       ],
       [
-        "00000000-0000-0000-0000-000000003003", // deid-ignore
+        SYSTEM_QUERY_UUID,
         {
-          query_id: "00000000-0000-0000-0000-000000003003", // deid-ignore
-          form_id: "00000000-0000-0000-0000-000000002002", // deid-ignore
+          query_id: SYSTEM_QUERY_UUID,
+          form_id: FORM_2002_UUID,
           enrollment_id: ENROLLMENT_1002_UUID,
           item_id: "item-hr",
-          observation_id: OBS_3_UUID,
+          observation_id: OBS_5_UUID,
           revision: 1,
           current_revision: 1,
           value_changed: false,
@@ -902,6 +1022,283 @@ export function createWebDemoStore() {
           subject_code: "SUBJ-1002",
           collection_spec_id: "form-vital-signs",
           planned_activity_id: "visit-baseline",
+          validation_finding_id: VALIDATION_FINDING_1_UUID,
+          validation_finding_ref: `validation_finding:${VALIDATION_FINDING_1_UUID}`,
+          validation_finding_label: "RULE-HR-RANGE v1 · Error",
+          rule_pack_id: RULE_PACK_VITALS_UUID,
+          rule_pack_ref: `library_item:${RULE_PACK_VITALS_UUID}`,
+          rule_pack_label: "Cardiovascular Vital Signs Edit Checks (v1)",
+          pack_key: "cadence-vital-signs-checks",
+          rule_id: "RULE-HR-RANGE",
+          rule_version: 1,
+          site_ref: `study_site:${SITE_102_UUID}`,
+          site_label: "Site SITE-102",
+          participant_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
+          participant_label: "SUBJ-1002",
+          visit_label: "Baseline Visit (Day 1)",
+          form_ref: `collection_instance:${FORM_2002_UUID}`,
+          form_label: "Vital Signs (CDASH VS) · Baseline Visit",
+          item_label: "Resting Heart Rate",
+          observation_ref: `observation:${OBS_5_UUID}@1`,
+          observation_label: "Resting Heart Rate (HR): 108 /min",
+        },
+      ],
+    ]);
+
+    state.rulePacks = new Map([
+      [
+        `library_item:${RULE_PACK_VITALS_UUID}`,
+        {
+          ref: `library_item:${RULE_PACK_VITALS_UUID}@2`,
+          key: "cadence-vital-signs-checks",
+          version: 1,
+          title: "Cardiovascular Vital Signs Edit Checks",
+          description:
+            "Post-commit CDASH VS edit checks for resting heart rate, blood pressure plausibility, and baseline visit windows.",
+          status: "Approved",
+          content_hash: "sha256-demo-pack-6001",
+          rule_count: 3,
+          rules: [
+            {
+              id: "RULE-HR-RANGE",
+              version: 1,
+              stage: "Collection",
+              dataset: "VS",
+              severity: "Error",
+              explanation:
+                "Resting heart rate outside expected 50-100 bpm window.",
+              remediation_guidance:
+                "Confirm 5-minute seated rest and verify bedside ECG or pulse oximeter source.",
+              condition:
+                '{"op":"between","field":"item-hr","min":50,"max":100}',
+            },
+            {
+              id: "VS_SYSBP_ELEVATED",
+              version: 1,
+              stage: "Collection",
+              dataset: "VS",
+              severity: "Warning",
+              explanation:
+                "Systolic blood pressure exceeds 120 mm[Hg] screening threshold.",
+              remediation_guidance:
+                "Confirm repeat seated cuff measurement per protocol section 6.2.",
+              condition: '{"op":"lte","field":"item-sysbp","value":120}',
+            },
+            {
+              id: "USDM_VISIT_WINDOW_CHECK",
+              version: 1,
+              stage: "Design",
+              dataset: "SOA",
+              severity: "Notice",
+              explanation:
+                "Baseline visit window allows +/-0 day tolerance; confirm clinic scheduling feasibility.",
+              remediation_guidance:
+                "Review Schedule of Activities baseline window in Protocol Versions.",
+              condition: '{"op":"gte","field":"window_after","value":1}',
+            },
+          ],
+        },
+      ],
+      [
+        `library_item:${RULE_PACK_HEMODYNAMICS_UUID}`,
+        {
+          ref: `library_item:${RULE_PACK_HEMODYNAMICS_UUID}@1`,
+          key: "cadence-hemodynamic-checks",
+          version: 1,
+          title: "Hemodynamic Pulse Pressure Plausibility Checks",
+          description:
+            "Candidate edit checks evaluating pulse pressure spread across baseline and follow-up visits.",
+          status: "Draft",
+          content_hash: "sha256-demo-pack-6002",
+          rule_count: 1,
+          rules: [
+            {
+              id: "VS_PULSE_PRESSURE_WIDE",
+              version: 1,
+              stage: "Collection",
+              dataset: "VS",
+              severity: "Warning",
+              explanation:
+                "Pulse pressure (SYSBP minus DIABP) exceeds 45 mm[Hg] screening threshold.",
+              remediation_guidance:
+                "Verify cuff size and ipsilateral arm selection on source worksheet.",
+              condition:
+                '{"op":"lte","expr":"item-sysbp - item-diabp","value":45}',
+            },
+          ],
+        },
+      ],
+    ]);
+
+    state.studyPinnedRulePacks = new Map([
+      [
+        canonicalStudyEntry.ref.split("@")[0],
+        [`library_item:${RULE_PACK_VITALS_UUID}`],
+      ],
+      [STUDY_REF, [`library_item:${RULE_PACK_VITALS_UUID}`]],
+    ]);
+
+    state.validationFindings = new Map([
+      [
+        `validation_finding:${VALIDATION_FINDING_1_UUID}`,
+        {
+          ref: `validation_finding:${VALIDATION_FINDING_1_UUID}@1`,
+          study_ref: STUDY_REF,
+          stage: "Collection",
+          pack_key: "cadence-vital-signs-checks",
+          rule_pack_ref: `library_item:${RULE_PACK_VITALS_UUID}`,
+          rule_pack_label: "Cardiovascular Vital Signs Edit Checks (v1)",
+          rule_id: "RULE-HR-RANGE",
+          rule_version: 1,
+          severity: "Error",
+          status: "Open",
+          blocks: true,
+          target_kind: "DatasetRecord",
+          dataset: "VS",
+          record_key: FORM_2002_UUID,
+          variable: "item-hr",
+          message:
+            "Resting heart rate (108 /min) is outside expected 50-100 /min window.",
+          expected: "50..100 /min",
+          observed: [
+            {
+              variable: "Resting Heart Rate (HR)",
+              value: "108 /min",
+            },
+          ],
+          first_detected_run_ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+          last_detected_run_ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+          resolved_by_run_ref: null,
+          classification: null,
+          decision: null,
+          target_node_ref: `collection_instance:${FORM_2002_UUID}`,
+          target_label: "Vital Signs (CDASH VS) · Baseline Visit",
+          site_ref: `study_site:${SITE_102_UUID}`,
+          site_label: "SITE-102 · Lakeshore Medical Center",
+          participant_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
+          participant_id: "SUBJ-1002",
+          participant_label: "Participant SUBJ-1002",
+          planned_activity_id: "visit-baseline",
+          visit_label: "Baseline Visit (Day 1)",
+          form_ref: `collection_instance:${FORM_2002_UUID}`,
+          form_id: FORM_2002_UUID,
+          form_label: "Vital Signs (CDASH VS) · Baseline Visit",
+          collection_spec_id: "form-vital-signs",
+          item_id: "item-hr",
+          item_label: "Resting Heart Rate",
+          observation_ref: `observation:${OBS_5_UUID}@1`,
+          observation_label: "Resting Heart Rate (HR): 108 /min",
+          query_ref: `form_query:${SYSTEM_QUERY_UUID}`,
+          query_id: SYSTEM_QUERY_UUID,
+          query_label: "Open system query on Resting Heart Rate",
+        },
+      ],
+      [
+        `validation_finding:${VALIDATION_FINDING_2_UUID}`,
+        {
+          ref: `validation_finding:${VALIDATION_FINDING_2_UUID}@1`,
+          study_ref: STUDY_REF,
+          stage: "Collection",
+          pack_key: "cadence-vital-signs-checks",
+          rule_pack_ref: `library_item:${RULE_PACK_VITALS_UUID}`,
+          rule_pack_label: "Cardiovascular Vital Signs Edit Checks (v1)",
+          rule_id: "VS_SYSBP_ELEVATED",
+          rule_version: 1,
+          severity: "Warning",
+          status: "Investigating",
+          blocks: false,
+          target_kind: "Observation",
+          dataset: "VS",
+          record_key: OBS_1_UUID,
+          variable: "item-sysbp",
+          message:
+            "Systolic blood pressure (128 mm[Hg]) exceeds 120 mm[Hg] screening threshold.",
+          expected: "<= 120 mm[Hg]",
+          observed: [
+            {
+              variable: "Systolic Blood Pressure (SYSBP)",
+              value: "128 mm[Hg]",
+            },
+          ],
+          first_detected_run_ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+          last_detected_run_ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+          resolved_by_run_ref: null,
+          classification: "DataIssue",
+          decision: null,
+          target_node_ref: `observation:${OBS_1_UUID}@1`,
+          target_label: "Systolic Blood Pressure (SYSBP): 128 mm[Hg]",
+          site_ref: `study_site:${SITE_101_UUID}`,
+          site_label: "SITE-101 · Riverside University Hospital",
+          participant_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+          participant_id: "SUBJ-1001",
+          participant_label: "Participant SUBJ-1001",
+          planned_activity_id: "visit-baseline",
+          visit_label: "Baseline Visit (Day 1)",
+          form_ref: `collection_instance:${DEFAULT_FORM_UUID}`,
+          form_id: DEFAULT_FORM_UUID,
+          form_label: "Vital Signs (CDASH VS) · Baseline Visit",
+          collection_spec_id: "form-vital-signs",
+          item_id: "item-sysbp",
+          item_label: "Systolic Blood Pressure",
+          observation_ref: `observation:${OBS_1_UUID}@1`,
+          observation_label: "Systolic Blood Pressure (SYSBP): 128 mm[Hg]",
+          query_ref: `form_query:${DEFAULT_QUERY_UUID}`,
+          query_id: DEFAULT_QUERY_UUID,
+          query_label: "Open query on Systolic Blood Pressure",
+        },
+      ],
+      [
+        `validation_finding:${VALIDATION_FINDING_3_UUID}`,
+        {
+          ref: `validation_finding:${VALIDATION_FINDING_3_UUID}@1`,
+          study_ref: STUDY_REF,
+          stage: "Design",
+          pack_key: "cadence-vital-signs-checks",
+          rule_pack_ref: `library_item:${RULE_PACK_VITALS_UUID}`,
+          rule_pack_label: "Cardiovascular Vital Signs Edit Checks (v1)",
+          rule_id: "USDM_VISIT_WINDOW_CHECK",
+          rule_version: 1,
+          severity: "Notice",
+          status: "Open",
+          blocks: false,
+          target_kind: "DesignElement",
+          dataset: "SOA",
+          record_key: "visit-baseline",
+          variable: "window_after",
+          message:
+            "Baseline visit window allows +/-0 day tolerance; confirm clinic scheduling feasibility.",
+          expected: ">= 1 day",
+          observed: [
+            {
+              variable: "Baseline Visit Window After",
+              value: "0 days",
+            },
+          ],
+          first_detected_run_ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+          last_detected_run_ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+          resolved_by_run_ref: null,
+          classification: null,
+          decision: null,
+          target_node_ref: VERSION_V2_REF,
+          target_label: "Protocol v2.0 Active Release · Baseline Visit (Day 1)",
+          site_ref: null,
+          site_label: null,
+          participant_ref: null,
+          participant_id: null,
+          participant_label: null,
+          planned_activity_id: "visit-baseline",
+          visit_label: "Baseline Visit (Day 1)",
+          form_ref: null,
+          form_id: null,
+          form_label: null,
+          collection_spec_id: null,
+          item_id: null,
+          item_label: null,
+          observation_ref: null,
+          observation_label: null,
+          query_ref: null,
+          query_id: null,
+          query_label: null,
         },
       ],
     ]);
@@ -1801,11 +2198,14 @@ export function createWebDemoStore() {
         });
       }
       if (String(nodeRef).startsWith("observation:")) {
-        const obs = state.observations.get(nodeRef);
+        const unversionedObsRef = String(nodeRef).split("@")[0];
+        const obs =
+          state.observations.get(nodeRef) ||
+          state.observations.get(unversionedObsRef);
         if (obs) {
           return applyNodeVisibilityMask(
             {
-              ref: obs.ref,
+              ref: nodeRef,
               kind: "observation",
               title: `Observation ${obs.concept}`,
               code: obs.concept,
@@ -1815,6 +2215,70 @@ export function createWebDemoStore() {
             caller
           );
         }
+      }
+      if (String(nodeRef).startsWith("validation_finding:")) {
+        const cleanRef = String(nodeRef).split("@")[0];
+        const finding = state.validationFindings?.get(cleanRef);
+        if (finding) {
+          return {
+            ref: finding.ref,
+            kind: "validation_finding",
+            title: `${finding.rule_id} · ${finding.target_label || finding.dataset}`,
+            code: finding.rule_id,
+            status: String(finding.status || "OPEN").toUpperCase(),
+            mask: null,
+          };
+        }
+      }
+      if (String(nodeRef).startsWith("form_query:")) {
+        const queryUuid = String(nodeRef)
+          .replace(/^form_query:/, "")
+          .split("@")[0];
+        const q = state.queries.get(queryUuid);
+        if (q) {
+          return {
+            ref: `form_query:${q.query_id}@${q.version || 1}`,
+            kind: "form_query",
+            title: `Query on ${q.item_label || q.item_id} (${q.subject_code || "participant"})`,
+            code: q.item_id,
+            status: String(q.status || "OPEN").toUpperCase(),
+            mask: null,
+          };
+        }
+      }
+      if (String(nodeRef).startsWith("library_item:")) {
+        const cleanPackRef = String(nodeRef).split("@")[0];
+        const pack = state.rulePacks?.get(cleanPackRef);
+        if (pack) {
+          return {
+            ref: pack.ref,
+            kind: "library_item",
+            title: `${pack.title} (v${pack.version})`,
+            code: pack.key,
+            status: String(pack.status || "APPROVED").toUpperCase(),
+            mask: null,
+          };
+        }
+      }
+      if (String(nodeRef).startsWith("validation_run:")) {
+        return {
+          ref: nodeRef,
+          kind: "validation_run",
+          title: "Collection Validation Run · Vital Signs",
+          code: "VAL-RUN-01",
+          status: "COMPLETED",
+          mask: null,
+        };
+      }
+      if (String(nodeRef).startsWith("study_standards_profile:")) {
+        return {
+          ref: nodeRef,
+          kind: "study_standards_profile",
+          title: "Study Standards Profile",
+          code: "STD-PROFILE",
+          status: "ACTIVE",
+          mask: null,
+        };
       }
       if (String(nodeRef).startsWith("protocol_version:")) {
         return {
@@ -1929,12 +2393,39 @@ export function createWebDemoStore() {
           );
         }
       }
+      if (String(nodeRef).startsWith("attestation:")) {
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "attestation",
+            title: "Electronic Signature Attestation",
+            code: "SIG-ATTEST",
+            status: "VERIFIED",
+            mask: null,
+          },
+          caller
+        );
+      }
+      if (String(nodeRef).startsWith("protocol_element:")) {
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "protocol_element",
+            title: "Baseline Visit Schedule Element",
+            code: "visit-baseline",
+            status: "ACTIVE",
+            mask: null,
+          },
+          caller
+        );
+      }
+      const rawKind = String(nodeRef).split(":")[0] || "node";
       return applyNodeVisibilityMask(
         {
           ref: nodeRef,
-          kind: String(nodeRef).split(":")[0] || "node",
-          title: String(nodeRef),
-          code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
+          kind: rawKind,
+          title: rawKind.replace(/_/g, " "),
+          code: "DEMO",
           status: "ACTIVE",
           mask: null,
         },
@@ -3175,8 +3666,215 @@ export function createWebDemoStore() {
     },
 
     getLineage(nodeRef, direction = "upstream", depth = 3, caller = null) {
-      const now = new Date().toISOString();
+      const now = demoNowIso();
       const startNode = this.getNode(nodeRef, caller);
+      const unversioned = String(nodeRef || "").split("@")[0];
+      if (unversioned.startsWith("form_query:")) {
+        const queryUuid = unversioned.replace(/^form_query:/, "");
+        const q = state.queries.get(queryUuid);
+        const nodes = [
+          {
+            handle: "n0",
+            kind: "form_query",
+            ref: nodeRef,
+            mask: startNode?.mask ?? null,
+            distance: 0,
+          },
+        ];
+        const edges = [];
+        if (q?.validation_finding_ref) {
+          nodes.push({
+            handle: "n1",
+            kind: "validation_finding",
+            ref: q.validation_finding_ref,
+            mask: null,
+            distance: 1,
+          });
+          edges.push({
+            from: "n0",
+            to: "n1",
+            kind: "derived_from",
+            activity: "execution.query.raise",
+            recorded_at: q.raised_at || now,
+            valid_from: q.raised_at || now,
+          });
+        }
+        if (q?.rule_pack_ref) {
+          const handle = `n${nodes.length}`;
+          nodes.push({
+            handle,
+            kind: "library_item",
+            ref: q.rule_pack_ref,
+            mask: null,
+            distance: 1,
+          });
+          edges.push({
+            from: "n0",
+            to: handle,
+            kind: "defined_by",
+            activity: "execution.query.raise",
+            recorded_at: q.raised_at || now,
+            valid_from: q.raised_at || now,
+          });
+        }
+        if (q?.observation_id) {
+          const handle = `n${nodes.length}`;
+          nodes.push({
+            handle,
+            kind: "observation",
+            ref: `observation:${q.observation_id}@${q.revision || 1}`,
+            mask: null,
+            distance: 1,
+          });
+          edges.push({
+            from: "n0",
+            to: handle,
+            kind: "derived_from",
+            activity: "execution.query.raise",
+            recorded_at: q.raised_at || now,
+            valid_from: q.raised_at || now,
+          });
+        }
+        return {
+          start: nodeRef,
+          direction,
+          depth,
+          valid_at: now,
+          known_at: now,
+          nodes,
+          edges,
+          truncated: false,
+        };
+      }
+      if (unversioned.startsWith("validation_finding:")) {
+        const finding = state.validationFindings?.get(unversioned);
+        const nodes = [
+          {
+            handle: "n0",
+            kind: "validation_finding",
+            ref: finding?.ref || nodeRef,
+            mask: startNode?.mask ?? null,
+            distance: 0,
+          },
+          {
+            handle: "n1",
+            kind: "validation_run",
+            ref:
+              finding?.last_detected_run_ref ||
+              `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+            mask: null,
+            distance: 1,
+          },
+          {
+            handle: "n2",
+            kind: "library_item",
+            ref:
+              finding?.rule_pack_ref ||
+              `library_item:${RULE_PACK_VITALS_UUID}@2`,
+            mask: null,
+            distance: 1,
+          },
+        ];
+        const edges = [
+          {
+            from: "n0",
+            to: "n1",
+            kind: "derived_from",
+            activity: "validation_run.record",
+            recorded_at: "2026-08-10T08:00:00Z",
+            valid_from: "2026-08-10T08:00:00Z",
+          },
+          {
+            from: "n0",
+            to: "n2",
+            kind: "defined_by",
+            activity: "validation_run.record",
+            recorded_at: "2026-08-10T08:00:00Z",
+            valid_from: "2026-08-10T08:00:00Z",
+          },
+        ];
+        if (finding?.query_ref) {
+          nodes.push({
+            handle: "n3",
+            kind: "form_query",
+            ref: finding.query_ref,
+            mask: null,
+            distance: 1,
+          });
+          edges.push({
+            from: "n3",
+            to: "n0",
+            kind: "derived_from",
+            activity: "execution.query.raise",
+            recorded_at: "2026-08-10T08:00:00Z",
+            valid_from: "2026-08-10T08:00:00Z",
+          });
+        }
+        return {
+          start: nodeRef,
+          direction,
+          depth,
+          valid_at: now,
+          known_at: now,
+          nodes,
+          edges,
+          truncated: false,
+        };
+      }
+      if (
+        unversioned.startsWith("collection_instance:") ||
+        unversioned.startsWith("observation:")
+      ) {
+        return {
+          start: nodeRef,
+          direction,
+          depth,
+          valid_at: now,
+          known_at: now,
+          nodes: [
+            {
+              handle: "n0",
+              kind: unversioned.split(":")[0],
+              ref: nodeRef,
+              mask: startNode?.mask ?? null,
+              distance: 0,
+            },
+            {
+              handle: "n1",
+              kind: "validation_run",
+              ref: `validation_run:${VALIDATION_RUN_1_UUID}@1`,
+              mask: null,
+              distance: 1,
+            },
+            {
+              handle: "n2",
+              kind: "protocol_version",
+              ref: VERSION_V2_REF,
+              mask: null,
+              distance: 1,
+            },
+          ],
+          edges: [
+            {
+              from: "n0",
+              to: "n1",
+              kind: "validated_by",
+              activity: "validation_run.record",
+              recorded_at: "2026-08-10T08:00:00Z",
+              valid_from: "2026-08-10T08:00:00Z",
+            },
+            {
+              from: "n0",
+              to: "n2",
+              kind: "governed_by",
+              activity: null,
+              recorded_at: "2026-08-01T09:00:00Z",
+              valid_from: "2026-08-01T09:00:00Z",
+            },
+          ],
+          truncated: false,
+        };
+      }
       return {
         start: nodeRef,
         direction,
@@ -4479,8 +5177,16 @@ export function createWebDemoStore() {
           results = matches;
         }
       } else if (opts.studyId) {
+        const canonicalStudyUuid = String(DEMO_STUDY.ref || "")
+          .replace(/^study:/, "")
+          .split("@")[0];
+        const isDefaultStudy =
+          opts.studyId === STUDY_UUID || opts.studyId === canonicalStudyUuid;
         const matches = results.filter(
-          (q) => !q.study_id || q.study_id === opts.studyId
+          (q) =>
+            !q.study_id ||
+            q.study_id === opts.studyId ||
+            (isDefaultStudy && q.study_id === STUDY_UUID)
         );
         results = matches;
       }
@@ -4618,6 +5324,37 @@ export function createWebDemoStore() {
         subject_code: subjectMatch?.subject_id || "SUBJ-1001",
         collection_spec_id: form.collection_spec_id || "form-vital-signs",
         planned_activity_id: form.planned_activity_id || "visit-baseline",
+        validation_finding_id: body?.validation_finding_id || null,
+        validation_finding_ref: body?.validation_finding_id
+          ? `validation_finding:${body.validation_finding_id}`
+          : null,
+        validation_finding_label: body?.rule_id
+          ? `${body.rule_id}${body.rule_version ? ` v${body.rule_version}` : ""}`
+          : null,
+        rule_pack_id: body?.rule_pack_id || null,
+        rule_pack_ref: body?.rule_pack_id
+          ? `library_item:${body.rule_pack_id}`
+          : null,
+        rule_pack_label: body?.pack_key || null,
+        pack_key: body?.pack_key || null,
+        rule_id: body?.rule_id || null,
+        rule_version: body?.rule_version ?? null,
+        site_ref: `study_site:${form.study_site_id || SITE_101_UUID}`,
+        site_label: `Site ${subjectMatch?.site_id || "SITE-101"}`,
+        participant_ref: `enrollment:${form.enrollment_id}`,
+        participant_label: subjectMatch?.subject_id || "SUBJ-1001",
+        visit_label:
+          form.planned_activity_id === "visit-baseline"
+            ? "Baseline Visit (Day 1)"
+            : form.planned_activity_id || null,
+        form_ref: `collection_instance:${form.form_id}`,
+        form_label:
+          form.collection_title ||
+          resolveCollectionTitle(form.collection_spec_id) ||
+          "Vital Signs (CDASH VS)",
+        item_label: item?.concept || body?.item_id || "SYSBP",
+        observation_ref: `observation:${body?.observation_id || item?.observation_id || OBS_1_UUID}@${rev}`,
+        observation_label: `${item?.concept || "SYSBP"} (revision ${rev})`,
       };
       state.queries.set(queryId, created);
       recordActivity(
@@ -4946,6 +5683,572 @@ export function createWebDemoStore() {
       return cloneJson(state.entitlements);
     },
 
+    listStudyRulePacks(studyRef) {
+      const study = getStudyByRefOrCode(studyRef);
+      const cleanStudyRef = String(study?.ref || STUDY_REF).split("@")[0];
+      const pinnedSet = new Set(
+        state.studyPinnedRulePacks.get(cleanStudyRef) ||
+          (study?.isCustomCreated
+            ? []
+            : [`library_item:${RULE_PACK_VITALS_UUID}`])
+      );
+      const rulePacks = [...state.rulePacks.entries()].map(
+        ([unversionedRef, pack]) => ({
+          ...cloneJson(pack),
+          pinned: pinnedSet.has(unversionedRef),
+        })
+      );
+      return {
+        study_ref: `${cleanStudyRef}@1`,
+        profile_ref:
+          pinnedSet.size > 0
+            ? `study_standards_profile:${STANDARDS_PROFILE_UUID}@1`
+            : null,
+        pinned_rule_pack_refs: [...pinnedSet],
+        rule_packs: rulePacks,
+      };
+    },
+
+    previewStudyRulePack(studyRef, itemRef) {
+      const study = getStudyByRefOrCode(studyRef);
+      const cleanItemRef = String(itemRef || "").split("@")[0];
+      const pack = state.rulePacks.get(cleanItemRef);
+      if (!pack) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "RulePack not found",
+              status: 404,
+              code: "K.Standards.NotFound",
+              detail: `No visible RulePack '${cleanItemRef}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+      const forms = study?.isCustomCreated ? [] : [...state.forms.values()];
+      const violations = [];
+      const packLabel = `${pack.title} (v${pack.version})`;
+
+      for (const form of forms) {
+        const subj = state.subjects.find((s) => s.id === form.enrollment_id);
+        const siteCode = subj?.site_id || "SITE-101";
+        const siteLabel =
+          siteCode === "SITE-102"
+            ? "SITE-102 · Lakeshore Medical Center"
+            : "SITE-101 · Riverside University Hospital";
+        const subjectCode = subj?.subject_id || "SUBJ-1001";
+        const formLabel = `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || "Vital Signs (CDASH VS)"} · Baseline Visit`;
+
+        if (pack.key === "cadence-vital-signs-checks") {
+          const hrItem = (form.items || []).find(
+            (it) => it.item_id === "item-hr"
+          );
+          const hrVal = Number(hrItem?.value?.value);
+          if (hrItem && Number.isFinite(hrVal) && (hrVal < 50 || hrVal > 100)) {
+            violations.push({
+              form_id: form.form_id,
+              pack_key: pack.key,
+              rule_pack_ref: cleanItemRef,
+              rule_pack_label: packLabel,
+              rule_id: "RULE-HR-RANGE",
+              rule_version: 1,
+              severity: "Error",
+              dataset: "VS",
+              item_id: "item-hr",
+              item_label: "Resting Heart Rate",
+              message: `Resting heart rate (${hrVal} /min) is outside expected 50-100 /min window.`,
+              remediation_guidance:
+                "Confirm 5-minute seated rest and verify bedside ECG or pulse oximeter source.",
+              site_ref: `study_site:${form.study_site_id || SITE_102_UUID}`,
+              site_label: siteLabel,
+              participant_ref: `enrollment:${form.enrollment_id}`,
+              participant_id: subjectCode,
+              participant_label: `Participant ${subjectCode}`,
+              planned_activity_id: form.planned_activity_id || "visit-baseline",
+              visit_label: "Baseline Visit (Day 1)",
+              form_ref: `collection_instance:${form.form_id}`,
+              form_label: formLabel,
+              collection_spec_id: form.collection_spec_id,
+              observation_ref: hrItem.observation_id
+                ? `observation:${hrItem.observation_id}@${hrItem.revision || 1}`
+                : null,
+              observation_label: `Resting Heart Rate (HR): ${hrVal} /min`,
+              query_ref:
+                form.form_id === FORM_2002_UUID
+                  ? `form_query:${SYSTEM_QUERY_UUID}`
+                  : null,
+              query_id:
+                form.form_id === FORM_2002_UUID ? SYSTEM_QUERY_UUID : null,
+              query_label:
+                form.form_id === FORM_2002_UUID
+                  ? "Open system query on Resting Heart Rate"
+                  : null,
+            });
+          }
+        } else if (pack.key === "cadence-hemodynamic-checks") {
+          const sysItem = (form.items || []).find(
+            (it) => it.item_id === "item-sysbp"
+          );
+          const diaItem = (form.items || []).find(
+            (it) => it.item_id === "item-diabp"
+          );
+          const sysVal = Number(sysItem?.value?.value);
+          const diaVal = Number(diaItem?.value?.value);
+          if (
+            sysItem &&
+            diaItem &&
+            Number.isFinite(sysVal) &&
+            Number.isFinite(diaVal) &&
+            sysVal - diaVal > 45
+          ) {
+            violations.push({
+              form_id: form.form_id,
+              pack_key: pack.key,
+              rule_pack_ref: cleanItemRef,
+              rule_pack_label: packLabel,
+              rule_id: "VS_PULSE_PRESSURE_WIDE",
+              rule_version: 1,
+              severity: "Warning",
+              dataset: "VS",
+              item_id: "item-sysbp",
+              item_label: "Systolic Blood Pressure",
+              message: `Pulse pressure (${sysVal - diaVal} mm[Hg]) exceeds 45 mm[Hg] screening threshold.`,
+              remediation_guidance:
+                "Verify cuff size and ipsilateral arm selection on source worksheet.",
+              site_ref: `study_site:${form.study_site_id || SITE_101_UUID}`,
+              site_label: siteLabel,
+              participant_ref: `enrollment:${form.enrollment_id}`,
+              participant_id: subjectCode,
+              participant_label: `Participant ${subjectCode}`,
+              planned_activity_id: form.planned_activity_id || "visit-baseline",
+              visit_label: "Baseline Visit (Day 1)",
+              form_ref: `collection_instance:${form.form_id}`,
+              form_label: formLabel,
+              collection_spec_id: form.collection_spec_id,
+              observation_ref: sysItem.observation_id
+                ? `observation:${sysItem.observation_id}@${sysItem.revision || 1}`
+                : null,
+              observation_label: `Systolic Blood Pressure (SYSBP): ${sysVal} mm[Hg]`,
+              query_ref:
+                form.form_id === DEFAULT_FORM_UUID
+                  ? `form_query:${DEFAULT_QUERY_UUID}`
+                  : null,
+              query_id:
+                form.form_id === DEFAULT_FORM_UUID ? DEFAULT_QUERY_UUID : null,
+              query_label:
+                form.form_id === DEFAULT_FORM_UUID
+                  ? "Open query on Systolic Blood Pressure"
+                  : null,
+            });
+          }
+        }
+      }
+
+      return {
+        data: {
+          item_ref: cleanItemRef,
+          forms_evaluated: forms.length,
+          rules_evaluated: forms.length * (pack.rules?.length || 0),
+          violation_count: violations.length,
+          violations,
+        },
+      };
+    },
+
+    approveLibraryItem(
+      itemRef,
+      _body = {},
+      { reason = "", sigToken = "" } = {}
+    ) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when approving a library item.",
+            },
+          },
+        };
+      }
+      if (!String(sigToken || "").trim()) {
+        return {
+          error: {
+            status: 401,
+            problem: {
+              title: "Step-up signature required",
+              status: 401,
+              code: "K.Signature.Required",
+              detail:
+                "Header 'X-Signature-Token' is required to approve a RulePack.",
+            },
+          },
+        };
+      }
+      const cleanItemRef = String(itemRef || "").split("@")[0];
+      const pack = state.rulePacks.get(cleanItemRef);
+      if (!pack) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "RulePack not found",
+              status: 404,
+              code: "K.Standards.NotFound",
+              detail: `No visible RulePack '${cleanItemRef}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+      if (pack.status === "Approved") {
+        return {
+          data: {
+            ...cloneJson(pack),
+            pinned: false,
+          },
+        };
+      }
+      const currentVer = Number(String(pack.ref).split("@")[1] || 1);
+      pack.status = "Approved";
+      pack.ref = `${cleanItemRef}@${currentVer + 1}`;
+      recordActivity(
+        "library_item.approved",
+        "standards",
+        "library_item",
+        cleanItemRef,
+        "designer.lead"
+      );
+      const defaultPinned = state.studyPinnedRulePacks.get(STUDY_REF) || [];
+      return {
+        data: {
+          ...cloneJson(pack),
+          pinned: defaultPinned.includes(cleanItemRef),
+        },
+      };
+    },
+
+    declareStudyRulePacks(studyRef, body = {}, { reason = "" } = {}) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when updating study rule packs.",
+            },
+          },
+        };
+      }
+      const study = getStudyByRefOrCode(studyRef);
+      const cleanStudyRef = String(study?.ref || STUDY_REF).split("@")[0];
+      const requested = Array.isArray(body?.rule_pack_refs)
+        ? body.rule_pack_refs.map((r) => {
+            const clean = String(r || "")
+              .trim()
+              .split("@")[0];
+            return clean.includes(":") ? clean : `library_item:${clean}`;
+          })
+        : [];
+      for (const ref of requested) {
+        const pack = state.rulePacks.get(ref);
+        if (!pack) {
+          return {
+            error: {
+              status: 404,
+              problem: {
+                title: "RulePack not found",
+                status: 404,
+                code: "K.Standards.NotFound",
+                detail: `RulePack '${ref}' does not exist.`,
+              },
+            },
+          };
+        }
+        if (pack.status !== "Approved") {
+          return {
+            error: {
+              status: 409,
+              problem: {
+                title: "RulePack not approved",
+                status: 409,
+                code: "K.Standards.ItemNotApproved",
+                detail: `RulePack '${pack.key}' must be Approved before pinning on a study.`,
+              },
+            },
+          };
+        }
+      }
+      state.studyPinnedRulePacks.set(cleanStudyRef, [...new Set(requested)]);
+      recordActivity(
+        "study_standards_profile.declared",
+        "standards",
+        "study",
+        cleanStudyRef,
+        "designer.lead"
+      );
+      return { data: this.listStudyRulePacks(cleanStudyRef) };
+    },
+
+    listStudyValidationFindings(studyRef, filters = {}) {
+      const study = getStudyByRefOrCode(studyRef);
+      if (study?.isCustomCreated) {
+        return { total: 0, findings: [] };
+      }
+      const cleanStudyRef = String(study?.ref || STUDY_REF).split("@")[0];
+      let findings = [...state.validationFindings.values()].map((f) => ({
+        ...cloneJson(f),
+        study_ref: cleanStudyRef,
+      }));
+      if (filters.stage) {
+        const wanted = String(filters.stage).trim().toLowerCase();
+        findings = findings.filter(
+          (f) => String(f.stage || "").toLowerCase() === wanted
+        );
+      }
+      if (filters.status) {
+        const wanted = String(filters.status).trim().toLowerCase();
+        findings = findings.filter(
+          (f) => String(f.status || "").toLowerCase() === wanted
+        );
+      }
+      if (filters.severity) {
+        const wanted = String(filters.severity).trim().toLowerCase();
+        findings = findings.filter(
+          (f) => String(f.severity || "").toLowerCase() === wanted
+        );
+      }
+      if (filters.dataset) {
+        const wanted = String(filters.dataset).trim().toUpperCase();
+        findings = findings.filter(
+          (f) => String(f.dataset || "").toUpperCase() === wanted
+        );
+      }
+      if (filters.packKey) {
+        const wanted = String(filters.packKey).trim().toLowerCase();
+        findings = findings.filter(
+          (f) => String(f.pack_key || "").toLowerCase() === wanted
+        );
+      }
+      const total = findings.length;
+      const limit = Number(filters.limit);
+      if (Number.isFinite(limit) && limit > 0) {
+        findings = findings.slice(0, limit);
+      }
+      return { total, findings };
+    },
+
+    getValidationFinding(findingRef) {
+      const cleanRef = String(findingRef || "").split("@")[0];
+      const normalizedRef = cleanRef.includes(":")
+        ? cleanRef
+        : `validation_finding:${cleanRef}`;
+      const finding = state.validationFindings.get(normalizedRef);
+      if (!finding) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Validation finding not found",
+              status: 404,
+              code: "K.Validation.FindingNotFound",
+              detail: `No visible validation finding '${normalizedRef}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+      const targetEvidence = finding.target_node_ref
+        ? [finding.target_node_ref]
+        : [];
+      const targetSummary = finding.target_label || `${finding.dataset} record`;
+      const steps = [
+        {
+          claim: `${finding.rule_pack_label || finding.pack_key} rule ${finding.rule_id} v${finding.rule_version} evaluated ${targetSummary}: ${finding.message}`,
+          evidence: [
+            finding.rule_pack_ref,
+            finding.last_detected_run_ref,
+            ...targetEvidence,
+            ...(finding.query_ref ? [finding.query_ref] : []),
+          ].filter(Boolean),
+        },
+      ];
+      if (finding.decision) {
+        steps.push({
+          claim: `Decision (${finding.decision.status || finding.status}) by ${finding.decision.decided_by}: ${finding.decision.text}`,
+          evidence: [
+            finding.decision.decided_on_run_ref,
+            finding.decision.attestation_ref,
+          ].filter(Boolean),
+        });
+      }
+      const nextActions = [];
+      if (finding.status === "Open" || finding.status === "Investigating") {
+        if (finding.target_node_ref) {
+          nextActions.push({
+            description: `Inspect ${targetSummary} or correct source value to resolve ${finding.rule_id}.`,
+            capability: "observation.correct",
+            target: finding.target_node_ref,
+          });
+        }
+        if (finding.query_ref) {
+          nextActions.push({
+            description: `Review linked query (${finding.query_label || "Open query"}).`,
+            capability: "execution.query.manage",
+            target: finding.query_ref,
+          });
+        }
+        nextActions.push({
+          description: `Classify or record signed disposition for ${finding.rule_id}.`,
+          capability: "validation_finding.accept",
+          target: normalizedRef,
+        });
+      }
+      return {
+        data: {
+          finding: cloneJson(finding),
+          explanation: {
+            subject: finding.ref,
+            claim: `${finding.severity} finding on ${targetSummary} (${finding.status}): ${finding.message}`,
+            producer: "kernel/validation/explain",
+            steps,
+            conditions: [
+              {
+                code: finding.rule_id,
+                description: finding.expected
+                  ? `Expected ${finding.expected}`
+                  : finding.message,
+                met:
+                  finding.status === "Resolved" ||
+                  finding.status === "Accepted" ||
+                  finding.status === "Explained",
+                evidence: [finding.rule_pack_ref, ...targetEvidence].filter(
+                  Boolean
+                ),
+              },
+            ],
+            next_actions: nextActions,
+          },
+        },
+      };
+    },
+
+    transitionValidationFinding(
+      findingRef,
+      transition,
+      body = {},
+      { reason = "", sigToken = "" } = {}
+    ) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required for validation finding decisions.",
+            },
+          },
+        };
+      }
+      if (
+        (transition === "accept" || transition === "explain") &&
+        !String(sigToken || "").trim()
+      ) {
+        return {
+          error: {
+            status: 401,
+            problem: {
+              title: "Step-up signature required",
+              status: 401,
+              code: "K.Signature.Required",
+              detail:
+                "Header 'X-Signature-Token' is required for signed finding dispositions.",
+            },
+          },
+        };
+      }
+      const cleanRef = String(findingRef || "").split("@")[0];
+      const normalizedRef = cleanRef.includes(":")
+        ? cleanRef
+        : `validation_finding:${cleanRef}`;
+      const finding = state.validationFindings.get(normalizedRef);
+      if (!finding) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Validation finding not found",
+              status: 404,
+              code: "K.Validation.FindingNotFound",
+              detail: `No visible validation finding '${normalizedRef}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+
+      const idx = nextCounter();
+      const now = demoNowIso(idx);
+      const currentVer = Number(String(finding.ref).split("@")[1] || 1);
+
+      if (transition === "investigate") {
+        finding.status = "Investigating";
+        finding.decision = {
+          status: "Investigating",
+          decided_by: "usr-dm-01",
+          decided_at: now,
+          text: reason,
+          decided_on_run_ref: finding.last_detected_run_ref,
+          attestation_ref: null,
+        };
+      } else if (transition === "classify") {
+        finding.classification = body?.classification || "DataIssue";
+      } else if (transition === "accept") {
+        finding.status = "Accepted";
+        finding.blocks = false;
+        finding.decision = {
+          status: "Accepted",
+          decided_by: "usr-dm-01",
+          decided_at: now,
+          text: String(body?.rationale || reason),
+          decided_on_run_ref: finding.last_detected_run_ref,
+          attestation_ref: `attestation:${body?.attestation_id || makeUuidFromIndex("00007200", idx)}`,
+        };
+      } else if (transition === "explain") {
+        finding.status = "Explained";
+        finding.blocks = false;
+        finding.decision = {
+          status: "Explained",
+          decided_by: "usr-cra-01",
+          decided_at: now,
+          text: String(body?.explanation || reason),
+          decided_on_run_ref: finding.last_detected_run_ref,
+          attestation_ref: `attestation:${body?.attestation_id || makeUuidFromIndex("00007200", idx)}`,
+        };
+      } else if (transition === "reopen") {
+        finding.status = "Open";
+        finding.blocks = finding.severity === "Error";
+        finding.decision = null;
+      }
+
+      finding.ref = `${normalizedRef}@${currentVer + 1}`;
+      recordActivity(
+        `validation_finding.${transition}`,
+        "validation",
+        "validation_finding",
+        normalizedRef,
+        transition === "explain" ? "usr-cra-01" : "usr-dm-01"
+      );
+      return { data: cloneJson(finding) };
+    },
+
     getLockReadiness(studyRef, rawScopeRef) {
       const study = getStudyByRefOrCode(studyRef);
       const cleanStudyRef = String(study?.ref || studyRef || STUDY_REF).split(
@@ -5100,7 +6403,7 @@ export function createWebDemoStore() {
             },
           ],
           next_actions: blockers.map((b) => ({
-            action: b.next_action,
+            description: b.next_action,
             capability: b.next_capability,
             target: b.target_ref,
           })),

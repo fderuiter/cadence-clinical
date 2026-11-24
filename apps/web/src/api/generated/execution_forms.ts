@@ -406,6 +406,28 @@ export interface components {
       /** Format: date-time */
       escalated_at?: null | string;
       last_answered_by?: null | string;
+      /** Format: uuid */
+      validation_finding_id?: null | string;
+      validation_finding_ref?: null | string;
+      validation_finding_label?: null | string;
+      /** Format: uuid */
+      rule_pack_id?: null | string;
+      rule_pack_ref?: null | string;
+      rule_pack_label?: null | string;
+      pack_key?: null | string;
+      rule_id?: null | string;
+      /** Format: int32 */
+      rule_version?: null | number | string;
+      site_ref?: null | string;
+      site_label?: null | string;
+      participant_ref?: null | string;
+      participant_label?: null | string;
+      visit_label?: null | string;
+      form_ref?: null | string;
+      form_label?: null | string;
+      item_label?: null | string;
+      observation_ref?: null | string;
+      observation_label?: null | string;
     };
     ExecutionForms_FormQueryTextRequest: {
       text: string;

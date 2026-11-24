@@ -8,6 +8,8 @@ using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
@@ -225,7 +227,20 @@ internal sealed class RaiseQueryHandler : ICommandHandler<RaiseQuery, AssertionS
             return query.Error!;
         }
 
-        context.Work.LinkInput(NodeRef.For(observation.Id, raised.TargetRevision!.Value), LineageEdgeKind.DerivedFrom, target: NodeRef.For(raised.Id));
+        var targetNode = NodeRef.For(raised.Id);
+        context.Work.LinkInput(NodeRef.For(observation.Id, raised.TargetRevision!.Value), LineageEdgeKind.DerivedFrom, target: targetNode);
+        if (command.ValidationFindingId is { IsEmpty: false } findingId)
+        {
+            var findingDecision = await context.Work.ReadAsync<ValidationFinding>(findingId, cancellationToken).ConfigureAwait(false);
+            context.Work.LinkInput(NodeRef.For(findingId, Math.Max(1L, findingDecision?.VersionIndex ?? 1L)), LineageEdgeKind.DerivedFrom, target: targetNode);
+        }
+
+        if (command.RulePackId is { IsEmpty: false } rulePackId)
+        {
+            var rulePack = await context.Work.ReadAsync<LibraryItem>(rulePackId, cancellationToken).ConfigureAwait(false);
+            context.Work.LinkInput(NodeRef.For(rulePackId, Math.Max(1L, rulePack?.VersionIndex ?? 1L)), LineageEdgeKind.DefinedBy, target: targetNode);
+        }
+
         return ObservationAssertions.Made(context, raised);
     }
 }

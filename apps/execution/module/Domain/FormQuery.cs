@@ -7,7 +7,9 @@ using Cadence.Kernel;
 using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Modules.Execution.Domain;
 
@@ -284,7 +286,12 @@ public sealed record FormQueryTemporalSnapshot(
     DateTimeOffset? DueAt,
     DateTimeOffset? EscalatedAt,
     string? LastAnsweredBy,
-    IReadOnlyList<FormQueryMessage> Messages);
+    IReadOnlyList<FormQueryMessage> Messages,
+    ValidationFindingId? ValidationFindingId = null,
+    LibraryItemId? RulePackId = null,
+    string? PackKey = null,
+    string? RuleId = null,
+    int? RuleVersion = null);
 
 /// <summary>
 /// What the kernel must assert for one step of a query (spec §8.2): raise a <c>Queried</c> assertion about the
@@ -324,6 +331,12 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
 
     /// <summary>Maximum length of an optional assignee identifier.</summary>
     public const int AssigneeMaxLength = 256;
+
+    /// <summary>Maximum length of an optional validation rule-pack key.</summary>
+    public const int PackKeyMaxLength = 128;
+
+    /// <summary>Maximum length of an optional validation rule code.</summary>
+    public const int RuleIdMaxLength = 64;
 
     private readonly List<FormQueryPeriod> _periods = [];
     private readonly List<FormQueryMessageRecord> _messageRecords = [];
@@ -406,6 +419,21 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
     /// <summary>The kernel <c>QueryAnswered</c> assertion while the query is answered and the answer stands.</summary>
     public AssertionId? KernelAnswerId { get; private set; }
 
+    /// <summary>The validation finding that caused this query when raised from an automated or linked edit check.</summary>
+    public ValidationFindingId? ValidationFindingId { get; private set; }
+
+    /// <summary>The library rule-pack version that defined the rule for this query, if any.</summary>
+    public LibraryItemId? RulePackId { get; private set; }
+
+    /// <summary>Stable key of the rule pack that produced this query, if any.</summary>
+    public string? PackKey { get; private set; }
+
+    /// <summary>Rule identifier within the rule pack that produced this query, if any.</summary>
+    public string? RuleId { get; private set; }
+
+    /// <summary>Positive rule version within the rule pack that produced this query, if any.</summary>
+    public int? RuleVersion { get; private set; }
+
     /// <summary>Every bitemporal state row of this query, including superseded intervals.</summary>
     public IReadOnlyList<FormQueryPeriod> Periods => _periods;
 
@@ -436,7 +464,12 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
         FormQueryOrigin origin = FormQueryOrigin.Manual,
         FormQueryOwnerRole ownerRole = FormQueryOwnerRole.Site,
         FormQueryPriority priority = FormQueryPriority.Normal,
-        string? assignee = null)
+        string? assignee = null,
+        ValidationFindingId? validationFindingId = null,
+        LibraryItemId? rulePackId = null,
+        string? packKey = null,
+        string? ruleId = null,
+        int? ruleVersion = null)
     {
         if (id.IsEmpty || tenantId.IsEmpty || formId.IsEmpty || enrollmentId.IsEmpty || observationId.IsEmpty || kernelQueryId.IsEmpty
             || string.IsNullOrWhiteSpace(itemId) || revision < 1 || !Enum.IsDefined(origin) || !Enum.IsDefined(ownerRole) || !Enum.IsDefined(priority))
@@ -446,6 +479,15 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
 
         var recordedAt = KernelTimestamps.ToStoredPrecision(at);
         var normalizedAssignee = NormalizeAssignee(assignee);
+        var normalizedPackKey = NormalizeOptionalCode(packKey, PackKeyMaxLength, nameof(packKey));
+        var normalizedRuleId = NormalizeOptionalCode(ruleId, RuleIdMaxLength, nameof(ruleId));
+        int? normalizedRuleVersion = null;
+        if (ruleVersion is not null)
+        {
+            normalizedRuleVersion = ruleVersion.Value >= 1
+                ? ruleVersion.Value
+                : throw new ArgumentException("Rule version must be positive when supplied.", nameof(ruleVersion));
+        }
         var trimmed = Text(text);
         var normalizedReason = NormalizeReason(reasonForChange, trimmed);
         var dueAt = recordedAt.AddDays(OpenSlaDays);
@@ -463,6 +505,11 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
             LastAnsweredBy = null,
             KernelQueryId = kernelQueryId,
             KernelAnswerId = null,
+            ValidationFindingId = validationFindingId is { IsEmpty: false } fId ? fId : null,
+            RulePackId = rulePackId is { IsEmpty: false } pId ? pId : null,
+            PackKey = normalizedPackKey,
+            RuleId = normalizedRuleId,
+            RuleVersion = normalizedRuleVersion,
         };
 
         query.AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
@@ -664,7 +711,12 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
             period.DueAt,
             period.EscalatedAt,
             period.LastAnsweredBy,
-            messages);
+            messages,
+            ValidationFindingId,
+            RulePackId,
+            PackKey,
+            RuleId,
+            RuleVersion);
     }
 
     private FormQueryPeriod CurrentPeriod() =>
@@ -752,5 +804,18 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
         return trimmed.Length <= AssigneeMaxLength
             ? trimmed
             : throw new ArgumentException($"Assignee may be at most {AssigneeMaxLength} characters.", nameof(assignee));
+    }
+
+    private static string? NormalizeOptionalCode(string? value, int maxLength, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength
+            ? trimmed
+            : throw new ArgumentException($"Value may be at most {maxLength} characters.", paramName);
     }
 }

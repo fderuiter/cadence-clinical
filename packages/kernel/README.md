@@ -610,9 +610,9 @@ A validation run records what a study's pinned rule packs detected at one stage 
   rule version. Targets that are kernel objects use a NodeRef without `@version`.
 - Status is derived on read by `FindingLedger`: a run covering the finding's stage, pack and dataset that no longer
   detects it resolves it, and a decision made before a resolution is void if the finding recurs.
-- `IValidationFindings` finds, lists (filters and `BlockingOnly`) and explains findings, and reads runs.
+- `IValidationFindings` finds, lists (filters and `BlockingOnly`) and explains findings, and reads runs. `KernelValidationEndpoints` hydrates clinical `NodeRef` dimensions (`Site`, `Participant`, `Visit`, `eCRF Form`, `Observation`, and linked `Query` via `IKernelLineage` + `IKernelNavigator`) on read while enforcing `INodeVisibility` and blinding masking ([ADR-2833](../../docs/adr/2026-11-23-validation-finding-clinical-hydration-and-formquery-provenance.md)).
 - Run tables are insert-only (`KA001`); a decisions record keeps its finding, study and author (`KS001`).
-- A run is `[DerivedObject]`, linked `DefinedBy` its pack versions and `ValidatedBy` its inputs; decisions link
+- A run is `[DerivedObject]`, linked `DefinedBy` its pack versions and `ValidatedBy` its versioned `CollectionInstance` and `Observation` inputs (`CollectionValidationService`); decisions link
   `DerivedFrom` their run.
 
 A host registers `AddKernelValidation()` and `AddKernelValidationPersistence()`. Attesting other kinds of record:

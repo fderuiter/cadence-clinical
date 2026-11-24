@@ -195,6 +195,11 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
                         .HasColumnType("character varying(24)")
                         .HasColumnName("owner_role");
 
+                    b.Property<string>("PackKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("pack_key");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -211,6 +216,19 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("revision");
 
+                    b.Property<string>("RuleId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rule_id");
+
+                    b.Property<Guid?>("RulePackId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rule_pack_id");
+
+                    b.Property<int?>("RuleVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("rule_version");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -225,6 +243,10 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
+                    b.Property<Guid?>("ValidationFindingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("validation_finding_id");
+
                     b.Property<long>("VersionIndex")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint")
@@ -237,6 +259,9 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "EnrollmentId", "Status")
                         .HasDatabaseName("ix_form_queries_tenant_enrollment_status");
+
+                    b.HasIndex("TenantId", "FormId", "ValidationFindingId")
+                        .HasDatabaseName("ix_form_queries_tenant_form_finding");
 
                     b.HasIndex("TenantId", "ObservationId", "Status")
                         .HasDatabaseName("ix_form_queries_tenant_observation_status");

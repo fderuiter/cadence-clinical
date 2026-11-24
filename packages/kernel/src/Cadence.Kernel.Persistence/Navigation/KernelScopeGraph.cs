@@ -307,23 +307,8 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                         NodeRef.For(proposal.StudyId));
 
             case NodeKinds.ValidationFinding:
-                var findingId = ValidationFindingId.FromGuid(node.Id);
-                var detection = await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                    .Where(d => d.TenantId == tenant && d.FindingId == findingId)
-                    .Select(d => new { d.StudyId, d.RuleId, d.Dataset, d.TargetKey })
-                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                if (detection is null)
-                {
-                    return null;
-                }
-
-                var decisions = await db.Set<ValidationFinding>().AsNoTracking()
-                    .Where(f => f.TenantId == tenant && f.Id == findingId)
-                    .Select(f => (long?)f.VersionIndex)
-                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                return new ScopeNode(
-                    new NodeSummary(NodeRef.For(findingId, decisions), $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}", detection.RuleId),
-                    NodeRef.For(detection.StudyId));
+                return await ValidationFindingAsync(db, tenant, ValidationFindingId.FromGuid(node.Id), cancellationToken)
+                    .ConfigureAwait(false);
 
             case NodeKinds.Concept:
                 return await ConceptAsync(db, tenant, tenantRef, node, cancellationToken).ConfigureAwait(false);
@@ -582,21 +567,208 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
     }
 
     /// <summary>
+    /// A validation finding sits under its study (ADR-2462), labelled with its rule identifier and resolved clinical
+    /// target title without exposing raw entity UUIDs.
+    /// </summary>
+    private static async Task<ScopeNode?> ValidationFindingAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        ValidationFindingId findingId,
+        CancellationToken cancellationToken)
+    {
+        var detection = await db.Set<ValidationDetectionRecord>().AsNoTracking()
+            .Where(d => d.TenantId == tenant && d.FindingId == findingId)
+            .Select(d => new { d.StudyId, d.RuleId, d.TargetKind, d.Dataset, d.TargetKey, d.Variable })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (detection is null)
+        {
+            return null;
+        }
+
+        var decisions = await db.Set<ValidationFinding>().AsNoTracking()
+            .Where(f => f.TenantId == tenant && f.Id == findingId)
+            .Select(f => (long?)f.VersionIndex)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var targetTitle = await ResolveFindingTargetTitleAsync(
+            db,
+            tenant,
+            detection.TargetKind,
+            detection.Dataset,
+            detection.TargetKey,
+            detection.Variable,
+            cancellationToken).ConfigureAwait(false);
+
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(findingId, decisions), $"Finding {detection.RuleId} on {targetTitle}", detection.RuleId),
+            NodeRef.For(detection.StudyId));
+    }
+
+    private static async Task<string> ResolveFindingTargetTitleAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        FindingTargetKind targetKind,
+        string dataset,
+        string targetKey,
+        string? variable,
+        CancellationToken cancellationToken)
+    {
+        if (targetKind == FindingTargetKind.DatasetRecord)
+        {
+            CollectionInstanceId? formId = null;
+            if (Guid.TryParse(targetKey, out var formGuid) && formGuid != Guid.Empty)
+            {
+                formId = CollectionInstanceId.FromGuid(formGuid);
+            }
+            else if (NodeRef.TryParse(targetKey, out var colNode) && colNode.Kind == NodeKinds.CollectionInstance && colNode.Id != Guid.Empty)
+            {
+                formId = CollectionInstanceId.FromGuid(colNode.Id);
+            }
+
+            if (formId is { } resolvedFormId)
+            {
+                var instance = await db.CollectionInstances.AsNoTracking()
+                    .SingleOrDefaultAsync(c => c.TenantId == tenant && c.Id == resolvedFormId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (instance is not null)
+                {
+                    var content = await db.ProtocolVersions.AsNoTracking()
+                        .Where(v => v.TenantId == tenant && v.Id == instance.ProtocolVersionId)
+                        .Select(v => v.Content)
+                        .FirstOrDefaultAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    var design = content is null ? null : ProtocolDesignDocument.Read(content).Design;
+                    var formTitle = CollectionInstanceSummary(instance, design).Title;
+                    var itemLabel = ResolveDesignItemLabel(design, instance.CollectionSpecId, variable);
+                    return string.IsNullOrWhiteSpace(itemLabel) ? formTitle : $"{formTitle} · {itemLabel}";
+                }
+            }
+        }
+        else if (targetKind == FindingTargetKind.Observation)
+        {
+            ObservationId? observationId = null;
+            if (NodeRef.TryParse(targetKey, out var obsNode) && obsNode.Kind == NodeKinds.Observation && obsNode.Id != Guid.Empty)
+            {
+                observationId = ObservationId.FromGuid(obsNode.Id);
+            }
+            else if (Guid.TryParse(targetKey, out var obsGuid) && obsGuid != Guid.Empty)
+            {
+                observationId = ObservationId.FromGuid(obsGuid);
+            }
+
+            if (observationId is { } resolvedObsId)
+            {
+                var observation = await db.Observations.AsNoTracking()
+                    .SingleOrDefaultAsync(o => o.TenantId == tenant && o.Id == resolvedObsId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (observation is not null)
+                {
+                    var parentInstance = await db.CollectionInstances.AsNoTracking()
+                        .Include(c => c.Members)
+                        .FirstOrDefaultAsync(
+                            c => c.TenantId == tenant
+                                && c.EnrollmentId == observation.EnrollmentId
+                                && c.Members.Any(m => m.ObservationId == resolvedObsId),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    string? formTitle = null;
+                    string? itemLabel = null;
+                    if (parentInstance is not null)
+                    {
+                        var content = await db.ProtocolVersions.AsNoTracking()
+                            .Where(v => v.TenantId == tenant && v.Id == parentInstance.ProtocolVersionId)
+                            .Select(v => v.Content)
+                            .FirstOrDefaultAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                        var design = content is null ? null : ProtocolDesignDocument.Read(content).Design;
+                        formTitle = CollectionInstanceSummary(parentInstance, design).Title;
+                        var memberItemId = parentInstance.Members.FirstOrDefault(m => m.ObservationId == resolvedObsId)?.ItemId;
+                        itemLabel = ResolveDesignItemLabel(design, parentInstance.CollectionSpecId, memberItemId ?? variable);
+                    }
+
+                    if (string.IsNullOrWhiteSpace(itemLabel))
+                    {
+                        var concepts = await ResolveConceptMetadataAsync(db, tenant, [observation], cancellationToken).ConfigureAwait(false);
+                        var (conceptLabel, conceptCode) = concepts.GetValueOrDefault((observation.ConceptId, observation.ConceptVersion));
+                        itemLabel = !string.IsNullOrWhiteSpace(conceptLabel) ? conceptLabel.Trim() : (conceptCode ?? variable);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(formTitle) && !string.IsNullOrWhiteSpace(itemLabel))
+                    {
+                        return $"{formTitle} · {itemLabel}";
+                    }
+
+                    return itemLabel ?? formTitle ?? dataset;
+                }
+            }
+        }
+        else if (targetKind == FindingTargetKind.DesignElement && NodeRef.TryParse(targetKey, out var designNode))
+        {
+            if (designNode.Kind == NodeKinds.ProtocolVersion)
+            {
+                var pvNumber = await db.ProtocolVersions.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == ProtocolVersionId.FromGuid(designNode.Id))
+                    .Select(p => (int?)p.Number)
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (pvNumber is not null)
+                {
+                    return $"Protocol version {pvNumber.Value}";
+                }
+            }
+            else if (designNode.Kind == NodeKinds.ProtocolElement
+                && await ProtocolElementAsync(db, tenant, designNode.Id, cancellationToken).ConfigureAwait(false) is { } elementScope)
+            {
+                return elementScope.Summary.Title;
+            }
+        }
+
+        if (Guid.TryParse(targetKey, out _) || NodeRef.TryParse(targetKey, out _))
+        {
+            return string.IsNullOrWhiteSpace(variable) ? dataset : $"{dataset} · {variable}";
+        }
+
+        return string.IsNullOrWhiteSpace(variable)
+            ? $"{dataset} {targetKey}"
+            : $"{dataset} {targetKey} · {variable}";
+    }
+
+    private static string? ResolveDesignItemLabel(ProtocolDesign? design, string defaultSpecId, string? variable)
+    {
+        if (string.IsNullOrWhiteSpace(variable))
+        {
+            return null;
+        }
+
+        var specId = defaultSpecId;
+        var itemId = variable.Trim();
+        var dot = itemId.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < itemId.Length - 1)
+        {
+            specId = itemId[..dot];
+            itemId = itemId[(dot + 1)..];
+        }
+
+        var specItem = design?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, specId, StringComparison.Ordinal))
+            ?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+        return !string.IsNullOrWhiteSpace(specItem?.Prompt) ? specItem.Prompt.Trim() : itemId;
+    }
+
+    /// <summary>
     /// A discrepancy query (<c>FormQuery</c>, ADR-2625) sits under the enrollment that governs it in lineage, at its
     /// latest recorded lineage version, so enrollment, study-site, and study activity streams include query workflow events.
     /// </summary>
     private static async Task<ScopeNode?> FormQueryAsync(KernelDbContext db, TenantId tenant, Guid queryGuid, CancellationToken cancellationToken)
     {
-        var enrollmentGuid = await db.LineageEdges.AsNoTracking()
-            .Where(e => e.TenantId == tenant
-                && e.ToKind == NodeKinds.FormQuery
-                && e.ToId == queryGuid
-                && e.FromKind == NodeKinds.Enrollment
-                && e.Kind == LineageEdgeKind.GovernedBy)
+        var inboundEdges = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.TenantId == tenant && e.ToKind == NodeKinds.FormQuery && e.ToId == queryGuid)
             .OrderByDescending(e => e.RecordedAt)
             .ThenByDescending(e => e.Id)
-            .Select(e => (Guid?)e.FromId)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            .Select(e => new { e.FromKind, e.FromId, e.Kind })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        var enrollmentGuid = inboundEdges
+            .FirstOrDefault(e => e.FromKind == NodeKinds.Enrollment && e.Kind == LineageEdgeKind.GovernedBy)?.FromId;
         if (enrollmentGuid is null)
         {
             return null;
@@ -610,10 +782,102 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             return null;
         }
 
+        var enrollmentId = EnrollmentId.FromGuid(enrollmentGuid.Value);
+        var subjectCode = await db.Enrollments.AsNoTracking()
+            .Where(e => e.TenantId == tenant && e.Id == enrollmentId)
+            .Select(e => e.SubjectCode.Value)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+        var formGuid = inboundEdges
+            .FirstOrDefault(e => e.FromKind == NodeKinds.CollectionInstance && e.Kind == LineageEdgeKind.CollectedBy)?.FromId;
+        var obsGuid = inboundEdges
+            .FirstOrDefault(e => e.FromKind == NodeKinds.Observation && e.Kind == LineageEdgeKind.DerivedFrom)?.FromId;
+        var findingGuid = inboundEdges
+            .FirstOrDefault(e => e.FromKind == NodeKinds.ValidationFinding && e.Kind == LineageEdgeKind.DerivedFrom)?.FromId;
+
+        string? formTitle = null;
+        string? itemLabel = null;
+        string? itemCode = null;
+        CollectionInstance? instance = null;
+        ProtocolDesign? design = null;
+
+        if (formGuid is not null)
+        {
+            var formId = CollectionInstanceId.FromGuid(formGuid.Value);
+            instance = await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
+                .SingleOrDefaultAsync(c => c.TenantId == tenant && c.Id == formId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else if (obsGuid is not null)
+        {
+            var obsId = ObservationId.FromGuid(obsGuid.Value);
+            instance = await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
+                .FirstOrDefaultAsync(
+                    c => c.TenantId == tenant
+                        && c.EnrollmentId == enrollmentId
+                        && c.Members.Any(m => m.ObservationId == obsId),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (instance is not null)
+        {
+            var content = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => v.TenantId == tenant && v.Id == instance.ProtocolVersionId)
+                .Select(v => v.Content)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+            design = content is null ? null : ProtocolDesignDocument.Read(content).Design;
+            formTitle = CollectionInstanceSummary(instance, design).Title;
+        }
+
+        if (obsGuid is not null)
+        {
+            var obsId = ObservationId.FromGuid(obsGuid.Value);
+            if (instance is not null)
+            {
+                itemCode = instance.Members.FirstOrDefault(m => m.ObservationId == obsId)?.ItemId;
+                itemLabel = ResolveDesignItemLabel(design, instance.CollectionSpecId, itemCode);
+            }
+
+            if (string.IsNullOrWhiteSpace(itemLabel))
+            {
+                var obs = await db.Observations.AsNoTracking()
+                    .SingleOrDefaultAsync(o => o.TenantId == tenant && o.Id == obsId, cancellationToken)
+                    .ConfigureAwait(false);
+                if (obs is not null)
+                {
+                    var concepts = await ResolveConceptMetadataAsync(db, tenant, [obs], cancellationToken).ConfigureAwait(false);
+                    var (conceptLabel, conceptCode) = concepts.GetValueOrDefault((obs.ConceptId, obs.ConceptVersion));
+                    itemLabel = !string.IsNullOrWhiteSpace(conceptLabel) ? conceptLabel.Trim() : conceptCode;
+                    itemCode ??= conceptCode;
+                }
+            }
+        }
+
+        string? ruleId = null;
+        if (findingGuid is not null)
+        {
+            var fId = ValidationFindingId.FromGuid(findingGuid.Value);
+            ruleId = await db.Set<ValidationDetectionRecord>().AsNoTracking()
+                .Where(d => d.TenantId == tenant && d.FindingId == fId)
+                .Select(d => d.RuleId)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var prefix = !string.IsNullOrWhiteSpace(ruleId) ? $"Query ({ruleId})" : "Query";
+        var parts = new[] { formTitle, itemLabel, subjectCode }
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToArray();
+        var title = parts.Length == 0 ? prefix : $"{prefix} on {string.Join(" · ", parts)}";
+        var code = ruleId ?? itemCode ?? subjectCode;
+
         var id = FormQueryId.FromGuid(queryGuid);
         return new ScopeNode(
-            new NodeSummary(NodeRef.For(id, latest.Value), $"Form query {queryGuid:D}", Code: null),
-            NodeRef.For(EnrollmentId.FromGuid(enrollmentGuid.Value)));
+            new NodeSummary(NodeRef.For(id, latest.Value), title, code),
+            NodeRef.For(enrollmentId));
     }
 
     /// <summary>A proposal's label: the start of its intent, on one line.</summary>

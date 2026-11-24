@@ -620,6 +620,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
 | [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
 | [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
+| [ADR-2833: Hydrate Validation Finding Clinical Context and Persist FormQuery Rule-Pack Provenance](adr/2026-11-23-validation-finding-clinical-hydration-and-formquery-provenance.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

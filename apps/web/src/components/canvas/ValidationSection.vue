@@ -84,8 +84,17 @@
               <div>
                 <strong class="rule-pack-title">{{ pack.title }}</strong>
                 <div class="rule-pack-meta">
-                  <code>{{ pack.key }}</code> · v{{ pack.version }} ·
-                  {{ pack.rule_count }}
+                  <EntityLink
+                    :node-ref="pack.ref"
+                    :label="`${pack.key} · v${pack.version}`"
+                    :study-code="studyCode"
+                    stage="data"
+                    section="validation"
+                    :site="site"
+                    :participant="participant"
+                    :resolve-remotely="false"
+                  />
+                  · {{ pack.rule_count }}
                   {{ Number(pack.rule_count) === 1 ? "rule" : "rules" }}
                 </div>
               </div>
@@ -226,18 +235,94 @@
               <span v-if="previewByRef[pack.ref].violations.length === 0">
                 0 discrepancies across current study forms.
               </span>
-              <ul v-else>
+              <ul v-else class="preview-violations-list">
                 <li
                   v-for="(v, idx) in previewByRef[pack.ref].violations"
                   :key="`${v.form_id}-${v.rule_id}-${idx}`"
+                  class="preview-violation-item"
                 >
-                  <strong>[{{ v.severity }}] {{ v.rule_id }}</strong>
-                  <template v-if="v.dataset">
-                    on <code>{{ v.dataset }}</code>
-                  </template>
-                  <template v-if="v.item_id">
-                    · <code>{{ v.item_id }}</code> </template
-                  >: {{ v.message }}
+                  <div>
+                    <strong>[{{ v.severity }}] {{ v.rule_id }}</strong>
+                    <template v-if="v.dataset">
+                      on <code>{{ v.dataset }}</code>
+                    </template>
+                    <template v-if="v.item_label || v.item_id">
+                      · <code>{{ v.item_label || v.item_id }}</code> </template
+                    >: {{ v.message }}
+                  </div>
+                  <div
+                    v-if="hasPreviewContext(v)"
+                    class="finding-context-links"
+                    :data-testid="`preview-violation-context-${v.rule_id}-${idx}`"
+                  >
+                    <EntityLink
+                      v-if="v.site_ref || v.site_label"
+                      :node-ref="v.site_ref"
+                      :label="v.site_label"
+                      kind-label="Site"
+                      :to="previewSiteLocation(v)"
+                      :study-code="studyCode"
+                      :site="effectiveSiteForContext(v.site_label)"
+                      :participant="
+                        effectiveParticipantForContext(v.participant_label)
+                      "
+                      :resolve-remotely="false"
+                    />
+                    <EntityLink
+                      v-if="v.participant_ref || v.participant_label"
+                      :node-ref="v.participant_ref"
+                      :label="v.participant_label"
+                      kind-label="Participant"
+                      :to="previewParticipantLocation(v)"
+                      :study-code="studyCode"
+                      :site="effectiveSiteForContext(v.site_label)"
+                      :participant="
+                        effectiveParticipantForContext(v.participant_label)
+                      "
+                      :resolve-remotely="false"
+                    />
+                    <EntityLink
+                      v-if="v.visit_label || v.planned_activity_id"
+                      :label="v.visit_label || v.planned_activity_id"
+                      kind-label="Visit"
+                      :to="previewFormLocation(v)"
+                      :study-code="studyCode"
+                      :resolve-remotely="false"
+                    />
+                    <EntityLink
+                      v-if="v.form_ref || v.form_label"
+                      :node-ref="v.form_ref"
+                      :label="v.form_label"
+                      kind-label="eCRF Form"
+                      :to="previewFormLocation(v)"
+                      :study-code="studyCode"
+                      :resolve-remotely="false"
+                    />
+                    <EntityLink
+                      v-if="v.observation_ref || v.observation_label"
+                      :node-ref="v.observation_ref"
+                      :label="v.observation_label"
+                      kind-label="Observation"
+                      :to="previewObservationLocation(v)"
+                      :study-code="studyCode"
+                      :resolve-remotely="false"
+                    />
+                    <EntityLink
+                      v-if="v.query_ref || v.query_label"
+                      :node-ref="v.query_ref"
+                      :label="v.query_label"
+                      kind-label="Query"
+                      :to="
+                        findingQueryLocation(
+                          v.query_ref,
+                          v.site_label,
+                          v.participant_label
+                        )
+                      "
+                      :study-code="studyCode"
+                      :resolve-remotely="false"
+                    />
+                  </div>
                 </li>
               </ul>
             </div>
@@ -310,6 +395,104 @@
               <code>{{ finding.rule_id }}</code>
               <span>{{ finding.message }}</span>
             </div>
+            <div
+              class="finding-context-links"
+              :data-testid="`finding-context-${finding.ref}`"
+            >
+              <EntityLink
+                :node-ref="finding.ref"
+                :label="`${finding.rule_id} (${finding.status})`"
+                kind-label="Rule Finding"
+                :study-code="studyCode"
+                stage="data"
+                section="validation"
+                :site="effectiveSiteForFinding(finding)"
+                :participant="effectiveParticipantForFinding(finding)"
+                :resolve-remotely="false"
+              />
+              <EntityLink
+                v-if="finding.rule_pack_ref || finding.pack_key"
+                :node-ref="finding.rule_pack_ref"
+                :label="
+                  finding.rule_pack_label ||
+                  `${finding.pack_key} v${finding.rule_version}`
+                "
+                kind-label="RulePack"
+                :study-code="studyCode"
+                stage="data"
+                section="validation"
+                :site="effectiveSiteForFinding(finding)"
+                :participant="effectiveParticipantForFinding(finding)"
+                :resolve-remotely="false"
+              />
+              <EntityLink
+                v-if="finding.site_ref || finding.site_label"
+                :node-ref="finding.site_ref"
+                :label="finding.site_label"
+                kind-label="Site"
+                :to="findingSiteLocation(finding)"
+                :study-code="studyCode"
+                :site="effectiveSiteForFinding(finding)"
+                :participant="effectiveParticipantForFinding(finding)"
+                :resolve-remotely="false"
+              />
+              <EntityLink
+                v-if="finding.participant_ref || finding.participant_label"
+                :node-ref="finding.participant_ref"
+                :label="finding.participant_label"
+                kind-label="Participant"
+                :to="findingParticipantLocation(finding)"
+                :study-code="studyCode"
+                :site="effectiveSiteForFinding(finding)"
+                :participant="effectiveParticipantForFinding(finding)"
+                :resolve-remotely="false"
+              />
+              <EntityLink
+                v-if="finding.visit_label || finding.planned_activity_id"
+                :label="finding.visit_label || finding.planned_activity_id"
+                kind-label="Visit"
+                :to="findingVisitLocation(finding)"
+                :study-code="studyCode"
+                :resolve-remotely="false"
+              />
+              <EntityLink
+                v-if="finding.form_ref || finding.form_label"
+                :node-ref="finding.form_ref"
+                :label="finding.form_label"
+                kind-label="eCRF Form"
+                :to="findingEcrfFormLocation(finding)"
+                :study-code="studyCode"
+                :resolve-remotely="false"
+              />
+              <EntityLink
+                v-if="finding.observation_ref || finding.observation_label"
+                :node-ref="finding.observation_ref"
+                :label="finding.observation_label"
+                kind-label="Observation"
+                :to="findingObservationDetailLocation(finding)"
+                :study-code="studyCode"
+                :resolve-remotely="false"
+              />
+              <span
+                v-if="finding.query_ref || finding.query_label"
+                :data-testid="`finding-query-link-${finding.ref}`"
+              >
+                <EntityLink
+                  :node-ref="finding.query_ref"
+                  :label="finding.query_label"
+                  kind-label="Query"
+                  :to="
+                    findingQueryLocation(
+                      finding.query_ref,
+                      finding.site_label,
+                      finding.participant_label
+                    )
+                  "
+                  :study-code="studyCode"
+                  :resolve-remotely="false"
+                />
+              </span>
+            </div>
             <p
               v-if="finding.decision"
               class="finding-decision-note"
@@ -323,9 +506,10 @@
               <router-link
                 v-if="findingFormLocation(finding)"
                 class="form-link"
+                :data-testid="`finding-target-link-${finding.ref}`"
                 :to="findingFormLocationOrDefault(finding)"
               >
-                Open {{ finding.variable ?? "form" }}
+                {{ findingTargetActionLabel(finding) }}
               </router-link>
               <button
                 :data-testid="`btn-inspect-finding-${finding.ref}`"
@@ -477,7 +661,35 @@
                   v-for="(step, idx) in selectedFinding.explanation.steps"
                   :key="idx"
                 >
-                  {{ step.claim }}
+                  <span>{{ step.claim }}</span>
+                  <span
+                    v-if="stepNodeRefs(step.evidence).length > 0"
+                    class="explanation-evidence-chips"
+                  >
+                    <NodeRefChip
+                      v-for="evRef in stepNodeRefs(step.evidence)"
+                      :key="evRef"
+                      :node-ref="evRef"
+                      include-kind
+                    />
+                  </span>
+                </li>
+              </ul>
+              <ul
+                v-if="selectedFinding.explanation.next_actions.length > 0"
+                class="explanation-next-actions"
+                data-testid="finding-explanation-next-actions"
+              >
+                <li
+                  v-for="(act, idx) in selectedFinding.explanation.next_actions"
+                  :key="idx"
+                >
+                  <span>{{ act.description }}</span>
+                  <NodeRefChip
+                    v-if="nextActionTargetRef(act.target)"
+                    :node-ref="nextActionTargetRef(act.target)!"
+                    include-kind
+                  />
                 </li>
               </ul>
             </div>
@@ -548,6 +760,7 @@ import {
   type KernelFindingClassification,
   type KernelRulePack,
   type KernelRulePackPreview,
+  type KernelRulePackPreviewViolation,
   type KernelValidationFinding,
   type KernelValidationFindingDetail,
 } from "../../api/kernelApi";
@@ -557,8 +770,15 @@ import {
   observationNodeRef,
   parseNodeRef,
 } from "../../canvas/nodeRef";
+import {
+  normalizeLookupNodeRef,
+  parseLookupNodeRef,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { useAuthStore } from "../../stores/auth";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import EntityLink from "./EntityLink.vue";
+import NodeRefChip from "./NodeRefChip.vue";
 
 type FindingActionMode =
   "investigate" | "classify" | "accept" | "explain" | "reopen";
@@ -690,6 +910,62 @@ async function loadRulePacks() {
   const response = await kernelApi.listStudyRulePacks(studyRef.value);
   rulePacks.value = response.rule_packs;
   pinnedRefs.value = response.pinned_rule_pack_refs.map(unversionedPackRef);
+  for (const pack of response.rule_packs) {
+    seedNodeSummary(pack.ref, {
+      kind: "library_item",
+      code: pack.key,
+      title: pack.title,
+      status: pack.status,
+    });
+  }
+}
+
+function seedHydratedFindingSummaries(items: KernelValidationFinding[]) {
+  for (const finding of items) {
+    seedNodeSummary(finding.ref, {
+      kind: "validation_finding",
+      code: finding.rule_id,
+      title: finding.message,
+      status: finding.status,
+    });
+    if (finding.rule_pack_ref && finding.rule_pack_label) {
+      seedNodeSummary(finding.rule_pack_ref, {
+        kind: "library_item",
+        code: finding.pack_key,
+        title: finding.rule_pack_label,
+      });
+    }
+    if (finding.site_ref && finding.site_label) {
+      seedNodeSummary(finding.site_ref, {
+        kind: "study_site",
+        title: finding.site_label,
+      });
+    }
+    if (finding.participant_ref && finding.participant_label) {
+      seedNodeSummary(finding.participant_ref, {
+        kind: "enrollment",
+        title: finding.participant_label,
+      });
+    }
+    if (finding.form_ref && finding.form_label) {
+      seedNodeSummary(finding.form_ref, {
+        kind: "collection_instance",
+        title: finding.form_label,
+      });
+    }
+    if (finding.observation_ref && finding.observation_label) {
+      seedNodeSummary(finding.observation_ref, {
+        kind: "observation",
+        title: finding.observation_label,
+      });
+    }
+    if (finding.query_ref && finding.query_label) {
+      seedNodeSummary(finding.query_ref, {
+        kind: "form_query",
+        title: finding.query_label,
+      });
+    }
+  }
 }
 
 async function loadFindings() {
@@ -699,6 +975,7 @@ async function loadFindings() {
     severity: severityFilter.value || undefined,
   });
   findings.value = page.findings;
+  seedHydratedFindingSummaries(page.findings);
   await probePerFindingCapabilities(page.findings);
 }
 
@@ -867,6 +1144,7 @@ watch(
               }
             );
             findings.value = page.findings;
+            seedHydratedFindingSummaries(page.findings);
             return page.findings;
           })(),
           loadFindingCapabilities(studyRef.value),
@@ -1197,36 +1475,329 @@ async function signFindingWithToken(sigToken: string, signingReason: string) {
   }
 }
 
+function extractShortCode(
+  label: string | null | undefined,
+  prefixRegex: RegExp
+): string | undefined {
+  const trimmed = label?.trim() ?? "";
+  if (!trimmed || trimmed.toLowerCase() === "masked") return undefined;
+  const head = trimmed.split("·")[0]?.replace(prefixRegex, "").trim() ?? "";
+  return head || undefined;
+}
+
+function effectiveSiteForContext(
+  siteLabel?: string | null
+): string | undefined {
+  return (
+    props.site?.trim() || extractShortCode(siteLabel, /^site\s+/i) || undefined
+  );
+}
+
+function effectiveParticipantForContext(
+  participantLabel?: string | null
+): string | undefined {
+  return (
+    props.participant?.trim() ||
+    extractShortCode(participantLabel, /^participant\s+/i) ||
+    undefined
+  );
+}
+
+function effectiveSiteForFinding(
+  finding: KernelValidationFinding
+): string | undefined {
+  return effectiveSiteForContext(finding.site_label);
+}
+
+function effectiveParticipantForFinding(
+  finding: KernelValidationFinding
+): string | undefined {
+  return effectiveParticipantForContext(finding.participant_label);
+}
+
+function scopedQueryParams(
+  siteValue: string | undefined,
+  participantValue: string | undefined,
+  extra: Record<string, string | undefined>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  const nodeVal = props.node?.trim() || undefined;
+  const merged: Record<string, string | undefined> = {
+    ...(siteValue ? { site: siteValue } : {}),
+    ...(participantValue ? { participant: participantValue } : {}),
+    ...(nodeVal && !("node" in extra) ? { node: nodeVal } : {}),
+    ...extra,
+  };
+  for (const [k, v] of Object.entries(merged)) {
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
+function stepNodeRefs(evidence: readonly unknown[]): string[] {
+  const refs: string[] = [];
+  for (const entry of evidence) {
+    if (typeof entry !== "string") continue;
+    const normalized = normalizeLookupNodeRef(entry);
+    if (normalized) refs.push(normalized);
+  }
+  return refs;
+}
+
+function nextActionTargetRef(target: unknown): string | null {
+  if (typeof target !== "string") return null;
+  const normalized = normalizeLookupNodeRef(target);
+  return normalized && parseLookupNodeRef(normalized) ? normalized : null;
+}
+
+function hasPreviewContext(v: KernelRulePackPreviewViolation): boolean {
+  return Boolean(
+    v.site_ref ||
+    v.site_label ||
+    v.participant_ref ||
+    v.participant_label ||
+    v.visit_label ||
+    v.planned_activity_id ||
+    v.form_ref ||
+    v.form_label ||
+    v.observation_ref ||
+    v.observation_label ||
+    v.query_ref ||
+    v.query_label
+  );
+}
+
+function previewSiteLocation(
+  v: KernelRulePackPreviewViolation
+): RouteLocationRaw | null {
+  if (v.site_label?.toLowerCase() === "masked") return null;
+  const siteVal = effectiveSiteForContext(v.site_label);
+  const participantVal = effectiveParticipantForContext(v.participant_label);
+  if (!siteVal && !v.site_ref) return null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "conduct",
+      section: "participants",
+      node: normalizeLookupNodeRef(v.site_ref) ?? undefined,
+    }),
+  };
+}
+
+function previewParticipantLocation(
+  v: KernelRulePackPreviewViolation
+): RouteLocationRaw | null {
+  if (v.participant_label?.toLowerCase() === "masked") return null;
+  const siteVal = effectiveSiteForContext(v.site_label);
+  const participantVal = effectiveParticipantForContext(v.participant_label);
+  if (!participantVal && !v.participant_ref) return null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "conduct",
+      node: normalizeLookupNodeRef(v.participant_ref) ?? undefined,
+    }),
+  };
+}
+
+function previewFormLocation(
+  v: KernelRulePackPreviewViolation
+): RouteLocationRaw | null {
+  if (v.form_label?.toLowerCase() === "masked") return null;
+  const formRef =
+    collectionInstanceRef(v.form_ref) ?? collectionInstanceRef(v.form_id);
+  if (!formRef) return null;
+  const siteVal = effectiveSiteForContext(v.site_label);
+  const participantVal = effectiveParticipantForContext(v.participant_label);
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "data",
+      section: "validation",
+      form: formRef,
+      item: v.item_id ?? undefined,
+    }),
+  };
+}
+
+function previewObservationLocation(
+  v: KernelRulePackPreviewViolation
+): RouteLocationRaw | null {
+  if (v.observation_label?.toLowerCase() === "masked") return null;
+  const obsRef = observationNodeRef(v.observation_ref);
+  if (!obsRef) return null;
+  const formRef =
+    collectionInstanceRef(v.form_ref) ?? collectionInstanceRef(v.form_id);
+  const siteVal = effectiveSiteForContext(v.site_label);
+  const participantVal = effectiveParticipantForContext(v.participant_label);
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "data",
+      section: "validation",
+      form: formRef ?? undefined,
+      item: v.item_id ?? undefined,
+      observation: obsRef,
+    }),
+  };
+}
+
+function findingSiteLocation(
+  finding: KernelValidationFinding
+): RouteLocationRaw | null {
+  if (finding.site_label?.toLowerCase() === "masked") return null;
+  const siteVal = effectiveSiteForFinding(finding);
+  const participantVal = effectiveParticipantForFinding(finding);
+  if (!siteVal && !finding.site_ref) return null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "conduct",
+      section: "participants",
+      node: normalizeLookupNodeRef(finding.site_ref) ?? undefined,
+    }),
+  };
+}
+
+function findingParticipantLocation(
+  finding: KernelValidationFinding
+): RouteLocationRaw | null {
+  if (finding.participant_label?.toLowerCase() === "masked") return null;
+  const siteVal = effectiveSiteForFinding(finding);
+  const participantVal = effectiveParticipantForFinding(finding);
+  if (!participantVal && !finding.participant_ref) return null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "conduct",
+      node: normalizeLookupNodeRef(finding.participant_ref) ?? undefined,
+    }),
+  };
+}
+
+function isDatasetRecordTarget(kind: string | null | undefined): boolean {
+  return kind === "DatasetRecord" || kind === "Record";
+}
+
+function findingEcrfFormLocation(
+  finding: KernelValidationFinding
+): RouteLocationRaw | null {
+  if (finding.form_label?.toLowerCase() === "masked") return null;
+  const formRef =
+    collectionInstanceRef(finding.form_ref) ??
+    (isDatasetRecordTarget(finding.target_kind)
+      ? collectionInstanceRef(finding.record_key)
+      : null);
+  if (!formRef) return null;
+  const siteVal = effectiveSiteForFinding(finding);
+  const participantVal = effectiveParticipantForFinding(finding);
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "data",
+      section: "validation",
+      form: formRef,
+      item: finding.item_id || finding.variable || undefined,
+    }),
+  };
+}
+
+function findingVisitLocation(
+  finding: KernelValidationFinding
+): RouteLocationRaw | null {
+  if (finding.visit_label?.toLowerCase() === "masked") return null;
+  return findingEcrfFormLocation(finding);
+}
+
+function findingObservationDetailLocation(
+  finding: KernelValidationFinding
+): RouteLocationRaw | null {
+  if (finding.observation_label?.toLowerCase() === "masked") return null;
+  const obsRef =
+    observationNodeRef(finding.observation_ref) ??
+    (finding.target_kind === "Observation"
+      ? observationNodeRef(finding.record_key)
+      : null);
+  if (!obsRef) return null;
+  const formRef = collectionInstanceRef(finding.form_ref);
+  const siteVal = effectiveSiteForFinding(finding);
+  const participantVal = effectiveParticipantForFinding(finding);
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "data",
+      section: "validation",
+      form: formRef ?? undefined,
+      item: finding.item_id || finding.variable || undefined,
+      observation: obsRef,
+    }),
+  };
+}
+
+function findingQueryLocation(
+  queryRef?: string | null,
+  siteLabel?: string | null,
+  participantLabel?: string | null
+): RouteLocationRaw | null {
+  const siteVal = effectiveSiteForContext(siteLabel);
+  const participantVal = effectiveParticipantForContext(participantLabel);
+  const cleanQueryRef = normalizeLookupNodeRef(queryRef);
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: scopedQueryParams(siteVal, participantVal, {
+      stage: "data",
+      section: "queries",
+      node: cleanQueryRef ?? undefined,
+    }),
+  };
+}
+
+function findingTargetActionLabel(finding: KernelValidationFinding): string {
+  if (finding.target_kind === "DesignElement") {
+    return `Open ${finding.variable || finding.dataset || "protocol design"}`;
+  }
+  if (finding.target_kind === "Observation") {
+    return `Open ${finding.item_label || finding.variable || "observation"}`;
+  }
+  return `Open ${finding.item_label || finding.variable || finding.form_label || "form"}`;
+}
+
 function findingFormLocation(
   finding: KernelValidationFinding
 ): RouteLocationRaw | null {
-  const baseQuery = scopedFindingBaseQuery();
-  if (
-    finding.target_kind === "DatasetRecord" ||
-    finding.target_kind === "Record"
-  ) {
-    const formRef = collectionInstanceRef(finding.record_key);
-    if (!formRef) return null;
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: {
-        ...baseQuery,
-        form: formRef,
-        ...(finding.variable ? { item: finding.variable } : {}),
-      },
-    };
+  const siteVal = effectiveSiteForFinding(finding);
+  const participantVal = effectiveParticipantForFinding(finding);
+
+  if (isDatasetRecordTarget(finding.target_kind)) {
+    return findingEcrfFormLocation(finding);
   }
   if (finding.target_kind === "Observation") {
-    const obsRef = observationNodeRef(finding.record_key);
-    if (!obsRef) return null;
+    return findingObservationDetailLocation(finding);
+  }
+  if (finding.target_kind === "DesignElement") {
+    const designNode =
+      normalizeLookupNodeRef(finding.target_node_ref) ??
+      normalizeLookupNodeRef(finding.record_key) ??
+      (parseNodeRef(`protocol_element:${finding.record_key}`)
+        ? `protocol_element:${finding.record_key}`
+        : null);
     return {
       name: "study",
       params: { studyCode: props.studyCode },
-      query: {
-        ...baseQuery,
-        observation: obsRef,
-      },
+      query: scopedQueryParams(siteVal, participantVal, {
+        stage: "design",
+        section: "protocol-versions",
+        node: designNode ?? undefined,
+      }),
     };
   }
   return null;
@@ -1353,6 +1924,30 @@ function findingFormLocation(
   display: flex;
   gap: 12px;
   margin-top: 2px;
+}
+.finding-context-links,
+.explanation-evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+.explanation-evidence-chips {
+  display: inline-flex;
+  margin-left: 8px;
+}
+.preview-violations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.preview-violation-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .banner {
   padding: 8px 12px;

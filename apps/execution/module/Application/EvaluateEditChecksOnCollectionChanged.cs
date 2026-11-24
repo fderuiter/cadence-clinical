@@ -389,7 +389,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                     else
                     {
                         var firstEpisodeId = DeriveAutoQueryId(tenant, finding.Id, 0);
-                        if (formQueries.Any(q => q.Id == firstEpisodeId))
+                        if (formQueries.Any(q => q.ValidationFindingId == finding.Id || q.Id == firstEpisodeId))
                         {
                             await EnsureOpenAutoQueryAsync(
                                 tenant,
@@ -534,7 +534,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 reason,
                 Origin: FormQueryOrigin.System,
                 OwnerRole: FormQueryOwnerRole.Site,
-                Priority: priority),
+                Priority: priority,
+                ValidationFindingId: finding.Id,
+                RulePackId: finding.RulePack,
+                PackKey: finding.PackKey,
+                RuleId: finding.RuleId,
+                RuleVersion: finding.RuleVersion),
             metadata,
             cancellationToken).ConfigureAwait(false);
 
@@ -557,7 +562,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                         reason,
                         Origin: FormQueryOrigin.System,
                         OwnerRole: FormQueryOwnerRole.Site,
-                        Priority: priority),
+                        Priority: priority,
+                        ValidationFindingId: finding.Id,
+                        RulePackId: finding.RulePack,
+                        PackKey: finding.PackKey,
+                        RuleId: finding.RuleId,
+                        RuleVersion: finding.RuleVersion),
                     metadata,
                     cancellationToken).ConfigureAwait(false);
             }
@@ -594,7 +604,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         var activeAutoQueries = formQueries
-            .Where(q => autoIds.Contains(q.Id)
+            .Where(q => (q.ValidationFindingId == finding.Id || autoIds.Contains(q.Id))
                 && q.Origin == FormQueryOrigin.System
                 && q.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
             .Where(q => finding.Observed.Count > 0
@@ -728,7 +738,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         var activeAutoQueries = formQueries
-            .Where(q => autoIds.Contains(q.Id)
+            .Where(q => (q.ValidationFindingId == finding.Id || autoIds.Contains(q.Id))
                 && q.Origin == FormQueryOrigin.System
                 && q.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
             .ToList();

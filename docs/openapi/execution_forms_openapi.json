@@ -2727,6 +2727,125 @@
               "null",
               "string"
             ]
+          },
+          "validation_finding_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "validation_finding_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "validation_finding_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rule_pack_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "rule_pack_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rule_pack_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pack_key": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rule_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rule_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "site_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participant_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_label": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

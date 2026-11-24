@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
@@ -81,6 +82,7 @@ public enum FindingClassification
 }
 
 /// <summary>What a finding is about.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<FindingTargetKind>))]
 public enum FindingTargetKind
 {
     /// <summary>A record, and optionally one variable, of a dataset (an SDTM row, a form record).</summary>
@@ -106,8 +108,71 @@ public sealed record FindingTarget(FindingTargetKind Kind, string Dataset, strin
     /// <summary>The longest record key.</summary>
     public const int MaxKeyLength = 200;
 
-    /// <summary>The kernel object the target is, for <see cref="FindingTargetKind.Observation"/> and <see cref="FindingTargetKind.DesignElement"/>.</summary>
-    public NodeRef? Node => Kind != FindingTargetKind.DatasetRecord && NodeRef.TryParse(Key, out var node) ? node : null;
+    /// <summary>
+    /// The kernel object the target names: <c>collection_instance:&lt;uuid&gt;</c> when a <see cref="FindingTargetKind.DatasetRecord"/>
+    /// key is a non-empty <see cref="CollectionInstanceId"/> UUID (or unversioned <c>collection_instance</c> <see cref="NodeRef"/>),
+    /// or the parsed <see cref="NodeRef"/> for <see cref="FindingTargetKind.Observation"/> and <see cref="FindingTargetKind.DesignElement"/>.
+    /// </summary>
+    public NodeRef? Node => Kind switch
+    {
+        FindingTargetKind.DatasetRecord when Guid.TryParse(Key, out var id) && id != Guid.Empty =>
+            NodeRef.For(CollectionInstanceId.FromGuid(id)),
+        FindingTargetKind.DatasetRecord when NodeRef.TryParse(Key, out var colNode)
+            && colNode.Kind == NodeKinds.CollectionInstance
+            && colNode.Version is null => colNode,
+        not FindingTargetKind.DatasetRecord when NodeRef.TryParse(Key, out var node) => node,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Resolves a <see cref="CollectionInstanceId"/> when this target is a <see cref="FindingTargetKind.DatasetRecord"/>
+    /// whose key names a form instance UUID or <c>collection_instance:&lt;uuid&gt;</c> <see cref="NodeRef"/>.
+    /// </summary>
+    public bool TryGetCollectionInstanceId(out CollectionInstanceId id)
+    {
+        if (Kind == FindingTargetKind.DatasetRecord)
+        {
+            if (Guid.TryParse(Key, out var guid) && guid != Guid.Empty)
+            {
+                id = CollectionInstanceId.FromGuid(guid);
+                return true;
+            }
+
+            if (NodeRef.TryParse(Key, out var node) && node.Kind == NodeKinds.CollectionInstance && node.Id != Guid.Empty)
+            {
+                id = CollectionInstanceId.FromGuid(node.Id);
+                return true;
+            }
+        }
+
+        id = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Resolves an <see cref="ObservationId"/> when this target is a <see cref="FindingTargetKind.Observation"/>
+    /// whose key names an <c>observation:&lt;uuid&gt;</c> <see cref="NodeRef"/> or non-empty observation UUID.
+    /// </summary>
+    public bool TryGetObservationId(out ObservationId id)
+    {
+        if (Kind == FindingTargetKind.Observation)
+        {
+            if (NodeRef.TryParse(Key, out var node) && node.Kind == NodeKinds.Observation && node.Id != Guid.Empty)
+            {
+                id = ObservationId.FromGuid(node.Id);
+                return true;
+            }
+
+            if (Guid.TryParse(Key, out var guid) && guid != Guid.Empty)
+            {
+                id = ObservationId.FromGuid(guid);
+                return true;
+            }
+        }
+
+        id = default;
+        return false;
+    }
 
     /// <summary>The problems with this target, or an empty list when it is well formed.</summary>
     public IReadOnlyList<string> Problems()

@@ -50,7 +50,9 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
                         key,
                         reason,
                         Revision: payload.Revision,
-                        AssertedBy: actorId),
+                        AssertedBy: actorId,
+                        ValidationFindingId: payload.ValidationFindingId,
+                        RulePackId: payload.RulePackId),
                     metadata,
                     cancellationToken).ConfigureAwait(false),
                 KernelAssertionStepKind.Answer => await sender.SendAsync(

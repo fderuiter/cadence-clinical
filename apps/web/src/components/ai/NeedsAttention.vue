@@ -189,7 +189,7 @@ function reviewLocation(ref: string): RouteLocationRaw {
 
 function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
   const formRef =
-    finding.target_kind === "DatasetRecord" || finding.target_kind === "Record"
+    finding.target_kind === "DatasetRecord"
       ? collectionInstanceRef(finding.record_key)
       : null;
   const obsRef =

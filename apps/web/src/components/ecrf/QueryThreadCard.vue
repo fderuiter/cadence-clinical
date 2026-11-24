@@ -12,7 +12,7 @@
         :checked="selected"
         :value="query.query_id"
         :disabled="busy || assertionsLocked || !eligibleForBulk"
-        :aria-label="`Select query on ${query.item_id}`"
+        :aria-label="`Select query on ${accessibleItemTarget}`"
         @change="
           emit('toggle-select', ($event.target as HTMLInputElement).checked)
         "
@@ -56,11 +56,25 @@
       >
         Due {{ formatDueDate(query.due_at) }}
       </span>
+      <EntityLink
+        v-if="studyCode && queryNodeRef"
+        :data-testid="`query-node-link-${query.query_id}`"
+        :node-ref="queryNodeRef"
+        :label="queryNodeLabel"
+        :study-code="studyCode"
+        :stage="showContext ? 'data' : undefined"
+        :section="showContext ? 'queries' : undefined"
+        :site="effectiveSiteScope"
+        :participant="effectiveParticipantScope"
+        :resolve-remotely="false"
+      />
       <QueryContextLinks
         :query="query"
         :show-form="showForm"
         :show-context="showContext"
         :study-code="studyCode"
+        :site-scope="siteScope"
+        :participant-scope="participantScope"
         :subject-code="subjectCode"
         :form-titles="formTitles"
         :form-to="formTo"
@@ -139,14 +153,16 @@
           "
         >
           {{ QUERY_ACTION_TEXT[activeAction].button
-          }}<span class="sr-only"> for {{ query.item_id }}</span>
+          }}<span class="sr-only"> for {{ accessibleItemTarget }}</span>
         </button>
         <button
           type="button"
           class="btn btn-secondary"
           @click="emit('dismiss')"
         >
-          Back<span class="sr-only"> from query on {{ query.item_id }}</span>
+          Back<span class="sr-only">
+            from query on {{ accessibleItemTarget }}</span
+          >
         </button>
       </div>
     </form>
@@ -161,27 +177,30 @@
         @click="emit('begin', action)"
       >
         {{ QUERY_ACTION_TEXT[action].start
-        }}<span class="sr-only"> query on {{ query.item_id }}</span>
+        }}<span class="sr-only"> query on {{ accessibleItemTarget }}</span>
       </button>
     </div>
   </li>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   actionTakesText,
   type FormQueryAction,
   type FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
+import { formQueryRef } from "../../canvas/nodeRef";
 import {
   isBlockedBySeparationOfDuties,
   isSystemQuery,
 } from "../../composables/useFormQueries";
+import EntityLink from "../canvas/EntityLink.vue";
 import { QUERY_ACTION_TEXT } from "./QueryBulkToolbar.vue";
 import QueryContextLinks from "./QueryContextLinks.vue";
 
-defineProps<{
+const props = defineProps<{
   query: FormQueryResponse;
   canManage: boolean;
   effectiveCurrentUserId?: string | readonly string[] | null;
@@ -197,11 +216,37 @@ defineProps<{
   showForm?: boolean;
   showContext?: boolean;
   studyCode?: string;
+  siteScope?: string;
+  participantScope?: string;
   subjectCode?: string;
   formTitles?: Record<string, string>;
   formTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
   observationTo?: (query: FormQueryResponse) => RouteLocationRaw | null;
 }>();
+
+const accessibleItemTarget = computed(() =>
+  props.query.item_label === "masked" ? "masked" : props.query.item_id
+);
+
+const queryNodeRef = computed(() => formQueryRef(props.query.query_id));
+
+const queryNodeLabel = computed(() => {
+  if (props.query.item_label === "masked") return "masked";
+  const label = props.query.item_label || props.query.item_id;
+  return `Query · ${label}`;
+});
+
+const effectiveSiteScope = computed(
+  () => props.query.site_code || props.siteScope || undefined
+);
+
+const effectiveParticipantScope = computed(
+  () =>
+    props.participantScope ||
+    props.query.subject_code ||
+    props.subjectCode ||
+    undefined
+);
 
 const emit = defineEmits<{
   (e: "toggle-select", checked: boolean): void;

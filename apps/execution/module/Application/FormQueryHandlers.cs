@@ -9,7 +9,10 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 
 using FluentValidation;
@@ -21,7 +24,9 @@ namespace Cadence.Modules.Execution.Application;
 /// lock may cover it. Links the new derived <see cref="FormQuery"/> aggregate to its governing enrollment, form instance,
 /// and target observation revision (<c>K-LIN-1</c>).
 /// </summary>
-internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<RaiseFormQuery, FormQueryState>
+internal sealed class RaiseFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IKernelNavigator? navigator = null) : ICommandHandler<RaiseFormQuery, FormQueryState>
 {
     public async Task<CommandResult<FormQueryState>> HandleAsync(RaiseFormQuery command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -74,11 +79,40 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             command.Origin,
             command.OwnerRole,
             command.Priority,
-            command.Assignee);
+            command.Assignee,
+            command.ValidationFindingId,
+            command.RulePackId,
+            command.PackKey,
+            command.RuleId,
+            command.RuleVersion);
         context.Work.Add(query);
         context.Work.LinkInput(NodeRef.For(record.EnrollmentId, Math.Max(1L, record.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
         context.Work.LinkInput(NodeRef.For(record.CollectionInstanceId, Math.Max(1L, record.Version)), LineageEdgeKind.CollectedBy);
         context.Work.LinkInput(NodeRef.For(value.ObservationId, value.Revision), LineageEdgeKind.DerivedFrom);
+        if (query.ValidationFindingId is { IsEmpty: false } findingId)
+        {
+            var findingVersion = 1L;
+            if (navigator is not null
+                && await navigator.ResolveAsync(context.TenantId, NodeRef.For(findingId), cancellationToken).ConfigureAwait(false) is { } findingSummary)
+            {
+                findingVersion = Math.Max(1L, findingSummary.Ref.Version ?? 1L);
+            }
+
+            context.Work.LinkInput(NodeRef.For(findingId, findingVersion), LineageEdgeKind.DerivedFrom);
+        }
+
+        if (query.RulePackId is { IsEmpty: false } rulePackId)
+        {
+            var packVersion = 1L;
+            if (navigator is not null
+                && await navigator.ResolveAsync(context.TenantId, NodeRef.For(rulePackId), cancellationToken).ConfigureAwait(false) is { } packSummary)
+            {
+                packVersion = Math.Max(1L, packSummary.Ref.Version ?? 1L);
+            }
+
+            context.Work.LinkInput(NodeRef.For(rulePackId, packVersion), LineageEdgeKind.DefinedBy);
+        }
+
         return FormQueryScopes.Changed(
             context,
             query,
@@ -412,7 +446,7 @@ internal static class FormQueryScopes
     }
 
     internal static FormQueryScopeContext ToScopeContext(CollectionInstanceScopeState state, int? currentRevision) =>
-        new(state.StudyId, state.StudySiteId, state.CollectionSpecId, state.PlannedActivityId, currentRevision);
+        new(state.StudyId, state.StudySiteId, state.ProtocolVersionId, state.CollectionSpecId, state.PlannedActivityId, currentRevision);
 
     public static (StepDecision? Allowed, KernelError? Error) StepAllowed(
         System.Collections.Generic.IReadOnlyList<KernelAssertionStep> steps,
@@ -451,7 +485,12 @@ internal static class FormQueryScopes
             query.Priority,
             actorId,
             reasonForChange,
-            steps));
+            steps,
+            query.ValidationFindingId,
+            query.RulePackId,
+            query.PackKey,
+            query.RuleId,
+            query.RuleVersion));
         return CommandResult<FormQueryState>.Success(FormQueryState.Of(query, version, scope));
     }
 }
@@ -472,6 +511,12 @@ internal sealed class RaiseFormQueryValidator : AbstractValidator<RaiseFormQuery
         RuleFor(c => c.Priority).IsInEnum().WithMessage("Choose a valid priority.");
         RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
             .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
+        RuleFor(c => c.PackKey).Must(k => k is null || k.Trim().Length <= FormQuery.PackKeyMaxLength)
+            .WithMessage($"Pack key may be at most {FormQuery.PackKeyMaxLength} characters.");
+        RuleFor(c => c.RuleId).Must(r => r is null || r.Trim().Length <= FormQuery.RuleIdMaxLength)
+            .WithMessage($"Rule id may be at most {FormQuery.RuleIdMaxLength} characters.");
+        RuleFor(c => c.RuleVersion).Must(v => v is null or >= 1)
+            .WithMessage("Rule version must be positive when supplied.");
     }
 }
 

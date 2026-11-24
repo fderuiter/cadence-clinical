@@ -158,6 +158,24 @@ public sealed record KernelDeclareStudyRulePacksRequest(IReadOnlyList<string> Ru
 /// <param name="ItemId">Primary item identifier on the form, when resolved.</param>
 /// <param name="Message">Discrepancy message.</param>
 /// <param name="RemediationGuidance">Optional remediation guidance.</param>
+/// <param name="RulePackRef">Previewed rule-pack <c>NodeRef</c> (<c>library_item:&lt;uuid&gt;</c>).</param>
+/// <param name="RulePackLabel">Human-readable rule-pack title and version.</param>
+/// <param name="SiteRef">Study site <c>NodeRef</c> (<c>study_site:&lt;uuid&gt;</c>), when visible.</param>
+/// <param name="SiteLabel">Human-readable study site label, or <c>masked</c> when restricted.</param>
+/// <param name="ParticipantRef">Enrollment <c>NodeRef</c> (<c>enrollment:&lt;uuid&gt;</c>), when visible.</param>
+/// <param name="ParticipantId">Participant <c>NodeRef</c> (<c>participant:&lt;uuid&gt;</c>), when available.</param>
+/// <param name="ParticipantLabel">Human-facing participant subject code, or <c>masked</c> when restricted.</param>
+/// <param name="PlannedActivityId">Scheduled visit (<c>PlannedActivity</c>) identifier on the form, when scheduled.</param>
+/// <param name="VisitLabel">Human-readable scheduled visit title.</param>
+/// <param name="FormRef">Form instance <c>NodeRef</c> (<c>collection_instance:&lt;uuid&gt;</c>).</param>
+/// <param name="FormLabel">Human-readable eCRF form title.</param>
+/// <param name="CollectionSpecId">Governing <c>CollectionSpec</c> identifier on the form.</param>
+/// <param name="ItemLabel">Human-readable item prompt or concept label.</param>
+/// <param name="ObservationRef">Primary observation <c>NodeRef</c> (<c>observation:&lt;uuid&gt;</c>), when recorded and visible.</param>
+/// <param name="ObservationLabel">Human-readable observation summary, or <c>masked</c> when blinded/restricted.</param>
+/// <param name="QueryRef">Linked discrepancy query <c>NodeRef</c> (<c>form_query:&lt;uuid&gt;</c>), when present and visible.</param>
+/// <param name="QueryId">Linked discrepancy query UUID, when present and visible.</param>
+/// <param name="QueryLabel">Human-readable discrepancy query label, or <c>masked</c> when restricted.</param>
 public sealed record KernelRulePackPreviewViolationResponse(
     Guid FormId,
     string PackKey,
@@ -167,7 +185,25 @@ public sealed record KernelRulePackPreviewViolationResponse(
     string Dataset,
     string? ItemId,
     string Message,
-    string? RemediationGuidance)
+    string? RemediationGuidance,
+    string? RulePackRef = null,
+    string? RulePackLabel = null,
+    string? SiteRef = null,
+    string? SiteLabel = null,
+    string? ParticipantRef = null,
+    string? ParticipantId = null,
+    string? ParticipantLabel = null,
+    string? PlannedActivityId = null,
+    string? VisitLabel = null,
+    string? FormRef = null,
+    string? FormLabel = null,
+    string? CollectionSpecId = null,
+    string? ItemLabel = null,
+    string? ObservationRef = null,
+    string? ObservationLabel = null,
+    string? QueryRef = null,
+    Guid? QueryId = null,
+    string? QueryLabel = null)
 {
     internal static KernelRulePackPreviewViolationResponse From(CollectionRulePackPreviewViolation violation) =>
         new(
@@ -179,7 +215,9 @@ public sealed record KernelRulePackPreviewViolationResponse(
             violation.Dataset,
             violation.ItemId,
             violation.Message,
-            violation.RemediationGuidance);
+            violation.RemediationGuidance,
+            FormRef: violation.FormId.IsEmpty ? null : NodeRef.For(violation.FormId).ToString(),
+            CollectionSpecId: violation.Dataset);
 }
 
 /// <summary>Response for <c>POST /api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview</c>.</summary>
@@ -240,6 +278,49 @@ public sealed record KernelAcceptFindingRequest(string Rationale, Guid? Attestat
 public sealed record KernelExplainFindingRequest(string Explanation, Guid? AttestationId = null);
 
 /// <summary>Summary of a validation finding returned by <c>GET /api/v1/kernel/studies/{studyRef}/validation/findings</c>.</summary>
+/// <param name="Ref">Finding <c>NodeRef</c> (<c>validation_finding:&lt;uuid&gt;</c>).</param>
+/// <param name="StudyRef">Owning study <c>NodeRef</c> (<c>study:&lt;uuid&gt;</c>).</param>
+/// <param name="Stage">Validation lifecycle stage.</param>
+/// <param name="PackKey">Rule pack key.</param>
+/// <param name="RulePackRef">Rule-pack <c>NodeRef</c> (<c>library_item:&lt;uuid&gt;</c>).</param>
+/// <param name="RuleId">Rule identifier within the pack.</param>
+/// <param name="RuleVersion">Rule version number.</param>
+/// <param name="Severity">Finding severity (<c>Error</c>, <c>Warning</c>, <c>Notice</c>).</param>
+/// <param name="Status">Derived finding status (<c>Open</c>, <c>Investigating</c>, <c>Resolved</c>, <c>Accepted</c>, <c>Explained</c>).</param>
+/// <param name="Blocks">Whether this finding currently blocks its lifecycle stage gate.</param>
+/// <param name="TargetKind">Strongly-typed finding target kind (<see cref="FindingTargetKind"/>).</param>
+/// <param name="Dataset">Target dataset or collection specification identifier.</param>
+/// <param name="RecordKey">Target record key or kernel <c>NodeRef</c>.</param>
+/// <param name="Variable">Optional narrowed variable or item identifier.</param>
+/// <param name="Message">Discrepancy message reported by the rule.</param>
+/// <param name="Expected">Optional expected value or condition text.</param>
+/// <param name="Observed">Observed variable values evaluated by the rule.</param>
+/// <param name="FirstDetectedRunRef">First detecting validation run <c>NodeRef</c>.</param>
+/// <param name="LastDetectedRunRef">Latest detecting validation run <c>NodeRef</c>.</param>
+/// <param name="ResolvedByRunRef">Resolving validation run <c>NodeRef</c>, when resolved.</param>
+/// <param name="Classification">Assigned finding classification, when classified.</param>
+/// <param name="Decision">Decision in force on the finding, when present.</param>
+/// <param name="RulePackLabel">Human-readable rule-pack title and version.</param>
+/// <param name="TargetNodeRef">Resolved target kernel <c>NodeRef</c> (<c>collection_instance:&lt;uuid&gt;</c>, <c>observation:&lt;uuid&gt;</c>, or design element).</param>
+/// <param name="TargetLabel">Human-readable target label free of raw UUIDs.</param>
+/// <param name="SiteRef">Study site <c>NodeRef</c> (<c>study_site:&lt;uuid&gt;</c>), when resolved and visible.</param>
+/// <param name="SiteLabel">Human-readable study site label, or <c>masked</c> when restricted.</param>
+/// <param name="ParticipantRef">Enrollment <c>NodeRef</c> (<c>enrollment:&lt;uuid&gt;</c>), when resolved and visible.</param>
+/// <param name="ParticipantId">Participant <c>NodeRef</c> (<c>participant:&lt;uuid&gt;</c>), when available.</param>
+/// <param name="ParticipantLabel">Human-facing participant subject code, or <c>masked</c> when restricted.</param>
+/// <param name="PlannedActivityId">Scheduled visit (<c>PlannedActivity</c>) identifier on the form, when scheduled.</param>
+/// <param name="VisitLabel">Human-readable scheduled visit title.</param>
+/// <param name="FormRef">Form instance <c>NodeRef</c> (<c>collection_instance:&lt;uuid&gt;</c>), when resolved and visible.</param>
+/// <param name="FormId">Form instance UUID string, when resolved and visible.</param>
+/// <param name="FormLabel">Human-readable eCRF form title.</param>
+/// <param name="CollectionSpecId">Governing <c>CollectionSpec</c> identifier on the form.</param>
+/// <param name="ItemId">Resolved item identifier on the form.</param>
+/// <param name="ItemLabel">Human-readable item prompt or concept label.</param>
+/// <param name="ObservationRef">Primary observation <c>NodeRef</c> (<c>observation:&lt;uuid&gt;</c>), when resolved and visible.</param>
+/// <param name="ObservationLabel">Human-readable observation summary, or <c>masked</c> when blinded/restricted.</param>
+/// <param name="QueryRef">Linked discrepancy query <c>NodeRef</c> (<c>form_query:&lt;uuid&gt;</c>), when present and visible.</param>
+/// <param name="QueryId">Linked discrepancy query UUID, when present and visible.</param>
+/// <param name="QueryLabel">Human-readable discrepancy query label, or <c>masked</c> when restricted.</param>
 public sealed record KernelValidationFindingResponse(
     string Ref,
     string StudyRef,
@@ -251,7 +332,7 @@ public sealed record KernelValidationFindingResponse(
     string Severity,
     string Status,
     bool Blocks,
-    string TargetKind,
+    FindingTargetKind TargetKind,
     string Dataset,
     string RecordKey,
     string? Variable,
@@ -262,7 +343,28 @@ public sealed record KernelValidationFindingResponse(
     string LastDetectedRunRef,
     string? ResolvedByRunRef,
     string? Classification,
-    KernelFindingDecisionResponse? Decision = null)
+    KernelFindingDecisionResponse? Decision = null,
+    string? RulePackLabel = null,
+    string? TargetNodeRef = null,
+    string? TargetLabel = null,
+    string? SiteRef = null,
+    string? SiteLabel = null,
+    string? ParticipantRef = null,
+    string? ParticipantId = null,
+    string? ParticipantLabel = null,
+    string? PlannedActivityId = null,
+    string? VisitLabel = null,
+    string? FormRef = null,
+    string? FormId = null,
+    string? FormLabel = null,
+    string? CollectionSpecId = null,
+    string? ItemId = null,
+    string? ItemLabel = null,
+    string? ObservationRef = null,
+    string? ObservationLabel = null,
+    string? QueryRef = null,
+    Guid? QueryId = null,
+    string? QueryLabel = null)
 {
     internal static KernelValidationFindingResponse From(ValidationFindingView view) =>
         new(
@@ -276,7 +378,7 @@ public sealed record KernelValidationFindingResponse(
             view.Severity.ToString(),
             view.Status.ToString(),
             view.Blocks,
-            view.Target.Kind.ToString(),
+            view.Target.Kind,
             view.Target.Dataset,
             view.Target.Key,
             view.Target.Variable,
@@ -287,7 +389,9 @@ public sealed record KernelValidationFindingResponse(
             NodeRef.For(view.LastDetectedRun).ToString(),
             view.ResolvedBy is { } r ? NodeRef.For(r).ToString() : null,
             view.Classification?.ToString(),
-            view.Decision is { } d ? KernelFindingDecisionResponse.From(d) : null);
+            view.Decision is { } d ? KernelFindingDecisionResponse.From(d) : null,
+            TargetNodeRef: view.Target.Node?.ToString(),
+            TargetLabel: view.TargetLabel);
 }
 
 /// <summary>Page of validation findings for a study.</summary>

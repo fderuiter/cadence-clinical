@@ -198,7 +198,9 @@ export interface components {
       variable?: null | string;
       node?: components["schemas"]["Designer_NodeRef"];
     };
-    Designer_FindingTargetKind: number;
+    /** @enum {unknown} */
+    Designer_FindingTargetKind:
+      "DatasetRecord" | "Observation" | "DesignElement";
     Designer_NodeRef: unknown;
     Designer_ObservedVariable: {
       variable: string;

@@ -242,6 +242,80 @@ public sealed class ExecutionFormQueryTests
         access.FilterVisibleCalls.Should().Be(1);
     }
 
+    [Fact(DisplayName = "Raise_SystemQueryWithValidationFindingProvenance_PersistsAcrossStateAsOfAndResponseMapping")]
+    public void RaiseSystemQueryWithValidationFindingProvenancePersistsAcrossStateAsOfAndResponseMapping()
+    {
+        var findingGuid = Guid.Parse("01950000-0000-7000-8000-000000006001"); // deid-ignore
+        var packGuid = Guid.Parse("01950000-0000-7000-8000-000000005001"); // deid-ignore
+        var expectedFindingId = Cadence.Kernel.Validation.ValidationFindingId.FromGuid(findingGuid);
+        var expectedPackId = Cadence.Kernel.Standards.LibraryItemId.FromGuid(packGuid);
+
+        var (query, _) = FormQuery.Raise(
+            FormQueryId.New(),
+            TenantId.New(),
+            CollectionInstanceId.New(),
+            EnrollmentId.New(),
+            "item-hr",
+            ObservationId.New(),
+            1,
+            "Resting heart rate exceeds 100 /min.",
+            AssertionId.New(),
+            "svc:execution-edit-checks",
+            At,
+            "Post-commit edit check",
+            FormQueryOrigin.System,
+            ownerRole: FormQueryOwnerRole.Site,
+            priority: FormQueryPriority.High,
+            validationFindingId: expectedFindingId,
+            rulePackId: expectedPackId,
+            packKey: "cadence-vital-signs-checks",
+            ruleId: "RULE-HR-RANGE",
+            ruleVersion: 2);
+
+        query.Priority.Should().Be(FormQueryPriority.High);
+        query.ValidationFindingId.Should().Be(expectedFindingId);
+        query.RulePackId.Should().Be(expectedPackId);
+        query.PackKey.Should().Be("cadence-vital-signs-checks");
+        query.RuleId.Should().Be("RULE-HR-RANGE");
+        query.RuleVersion.Should().Be(2);
+
+        var snapshot = query.StateAsOf(At.AddMinutes(5), At.AddMinutes(5));
+        snapshot.Should().NotBeNull();
+        snapshot!.ValidationFindingId.Should().Be(expectedFindingId);
+        snapshot.RulePackId.Should().Be(expectedPackId);
+        snapshot.PackKey.Should().Be("cadence-vital-signs-checks");
+        snapshot.RuleId.Should().Be("RULE-HR-RANGE");
+        snapshot.RuleVersion.Should().Be(2);
+
+        var response = FormQueryResponse.From(
+            query,
+            new Dictionary<ObservationId, int> { [query.ObservationId] = 1 });
+        response.ValidationFindingId.Should().Be(findingGuid);
+        response.ValidationFindingRef.Should().Be($"validation_finding:{findingGuid:D}");
+        response.RulePackId.Should().Be(packGuid);
+        response.RulePackRef.Should().Be($"library_item:{packGuid:D}");
+        response.PackKey.Should().Be("cadence-vital-signs-checks");
+        response.RuleId.Should().Be("RULE-HR-RANGE");
+        response.RuleVersion.Should().Be(2);
+
+        var masked = FormQueryResponse.From(
+            query,
+            new Dictionary<ObservationId, int> { [query.ObservationId] = 1 },
+            maskBlinded: true);
+        masked.ObservationId.Should().Be(Guid.Empty);
+        masked.ObservationRef.Should().BeNull();
+        masked.ObservationLabel.Should().Be("masked");
+        masked.ValidationFindingId.Should().BeNull();
+        masked.ValidationFindingRef.Should().BeNull();
+        masked.ValidationFindingLabel.Should().Be("masked");
+        masked.RulePackId.Should().BeNull();
+        masked.RulePackRef.Should().BeNull();
+        masked.RulePackLabel.Should().Be("masked");
+        masked.PackKey.Should().Be("masked");
+        masked.RuleId.Should().Be("masked");
+        masked.RuleVersion.Should().BeNull();
+    }
+
     private static (FormQuery Query, KernelAssertionStep Step) Raise(
         string text = "Confirm the value",
         FormQueryOrigin origin = FormQueryOrigin.Manual) =>
