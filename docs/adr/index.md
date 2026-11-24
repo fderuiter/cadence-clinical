@@ -468,6 +468,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
 - [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
+- [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
