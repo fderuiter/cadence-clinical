@@ -256,9 +256,15 @@ export function clearSynchronizedWorkspaceScope(): void {
 
   const etmfInstance = pinia._s?.get("etmf");
   if (etmfInstance) {
-    etmfInstance.currentStudyId = "";
-    etmfInstance.currentSiteId = "";
-    (etmfInstance.clearScopedData as (() => void) | undefined)?.();
+    if (typeof etmfInstance.resetSessionScope === "function") {
+      (etmfInstance.resetSessionScope as (useDemo: boolean) => void)(
+        demoDefaults
+      );
+    } else {
+      etmfInstance.currentStudyId = "";
+      etmfInstance.currentSiteId = "";
+      (etmfInstance.clearScopedData as (() => void) | undefined)?.();
+    }
   }
 }
 

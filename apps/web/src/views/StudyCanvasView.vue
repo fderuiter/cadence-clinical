@@ -247,6 +247,7 @@
             :observation-ref="openObservationRef"
             :return-to="observationReturnLocation"
             :return-label="observationReturnLabel"
+            @dirty-change="observationWorkspaceDirty = $event"
             @loaded="onObservationLoaded"
           />
 
@@ -1020,8 +1021,7 @@ import {
   watch,
 } from "vue";
 import {
-  onBeforeRouteLeave,
-  onBeforeRouteUpdate,
+  isNavigationFailure,
   useRoute,
   useRouter,
   type LocationQueryRaw,
@@ -1070,6 +1070,7 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import {
+  readInstantiatedClinicalScope,
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
@@ -1079,12 +1080,11 @@ import {
   hasActiveModalFocusTrap,
   useSignOutGuard,
 } from "ui";
-import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
+import { useUnsavedNavigationGuard } from "../composables/useUnsavedNavigationGuard";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
-import { shouldSuppressUnsavedNavigationGuard } from "../composables/useRouteScopeSync";
 import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   enrollmentIdFromParticipant,
@@ -1676,6 +1676,7 @@ const queryChangedFilter = computed(() => {
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
 const documentsWorkspaceDirty = ref(false);
+const observationWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
@@ -2530,6 +2531,7 @@ async function goToPaletteTarget(target: PaletteTarget) {
   const isCrossStudy = Boolean(
     studyCode.value && targetStudy && targetStudy !== studyCode.value
   );
+  const previousScope = isCrossStudy ? readInstantiatedClinicalScope() : null;
   if (isCrossStudy) {
     syncInstantiatedClinicalScope({
       activeStudyId: targetStudy,
@@ -2537,15 +2539,28 @@ async function goToPaletteTarget(target: PaletteTarget) {
       activeSubjectId: "",
     });
   }
+  const restorePreviousScope = () => {
+    if (previousScope) {
+      syncInstantiatedClinicalScope({
+        activeStudyId: previousScope.activeStudyId ?? "",
+        activeSiteId: previousScope.activeSiteId ?? "",
+        activeSubjectId: previousScope.activeSubjectId ?? "",
+      });
+    }
+  };
   if (target.ask) {
     // Ask keeps the view and its selection within the same study, and opens Assist with the question.
-    await router.push({
+    const failure = await router.push({
       name: "study",
       params: { studyCode: targetStudy },
       query: isCrossStudy
         ? { ask: target.ask }
         : { ...route.query, ask: target.ask },
     });
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
     await canvas.requestInspectorFocus({
       nodeRef: null,
       scrollIntoView: true,
@@ -2553,10 +2568,9 @@ async function goToPaletteTarget(target: PaletteTarget) {
     return;
   }
   if (target.participant) {
-    if (targetStudy && targetStudy !== canvas.studyCode) {
-      canvas.openStudy(targetStudy);
+    if (!isCrossStudy) {
+      canvas.rememberParticipants([target.participant]);
     }
-    canvas.rememberParticipants([target.participant]);
     const nodeText = participantNodeRef(target.participant);
     const activeSite = siteFilter.value || zoomSite.value;
     const compatibleSite =
@@ -2565,7 +2579,7 @@ async function goToPaletteTarget(target: PaletteTarget) {
       (!target.participant.site_id || target.participant.site_id === activeSite)
         ? activeSite
         : undefined;
-    await router.push(
+    const failure = await router.push(
       studyLocation(
         {
           stage: target.stage,
@@ -2576,6 +2590,14 @@ async function goToPaletteTarget(target: PaletteTarget) {
         targetStudy
       )
     );
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
+    if (targetStudy && targetStudy !== canvas.studyCode) {
+      canvas.openStudy(targetStudy);
+    }
+    canvas.rememberParticipants([target.participant]);
     await canvas.requestInspectorFocus({
       nodeRef: nodeText,
       scrollIntoView: true,
@@ -2583,7 +2605,7 @@ async function goToPaletteTarget(target: PaletteTarget) {
     return;
   }
   if (isCrossStudy) {
-    await router.push(
+    const failure = await router.push(
       studyLocation(
         {
           stage: target.stage,
@@ -2592,6 +2614,10 @@ async function goToPaletteTarget(target: PaletteTarget) {
         targetStudy
       )
     );
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
     return;
   }
   await router.push(
@@ -2627,6 +2653,7 @@ watch(
     }
     formWorkspaceDirty.value = false;
     documentsWorkspaceDirty.value = false;
+    observationWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
@@ -2798,9 +2825,19 @@ watch(openObservationRef, (refText) => {
   resolvedParticipantId.value = "";
   lineageRequest++;
   if (!refText) {
+    observationWorkspaceDirty.value = false;
     loadedObservation.value = null;
   }
 });
+
+watch(
+  () => section.value?.id,
+  (secId) => {
+    if (secId !== "documents") {
+      documentsWorkspaceDirty.value = false;
+    }
+  }
+);
 
 const autoCollapseNavigator = computed(
   () =>
@@ -2914,6 +2951,8 @@ const UNSAVED_FORM_CONFIRM_MESSAGE =
   "You have unsaved eCRF draft changes. Are you sure you want to leave?";
 const UNSAVED_ETMF_CONFIRM_MESSAGE =
   "You have unsaved eTMF upload, taxonomy, or quality control draft changes. Are you sure you want to leave?";
+const UNSAVED_OBSERVATION_CONFIRM_MESSAGE =
+  "You have an unsaved observation correction. Leave without saving?";
 
 function leavesActiveDocuments(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
@@ -2953,82 +2992,69 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
-function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
-  return shouldSuppressUnsavedNavigationGuard(authStore, to);
+function leavesActiveObservation(to: RouteLocationNormalized): boolean {
+  if (!openObservationRef.value) return false;
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+  return observationNodeRef(to.query.observation) !== openObservationRef.value;
 }
 
-function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (
-    (formWorkspaceDirty.value || documentsWorkspaceDirty.value) &&
-    !shouldSuppressUnsavedGuard()
-  ) {
-    event.preventDefault();
-    event.returnValue = "";
-    return "";
-  }
-}
-
-async function confirmDiscardUnsavedForm(): Promise<boolean> {
-  return Boolean(
-    await confirmDialog({
-      title: "Unsaved Form Changes",
-      message: UNSAVED_FORM_CONFIRM_MESSAGE,
-      confirmLabel: "Leave Without Saving",
-      cancelLabel: "Stay on Form",
-      variant: "warning",
-    })
-  );
-}
-
-async function confirmDiscardUnsavedDocuments(): Promise<boolean> {
-  return Boolean(
-    await confirmDialog({
-      title: "Unsaved eTMF Changes",
-      message: UNSAVED_ETMF_CONFIRM_MESSAGE,
-      confirmLabel: "Leave Without Saving",
-      cancelLabel: "Stay in Documents",
-      variant: "warning",
-    })
-  );
-}
-
-if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave((to) => {
-    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
-      return confirmDiscardUnsavedForm().then((confirmed) =>
-        confirmed ? undefined : false
-      );
+useUnsavedNavigationGuard({
+  isDirty: () =>
+    formWorkspaceDirty.value ||
+    observationWorkspaceDirty.value ||
+    documentsWorkspaceDirty.value,
+  guardSignOut: false,
+  dialogCopy: (to, from) => {
+    const sameStudyRoute = Boolean(to.name && to.name === from.name);
+    const leavingObs =
+      observationWorkspaceDirty.value &&
+      (!sameStudyRoute || leavesActiveObservation(to));
+    if (leavingObs) {
+      return {
+        title: "Unsaved Observation Changes",
+        message: UNSAVED_OBSERVATION_CONFIRM_MESSAGE,
+        confirmLabel: "Leave Without Saving",
+        cancelLabel: "Stay on Observation",
+      };
     }
-    if (documentsWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
-      return confirmDiscardUnsavedDocuments().then((confirmed) =>
-        confirmed ? undefined : false
-      );
+    const leavingForm =
+      formWorkspaceDirty.value && (!sameStudyRoute || leavesActiveForm(to));
+    if (leavingForm) {
+      return {
+        title: "Unsaved Form Changes",
+        message: UNSAVED_FORM_CONFIRM_MESSAGE,
+        confirmLabel: "Leave Without Saving",
+        cancelLabel: "Stay on Form",
+      };
     }
-  });
-}
-
-if (typeof onBeforeRouteUpdate === "function") {
-  onBeforeRouteUpdate((to) => {
-    if (
-      formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard(to) &&
-      leavesActiveForm(to)
-    ) {
-      return confirmDiscardUnsavedForm().then((confirmed) =>
-        confirmed ? undefined : false
-      );
-    }
-    if (
+    const leavingDocs =
       documentsWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
-      leavesActiveDocuments(to)
-    ) {
-      return confirmDiscardUnsavedDocuments().then((confirmed) =>
-        confirmed ? undefined : false
-      );
+      (!sameStudyRoute || leavesActiveDocuments(to));
+    if (leavingDocs) {
+      return {
+        title: "Unsaved eTMF Changes",
+        message: UNSAVED_ETMF_CONFIRM_MESSAGE,
+        confirmLabel: "Leave Without Saving",
+        cancelLabel: "Stay in Documents",
+      };
     }
-  });
-}
+    return null;
+  },
+  shouldPromptOnUpdate: (to) =>
+    (observationWorkspaceDirty.value && leavesActiveObservation(to)) ||
+    (formWorkspaceDirty.value && leavesActiveForm(to)) ||
+    (documentsWorkspaceDirty.value && leavesActiveDocuments(to)),
+  onConfirmedDiscard: () => {
+    if (observationWorkspaceDirty.value) {
+      observationWorkspaceDirty.value = false;
+    }
+    if (documentsWorkspaceDirty.value) {
+      documentsWorkspaceDirty.value = false;
+    }
+  },
+});
 
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
@@ -3408,6 +3434,8 @@ watch(
 
 function handleDemoReset() {
   formWorkspaceDirty.value = false;
+  documentsWorkspaceDirty.value = false;
+  observationWorkspaceDirty.value = false;
   loadedForm.value = null;
   loadedObservation.value = null;
   resolvedLineage.value = null;
@@ -3476,7 +3504,6 @@ onMounted(() => {
     }
     return Boolean(inspectorRef.value?.openExplain?.(options));
   });
-  window.addEventListener("beforeunload", handleBeforeUnload);
   window.addEventListener("cadence:demo-reset", handleDemoReset);
   document.addEventListener("click", onWorkspaceInteractionCapture, true);
   document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
@@ -3515,7 +3542,6 @@ onUnmounted(() => {
     window.removeEventListener("resize", syncMediumCanvasViewport);
     window.removeEventListener("resize", syncTopbarHeight);
   }
-  window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("cadence:demo-reset", handleDemoReset);
   document.removeEventListener("click", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);

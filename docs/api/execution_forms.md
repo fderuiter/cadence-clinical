@@ -9,6 +9,7 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | `GET` | `/api/v1/execution/forms/queries` | ExecutionListEnrollmentQueries | Lists the queries on every form of an enrollment or across visible enrollments of a study, oldest first. |
 | `GET` | `/api/v1/execution/forms/queries/digests` | ExecutionListFormQueryAgingDigests | Lists daily de-identified query aging digests for visible scopes of a study. |
 | `POST` | `/api/v1/execution/forms/queries/escalate` | ExecutionEscalateOverdueFormQueries | Escalates open queries past their 14-day SLA on IClock and emits daily aging digests (execution.query.manage). |
+| `GET` | `/api/v1/execution/forms/sdv-alerts` | ExecutionListFormSdvAlerts | Lists active CRA SDV modification alerts for a study or enrollment, omitting observations once monitors verify the latest revision. |
 | `GET` | `/api/v1/execution/forms/{formId}` | ExecutionGetForm | Reads a form: its items in layout order with their values, completeness, locks, assertions and signatures. |
 | `POST` | `/api/v1/execution/forms/{formId}/preview` | ExecutionPreviewFormValues | Evaluates pinned study collection rules in memory over draft form values without mutating state (K-RULE-3). |
 | `GET` | `/api/v1/execution/forms/{formId}/queries` | ExecutionListFormQueries | Lists a form's queries, oldest first, each with whether its value changed since it was raised. |

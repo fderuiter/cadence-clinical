@@ -33,7 +33,18 @@ export interface KernelApproveProtocolVersionInput {
   meaning?: KernelLockMeaning;
   expectedContentHash?: string | null;
   attestationId?: string | null;
+  reviewAttestationRef?: string | null;
   sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelSaveSimulationReportInput {
+  studyRef: string;
+  title: string;
+  result: Schemas["Kernel_KernelSimulationResponse"];
+  artifactId?: string | null;
+  artifactVersionId?: string | null;
   reason: string;
   idempotencyKey: string;
 }
@@ -151,6 +162,7 @@ export const kernelGovernanceApi = {
     meaning = "Approved",
     expectedContentHash,
     attestationId,
+    reviewAttestationRef,
     sigToken,
     reason,
     idempotencyKey,
@@ -164,11 +176,43 @@ export const kernelGovernanceApi = {
             ? { expected_content_hash: expectedContentHash }
             : {}),
           ...(attestationId ? { attestation_id: attestationId } : {}),
+          ...(reviewAttestationRef
+            ? { review_attestation_ref: reviewAttestationRef }
+            : {}),
         },
         headers: {
           "X-Change-Reason": encodeChangeReason(reason),
           "Idempotency-Key": idempotencyKey,
           "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Saves an unmasked SimulationResult as an attestable SimulationReport artifact version (K-SIM-5). */
+  saveSimulationReport({
+    studyRef,
+    title,
+    result,
+    artifactId,
+    artifactVersionId,
+    reason,
+    idempotencyKey,
+  }: KernelSaveSimulationReportInput): Promise<KernelArtifact> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/studies/{studyRef}/simulation-reports", {
+        params: { path: { studyRef: unversioned(studyRef) } },
+        body: {
+          title,
+          result,
+          ...(artifactId ? { artifact_id: artifactId } : {}),
+          ...(artifactVersionId
+            ? { artifact_version_id: artifactVersionId }
+            : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
         },
       })
     );

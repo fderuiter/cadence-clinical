@@ -553,13 +553,14 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             "Test bitemporal known_at isolation",
             AmendmentClassification.NonSubstantial,
             "Added future item marker",
-            [SpecId],
+            [SpecId, futureItemMarker],
             TransitionPolicy.Automatic);
         await _scenario.Protocol.OkAsync(new ForkProtocolVersion(world.Tenant, world.Version, v2Id, amendment, KernelProtocolScenario.Key(), "Forked v2 after cut"), ct);
         await _scenario.Protocol.OkAsync(new ReviseProtocolDraft(world.Tenant, v2Id, ProtocolDesignDocument.Write(amendedDesign), null, KernelProtocolScenario.Key(), "Revised v2 after cut"), ct);
         var v2Review = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(world.Tenant, v2Id, KernelProtocolScenario.Key(), "Submitted v2"), ct);
+        var (_, _, v2SimReviewAttest) = await _scenario.Protocol.SimulateAndAttestReviewAsync(world.Tenant, world.Study, v2Id, ct);
         var v2Attest = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(world.Tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(v2Review)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(world.Tenant, v2Id, v2Attest, KernelProtocolScenario.Key(), "Approved v2"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(world.Tenant, v2Id, v2Attest, KernelProtocolScenario.Key(), "Approved v2", v2SimReviewAttest), ct);
         var v2Eff = EffectivityId.New();
         // Retroactive EffectiveAt (before tCut!), recorded strictly AFTER tCut: known_at = tCut must NOT see v2!
         var retroactiveValidAt = tCut.AddHours(-1);
@@ -1051,6 +1052,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             (Actor.Person(ReadOnlyReviewer), ["observation.verify"], AuthorityScope.Study(study)),
             (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount(AlertMonitorOnVerifiedObservationCorrected.Name), ["execution.query.manage"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
             (Actor.AutomationAgent(IntelligenceMcp.AgentName), ["observation.verify", "enrollment.unblind"], AuthorityScope.Tenant()),
         })

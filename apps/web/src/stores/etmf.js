@@ -346,6 +346,28 @@ export const useEtmfStore = defineStore("etmf", {
       this.documentsError = "";
     },
 
+    resetSessionScope(useDemoDefaults = false) {
+      this.currentSiteId = "";
+      this.clearScopedData();
+      if (useDemoDefaults) {
+        this.currentStudyId = DEMO_STUDY.code || "";
+        if (typeof window !== "undefined" && window.localStorage) {
+          const stored = window.localStorage.getItem("demo_documents");
+          if (stored) {
+            try {
+              this.documentsList = JSON.parse(stored);
+              return;
+            } catch {
+              // Fall back to default demo documents if stored JSON is invalid
+            }
+          }
+        }
+        this.documentsList = getDefaultDocuments();
+      } else {
+        this.currentStudyId = "";
+      }
+    },
+
     setScope(studyId, siteId) {
       let studyChanged = false;
       let siteChanged = false;
@@ -1162,6 +1184,10 @@ export const useEtmfStore = defineStore("etmf", {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.removeItem("demo_documents");
       }
+      this.currentStudyId =
+        isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "";
+      this.currentSiteId = "";
+      this.clearScopedData();
       this.documentsList = getDefaultDocuments();
     },
 

@@ -411,6 +411,97 @@ describe("CSS Assets and Package Exports", () => {
         ).toBeGreaterThanOrEqual(3);
       }
     });
+
+    it("delivers >= 3:1 non-text accent border contrast and >= 4.5:1 text contrast for edited rows and Unsaved badges across light and dark themes (SC 1.4.3 / SC 1.4.11)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      const darkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="dark"\][\s\S]*?\{([\s\S]*?)\}/,
+        tokens
+      );
+      const autoDarkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="auto"\]\s*\{([\s\S]*?)\}/,
+        tokens
+      );
+
+      const rowForegroundTokens = [
+        "--semantic-color-text",
+        "--semantic-color-text-muted",
+        "--semantic-color-text-secondary",
+        "--semantic-color-interactive-primary",
+        "--semantic-color-error",
+      ];
+
+      for (const [themeName, themeMap, adjacentSurfaces] of [
+        ["light", tokens, ["#ffffff", "#f8fafc"]],
+        ["dark", darkTokens, ["#0f172a", "#1e293b"]],
+        ["auto-dark", autoDarkTokens, ["#0f172a", "#1e293b"]],
+      ]) {
+        const editedBg = themeMap.get("--semantic-color-edited-row-bg");
+        const editedBorder = themeMap.get("--semantic-color-edited-row-border");
+        const unsavedBg = themeMap.get("--semantic-badge-unsaved-bg");
+        const unsavedText = themeMap.get("--semantic-badge-unsaved-text");
+        const unsavedBorder = themeMap.get("--semantic-badge-unsaved-border");
+        const controlBorder = themeMap.get("--semantic-color-border-control");
+
+        expect(editedBg, `${themeName} edited row bg defined`).toBeDefined();
+        expect(
+          editedBorder,
+          `${themeName} edited row border defined`
+        ).toBeDefined();
+        expect(
+          unsavedBg,
+          `${themeName} unsaved badge bg defined`
+        ).toBeDefined();
+        expect(
+          unsavedText,
+          `${themeName} unsaved badge text defined`
+        ).toBeDefined();
+        expect(
+          unsavedBorder,
+          `${themeName} unsaved badge border defined`
+        ).toBeDefined();
+
+        // 3:1 non-text contrast for edited-row accent border against edited surface and adjacent table surfaces
+        for (const surface of [editedBg, ...adjacentSurfaces]) {
+          const borderRatio = contrastRatio(editedBorder, surface);
+          expect(
+            borderRatio,
+            `${themeName} --semantic-color-edited-row-border (${editedBorder}) on ${surface} achieved ${borderRatio.toFixed(2)}:1 (< 3:1)`
+          ).toBeGreaterThanOrEqual(3);
+
+          const badgeBorderRatio = contrastRatio(unsavedBorder, surface);
+          expect(
+            badgeBorderRatio,
+            `${themeName} --semantic-badge-unsaved-border (${unsavedBorder}) on ${surface} achieved ${badgeBorderRatio.toFixed(2)}:1 (< 3:1)`
+          ).toBeGreaterThanOrEqual(3);
+        }
+
+        // Control border inside edited row also maintains >= 3:1 contrast
+        expect(
+          contrastRatio(controlBorder, editedBg),
+          `${themeName} --semantic-color-border-control (${controlBorder}) on edited row (${editedBg})`
+        ).toBeGreaterThanOrEqual(3);
+
+        // 4.5:1 normal-text contrast for all row text tokens on edited row surface
+        for (const fgToken of rowForegroundTokens) {
+          const fgHex = themeMap.get(fgToken);
+          const textRatio = contrastRatio(fgHex, editedBg);
+          expect(
+            textRatio,
+            `${themeName} ${fgToken} (${fgHex}) on --semantic-color-edited-row-bg (${editedBg}) achieved ${textRatio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+
+        // 4.5:1 normal-text contrast for Unsaved badge label on its badge background
+        const unsavedTextRatio = contrastRatio(unsavedText, unsavedBg);
+        expect(
+          unsavedTextRatio,
+          `${themeName} --semantic-badge-unsaved-text (${unsavedText}) on --semantic-badge-unsaved-bg (${unsavedBg}) achieved ${unsavedTextRatio.toFixed(2)}:1 (< 4.5:1)`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    });
   });
 
   describe("ESLint Static Token Enforcement Gates", () => {

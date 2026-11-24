@@ -1,4 +1,4 @@
-# ADR-2671: Shared EntityLink Peek Drawers and Scoped eTMF Workspace Synchronization
+# ADR-2672: Shared EntityLink Peek Drawers and Scoped eTMF Workspace Synchronization
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
