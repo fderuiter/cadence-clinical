@@ -690,6 +690,54 @@ public sealed class DicomWebEndpointsTests
     }
 
     [Fact]
+    public async Task StoreBatchInstancesAsync_Returns403OutsideStudyProblem_WhenTrailingStudyIsOutsideCallerScope()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string boundary = "----CadenceOutOfScopeBoundary" + Guid.NewGuid().ToString("N");
+        byte[] multipartBytes = BuildMultipartPayload(
+            boundary,
+            leadingFields: [],
+            files:
+            [
+                ("slice_001.dcm", "application/dicom", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6401"))
+            ],
+            trailingFields:
+            [
+                ("subjectId", "SUBJ-SCOPE-01"),
+                ("studyId", "STUDY-OTHER"),
+                ("siteId", "SITE-01")
+            ]);
+
+        var spoolBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-multipart-*.tmp").ToHashSet(StringComparer.Ordinal);
+
+        await using var innerMs = new MemoryStream(multipartBytes, writable: false);
+        await using var bodyStream = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
+
+        var httpContext = CreateAuthorizedHttpContext("STUDY-ALLOWED", "SITE-01");
+        httpContext.Request.Method = "POST";
+        httpContext.Request.ContentType = $"multipart/form-data; boundary={boundary}";
+        httpContext.Request.Body = bodyStream;
+
+        var mockIngestionService = Substitute.For<IDicomIngestionService>();
+
+        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, mockIngestionService, ct);
+
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        problem.ProblemDetails.Title.Should().Be(ClinicalScopeGuard.OutsideStudyTitle);
+        problem.ProblemDetails.Detail.Should().Be(ClinicalScopeGuard.OutsideStudyDeniedDetail);
+
+        var leakedFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-multipart-*.tmp")
+            .Where(path => !spoolBefore.Contains(path))
+            .ToArray();
+        leakedFiles.Should().BeEmpty();
+
+        await mockIngestionService.DidNotReceiveWithAnyArgs().IngestBatchAsync(
+            default!,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task StoreInstancesAsync_Returns400BadRequest_WhenHeaderOnlyDicomHasMaxUshortDimensions()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -940,7 +988,7 @@ public sealed class DicomWebEndpointsTests
             BitsAllocated = 16,
             PixelSpacingJson = "[0.5,0.5]",
             ObjectKey = $"dicom/{studyEnvelopeId}/{seriesEnvelopeId}/{sopInstanceUid}.dcm",
-            ChecksumSha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            ChecksumSha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // pragma: allowlist secret
             SizeBytes = 1_024,
             BurnedInPhiMasked = true
         });

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -114,48 +113,18 @@ public static class ExporterBuildFreshness
         string exporterDisplayName)
     {
         bool skipBuild = CanSkipBuild(repoRoot, exporterProjectRelativePath);
-        var psi = new ProcessStartInfo("dotnet")
-        {
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        psi.ArgumentList.Add("run");
+        var args = new List<string>(exporterArguments.Count + 5) { "run" };
         if (skipBuild)
         {
-            psi.ArgumentList.Add("--no-build");
+            args.Add("--no-build");
         }
 
-        psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(exporterProjectRelativePath);
-        psi.ArgumentList.Add("--");
-        foreach (string arg in exporterArguments)
-        {
-            psi.ArgumentList.Add(arg);
-        }
+        args.Add("--project");
+        args.Add(exporterProjectRelativePath);
+        args.Add("--");
+        args.AddRange(exporterArguments);
 
-        using var process = Process.Start(psi);
-        if (process is null)
-        {
-            Console.WriteLine($"[ERROR] Could not start 'dotnet run' for the {exporterDisplayName}.");
-            return false;
-        }
-
-        var stderrTask = process.StandardError.ReadToEndAsync();
-        string stdout = process.StandardOutput.ReadToEnd();
-        process.WaitForExit();
-        string stderr = stderrTask.GetAwaiter().GetResult();
-
-        if (process.ExitCode != 0)
-        {
-            Console.WriteLine($"[ERROR] The {exporterDisplayName} failed with exit code {process.ExitCode}:");
-            Console.WriteLine(stdout);
-            Console.WriteLine(stderr);
-            return false;
-        }
-
-        return true;
+        return ExporterBinaryResolver.ExecuteProcess(repoRoot, "dotnet", args, exporterDisplayName);
     }
 
     private static (string AssemblyName, string TargetFramework) ReadExporterIdentity(string fullRepoRoot, string csprojPath)

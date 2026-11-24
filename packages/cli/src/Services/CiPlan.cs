@@ -350,12 +350,12 @@ public static class CiPlan
             new("lint-and-static", "Build frontend workspace") { Commands = [Pnpm("build")] },
             new("lint-and-static", "Run frontend style and lint")
             {
+                EnvironmentIfPassed = NativeAotCacheHit,
                 Commands =
                 [
                     Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
                         with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
-                    Pnpm("-r", "lint"),
-                    Pnpm("exec", "eslint", "--max-warnings", "0", "."),
+                    NodeCli("check", "eslint"),
                     Pnpm("-r", "typecheck"),
                 ],
             },
@@ -364,20 +364,20 @@ public static class CiPlan
                 RequiredTool = "hadolint",
                 ToolHint = "provision hadolint 2.15.1 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
                 Files = CiFileSource.Dockerfiles,
-                Commands = [new CiCommand("hadolint", ["--failure-threshold", "error"])],
+                Commands = [new CiCommand("hadolint", ["--failure-threshold", "warning"])],
             },
             new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
                 ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
-                Commands = [new CiCommand("shellcheck", [])],
+                Commands = [new CiCommand("shellcheck", ["-x"])],
             },
             new("lint-and-static", "Run installer checksum tests")
             {
                 RequiredTool = "bash",
                 ToolHint = "install bash (Git for Windows includes it)",
-                Commands = [new CiCommand("bash", ["tests/test_installer_checksums.sh"])],
+                Commands = [new CiCommand("bash", ["scripts/test_installer_checksums.sh"])],
             },
             new("lint-and-static", "Run Markdown validation")
             {
@@ -399,7 +399,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "typecheck", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "typecheck", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "shellcheck", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
             },
             new("dotnet-quality", "Run architecture tests")
             {

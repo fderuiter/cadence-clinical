@@ -5,10 +5,10 @@ LABEL description="GxP-validated statistical computing execution base image for 
 LABEL version="2026.1"
 
 RUN apt-get update \
-    && apt-get install -y --only-upgrade --no-install-recommends zlib1g \
+    && apt-get install -y --only-upgrade --no-install-recommends zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1 \
     && apt-get install -y --no-install-recommends \
-        build-essential \
-        libgomp1 \
+        build-essential=12.12 \
+        libgomp1=14.2.0-19 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt

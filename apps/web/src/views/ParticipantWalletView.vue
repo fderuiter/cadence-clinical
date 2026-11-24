@@ -38,35 +38,43 @@
       <div class="stat-card">
         <div class="stat-icon balance-icon">💳</div>
         <div class="stat-details">
-          <div class="stat-value">${{ totalBalance.toFixed(2) }}</div>
+          <div class="stat-value tabular-nums">
+            ${{ totalBalance.toFixed(2) }}
+          </div>
           <div class="stat-label">Active Total Balances</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon stipend-icon">📅</div>
         <div class="stat-details">
-          <div class="stat-value">${{ totalStipends.toFixed(2) }}</div>
+          <div class="stat-value tabular-nums">
+            ${{ totalStipends.toFixed(2) }}
+          </div>
           <div class="stat-label">Lifetime Visit Stipends</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon travel-icon">🧾</div>
         <div class="stat-details">
-          <div class="stat-value">${{ totalReimbursements.toFixed(2) }}</div>
+          <div class="stat-value tabular-nums">
+            ${{ totalReimbursements.toFixed(2) }}
+          </div>
           <div class="stat-label">Approved Reimbursements</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon tax-icon">🏛️</div>
         <div class="stat-details">
-          <div class="stat-value">${{ totalTaxableYtd.toFixed(2) }}</div>
+          <div class="stat-value tabular-nums">
+            ${{ totalTaxableYtd.toFixed(2) }}
+          </div>
           <div class="stat-label">YTD 1099 Taxable Earnings</div>
         </div>
       </div>
       <div class="stat-card">
         <div class="stat-icon pending-icon">⏳</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ pendingClaimsCount }}
           </div>
           <div class="stat-label">Claims Pending Review</div>
@@ -802,7 +810,7 @@
           <h3 id="wallet-approvals-heading" class="panel-title" tabindex="-1">
             1-Click Coordinator Expense Claim Review Queue
           </h3>
-          <span class="badge badge-regulatory"
+          <span class="badge badge-regulatory tabular-nums"
             >{{ pendingClaims.length }} Pending Decisions</span
           >
         </div>

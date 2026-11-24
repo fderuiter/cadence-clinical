@@ -63,6 +63,7 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt", true)]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt", true)]
     [InlineData(".deid-baseline.txt", true)]
+    [InlineData(".duplication-baseline.txt", true)]
     [InlineData(".secrets.baseline", true)]
     [InlineData(".cadence/snapshots/baseline-test.tar.gz", false)]
     [InlineData("docs/baseline.md", false)]
@@ -466,6 +467,40 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
         Git("commit", "-q", "--no-edit");
         Check().Should().Be(0);
+    }
+
+    [Fact]
+    public void DuplicationBaseline_BlocksGrowthWithoutTrailer_AdmitsAuthorizedGrowth_AndAllowsShrink()
+    {
+        Write(".duplication-baseline.txt", "# duplication\napps/web/a.ts|apps/web/b.ts|0123456789abcdef\n");
+        Commit("feat: add unaccepted duplication baseline entry");
+        Check().Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: ratchet existing frontend clones\n\nBaseline-Growth: .duplication-baseline.txt +1 - legacy frontend clones");
+        Check().Should().Be(0);
+
+        File.Delete(Path.Combine(_dir, ".duplication-baseline.txt"));
+        Commit("refactor: eliminate remaining frontend clones");
+        Check().Should().Be(0);
+    }
+
+    [Fact]
+    public void IntermediateGrowth_CompletelyRemovedBeforeHead_Passes_WhileUnremediatedEntriesStillFail()
+    {
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\nK-XS-1|App|D\n");
+        Commit($"feat: temporary branch growth with pre-ADR-2832 trailer\n\nBaseline-Growth: {Baseline} - temporary migration clones");
+        Check().Should().Be(1, "unremediated branch additions without a +<count> trailer must fail");
+
+        // Removing pre-existing entry A and only one added entry C still leaves D at HEAD -> must still fail closed.
+        Write(Baseline, Header + "K-XS-1|App|B\nK-XS-1|App|D\n");
+        Commit("refactor: remove A and C while D remains");
+        Check().Should().Be(1, "shrinking an existing entry must never offset a surviving unadmitted entry");
+
+        // Removing D as well leaves zero net additions at HEAD relative to origin/main -> passes cleanly.
+        Write(Baseline, Header + "K-XS-1|App|B\n");
+        Commit("refactor: eliminate remaining temporary entry D");
+        Check().Should().Be(0, "intermediate branch baseline additions completely removed before HEAD are remediated");
     }
 
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);

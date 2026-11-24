@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -282,5 +283,123 @@ internal sealed class FormQueryEscalationService(
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
         return new Guid(bytes, bigEndian: true);
+    }
+}
+
+/// <summary>
+/// Evaluates treatment-blinding classification (<c>K-AUTH-4</c>) across <see cref="FormQueryAgingDigestEntry"/> sets,
+/// redacting blinded entries either unconditionally (for outbox lead alerts) or unless the reader holds explicit
+/// <c>enrollment.unblind</c> authority on the entry's enrollment.
+/// </summary>
+internal static class FormQueryDigestBlinding
+{
+    public static async Task<IReadOnlyList<IReadOnlyList<FormQueryAgingDigestEntry>>> RedactBatchAsync(
+        TenantId tenant,
+        IReadOnlyList<IReadOnlyList<FormQueryAgingDigestEntry>> entryLists,
+        ICollectionInstanceRecords forms,
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        IKernelReadAccess? access,
+        bool alwaysMaskBlinded,
+        CancellationToken cancellationToken)
+    {
+        if (entryLists.Count == 0)
+        {
+            return [];
+        }
+
+        var allEntries = entryLists.SelectMany(static list => list).ToList();
+        if (allEntries.Count == 0)
+        {
+            return entryLists;
+        }
+
+        var distinctFormIds = allEntries
+            .Where(static e => e.FormId != Guid.Empty)
+            .Select(static e => CollectionInstanceId.FromGuid(e.FormId))
+            .Distinct()
+            .ToList();
+        IReadOnlySet<EnrollmentId> unblindedEnrollments = FrozenSet<EnrollmentId>.Empty;
+        var targetFormIds = distinctFormIds;
+        if (!alwaysMaskBlinded && access is not null && distinctFormIds.Count > 0)
+        {
+            var headersByFormId = await forms.FindHeadersAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false);
+            var unblinded = new HashSet<EnrollmentId>();
+            foreach (var enrollmentId in headersByFormId.Values.Select(static h => h.EnrollmentId).Distinct())
+            {
+                if (await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false))
+                {
+                    unblinded.Add(enrollmentId);
+                }
+            }
+
+            unblindedEnrollments = unblinded;
+            targetFormIds = [
+                .. distinctFormIds.Where(id =>
+                    !headersByFormId.TryGetValue(id, out var header)
+                    || !unblinded.Contains(header.EnrollmentId)),
+            ];
+        }
+
+        var targetsByFormId = targetFormIds.Count > 0
+            ? await forms.FindQueryTargetsAsync(tenant, targetFormIds, unblindedEnrollments, cancellationToken).ConfigureAwait(false)
+            : new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>();
+
+        Dictionary<Guid, ObservationId> observationByQueryId;
+        if (targetsByFormId.Values.Any(static t => t.BlindedObservationIds is { Count: > 0 }))
+        {
+            var distinctQueryIds = allEntries
+                .Where(static e => e.QueryId != Guid.Empty)
+                .Select(static e => FormQueryId.FromGuid(e.QueryId))
+                .Distinct()
+                .ToList();
+            if (distinctQueryIds.Count > 0)
+            {
+                await using var db = contexts.Create(tenant);
+                observationByQueryId = await db.FormQueries
+                    .AsNoTracking()
+                    .IgnoreAutoIncludes()
+                    .Where(q => distinctQueryIds.Contains(q.Id))
+                    .Select(q => new { q.Id, q.ObservationId })
+                    .ToDictionaryAsync(x => x.Id.Value, x => x.ObservationId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                observationByQueryId = [];
+            }
+        }
+        else
+        {
+            observationByQueryId = [];
+        }
+
+        var result = new List<IReadOnlyList<FormQueryAgingDigestEntry>>(entryLists.Count);
+        foreach (var entries in entryLists)
+        {
+            var shaped = new List<FormQueryAgingDigestEntry>(entries.Count);
+            foreach (var entry in entries)
+            {
+                if (string.Equals(entry.ItemId, FormQueryAgingDigestEntry.MaskedLiteral, StringComparison.Ordinal))
+                {
+                    shaped.Add(entry.MaskBlinded());
+                    continue;
+                }
+
+                if (!targetsByFormId.TryGetValue(CollectionInstanceId.FromGuid(entry.FormId), out var target))
+                {
+                    shaped.Add(entry);
+                    continue;
+                }
+
+                observationByQueryId.TryGetValue(entry.QueryId, out var observationId);
+                var isBlinded = target.IsQueryBlinded(entry.ItemId, observationId);
+                var canUnblind = !alwaysMaskBlinded && unblindedEnrollments.Contains(target.EnrollmentId);
+                shaped.Add(isBlinded && !canUnblind ? entry.MaskBlinded() : entry);
+            }
+
+            result.Add(shaped);
+        }
+
+        return result;
     }
 }

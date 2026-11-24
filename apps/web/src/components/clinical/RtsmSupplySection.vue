@@ -22,7 +22,7 @@
       prefix="rtsm"
       form-id="rtsm-scope-form"
       aria-label="Investigational supply scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
       submit-id="btn-load-supply"
@@ -468,7 +468,8 @@ const workspace = useScopedWorkspaceSection(props, {
   fallbackErrorTitle: "Supply status could not be loaded",
   fallbackErrorMessage: "Investigational supply status could not be loaded.",
 });
-const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
+const { authStore, toasts, isStudyLocked, syncActiveScope, recordLoadFailure } =
+  workspace;
 const {
   assignedStudies,
   assignedSites,
