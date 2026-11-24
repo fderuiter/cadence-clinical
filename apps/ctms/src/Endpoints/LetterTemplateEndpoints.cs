@@ -118,40 +118,7 @@ public static class LetterTemplateEndpoints
         return TypedResults.Content(rendered, "text/plain");
     }
 
-    /// <summary>
-    /// Compiles an unsigned draft GxP PDF letter. Finalizing a visit letter requires <see cref="FinalizeAndDispatchLetterAsync"/>.
-    /// </summary>
-    public static async Task<IResult> CompileAndDispatchLetterAsync(
-        [FromQuery] string templateName,
-        [FromBody] SiteVisitLetterModel request,
-        [FromServices] ITemplateRenderer renderer,
-        [FromServices] CtmsDbContext dbContext,
-        [FromServices] IClock clock,
-        [FromServices] IServiceProvider serviceProvider,
-        HttpContext httpContext,
-        CancellationToken ct)
-    {
-        if (request.Finalize)
-        {
-            return TypedResults.Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Finalization requires signed endpoint",
-                detail: "Use POST /api/v1/ctms/letters/finalize with an electronic signature to finalize a visit letter.",
-                extensions: new Dictionary<string, object?> { ["code"] = "FINALIZE_REQUIRES_DEDICATED_ROUTE" });
-        }
-
-        return await ExecuteLetterCompilationPipelineAsync(
-            templateName,
-            request with { Finalize = false },
-            finalize: false,
-            explicitReasonForChange: null,
-            renderer,
-            dbContext,
-            clock,
-            serviceProvider,
-            httpContext,
-            ct);
-    }
+    private static readonly object FinalizeLetterMarker = new();
 
     /// <summary>
     /// Finalizes a GxP PDF letter under a verified Part 11 step-up signature, files to eTMF, and dispatches email notification.
@@ -175,7 +142,8 @@ public static class LetterTemplateEndpoints
             ?? httpContext.User?.Identity?.Name
             ?? request.CraId;
 
-        return await ExecuteLetterCompilationPipelineAsync(
+        httpContext.Items[FinalizeLetterMarker] = reason;
+        return await CompileAndDispatchLetterAsync(
             templateName,
             request with
             {
@@ -183,8 +151,6 @@ public static class LetterTemplateEndpoints
                 SignerName = string.IsNullOrWhiteSpace(request.SignerName) ? verifiedSigner : request.SignerName,
                 ReasonForChange = reason,
             },
-            finalize: true,
-            explicitReasonForChange: reason,
             renderer,
             dbContext,
             clock,
@@ -193,18 +159,32 @@ public static class LetterTemplateEndpoints
             ct);
     }
 
-    private static async Task<IResult> ExecuteLetterCompilationPipelineAsync(
-        string templateName,
-        SiteVisitLetterModel request,
-        bool finalize,
-        string? explicitReasonForChange,
-        ITemplateRenderer renderer,
-        CtmsDbContext dbContext,
-        IClock clock,
-        IServiceProvider serviceProvider,
+    /// <summary>
+    /// Compiles an unsigned draft GxP PDF letter, or completes verified finalization when invoked from <see cref="FinalizeAndDispatchLetterAsync"/>.
+    /// </summary>
+    public static async Task<IResult> CompileAndDispatchLetterAsync(
+        [FromQuery] string templateName,
+        [FromBody] SiteVisitLetterModel request,
+        [FromServices] ITemplateRenderer renderer,
+        [FromServices] CtmsDbContext dbContext,
+        [FromServices] IClock clock,
+        [FromServices] IServiceProvider serviceProvider,
         HttpContext httpContext,
         CancellationToken ct)
     {
+        bool finalize = httpContext.Items.TryGetValue(FinalizeLetterMarker, out var reasonObj)
+            && reasonObj is string
+            && !string.IsNullOrWhiteSpace((string)reasonObj);
+        string? explicitReasonForChange = finalize ? (string)reasonObj! : null;
+
+        if (!finalize && request.Finalize)
+        {
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Finalization requires signed endpoint",
+                detail: "Use POST /api/v1/ctms/letters/finalize with an electronic signature to finalize a visit letter.",
+                extensions: new Dictionary<string, object?> { ["code"] = "FINALIZE_REQUIRES_DEDICATED_ROUTE" });
+        }
         if (!Catalog.Contains(templateName))
         {
             return UnknownTemplate(Catalog);

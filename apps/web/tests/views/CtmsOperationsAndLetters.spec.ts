@@ -82,7 +82,7 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
       pdfObjectKey: "letters/CAD-101/SITE-101/LTR-DRAFT999.pdf",
       isSigned: false,
       status: "COMPILED",
-      signatureManifestation: null,
+      signatureManifestation: "",
       etmfDocumentId: null,
       dispatchedAt: "2026-10-12T12:00:00Z",
       pdfAccessUrl: "/api/v1/ctms/letters/LTR-DRAFT999/pdf",

@@ -214,7 +214,7 @@ public sealed class StandaloneGxPAuditAndOutboxPostgresTests(ThrowawayPostgresDa
                 MimeType = "application/pdf",
                 SizeBytes = 1024,
                 ObjectKey = $"studies/STUDY-FS/{fileId}/protocol.pdf",
-                ChecksumSha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                ChecksumSha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
                 UploadedBy = "svc:fileshare-quarantine-worker",
                 UploadedAt = now,
                 CreatedAt = now.UtcDateTime,
@@ -250,7 +250,7 @@ public sealed class StandaloneGxPAuditAndOutboxPostgresTests(ThrowawayPostgresDa
                 Filename = "investigator_cv.pdf",
                 MimeType = "application/pdf",
                 ObjectKey = $"etmf/{docId}.pdf",
-                ContentChecksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                ContentChecksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
                 CreatedAt = now.UtcDateTime,
                 CreatedBy = "svc:etmf-db-seeder",
                 ReasonForChange = "Initial TMF filing",

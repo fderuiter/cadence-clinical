@@ -230,6 +230,8 @@
             </router-link>
           </div>
         </div>
+
+        <DemoResetButton variant="login" />
       </div>
     </div>
   </div>
@@ -244,9 +246,10 @@ import {
   peekWebReturnUrl,
   saveWebReturnUrl,
 } from "../auth/sessionCoordinator.js";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/preReleaseNotice.js";
 import { useAuthStore } from "../stores/auth";
 import { formatRoleList } from "../utils/clinicalLabels";
+import DemoResetButton from "./demo/DemoResetButton.vue";
 
 const authStore = useAuthStore();
 const router = useRouter();

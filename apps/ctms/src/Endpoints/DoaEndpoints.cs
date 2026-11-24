@@ -564,6 +564,8 @@ public static class DoaEndpoints
         return TypedResults.Ok(response);
     }
 
+    private static readonly object SignedDoaExportMarker = new();
+
     public static async Task<IResult> ExportSiteDoaPdfAsync(
         [FromRoute(Name = "site_id")] string siteId,
         CtmsDbContext db,
@@ -572,47 +574,14 @@ public static class DoaEndpoints
         CancellationToken ct,
         [FromQuery(Name = "study_id")] string? studyId = null)
     {
+        bool isSignedExport = httpContext.Items.TryGetValue(SignedDoaExportMarker, out var reasonObj)
+            && reasonObj is string signedReason
+            && !string.IsNullOrWhiteSpace(signedReason);
+
         var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
         if (scope.Error is not null)
         {
             return scope.Error;
-        }
-
-        string trimmedSite = siteId.Trim();
-        var (user, role) = ResolveCaller(httpContext, "investigator");
-        DateTimeOffset now = clock.UtcNow;
-
-        var (_, rawPdfBytes) = await BuildSiteDoaRawPdfAsync(
-            db,
-            siteId,
-            trimmedSite,
-            scope.AuthorizedStudies,
-            user,
-            role,
-            now,
-            isSignedExport: false,
-            ct);
-
-        return Results.File(rawPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}_working_copy.pdf");
-    }
-
-    public static async Task<IResult> ExportSignedSiteDoaPdfAsync(
-        [FromRoute(Name = "site_id")] string siteId,
-        CtmsDbContext db,
-        HttpContext httpContext,
-        [FromServices] IClock clock,
-        CancellationToken ct,
-        [FromQuery(Name = "study_id")] string? studyId = null)
-    {
-        var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
-        if (scope.Error is not null)
-        {
-            return scope.Error;
-        }
-
-        if (!TryExtractReasonForChange(httpContext, null, out string reason, out var problem))
-        {
-            return problem!;
         }
 
         string trimmedSite = siteId.Trim();
@@ -628,9 +597,15 @@ public static class DoaEndpoints
             user,
             role,
             now,
-            isSignedExport: true,
+            isSignedExport,
             ct);
 
+        if (!isSignedExport)
+        {
+            return Results.File(rawPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}_working_copy.pdf");
+        }
+
+        string reason = (string)httpContext.Items[SignedDoaExportMarker]!;
         var (cert, key) = Pkcs7Signer.GenerateSigningCredentials(user, clock);
         var signer = new Pkcs7Signer(cert, key);
         byte[] signedPdfBytes = signer.SignPdf(rawPdfBytes);
@@ -665,6 +640,29 @@ public static class DoaEndpoints
         await db.SaveChangesAsync(ct);
 
         return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}.pdf");
+    }
+
+    public static async Task<IResult> ExportSignedSiteDoaPdfAsync(
+        [FromRoute(Name = "site_id")] string siteId,
+        CtmsDbContext db,
+        HttpContext httpContext,
+        [FromServices] IClock clock,
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
+    {
+        var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
+        if (scope.Error is not null)
+        {
+            return scope.Error;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, null, out string reason, out var problem))
+        {
+            return problem!;
+        }
+
+        httpContext.Items[SignedDoaExportMarker] = reason;
+        return await ExportSiteDoaPdfAsync(siteId, db, httpContext, clock, ct, studyId);
     }
 
     private static async Task<(int DelegationCount, byte[] RawPdfBytes)> BuildSiteDoaRawPdfAsync(

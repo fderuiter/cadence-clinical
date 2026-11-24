@@ -581,7 +581,7 @@ export const STEP_UP_ACTION_MAX_LENGTH = 512;
 /**
  * Canonical `semantic_action` identifiers shared across Cadence Clinical workflows.
  */
-export const SEMANTIC_ACTIONS = Object.freeze({
+export const SEMANTIC_ACTIONS = /* @__PURE__ */ Object.freeze({
   CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off",
   CTMS_DOA_EXPORT_SIGNED_PDF: "ctms.doa.export_signed_pdf",
   CTMS_GREENLIGHT_CERTIFY: "ctms.greenlight.certify",
@@ -716,7 +716,7 @@ export const SIGNATURE_OTHER_REASON = "Other";
  * Uses alphanumeric `inputmode="text"` so mobile virtual keyboards never lock out
  * Keycloak account passwords with digits-only keypads.
  */
-export const SIGNATURE_PASSWORD_INPUT_ATTRS = Object.freeze({
+export const SIGNATURE_PASSWORD_INPUT_ATTRS = /* @__PURE__ */ Object.freeze({
   type: "password",
   inputmode: "text",
   autocomplete: "current-password",

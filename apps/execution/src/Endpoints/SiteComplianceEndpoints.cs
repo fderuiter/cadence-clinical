@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application;
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
@@ -91,13 +92,19 @@ public static class SiteComplianceEndpoints
         EtmfCompletenessWebhookPayload payload,
         ISiteComplianceApplicationService svc,
         CancellationToken ct,
-        HttpContext? http = null)
+        HttpContext? http = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
         if (ExecutionScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyId, payload.SiteId) is { } denied)
         {
             return denied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, payload.StudyId, payload.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await svc.ApplyEtmfWebhookAsync(payload, ct).ConfigureAwait(false);
@@ -118,13 +125,19 @@ public static class SiteComplianceEndpoints
         SiteActivationRequest request,
         ISiteComplianceApplicationService svc,
         CancellationToken ct,
-        HttpContext? http = null)
+        HttpContext? http = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
         if (ExecutionScopeGuard.RequireStudyAndSite(http, request.StudyId, siteId) is { } denied)
         {
             return denied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, request.StudyId, siteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await svc.ActivateSiteAsync(siteId, request, ct).ConfigureAwait(false);

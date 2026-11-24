@@ -70,6 +70,10 @@ public interface ISubjectApplicationService
     Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
         Task.FromResult<(StudyCode StudyId, SiteCode? SiteId)?>(null);
 
+    /// <summary>Resolves a participant's study, optional site, and canonical subject code for kernel lock checks.</summary>
+    Task<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?> GetSubjectLockScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
+        Task.FromResult<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?>(null);
+
     /// <summary>Evaluates screening eligibility and transitions to <c>ScreenFailed</c>/<c>Enrolled</c>
     /// (SCN-005/SCN-007). Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct);

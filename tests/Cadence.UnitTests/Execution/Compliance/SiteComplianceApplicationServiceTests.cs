@@ -49,11 +49,15 @@ public class SiteComplianceApplicationServiceTests
             .Options);
 
     private static SiteComplianceApplicationService CreateService(
-        ExecutionDbContext context, RecordingAuditLogWriter? auditLog = null, IClock? clock = null) =>
+        ExecutionDbContext context,
+        RecordingAuditLogWriter? auditLog = null,
+        IClock? clock = null,
+        IKernelLockGuard? lockGuard = null) =>
         new(new SiteComplianceRepository(context),
             auditLog ?? new RecordingAuditLogWriter(),
             new FakeCurrentAuditContextAccessor("user-compliance-1", "eTMF completeness evaluation sync"),
-            clock ?? new FakeClock(FixedActivatedAt));
+            clock ?? new FakeClock(FixedActivatedAt),
+            lockGuard);
 
     // ---- ApplyEtmfWebhookAsync: create branch ------------------------------------------------------
 
@@ -395,5 +399,52 @@ public class SiteComplianceApplicationServiceTests
         response.IsComplete.Should().BeTrue();
         response.MissingDocuments.Should().Equal("Form-B");
         response.SiteId.Should().Be(new SiteCode(SiteId));
+    }
+
+    [Fact]
+    public async Task ApplyEtmfWebhookAsync_And_ActivateSiteAsync_WhenKernelLockGuardReportsLocked_ReturnObservationLockedWithoutWrites()
+    {
+        string databaseName = Guid.NewGuid().ToString();
+        var auditLog = new RecordingAuditLogWriter();
+        var lockGuard = new AlwaysLockedGuard();
+
+        await using var context = CreateContext(databaseName);
+        var service = CreateService(context, auditLog, lockGuard: lockGuard);
+
+        var webhookResult = await service.ApplyEtmfWebhookAsync(
+            new EtmfCompletenessWebhookPayload(Study.Value, SiteId, Milestone, IsComplete: true, MissingArtifacts: []),
+            TestContext.Current.CancellationToken);
+        webhookResult.IsFailure.Should().BeTrue();
+        webhookResult.Error!.Code.Should().Be("K.Observation.Locked");
+
+        var activateResult = await service.ActivateSiteAsync(
+            SiteId,
+            new SiteActivationRequest(Study.Value),
+            TestContext.Current.CancellationToken);
+        activateResult.IsFailure.Should().BeTrue();
+        activateResult.Error!.Code.Should().Be("K.Observation.Locked");
+
+        (await context.SiteComplianceCaches.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        auditLog.Calls.Should().BeEmpty("locked compliance mutations must short-circuit before writing BLOCKED_ACTIVATION or ETMF_COMPLIANCE_UPDATE audit rows");
+    }
+
+    private sealed class AlwaysLockedGuard : IKernelLockGuard
+    {
+        public Task<Cadence.Core.Domain.Result<bool>> EnsureUnlockedAsync(
+            string? studyCode,
+            string? siteCode = null,
+            string? subjectCode = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<Cadence.Core.Domain.Result<bool>>(
+                Cadence.Core.Domain.DomainError.Conflict("K.Observation.Locked", "Scope is frozen or locked."));
+
+        public Task<Cadence.Core.Domain.Result<bool>> EnsureUnlockedForServiceAsync(
+            ServiceAccount serviceAccount,
+            string? tenantCode,
+            string? studyCode,
+            string? siteCode = null,
+            string? subjectCode = null,
+            CancellationToken cancellationToken = default) =>
+            EnsureUnlockedAsync(studyCode, siteCode, subjectCode, cancellationToken);
     }
 }

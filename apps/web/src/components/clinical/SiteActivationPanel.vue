@@ -49,8 +49,12 @@
         @change="onPickSite"
       >
         <option value="">Custom / enter site code</option>
-        <option v-for="code in siteOptions" :key="code" :value="code">
-          {{ code }}
+        <option
+          v-for="option in siteOptions"
+          :key="option.code"
+          :value="option.code"
+        >
+          {{ option.label }}
         </option>
       </select>
       <label for="site-activation-site">Site</label>
@@ -75,6 +79,112 @@
       >
         Check eTMF status
       </button>
+      <button
+        v-if="canQuickCreateSite"
+        id="btn-site-activation-new-site"
+        type="button"
+        class="btn btn-secondary"
+        @click="toggleCreateSiteShortcut"
+      >
+        {{ showCreateSiteForm ? "Cancel new site" : "+ Register & link site" }}
+      </button>
+    </form>
+
+    <form
+      v-if="showCreateSiteForm"
+      id="site-activation-create-site-form"
+      class="quick-site-form"
+      aria-label="Register and link a site"
+      @submit.prevent="submitQuickSite"
+    >
+      <p v-if="quickSiteError" class="status status-error" role="alert">
+        {{ quickSiteError }}
+      </p>
+      <div class="quick-site-grid">
+        <div class="quick-field">
+          <label for="site-activation-new-code">Site code</label>
+          <input
+            id="site-activation-new-code"
+            v-model="newSiteCode"
+            type="text"
+            maxlength="64"
+            autocomplete="off"
+            placeholder="e.g. SITE-01"
+            :disabled="creatingQuickSite"
+            required
+          />
+        </div>
+        <div class="quick-field">
+          <label for="site-activation-new-country">Country (ISO-2)</label>
+          <input
+            id="site-activation-new-country"
+            v-model="newSiteCountry"
+            type="text"
+            maxlength="2"
+            autocomplete="off"
+            placeholder="US"
+            :disabled="creatingQuickSite"
+            required
+          />
+        </div>
+        <div class="quick-field">
+          <label for="site-activation-new-name">Site name</label>
+          <input
+            id="site-activation-new-name"
+            v-model="newSiteName"
+            type="text"
+            maxlength="200"
+            autocomplete="off"
+            placeholder="e.g. Metro Cardiology Research Center"
+            :disabled="creatingQuickSite"
+            required
+          />
+        </div>
+        <div class="quick-field">
+          <label for="site-activation-new-institution">Site institution</label>
+          <input
+            id="site-activation-new-institution"
+            v-model="newSiteInstitution"
+            type="text"
+            maxlength="200"
+            autocomplete="off"
+            placeholder="e.g. Metro University Hospital"
+            :disabled="creatingQuickSite"
+            required
+          />
+        </div>
+        <div class="quick-field quick-field-wide">
+          <label for="site-activation-new-reason">
+            Reason for change (required)
+          </label>
+          <input
+            id="site-activation-new-reason"
+            v-model="newSiteReason"
+            type="text"
+            maxlength="500"
+            autocomplete="off"
+            placeholder="e.g. Register clinical site for study startup"
+            :disabled="creatingQuickSite"
+            required
+          />
+        </div>
+      </div>
+      <div class="quick-site-actions">
+        <button
+          id="btn-confirm-site-activation-new-site"
+          type="submit"
+          class="btn btn-primary"
+          :disabled="!canSubmitQuickSite"
+        >
+          {{
+            creatingQuickSite
+              ? "Registering…"
+              : studyCode.trim()
+                ? `Register & link to ${studyCode.trim()}`
+                : "Register site"
+          }}
+        </button>
+      </div>
     </form>
 
     <div
@@ -151,6 +261,7 @@
         v-if="compliance.is_activated"
         id="site-activated-summary"
         class="activated-banner"
+        tabindex="-1"
       >
         <span class="activated-badge">Activated</span>
         <span>
@@ -285,6 +396,7 @@
           v-if="matchedKernelSite.status === 'Active'"
           id="kernel-site-active-banner"
           class="activated-banner"
+          tabindex="-1"
         >
           <span class="activated-badge">Kernel Active</span>
           <span>
@@ -423,16 +535,21 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
-import { describeKernelError } from "../../api/kernelApi";
+import { describeKernelError, kernelApi } from "../../api/kernelApi";
 import { kernelGovernanceApi } from "../../api/kernelGovernanceApi";
 import {
   SITE_ACTIVATION_ROLE_REASON,
   canActivateSite,
   canManageKernelStudySites,
 } from "../../canvas/authority";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import {
+  findKernelStudyRef,
+  findStudySites,
+  invalidateStudySitesCache,
+} from "../../canvas/kernelStudy";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
@@ -442,6 +559,7 @@ import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
 } from "../../utils/callerScope";
+import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 import KernelExplanation from "../canvas/KernelExplanation.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 
@@ -490,6 +608,7 @@ const siteCode = ref(
     (assignedSites.value.length ? assignedSites.value[0] : "")
 );
 const discoveredSites = ref([]);
+const kernelLinkedSites = ref([]);
 const compliance = ref(null);
 const checked = ref(false);
 const loading = ref(false);
@@ -538,6 +657,31 @@ const unmetConditions = computed(() => {
   }
   return items;
 });
+
+const showCreateSiteForm = ref(false);
+const creatingQuickSite = ref(false);
+const quickSiteError = ref("");
+const newSiteCode = ref("");
+const newSiteName = ref("");
+const newSiteCountry = ref("US");
+const newSiteInstitution = ref("");
+const newSiteReason = ref("");
+
+const canQuickCreateSite = computed(
+  () =>
+    typeof kernelApi.createSite === "function" &&
+    typeof kernelApi.linkSiteToStudy === "function"
+);
+
+const canSubmitQuickSite = computed(
+  () =>
+    !creatingQuickSite.value &&
+    Boolean(newSiteCode.value.trim()) &&
+    Boolean(newSiteName.value.trim()) &&
+    newSiteCountry.value.trim().length === 2 &&
+    Boolean(newSiteInstitution.value.trim()) &&
+    Boolean(newSiteReason.value.trim())
+);
 
 const kernelStudyRef = ref("");
 const kernelSites = ref([]);
@@ -617,8 +761,16 @@ async function linkSiteInKernel() {
       idempotencyKey: nextKernelIdempotencyKey(),
     });
     kernelSiteReason.value = "";
+    invalidateStudySitesCache(studyCode.value);
     await refreshKernelSites(studyCode.value);
+    void loadKernelLinkedSites();
     kernelSiteFeedback.value = `Linked site ${linked.site_code || site} to study (${linked.status}).`;
+    kernelBusy.value = false;
+    void handoffFocus([
+      "#kernel-site-active-banner",
+      "#kernel-site-activate-reason",
+      "#site-activation-title",
+    ]);
   } catch (err) {
     kernelSiteError.value = describeKernelError(err);
   } finally {
@@ -649,6 +801,8 @@ async function activateKernelSite() {
     kernelSiteReason.value = "";
     await refreshKernelSites(studyCode.value);
     kernelSiteFeedback.value = `Activated kernel study site ${activated.site_code || siteCode.value.trim()}.`;
+    kernelBusy.value = false;
+    void handoffFocus(["#kernel-site-active-banner", "#site-activation-title"]);
   } catch (err) {
     kernelSiteError.value = describeKernelError(err);
   } finally {
@@ -657,22 +811,33 @@ async function activateKernelSite() {
 }
 
 const siteOptions = computed(() => {
-  const merged = new Set(DEFAULT_KNOWN_SITES);
+  const byCode = new Map();
+  for (const item of kernelLinkedSites.value) {
+    if (item?.code) {
+      byCode.set(item.code, item.label || item.code);
+    }
+  }
+  for (const s of DEFAULT_KNOWN_SITES) {
+    if (s && !byCode.has(s)) byCode.set(s, s);
+  }
   for (const s of assignedSites.value) {
-    if (s) merged.add(s);
+    if (s && !byCode.has(s)) byCode.set(s, s);
   }
   for (const s of discoveredSites.value) {
-    if (s) merged.add(s);
+    if (s && !byCode.has(s)) byCode.set(s, s);
   }
   if (siteCode.value?.trim()) {
-    merged.add(siteCode.value.trim());
+    const trimmed = siteCode.value.trim();
+    if (!byCode.has(trimmed)) byCode.set(trimmed, trimmed);
   }
-  return [...merged].sort((a, b) => a.localeCompare(b));
+  return [...byCode.entries()]
+    .map(([code, label]) => ({ code, label }))
+    .sort((a, b) => a.code.localeCompare(b.code));
 });
 
 const pickerValue = computed(() => {
   const trimmed = siteCode.value?.trim() || "";
-  return siteOptions.value.includes(trimmed) ? trimmed : "";
+  return siteOptions.value.some((opt) => opt.code === trimmed) ? trimmed : "";
 });
 
 function onPickSite(event) {
@@ -683,18 +848,115 @@ function onPickSite(event) {
   }
 }
 
-async function loadStudySites() {
+function nextQuickSiteKey(prefix) {
+  if (isDemoBuild()) {
+    return `${prefix}-${demoRandomToken(12, 36, `${prefix}.idempotency`)}`;
+  }
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${prefix}-${demoRandomToken(12, 36, `${prefix}.idempotency`)}`;
+}
+
+function toggleCreateSiteShortcut() {
+  const opening = !showCreateSiteForm.value;
+  showCreateSiteForm.value = opening;
+  quickSiteError.value = "";
+  void handoffFocus(
+    opening ? "#site-activation-new-code" : "#btn-site-activation-new-site",
+    { scrollIfOffscreen: opening }
+  );
+}
+
+async function loadKernelLinkedSites() {
   const study = studyCode.value?.trim();
   if (!study) return;
   try {
-    const milestones = await ctmsApi.listSiteMilestones({ study_id: study });
-    if (Array.isArray(milestones)) {
-      discoveredSites.value = milestones
-        .map((m) => m.site_id)
-        .filter((s) => Boolean(s));
-    }
+    kernelLinkedSites.value = await findStudySites(study);
   } catch {
-    // Optional site discovery should never block manual site entry.
+    kernelLinkedSites.value = [];
+  }
+}
+
+async function loadStudySites() {
+  const study = studyCode.value?.trim();
+  if (!study) return;
+  const [linkedResult, milestoneResult] = await Promise.allSettled([
+    findStudySites(study),
+    ctmsApi.listSiteMilestones({ study_id: study }),
+  ]);
+  if (linkedResult.status === "fulfilled") {
+    kernelLinkedSites.value = linkedResult.value;
+  }
+  if (
+    milestoneResult.status === "fulfilled" &&
+    Array.isArray(milestoneResult.value)
+  ) {
+    discoveredSites.value = milestoneResult.value
+      .map((m) => m.site_id)
+      .filter((s) => Boolean(s));
+  }
+}
+
+async function submitQuickSite() {
+  if (!canSubmitQuickSite.value) return;
+  quickSiteError.value = "";
+  creatingQuickSite.value = true;
+  try {
+    const created = await kernelApi.createSite({
+      code: newSiteCode.value.trim(),
+      name: newSiteName.value.trim(),
+      country: newSiteCountry.value.trim().toUpperCase(),
+      institutionName: newSiteInstitution.value.trim(),
+      reason: newSiteReason.value.trim(),
+      idempotencyKey: nextQuickSiteKey("site-activation-create"),
+    });
+
+    const study = studyCode.value.trim();
+    if (study) {
+      await kernelApi.linkSiteToStudy({
+        studyRef: study,
+        siteRef: created.ref,
+        siteCode: created.code,
+        reason: newSiteReason.value.trim(),
+        idempotencyKey: nextQuickSiteKey("site-activation-link"),
+      });
+      invalidateStudySitesCache(study);
+      void refreshKernelSites(study);
+    }
+
+    const label =
+      created.name && created.name !== created.code
+        ? `${created.code} — ${created.name}`
+        : created.code;
+    const merged = new Map(kernelLinkedSites.value.map((s) => [s.code, s]));
+    merged.set(created.code, { code: created.code, label });
+    kernelLinkedSites.value = [...merged.values()].sort((a, b) =>
+      a.code.localeCompare(b.code)
+    );
+
+    siteCode.value = created.code;
+    showCreateSiteForm.value = false;
+    newSiteCode.value = "";
+    newSiteName.value = "";
+    newSiteInstitution.value = "";
+    newSiteReason.value = "";
+    creatingQuickSite.value = false;
+    void handoffFocus([
+      "#site-activation-site-picker",
+      "#site-activation-site",
+    ]);
+    toasts.push({
+      tone: "success",
+      title: `Site ${created.code} registered`,
+      message: study
+        ? `Linked ${created.code} to ${study}.`
+        : `Registered ${created.code} in your workspace.`,
+    });
+  } catch (err) {
+    quickSiteError.value = describeKernelError(err);
+  } finally {
+    creatingQuickSite.value = false;
   }
 }
 
@@ -705,6 +967,7 @@ watch(
     if (!value) return;
     studyCode.value = value;
     discoveredSites.value = [];
+    kernelLinkedSites.value = [];
     compliance.value = null;
     checked.value = false;
     loadError.value = false;
@@ -715,6 +978,7 @@ watch(
     kernelSites.value = [];
     kernelSiteFeedback.value = "";
     kernelSiteError.value = "";
+    loadKernelLinkedSites();
     void refreshKernelSites(value);
   }
 );
@@ -833,6 +1097,7 @@ async function activate() {
         activated_by: authStore.userId || current.activated_by || null,
       };
     }
+    void handoffFocus(["#site-activated-summary", "#site-activation-title"]);
   } catch (err) {
     if (isForbiddenScopeError(err)) {
       scopeGuidance.value = formatScopeForbiddenGuidance(err, {
@@ -843,6 +1108,7 @@ async function activate() {
         hasAllStudiesScope: authStore.hasAllStudiesScope,
       });
       compliance.value = null;
+      void handoffFocus("#site-activation-title");
     } else {
       toasts.apiError(`Site ${current.site_id} was not activated`, err);
     }
@@ -853,6 +1119,9 @@ async function activate() {
 
 // Opened for a study and site (CTMS reads ?studyId= and ?siteId=, or token claims provide assigned scope): show status straight away.
 onMounted(() => {
+  if (props.studyCode) {
+    loadKernelLinkedSites();
+  }
   if (studyCode.value.trim()) {
     void refreshKernelSites(studyCode.value);
   }
@@ -1045,6 +1314,49 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
   padding: 8px 12px;
+}
+
+.quick-site-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+}
+
+.quick-site-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.quick-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quick-field-wide {
+  grid-column: 1 / -1;
+}
+
+.quick-field label {
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+
+.quick-field input {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+}
+
+.quick-site-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .kernel-governance {

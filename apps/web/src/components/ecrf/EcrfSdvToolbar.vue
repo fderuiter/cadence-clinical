@@ -237,19 +237,24 @@ const nonMissingReadinessBlockers = computed(() =>
 <style scoped>
 .ecrf-form-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
   font-size: 0.85rem;
 }
 .ecrf-form-summary dt {
   font-weight: 600;
 }
+.ecrf-form-summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .ecrf-form-complete {
   color: var(--semantic-color-success-dark);
   font-weight: 600;
 }
 .ecrf-form-incomplete {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-form-locks {
   background-color: var(--semantic-color-surface-header);
@@ -289,21 +294,6 @@ const nonMissingReadinessBlockers = computed(() =>
 .ecrf-bulk-sdv-result--failed {
   color: var(--semantic-color-error-text-dark);
 }
-.ecrf-form-outcome {
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ecrf-form-outcome--saved {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-form-outcome--failed {
-  background-color: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
-}
 </style>
+
+<style scoped src="./ecrfFormBanners.css"></style>

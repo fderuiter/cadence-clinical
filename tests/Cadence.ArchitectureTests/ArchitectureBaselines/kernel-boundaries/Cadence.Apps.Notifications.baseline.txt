@@ -1,0 +1,11 @@
+# Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
+# One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationAuditLog.TenantId
+K-MOD-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationDelivery.TenantId
+K-MOD-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationRecord.TenantId
+K-MOD-1|Cadence.Apps.Notifications|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationAuditLog
+K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationPayload.SiteId
+K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationPayload.SubjectId
+K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationRenderModel.StudyId

@@ -147,44 +147,79 @@
 
       <div
         class="panes"
-        :class="{ 'panes--inspector-collapsed': inspectorCollapsed }"
+        :class="{
+          'panes--navigator-collapsed': navigatorCollapsed,
+          'panes--inspector-collapsed': inspectorCollapsed,
+        }"
       >
-        <nav id="canvas-navigator" class="navigator" aria-label="Sections">
-          <router-link
-            id="nav-study-home"
-            :to="scopedStudyLocation()"
-            class="nav-link"
-            :class="{ current: !stage }"
-            :aria-current="!stage ? 'page' : undefined"
-          >
-            Study home
-          </router-link>
+        <nav
+          id="canvas-navigator"
+          class="navigator"
+          :class="{ 'navigator--collapsed': navigatorCollapsed }"
+          :data-collapsed="navigatorCollapsed ? 'true' : 'false'"
+          aria-label="Sections"
+        >
+          <div class="navigator-rail">
+            <button
+              id="btn-toggle-navigator"
+              type="button"
+              class="navigator-toggle"
+              :aria-expanded="!navigatorCollapsed"
+              aria-controls="canvas-navigator-body"
+              :aria-label="
+                navigatorCollapsed ? 'Expand navigator' : 'Collapse navigator'
+              "
+              :title="
+                navigatorCollapsed ? 'Expand navigator' : 'Collapse navigator'
+              "
+              @click="toggleNavigator"
+            >
+              <span aria-hidden="true">{{
+                navigatorCollapsed ? "▸" : "◂"
+              }}</span>
+            </button>
+          </div>
           <div
-            v-for="group in navigatorStages"
-            :key="group.id"
-            class="nav-group"
+            v-if="!navigatorCollapsed"
+            id="canvas-navigator-body"
+            class="navigator-body"
           >
-            <h2 class="nav-group-title">
-              {{ group.label }}
-            </h2>
-            <ul v-if="group.sections.length">
-              <li v-for="item in group.sections" :key="item.id">
-                <router-link
-                  :id="`nav-${item.id}`"
-                  :to="
-                    scopedStudyLocation({ stage: group.id, section: item.id })
-                  "
-                  class="nav-link"
-                  :class="{ current: section?.id === item.id }"
-                  :aria-current="section?.id === item.id ? 'page' : undefined"
-                >
-                  {{ item.label }}
-                </router-link>
-              </li>
-            </ul>
-            <p v-else class="nav-empty">
-              No sections are available in this stage yet.
-            </p>
+            <router-link
+              id="nav-study-home"
+              :to="scopedStudyLocation()"
+              class="nav-link"
+              :class="{ current: !stage }"
+              :aria-current="!stage ? 'page' : undefined"
+            >
+              Study home
+            </router-link>
+            <div
+              v-for="group in navigatorStages"
+              :key="group.id"
+              class="nav-group"
+            >
+              <h2 class="nav-group-title">
+                {{ group.label }}
+              </h2>
+              <ul v-if="group.sections.length">
+                <li v-for="item in group.sections" :key="item.id">
+                  <router-link
+                    :id="`nav-${item.id}`"
+                    :to="
+                      scopedStudyLocation({ stage: group.id, section: item.id })
+                    "
+                    class="nav-link"
+                    :class="{ current: section?.id === item.id }"
+                    :aria-current="section?.id === item.id ? 'page' : undefined"
+                  >
+                    {{ item.label }}
+                  </router-link>
+                </li>
+              </ul>
+              <p v-else class="nav-empty">
+                No sections are available in this stage yet.
+              </p>
+            </div>
           </div>
         </nav>
 
@@ -344,6 +379,12 @@
               :key="`home-sites-${studyCode}`"
               :study-code="studyCode"
               :can-manage-sites="authStore.canManageWorkspaceSites"
+              :manage-sites-location="
+                scopedStudyLocation({ stage: 'conduct', section: 'sites' })
+              "
+              :active-site="siteFilter || zoomSite"
+              :active-participant="activeParticipantScopeParam"
+              :active-node="activeInspectorParticipantNodeParam"
               compact
               @open-participants="openParticipantsForSite"
             />
@@ -363,10 +404,45 @@
             :status="statusFilter"
             :site-id="siteFilter"
             :query="participantSearchFilter"
-            :selected-id="(selectedNode ?? recordRef)?.id ?? ''"
+            :selected-id="
+              selectedParticipant?.id ??
+              recordParticipant?.id ??
+              (selectedNode?.kind === 'participant'
+                ? selectedNode.id
+                : recordRef?.kind === 'participant'
+                  ? recordRef.id
+                  : '')
+            "
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
             @filter="applyParticipantFilter"
+          />
+
+          <SitesSection
+            v-else-if="section?.id === 'sites'"
+            :key="`sites-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+            @open-participants="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                    site: code || undefined,
+                  })
+                )
+            "
+            @open-activation="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'start',
+                    section: 'site-activation',
+                    site: code || undefined,
+                  })
+                )
+            "
           />
 
           <ProtocolVersionsSection
@@ -375,14 +451,6 @@
             :study-code="studyCode"
             :selected-ref="selectedVersionText"
             @select="selectVersion"
-          />
-
-          <StudySitesPanel
-            v-else-if="section?.id === 'sites'"
-            :key="`sites-${studyCode}`"
-            :study-code="studyCode"
-            :can-manage-sites="authStore.canManageWorkspaceSites"
-            @open-participants="openParticipantsForSite"
           />
 
           <SiteActivationPanel
@@ -478,6 +546,9 @@
             :key="`validation-${studyCode}`"
             :study-code="studyCode"
             :can-manage-rules="canManageRules"
+            :site="siteFilter || zoomSite"
+            :participant="activeParticipantScopeParam"
+            :node="activeInspectorParticipantNodeParam"
           />
 
           <ExportsSection
@@ -983,7 +1054,7 @@ import {
   formatNodeRef,
   observationNodeRef,
   parseNodeRef,
-  tryNodeRef,
+  type NodeRef,
 } from "../canvas/nodeRef";
 import {
   ETMF_READ_ROLE_REASON,
@@ -1008,8 +1079,13 @@ import {
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import {
+  enrollmentIdFromParticipant,
+  participantNodeRef,
+  useStudyCanvasStore,
+} from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1020,6 +1096,7 @@ import ValidationSection from "../components/canvas/ValidationSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import SitesSection from "../components/canvas/SitesSection.vue";
 import QueriesSection, {
   type StudyQueriesFilterState,
 } from "../components/canvas/QueriesSection.vue";
@@ -1078,6 +1155,7 @@ interface StudyQuery {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
@@ -1088,9 +1166,59 @@ const paletteOpen = ref(false);
 const typedStudy = ref("");
 const inspectorCollapsed = ref(true);
 const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
+const MEDIUM_CANVAS_MEDIA_QUERY = "(min-width: 961px) and (max-width: 1280px)";
+const isMediumCanvasViewport = ref(false);
+const manualNavigatorCollapsed = ref<boolean | null>(null);
+let mediumCanvasMediaList: MediaQueryList | null = null;
 const topbarRef = ref<HTMLElement | null>(null);
 const topbarHeight = ref(45);
 let topbarResizeObserver: ResizeObserver | null = null;
+
+function syncMediumCanvasViewport() {
+  if (typeof window === "undefined") {
+    isMediumCanvasViewport.value = false;
+    return;
+  }
+  if (typeof window.matchMedia === "function") {
+    const mql =
+      mediumCanvasMediaList ?? window.matchMedia(MEDIUM_CANVAS_MEDIA_QUERY);
+    isMediumCanvasViewport.value = Boolean(mql?.matches);
+    return;
+  }
+  isMediumCanvasViewport.value =
+    window.innerWidth >= 961 && window.innerWidth <= 1280;
+}
+
+function toggleNavigator() {
+  manualNavigatorCollapsed.value = !navigatorCollapsed.value;
+}
+
+async function focusAndScrollInspector(options?: {
+  scrollIntoView?: boolean;
+}): Promise<void> {
+  inspectorRef.value?.expand();
+  await nextTick();
+  syncTopbarHeight();
+  await nextTick();
+  if (options?.scrollIntoView === false || typeof document === "undefined") {
+    return;
+  }
+  const inspectorEl = document.getElementById("canvas-inspector");
+  if (!inspectorEl) return;
+  const computedPos =
+    typeof window !== "undefined" &&
+    typeof window.getComputedStyle === "function"
+      ? window.getComputedStyle(inspectorEl).position
+      : "";
+  const isDesktopSticky =
+    typeof window !== "undefined" &&
+    window.innerWidth > 960 &&
+    computedPos === "sticky";
+  if (isDesktopSticky) {
+    return;
+  }
+  inspectorEl.scrollIntoView?.({ block: "start", behavior: "auto" });
+}
 
 function syncTopbarHeight() {
   const el = topbarRef.value;
@@ -1098,6 +1226,10 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
+    el.closest?.<HTMLElement>(".canvas")?.style?.setProperty(
+      "--canvas-topbar-height",
+      `${measured}px`
+    );
   }
 }
 
@@ -1120,10 +1252,12 @@ const linkSandboxSiteOnCreate = ref(true);
 
 const defaultStarterSite = computed<KernelSiteSummary | null>(() => {
   if (workspaceSites.value.length === 0) return null;
-  const assigned = authStore.assignedSiteIds ?? [];
+  const assigned: string[] = authStore.assignedSiteIds ?? [];
   if (assigned.length > 0) {
     const matched = workspaceSites.value.find((site) =>
-      assigned.some((code) => code.toLowerCase() === site.code.toLowerCase())
+      assigned.some(
+        (code: string) => code.toLowerCase() === site.code.toLowerCase()
+      )
     );
     if (matched) return matched;
   }
@@ -1372,25 +1506,23 @@ async function submitCreateStudy() {
       } catch {
         // Non-OIDC test sessions continue with the existing in-memory session.
       }
+      const createdCode = created?.code;
       if (
-        created?.code &&
+        createdCode &&
         !authStore.studyIds.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.studyIds = [...authStore.studyIds, created.code];
+        authStore.studyIds = [...authStore.studyIds, createdCode];
       }
       if (
-        created?.code &&
+        createdCode &&
         Array.isArray(authStore.assignedStudies) &&
         !authStore.assignedStudies.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.assignedStudies = [
-          ...authStore.assignedStudies,
-          created.code,
-        ];
+        authStore.assignedStudies = [...authStore.assignedStudies, createdCode];
       }
       if (
         starterSite?.code &&
@@ -1538,11 +1670,15 @@ const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
 const resolvedParticipantId = ref("");
 let lineageRequest = 0;
 
-function isParticipantPending(id: string | undefined): boolean {
-  if (!studyCode.value || !id) return false;
-  if (canvas.knownParticipants[id]) return false;
-  if (canvas.participantLookups[id]) return true;
-  return !canvas.failedParticipantIds[id];
+function isParticipantNodePending(node: NodeRef | null | undefined): boolean {
+  if (!studyCode.value || !node) return false;
+  if (canvas.findKnownParticipant(node)) return false;
+  if (node.kind === "enrollment") {
+    if (canvas.enrollmentLookups[node.id]) return true;
+    return !canvas.failedEnrollmentIds[node.id];
+  }
+  if (canvas.participantLookups[node.id]) return true;
+  return !canvas.failedParticipantIds[node.id];
 }
 
 const loadedFormParticipant = computed<SubjectSummary | null>(() => {
@@ -1576,9 +1712,10 @@ const {
 } = useCanvasSelection({
   query: () => route.query,
   knownParticipants: () => canvas.knownParticipants,
+  findParticipant: (node) => canvas.findKnownParticipant(node),
   loadedFormParticipant,
   lineageParticipant,
-  isParticipantPending,
+  isParticipantNodePending,
   canResolveRemotely: canResolveNodesRemotely,
 });
 
@@ -1615,8 +1752,7 @@ const activeParticipantNodeText = computed(() => {
     return selectionActiveParticipantNodeText.value;
   }
   if (codeQueryParticipant.value) {
-    const node = tryNodeRef("participant", codeQueryParticipant.value.id);
-    return node ? formatNodeRef(node) : "";
+    return participantNodeRef(codeQueryParticipant.value);
   }
   return "";
 });
@@ -1655,7 +1791,7 @@ const askText = computed(() => single(route.query.ask).trim());
 
 const isRecordParticipantLoading = computed(() =>
   recordRef.value
-    ? isParticipantPending(recordRef.value.id)
+    ? isParticipantNodePending(recordRef.value)
     : Boolean(
         studyCode.value &&
         participantCodeQuery.value &&
@@ -1678,12 +1814,18 @@ async function loadInspectedProtocolVersion(text: string) {
     const version = await kernelApi.getProtocolVersion(text);
     if (request === versionRequest) {
       inspectedVersion.value = version;
-      seedNodeSummary(version.ref, {
-        kind: "protocol_version",
-        code: version.version,
-        title: `Protocol ${version.version}`,
-        status: version.status,
-      });
+      const versionNumber =
+        version.number !== null && version.number !== undefined
+          ? String(version.number)
+          : text;
+      if (version.ref) {
+        seedNodeSummary(version.ref, {
+          kind: "protocol_version",
+          code: versionNumber,
+          title: `Protocol v${versionNumber}`,
+          status: version.status,
+        });
+      }
     }
   } catch (e) {
     if (request === versionRequest) {
@@ -1739,12 +1881,16 @@ const isSelectedParticipantMissing = computed(
 );
 
 const activeEnrollmentId = computed(() => {
+  const persisted = enrollmentIdFromParticipant(activeFormParticipant.value);
+  if (persisted) return persisted;
   if (
     activeFormParticipant.value &&
-    canvas.record.subjectCode === activeFormParticipant.value.subject_id
+    canvas.record.subjectCode === activeFormParticipant.value.subject_id &&
+    canvas.record.enrollmentId
   ) {
     return canvas.record.enrollmentId;
   }
+  if (recordRef.value?.kind === "enrollment") return recordRef.value.id;
   if (loadedForm.value?.enrollment_id) return loadedForm.value.enrollment_id;
   return null;
 });
@@ -1882,38 +2028,33 @@ function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
   );
 }
 
-function selectParticipant(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  if (!node) return;
-  inspectorRef.value?.expand();
-  router.push(
+async function selectParticipant(participant: SubjectSummary) {
+  const nodeText = participantNodeRef(participant);
+  if (!nodeText) return;
+  await router.push(
     studyLocation({
       stage: "conduct",
       section: "participants",
       status: statusFilter.value,
       site: siteFilter.value,
       q: participantSearchFilter.value,
-      node: formatNodeRef(node),
+      node: nodeText,
     })
   );
-  // Stacked panes on a narrow screen: bring the inspector into view (§2.4).
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
+  await canvas.requestInspectorFocus({
+    nodeRef: nodeText,
+    scrollIntoView: true,
+  });
 }
 
 /** The participant's data, opened at the participant zoom level with the participant in the inspector. */
 function recordLocationFor(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  const text = node ? formatNodeRef(node) : "";
+  const text = participantNodeRef(participant);
   return studyLocation({ stage: "conduct", participant: text });
 }
 
 function newFormLocationFor(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  const text = node ? formatNodeRef(node) : "";
+  const text = participantNodeRef(participant);
   return studyLocation({ stage: "conduct", participant: text, form: "new" });
 }
 
@@ -1922,8 +2063,7 @@ function newFormCellLocationFor(
   specId: string,
   visitId?: string | null
 ) {
-  const node = tryNodeRef("participant", participant.id);
-  const text = node ? formatNodeRef(node) : "";
+  const text = participantNodeRef(participant);
   return studyLocation({
     stage: "conduct",
     participant: text,
@@ -1951,11 +2091,12 @@ function ecrfHandoffLocationFor(participant: SubjectSummary) {
     query.siteId = siteIdForHandoff;
   }
   const enrollmentForParticipant =
-    canvas.record.subjectCode === participant.subject_id
+    enrollmentIdFromParticipant(participant) ??
+    (canvas.record.subjectCode === participant.subject_id
       ? canvas.record.enrollmentId
       : loadedForm.value?.participant_id === participant.id
         ? loadedForm.value.enrollment_id
-        : null;
+        : null);
   if (enrollmentForParticipant) {
     query.enrollmentId = enrollmentForParticipant;
   }
@@ -2246,6 +2387,14 @@ const {
   hasExternalDrafts: () => hasUserScopedDrafts(),
   onConfirmSignOut: async () => {
     await authStore.logout();
+    if (
+      router &&
+      typeof router.replace === "function" &&
+      route?.path !== "/login" &&
+      route?.name !== "login"
+    ) {
+      await router.replace("/login");
+    }
   },
 });
 
@@ -2268,6 +2417,15 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
+    if (
+      isDemoBuild() &&
+      siteFilter.value &&
+      lineage?.siteCode &&
+      lineage.siteCode !== siteFilter.value
+    ) {
+      resolvedLineage.value = null;
+      return;
+    }
     if (lineage?.subjectCode && !zoomParticipant.value) {
       const participant = await canvas.resolveParticipantByCode(
         lineage.subjectCode
@@ -2279,21 +2437,19 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
 }
 
-function selectVersion(version: KernelProtocolVersion) {
+async function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
-  inspectorRef.value?.expand();
-  router.push(
+  await router.push(
     studyLocation({
       stage: "design",
       section: "protocol-versions",
       node: version.ref,
     })
   );
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
+  await canvas.requestInspectorFocus({
+    nodeRef: version.ref,
+    scrollIntoView: true,
+  });
 }
 
 function applyParticipantFilter(filter: {
@@ -2353,36 +2509,83 @@ function openParticipantsForSite(siteCode: string) {
   );
 }
 
-function goToPaletteTarget(target: PaletteTarget) {
+async function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
+  const targetStudy = (target.studyCode || studyCode.value).trim();
+  const isCrossStudy = Boolean(
+    studyCode.value && targetStudy && targetStudy !== studyCode.value
+  );
+  if (isCrossStudy) {
+    syncInstantiatedClinicalScope({
+      activeStudyId: targetStudy,
+      activeSiteId: "",
+      activeSubjectId: "",
+    });
+  }
   if (target.ask) {
-    inspectorRef.value?.expand();
-    // Ask keeps the view and its selection, and opens Assist with the question.
-    router.push({
+    // Ask keeps the view and its selection within the same study, and opens Assist with the question.
+    await router.push({
       name: "study",
-      params: { studyCode: target.studyCode },
-      query: { ...route.query, ask: target.ask },
+      params: { studyCode: targetStudy },
+      query: isCrossStudy
+        ? { ask: target.ask }
+        : { ...route.query, ask: target.ask },
+    });
+    await canvas.requestInspectorFocus({
+      nodeRef: null,
+      scrollIntoView: true,
     });
     return;
   }
   if (target.participant) {
-    if (target.studyCode && target.studyCode !== canvas.studyCode) {
-      canvas.openStudy(target.studyCode);
+    if (targetStudy && targetStudy !== canvas.studyCode) {
+      canvas.openStudy(targetStudy);
     }
     canvas.rememberParticipants([target.participant]);
-    inspectorRef.value?.expand();
+    const nodeText = participantNodeRef(target.participant);
+    const activeSite = siteFilter.value || zoomSite.value;
+    const compatibleSite =
+      !isCrossStudy &&
+      activeSite &&
+      (!target.participant.site_id || target.participant.site_id === activeSite)
+        ? activeSite
+        : undefined;
+    await router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+          site: compatibleSite,
+          node: nodeText,
+        },
+        targetStudy
+      )
+    );
+    await canvas.requestInspectorFocus({
+      nodeRef: nodeText,
+      scrollIntoView: true,
+    });
+    return;
   }
-  const node = target.participant
-    ? tryNodeRef("participant", target.participant.id)
-    : null;
-  router.push(
-    studyLocation(
+  if (isCrossStudy) {
+    await router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+        },
+        targetStudy
+      )
+    );
+    return;
+  }
+  await router.push(
+    scopedStudyLocation(
       {
         stage: target.stage,
         section: target.section,
-        node: node ? formatNodeRef(node) : "",
       },
-      target.studyCode
+      targetStudy
     )
   );
 }
@@ -2432,33 +2635,60 @@ watch(callerAuthKey, (next, prev) => {
 watch(
   [
     studyCode,
-    () => recordRef.value?.id,
-    () => selectedNode.value?.id,
+    () =>
+      recordRef.value ? `${recordRef.value.kind}:${recordRef.value.id}` : "",
+    () =>
+      selectedNode.value
+        ? `${selectedNode.value.kind}:${selectedNode.value.id}`
+        : "",
     () => loadedForm.value?.participant_id,
     () => codeQueryParticipant.value?.id,
     callerAuthKey,
   ],
-  ([code, recordId, selectedId, formParticipantId, codeParticipantId]) => {
+  ([code, , , formParticipantId, codeParticipantId]) => {
     if (!code) return;
-    const ids = new Set(
-      [recordId, selectedId, formParticipantId, codeParticipantId].filter(
-        (id): id is string => Boolean(id)
+    const postRandomizationStates = [
+      "RANDOMIZED",
+      "ACTIVE",
+      "UNBLINDED",
+      "RECONSENT_REQUIRED",
+      "COMPLETED",
+      "WITHDRAWN",
+    ];
+    const hydratedIds = new Set<string>();
+    for (const node of [recordRef.value, selectedNode.value]) {
+      if (!node) continue;
+      const known = canvas.findKnownParticipant(node);
+      if (!known) {
+        if (node.kind === "enrollment") {
+          void canvas.ensureParticipantByEnrollmentId(node.id);
+        } else {
+          void canvas.ensureParticipantById(node.id);
+        }
+      } else if (!hydratedIds.has(known.id)) {
+        hydratedIds.add(known.id);
+        if (
+          known.treatment_group === undefined &&
+          postRandomizationStates.includes(known.status)
+        ) {
+          void refreshParticipantDetailMutation(canvas, known.id);
+        }
+      }
+    }
+    const directIds = new Set(
+      [formParticipantId, codeParticipantId].filter((id): id is string =>
+        Boolean(id)
       )
     );
-    for (const id of ids) {
+    for (const id of directIds) {
+      if (hydratedIds.has(id)) continue;
+      hydratedIds.add(id);
       const known = canvas.knownParticipants[id];
       if (!known) {
         void canvas.ensureParticipantById(id);
       } else if (
         known.treatment_group === undefined &&
-        [
-          "RANDOMIZED",
-          "ACTIVE",
-          "UNBLINDED",
-          "RECONSENT_REQUIRED",
-          "COMPLETED",
-          "WITHDRAWN",
-        ].includes(known.status)
+        postRandomizationStates.includes(known.status)
       ) {
         void refreshParticipantDetailMutation(canvas, id);
       }
@@ -2479,14 +2709,14 @@ watch(
     try {
       const resolved = await canvas.resolveParticipantByCode(subjectCode, code);
       if (seq !== conductSubjectSeq) return;
-      const node = resolved ? tryNodeRef("participant", resolved.id) : null;
-      if (node) {
+      const nodeText = resolved ? participantNodeRef(resolved) : "";
+      if (nodeText) {
         await router.replace(
           studyLocation(
             {
               stage: "conduct",
               site: siteFilter.value || undefined,
-              participant: formatNodeRef(node),
+              participant: nodeText,
               form: formQuery.value || undefined,
               spec: initialSpecId.value || undefined,
               visit: initialVisitId.value || undefined,
@@ -2537,6 +2767,19 @@ watch(openObservationRef, (refText) => {
   if (!refText) {
     loadedObservation.value = null;
   }
+});
+
+const autoCollapseNavigator = computed(
+  () =>
+    isMediumCanvasViewport.value &&
+    (hasOpenForm.value || Boolean(openObservationRef.value))
+);
+const navigatorCollapsed = computed(
+  () => manualNavigatorCollapsed.value ?? autoCollapseNavigator.value
+);
+
+watch([studyCode, autoCollapseNavigator], () => {
+  manualNavigatorCollapsed.value = null;
 });
 
 watch([hasOpenForm, openObservationRef], ([formOpen, obsRef]) => {
@@ -2662,8 +2905,24 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
-function shouldSuppressUnsavedGuard(): boolean {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
+  if (
+    !authStore.isAuthenticated ||
+    authStore.sessionExpired ||
+    authStore.isLoggingOut
+  ) {
+    return true;
+  }
+  if (
+    to &&
+    (to.name === "forbidden" ||
+      to.path === "/forbidden" ||
+      to.name === "login" ||
+      to.path === "/login")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -2687,8 +2946,8 @@ async function confirmDiscardUnsavedForm(): Promise<boolean> {
 }
 
 if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  onBeforeRouteLeave((to) => {
+    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
         confirmed ? undefined : false
       );
@@ -2700,7 +2959,7 @@ if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to) => {
     if (
       formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
+      !shouldSuppressUnsavedGuard(to) &&
       leavesActiveForm(to)
     ) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
@@ -2725,10 +2984,33 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
 }
 
+watch(
+  () => ({
+    studyCode: studyCode.value,
+    stage: stage.value?.id || "",
+    section: section.value?.id || "",
+    siteCode: zoomSite.value || "",
+    subjectCode: zoomParticipantCode.value || canvas.record.subjectCode || "",
+    nodeRef: inspectedNodeText.value || "",
+    participantNodeRef: activeParticipantNodeText.value || "",
+    form: formQuery.value || "",
+    formId: openFormId.value || "",
+    formSpecId:
+      loadedForm.value?.collection_spec_id || initialSpecId.value || "",
+    isNewForm: isNewForm.value,
+    observationRef: openObservationRef.value || "",
+    proposalRef: proposalRef.value || "",
+  }),
+  (scopeSnapshot) => {
+    knowledgeStore.setCanvasEscalationContext(scopeSnapshot);
+  },
+  { immediate: true }
+);
+
 const SECTION_HEADING_TARGETS: Record<string, string[]> = {
   participants: ["#participants-title"],
   "protocol-versions": ["#protocol-versions-title"],
-  sites: ["#study-sites-title"],
+  sites: ["#sites-section-title", "#study-sites-title"],
   "site-activation": ["#site-activation-title"],
   "startup-greenlight": ["#ctms-greenlight-title"],
   "site-milestones": ["#ctms-milestones-title"],
@@ -3063,9 +3345,54 @@ watch(
   { flush: "sync" }
 );
 
+function handleDemoReset() {
+  formWorkspaceDirty.value = false;
+  loadedForm.value = null;
+  loadedObservation.value = null;
+  resolvedLineage.value = null;
+  resolvedParticipantId.value = "";
+  lineageRequest++;
+  const code = studyCode.value;
+  canvas.openStudy(code);
+  if (!code) {
+    loadStudyDirectory();
+  } else if (!stage.value) {
+    canvas.loadPulse();
+  } else if (section.value?.id === "participants") {
+    canvas.loadParticipants({
+      status: statusFilter.value || undefined,
+      siteId: siteFilter.value || undefined,
+      q: participantSearchFilter.value || undefined,
+    });
+  }
+}
+
 let unregisterCanvasExplain: (() => void) | null = null;
+let unregisterInspectorFocus: (() => void) | null = null;
 
 onMounted(() => {
+  syncMediumCanvasViewport();
+  if (typeof window !== "undefined") {
+    if (typeof window.matchMedia === "function") {
+      mediumCanvasMediaList = window.matchMedia(MEDIUM_CANVAS_MEDIA_QUERY);
+      if (typeof mediumCanvasMediaList?.addEventListener === "function") {
+        mediumCanvasMediaList.addEventListener(
+          "change",
+          syncMediumCanvasViewport
+        );
+      } else if (typeof mediumCanvasMediaList?.addListener === "function") {
+        mediumCanvasMediaList.addListener(syncMediumCanvasViewport);
+      }
+    }
+    window.addEventListener("resize", syncMediumCanvasViewport);
+  }
+  unregisterInspectorFocus = canvas.registerInspectorCoordinator(
+    async (request) => {
+      await focusAndScrollInspector({
+        scrollIntoView: request.scrollIntoView,
+      });
+    }
+  );
   unregisterCanvasExplain = canvas.registerExplainCoordinator((options) => {
     if (options?.fromShortcut) return false;
     const targetRef = options?.targetNodeRef;
@@ -3089,25 +3416,46 @@ onMounted(() => {
     return Boolean(inspectorRef.value?.openExplain?.(options));
   });
   window.addEventListener("beforeunload", handleBeforeUnload);
+  window.addEventListener("cadence:demo-reset", handleDemoReset);
   document.addEventListener("click", onWorkspaceInteractionCapture, true);
   document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
   syncTopbarHeight();
+  window.addEventListener("resize", syncTopbarHeight);
   if (
     typeof ResizeObserver !== "undefined" &&
     topbarRef.value instanceof HTMLElement
   ) {
     topbarResizeObserver = new ResizeObserver(() => syncTopbarHeight());
-    topbarResizeObserver.observe(topbarRef.value);
+    topbarResizeObserver.observe(topbarRef.value, { box: "border-box" });
   }
 });
 onUnmounted(() => {
+  knowledgeStore.clearCanvasEscalationContext();
   stopReturnFocusObserver();
+  unregisterInspectorFocus?.();
+  unregisterInspectorFocus = null;
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;
+  if (mediumCanvasMediaList) {
+    if (typeof mediumCanvasMediaList.removeEventListener === "function") {
+      mediumCanvasMediaList.removeEventListener(
+        "change",
+        syncMediumCanvasViewport
+      );
+    } else if (typeof mediumCanvasMediaList.removeListener === "function") {
+      mediumCanvasMediaList.removeListener(syncMediumCanvasViewport);
+    }
+    mediumCanvasMediaList = null;
+  }
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", syncMediumCanvasViewport);
+    window.removeEventListener("resize", syncTopbarHeight);
+  }
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  window.removeEventListener("cadence:demo-reset", handleDemoReset);
   document.removeEventListener("click", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);
@@ -3206,7 +3554,21 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-@media (min-width: 768px) and (max-width: 1280px) {
+@media (min-width: 961px) {
+  .topbar {
+    padding: 0 14px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .zoom-path ol {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 960px) {
   .topbar {
     padding: 0 12px;
     gap: 8px;
@@ -3318,10 +3680,20 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr) 20rem;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.panes.panes--navigator-collapsed {
+  grid-template-columns: 2.75rem minmax(0, 1fr) 20rem;
 }
 
 .panes.panes--inspector-collapsed {
   grid-template-columns: 14rem minmax(0, 1fr) 2.75rem;
+}
+
+.panes.panes--navigator-collapsed.panes--inspector-collapsed {
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
 }
 
 .navigator {
@@ -3330,8 +3702,54 @@ onUnmounted(() => {
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px;
+  min-width: 0;
   background: var(--semantic-color-surface);
+}
+
+.navigator.navigator--collapsed {
+  padding: 8px 6px;
+  align-items: center;
+}
+
+.navigator-rail {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.navigator.navigator--collapsed .navigator-rail {
+  justify-content: center;
+}
+
+.navigator-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px 6px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-dark);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.navigator-toggle:hover {
+  background: var(--neutral-light);
+  color: var(--primary);
+}
+
+.navigator-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .nav-group-title {
@@ -3371,13 +3789,21 @@ onUnmounted(() => {
 .workspace {
   padding: 16px;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
+}
+
+.workspace > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .canvas :deep(#canvas-inspector) {
   position: sticky;
   top: var(--canvas-pane-top);
+  scroll-margin-top: calc(var(--canvas-pane-top, 0px) + 12px);
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
@@ -3605,9 +4031,34 @@ onUnmounted(() => {
   color: var(--neutral-dark);
 }
 
+@media (min-width: 961px) and (max-width: 1280px) {
+  .study-header {
+    padding: 8px 12px;
+    gap: 6px 16px;
+  }
+
+  .panes {
+    grid-template-columns: 11rem minmax(0, 1fr) 15.5rem;
+  }
+
+  .panes.panes--navigator-collapsed {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 15.5rem;
+  }
+
+  .panes.panes--inspector-collapsed {
+    grid-template-columns: 11rem minmax(0, 1fr) 2.75rem;
+  }
+
+  .panes.panes--navigator-collapsed.panes--inspector-collapsed {
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  }
+}
+
 @media (max-width: 960px) {
   .panes,
-  .panes.panes--inspector-collapsed {
+  .panes.panes--navigator-collapsed,
+  .panes.panes--inspector-collapsed,
+  .panes.panes--navigator-collapsed.panes--inspector-collapsed {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -3617,6 +4068,15 @@ onUnmounted(() => {
     overflow-y: visible;
     align-self: stretch;
     border-bottom: 1px solid var(--border);
+  }
+
+  .navigator.navigator--collapsed {
+    align-items: stretch;
+    padding: 6px 12px;
+  }
+
+  .navigator.navigator--collapsed .navigator-rail {
+    justify-content: flex-start;
   }
 
   .workspace {
@@ -3630,6 +4090,12 @@ onUnmounted(() => {
     overflow-y: visible;
     align-self: stretch;
     border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    position: static;
   }
 }
 </style>

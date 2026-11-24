@@ -1,0 +1,15 @@
+# Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
+# One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileAuditLog.TenantId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.SiteId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.StudyId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.TenantId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.GuestLink.TenantId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.PlaybackAuditLog.TenantId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.ShareGrant.TenantId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileAuditLog
+K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.SiteId
+K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.StudyId
+K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.PlaybackAuditLog

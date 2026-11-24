@@ -769,4 +769,168 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       searchSpy.mockRestore();
     }
   });
+
+  it("awaits router.push before requesting inspector focus via studyCanvas store, including re-selecting an active participant and cross-route pending focus", async () => {
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockResolvedValue({ items: [], total: 0 });
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const canvasStore = useStudyCanvasStore();
+    canvasStore.openStudy("CAD-101");
+    const participant = {
+      id: "0192f3c4-5e6a-7b8c-9d0e-000000000042",
+      subject_id: "017-0042",
+      study_id: "CAD-101",
+      site_id: "SITE-17",
+      status: "ACTIVE",
+      active_protocol_version: "1.0",
+      enrollment_index: 42,
+    };
+    canvasStore.paletteParticipants = [participant];
+    canvasStore.paletteTotal = 1;
+    canvasStore.paletteLoaded = true;
+    canvasStore.unfilteredLoadedCount = 1;
+
+    await router.push(
+      "/studies/CAD-101?stage=conduct&section=participants&node=participant:0192f3c4-5e6a-7b8c-9d0e-000000000042"
+    );
+
+    const events = [];
+    let resolveGate;
+    const gate = new Promise((resolve) => {
+      resolveGate = resolve;
+    });
+    vi.restoreAllMocks();
+    const listRestoredSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockResolvedValue({ items: [], total: 0 });
+    const searchRestoredSpy = vi
+      .spyOn(kernelApi, "search")
+      .mockResolvedValue([]);
+    const pushSpy = vi
+      .spyOn(router, "push")
+      .mockImplementationOnce(async () => {
+        events.push("push:start");
+        await gate;
+        events.push("push:done");
+      });
+
+    const unregister = canvasStore.registerInspectorCoordinator((req) => {
+      events.push(`focus:${req.nodeRef}:${req.scrollIntoView}`);
+    });
+
+    try {
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      await body.find("#canvas-palette-input").setValue("017-0042");
+      const participantOption = body
+        .findAll("#canvas-palette [role='option']")
+        .find((o) => o.find(".palette-label").text().includes("017-0042"));
+      expect(participantOption).toBeTruthy();
+
+      await participantOption.trigger("click");
+      expect(wrapper.emitted("close")).toBeTruthy();
+      expect(events).toEqual(["push:start"]);
+
+      resolveGate();
+      await flushPromises();
+      expect(events).toEqual([
+        "push:start",
+        "push:done",
+        "focus:participant:0192f3c4-5e6a-7b8c-9d0e-000000000042:true",
+      ]);
+      wrapper.unmount();
+
+      // Verify pending focus survives openStudy ($reset) when StudyCanvasView mounts after route transition
+      unregister();
+      pushSpy.mockRestore();
+      await canvasStore.requestInspectorFocus({
+        nodeRef: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000042",
+        scrollIntoView: true,
+      });
+      canvasStore.openStudy("CAD-102");
+      const flushed = [];
+      const unregister2 = canvasStore.registerInspectorCoordinator((req) => {
+        flushed.push(req);
+      });
+      expect(flushed).toHaveLength(1);
+      expect(flushed[0].nodeRef).toBe(
+        "participant:0192f3c4-5e6a-7b8c-9d0e-000000000042"
+      );
+      unregister2();
+    } finally {
+      unregister();
+      pushSpy.mockRestore();
+      listRestoredSpy.mockRestore();
+      searchRestoredSpy.mockRestore();
+      listSpy.mockRestore();
+      searchSpy.mockRestore();
+    }
+  });
+
+  it("appends deduplicated role-authorized Preview module destinations in demo builds and suppresses Preview in standard builds", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const stdWrapper = mount(CommandPaletteOverlay, {
+      props: { isOpen: true },
+      global: { plugins: [pinia, router] },
+    });
+    expect(body.find("#canvas-palette").text()).not.toContain("Preview");
+    stdWrapper.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      authStore.startDemoSession();
+      authStore.switchPersona("sponsor_designer");
+
+      const designerWrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      const paletteText = body.find("#canvas-palette").text();
+      expect(paletteText).toContain("Preview");
+      expect(paletteText).toContain("Protocol & schedule designer");
+      expect(paletteText).not.toContain("EDC");
+      expect(paletteText).not.toContain("CTMS");
+      expect(paletteText).not.toContain("eTMF");
+      expect(paletteText).not.toContain("RTSM");
+      expect(paletteText).not.toContain("P21");
+      expect(paletteText).not.toContain("QMS");
+      expect(paletteText).not.toContain("Safety system");
+
+      const labels = body
+        .findAll("#canvas-palette .palette-label")
+        .map((el) => el.text());
+      expect(labels.filter((label) => label === "Studies")).toHaveLength(1);
+      expect(labels).not.toContain("Safety review");
+      designerWrapper.unmount();
+
+      authStore.switchPersona("safety_officer");
+      const safetyWrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+      const safetyLabels = body
+        .findAll("#canvas-palette .palette-label")
+        .map((el) => el.text());
+      expect(safetyLabels).toContain("Safety review");
+      expect(safetyLabels).not.toContain("Protocol & schedule designer");
+      safetyWrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

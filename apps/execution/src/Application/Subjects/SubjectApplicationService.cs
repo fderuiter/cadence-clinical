@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
@@ -94,6 +95,7 @@ public sealed class SubjectApplicationService(
         var studyCode = new StudyCode(request.StudyId);
         SiteCode? siteCode = request.SiteId is not null ? new SiteCode(request.SiteId) : null;
         var subjectId = SubjectId.New();
+        Guid? kernelEnrollmentId = null;
 
         if (kernelEnrollmentSynchronizer is not null
             && siteCode is { } assignedSite
@@ -111,6 +113,11 @@ public sealed class SubjectApplicationService(
             {
                 return Result<SubjectResponse>.Failure(syncResult.Error!);
             }
+
+            if (syncResult.Value != Guid.Empty)
+            {
+                kernelEnrollmentId = syncResult.Value;
+            }
         }
 
         // The index read, the insert and its audit entry are one unit of work under the per-study lock; a transient
@@ -120,7 +127,7 @@ public sealed class SubjectApplicationService(
             int enrollmentIndex = await subjects.EnrollNextIndexAsync(studyCode, token).ConfigureAwait(false);
 
             var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
-                encryptedDemographics, stratFactors: null, id: subjectId);
+                encryptedDemographics, stratFactors: null, id: subjectId, kernelEnrollmentId: kernelEnrollmentId);
             // ReasonForChange is resolved strictly from the caller's X-Change-Reason header or a declared
             // background ServiceAccount via ICurrentAuditContextAccessor.
             subject.ReasonForChange = auditContext.ChangeReason;
@@ -256,6 +263,11 @@ public sealed class SubjectApplicationService(
             {
                 return Result<SubjectResponse>.Failure(syncResult.Error!);
             }
+
+            if (syncResult.Value != Guid.Empty)
+            {
+                subject.BindKernelEnrollment(syncResult.Value);
+            }
         }
 
         subject.ReasonForChange = changeReason;
@@ -319,30 +331,7 @@ public sealed class SubjectApplicationService(
             return SubjectErrors.NotFound(subjectIdOrCode);
         }
 
-        if (changeReason.Trim().Length < SubjectAuthority.MinimumUnblindingReasonLength)
-        {
-            return SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength);
-        }
-
-        var unblindResult = subject.Unblind(auditContext.UserId, changeReason, _clock);
-        if (unblindResult.IsFailure)
-        {
-            return Result<SubjectResponse>.Failure(unblindResult.Error!);
-        }
-
-        subject.ReasonForChange = changeReason;
-        await auditLog.WriteAsync(
-            nameof(ClinicalSubject),
-            subject.Id.ToString(),
-            $"TRANSITION_{SubjectStateCodec.ToCode(SubjectState.Unblinded)}",
-            auditContext.UserId,
-            changeReason,
-            oldValues: null,
-            newValues: null,
-            ct).ConfigureAwait(false);
-        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
-
-        return SubjectResponse.FromAggregate(subject);
+        return await TransitionSubjectAsync(subject, SubjectState.Unblinded, changeReason, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -476,7 +465,8 @@ public sealed class SubjectApplicationService(
             subject.EnrollmentIndex,
             TreatmentGroup: null,
             RandomizationSeed: null,
-            InvestigationalProductId: null);
+            InvestigationalProductId: null,
+            EnrollmentRef: subject.EnrollmentRef);
     }
 
     /// <summary>Default page size for <see cref="ListAsync"/>.</summary>
@@ -629,6 +619,13 @@ public sealed class SubjectApplicationService(
         return subject is null ? null : (subject.StudyCode, subject.SiteCode);
     }
 
+    /// <inheritdoc />
+    public async Task<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?> GetSubjectLockScopeAsync(string subjectIdOrCode, CancellationToken ct = default)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        return subject is null ? null : (subject.StudyCode, subject.SiteCode, subject.SubjectCode);
+    }
+
     /// <summary>
     /// Evaluates screening eligibility and transitions to <see cref="SubjectState.ScreenFailed"/> or
     /// <see cref="SubjectState.Enrolled"/> (SCN-005/SCN-007), single-lookup by domain code only (matching
@@ -742,9 +739,8 @@ public sealed class SubjectApplicationService(
     /// being duplicated per call site. Returns <see langword="null"/> when neither lookup matches; callers are
     /// responsible for mapping that to <see cref="SubjectErrors.NotFound"/>.
     /// </summary>
-    private async Task<ClinicalSubject?> ResolveSubjectAsync(string subjectIdOrCode, CancellationToken ct) =>
-        await subjects.GetByIdAsync(subjectIdOrCode, ct).ConfigureAwait(false)
-            ?? await subjects.GetByCodeAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+    private Task<ClinicalSubject?> ResolveSubjectAsync(string subjectIdOrCode, CancellationToken ct) =>
+        SubjectLookup.ResolveAsync(subjects, subjectIdOrCode, ct);
 
     /// <summary>
     /// Flattens the structured <see cref="DemographicsPayload"/> DTO into the free-form dictionary shape

@@ -13,6 +13,17 @@ export interface ScopedWorkspaceSectionProps {
   siteId?: string;
 }
 
+export const scopedWorkspaceSectionProps = {
+  studyCode: {
+    type: String,
+    default: "",
+  },
+  siteId: {
+    type: String,
+    default: "",
+  },
+} as const;
+
 export function useScopedWorkspaceSection(
   props: ScopedWorkspaceSectionProps,
   options: {
@@ -29,6 +40,34 @@ export function useScopedWorkspaceSection(
   const assignedStudies = computed(() => authStore.assignedStudies || []);
   const assignedSites = computed(() => authStore.assignedSites || []);
 
+  const signerUsername = computed(() => {
+    const store = authStore as {
+      identity?: { username?: string } | null;
+      user?: { username?: string } | null;
+      userId?: string | null;
+    };
+    return (
+      store.identity?.username || store.user?.username || store.userId || ""
+    );
+  });
+
+  const signerDisplayName = computed(() => {
+    const user = (
+      authStore as {
+        user?: {
+          displayName?: string;
+          firstName?: string;
+          lastName?: string;
+        } | null;
+      }
+    ).user;
+    const full = [user?.firstName, user?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    return user?.displayName || full || signerUsername.value;
+  });
+
   const studyInput = ref(
     props.studyCode ||
       clinicalStore.activeStudyId ||
@@ -39,6 +78,7 @@ export function useScopedWorkspaceSection(
       clinicalStore.activeSiteId ||
       (assignedSites.value.length ? assignedSites.value[0] : "")
   );
+  const newSiteId = ref(siteInput.value);
 
   const loading = ref(false);
   const loaded = ref(false);
@@ -60,6 +100,7 @@ export function useScopedWorkspaceSection(
     (val) => {
       if (val === undefined) return;
       siteInput.value = val;
+      if (val) newSiteId.value = val;
       options.onSitePropChange?.(val);
     }
   );
@@ -69,7 +110,10 @@ export function useScopedWorkspaceSection(
       clinicalStore.activeStudyId = study;
       syncActiveStudyScope(study);
     }
-    if (site) clinicalStore.activeSiteId = site;
+    if (site) {
+      clinicalStore.activeSiteId = site;
+      newSiteId.value = site;
+    }
   }
 
   function recordLoadFailure(err: unknown, study?: string, site?: string) {
@@ -97,11 +141,14 @@ export function useScopedWorkspaceSection(
     assignedSites,
     studyInput,
     siteInput,
+    newSiteId,
     loading,
     loaded,
     saving,
     loadError,
     scopeGuidance,
+    signerUsername,
+    signerDisplayName,
     syncActiveScope,
     recordLoadFailure,
   };

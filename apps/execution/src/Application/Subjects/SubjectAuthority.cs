@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
@@ -7,16 +9,18 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 /// <summary>
 /// Who may change a participant's record in Execution (#4943). Adding a participant, recording consent, changing
 /// their state and editing their demographics are site work; a data manager reviews and queries but never modifies
-/// source subject entries (PRD §3.2, #4981). Breaking the blind needs an unblinding authority. These are role checks until grants and qualifications from the Trust engine
-/// replace them (#4781).
+/// source subject entries (PRD §3.2, #4981). Self-service trial founders hold <c>trial_coordinator</c>, which may
+/// manage participants strictly inside verified <c>trial-*</c> workspaces. Breaking the blind needs an unblinding
+/// authority. These are role checks until grants and qualifications from the Trust engine replace them (#4781).
 /// @req:PRD-SUB-001
 /// </summary>
-public static class SubjectAuthority
+public static partial class SubjectAuthority
 {
     /// <summary>
     /// Whether <paramref name="role"/> may add a participant, record consent, change state or edit demographics: an
-    /// investigator (site, principal, sub or lead) or a clinical research coordinator. Data managers, monitors,
-    /// auditors and participants read but never change the record.
+    /// investigator (site, principal, sub or lead), a clinical research coordinator, or a trial coordinator (further
+    /// restricted to verified <c>trial-*</c> tenants by <see cref="AuthorizeParticipantChange"/>). Data managers,
+    /// monitors, auditors and participants read but never change the record.
     /// </summary>
     public static bool CanManageParticipants(string role)
     {
@@ -30,8 +34,16 @@ public static class SubjectAuthority
             or "principal_investigator" or "principal investigator" or "pi"
             or "sub_investigator" or "sub investigator" or "sub-investigator"
             or "lead_investigator" or "lead investigator"
-            or "crc" or "site coordinator" or "site_coordinator" or "clinical research coordinator";
+            or "crc" or "site coordinator" or "site_coordinator" or "clinical research coordinator"
+            or "trial_coordinator" or "trial coordinator" or "trial-coordinator" or "trialcoordinator";
     }
+
+    /// <summary>
+    /// Whether <paramref name="tenantId"/> is a deterministic self-service trial workspace code (<c>trial-&lt;12 hex&gt;</c>)
+    /// minted by <c>TrialOnboardingService.DeriveTenantCode</c>.
+    /// </summary>
+    public static bool IsVerifiedTrialTenant(string? tenantId) =>
+        !string.IsNullOrWhiteSpace(tenantId) && VerifiedTrialTenantPattern().IsMatch(tenantId.Trim());
 
     /// <summary>
     /// The shortest clinical justification an emergency unblinding accepts, in characters (PRD-SUB-005, #4982).
@@ -57,12 +69,29 @@ public static class SubjectAuthority
 
     /// <summary>
     /// <see langword="null"/> when <paramref name="caller"/> may change a participant's record, otherwise the
-    /// <c>403</c> to return.
+    /// <c>403</c> to return. <c>trial_coordinator</c> callers are permitted only inside verified <c>trial-*</c>
+    /// workspace tenants; non-trial tenants require a dedicated site investigator or coordinator role.
     /// </summary>
-    public static DomainError? AuthorizeParticipantChange(AuthenticatedCaller? caller) =>
-        caller?.FirstRoleMatching(CanManageParticipants) is null
-            ? SubjectErrors.UnauthorizedParticipantRole(Roles(caller))
-            : null;
+    public static DomainError? AuthorizeParticipantChange(AuthenticatedCaller? caller)
+    {
+        if (caller is null)
+        {
+            return SubjectErrors.UnauthorizedParticipantRole(string.Empty);
+        }
+
+        if (caller.FirstRoleMatching(IsStandardSiteParticipantRole) is not null)
+        {
+            return null;
+        }
+
+        if (caller.FirstRoleMatching(IsTrialCoordinatorRole) is not null
+            && IsVerifiedTrialTenant(caller.TenantId))
+        {
+            return null;
+        }
+
+        return SubjectErrors.UnauthorizedParticipantRole(Roles(caller));
+    }
 
     /// <summary>
     /// <see langword="null"/> when <paramref name="caller"/> holds emergency unblinding authority
@@ -88,6 +117,22 @@ public static class SubjectAuthority
         return AuthorizeParticipantChange(caller);
     }
 
+    private static bool IsStandardSiteParticipantRole(string role) =>
+        CanManageParticipants(role) && !IsTrialCoordinatorRole(role);
+
+    private static bool IsTrialCoordinatorRole(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            return false;
+        }
+
+        return role.Trim().ToLowerInvariant() is "trial_coordinator" or "trial coordinator" or "trial-coordinator" or "trialcoordinator";
+    }
+
     private static string Roles(AuthenticatedCaller? caller) =>
         caller is null ? string.Empty : string.Join(",", caller.Roles);
+
+    [GeneratedRegex("^trial-[0-9a-f]{12}\\z", RegexOptions.CultureInvariant)]
+    private static partial Regex VerifiedTrialTenantPattern();
 }

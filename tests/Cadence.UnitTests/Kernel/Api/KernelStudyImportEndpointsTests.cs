@@ -94,7 +94,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         _world.GrantRole(
             Actor.Person(DesignerIdentity.UserId),
             "DESIGNER",
-            ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"],
+            ["organization.register", "study.register", "site.register", "study_site.link", "concept.define", "code_system.register", "code_system.import_version", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"],
             AuthorityScope.Tenant());
 
         _world.GrantRole(
@@ -204,6 +204,128 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         }
 
         _world.Studies.Count.Should().Be(countAfterFirst, "duplicate Idempotency-Key must not create duplicate studies");
+    }
+
+    [Fact]
+    public async Task CreateSiteAndLinkToStudy_RegistersSiteInstitution_EnforcesHeaders_AndListsStudySites()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var crcClient = CreateClient(CoordinatorIdentity);
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        // 1. Caller without site.register receives 403 Forbidden.
+        using (var deniedSiteReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-01",
+            name = "Boston General Hospital",
+            country = "US",
+            institution_name = "Boston General Health",
+        }, idempotencyKey: "site-denied", reason: "Unauthorized site creation"))
+        {
+            using var deniedRes = await crcClient.SendAsync(deniedSiteReq, ct);
+            deniedRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 2. Missing X-Change-Reason and missing Idempotency-Key fail closed with 422.
+        using (var noReasonReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-01",
+            name = "Boston General Hospital",
+            country = "US",
+            institution_name = "Boston General Health",
+        }, idempotencyKey: "site-no-reason", reason: null))
+        {
+            using var noReasonRes = await designerClient.SendAsync(noReasonReq, ct);
+            noReasonRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await noReasonRes.Content.ReadAsStringAsync(ct)).Should().Contain("K.Command.ReasonForChangeRequired");
+        }
+
+        using (var noIdemReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/sites")
+        {
+            Content = JsonContent.Create(new
+            {
+                site_code = "SITE-01",
+                name = "Boston General Hospital",
+                country = "US",
+                institution_name = "Boston General Health",
+            }),
+        })
+        {
+            noIdemReq.Headers.Add(GatewayHeaders.ChangeReason, "Missing idempotency key");
+            using var noIdemRes = await designerClient.SendAsync(noIdemReq, ct);
+            noIdemRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            (await noIdemRes.Content.ReadAsStringAsync(ct)).Should().Contain("K.Command.IdempotencyKeyRequired");
+        }
+
+        // 3. Register site when institution_name matches existing Sponsor name ("Cadence Pharma") ->
+        // disambiguates and registers OrganizationKind.SiteInstitution instead of reusing Sponsor!
+        string siteRef;
+        string institutionRef;
+        using (var createSiteReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-01",
+            name = "Cadence Boston Clinic",
+            country = "us",
+            institution_name = "Cadence Pharma",
+        }, idempotencyKey: "site-create-01", reason: "Register primary Boston site"))
+        {
+            using var createSiteRes = await designerClient.SendAsync(createSiteReq, ct);
+            createSiteRes.StatusCode.Should().Be(HttpStatusCode.Created, await createSiteRes.Content.ReadAsStringAsync(ct));
+            var siteDoc = JsonDocument.Parse(await createSiteRes.Content.ReadAsStringAsync(ct)).RootElement;
+            siteRef = siteDoc.GetProperty("ref").GetString()!;
+            institutionRef = siteDoc.GetProperty("institution_ref").GetString()!;
+            siteDoc.GetProperty("code").GetString().Should().Be("SITE-01");
+            siteDoc.GetProperty("country").GetString().Should().Be("US");
+            siteDoc.GetProperty("institution_code").GetString().Should().Be("CADENCE-PHARMA-SITE");
+        }
+
+        var siteInstitutionOrgs = await designerClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/organizations?kind=SiteInstitution", ct);
+        siteInstitutionOrgs.EnumerateArray().Select(o => o.GetProperty("ref").GetString())
+            .Should().Contain(institutionRef);
+
+        var allSites = await designerClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/sites", ct);
+        allSites.EnumerateArray().Select(s => s.GetProperty("code").GetString())
+            .Should().Contain("SITE-01");
+
+        // 4. Passing a Sponsor NodeRef as institution_ref is rejected with 422.
+        using (var wrongKindReq = JsonPost("/api/v1/kernel/sites", new
+        {
+            site_code = "SITE-02",
+            name = "Wrong Org Kind Site",
+            country = "US",
+            institution_ref = NodeRef.For(_world.DemoSponsorId).ToString(),
+        }, idempotencyKey: "site-wrong-kind", reason: "Reject sponsor org ref for site"))
+        {
+            using var wrongKindRes = await designerClient.SendAsync(wrongKindReq, ct);
+            wrongKindRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        }
+
+        // 5. Link SITE-01 to CADENCE-101 -> 201 Created, listed on GET /studies/CADENCE-101/sites for both designer and study-scoped coordinator.
+        using (var linkNoReason = JsonPost("/api/v1/kernel/studies/CADENCE-101/sites", new
+        {
+            site_ref = siteRef,
+        }, idempotencyKey: "link-no-reason", reason: null))
+        {
+            using var linkNoReasonRes = await designerClient.SendAsync(linkNoReason, ct);
+            linkNoReasonRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        }
+
+        using (var linkReq = JsonPost("/api/v1/kernel/studies/CADENCE-101/sites", new
+        {
+            site_code = "SITE-01",
+        }, idempotencyKey: "link-site-01", reason: "Link SITE-01 to CADENCE-101"))
+        {
+            using var linkRes = await designerClient.SendAsync(linkReq, ct);
+            linkRes.StatusCode.Should().Be(HttpStatusCode.Created, await linkRes.Content.ReadAsStringAsync(ct));
+            var linkDoc = JsonDocument.Parse(await linkRes.Content.ReadAsStringAsync(ct)).RootElement;
+            linkDoc.GetProperty("site_code").GetString().Should().Be("SITE-01");
+            linkDoc.GetProperty("study_code").GetString().Should().Be("CADENCE-101");
+            linkDoc.GetProperty("status").GetString().Should().Be("Selected");
+        }
+
+        var linkedSitesForCrc = await crcClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/studies/CADENCE-101/sites", ct);
+        linkedSitesForCrc.EnumerateArray().Select(s => s.GetProperty("site_code").GetString())
+            .Should().Equal("SITE-01");
     }
 
     [Fact]
@@ -327,11 +449,88 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         badRes.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
     }
 
+    [Fact]
+    public async Task ImportProtocolDraft_RegistersCodeSystemVersionsIdempotently_ForOdmAndUsdmCodelists()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        const string odmWithCodelist = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.CL.1" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-02-01T00:00:00Z">
+              <Study OID="S.CL">
+                <GlobalVariables>
+                  <StudyName>Codelist Study</StudyName>
+                  <StudyDescription>Test</StudyDescription>
+                  <ProtocolName>CL-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.1" Name="v1">
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vital Signs" Repeating="No">
+                    <ItemRef ItemOID="IT.SBP" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.POS" OrderNumber="2" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.SBP" Name="SYSBP" DataType="float">
+                    <Question><TranslatedText>Systolic Blood Pressure</TranslatedText></Question>
+                    <MeasurementUnitRef MeasurementUnitOID="MU.MMHG"/>
+                  </ItemDef>
+                  <ItemDef OID="IT.POS" Name="VSPOS" DataType="text">
+                    <Question><TranslatedText>Position</TranslatedText></Question>
+                    <CodeListRef CodeListOID="CL.POS"/>
+                  </ItemDef>
+                  <CodeList OID="CL.POS" Name="Position" DataType="text">
+                    <CodeListItem CodedValue="SITTING"><Decode><TranslatedText>Sitting</TranslatedText></Decode></CodeListItem>
+                    <CodeListItem CodedValue="SUPINE"><Decode><TranslatedText>Supine</TranslatedText></Decode></CodeListItem>
+                  </CodeList>
+                </MetaDataVersion>
+                <BasicDefinitions>
+                  <MeasurementUnit OID="MU.MMHG" Name="mmHg">
+                    <Symbol><TranslatedText>mm[Hg]</TranslatedText></Symbol>
+                  </MeasurementUnit>
+                </BasicDefinitions>
+              </Study>
+            </ODM>
+            """;
+
+        using (var firstOdm = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", odmWithCodelist, "vs_cl.xml", "cl-odm-1", "Import ODM with codelist"))
+        {
+            using var res = await designerClient.SendAsync(firstOdm, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync(ct));
+        }
+
+        _world.CodeSystems.Should().ContainSingle();
+        _world.CodeSystemVersions.Should().ContainSingle();
+        var firstVersionId = _world.CodeSystemVersions.Single().Id;
+
+        var parsedAfterOdm = Cadence.Kernel.Protocol.Design.ProtocolDesignDocument.Read(_world.Versions.Single().Content).Design!;
+        var sbpItem = parsedAfterOdm.CollectionSpecs.Single().Items[0];
+        sbpItem.ValueKind.Should().Be(Cadence.Kernel.Evidence.ObservationValueKind.Quantity);
+        sbpItem.Unit.Should().Be("mm[Hg]");
+        sbpItem.Required.Should().BeTrue();
+
+        var posItem = parsedAfterOdm.CollectionSpecs.Single().Items[1];
+        posItem.ValueKind.Should().Be(Cadence.Kernel.Evidence.ObservationValueKind.Coded);
+        posItem.Terminology.Should().NotBeNull();
+        posItem.Terminology!.CodeSystemVersionId.Should().Be(firstVersionId);
+
+        // Re-importing the same codelist reuses the registered CodeSystemVersion rather than creating duplicates.
+        using (var secondOdm = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", odmWithCodelist, "vs_cl.xml", "cl-odm-2", "Re-import same codelist"))
+        {
+            using var res = await designerClient.SendAsync(secondOdm, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.OK, await res.Content.ReadAsStringAsync(ct));
+        }
+
+        _world.CodeSystems.Should().ContainSingle();
+        _world.CodeSystemVersions.Should().ContainSingle();
+    }
+
     private HttpClient CreateClient(GatewayIdentity identity)
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ITenantDirectory>();
@@ -340,6 +539,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 services.AddSingleton<IAuthorityStore>(_world);
                 services.RemoveAll<IStudyDirectory>();
                 services.AddSingleton<IStudyDirectory>(_world);
+                services.RemoveAll<IStudyGovernanceReader>();
                 services.RemoveAll<IProtocolVersionReader>();
                 services.AddSingleton<IProtocolVersionReader>(_world);
                 services.RemoveAll<IConceptRegistry>();
@@ -432,6 +632,12 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
         public List<ConceptVersionView> Concepts { get; } = [];
 
+        public List<(CodeSystemId Id, string Uri, LicenseClass License)> CodeSystems { get; } = [];
+
+        public List<CodeSystemVersionView> CodeSystemVersions { get; } = [];
+
+        public List<CodeSystemEntryView> CodeSystemEntries { get; } = [];
+
         public List<StoredVersion> Versions { get; } = [];
 
         public Dictionary<string, object> IdempotentResults { get; } = new(StringComparer.Ordinal);
@@ -474,6 +680,25 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 if (s is not null)
                 {
                     return Task.FromResult(new ScopePath(s.SponsorId, s.StudyId, null, null));
+                }
+            }
+
+            if (resource.Kind == NodeKinds.Site)
+            {
+                var site = Sites.FirstOrDefault(x => x.SiteId == SiteId.FromGuid(resource.Id));
+                if (site is not null)
+                {
+                    return Task.FromResult(new ScopePath(site.InstitutionId, null, site.Country, null));
+                }
+            }
+
+            if (resource.Kind == NodeKinds.StudySite)
+            {
+                var ss = StudySites.FirstOrDefault(x => x.StudySiteId == StudySiteId.FromGuid(resource.Id));
+                if (ss is not null)
+                {
+                    var s = Studies.First(x => x.StudyId == ss.StudyId);
+                    return Task.FromResult(new ScopePath(s.SponsorId, s.StudyId, ss.Country, ss.StudySiteId));
                 }
             }
 
@@ -523,15 +748,34 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(Sites.FirstOrDefault(s => s.SiteId == siteId));
 
-        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Sites.FirstOrDefault(s => string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)));
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s =>
+                string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)
+                && (institutionId is null || s.InstitutionId == institutionId.Value)));
 
-        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([.. StudySites.Where(ss => ss.StudyId == studyId).OrderBy(ss => ss.SiteCode, StringComparer.Ordinal)]);
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(
+            TenantId tenant,
+            StudyId studyId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>(
+                [.. StudySites.Where(ss => ss.StudyId == studyId).OrderBy(ss => ss.SiteCode, StringComparer.Ordinal)]);
 
-        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(
+            TenantId tenant,
+            StudySiteId studySiteId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(StudySites.FirstOrDefault(ss => ss.StudySiteId == studySiteId));
 
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(StudySites.FirstOrDefault(ss => ss.StudyId == studyId && ss.SiteId == siteId));
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([.. Versions.Where(v => v.Summary.StudyId == study).OrderByDescending(v => v.Summary.Number).Select(v => v.Summary)]);
 
@@ -563,13 +807,23 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             Task.FromResult(Concepts.FirstOrDefault(c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode == cdiscConceptCode));
 
         public Task<CodeSystemVersionView?> FindCodeSystemVersionAsync(TenantId tenant, string codeSystemUri, string version, CancellationToken cancellationToken = default) =>
-            Task.FromResult<CodeSystemVersionView?>(null);
+            Task.FromResult(CodeSystemVersions.FirstOrDefault(v =>
+                string.Equals(v.CodeSystemUri, codeSystemUri, StringComparison.Ordinal)
+                && string.Equals(v.Version, version, StringComparison.Ordinal)));
 
         public Task<IReadOnlyList<CodeSystemEntryView>> LookupAsync(TenantId tenant, Coding coding, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([]);
+            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([
+                .. CodeSystemEntries.Where(e =>
+                    e.CodeSystemVersionId == coding.CodeSystemVersionId
+                    && string.Equals(e.Code, coding.Code, StringComparison.Ordinal)),
+            ]);
 
         public Task<IReadOnlyList<CodeSystemEntryView>> GetGroupAsync(TenantId tenant, CodeSystemVersionId version, string groupCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([]);
+            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([
+                .. CodeSystemEntries.Where(e =>
+                    e.CodeSystemVersionId == version
+                    && string.Equals(e.GroupCode, groupCode, StringComparison.Ordinal)),
+            ]);
 
         public Task<IReadOnlyList<ConceptMappingView>> ResolveCodingAsync(TenantId tenant, Coding coding, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ConceptMappingView>>([]);
@@ -621,6 +875,8 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 RegisterSite regSite => ExecuteRegisterSite(regSite),
                 LinkSiteToStudy linkSite => ExecuteLinkSiteToStudy(linkSite),
                 DefineConcept defConcept => ExecuteDefineConcept(defConcept),
+                RegisterCodeSystem regCodeSystem => ExecuteRegisterCodeSystem(regCodeSystem),
+                ImportCodeSystemVersion importVersion => ExecuteImportCodeSystemVersion(importVersion),
                 CreateProtocolDraft createDraft => ExecuteCreateDraft(createDraft),
                 ReviseProtocolDraft reviseDraft => ExecuteReviseDraft(reviseDraft),
                 ForkProtocolVersion forkVersion => ExecuteForkVersion(forkVersion),
@@ -672,30 +928,36 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             }
 
             var inst = world.Organizations.FirstOrDefault(o => o.OrganizationId == cmd.InstitutionId);
-            if (inst is null)
+            if (inst is null || inst.Kind != OrganizationKind.SiteInstitution)
             {
                 return StudyErrors.InstitutionUnknown;
             }
 
-            if (inst.Kind != OrganizationKind.SiteInstitution)
-            {
-                return StudyErrors.InstitutionUnknown;
-            }
-
-            world.Sites.Add(new SiteDirectoryEntry(cmd.SiteId, 1, inst.OrganizationId, inst.VersionIndex, inst.Code, inst.Name, cmd.Code, cmd.Name, cmd.Country));
+            world.Sites.Add(new SiteDirectoryEntry(
+                cmd.SiteId,
+                1,
+                inst.OrganizationId,
+                inst.VersionIndex,
+                inst.Code,
+                inst.Name,
+                cmd.Code,
+                cmd.Name,
+                cmd.Country,
+                true,
+                0));
             return cmd.SiteId;
         }
 
         private object ExecuteLinkSiteToStudy(LinkSiteToStudy cmd)
         {
-            var study = world.Studies.FirstOrDefault(s => s.StudyId == cmd.StudyId);
-            if (study is null)
+            var studyIdx = world.Studies.FindIndex(s => s.StudyId == cmd.StudyId);
+            if (studyIdx < 0)
             {
                 return StudyErrors.StudyUnknown;
             }
 
-            var site = world.Sites.FirstOrDefault(s => s.SiteId == cmd.SiteId);
-            if (site is null)
+            var siteIdx = world.Sites.FindIndex(s => s.SiteId == cmd.SiteId);
+            if (siteIdx < 0)
             {
                 return StudyErrors.SiteUnknown;
             }
@@ -705,6 +967,8 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 return StudyErrors.AlreadyLinked;
             }
 
+            var study = world.Studies[studyIdx];
+            var site = world.Sites[siteIdx];
             world.StudySites.Add(new StudySiteDirectoryEntry(
                 cmd.StudySiteId,
                 1,
@@ -718,7 +982,12 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 site.InstitutionVersionIndex,
                 site.InstitutionCode,
                 site.InstitutionName,
-                "Selected"));
+                "Selected",
+                study.StudyCode,
+                study.VersionIndex,
+                true));
+            world.Studies[studyIdx] = study with { SiteCount = study.SiteCount + 1 };
+            world.Sites[siteIdx] = site with { LinkedStudyCount = site.LinkedStudyCount + 1 };
             return cmd.StudySiteId;
         }
 
@@ -737,6 +1006,57 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 ConceptMappingState.Unmapped,
                 Epoch));
             return conceptRef;
+        }
+
+        private object ExecuteRegisterCodeSystem(RegisterCodeSystem cmd)
+        {
+            if (world.CodeSystems.Any(cs => cs.Id == cmd.CodeSystemId || string.Equals(cs.Uri, cmd.Uri, StringComparison.Ordinal)))
+            {
+                return KernelErrors.AlreadyExists;
+            }
+
+            world.CodeSystems.Add((cmd.CodeSystemId, cmd.Uri, cmd.License));
+            return cmd.CodeSystemId;
+        }
+
+        private object ExecuteImportCodeSystemVersion(ImportCodeSystemVersion cmd)
+        {
+            var cs = world.CodeSystems.FirstOrDefault(x => x.Id == cmd.CodeSystemId);
+            if (cs == default)
+            {
+                return KernelErrors.NotFound;
+            }
+
+            if (world.CodeSystemVersions.Any(v =>
+                    v.Id == cmd.CodeSystemVersionId
+                    || (v.CodeSystemId == cmd.CodeSystemId && string.Equals(v.Version, cmd.Version, StringComparison.Ordinal))))
+            {
+                return KernelErrors.AlreadyExists;
+            }
+
+            world.CodeSystemVersions.Add(new CodeSystemVersionView(
+                cmd.CodeSystemVersionId,
+                cmd.CodeSystemId,
+                cs.Uri,
+                cmd.Version,
+                cmd.ReleasedOn,
+                cs.License,
+                cmd.Package.Sha256,
+                cmd.Entries.Count));
+
+            foreach (var entry in cmd.Entries)
+            {
+                world.CodeSystemEntries.Add(new CodeSystemEntryView(
+                    cmd.CodeSystemVersionId,
+                    entry.Code,
+                    entry.Display,
+                    entry.GroupCode,
+                    entry.SubmissionValue,
+                    entry.Definition,
+                    entry.Synonyms ?? []));
+            }
+
+            return cmd.CodeSystemVersionId;
         }
 
         private object ExecuteCreateDraft(CreateProtocolDraft cmd)

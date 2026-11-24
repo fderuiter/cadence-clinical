@@ -1,4 +1,4 @@
-# ADR-2823: Default Standalone GxP Merkle Auditing, Durable Signature Token Stores, and Dedicated Signed Routes
+# ADR-2833: Default Standalone GxP Merkle Auditing, Durable Signature Token Stores, and Dedicated Signed Routes
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

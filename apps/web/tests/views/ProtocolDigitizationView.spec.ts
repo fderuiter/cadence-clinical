@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import ProtocolDigitizationView from "@/views/ProtocolDigitizationView.vue";
 import { useAuthStore } from "@/stores/auth";
@@ -115,6 +115,17 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     vi.clearAllMocks();
   });
 
+  function mountDigitizationView(): VueWrapper<any> {
+    return mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+  }
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -136,14 +147,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("advances stepper when file is selected and triggers AI extraction", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     // Simulate file selection
     const file = new File(
@@ -167,14 +171,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("displays extracted USDM arms, epochs, and synthesized eCRF forms", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.rawExtractionData = mockExtractionData;
     wrapper.vm.currentStep = 3; // SoA & Verification step
@@ -185,14 +182,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("displays synthesized eCRF layout elements in activation step", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.rawExtractionData = mockExtractionData;
     wrapper.vm.currentStep = 4; // eCRF synthesis step
@@ -203,14 +193,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("renders human escalation alert card when job transitions to PENDING_REVIEW", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.currentStep = 2;
     // Renamed to _triggerEscalation in #4739 (ESLint no-unused-vars: it has no in-view caller and is
@@ -231,14 +214,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("requires Part 11 Electronic Signature before submitting stage correction", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.currentStep = 2;
     wrapper.vm._triggerEscalation({ current_stage: "SOA_EXTRACTION" });
@@ -265,14 +241,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("opens USDM Concept Staging Drawer when unmapped concept codes are detected", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.currentStep = 2;
     wrapper.vm.triggerConceptStaging([
@@ -293,14 +262,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("binds NCIt/CDISC concepts and hydrates protocol design lineage nodes upon confirmation", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.rawExtractionData = mockExtractionData;
     wrapper.vm.triggerConceptStaging([
@@ -335,14 +297,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("switches between document upload and guided wizard mode while preserving uploaded file state", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     // Select file in upload mode
     const file = new File(["Protocol text"], "oncology_protocol.pdf", {
@@ -373,14 +328,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
   });
 
   it("synthesizes USDM protocol via wizard, populates rawExtractionData, and advances directly to Step 3", async () => {
-    const wrapper = mount(ProtocolDigitizationView, {
-      global: {
-        plugins: [pinia],
-        stubs: {
-          "router-link": true,
-        },
-      },
-    });
+    const wrapper = mountDigitizationView();
 
     wrapper.vm.step1Mode = "wizard";
     await wrapper.vm.$nextTick();

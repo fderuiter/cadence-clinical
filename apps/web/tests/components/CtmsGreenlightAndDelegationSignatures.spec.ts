@@ -29,21 +29,25 @@ describe("CtmsGreenlightSection and CtmsDelegationSection Part 11 signature step
     signInAs(useAuthStore(), ["Data Manager"], { username: "dm_lead_01" });
 
     const readyGate = (siteId: string) => ({
+      id: `gate-${siteId.toLowerCase()}`,
       study_id: "CAD-101",
       site_id: siteId,
+      site_name: `Clinical Site ${siteId}`,
       country_code: "US",
       overall_status: "READY",
-      is_ready_for_certification: true,
-      facets: [
-        {
-          facet_code: "REGULATORY_IRB",
-          display_name: "Regulatory & IRB",
-          is_satisfied: true,
-          evidence_summary: "Approved",
-        },
-      ],
-      blocking_reasons: [],
-      evaluated_at: "2026-10-01T00:00:00Z",
+      readiness_percentage: 100,
+      facet_regulatory_irb: true,
+      facet_cta_budget: true,
+      facet_eisf_baseline: true,
+      facet_doa_log: true,
+      facet_staff_training: true,
+      facet_ip_release: true,
+      is_compliant: true,
+      greenlight_token: null,
+      greenlight_certified_by: null,
+      greenlight_certified_at: null,
+      is_overridden: false,
+      unfulfilled_reasons: [],
     });
 
     vi.spyOn(ctmsApi, "getCountryGreenlightMatrix").mockResolvedValue([
@@ -56,15 +60,18 @@ describe("CtmsGreenlightSection and CtmsDelegationSection Part 11 signature step
     vi.spyOn(ctmsApi, "certifySiteGreenlight").mockResolvedValue({
       ...readyGate("SITE-101"),
       overall_status: "CERTIFIED",
-      certified_by: "dm_lead_01",
-      certified_at: "2026-10-02T12:00:00Z",
+      greenlight_token: "GL-TOK-101",
+      greenlight_certified_by: "dm_lead_01",
+      greenlight_certified_at: "2026-10-02T12:00:00Z",
     });
     vi.spyOn(ctmsApi, "batchCertifyCountrySites").mockResolvedValue({
+      success: true,
       study_id: "CAD-101",
       country_code: "US",
-      total_certified: 2,
+      certified_count: 2,
       certified_sites: [],
-    } as any);
+      message: "Certified 2 sites",
+    });
 
     const wrapper = mount(CtmsGreenlightSection, {
       props: { studyCode: "CAD-101", siteId: "SITE-101" },
@@ -137,6 +144,7 @@ describe("CtmsGreenlightSection and CtmsDelegationSection Part 11 signature step
         study_id: "CAD-101",
         country_code: "US",
         site_ids: ["SITE-202", "SITE-101"],
+        meaning: "Batch country startup greenlight certification",
       },
       "Batch country startup greenlight certification",
       "sig-greenlight-batch-2"

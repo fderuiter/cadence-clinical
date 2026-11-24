@@ -23,7 +23,7 @@ import {
   webSessionCoordinator,
 } from "../auth/sessionCoordinator.js";
 import { kernelApi } from "../api/kernelApi";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/preReleaseNotice.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
 import { clearActiveStudyScope } from "./studyScopeBridge";
@@ -47,17 +47,27 @@ const EMPTY_DEMO_IDENTITY = Object.freeze({
 });
 
 export function resolveDemoIdentity(workspacePersona = "super_admin") {
-  const mapped = toDemoAuthUser(getDemoPersonaForWorkspace(workspacePersona));
-  return mapped || EMPTY_DEMO_IDENTITY;
+  if (!isDemoBuild()) {
+    return EMPTY_DEMO_IDENTITY;
+  }
+  const persona = getDemoPersonaForWorkspace(workspacePersona);
+  const mapped = toDemoAuthUser(persona);
+  if (!mapped) {
+    return EMPTY_DEMO_IDENTITY;
+  }
+  return persona?.siteCode ? { ...mapped, siteId: persona.siteCode } : mapped;
 }
 
 /**
  * Synthetic role-based offline identity used only by demo builds (see utils/demoMode.js).
  */
-export const DEMO_IDENTITY = resolveDemoIdentity("super_admin");
+export const DEMO_IDENTITY = /* @__PURE__ */ resolveDemoIdentity("super_admin");
 
-export const DEMO_ROLES = Object.freeze(
-  MANIFEST_DEMO_ROLES.length > 0 || DEMO_PERSONAS.length > 0
+function buildAllDemoRoles() {
+  if (!isDemoBuild()) {
+    return [];
+  }
+  return MANIFEST_DEMO_ROLES.length > 0 || DEMO_PERSONAS.length > 0
     ? Array.from(
         new Set([
           ...DEMO_PERSONAS.flatMap((p) => p.realmRoles || []),
@@ -70,8 +80,71 @@ export const DEMO_ROLES = Object.freeze(
           "TMF Auditor",
         ])
       )
-    : []
-);
+    : [];
+}
+
+export const DEMO_ROLES = isDemoBuild()
+  ? /* @__PURE__ */ Object.freeze(buildAllDemoRoles())
+  : /* @__PURE__ */ Object.freeze([]);
+
+function resolveDemoPersonaScope(personaKey) {
+  if (!isDemoBuild()) {
+    return null;
+  }
+  const scopes = {
+    super_admin: {
+      rawRoles: buildAllDemoRoles(),
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    sponsor_designer: {
+      rawRoles: ["Sponsor Designer"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    data_manager: {
+      rawRoles: ["Data Manager"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    site_crc: {
+      rawRoles: ["Site Investigator", "CRC"],
+      siteIds: ["SITE-101"],
+      hasAllStudiesScope: false,
+    },
+    site_investigator: {
+      rawRoles: ["Principal Investigator", "Site Investigator"],
+      siteIds: ["SITE-101"],
+      hasAllStudiesScope: false,
+    },
+    cra_monitor: {
+      rawRoles: ["CRA", "Monitor"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    safety_officer: {
+      rawRoles: ["Safety Reviewer"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    auditor: {
+      rawRoles: ["Auditor"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+  };
+  return scopes[personaKey] || scopes.super_admin;
+}
+
+async function runFullDemoReset(pinia) {
+  if (!isDemoBuild()) {
+    return;
+  }
+  const { resetDemoSandbox, resetDemoSandboxSync } =
+    await import("../utils/demoReset.js");
+  resetDemoSandboxSync({ pinia });
+  await resetDemoSandbox({ pinia });
+}
 
 const ADMIN_ROLE_ALIASES = [
   "sponsor_admin",
@@ -106,6 +179,7 @@ const BASELINE_CAPABILITIES = [
 
 export const ROLE_ALIASES = {
   crc: ["site_investigator", "crc"],
+  trial_coordinator: ["site_investigator", "crc", "trial_coordinator"],
   site_investigator: ["site_investigator", "crc"],
   principal_investigator: [
     "principal_investigator",
@@ -114,7 +188,7 @@ export const ROLE_ALIASES = {
   ],
   cra: ["cra", "monitor"],
   monitor: ["cra", "monitor"],
-  safety_reviewer: ["safety_reviewer"],
+  safety_reviewer: ["safety_reviewer", "safety_officer"],
   auditor: ["auditor", "tmf_auditor"],
   tmf_auditor: ["auditor", "tmf_auditor"],
   designer: ["sponsor_designer"],
@@ -152,7 +226,7 @@ export const PERSONA_PRESETS = [
   {
     key: "site_crc",
     label: "🩺 Site Coordinator / CRC",
-    requires: ["site_investigator", "crc"],
+    requires: ["site_investigator", "crc", "trial_coordinator"],
   },
   {
     key: "site_investigator",
@@ -301,6 +375,7 @@ function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
  * @property {string} lastName
  * @property {string} id - `sub` claim
  * @property {string} tenantId - `tenant_id` claim; blank when the token has none
+ * @property {string} [siteId] - Optional assigned site code for site-scoped personas
  */
 
 /** Milliseconds per UTC calendar day for trial countdown calculation. */
@@ -423,6 +498,7 @@ export const useAuthStore = defineStore("auth", {
     isCrc: (state) =>
       holdsAnyRole(state.rawRoles, [
         "crc",
+        "trial_coordinator",
         "site_investigator",
         "principal_investigator",
       ]),
@@ -446,7 +522,17 @@ export const useAuthStore = defineStore("auth", {
       if (fromAssigned.length > 0) return fromAssigned;
       return Array.isArray(state.user?.studyIds) ? state.user.studyIds : [];
     },
-    availablePersonas: (state) => personasForRoles(state.rawRoles),
+    availablePersonas: (state) => {
+      if (
+        isDemoBuild() &&
+        state.isAuthenticated &&
+        state.isDemoMode &&
+        !state.accessToken
+      ) {
+        return PERSONA_PRESETS;
+      }
+      return personasForRoles(state.rawRoles);
+    },
     /**
      * True for newly self-registered OIDC sessions that have no kernel `tenant_id`
      * claim and no assigned clinical realm roles yet, prompting trial setup.
@@ -461,9 +547,10 @@ export const useAuthStore = defineStore("auth", {
       ),
     activeTier: (state) =>
       state.entitlements?.tier ||
-      (state.isDemoMode ? "Complete" : "Individual"),
+      (isDemoBuild() && state.isDemoMode ? "Complete" : "Individual"),
     subscriptionStatus: (state) =>
-      state.entitlements?.status || (state.isDemoMode ? "Active" : null),
+      state.entitlements?.status ||
+      (isDemoBuild() && state.isDemoMode ? "Active" : null),
     isTrialExpired: (state) =>
       Boolean(
         state.entitlements?.is_read_only ||
@@ -486,10 +573,12 @@ export const useAuthStore = defineStore("auth", {
     },
     entitledFamilies: (state) =>
       state.entitlements?.product_families ||
-      (state.isDemoMode ? COMPLETE_FAMILIES : INDIVIDUAL_FAMILIES),
+      (isDemoBuild() && state.isDemoMode
+        ? COMPLETE_FAMILIES
+        : INDIVIDUAL_FAMILIES),
     activePlanBadge: (state) => {
       if (!state.isAuthenticated) return null;
-      if (state.isDemoMode && !state.entitlements) {
+      if (isDemoBuild() && state.isDemoMode && !state.entitlements) {
         return "Demo · Pre-release";
       }
       const tier = state.entitlements?.tier || "Individual";
@@ -606,15 +695,17 @@ export const useAuthStore = defineStore("auth", {
       this.isAuthenticated = true;
       this.sessionExpired = false;
       this.isLoggingOut = false;
-      this.rawRoles = [...DEMO_ROLES];
-      this.hasAllStudiesScope = true;
-      const entitled = personasForRoles(this.rawRoles);
       const selectedPersona =
-        personaKey && entitled.some((p) => p.key === personaKey)
+        personaKey && PERSONA_PRESETS.some((p) => p.key === personaKey)
           ? personaKey
-          : entitled[0]?.key || null;
+          : PERSONA_PRESETS[0]?.key || "super_admin";
+      const scope = resolveDemoPersonaScope(selectedPersona);
       this.currentPersona = selectedPersona;
-      this.user = { ...resolveDemoIdentity(selectedPersona || "super_admin") };
+      this.rawRoles = [...scope.rawRoles];
+      this.siteIds = [...scope.siteIds];
+      this.assignedSites = [...scope.siteIds];
+      this.hasAllStudiesScope = Boolean(scope.hasAllStudiesScope);
+      this.user = { ...resolveDemoIdentity(selectedPersona) };
       resetCanvasSessionCaches();
       purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(storageScopeOf(this));
@@ -625,6 +716,7 @@ export const useAuthStore = defineStore("auth", {
     /** Starts the Keycloak authorization code + PKCE sign-in redirect. */
     async login(options = {}) {
       if (isDemoBuild()) {
+        await runFullDemoReset(this._p);
         this.startDemoSession();
         return;
       }
@@ -687,7 +779,7 @@ export const useAuthStore = defineStore("auth", {
         this.applyEntitlements(snapshot);
         return snapshot;
       } catch {
-        if (this.isDemoMode && !this.entitlements) {
+        if (isDemoBuild() && this.isDemoMode && !this.entitlements) {
           const demoTenantUuid =
             DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000000";
           this.entitlements = {
@@ -764,9 +856,14 @@ export const useAuthStore = defineStore("auth", {
       } catch {
         // Pinia or store not ready
       }
+      if (isDemoBuild()) {
+        await runFullDemoReset(this._p);
+      }
       resetCanvasSessionCaches({ reason: "logout" });
       if (keycloak) {
         await keycloak.logout(options);
+      } else {
+        notifySessionEnded({ reason: "logout" });
       }
     },
     /**
@@ -839,12 +936,26 @@ export const useAuthStore = defineStore("auth", {
      * the user to are accepted; roles are never changed.
      */
     switchPersona(personaKey) {
-      const entitled = personasForRoles(this.rawRoles);
+      const isOfflineDemo =
+        isDemoBuild() &&
+        this.isAuthenticated &&
+        this.isDemoMode &&
+        !this.accessToken;
+      const entitled = isOfflineDemo
+        ? PERSONA_PRESETS
+        : personasForRoles(this.rawRoles);
       if (!entitled.some((p) => p.key === personaKey)) {
         return false;
       }
       this.currentPersona = personaKey;
-      if (this.isDemoMode && isDemoBuild()) {
+      if (isDemoBuild() && isOfflineDemo) {
+        const scope = resolveDemoPersonaScope(personaKey);
+        this.rawRoles = [...scope.rawRoles];
+        this.siteIds = [...scope.siteIds];
+        this.assignedSites = [...scope.siteIds];
+        this.hasAllStudiesScope = Boolean(scope.hasAllStudiesScope);
+        this.user = { ...resolveDemoIdentity(personaKey) };
+      } else if (isDemoBuild() && this.isDemoMode) {
         this.user = { ...resolveDemoIdentity(personaKey) };
       }
       resetCanvasSessionCaches();

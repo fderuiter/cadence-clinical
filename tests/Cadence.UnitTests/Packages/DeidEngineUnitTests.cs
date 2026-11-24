@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 using Cadence.Deid;
 using Cadence.Kernel.Time;
@@ -241,6 +242,125 @@ public class DeidEngineUnitTests
         a.Certificate.OriginalStudyInstanceUidHash.Should()
             .NotBe(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(originalStudyUid))));
         a.Certificate.OriginalStudyInstanceUidHash.Should().Be(first.HashOriginalUid(originalStudyUid));
+    }
+
+    [Fact]
+    public void DicomDeidentifier_ScopesAllFourUidsByLengthPrefixedStudySiteAndSubject_WithoutColonCollisions()
+    {
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
+        byte[] sample = MinimalDicomWithFrameOfReference();
+
+        (string StudyUid, string SeriesUid, string SopUid, string FrameUid) DeidentifyWithScope(
+            string studyId,
+            string siteId,
+            string subjectId)
+        {
+            var res = deidentifier.Deidentify(
+                dicomBytes: sample,
+                subjectId: subjectId,
+                siteId: siteId,
+                studyId: studyId,
+                deidentifiedAt: FakeClock.DefaultStart,
+                applyPixelMask: false);
+
+            using var sliceStream = new MemoryStream(sample, writable: false);
+            var sliceRes = deidentifier.DeidentifySlice(
+                dicomStream: sliceStream,
+                subjectId: subjectId,
+                siteId: siteId,
+                studyId: studyId,
+                applyPixelMask: false);
+
+            sliceRes.AnonymizedStudyUid.Should().Be(res.AnonymizedStudyUid);
+            sliceRes.AnonymizedSeriesUid.Should().Be(res.AnonymizedSeriesUid);
+            sliceRes.AnonymizedSopUid.Should().Be(res.AnonymizedSopUid);
+
+            using var outMs = new MemoryStream(res.DeidentifiedBytes, writable: false);
+            var outDataset = DicomFile.Open(outMs).Dataset;
+            string frameUid = outDataset.GetSingleValue<string>(DicomTag.FrameOfReferenceUID);
+            frameUid.Should().StartWith(DicomDeidentifier.CadenceDicomUidRoot);
+
+            return (res.AnonymizedStudyUid, res.AnonymizedSeriesUid, res.AnonymizedSopUid, frameUid);
+        }
+
+        var baseline = DeidentifyWithScope("STUDY-01", "SITE-01", "SUBJ-01");
+        var repeat = DeidentifyWithScope("STUDY-01", "SITE-01", "SUBJ-01");
+        repeat.Should().Be(baseline);
+
+        var differentSite = DeidentifyWithScope("STUDY-01", "SITE-02", "SUBJ-01");
+        var differentSubject = DeidentifyWithScope("STUDY-01", "SITE-01", "SUBJ-02");
+        var differentStudy = DeidentifyWithScope("STUDY-02", "SITE-01", "SUBJ-01");
+
+        foreach (var other in new[] { differentSite, differentSubject, differentStudy })
+        {
+            other.StudyUid.Should().NotBe(baseline.StudyUid);
+            other.SeriesUid.Should().NotBe(baseline.SeriesUid);
+            other.SopUid.Should().NotBe(baseline.SopUid);
+            other.FrameUid.Should().NotBe(baseline.FrameUid);
+        }
+
+        var colonPairs = new[]
+        {
+            (Left: DeidentifyWithScope("STUDY:A", "SITE", "SUBJ"), Right: DeidentifyWithScope("STUDY", "A:SITE", "SUBJ")),
+            (Left: DeidentifyWithScope("STUDY", "SITE:B", "SUBJ"), Right: DeidentifyWithScope("STUDY", "SITE", "B:SUBJ")),
+            (Left: DeidentifyWithScope("STUDY:SITE", "X", "SUBJ"), Right: DeidentifyWithScope("STUDY", "SITE:X", "SUBJ")),
+        };
+
+        foreach (var (left, right) in colonPairs)
+        {
+            left.StudyUid.Should().NotBe(right.StudyUid);
+            left.SeriesUid.Should().NotBe(right.SeriesUid);
+            left.SopUid.Should().NotBe(right.SopUid);
+            left.FrameUid.Should().NotBe(right.FrameUid);
+        }
+    }
+
+    [Theory]
+    [InlineData(null, "SITE-01", "STUDY-01")]
+    [InlineData("", "SITE-01", "STUDY-01")]
+    [InlineData("   ", "SITE-01", "STUDY-01")]
+    [InlineData("SUBJ-01", null, "STUDY-01")]
+    [InlineData("SUBJ-01", "", "STUDY-01")]
+    [InlineData("SUBJ-01", "   ", "STUDY-01")]
+    [InlineData("SUBJ-01", "SITE-01", null)]
+    [InlineData("SUBJ-01", "SITE-01", "")]
+    [InlineData("SUBJ-01", "SITE-01", "   ")]
+    public void DicomDeidentifier_RefusesNullOrWhitespaceScopeIdentifiers(string? subjectId, string? siteId, string? studyId)
+    {
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
+        byte[] sample = MinimalDicom();
+
+        Action deidentifyAct = () => deidentifier.Deidentify(
+            dicomBytes: sample,
+            subjectId: subjectId!,
+            siteId: siteId!,
+            studyId: studyId!,
+            deidentifiedAt: FakeClock.DefaultStart,
+            applyPixelMask: false);
+
+        Action sliceAct = () =>
+        {
+            using var ms = new MemoryStream(sample, writable: false);
+            _ = deidentifier.DeidentifySlice(
+                dicomStream: ms,
+                subjectId: subjectId!,
+                siteId: siteId!,
+                studyId: studyId!,
+                applyPixelMask: false);
+        };
+
+        deidentifyAct.Should().Throw<ArgumentException>();
+        sliceAct.Should().Throw<ArgumentException>();
+    }
+
+    private static byte[] MinimalDicomWithFrameOfReference()
+    {
+        using var ms = new MemoryStream(MinimalDicom());
+        var file = DicomFile.Open(ms);
+        file.Dataset.AddOrUpdate(DicomTag.FrameOfReferenceUID, "1.2.840.10008.5.1.4.1.1.6.1.4001");
+        using var outMs = new MemoryStream();
+        file.Save(outMs);
+        return outMs.ToArray();
     }
 
     [Fact]
@@ -482,6 +602,152 @@ public class DeidEngineUnitTests
         dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEG2000Lossless;
         using var ms = new MemoryStream();
         dicomFile.Save(ms);
+        return ms.ToArray();
+    }
+
+    [Fact]
+    public void DeidentifySlice_MatchesDeidentify_OnHashesSizesAnonymizedUidsMasksAndScrubbedTags()
+    {
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
+
+        foreach (byte[] sample in new[] { MinimalDicom(), MinimalCtWithSequenceDicom() })
+        {
+            var expected = deidentifier.Deidentify(
+                dicomBytes: sample,
+                subjectId: "SUBJ-SLICE-01",
+                siteId: "SITE-01",
+                studyId: "STUDY-2026",
+                deidentifiedAt: FakeClock.DefaultStart,
+                dateShiftDays: 21,
+                applyPixelMask: true);
+
+            using var sourceStream = new MemoryStream(sample, writable: false);
+            var actual = deidentifier.DeidentifySlice(
+                dicomStream: sourceStream,
+                subjectId: "SUBJ-SLICE-01",
+                siteId: "SITE-01",
+                studyId: "STUDY-2026",
+                dateShiftDays: 21,
+                applyPixelMask: true);
+
+            actual.SourceSha256.Should().Be(expected.Certificate.SourceSha256);
+            actual.TargetSha256.Should().Be(expected.Certificate.TargetSha256);
+            actual.DeidentifiedSizeBytes.Should().Be(expected.DeidentifiedBytes.Length);
+            actual.AnonymizedStudyUid.Should().Be(expected.AnonymizedStudyUid);
+            actual.AnonymizedSeriesUid.Should().Be(expected.AnonymizedSeriesUid);
+            actual.AnonymizedSopUid.Should().Be(expected.AnonymizedSopUid);
+            actual.OriginalStudyInstanceUidHash.Should().Be(expected.Certificate.OriginalStudyInstanceUidHash);
+            actual.OriginalSopInstanceUidHash.Should().Be(expected.Certificate.OriginalSopInstanceUidHash);
+            actual.PixelMaskApplied.Should().Be(expected.Certificate.PixelMaskApplied);
+            actual.PixelMasks.Should().Equal(expected.Certificate.PixelMasks);
+            actual.ScrubbedTagsCount.Should().Be(expected.Certificate.ScrubbedTagsCount);
+            actual.ScrubbedTags.Should().Equal(expected.Certificate.ScrubbedTags);
+            actual.Modality.Should().Be(expected.Modality);
+            actual.Rows.Should().Be(expected.Rows);
+            actual.Columns.Should().Be(expected.Columns);
+            actual.BitsAllocated.Should().Be(expected.BitsAllocated);
+        }
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-IMG-002")]
+    public void DeidentifySlice_ThrowsDicomPixelDeidException_WhenPixelMaskingFails()
+    {
+        byte[] corruptedBytes = UnsupportedCompressedDicom();
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
+        using var stream = new MemoryStream(corruptedBytes, writable: false);
+
+        Action act = () => deidentifier.DeidentifySlice(
+            dicomStream: stream,
+            subjectId: "SUBJ-999",
+            siteId: "SITE-99",
+            studyId: "STUDY-2026",
+            applyPixelMask: true);
+
+        act.Should().Throw<DicomPixelDeidException>();
+    }
+
+    [Fact]
+    public async Task PooledBlockStream_CopyAndHash_ZeroRange_And_Seek_OperateAcrossRentedBlocks()
+    {
+        Action zeroSize = () => _ = new PooledBlockStream(0);
+        Action lohSize = () => _ = new PooledBlockStream(85_000);
+        zeroSize.Should().Throw<ArgumentOutOfRangeException>();
+        lohSize.Should().Throw<ArgumentOutOfRangeException>();
+
+        byte[] payload = new byte[200 * 1024];
+        for (int i = 0; i < payload.Length; i++)
+        {
+            payload[i] = (byte)((i * 31 + 7) & 0xFF);
+        }
+
+        string expectedSha = Convert.ToHexStringLower(SHA256.HashData(payload));
+
+        await using var sourceMs = new MemoryStream(payload, writable: false);
+        var (pooled, actualSha) = await PooledBlockStream.CopyAndHashAsync(sourceMs, TestContext.Current.CancellationToken);
+        try
+        {
+            actualSha.Should().Be(expectedSha);
+            pooled.Length.Should().Be(payload.Length);
+            pooled.Position.Should().Be(0);
+
+            // Zero across the first 65,536-byte block boundary
+            pooled.ZeroRange(65_500, 100);
+            pooled.Seek(65_499, SeekOrigin.Begin).Should().Be(65_499);
+
+            byte[] window = new byte[102];
+            int read = await pooled.ReadAsync(window, TestContext.Current.CancellationToken);
+            read.Should().Be(102);
+            window[0].Should().Be(payload[65_499]);
+            window.AsSpan(1, 100).ToArray().Should().OnlyContain(b => b == 0);
+            window[101].Should().Be(payload[65_600]);
+
+            pooled.Seek(-4, SeekOrigin.End).Should().Be(payload.Length - 4);
+            pooled.ReadByte().Should().Be(payload[^4]);
+        }
+        finally
+        {
+            await pooled.DisposeAsync();
+        }
+
+        Action readDisposed = () => _ = pooled.Length;
+        readDisposed.Should().Throw<ObjectDisposedException>();
+    }
+
+    private static byte[] MinimalCtWithSequenceDicom()
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.CTImageStorage },
+            { DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.2.4001" },
+            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.2.4000" },
+            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.2.4000.1" },
+            { DicomTag.PatientName, "DOE^JANE" },
+            { DicomTag.PatientID, "RAW-CT-01" },
+            { DicomTag.StudyDate, "20260201" },
+            { DicomTag.Modality, "CT" },
+            { DicomTag.Rows, (ushort)64 },
+            { DicomTag.Columns, (ushort)64 },
+            { DicomTag.BitsAllocated, (ushort)16 },
+            { DicomTag.PixelSpacing, 0.8, 0.8 },
+            { DicomTag.SliceThickness, 2.5 },
+            { DicomTag.SliceLocation, 12.5 },
+            { DicomTag.WindowCenter, 40.0 },
+            { DicomTag.WindowWidth, 350.0 }
+        };
+
+        dataset.AddOrUpdate(new DicomSequence(DicomTag.RequestAttributesSequence, new DicomDataset
+        {
+            { DicomTag.RequestedProcedureID, "PROC-CT-01" },
+            { DicomTag.ScheduledProcedureStepDescription, "CHEST_CT" }
+        }));
+
+        byte[] pixels = new byte[64 * 64 * 2];
+        Array.Fill<byte>(pixels, 0x2A);
+        dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, pixels));
+
+        using var ms = new MemoryStream();
+        new DicomFile(dataset).Save(ms);
         return ms.ToArray();
     }
 }

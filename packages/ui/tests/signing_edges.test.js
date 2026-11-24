@@ -225,7 +225,7 @@ describe("SEMANTIC_ACTIONS and step-up batch_id binding", () => {
       action: "/api/v1/ctms/greenlight/batch-certify",
       semanticAction: SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY,
       batchId:
-        "  9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  ",
+        "  9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  ", // pragma: allowlist secret
     });
 
     expect(payload).toEqual({
@@ -233,7 +233,7 @@ describe("SEMANTIC_ACTIONS and step-up batch_id binding", () => {
       action: "/api/v1/ctms/greenlight/batch-certify",
       semantic_action: "ctms.greenlight.batch_certify",
       batch_id:
-        "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // pragma: allowlist secret
     });
   });
 

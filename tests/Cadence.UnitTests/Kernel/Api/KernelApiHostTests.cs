@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading;
@@ -14,6 +15,7 @@ using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
@@ -27,6 +29,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
+using Cadence.Kernel.Trust;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -113,6 +116,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeLineage _lineage = new();
     private readonly FakeActivityStore _activity = new();
     private readonly FakeEnrollmentDirectory _enrollments = new();
+    private readonly FakeSimulationInputs _simulationInputs = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -362,6 +366,73 @@ public sealed class KernelApiHostTests : IDisposable
         condition.GetProperty("code").GetString().Should().Be(AuthorityEvaluator.GrantCondition);
         condition.GetProperty("met").GetBoolean().Should().BeTrue();
         condition.GetProperty("evidence").EnumerateArray().Select(e => e.GetString()).Should().Equal(NodeRef.For(grant.Id).ToString());
+    }
+
+    /// <summary>CanI resolves read-only <c>simulation.run</c> capabilities instead of rejecting them as unknown.</summary>
+    [Fact]
+    public async Task CanI_ResolvesSimulationRunReadCapability()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var denied = await ReadJsonAsync(
+            client, $"/api/v1/kernel/authorization/can-i?capability={SimulationCapabilities.Run.Token}&resource={Study}", ct);
+        denied.RootElement.GetProperty("capability").GetString().Should().Be(SimulationCapabilities.Run.Token);
+        denied.RootElement.GetProperty("verb_class").GetString().Should().Be("Read");
+        denied.RootElement.GetProperty("permitted").GetBoolean().Should().BeFalse();
+
+        var grant = Grant.Issue(
+            GrantId.New(), Tenant, Reader, SimulationCapabilities.Run.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
+            withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
+        _authority.Grants.Add(grant);
+
+        using var permitted = await ReadJsonAsync(
+            client, $"/api/v1/kernel/authorization/can-i?capability={SimulationCapabilities.Run.Token}&resource={Study}", ct);
+        permitted.RootElement.GetProperty("permitted").GetBoolean().Should().BeTrue();
+    }
+
+    /// <summary>Simulation and matrix-gap endpoints serialize enums as strings and enforce @version pins with 409.</summary>
+    [Fact]
+    public async Task SimulationAndMatrixGapEndpoints_ReturnStringEnums_AndEnforceVersionPins()
+    {
+        var grant = Grant.Issue(
+            GrantId.New(), Tenant, Reader, SimulationCapabilities.Run.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
+            withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
+        _authority.Grants.Add(grant);
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        var simResponse = await client.PostAsJsonAsync(
+            new Uri("/api/v1/kernel/simulation/simulate", UriKind.Relative),
+            new { stored_version_ref = NodeRef.For(Amendment.Id, 2).ToString() },
+            ct);
+        simResponse.StatusCode.Should().Be(HttpStatusCode.OK, await simResponse.Content.ReadAsStringAsync(ct));
+        using var simDoc = JsonDocument.Parse(await simResponse.Content.ReadAsStringAsync(ct));
+        var simRoot = simDoc.RootElement;
+        simRoot.GetProperty("candidate").GetProperty("kind").GetString().Should().Be("ProtocolVersion");
+        simRoot.GetProperty("candidate").GetProperty("version").GetString().Should().Be(NodeRef.For(Amendment.Id, 2).ToString());
+        simRoot.GetProperty("structural_diff")[0].GetProperty("change").GetString().Should().Be("Changed");
+        simRoot.GetProperty("schedule_changes")[0].GetProperty("change").GetString().Should().Be("Changed");
+        simRoot.GetProperty("matrix_gaps")[0].GetProperty("kind").GetString().Should().Be("IchM11Violation");
+        simRoot.GetProperty("matrix_gaps")[0].GetProperty("severity").GetString().Should().Be("Error");
+        simRoot.GetProperty("matrix_gaps").EnumerateArray().Select(g => g.GetProperty("severity").GetString()).Should().Contain("Warning");
+
+        var staleResponse = await client.PostAsJsonAsync(
+            new Uri("/api/v1/kernel/simulation/simulate", UriKind.Relative),
+            new { stored_version_ref = NodeRef.For(Amendment.Id, 99).ToString() },
+            ct);
+        staleResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var staleDoc = JsonDocument.Parse(await staleResponse.Content.ReadAsStringAsync(ct));
+        staleDoc.RootElement.GetProperty("code").GetString().Should().Be(SimulationErrors.VersionStale.Code);
+
+        var gapResponse = await client.PostAsJsonAsync(
+            new Uri("/api/v1/kernel/protocols/matrix-gap-check", UriKind.Relative),
+            new { protocol_content = ProtocolDesignSamples.Minimal },
+            ct);
+        gapResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var gapDoc = JsonDocument.Parse(await gapResponse.Content.ReadAsStringAsync(ct));
+        gapDoc.RootElement[0].GetProperty("kind").GetString().Should().Be("IchM11Violation");
+        gapDoc.RootElement[0].GetProperty("severity").GetString().Should().Be("Error");
     }
 
     /// <summary>A caller the gateway signed without a subject has no actor, so CanI denies with the unresolved-actor condition.</summary>
@@ -887,6 +958,7 @@ public sealed class KernelApiHostTests : IDisposable
         using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseTestPostgresConnectionString()
             .UseSetting("Kernel:DevelopmentTenant:Code", "cadence-local"));
 
@@ -1073,7 +1145,7 @@ public sealed class KernelApiHostTests : IDisposable
 
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IKernelNavigator>();
@@ -1096,6 +1168,8 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IActivityStore>(_activity);
                 services.RemoveAll<IEnrollmentDirectory>();
                 services.AddSingleton<IEnrollmentDirectory>(_enrollments);
+                services.RemoveAll<ISimulationInputs>();
+                services.AddSingleton<ISimulationInputs>(_simulationInputs);
 
                 // The activity projector reads the database the host is configured with, which these tests never open.
                 var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
@@ -1485,5 +1559,39 @@ public sealed class KernelApiHostTests : IDisposable
 
         public Task<int> NextEnrollmentNumberAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class FakeSimulationInputs : ISimulationInputs
+    {
+        private static readonly string BaseContent = ProtocolDesignDocument.Write(SoaSamples.Cardio());
+        private static readonly string AmendedContent = ProtocolDesignDocument.Write(AmendedDesign);
+
+        public Task<ProtocolVersionSnapshot?> FindProtocolVersionAsync(TenantId tenant, ProtocolVersionId id, CancellationToken cancellationToken)
+        {
+            if (id == FirstVersion.Id)
+            {
+                return Task.FromResult<ProtocolVersionSnapshot?>(new ProtocolVersionSnapshot(
+                    FirstVersion.Id, StudyId.FromGuid(Study.Id), 1, ProtocolVersionStatus.Approved, null, BaseContent, ContentHash.Compute(BaseContent), 3));
+            }
+
+            if (id == Amendment.Id)
+            {
+                return Task.FromResult<ProtocolVersionSnapshot?>(new ProtocolVersionSnapshot(
+                    Amendment.Id, StudyId.FromGuid(Study.Id), 2, ProtocolVersionStatus.Draft, FirstVersion.Id, AmendedContent, null, 2));
+            }
+
+            return Task.FromResult<ProtocolVersionSnapshot?>(null);
+        }
+
+        public Task<DependentsReport> DependentsAsync(
+            TenantId tenant,
+            Actor reader,
+            ProtocolVersionId baseVersion,
+            ProtocolVersionId? candidate,
+            IReadOnlySet<NodeRef> impactedElements,
+            SimulationAsOf asOf,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new DependentsReport(
+                NodeRef.For(baseVersion).ToString(), LineageQuery.DefaultDepth, asOf.ValidAt, asOf.KnownAt, [], 0, false));
     }
 }

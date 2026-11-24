@@ -22,6 +22,9 @@ using Cadence.Database;
 using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Validation;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 using Cadence.Rules.Validation;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -526,7 +529,8 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
 
         // 1. eConsent capture stamps verified tenant code on ConsentAuditLog and resolved UUID on PostgreSQL tenant_id.
         string actionPath = "/api/v1/econsent/templates/tpl-rls-1/capture-consent";
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-EC-1", 0.99m, true, now: SystemClock.Instance.UtcNow);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-EC-1", 0.99m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: SystemClock.Instance.UtcNow);
         var crcAlpha = new GatewayIdentity(
             UserId: "crc-ec-alpha",
             Roles: ["crc"],
@@ -584,9 +588,35 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
             TenantId: "tenant-beta",
             StudyIds: [studyRouteId]));
 
-        var batchPostResp = await designerAlpha.PostAsJsonAsync(
+        var missingPackResp = await designerAlpha.PostAsJsonAsync(
             $"/api/v1/studies/{studyRouteId}/rules/batch-validate",
             new BatchValidateApiRequest(IsDryRun: true),
+            Ct);
+        missingPackResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        var explicitPack = new RulePack(
+            RuleAuthority.Study,
+            "Study Isolation Pack",
+            [
+                new Rule(
+                    "R_ISO_001",
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation("Protocol Edit Check Spec", "4.1", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "VS"),
+                    ValidationSeverity.Error,
+                    new ComparisonExpression(
+                        ComparisonOperator.Greater,
+                        new VariableExpression("SYSBP"),
+                        new LiteralExpression(RuleValue.FromNumber(140m))),
+                    "High systolic blood pressure.",
+                    null,
+                    EffectivePeriod.Always),
+            ]);
+
+        var batchPostResp = await designerAlpha.PostAsJsonAsync(
+            $"/api/v1/studies/{studyRouteId}/rules/batch-validate",
+            new BatchValidateApiRequest(RulePacks: [explicitPack], IsDryRun: true),
             Ct);
         batchPostResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var report = await batchPostResp.Content.ReadFromJsonAsync<BatchValidationReport>(cancellationToken: Ct);
@@ -812,6 +842,7 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys()
+                .UseTestBiometricLivenessKey()
                 .UseSetting("ConnectionStrings:cadence", cadenceAppConnectionString)
                 .UseSetting("Database:MigrateOnStartup", "false")
                 .ConfigureServices(services =>

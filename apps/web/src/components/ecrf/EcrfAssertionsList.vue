@@ -163,30 +163,11 @@ function assertionLink(target: string): RouteLocationRaw | null {
 </script>
 
 <style scoped>
-.ecrf-form-error {
-  color: var(--semantic-color-error);
-  font-size: 0.8rem;
-  margin: 2px 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.ecrf-form-outcome {
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ecrf-form-outcome--saved {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-form-outcome--failed {
-  background-color: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
+[data-testid="ecrf-form-assertions"] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 </style>
+
+<style scoped src="./ecrfFormBanners.css"></style>
