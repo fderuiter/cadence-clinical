@@ -478,6 +478,9 @@ export function createWebDemoStore() {
     queries: new Map(),
     queryDigests: [],
     proposals: new Map(),
+    validationFindings: [],
+    workQueues: [],
+    missingNodeRefs: new Set(),
     activityEntries: [],
     siteCompliance: new Map(),
     startupMatrices: new Map(),
@@ -565,6 +568,9 @@ export function createWebDemoStore() {
     state.idempotentSiteResponses = new Map();
     state.idempotentStudySiteResponses = new Map();
     state.idempotentImportResponses = new Map();
+    state.validationFindings = [];
+    state.workQueues = [];
+    state.missingNodeRefs = new Set();
 
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
     const baseCadenceStudy = createInitialDemoStudyDirectoryEntry();
@@ -1486,6 +1492,106 @@ export function createWebDemoStore() {
     return ensureStudyByCode(refOrCode);
   }
 
+  const DEMO_NODE_REF_SYNTAX =
+    /^[a-z][a-z0-9_]*:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:@[1-9][0-9]*)?$/i;
+  const DEMO_STUDY_CODE_SYNTAX = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+  function resolveExistingStudy(studyRefOrCode) {
+    const clean = String(studyRefOrCode || "").trim();
+    if (!clean) {
+      return {
+        error: {
+          status: 400,
+          problem: {
+            title: "Invalid study reference",
+            status: 400,
+            code: "K.NodeRef.Invalid",
+            detail: "A study reference or study code is required.",
+          },
+        },
+      };
+    }
+    if (clean.includes(":")) {
+      if (
+        !DEMO_NODE_REF_SYNTAX.test(clean) ||
+        !clean.toLowerCase().startsWith("study:")
+      ) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid study reference",
+              status: 400,
+              code: "K.NodeRef.Invalid",
+              detail: `'${clean}' is not a valid study NodeRef.`,
+            },
+          },
+        };
+      }
+    } else if (!DEMO_STUDY_CODE_SYNTAX.test(clean)) {
+      return {
+        error: {
+          status: 400,
+          problem: {
+            title: "Invalid study code",
+            status: 400,
+            code: "K.Study.InvalidCode",
+            detail: `'${clean}' is not a valid study code or NodeRef.`,
+          },
+        },
+      };
+    }
+
+    const unpinned = clean.split("@")[0].toLowerCase();
+    for (const candidate of state.studies.values()) {
+      if (
+        candidate.code.toUpperCase() === clean.toUpperCase() ||
+        String(candidate.ref).split("@")[0].toLowerCase() === unpinned
+      ) {
+        return { study: candidate };
+      }
+    }
+    if (clean.toUpperCase().startsWith("DEMO")) {
+      return { study: ensureStudyByCode(clean.toUpperCase()) };
+    }
+    return {
+      error: {
+        status: 404,
+        problem: {
+          title: "Study not found",
+          status: 404,
+          code: "K.Study.NotFound",
+          detail: `No visible study '${clean}' exists in this tenant.`,
+        },
+      },
+    };
+  }
+
+  function validateScopeOrStudyParam(rawScope) {
+    const clean = String(rawScope || "").trim();
+    if (!clean) return { study: null };
+    if (clean.includes(":")) {
+      if (!DEMO_NODE_REF_SYNTAX.test(clean)) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid scope reference",
+              status: 400,
+              code: "K.NodeRef.Invalid",
+              detail: `'${clean}' is not a valid NodeRef.`,
+            },
+          },
+        };
+      }
+      if (clean.toLowerCase().startsWith("study:")) {
+        return resolveExistingStudy(clean);
+      }
+      return { scopeRef: clean };
+    }
+    return resolveExistingStudy(clean);
+  }
+
   const resetListeners = new Set();
 
   function resetStoreState() {
@@ -1948,6 +2054,46 @@ export function createWebDemoStore() {
           );
         }
       }
+      if (String(nodeRef).startsWith("proposal:")) {
+        const unpinned = String(nodeRef).split("@")[0];
+        const prop =
+          state.proposals.get(nodeRef) || state.proposals.get(unpinned);
+        if (prop) {
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "proposal",
+              title: prop.intent || "Clinical proposal",
+              code: null,
+              status: prop.status || "Open",
+              mask: null,
+            },
+            caller
+          );
+        }
+      }
+      if (String(nodeRef).startsWith("query:")) {
+        const rawQueryId = String(nodeRef)
+          .replace(/^query:/, "")
+          .split("@")[0];
+        const q = state.queries.get(rawQueryId);
+        if (q) {
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "query",
+              title: q.text || `Discrepancy query (${q.item_id || "item"})`,
+              code: q.subject_code
+                ? `${q.subject_code} · ${q.item_id || "query"}`
+                : q.item_id || null,
+              status: String(q.status || "OPEN").toUpperCase(),
+              mask: null,
+            },
+            caller,
+            { siteCode: q.site_code || null }
+          );
+        }
+      }
       return applyNodeVisibilityMask(
         {
           ref: nodeRef,
@@ -1959,6 +2105,53 @@ export function createWebDemoStore() {
         },
         caller
       );
+    },
+
+    getNodes(refs = [], caller = null) {
+      const list = Array.isArray(refs) ? refs : [refs];
+      if (list.length > 100) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Batch size limit exceeded",
+              status: 400,
+              code: "K.Nodes.BatchLimitExceeded",
+              detail: "At most 100 node references may be requested per batch.",
+            },
+          },
+        };
+      }
+      const nodes = {};
+      for (const raw of list) {
+        const key = String(raw || "").trim();
+        if (!key) continue;
+        if (!DEMO_NODE_REF_SYNTAX.test(key)) {
+          return {
+            error: {
+              status: 400,
+              problem: {
+                title: "Invalid node reference",
+                status: 400,
+                code: "K.NodeRef.Invalid",
+                detail: `'${key}' is not a valid NodeRef.`,
+              },
+            },
+          };
+        }
+        const unpinned = key.split("@")[0];
+        if (
+          state.missingNodeRefs?.has(key) ||
+          state.missingNodeRefs?.has(unpinned)
+        ) {
+          continue;
+        }
+        const resolved = this.getNode(key, caller);
+        if (resolved) {
+          nodes[key] = resolved;
+        }
+      }
+      return { data: { nodes } };
     },
 
     getZoomPath(nodeRef, caller = null) {
@@ -3334,24 +3527,129 @@ export function createWebDemoStore() {
       };
     },
 
-    listProposals({ status, limit } = {}) {
+    resolveStudy(studyRefOrCode = "") {
+      return resolveExistingStudy(studyRefOrCode);
+    },
+
+    listProposals(studyOrOptions = "", maybeOptions = {}) {
+      const hasStudyArg = typeof studyOrOptions === "string";
+      const studyRefOrCode = hasStudyArg ? studyOrOptions : "";
+      const { status, limit } = hasStudyArg
+        ? maybeOptions || {}
+        : studyOrOptions || {};
+      if (studyRefOrCode) {
+        const resolved = resolveExistingStudy(studyRefOrCode);
+        if (resolved.error) return resolved;
+      }
       let items = [...state.proposals.values()];
-      const normalizedStatus = String(status || "")
-        .trim()
-        .toLowerCase();
-      if (normalizedStatus) {
-        items = items.filter(
-          (item) =>
-            String(item.status || "")
-              .trim()
-              .toLowerCase() === normalizedStatus
-        );
+      if (status) {
+        const upper = String(status).trim().toUpperCase();
+        items = items.filter((p) => {
+          const itemStatus = String(p.status || "")
+            .trim()
+            .toUpperCase();
+          if (upper === "OPEN") {
+            return itemStatus === "OPEN" || itemStatus === "PENDING";
+          }
+          return itemStatus === upper;
+        });
       }
-      const maxItems = Number(limit);
-      if (Number.isFinite(maxItems) && maxItems > 0) {
-        items = items.slice(0, maxItems);
+      const cap = Math.min(Math.max(1, Number(limit) || 50), 200);
+      const sliced = cloneJson(items.slice(0, cap));
+      return studyRefOrCode ? { data: sliced } : sliced;
+    },
+
+    listStudyValidationFindings(
+      studyRefOrCode = "",
+      { stage, statuses = [], severity, dataset, packKey, limit } = {}
+    ) {
+      const resolved = resolveExistingStudy(studyRefOrCode);
+      if (resolved.error) return resolved;
+      const studyRefUnpinned = String(resolved.study.ref).split("@")[0];
+      const normalizedStatuses = (
+        Array.isArray(statuses) ? statuses : [statuses]
+      )
+        .filter(Boolean)
+        .map((s) => String(s).toUpperCase());
+
+      let matched = (state.validationFindings || []).filter((f) => {
+        if (
+          f.study_ref &&
+          String(f.study_ref).split("@")[0] !== studyRefUnpinned &&
+          f.study_code?.toUpperCase() !== resolved.study.code.toUpperCase()
+        ) {
+          return false;
+        }
+        if (
+          stage &&
+          String(f.stage || "").toUpperCase() !== stage.toUpperCase()
+        )
+          return false;
+        if (
+          normalizedStatuses.length > 0 &&
+          !normalizedStatuses.includes(String(f.status || "").toUpperCase())
+        ) {
+          return false;
+        }
+        if (
+          severity &&
+          String(f.severity || "").toUpperCase() !== severity.toUpperCase()
+        ) {
+          return false;
+        }
+        if (
+          dataset &&
+          String(f.dataset || "").toUpperCase() !== dataset.toUpperCase()
+        ) {
+          return false;
+        }
+        if (packKey && f.pack_key !== packKey) return false;
+        return true;
+      });
+
+      const total = matched.length;
+      if (limit !== undefined && limit !== null && Number(limit) > 0) {
+        matched = matched.slice(0, Math.min(Number(limit), 200));
       }
-      return cloneJson(items);
+      return {
+        data: {
+          total,
+          findings: cloneJson(matched),
+        },
+      };
+    },
+
+    getStudyAttention(studyRefOrCode = "", { limit = 20 } = {}) {
+      const resolved = resolveExistingStudy(studyRefOrCode);
+      if (resolved.error) return resolved;
+      const cap = Math.min(Math.max(1, Number(limit) || 20), 200);
+      const proposalsRes = this.listProposals(studyRefOrCode, {
+        status: "Open",
+        limit: cap,
+      });
+      const findingsRes = this.listStudyValidationFindings(studyRefOrCode, {
+        statuses: ["Open", "Investigating"],
+        limit: cap,
+      });
+      return {
+        data: {
+          study_ref: String(resolved.study.ref).split("@")[0],
+          proposals: proposalsRes.data || [],
+          findings: findingsRes.data?.findings || [],
+        },
+      };
+    },
+
+    listWorkQueues({ within, queue } = {}) {
+      if (within) {
+        const check = validateScopeOrStudyParam(within);
+        if (check.error) return check;
+      }
+      let queues = cloneJson(state.workQueues || []);
+      if (queue) {
+        queues = queues.filter((q) => q.code === queue);
+      }
+      return { data: { queues } };
     },
 
     getProposal(proposalRef) {
@@ -3402,11 +3700,45 @@ export function createWebDemoStore() {
       };
     },
 
-    getActivityPage({ limit = 25 } = {}) {
-      return {
-        entries: cloneJson(state.activityEntries.slice(0, Number(limit) || 25)),
+    getActivityPage({
+      scope,
+      families = [],
+      limit = 25,
+      includeNodes = false,
+      caller = null,
+    } = {}) {
+      if (scope) {
+        const check = validateScopeOrStudyParam(scope);
+        if (check.error) return check;
+      }
+      const normalizedFamilies = (
+        Array.isArray(families) ? families : [families]
+      )
+        .filter(Boolean)
+        .map((f) => String(f).toLowerCase());
+      let filtered = state.activityEntries;
+      if (normalizedFamilies.length > 0) {
+        filtered = filtered.filter((entry) =>
+          normalizedFamilies.includes(String(entry.family || "").toLowerCase())
+        );
+      }
+      const entries = cloneJson(filtered.slice(0, Number(limit) || 25));
+      const page = {
+        entries,
         next: null,
       };
+      if (includeNodes) {
+        const subjectRefs = [
+          ...new Set(
+            entries
+              .filter((e) => !e.mask && e.subject)
+              .map((e) => String(e.subject))
+          ),
+        ];
+        const batch = this.getNodes(subjectRefs, caller);
+        page.nodes = batch.data?.nodes || {};
+      }
+      return scope ? { data: page } : page;
     },
 
     getObservation(observationRef, scopeHint = {}) {

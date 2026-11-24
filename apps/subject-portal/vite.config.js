@@ -5,6 +5,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 import {
+  buildModeAwareCspContent,
+  injectHoistedCspMeta as injectHoistedPortalCspMeta,
+  resolveViteOidcOrigin as resolvePortalOidcOrigin,
+} from "../../scripts/vite-hoist-csp.mjs";
+import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
   createUiWorkspaceAliases,
@@ -35,6 +40,12 @@ export function getDomain(input, options = {}) {
   return tailTwo;
 }
 `;
+
+export { injectHoistedPortalCspMeta, resolvePortalOidcOrigin };
+
+export function buildSubjectPortalCspContent(options = {}) {
+  return buildModeAwareCspContent(options);
+}
 
 export default defineConfig(({ mode }) => ({
   base: process.env.VITE_BASE_PATH || "/subject-portal/",
@@ -74,20 +85,36 @@ export default defineConfig(({ mode }) => ({
         }
       },
     },
-    {
-      name: "html-transform",
-      transformIndexHtml(html) {
-        const title =
-          process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
-        return html.replace(/%VITE_APP_TITLE%/g, title);
-      },
-      configurePreviewServer(server) {
-        if (server.httpServer) {
-          server.httpServer.keepAliveTimeout = 65000;
-          server.httpServer.headersTimeout = 66000;
-        }
-      },
-    },
+    (() => {
+      let resolvedPortalCsp = buildSubjectPortalCspContent();
+      return {
+        name: "html-transform",
+        configResolved(resolved) {
+          const fileEnv = loadEnv(resolved.mode, __dirname, "VITE_");
+          const mergedEnv = { ...fileEnv, ...process.env };
+          resolvedPortalCsp = buildSubjectPortalCspContent({
+            mode: resolved.mode,
+            isProduction: Boolean(resolved.isProduction),
+            env: mergedEnv,
+          });
+        },
+        transformIndexHtml: {
+          order: "post",
+          handler(html) {
+            const title =
+              process.env.VITE_APP_TITLE || "Subject Portal - Cadence Clinical";
+            const withTitle = html.replace(/%VITE_APP_TITLE%/g, title);
+            return injectHoistedPortalCspMeta(withTitle, resolvedPortalCsp);
+          },
+        },
+        configurePreviewServer(server) {
+          if (server.httpServer) {
+            server.httpServer.keepAliveTimeout = 65000;
+            server.httpServer.headersTimeout = 66000;
+          }
+        },
+      };
+    })(),
     (() => {
       let isE2eProd = false;
       let resolvedOutDir = path.resolve(__dirname, "dist");

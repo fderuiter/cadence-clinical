@@ -2,6 +2,7 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -49,6 +50,11 @@ public interface IAuthorityStore
 
     /// <summary>The roles with the given ids that exist in the tenant.</summary>
     Task<IReadOnlyList<Role>> RolesAsync(TenantId tenant, IReadOnlyCollection<RoleId> roles, CancellationToken cancellationToken);
+
+    /// <summary>The sequential protocol version numbers (from 1) of the given protocol versions in the tenant.</summary>
+    Task<IReadOnlyDictionary<ProtocolVersionId, int>> ProtocolVersionNumbersAsync(
+        TenantId tenant, IReadOnlyCollection<ProtocolVersionId> versions, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyDictionary<ProtocolVersionId, int>>(new Dictionary<ProtocolVersionId, int>());
 
     /// <summary>
     /// Where <paramref name="resource"/> sits on the scope path. An object that does not exist, or belongs to no
@@ -201,7 +207,7 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
 /// (K-AUTH-6); a missing qualification is named, with the one that lapsed when there is one. Separation of duties is a
 /// later slice of #4781.
 /// </summary>
-public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOptions options) : IAuthorizationEvaluator
+public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOptions options) : IAuthorizationEvaluator
 {
     private const string EnrollmentUnblindToken = "enrollment.unblind";
 
@@ -321,13 +327,17 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         }
 
         var forPerson = await EvaluateCoreAsync(request with { Actor = person }, enforceEvidenceBlinding, cancellationToken).ConfigureAwait(false);
+        var personLabel = DescribeActor(person, "the requesting person");
+        var personRef = ActorEvidence(person);
+        NodeRef[] requesterEvidence = personRef is { } pRef ? [pRef] : [];
         var bounded = forPerson.Permitted
-            ? EvaluatedCondition.Satisfied(RequesterCondition, $"Acts for {person.Id}, who may {request.Capability.Token}")
-            : EvaluatedCondition.Unsatisfied(RequesterCondition, $"Act for a person who may {request.Capability.Token}");
+            ? EvaluatedCondition.Satisfied(RequesterCondition, $"Acts for {personLabel}, who may {request.Capability.Token}", requesterEvidence)
+            : EvaluatedCondition.Unsatisfied(RequesterCondition, $"Act for a person who may {request.Capability.Token}", requesterEvidence);
         EvaluatedCondition[] conditions = [.. own.Conditions, bounded, .. forPerson.Conditions];
+        var agentLabel = DescribeActor(request.Actor, "The automation agent");
         return forPerson.Permitted
             ? AuthorizationDecision.Permit(conditions: conditions)
-            : AuthorizationDecision.Deny($"{request.Actor.Id} acts for {person.Id}, who may not {request.Capability.Token}: {forPerson.Reason}", conditions);
+            : AuthorizationDecision.Deny($"{agentLabel} acts for {personLabel}, who may not {request.Capability.Token}: {forPerson.Reason}", conditions);
     }
 
     /// <summary>
@@ -417,6 +427,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             path = evidenceInfo.Scope;
         }
 
+        var actorLabel = DescribeActor(request.Actor, "The signed-in user");
         var held = await store.GrantsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
         var roles = await RoleCapabilitiesFromStoreAsync(store, request.Tenant, held, cancellationToken).ConfigureAwait(false);
         var carrying = held.Where(g => Carries(g, token, roles)).ToList();
@@ -446,7 +457,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         {
             if (await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
             {
-                return await PermitIfQualifiedAsync(request, token, grant, path, qualified, unblindConditions, cancellationToken).ConfigureAwait(false);
+                return await PermitIfQualifiedAsync(request, actorLabel, token, grant, path, qualified, unblindConditions, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -461,7 +472,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
                 var grantPath = grantPaths.GetValueOrDefault(NodeRef.For(grant.Id), ScopePath.TenantWide);
                 if (grantPath.Study == path.Study && await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
                 {
-                    return await PermitIfQualifiedAsync(request, token, grant, grantPath, qualified, unblindConditions, cancellationToken).ConfigureAwait(false);
+                    return await PermitIfQualifiedAsync(request, actorLabel, token, grant, grantPath, qualified, unblindConditions, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -475,15 +486,19 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         NodeRef resource,
         IReadOnlyList<Grant> carrying)
     {
+        var actorLabel = DescribeActor(actor, "The signed-in user");
         var reason = carrying.Count == 0
-            ? $"{actor.Id} holds no grant of {token}."
-            : $"{actor.Id} holds no grant of {token} in effect for this {resource.Kind}.";
+            ? $"{actorLabel} holds no grant of {token}."
+            : $"{actorLabel} holds no grant of {token} in effect for this {resource.Kind}.";
+        NodeRef[] grantEvidence = ActorEvidence(actor) is { } actorNode
+            ? [resource, actorNode, .. carrying.Select(g => NodeRef.For(g.Id))]
+            : [resource, .. carrying.Select(g => NodeRef.For(g.Id))];
         return AuthorizationDecision.Deny(
             reason,
             EvaluatedCondition.Unsatisfied(
                 GrantCondition,
                 $"Obtain a grant or delegation of {token} covering this {resource.Kind}",
-                [resource, .. carrying.Select(g => NodeRef.For(g.Id))]));
+                grantEvidence));
     }
 
     private async ValueTask<EvaluatedCondition[]?> ResolveBlindedEvidenceConditionsAsync(
@@ -526,6 +541,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
 
     private async ValueTask<AuthorizationDecision> PermitIfQualifiedAsync(
         AuthorizationRequest request,
+        string actorLabel,
         string token,
         Grant grant,
         ScopePath qualificationPath,
@@ -540,7 +556,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             .. qualified ? await QualificationConditionsAsync(request, token, qualificationPath, cancellationToken).ConfigureAwait(false) : [],
         ];
         return conditions.FirstOrDefault(c => !c.Met) is { } missing
-            ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
+            ? AuthorizationDecision.Deny($"{actorLabel} is not qualified to {token}: {missing.Description}.", conditions)
             : AuthorizationDecision.Permit(conditions: conditions);
     }
 
@@ -589,12 +605,21 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             return [];
         }
 
+        var versionIds = requirements
+            .Where(r => r.ProtocolVersionId is not null)
+            .Select(r => r.ProtocolVersionId!.Value)
+            .Distinct()
+            .ToList();
+        IReadOnlyDictionary<ProtocolVersionId, int> versionNumbers = versionIds.Count == 0
+            ? EmptyVersionNumbers
+            : await store.ProtocolVersionNumbersAsync(request.Tenant, versionIds, cancellationToken).ConfigureAwait(false);
+
         var held = await store.QualificationsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
         var conditions = new List<EvaluatedCondition>(requirements.Count);
         foreach (var requirement in requirements)
         {
             var matching = held.Where(requirement.IsMetBy).OrderBy(q => q.Id).ToList();
-            var named = Named(requirement);
+            var named = Named(requirement, versionNumbers);
             if (matching.FirstOrDefault(q => q.IsInEffect(request.At, request.KnownAt)) is { } current)
             {
                 conditions.Add(EvaluatedCondition.Satisfied(
@@ -607,21 +632,65 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
                 .Where(x => x.Ended is not null)
                 .OrderByDescending(x => x.Ended)
                 .FirstOrDefault();
-            conditions.Add(lapsed.Qualification is { } expired
-                ? EvaluatedCondition.Unsatisfied(
+            NodeRef[] missingEvidence = requirement.ProtocolVersionId is { } requiredVersion
+                ? [NodeRef.For(requirement.Id), NodeRef.For(requiredVersion)]
+                : [NodeRef.For(requirement.Id)];
+            if (lapsed.Qualification is { } expired)
+            {
+                NodeRef[] expiredEvidence = requirement.ProtocolVersionId is { } expiredVersion
+                    ? [NodeRef.For(requirement.Id), NodeRef.For(expired.Id), NodeRef.For(expiredVersion)]
+                    : [NodeRef.For(requirement.Id), NodeRef.For(expired.Id)];
+                conditions.Add(EvaluatedCondition.Unsatisfied(
                     QualificationCondition,
                     $"Renew {named}; it expired on {lapsed.Ended!.Value:yyyy-MM-dd}",
-                    NodeRef.For(requirement.Id), NodeRef.For(expired.Id))
-                : EvaluatedCondition.Unsatisfied(QualificationCondition, $"Obtain {named}", NodeRef.For(requirement.Id)));
+                    expiredEvidence));
+            }
+            else
+            {
+                conditions.Add(EvaluatedCondition.Unsatisfied(QualificationCondition, $"Obtain {named}", missingEvidence));
+            }
         }
 
         return conditions;
     }
 
-    private static string Named(QualificationRequirement requirement) =>
-        requirement.ProtocolVersionId is { } version
-            ? $"{requirement.QualificationCode} for protocol version {version}"
-            : requirement.QualificationCode;
+    private static readonly IReadOnlyDictionary<ProtocolVersionId, int> EmptyVersionNumbers =
+        new Dictionary<ProtocolVersionId, int>();
+
+    private static string Named(QualificationRequirement requirement, IReadOnlyDictionary<ProtocolVersionId, int> versionNumbers)
+    {
+        if (requirement.ProtocolVersionId is not { } version)
+        {
+            return requirement.QualificationCode;
+        }
+
+        return versionNumbers.TryGetValue(version, out var number)
+            ? $"{requirement.QualificationCode} for protocol version {number}"
+            : $"{requirement.QualificationCode} for the required protocol version";
+    }
+
+    private static string DescribeActor(Actor actor, string personFallback)
+    {
+        if (!UuidPattern().IsMatch(actor.Id))
+        {
+            return actor.Id;
+        }
+
+        return actor.Kind switch
+        {
+            ActorKind.ServiceAccount => "The service account",
+            ActorKind.AutomationAgent => "The automation agent",
+            _ => personFallback,
+        };
+    }
+
+    private static NodeRef? ActorEvidence(Actor actor) =>
+        actor.Kind == ActorKind.Person && Guid.TryParse(actor.Id, out var personGuid) && personGuid != Guid.Empty
+            ? NodeRef.For(PersonId.FromGuid(personGuid))
+            : null;
+
+    [GeneratedRegex(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", RegexOptions.CultureInvariant)]
+    private static partial Regex UuidPattern();
 
     private Task<bool> InEffectAsync(AuthorizationRequest request, Grant grant, CancellationToken cancellationToken) =>
         GrantChain.InEffectAsync(store, request.Tenant, grant, request.At, request.KnownAt, cancellationToken);

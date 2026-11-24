@@ -1,5 +1,10 @@
 import { getActivePinia } from "pinia";
-import type { LocationQuery, RouteLocationRaw, Router } from "vue-router";
+import {
+  isNavigationFailure,
+  type LocationQuery,
+  type RouteLocationRaw,
+  type Router,
+} from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import {
@@ -110,18 +115,18 @@ export interface WorkspaceScopeSnapshot {
   inspectorNodeParam?: string;
 }
 
-const SITE_READINESS_SPONSOR_ROLES = [
+export const SITE_READINESS_SPONSOR_ROLES = [
   "cra",
   "monitor",
   "data_manager",
   "sponsor_admin",
 ];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
-const DATA_COLLECTION_ROLES = [
+export const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+export const DATA_COLLECTION_ROLES = [
   ...SITE_READINESS_SITE_ROLES,
   ...SITE_READINESS_SPONSOR_ROLES,
 ];
-const ETMF_ROLES = [
+export const ETMF_ROLES = [
   "cra",
   "monitor",
   "data_manager",
@@ -1041,28 +1046,6 @@ export async function executePaletteTarget(
     return;
   }
   const isCrossStudy = Boolean(priorStudyCode && studyCode !== priorStudyCode);
-  if (isCrossStudy) {
-    syncInstantiatedClinicalScope({
-      activeStudyId: studyCode,
-      activeSiteId: "",
-      activeSubjectId: "",
-    });
-  }
-  if (target.ask) {
-    const baseQuery =
-      !isCrossStudy &&
-      context.currentRouteName === "study" &&
-      context.currentQuery
-        ? { ...context.currentQuery }
-        : {};
-    await context.router.push({
-      name: "study",
-      params: { studyCode },
-      query: { ...baseQuery, ask: target.ask },
-    });
-    await context.onFocusInspector?.(null);
-    return;
-  }
   const effectiveScope: Partial<WorkspaceScopeSnapshot> =
     context.workspaceScope ??
     resolveActiveWorkspaceScope(
@@ -1075,6 +1058,42 @@ export async function executePaletteTarget(
       },
       null
     );
+  const previousScope = isCrossStudy ? readInstantiatedClinicalScope() : null;
+  if (isCrossStudy) {
+    syncInstantiatedClinicalScope({
+      activeStudyId: studyCode,
+      activeSiteId: "",
+      activeSubjectId: "",
+    });
+  }
+  const restorePreviousScope = () => {
+    if (previousScope) {
+      syncInstantiatedClinicalScope({
+        activeStudyId: previousScope.activeStudyId ?? "",
+        activeSiteId: previousScope.activeSiteId ?? "",
+        activeSubjectId: previousScope.activeSubjectId ?? "",
+      });
+    }
+  };
+  if (target.ask) {
+    const baseQuery =
+      !isCrossStudy &&
+      context.currentRouteName === "study" &&
+      context.currentQuery
+        ? { ...context.currentQuery }
+        : {};
+    const failure = await context.router.push({
+      name: "study",
+      params: { studyCode },
+      query: { ...baseQuery, ask: target.ask },
+    });
+    if (isNavigationFailure(failure)) {
+      restorePreviousScope();
+      return;
+    }
+    await context.onFocusInspector?.(null);
+    return;
+  }
   const scopedWithStudy: Partial<WorkspaceScopeSnapshot> = {
     ...effectiveScope,
     studyCode: priorStudyCode || effectiveScope.studyCode || "",
@@ -1088,7 +1107,11 @@ export async function executePaletteTarget(
     },
     scopedWithStudy
   );
-  await context.router.push(location);
+  const failure = await context.router.push(location);
+  if (isNavigationFailure(failure)) {
+    restorePreviousScope();
+    return;
+  }
   if (target.participant) {
     await context.onFocusInspector?.(location.query.node ?? null);
   }

@@ -303,3 +303,16 @@ public sealed record KernelValidationFindingPageResponse(
 public sealed record KernelValidationFindingDetailResponse(
     KernelValidationFindingResponse Finding,
     Explanation Explanation);
+
+/// <summary>
+/// Unified Study Home attention read returned by <c>GET /api/v1/kernel/studies/{studyRef}/attention</c>
+/// (Clinical Canvas PX-10, ADR-2635). Combines open proposals (masked in place when restricted) and visible
+/// <c>Open</c> or <c>Investigating</c> validation findings capped by <c>limit</c>.
+/// </summary>
+/// <param name="StudyRef">The resolved study <c>NodeRef</c> pinned to its current version.</param>
+/// <param name="Proposals">Open proposals for the study, masked in place when the caller may not see a proposal.</param>
+/// <param name="Findings">Visible <c>Open</c> or <c>Investigating</c> validation findings capped by <c>limit</c>.</param>
+public sealed record KernelStudyAttentionResponse(
+    string StudyRef,
+    IReadOnlyList<KernelProposalResponse> Proposals,
+    IReadOnlyList<KernelValidationFindingResponse> Findings);

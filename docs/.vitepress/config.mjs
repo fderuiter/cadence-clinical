@@ -1,5 +1,4 @@
 import { defineConfig } from "vitepress";
-import crypto from "crypto";
 import path from "path";
 import process from "process";
 import { fileURLToPath } from "url";
@@ -7,8 +6,10 @@ import { fileURLToPath } from "url";
 import {
   BLOG_FEED_PATH,
   getDraftBlogPostExcludes,
+  resolveBaseHref,
   writeRssFeed,
 } from "./blog.mjs";
+import { buildPortalCspContent, injectHashedPortalCsp } from "./csp.mjs";
 import {
   EXCLUDED_PORTAL_DOCS,
   assertThemeLinksExist,
@@ -21,57 +22,16 @@ import {
   synthesizeSidebarFromIndex,
 } from "./sidebar.mjs";
 
+export { buildPortalCspContent, injectHashedPortalCsp };
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const docsDir = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(__dirname, "../..");
 const indexPath = path.join(docsDir, "DOCUMENTATION_INDEX.md");
 const siteBase = process.env.VITEPRESS_BASE || "/cadence-clinical/";
+const rssFeedHref = resolveBaseHref(BLOG_FEED_PATH, siteBase);
 const isDevServer = process.argv.includes("dev");
-
-function buildPortalCspContent(inlineScriptHashes = []) {
-  const scriptSources = ["'self'", ...inlineScriptHashes].join(" ");
-  return [
-    "default-src 'self'",
-    `script-src ${scriptSources}`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "media-src 'self'",
-    "worker-src 'self'",
-    "connect-src 'self'",
-    "manifest-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join("; ");
-}
-
-function injectHashedPortalCsp(html) {
-  const inlineHashes = new Set();
-  const inlineScriptRegex =
-    /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script>/gi;
-  let match;
-  while ((match = inlineScriptRegex.exec(html)) !== null) {
-    const scriptBody = match[1];
-    if (scriptBody.length > 0) {
-      const digest = crypto
-        .createHash("sha256")
-        .update(scriptBody, "utf8")
-        .digest("base64");
-      inlineHashes.add(`'sha256-${digest}'`);
-    }
-  }
-
-  const cspTag = `<meta http-equiv="Content-Security-Policy" content="${buildPortalCspContent([...inlineHashes])}">`;
-  const existingCspRegex =
-    /<meta\b[^>]*\bhttp-equiv=["']Content-Security-Policy["'][^>]*>/i;
-  if (existingCspRegex.test(html)) {
-    return html.replace(existingCspRegex, cspTag);
-  }
-
-  return html.replace(/<head>/i, `<head>\n    ${cspTag}`);
-}
 
 const searchCatalog = buildPortalSearchCatalog(indexPath, {
   docsDir,
@@ -93,19 +53,12 @@ const config = defineConfig({
   ],
   head: [
     [
-      "meta",
-      {
-        "http-equiv": "Content-Security-Policy",
-        content: buildPortalCspContent(),
-      },
-    ],
-    [
       "link",
       {
         rel: "alternate",
         type: "application/rss+xml",
         title: "Cadence Clinical Engineering Blog RSS Feed",
-        href: `${siteBase.replace(/\/?$/, "/")}feed.xml`,
+        href: rssFeedHref,
       },
     ],
   ],
@@ -122,6 +75,7 @@ const config = defineConfig({
       md.use(repoLinksPlugin, {
         docsDir,
         repoRoot,
+        isDevServer,
       });
     },
   },
@@ -150,12 +104,20 @@ const config = defineConfig({
         },
         _render(src, env, md) {
           const relPath = env.relativePath ?? "";
-          if (!searchCatalog.shouldIndexPage(relPath, null, src)) {
+          if (
+            env.frontmatter?.draft === true ||
+            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||
+            !searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)
+          ) {
             return "";
           }
           const preparedSrc = searchCatalog.prepareSearchMarkdown(relPath, src);
           const html = md.render(preparedSrc, env);
-          if (!searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)) {
+          if (
+            env.frontmatter?.draft === true ||
+            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||
+            !searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)
+          ) {
             return "";
           }
           return searchCatalog.applyHeadingBoostHtml(relPath, html);
@@ -174,7 +136,7 @@ const config = defineConfig({
       { text: "API Reference", link: "/api/index" },
       { text: "Data Models", link: "/schema/README" },
       { text: "ADRs", link: "/adr/index" },
-      { text: "RSS", link: BLOG_FEED_PATH, target: "_blank" },
+      { text: "RSS", link: rssFeedHref, target: "_blank" },
     ],
     sidebar: synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -184,6 +146,6 @@ const config = defineConfig({
 });
 
 // VitePress checks links inside pages without fragments; assertThemeLinksExist validates nav and sidebar pages and anchors.
-assertThemeLinksExist(config.themeConfig, docsDir);
+assertThemeLinksExist(config.themeConfig, docsDir, { base: siteBase });
 
 export default config;

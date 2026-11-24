@@ -134,7 +134,7 @@ import {
   type KernelWorkItem,
   type KernelWorkQueue,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { seedKernelStudyRef } from "../../canvas/kernelStudy";
 import {
   collectionInstanceRef,
   observationNodeRef,
@@ -305,24 +305,37 @@ let requestSeq = 0;
 async function load() {
   if (!hasWorkQueueService.value) return;
   const seq = ++requestSeq;
+  const code = props.studyCode.trim();
   loading.value = true;
   error.value = "";
   noStudy.value = false;
   queues.value = [];
+  if (!code) {
+    noStudy.value = true;
+    loading.value = false;
+    return;
+  }
   try {
-    const studyRef = await findKernelStudyRef(props.studyCode);
-    if (seq !== requestSeq) return;
-    if (!studyRef) {
-      noStudy.value = true;
-      return;
-    }
-    const page = await kernelApi.listWorkQueues({ within: studyRef });
+    const page = await kernelApi.listWorkQueues({ within: code });
     if (seq === requestSeq) {
-      queues.value = page?.queues ?? [];
+      const nextQueues = page?.queues ?? [];
+      queues.value = nextQueues;
+      for (const q of nextQueues) {
+        const studyRefHint = q.items.find((it) => it.target?.study_ref)?.target
+          ?.study_ref;
+        if (studyRefHint) {
+          seedKernelStudyRef(code, studyRefHint);
+          break;
+        }
+      }
     }
   } catch (err) {
     if (seq === requestSeq) {
-      error.value = err instanceof Error ? err.message : String(err);
+      if ((err as { status?: number | null } | null)?.status === 404) {
+        noStudy.value = true;
+      } else {
+        error.value = err instanceof Error ? err.message : String(err);
+      }
     }
   } finally {
     if (seq === requestSeq) loading.value = false;

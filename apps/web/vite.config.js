@@ -1,9 +1,15 @@
 // Vue SPA Vite configuration
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
+import {
+  buildModeAwareCspContent,
+  injectHoistedCspMeta as injectHoistedWebCspMeta,
+  resolveViteOidcOrigin as resolveWebOidcOrigin,
+} from "../../scripts/vite-hoist-csp.mjs";
 import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
@@ -17,6 +23,16 @@ const DEV_PORT = 3000;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 const IS_E2E_BUILD = process.env.CADENCE_E2E_BUILD === "1";
+
+export { injectHoistedWebCspMeta, resolveWebOidcOrigin };
+
+export function buildWebCspContent(options = {}) {
+  return buildModeAwareCspContent(options, {
+    allowBlobMedia: true,
+    allowBlobWorker: true,
+    allowBlobFrame: true,
+  });
+}
 
 const E2E_BOOT_RECOVERY_SCRIPT = `(function () {
   var RETRY_KEY = "__cadence_e2e_boot_retry__";
@@ -95,20 +111,57 @@ export default defineConfig({
     },
     (() => {
       let resolvedBase = "/cadence-clinical/";
+      let resolvedOutDir = "dist";
+      let resolvedCsp = buildWebCspContent();
       return {
         name: "html-transform",
         configResolved(resolved) {
           resolvedBase = resolved.base || "/cadence-clinical/";
+          resolvedOutDir = resolved.build?.outDir || "dist";
+          const fileEnv = loadEnv(resolved.mode, __dirname, "VITE_");
+          const mergedEnv = { ...fileEnv, ...process.env };
+          resolvedCsp = buildWebCspContent({
+            mode: resolved.mode,
+            isProduction: Boolean(resolved.isProduction),
+            env: mergedEnv,
+          });
         },
-        transformIndexHtml(html) {
-          const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
-          const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
-          return IS_E2E_BUILD
-            ? transformed.replace(
-                "</title>",
-                `</title>\n    <script src="${resolvedBase}e2e-boot-recovery.js"></script>`
-              )
-            : transformed;
+        transformIndexHtml: {
+          order: "post",
+          handler(html) {
+            const title = process.env.VITE_APP_TITLE || "Cadence Clinical";
+            const transformed = html.replace(/%VITE_APP_TITLE%/g, title);
+            const withRecovery = IS_E2E_BUILD
+              ? transformed.replace(
+                  "</title>",
+                  `</title>\n    <script src="${resolvedBase}e2e-boot-recovery.js"></script>`
+                )
+              : transformed;
+            return injectHoistedWebCspMeta(withRecovery, resolvedCsp);
+          },
+        },
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            const cleanPath = (req.url || "").split("?")[0];
+            if (
+              cleanPath === "/silent-check-sso.html" ||
+              cleanPath ===
+                `${resolvedBase.replace(/\/?$/, "/")}silent-check-sso.html`
+            ) {
+              const ssoSrcPath = path.resolve(
+                __dirname,
+                "public/silent-check-sso.html"
+              );
+              if (fs.existsSync(ssoSrcPath)) {
+                const rawHtml = fs.readFileSync(ssoSrcPath, "utf8");
+                res.statusCode = 200;
+                res.setHeader("Content-Type", "text/html; charset=utf-8");
+                res.end(injectHoistedWebCspMeta(rawHtml, resolvedCsp));
+                return;
+              }
+            }
+            next();
+          });
         },
         generateBundle() {
           if (!IS_E2E_BUILD) return;
@@ -117,6 +170,20 @@ export default defineConfig({
             fileName: "e2e-boot-recovery.js",
             source: E2E_BOOT_RECOVERY_SCRIPT,
           });
+        },
+        writeBundle(outputOptions) {
+          const outDir = outputOptions?.dir
+            ? path.resolve(__dirname, outputOptions.dir)
+            : path.resolve(__dirname, resolvedOutDir);
+          const emittedSsoPath = path.join(outDir, "silent-check-sso.html");
+          if (fs.existsSync(emittedSsoPath)) {
+            const rawSsoHtml = fs.readFileSync(emittedSsoPath, "utf8");
+            fs.writeFileSync(
+              emittedSsoPath,
+              injectHoistedWebCspMeta(rawSsoHtml, resolvedCsp),
+              "utf8"
+            );
+          }
         },
         configurePreviewServer(server) {
           if (server.httpServer) {

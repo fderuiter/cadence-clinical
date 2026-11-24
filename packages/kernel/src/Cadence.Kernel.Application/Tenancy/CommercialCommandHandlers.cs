@@ -346,7 +346,7 @@ internal static class CommercialQuoteRefusal
                 "kernel.commercial",
                 [new ExplanationStep(CommercialErrors.QuoteInvalid.Message, [subject])],
                 [condition],
-                [new NextAction(actionDescription)]),
+                [new NextAction(actionDescription, Target: subject)]),
         };
     }
 }

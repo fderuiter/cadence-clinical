@@ -228,6 +228,127 @@ export function isGatewayRequest(url, location = globalThis.location) {
 }
 
 /**
+ * Rebuilds a `Request` with updated URL and/or headers while preserving any non-GET/HEAD body bytes.
+ *
+ * @param {Request} source
+ * @param {string} [url=source.url]
+ * @param {HeadersInit} [headers=source.headers]
+ * @returns {Promise<Request>}
+ */
+export async function rebuildRequest(
+  source,
+  url = source.url,
+  headers = source.headers
+) {
+  const hasBody =
+    source.body !== null && source.method !== "GET" && source.method !== "HEAD";
+  const body = hasBody ? await source.arrayBuffer() : undefined;
+  return new Request(url, {
+    method: source.method,
+    headers,
+    body: body && body.byteLength > 0 ? body : undefined,
+    credentials: source.credentials,
+    mode: source.mode,
+    cache: source.cache,
+    redirect: source.redirect,
+    referrer: source.referrer,
+    referrerPolicy: source.referrerPolicy,
+    integrity: source.integrity,
+    keepalive: source.keepalive,
+    signal: source.signal,
+  });
+}
+
+/**
+ * Returns a copy of `headers` with `Authorization: Bearer <token>` applied,
+ * preserving plain header objects vs `Headers` instances.
+ *
+ * @param {HeadersInit | undefined} headers
+ * @param {string} token
+ * @returns {HeadersInit}
+ */
+function withRefreshedBearerHeader(headers, token) {
+  const bearer = `Bearer ${token}`;
+  if (typeof Headers !== "undefined" && headers instanceof Headers) {
+    const next = new Headers(headers);
+    next.set("Authorization", bearer);
+    return next;
+  }
+  if (headers && typeof headers === "object" && !Array.isArray(headers)) {
+    /** @type {Record<string, string>} */
+    const next = {};
+    for (const [key, value] of Object.entries(headers)) {
+      if (key.toLowerCase() !== "authorization" && value !== undefined) {
+        next[key] = String(value);
+      }
+    }
+    next.Authorization = bearer;
+    return next;
+  }
+  const next = new Headers(headers);
+  next.set("Authorization", bearer);
+  return next;
+}
+
+/**
+ * Executes a gateway `fetch` call and performs at most one single-flight OIDC
+ * token refresh + retry when the gateway answers HTTP 401 (excluding 21 CFR
+ * Part 11 step-up authentication failures).
+ *
+ * @param {RequestInfo | URL} input
+ * @param {RequestInit} [init]
+ * @param {{
+ *   fetchImpl?: typeof fetch,
+ *   canRetry?: boolean,
+ * }} [options]
+ * @returns {Promise<Response>}
+ */
+export async function fetchWithSingleFlightRetry(input, init, options = {}) {
+  const { fetchImpl = globalThis.fetch, canRetry = true } = options;
+  const url = input instanceof Request ? input.url : String(input);
+  const retryClone =
+    canRetry && typeof Request !== "undefined" && input instanceof Request
+      ? input.clone()
+      : null;
+
+  const response = await fetchImpl(input, init);
+  if (response.status !== 401 || !canRetry) {
+    return response;
+  }
+
+  const errBody = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+  if (!freshToken) {
+    return response;
+  }
+
+  if (retryClone) {
+    const retryHeaders = new Headers(retryClone.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => {
+        retryHeaders.set(key, value);
+      });
+    }
+    retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+    const retriedRequest = await rebuildRequest(
+      retryClone,
+      retryClone.url,
+      retryHeaders
+    );
+    const retryInit = init ? { ...init, headers: retryHeaders } : undefined;
+    return fetchImpl(retriedRequest, retryInit);
+  }
+
+  return fetchImpl(input, {
+    ...init,
+    headers: withRefreshedBearerHeader(init?.headers, freshToken),
+  });
+}
+
+/**
  * Wraps `target.fetch` so gateway-bound requests carry the bearer token.
  * A request that already sets `Authorization` is left unchanged. Idempotent.
  */
@@ -237,10 +358,11 @@ export function installAuthorizedFetch(target = globalThis) {
     return;
   }
 
+  const boundOriginal = original.bind(target);
   const authorizedFetch = async (input, init = {}) => {
     const url = input instanceof Request ? input.url : input;
     if (!isGatewayRequest(url)) {
-      return original.call(target, input, init);
+      return boundOriginal(input, init);
     }
     const headers = new Headers(
       init.headers || (input instanceof Request ? input.headers : undefined)
@@ -255,33 +377,17 @@ export function installAuthorizedFetch(target = globalThis) {
     if (isDemoBuild()) {
       applyDemoIdentityHeaders(headers);
     }
-    const retryClone =
-      !hadExplicitAuth && input instanceof Request ? input.clone() : null;
-    const response = await original.call(target, input, { ...init, headers });
+    const response = await fetchWithSingleFlightRetry(
+      input,
+      { ...init, headers },
+      { fetchImpl: boundOriginal, canRetry: !hadExplicitAuth }
+    );
     if (response.status === 403) {
       const errBody = await response
         .clone()
         .json()
         .catch(() => null);
       notifySubscriptionExpiredIfNeeded(403, errBody);
-    }
-    if (response.status === 401 && !hadExplicitAuth) {
-      const errBody = await response
-        .clone()
-        .json()
-        .catch(() => null);
-      const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
-      if (freshToken) {
-        const retryHeaders = new Headers(headers);
-        retryHeaders.set("Authorization", `Bearer ${freshToken}`);
-        if (retryClone) {
-          return original.call(target, retryClone, {
-            ...init,
-            headers: retryHeaders,
-          });
-        }
-        return original.call(target, input, { ...init, headers: retryHeaders });
-      }
     }
     return response;
   };

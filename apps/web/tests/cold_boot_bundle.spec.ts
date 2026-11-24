@@ -59,7 +59,7 @@ const FORBIDDEN_BOOT_PATTERNS: ReadonlyArray<{
     label: "canvas/ecrfRedirect.ts",
     pattern: /src\/canvas\/ecrfRedirect\.ts$/,
   },
-  { label: "services/api.js", pattern: /src\/services\/api\.js$/ },
+  { label: "api/apiClient.js", pattern: /src\/api\/apiClient\.js$/ },
   { label: "vue-i18n", pattern: /(?:^|\/)vue-i18n(?:\/|$)/ },
   { label: "@intlify", pattern: /(?:^|\/)@intlify(?:\/|$)/ },
   { label: "src/locales/", pattern: /src\/locales\// },

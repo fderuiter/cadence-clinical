@@ -77,6 +77,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  docked: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "update:isOpen", "close"]);
@@ -125,8 +129,10 @@ const onBackdropClick = () => {
   closeDrawer();
 };
 
+const trapActive = computed(() => drawerOpen.value && !props.docked);
+
 useFocusTrap(drawerRef, {
-  isOpen: drawerOpen,
+  isOpen: trapActive,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
   restoreFocus:
@@ -152,7 +158,10 @@ useFocusTrap(drawerRef, {
       :class="[
         'clinical-drawer-backdrop',
         `position-${position}`,
-        { 'mobile-bottom-sheet': position === 'bottom' || mobileBottomSheet },
+        {
+          'is-docked': docked,
+          'mobile-bottom-sheet': position === 'bottom' || mobileBottomSheet,
+        },
         overlayClass,
       ]"
       role="presentation"
@@ -166,6 +175,7 @@ useFocusTrap(drawerRef, {
           'clinical-drawer-panel',
           position === 'bottom' ? 'drawer-bottom-sheet' : `size-${size}`,
           `position-${position}`,
+          { 'is-docked': docked },
           position === 'bottom' || mobileBottomSheet
             ? 'drawer-mobile-bottom-sheet'
             : 'drawer-panel-mobile-full',
@@ -466,6 +476,18 @@ useFocusTrap(drawerRef, {
 
   .clinical-drawer-footer {
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 1280px) {
+  .clinical-drawer-backdrop.is-docked {
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .clinical-drawer-panel.is-docked {
+    pointer-events: auto;
   }
 }
 </style>

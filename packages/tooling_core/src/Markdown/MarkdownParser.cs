@@ -72,6 +72,26 @@ public static partial class MarkdownParser
         "placeholder", "your-", "example", "path-to-new-adr", "node.js", "..."
     ];
 
+    private static readonly Dictionary<string, string> StagedRootDocs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["README"] = "README.md",
+        ["README.md"] = "README.md",
+        ["ARCHITECTURE"] = "ARCHITECTURE.md",
+        ["ARCHITECTURE.md"] = "ARCHITECTURE.md",
+        ["AGENTS"] = "AGENTS.md",
+        ["AGENTS.md"] = "AGENTS.md",
+        ["CONTEXT"] = "CONTEXT.md",
+        ["CONTEXT.md"] = "CONTEXT.md",
+        ["CONTRIBUTING"] = "CONTRIBUTING.md",
+        ["CONTRIBUTING.md"] = "CONTRIBUTING.md",
+        ["SECURITY"] = "SECURITY.md",
+        ["SECURITY.md"] = "SECURITY.md",
+        ["SUPPORT"] = "SUPPORT.md",
+        ["SUPPORT.md"] = "SUPPORT.md",
+        ["LICENSE"] = "LICENSE",
+        ["LICENSE.md"] = "LICENSE",
+    };
+
     public static List<MarkdownValidationIssue> ValidateWorkspaceLinks(
         string repoRoot,
         IEnumerable<string> filesToScan,
@@ -79,6 +99,7 @@ public static partial class MarkdownParser
     {
         var issues = new List<MarkdownValidationIssue>();
         var anchorCache = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var draftCache = new Dictionary<string, bool>(StringComparer.Ordinal);
 
         foreach (var file in filesToScan)
         {
@@ -99,10 +120,33 @@ public static partial class MarkdownParser
                 {
                     continue;
                 }
+
+                var parsedFm = YamlFrontmatterParser.Parse(lines);
+                int startLineIdx = parsedFm.HasFrontmatter ? parsedFm.BodyStartLineIndex : 0;
+
+                if (parsedFm.HasFrontmatter && parsedFm.RelatedLinks.Count > 0)
+                {
+                    foreach (var relatedEntry in parsedFm.RelatedLinks)
+                    {
+                        ValidateSingleLinkTarget(
+                            repoRoot,
+                            fullSourceFile,
+                            relativeFile,
+                            relatedEntry.Link,
+                            relatedEntry.LineNumber,
+                            isHistoricalDoc: false,
+                            isFrontmatterRelated: true,
+                            anchorCache,
+                            draftCache,
+                            issues,
+                            indexReader);
+                    }
+                }
+
                 char fenceChar = '\0';
                 int fenceLen = 0;
 
-                for (int i = 0; i < lines.Length; i++)
+                for (int i = startLineIdx; i < lines.Length; i++)
                 {
                     if (UpdateCodeFenceState(lines[i], ref fenceChar, ref fenceLen) || fenceLen > 0)
                     {
@@ -119,119 +163,18 @@ public static partial class MarkdownParser
                         }
 
                         string rawTarget = StripOptionalLinkTitle(m.Groups[2].Value.Trim());
-                        if (string.IsNullOrEmpty(rawTarget) ||
-                            rawTarget.Contains("://", StringComparison.Ordinal) ||
-                            rawTarget.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
-                            rawTarget.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) ||
-                            rawTarget.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
-                            rawTarget.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
-
-                        int hashIdx = rawTarget.IndexOf('#');
-                        string beforeHash = hashIdx >= 0 ? rawTarget[..hashIdx] : rawTarget;
-                        string rawFragment = hashIdx >= 0 ? rawTarget[(hashIdx + 1)..].Trim() : string.Empty;
-
-                        // Same-page heading anchor link (#section)
-                        if (rawTarget.StartsWith('#'))
-                        {
-                            ValidateAnchorFragment(
-                                repoRoot,
-                                fullSourceFile,
-                                rawFragment,
-                                relativeFile,
-                                rawTarget,
-                                i + 1,
-                                anchorCache,
-                                issues,
-                                indexReader);
-                            continue;
-                        }
-
-                        // Strip queries and pytest selectors from the file portion
-                        string target = beforeHash
-                            .Split('?')[0]
-                            .Split(["::"], StringSplitOptions.None)[0]
-                            .Trim();
-                        if (string.IsNullOrEmpty(target))
-                        {
-                            continue;
-                        }
-
-                        // Ignore placeholders
-                        if (IgnoredSubstrings.Any(ign => target.Contains(ign, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            continue;
-                        }
-
-                        string fileDir = Path.GetDirectoryName(fullSourceFile) ?? repoRoot;
-                        string decodedTarget = UnescapeUriOrRaw(target);
-
-                        // Try relative to file directory
-                        string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, decodedTarget));
-                        if (SnapshotFileExists(repoRoot, pathFromDir, indexReader) ||
-                            SnapshotDirectoryExists(repoRoot, pathFromDir, indexReader))
-                        {
-                            ValidateResolvedTargetAnchor(
-                                repoRoot,
-                                pathFromDir,
-                                rawFragment,
-                                relativeFile,
-                                rawTarget,
-                                i + 1,
-                                anchorCache,
-                                issues,
-                                indexReader);
-                            continue;
-                        }
-
-                        // Try relative to repo root
-                        string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, decodedTarget.TrimStart('/')));
-                        if (SnapshotFileExists(repoRoot, pathFromRoot, indexReader) ||
-                            SnapshotDirectoryExists(repoRoot, pathFromRoot, indexReader))
-                        {
-                            ValidateResolvedTargetAnchor(
-                                repoRoot,
-                                pathFromRoot,
-                                rawFragment,
-                                relativeFile,
-                                rawTarget,
-                                i + 1,
-                                anchorCache,
-                                issues,
-                                indexReader);
-                            continue;
-                        }
-
-                        // Fallback 1: Check .cs equivalent or src/ directory for transcribed C# code
-                        if (target.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
-                            target.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-                            target.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-                            target.EndsWith(".vue", StringComparison.OrdinalIgnoreCase))
-                        {
-                            string csTarget = Path.ChangeExtension(target, ".cs");
-                            string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
-                            if (SnapshotFileExists(repoRoot, csFromRoot, indexReader)) continue;
-
-                            if (isHistoricalDoc)
-                            {
-                                // Historical ADRs/migration docs reference pre-migration Python/Vue files
-                                continue;
-                            }
-                        }
-
-                        if (isHistoricalDoc && target.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Allow historical ADR cross-references
-                            continue;
-                        }
-
-                        issues.Add(new MarkdownValidationIssue(
+                        ValidateSingleLinkTarget(
+                            repoRoot,
+                            fullSourceFile,
                             relativeFile,
                             rawTarget,
-                            $"Broken Markdown link in '{relativeFile}:{i + 1}': '{rawTarget}'",
-                            i + 1));
+                            i + 1,
+                            isHistoricalDoc,
+                            isFrontmatterRelated: false,
+                            anchorCache,
+                            draftCache,
+                            issues,
+                            indexReader);
                     }
                 }
             }
@@ -242,6 +185,336 @@ public static partial class MarkdownParser
         }
 
         return issues;
+    }
+
+    private static void ValidateSingleLinkTarget(
+        string repoRoot,
+        string fullSourceFile,
+        string relativeFile,
+        string rawTarget,
+        int lineNumber,
+        bool isHistoricalDoc,
+        bool isFrontmatterRelated,
+        Dictionary<string, HashSet<string>> anchorCache,
+        Dictionary<string, bool> draftCache,
+        List<MarkdownValidationIssue> issues,
+        GitIndexReader? indexReader)
+    {
+        if (string.IsNullOrEmpty(rawTarget) ||
+            rawTarget.Contains("://", StringComparison.Ordinal) ||
+            rawTarget.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
+            rawTarget.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) ||
+            rawTarget.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+            rawTarget.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        int hashIdx = rawTarget.IndexOf('#');
+        string beforeHash = hashIdx >= 0 ? rawTarget[..hashIdx] : rawTarget;
+        string rawFragment = hashIdx >= 0 ? rawTarget[(hashIdx + 1)..].Trim() : string.Empty;
+
+        // Same-page heading anchor link (#section)
+        if (rawTarget.StartsWith('#'))
+        {
+            ValidateAnchorFragment(
+                repoRoot,
+                fullSourceFile,
+                rawFragment,
+                relativeFile,
+                rawTarget,
+                lineNumber,
+                anchorCache,
+                issues,
+                indexReader);
+            return;
+        }
+
+        // Strip queries and pytest selectors from the file portion
+        string target = beforeHash
+            .Split('?')[0]
+            .Split(["::"], StringSplitOptions.None)[0]
+            .Trim();
+        if (string.IsNullOrEmpty(target))
+        {
+            return;
+        }
+
+        if (IsCohostedOrStaticPortalEndpoint(target))
+        {
+            return;
+        }
+
+        // Ignore placeholders
+        if (IgnoredSubstrings.Any(ign => target.Contains(ign, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        string fileDir = Path.GetDirectoryName(fullSourceFile) ?? repoRoot;
+        string decodedTarget = UnescapeUriOrRaw(target);
+
+        if (!target.StartsWith('/'))
+        {
+            // Try relative to file directory
+            string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, decodedTarget));
+            if (TryResolveTargetCandidate(repoRoot, pathFromDir, indexReader, out string resolvedFromDir))
+            {
+                if (CheckDraftBlogTarget(repoRoot, fullSourceFile, resolvedFromDir, relativeFile, rawTarget, lineNumber, draftCache, issues, indexReader))
+                {
+                    return;
+                }
+
+                ValidateResolvedTargetAnchor(
+                    repoRoot,
+                    resolvedFromDir,
+                    rawFragment,
+                    relativeFile,
+                    rawTarget,
+                    lineNumber,
+                    anchorCache,
+                    issues,
+                    indexReader);
+                return;
+            }
+        }
+
+        // Try relative to repo root (or docs/ portal root for leading '/' links)
+        string trimmedRootTarget = decodedTarget.TrimStart('/');
+        string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, trimmedRootTarget));
+        if (TryResolveTargetCandidate(repoRoot, pathFromRoot, indexReader, out string resolvedFromRoot))
+        {
+            if (CheckDraftBlogTarget(repoRoot, fullSourceFile, resolvedFromRoot, relativeFile, rawTarget, lineNumber, draftCache, issues, indexReader))
+            {
+                return;
+            }
+
+            ValidateResolvedTargetAnchor(
+                repoRoot,
+                resolvedFromRoot,
+                rawFragment,
+                relativeFile,
+                rawTarget,
+                lineNumber,
+                anchorCache,
+                issues,
+                indexReader);
+            return;
+        }
+
+        if (target.StartsWith('/') &&
+            TryResolvePortalRootLink(repoRoot, trimmedRootTarget, indexReader, out string portalTarget))
+        {
+            if (CheckDraftBlogTarget(repoRoot, fullSourceFile, portalTarget, relativeFile, rawTarget, lineNumber, draftCache, issues, indexReader))
+            {
+                return;
+            }
+
+            ValidateResolvedTargetAnchor(
+                repoRoot,
+                portalTarget,
+                rawFragment,
+                relativeFile,
+                rawTarget,
+                lineNumber,
+                anchorCache,
+                issues,
+                indexReader);
+            return;
+        }
+
+        // Fallback 1: Check .cs equivalent or src/ directory for transcribed C# code
+        if (!isFrontmatterRelated &&
+            (target.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
+             target.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+             target.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+             target.EndsWith(".vue", StringComparison.OrdinalIgnoreCase)))
+        {
+            string csTarget = Path.ChangeExtension(target, ".cs");
+            string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
+            if (SnapshotFileExists(repoRoot, csFromRoot, indexReader)) return;
+
+            if (isHistoricalDoc)
+            {
+                // Historical ADRs/migration docs reference pre-migration Python/Vue files
+                return;
+            }
+        }
+
+        if (!isFrontmatterRelated && isHistoricalDoc && target.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            // Allow historical ADR cross-references
+            return;
+        }
+
+        string label = isFrontmatterRelated ? "frontmatter.related link" : "Markdown link";
+        issues.Add(new MarkdownValidationIssue(
+            relativeFile,
+            rawTarget,
+            $"Broken {label} in '{relativeFile}:{lineNumber}': '{rawTarget}'",
+            lineNumber));
+    }
+
+    private static bool IsCohostedOrStaticPortalEndpoint(string target)
+    {
+        if (!target.StartsWith('/'))
+        {
+            return false;
+        }
+
+        return target.Equals("/demo", StringComparison.OrdinalIgnoreCase) ||
+               target.StartsWith("/demo/", StringComparison.OrdinalIgnoreCase) ||
+               target.Equals("/subject-portal", StringComparison.OrdinalIgnoreCase) ||
+               target.StartsWith("/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
+               target.Equals("/feed.xml", StringComparison.OrdinalIgnoreCase) ||
+               target.Equals("/cadence-clinical/feed.xml", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryResolveTargetCandidate(
+        string repoRoot,
+        string candidatePath,
+        GitIndexReader? indexReader,
+        out string resolvedPath)
+    {
+        if (SnapshotFileExists(repoRoot, candidatePath, indexReader) ||
+            SnapshotDirectoryExists(repoRoot, candidatePath, indexReader))
+        {
+            resolvedPath = candidatePath;
+            return true;
+        }
+
+        if (candidatePath.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+        {
+            string mdEquivalent = Path.ChangeExtension(candidatePath, ".md");
+            if (SnapshotFileExists(repoRoot, mdEquivalent, indexReader))
+            {
+                resolvedPath = mdEquivalent;
+                return true;
+            }
+        }
+        else if (!Path.HasExtension(candidatePath))
+        {
+            string mdWithExt = candidatePath + ".md";
+            if (SnapshotFileExists(repoRoot, mdWithExt, indexReader))
+            {
+                resolvedPath = mdWithExt;
+                return true;
+            }
+        }
+
+        resolvedPath = string.Empty;
+        return false;
+    }
+
+    private static bool TryResolvePortalRootLink(
+        string repoRoot,
+        string trimmedRootTarget,
+        GitIndexReader? indexReader,
+        out string resolvedPath)
+    {
+        string docsDir = Path.Combine(repoRoot, "docs");
+        string cleanKey = trimmedRootTarget.TrimEnd('/');
+        if (cleanKey.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+        {
+            cleanKey = cleanKey[..^5];
+        }
+
+        if (string.IsNullOrEmpty(cleanKey))
+        {
+            string docsHome = Path.Combine(docsDir, "index.md");
+            if (SnapshotFileExists(repoRoot, docsHome, indexReader))
+            {
+                resolvedPath = docsHome;
+                return true;
+            }
+        }
+
+        if (StagedRootDocs.TryGetValue(cleanKey, out string? stagedRootName))
+        {
+            string rootDocPath = Path.Combine(repoRoot, stagedRootName);
+            if (SnapshotFileExists(repoRoot, rootDocPath, indexReader))
+            {
+                resolvedPath = rootDocPath;
+                return true;
+            }
+        }
+
+        string docsCandidate = Path.GetFullPath(Path.Combine(docsDir, cleanKey));
+        if (TryResolveTargetCandidate(repoRoot, docsCandidate, indexReader, out resolvedPath))
+        {
+            return true;
+        }
+
+        string docsIndexCandidate = Path.Combine(docsDir, cleanKey, "index.md");
+        if (SnapshotFileExists(repoRoot, docsIndexCandidate, indexReader))
+        {
+            resolvedPath = docsIndexCandidate;
+            return true;
+        }
+
+        resolvedPath = string.Empty;
+        return false;
+    }
+
+    private static bool CheckDraftBlogTarget(
+        string repoRoot,
+        string fullSourceFile,
+        string resolvedTarget,
+        string relativeFile,
+        string rawTarget,
+        int lineNumber,
+        Dictionary<string, bool> draftCache,
+        List<MarkdownValidationIssue> issues,
+        GitIndexReader? indexReader)
+    {
+        if (string.Equals(Path.GetFullPath(fullSourceFile), Path.GetFullPath(resolvedTarget), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!IsDraftBlogPostSnapshot(repoRoot, resolvedTarget, draftCache, indexReader))
+        {
+            return false;
+        }
+
+        issues.Add(new MarkdownValidationIssue(
+            relativeFile,
+            rawTarget,
+            $"Link in '{relativeFile}:{lineNumber}' references draft blog post: '{rawTarget}'",
+            lineNumber));
+        return true;
+    }
+
+    private static bool IsDraftBlogPostSnapshot(
+        string repoRoot,
+        string resolvedTarget,
+        Dictionary<string, bool> draftCache,
+        GitIndexReader? indexReader)
+    {
+        string normalizedFull = Path.GetFullPath(resolvedTarget);
+        if (draftCache.TryGetValue(normalizedFull, out bool cached))
+        {
+            return cached;
+        }
+
+        string rel = Path.GetRelativePath(repoRoot, normalizedFull).Replace('\\', '/');
+        if (!rel.StartsWith("docs/blog/", StringComparison.OrdinalIgnoreCase) ||
+            rel.Equals("docs/blog/index.md", StringComparison.OrdinalIgnoreCase) ||
+            !rel.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            draftCache[normalizedFull] = false;
+            return false;
+        }
+
+        bool isDraft = false;
+        if (TryReadSnapshotLines(repoRoot, normalizedFull, indexReader, out string[] targetLines))
+        {
+            var parsed = YamlFrontmatterParser.Parse(targetLines);
+            isDraft = parsed.HasFrontmatter && parsed.IsDraft;
+        }
+
+        draftCache[normalizedFull] = isDraft;
+        return isDraft;
     }
 
     private static string StripOptionalLinkTitle(string rawTarget)
@@ -418,6 +691,142 @@ public static partial class MarkdownParser
         return anchors;
     }
 
+    public static List<MarkdownValidationIssue> ValidateCodeFencesAndHeadings(
+        string repoRoot,
+        string fullMarkdownPath,
+        string[] lines)
+    {
+        var issues = new List<MarkdownValidationIssue>();
+        string relPath = Path.GetRelativePath(repoRoot, fullMarkdownPath).Replace('\\', '/');
+        char fenceChar = '\0';
+        int fenceLen = 0;
+        string fenceInfo = string.Empty;
+        int fenceStartLine = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].TrimEnd('\r');
+            string trimmed = line.TrimStart();
+            Match fenceMatch = CodeFenceLineRegex().Match(trimmed);
+
+            if (fenceMatch.Success)
+            {
+                string marker = fenceMatch.Groups[1].Value;
+                string rawRest = fenceMatch.Groups[2].Value;
+                string rest = rawRest.Trim();
+                bool isInlineBacktickSpan = marker[0] == '`' && rawRest.Contains('`', StringComparison.Ordinal);
+
+                if (fenceLen == 0)
+                {
+                    if (!isInlineBacktickSpan)
+                    {
+                        fenceChar = marker[0];
+                        fenceLen = marker.Length;
+                        fenceInfo = rest;
+                        fenceStartLine = i + 1;
+                        continue;
+                    }
+                }
+                else if (marker[0] == fenceChar && rest.Length == 0)
+                {
+                    if (marker.Length == fenceLen)
+                    {
+                        fenceChar = '\0';
+                        fenceLen = 0;
+                        fenceInfo = string.Empty;
+                        fenceStartLine = 0;
+                        continue;
+                    }
+
+                    if (marker.Length > fenceLen)
+                    {
+                        issues.Add(new MarkdownValidationIssue(
+                            relPath,
+                            marker,
+                            $"{relPath}:{i + 1} - Mismatched closing code fence length: opened with {fenceLen} '{fenceChar}' at line {fenceStartLine}, closed with {marker.Length}.",
+                            i + 1));
+                        fenceChar = '\0';
+                        fenceLen = 0;
+                        fenceInfo = string.Empty;
+                        fenceStartLine = 0;
+                        continue;
+                    }
+
+                    if (!IsMarkdownFenceInfo(fenceInfo))
+                    {
+                        issues.Add(new MarkdownValidationIssue(
+                            relPath,
+                            marker,
+                            $"{relPath}:{i + 1} - Mismatched closing code fence length: opened with {fenceLen} '{fenceChar}' at line {fenceStartLine}, closed with {marker.Length}.",
+                            i + 1));
+                        continue;
+                    }
+                }
+            }
+
+            if (fenceLen > 0)
+            {
+                if (fenceInfo.Length == 0 && HeadingLineRegex().IsMatch(trimmed))
+                {
+                    issues.Add(new MarkdownValidationIssue(
+                        relPath,
+                        line.Trim(),
+                        $"{relPath}:{i + 1} - Swallowed heading inside unlabeled code fence opened at line {fenceStartLine}: '{line.Trim()}'",
+                        i + 1));
+                }
+
+                continue;
+            }
+
+            if (trimmed.StartsWith('#'))
+            {
+                int hashCount = 0;
+                while (hashCount < trimmed.Length && trimmed[hashCount] == '#')
+                {
+                    hashCount++;
+                }
+
+                if (hashCount >= 1 && hashCount <= 6 && hashCount < trimmed.Length)
+                {
+                    char nextChar = trimmed[hashCount];
+                    if (nextChar != ' ' && nextChar != '\t' && nextChar != '#' && !char.IsDigit(nextChar))
+                    {
+                        issues.Add(new MarkdownValidationIssue(
+                            relPath,
+                            line.Trim(),
+                            $"{relPath}:{i + 1} - Heading missing space after '#': '{line.Trim()}'",
+                            i + 1));
+                    }
+                }
+            }
+        }
+
+        if (fenceLen > 0)
+        {
+            string openMarker = new(fenceChar, fenceLen);
+            issues.Add(new MarkdownValidationIssue(
+                relPath,
+                openMarker,
+                $"{relPath}:{fenceStartLine} - Unclosed code fence '{openMarker}' reached end of file.",
+                fenceStartLine));
+        }
+
+        return issues;
+    }
+
+    private static bool IsMarkdownFenceInfo(string fenceInfo)
+    {
+        if (string.IsNullOrEmpty(fenceInfo))
+        {
+            return false;
+        }
+
+        int spaceIdx = fenceInfo.IndexOfAny([' ', '\t']);
+        string lang = spaceIdx >= 0 ? fenceInfo[..spaceIdx] : fenceInfo;
+        return lang.Equals("markdown", StringComparison.OrdinalIgnoreCase) ||
+               lang.Equals("md", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool UpdateCodeFenceState(string line, ref char fenceChar, ref int fenceLen)
     {
         Match fenceMatch = CodeFenceLineRegex().Match(line.TrimStart());
@@ -427,9 +836,15 @@ public static partial class MarkdownParser
         }
 
         string marker = fenceMatch.Groups[1].Value;
-        string rest = fenceMatch.Groups[2].Value.Trim();
+        string rawRest = fenceMatch.Groups[2].Value;
+        string rest = rawRest.Trim();
         if (fenceLen == 0)
         {
+            if (marker[0] == '`' && rawRest.Contains('`', StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             fenceChar = marker[0];
             fenceLen = marker.Length;
             return true;
