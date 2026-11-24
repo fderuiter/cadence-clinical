@@ -41,6 +41,7 @@ import {
   readRouteScopeQuery,
   replaceRouteQueryParams,
   resolveRouteAndRouter,
+  shouldSuppressUnsavedNavigationGuard,
 } from "../composables/useRouteScopeSync";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
@@ -50,7 +51,6 @@ import {
   allowUnbackedAction,
   unbackedActionsEnabled,
 } from "../utils/unbackedActions.js";
-import { shouldSuppressUnsavedNavigationGuard } from "../utils/unsavedNavigationGuard";
 
 const EcrfDemoWorkspace = defineAsyncComponent(
   () => import("./demo/EcrfDemoWorkspace.vue")

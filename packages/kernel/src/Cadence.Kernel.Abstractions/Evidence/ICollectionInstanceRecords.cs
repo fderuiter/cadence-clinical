@@ -172,6 +172,71 @@ public interface ICollectionInstanceRecords
         return revisions;
     }
 
+    /// <summary>
+    /// Reads the header metadata of <paramref name="instance"/> without hydrating values, assertions, codelists, or signatures.
+    /// </summary>
+    async Task<CollectionInstanceHeader?> FindHeaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        return record is null ? null : CollectionInstanceHeader.From(record);
+    }
+
+    /// <summary>
+    /// Reads header metadata for <paramref name="instances"/> in one batch; missing forms are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var found = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        return found.ToDictionary(kv => kv.Key, kv => CollectionInstanceHeader.From(kv.Value));
+    }
+
+    /// <summary>
+    /// Reads narrow query-shaping targets for <paramref name="instances"/> in one batch, masking blinded observation
+    /// handles on enrollments outside <paramref name="unblindedEnrollments"/> (K-AUTH-4).
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceQueryTarget>> FindQueryTargetsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        IReadOnlySet<EnrollmentId> unblindedEnrollments,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        ArgumentNullException.ThrowIfNull(unblindedEnrollments);
+        var found = await FindManyForReaderAsync(tenant, instances, unblindedEnrollments, cancellationToken).ConfigureAwait(false);
+        return found.ToDictionary(kv => kv.Key, kv => CollectionInstanceQueryTarget.From(kv.Value));
+    }
+
+    /// <summary>
+    /// Reads the scope-locking, lineage-version, and current-revision state of <paramref name="instance"/>.
+    /// </summary>
+    async Task<CollectionInstanceScopeState?> FindScopeStateAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        return record is null ? null : CollectionInstanceScopeState.From(record);
+    }
+
+    /// <summary>
+    /// Reads narrow rule-evaluation inputs for every form instance opened for <paramref name="enrollment"/>, oldest first.
+    /// </summary>
+    async Task<IReadOnlyList<CollectionRuleInput>> ListRuleInputsForEnrollmentAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken = default)
+    {
+        var records = await ListRecordsForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
+        return [.. records.Select(CollectionRuleInput.From)];
+    }
+
     /// <summary>Every form instance opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
     Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
         TenantId tenant,
@@ -223,6 +288,8 @@ public interface ICollectionInstanceRecords
 /// <param name="AnsweredQueryCount">Un-retracted clinical queries on the form that have been answered and await closure.</param>
 /// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting the form or its values.</param>
 /// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
+/// <param name="ActiveQueryAssertionIds">Un-retracted <see cref="AssertionKind.Queried"/> assertion ids on the form's values, when projected.</param>
+/// <param name="AnsweredQueryAssertionIds">Subset of <paramref name="ActiveQueryAssertionIds"/> carrying an un-retracted <see cref="AssertionKind.QueryAnswered"/> assertion, when projected.</param>
 public sealed record CollectionInstanceSummary(
     CollectionInstanceId CollectionInstanceId,
     EnrollmentId EnrollmentId,
@@ -252,7 +319,213 @@ public sealed record CollectionInstanceSummary(
     int OpenQueryCount = 0,
     int AnsweredQueryCount = 0,
     int OpenErrorFindingCount = 0,
-    IReadOnlyList<string>? ReadinessBlockers = null);
+    IReadOnlyList<string>? ReadinessBlockers = null,
+    IReadOnlySet<AssertionId>? ActiveQueryAssertionIds = null,
+    IReadOnlySet<AssertionId>? AnsweredQueryAssertionIds = null);
+
+/// <summary>Header metadata of an opened form instance without member values, assertions, codelists, or signatures.</summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="EnrollmentId">Its participant enrollment.</param>
+/// <param name="ParticipantId">The enrollment's participant.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="ProtocolVersionId">The protocol version that governs the form (K-TIME-8).</param>
+/// <param name="CollectionSpecId">The CollectionSpec it collects.</param>
+/// <param name="PlannedActivityId">The planned activity (visit) it belongs to, when scheduled.</param>
+/// <param name="CollectedAt">When its values were collected in the trial world.</param>
+/// <param name="OpenedAt">When it was opened.</param>
+/// <param name="Version">1 when opened, one more per save that changed a value.</param>
+public sealed record CollectionInstanceHeader(
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    ParticipantId ParticipantId,
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    ProtocolVersionId ProtocolVersionId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    DateTimeOffset CollectedAt,
+    DateTimeOffset OpenedAt,
+    long Version)
+{
+    /// <summary>Projects header metadata from <paramref name="record"/>.</summary>
+    public static CollectionInstanceHeader From(CollectionInstanceRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new(
+            record.CollectionInstanceId,
+            record.EnrollmentId,
+            record.ParticipantId,
+            record.StudyId,
+            record.StudySiteId,
+            record.ProtocolVersionId,
+            record.CollectionSpecId,
+            record.PlannedActivityId,
+            record.CollectedAt,
+            record.OpenedAt,
+            record.Version);
+    }
+}
+
+/// <summary>
+/// Narrow projection of a form instance for query worklists and query step responses: header metadata, current
+/// observation and item revisions, and blinding classification without assertions, locks, codelists, or signatures.
+/// </summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="EnrollmentId">Its participant enrollment.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="ProtocolVersionId">The protocol version that governs the form (K-TIME-8).</param>
+/// <param name="CollectionSpecId">The CollectionSpec it collects.</param>
+/// <param name="PlannedActivityId">The planned activity (visit) it belongs to, when scheduled.</param>
+/// <param name="ObservationRevisions">Current revision number per unmasked observation on the form.</param>
+/// <param name="ItemRevisions">Current revision number per item identifier on the form.</param>
+/// <param name="BlindedItemIds">Items classified as blinded treatment data (K-AUTH-4).</param>
+/// <param name="BlindedObservationIds">Observations classified as blinded treatment data (K-AUTH-4).</param>
+public sealed record CollectionInstanceQueryTarget(
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    ProtocolVersionId ProtocolVersionId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    IReadOnlyDictionary<ObservationId, int> ObservationRevisions,
+    IReadOnlyDictionary<string, int> ItemRevisions,
+    IReadOnlySet<string>? BlindedItemIds = null,
+    IReadOnlySet<ObservationId>? BlindedObservationIds = null)
+{
+    /// <summary>True when a query over <paramref name="itemId"/> / <paramref name="observationId"/> targets blinded treatment data.</summary>
+    public bool IsQueryBlinded(string itemId, ObservationId observationId) =>
+        (BlindedItemIds?.Contains(itemId) ?? false)
+        || (BlindedObservationIds?.Contains(observationId) ?? false);
+
+    /// <summary>Projects query target metadata from <paramref name="record"/>.</summary>
+    public static CollectionInstanceQueryTarget From(CollectionInstanceRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new(
+            record.CollectionInstanceId,
+            record.EnrollmentId,
+            record.StudyId,
+            record.StudySiteId,
+            record.ProtocolVersionId,
+            record.CollectionSpecId,
+            record.PlannedActivityId,
+            record.Values.Where(v => !v.ObservationId.IsEmpty).ToDictionary(v => v.ObservationId, v => v.Revision),
+            record.Values.ToDictionary(v => v.ItemId, v => v.Revision, StringComparer.Ordinal),
+            record.BlindedItemIds,
+            record.BlindedObservationIds);
+    }
+}
+
+/// <summary>One member observation and its current revision on a <see cref="CollectionInstanceScopeState"/>.</summary>
+/// <param name="ItemId">The CollectionSpec item identifier.</param>
+/// <param name="ObservationId">The observation holding the value.</param>
+/// <param name="Value">The observation's current typed value.</param>
+/// <param name="Revision">The observation's current revision number.</param>
+public sealed record CollectionScopeValue(
+    string ItemId,
+    ObservationId ObservationId,
+    ObservationValue Value,
+    int Revision);
+
+/// <summary>
+/// Narrow projection of a form instance for scope locking, lineage linking, and revision checks without protocol
+/// design parsing, codelists, verification/query assertions, or signatures.
+/// </summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="EnrollmentId">Its participant enrollment.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="ProtocolVersionId">The protocol version that governs the form (K-TIME-8).</param>
+/// <param name="CollectionSpecId">The CollectionSpec it collects.</param>
+/// <param name="PlannedActivityId">The planned activity (visit) it belongs to, when scheduled.</param>
+/// <param name="Version">1 when opened, one more per save that changed a value.</param>
+/// <param name="EnrollmentVersion">Current version index of the governing enrollment for lineage linking.</param>
+/// <param name="Values">Current member values and revisions, ordered by item id.</param>
+/// <param name="Locks">Active locks and freezes covering the form or its values, widest scope first.</param>
+public sealed record CollectionInstanceScopeState(
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    ProtocolVersionId ProtocolVersionId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    long Version,
+    long EnrollmentVersion,
+    IReadOnlyList<CollectionScopeValue> Values,
+    IReadOnlyList<LockView> Locks)
+{
+    /// <summary>Projects scope state from <paramref name="record"/>.</summary>
+    public static CollectionInstanceScopeState From(CollectionInstanceRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new(
+            record.CollectionInstanceId,
+            record.EnrollmentId,
+            record.StudyId,
+            record.StudySiteId,
+            record.ProtocolVersionId,
+            record.CollectionSpecId,
+            record.PlannedActivityId,
+            record.Version,
+            record.EnrollmentVersion,
+            [.. record.Values.Select(v => new CollectionScopeValue(v.ItemId, v.ObservationId, v.Value, v.Revision))],
+            record.Locks);
+    }
+}
+
+/// <summary>One member value of a <see cref="CollectionRuleInput"/> for edit-check evaluation.</summary>
+/// <param name="ItemId">The CollectionSpec item identifier.</param>
+/// <param name="ObservationId">The observation holding the value.</param>
+/// <param name="Value">The observation's current typed value.</param>
+public sealed record CollectionRuleValue(
+    string ItemId,
+    ObservationId ObservationId,
+    ObservationValue Value);
+
+/// <summary>
+/// Narrow projection of a form instance for cross-form edit-check evaluation and observed-value comparison without
+/// observation revision histories, assertions, locks, codelists, or signatures.
+/// </summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="EnrollmentId">Its participant enrollment.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="ProtocolVersionId">The protocol version that governs the form (K-TIME-8).</param>
+/// <param name="CollectionSpecId">The CollectionSpec it collects.</param>
+/// <param name="OpenedAt">When the form was opened.</param>
+/// <param name="Items">The CollectionSpec's items in the governing protocol version.</param>
+/// <param name="Values">Current member values, ordered by item id.</param>
+/// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
+public sealed record CollectionRuleInput(
+    CollectionInstanceId CollectionInstanceId,
+    EnrollmentId EnrollmentId,
+    StudyId StudyId,
+    ProtocolVersionId ProtocolVersionId,
+    string CollectionSpecId,
+    DateTimeOffset OpenedAt,
+    IReadOnlyList<CollectionItem> Items,
+    IReadOnlyList<CollectionRuleValue> Values,
+    string? CollectionTitle = null)
+{
+    /// <summary>Projects rule input from <paramref name="record"/>.</summary>
+    public static CollectionRuleInput From(CollectionInstanceRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new(
+            record.CollectionInstanceId,
+            record.EnrollmentId,
+            record.StudyId,
+            record.ProtocolVersionId,
+            record.CollectionSpecId,
+            record.OpenedAt,
+            record.Items,
+            [.. record.Values.Select(v => new CollectionRuleValue(v.ItemId, v.ObservationId, v.Value))],
+            record.CollectionTitle);
+    }
+}
 
 /// <summary>A form instance and everything a form screen shows about it.</summary>
 /// <remarks>
@@ -322,7 +595,15 @@ public sealed record CollectionInstanceRecord(
         var blindedItems = BlindedItemIds ?? FrozenSet<string>.Empty;
         var blindedObservations = BlindedObservationIds ?? FrozenSet<ObservationId>.Empty;
         var effectiveBlindedItems = new HashSet<string>(blindedItems, StringComparer.Ordinal);
-        var specBlinded = BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(CollectionSpecId);
+        var specBlinded = BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(CollectionSpecId, CollectionTitle);
+        foreach (var item in Items)
+        {
+            if (specBlinded || BlindedTreatmentClassifier.Instance.IsBlindedCollectionItem(CollectionSpecId, CollectionTitle, item))
+            {
+                effectiveBlindedItems.Add(item.Id);
+            }
+        }
+
         foreach (var v in Values)
         {
             if (specBlinded

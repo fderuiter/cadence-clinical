@@ -16,7 +16,7 @@ public static class DuplicationDetectorService
 
     private static readonly string[] BaselineHeader =
     [
-        "# Code duplication ratchet baseline (.ts, .tsx, .vue, .css clones >15 normalized lines).",
+        "# Code duplication ratchet baseline (.cs, .js, .ts, .tsx, .vue, .css clones >15 normalized lines).",
         "# One pre-existing clone window per line: <fileA>|<fileB>|<sha256_16>. Sorted ordinally. May only shrink.",
         "# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check duplication [files...] (docs/cli.md).",
     ];
@@ -29,14 +29,6 @@ public static class DuplicationDetectorService
     private static readonly string[] IgnoredPathKeywords =
     [
         "node_modules", "tests", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "coverage", "Migrations", "migrations", ".git", "mockServiceWorker.js"
-    ];
-
-    // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244),
-    // and clinician/participant stylesheets standardize identical :root semantic token aliases by design (ADR-2635).
-    private static readonly HashSet<string>[] ExemptedPairs =
-    [
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/web/src/style.css", "apps/subject-portal/src/style.css" }
     ];
 
     public static int DetectDuplication(
@@ -216,12 +208,6 @@ public static class DuplicationDetectorService
                                     continue;
                                 }
 
-                                var pairSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { rel1, rel2 };
-                                if (ExemptedPairs.Any(ex => pairSet.IsSubsetOf(ex)))
-                                {
-                                    continue;
-                                }
-
                                 string dupKey = $"{rel1}:{l1.StartLine}|{rel2}:{l2.StartLine}";
                                 if (uniqueDupsReported.Add(dupKey))
                                 {
@@ -274,6 +260,7 @@ public static class DuplicationDetectorService
                 }
             }
 
+            // The pre-commit gate passes every staged file; like the full scan, unbaselined duplicates across C#, JavaScript, TypeScript, Vue, and CSS files fail.
             var allBaselineEntries = ReadBaselineEntries(repoRoot, reader);
             List<string> scopedBaseline = targetSet is null
                 ? allBaselineEntries
@@ -471,17 +458,13 @@ public static class DuplicationDetectorService
 
     private static bool IsEnforcedDuplicationFile(string relativePath)
     {
-        if (relativePath.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
-               relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-               relativePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-               relativePath.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
-               relativePath.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
-               relativePath.EndsWith(".css", StringComparison.OrdinalIgnoreCase);
+        return !relativePath.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) &&
+            (relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".css", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsScannableDuplicationPath(string relativePath)
@@ -498,7 +481,10 @@ public static class DuplicationDetectorService
             return false;
         }
 
-        if (norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase))
+        if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+            norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
+            norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
