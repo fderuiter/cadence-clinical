@@ -212,9 +212,18 @@ export function validateUsdmGraph(
 
   // Extract components from studyProjection or options
   const root = studyProjection || {};
-  const studyDesign = Array.isArray(root.studyDesigns)
-    ? root.studyDesigns[0] || {}
-    : root;
+  const wrapperStudy =
+    root.study && typeof root.study === "object" ? root.study : null;
+  const wrapperVersion =
+    wrapperStudy && Array.isArray(wrapperStudy.versions)
+      ? wrapperStudy.versions[0] || {}
+      : null;
+  const studyDesign =
+    wrapperVersion && Array.isArray(wrapperVersion.studyDesigns)
+      ? wrapperVersion.studyDesigns[0] || {}
+      : Array.isArray(root.studyDesigns)
+        ? root.studyDesigns[0] || {}
+        : root;
 
   // Gather existing component IDs across studyProjection, options, and projectionContext
   const encounters = [
@@ -277,7 +286,11 @@ export function validateUsdmGraph(
   }
 
   // Also include Biomedical Concepts if present
-  const bcs = studyDesign.biomedicalConcepts || root.biomedicalConcepts || [];
+  const bcs =
+    studyDesign.biomedicalConcepts ||
+    wrapperVersion?.biomedicalConcepts ||
+    root.biomedicalConcepts ||
+    [];
   for (const bc of bcs) {
     if (bc && bc.id) existingFieldIds.add(bc.id);
     if (bc && Array.isArray(bc.properties)) {

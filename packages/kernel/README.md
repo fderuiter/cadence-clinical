@@ -529,7 +529,9 @@ the enrollment:
 - The form is a lock scope (spec §10.5): a lock on it refuses saves, and corrections and assertions of its values made
   one at a time. `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in the governing version's
   order) with hydrated codelist options, its values with their revisions, the assertions about them, the signatures over the form and the locks in
-  force in one call.
+  force in one call (`FindAsync`), enrollment summaries with active/answered query assertion ids (`ListForEnrollmentAsync`),
+  and narrow projections for headers (`FindHeaderAsync`, `FindHeadersAsync`), query targets (`FindQueryTargetsAsync`),
+  lock/revision scope state (`FindScopeStateAsync`), and rule inputs (`ListRuleInputsForEnrollmentAsync`).
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
   or `ObservationCorrected`. Nothing consumes `CollectedValuesSaved` yet; edit checks will (#5368).
 - `KernelCollectionPostgresTests` covers atomicity at every commit stage, per-value 409, concurrent saves, the

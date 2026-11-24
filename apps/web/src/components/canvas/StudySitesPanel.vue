@@ -296,7 +296,10 @@ import {
   type KernelSiteSummary,
   type KernelStudySiteSummary,
 } from "../../api/kernelApi";
-import { clearKernelStudyCache } from "../../canvas/kernelStudy";
+import {
+  clearKernelStudyCache,
+  syncCallerSiteScope,
+} from "../../canvas/kernelStudy";
 import { buildScopedStudyLocation } from "../../canvas/palette";
 import { useAuthStore } from "../../stores/auth.js";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
@@ -370,31 +373,6 @@ function nextIdempotencyKey(prefix: string): string {
     return `${prefix}-${globalThis.crypto.randomUUID()}`;
   }
   return `${prefix}-${demoRandomToken(12, 36, "study-sites.idempotency")}`;
-}
-
-async function syncCallerSiteScope(siteCode: string) {
-  if (!siteCode) return;
-  try {
-    await authStore.refresh(-1);
-  } catch {
-    // Non-OIDC test sessions continue with the existing in-memory session.
-  }
-  if (
-    Array.isArray(authStore.siteIds) &&
-    !authStore.siteIds.some(
-      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
-    )
-  ) {
-    authStore.siteIds = [...authStore.siteIds, siteCode];
-  }
-  if (
-    Array.isArray(authStore.assignedSites) &&
-    !authStore.assignedSites.some(
-      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
-    )
-  ) {
-    authStore.assignedSites = [...authStore.assignedSites, siteCode];
-  }
 }
 
 const unlinkedWorkspaceSites = computed(() => {
@@ -507,7 +485,7 @@ async function submitLinkExistingSite() {
       reason: linkSiteReason.value.trim(),
       idempotencyKey: nextIdempotencyKey("link-site"),
     });
-    await syncCallerSiteScope(linked.site_code);
+    await syncCallerSiteScope(authStore, linked.site_code);
     clearKernelStudyCache();
     linkSiteReason.value = "";
     actionSuccess.value = `Linked site ${linked.site_code} (${linked.country}) to ${props.studyCode}.`;
@@ -575,7 +553,7 @@ async function submitRegisterSite() {
     } else {
       actionSuccess.value = `Registered site ${createdSite.code} (${createdSite.country}).`;
     }
-    await syncCallerSiteScope(createdSite.code);
+    await syncCallerSiteScope(authStore, createdSite.code);
     clearKernelStudyCache();
 
     newSiteCode.value = "";

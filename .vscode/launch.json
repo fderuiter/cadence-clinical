@@ -39,7 +39,8 @@
         "ASPNETCORE_URLS": "http://localhost:8018",
         "ConnectionStrings__cadence": "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password",
         "GATEWAY_SECRET": "abcdefghijklmnopqrstuvwxyz012345",
-        "AUDIT_LOG_SECRET_KEY": "abcdef0"
+        "AUDIT_LOG_SECRET_KEY": "abcdef0",
+        "CADENCE_BIOMETRIC_LIVENESS_KEY": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
       }
     }
   ],

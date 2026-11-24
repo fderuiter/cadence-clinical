@@ -286,7 +286,8 @@ Command → Authenticate → Resolve Actor → Authorize (§9.3) → Check conse
 
 - **K-TX-1** One command changes **one aggregate**, the member Observations of one CollectionInstance (K-FACT-6)
   under that instance's exclusive lock and the shared scope locks that cover it (§10.5, ADR-2622), a scope-locked
-  lock/release Assertion paired with its bound Attestation (§10.5, ADR-2621), or a homogeneous batch of newly defined
+  lock/release Assertion paired with its bound Attestation (§10.5, ADR-2621), an approved `ProtocolVersion` paired with
+  its bound immutable `FormVersionSnapshot`s (§6.2, ADR-2809), or a homogeneous batch of newly defined
   `Concept` aggregates at version 1 (§6.1). Mixed aggregate types and other multi-aggregate processes are rejected and
   must run as sagas driven by events.
 - **K-TX-2** Events, audit, provenance, lineage and outbox rows are written in the same transaction as the

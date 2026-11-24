@@ -554,6 +554,7 @@ public sealed class ProtocolImportBatchPostgresTests(KernelPostgresFixture fixtu
         {
             builder
                 .UseTestGatewaySecret()
+                .UseTestBiometricLivenessKey()
                 .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
                 .ConfigureLogging(logging => logging.ClearProviders())
                 .ConfigureServices(services =>

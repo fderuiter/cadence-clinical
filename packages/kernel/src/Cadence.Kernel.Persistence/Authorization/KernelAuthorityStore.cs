@@ -19,6 +19,7 @@ using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,8 @@ internal sealed class KernelAuthorityStore(
         NodeKinds.Enrollment,
         NodeKinds.ProtocolVersion,
         NodeKinds.ProtocolElement,
+        NodeKinds.FormVersionSnapshot,
+        NodeKinds.StudyStandardsProfile,
         NodeKinds.FormQuery,
         NodeKinds.Artifact,
         NodeKinds.ArtifactVersion,
@@ -62,6 +65,7 @@ internal sealed class KernelAuthorityStore(
         NodeKinds.Observation,
         NodeKinds.Assertion,
         NodeKinds.Attestation,
+        NodeKinds.ValidationRun,
         NodeKinds.ValidationFinding);
 
     private const string BlindedMarkerRegexSql =
@@ -1750,6 +1754,57 @@ internal sealed class KernelAuthorityStore(
                             join study in db.Studies.AsNoTracking() on new { v.TenantId, Id = v.StudyId } equals new { study.TenantId, study.Id }
                             where v.TenantId == tenant && ids.Contains(v.Id)
                             select new { v.Id, study.SponsorId, v.StudyId })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.FormVersionSnapshot:
+                {
+                    var ids = rawIds.Select(FormVersionSnapshotId.FromGuid).ToList();
+                    var rows = await (
+                            from snapshot in db.FormVersionSnapshots.AsNoTracking()
+                            join study in db.Studies.AsNoTracking() on new { snapshot.TenantId, Id = snapshot.StudyId } equals new { study.TenantId, study.Id }
+                            where snapshot.TenantId == tenant && ids.Contains(snapshot.Id)
+                            select new { snapshot.Id, study.SponsorId, snapshot.StudyId })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.StudyStandardsProfile:
+                {
+                    var ids = rawIds.Select(StudyStandardsProfileId.FromGuid).ToList();
+                    var rows = await (
+                            from profile in db.Set<Cadence.Kernel.Domain.Standards.StudyStandardsProfile>().AsNoTracking()
+                            join study in db.Studies.AsNoTracking() on new { profile.TenantId, Id = profile.StudyId } equals new { study.TenantId, study.Id }
+                            where profile.TenantId == tenant && ids.Contains(profile.Id)
+                            select new { profile.Id, study.SponsorId, profile.StudyId })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.ValidationRun:
+                {
+                    var ids = rawIds.Select(ValidationRunId.FromGuid).ToList();
+                    var rows = await (
+                            from run in db.Set<ValidationRun>().AsNoTracking()
+                            join study in db.Studies.AsNoTracking() on new { run.TenantId, Id = run.StudyId } equals new { study.TenantId, study.Id }
+                            where run.TenantId == tenant && ids.Contains(run.Id)
+                            select new { run.Id, study.SponsorId, run.StudyId })
                         .ToListAsync(ct).ConfigureAwait(false);
                     foreach (var row in rows)
                     {
