@@ -181,12 +181,20 @@ function ensureActiveStudySession(
 }
 
 /**
- * Seeds a positively resolved study reference into the active `(tenant, actor, persona, studyCode)` session cache.
+ * Seeds a positive `study:<id>[@<version>]` reference for `studyCode` into the active `(tenant, actor, persona,
+ * studyCode)` session cache (for example from `listStudySites`, `getStudyAttention`, or `ObservationView`) so
+ * subsequent stage switches that call `findKernelStudyRef` reuse the warm session entry without issuing `/api/v1/kernel/search`.
  */
-export function seedKernelStudyRef(code: string, ref: string): void {
-  const trimmedCode = code.trim();
-  const trimmedRef = ref.trim();
+export function seedKernelStudyRef(
+  studyCode: string,
+  studyRef: string | null | undefined
+): void {
+  const trimmedCode = studyCode.trim();
+  const trimmedRef = studyRef?.trim() ?? "";
   if (!trimmedCode || !trimmedRef) return;
+  const parsed = parseNodeRef(trimmedRef);
+  if (parsed?.kind !== "study") return;
+
   const bucket = getBucket();
   const scope = getKernelStudyCallerScopeKey();
   const normalizedStudy = normalizeStudyCode(trimmedCode);
@@ -545,6 +553,17 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
         try {
           const linked = await kernelApi.listStudySites(studyRef ?? trimmed);
           if (Array.isArray(linked)) {
+            const firstStudyRef = linked.find((s) => s.study_ref)?.study_ref;
+            if (
+              firstStudyRef &&
+              bucket.epoch === epochAtStart &&
+              getKernelStudyCallerScopeKey() === scope
+            ) {
+              bucket.studyRefs.set(
+                studyKey(scope, normalizedStudy),
+                firstStudyRef.trim()
+              );
+            }
             for (const site of linked) {
               if (site.mask) continue;
               const code = site.site_code?.trim();

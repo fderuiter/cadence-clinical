@@ -701,6 +701,103 @@ export function buildStepUpVerificationPayload(input = {}) {
 }
 
 /**
+ * Canonical gateway path for 21 CFR Part 11 step-up signature verification.
+ */
+export const STEP_UP_VERIFICATION_PATH = "/api/v1/auth/signature-verification";
+
+/**
+ * Resolves the canonical default `semantic_action` for a step-up `action` path
+ * when the caller does not pass an explicit `semanticAction`.
+ *
+ * @param {string | null | undefined} action
+ * @returns {string}
+ */
+export function resolveDefaultSemanticAction(action = "") {
+  const normalized = typeof action === "string" ? action : "";
+  if (normalized.includes("reconsent")) {
+    return SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN;
+  }
+  if (normalized.includes("capture-consent")) {
+    return SEMANTIC_ACTIONS.ECONSENT_CAPTURE;
+  }
+  if (normalized.includes("doa/sign-off")) {
+    return SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
+  }
+  if (normalized.includes("sign-off")) {
+    return SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF;
+  }
+  if (normalized.includes("chair-adjudicate")) {
+    return SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE;
+  }
+  if (normalized.includes("/forms/")) {
+    return SEMANTIC_ACTIONS.COLLECTION_SIGN;
+  }
+  if (normalized.includes("/soa/")) {
+    return SEMANTIC_ACTIONS.SOA_APPROVE;
+  }
+  return "execution.signature.verify";
+}
+
+/**
+ * Builds a validated v3 step-up verification payload, dispatches it to
+ * `/api/v1/auth/signature-verification` via the caller-provided `post` transport,
+ * and validates the returned `sig_token` unless `requireSigToken` is `false`.
+ *
+ * @param {{
+ *   username?: string | null,
+ *   password?: string,
+ *   totp?: string | null,
+ *   action: string,
+ *   semanticAction?: string,
+ *   semantic_action?: string,
+ *   batchId?: string | null,
+ *   batch_id?: string | null,
+ * }} input
+ * @param {{
+ *   post: (path: string, body: Record<string, unknown>) => Promise<any>,
+ *   requireSigToken?: boolean,
+ *   missingTokenMessage?: string,
+ * }} options
+ * @returns {Promise<any>}
+ */
+export async function requestStepUpSignature(input = {}, options = {}) {
+  const {
+    post,
+    requireSigToken = true,
+    missingTokenMessage = "Signature verification did not return a signature token.",
+  } = options || {};
+
+  if (typeof post !== "function") {
+    throw new TypeError(
+      "requestStepUpSignature requires an options.post(path, body) transport function."
+    );
+  }
+
+  const rawSemantic = input?.semanticAction ?? input?.semantic_action;
+  const semanticAction =
+    typeof rawSemantic === "string" && rawSemantic.trim().length > 0
+      ? rawSemantic.trim()
+      : resolveDefaultSemanticAction(input?.action);
+
+  const body = buildStepUpVerificationPayload({
+    ...input,
+    password: input?.password ?? "",
+    semanticAction,
+  });
+
+  const response = await post(STEP_UP_VERIFICATION_PATH, body);
+
+  if (requireSigToken !== false) {
+    const sigToken = response?.sig_token;
+    if (typeof sigToken !== "string" || sigToken.length === 0) {
+      throw new Error(missingTokenMessage);
+    }
+  }
+
+  return response;
+}
+
+/**
  * Controlled signing reason sentinel requiring free-text specification.
  */
 export const SIGNATURE_OTHER_REASON = "Other";

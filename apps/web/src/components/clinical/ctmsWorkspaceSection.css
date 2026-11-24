@@ -26,17 +26,36 @@
   gap: 8px;
 }
 
+.ctms-section .scope-bar .clinical-input,
+.ctms-section .form-row .clinical-input {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.ctms-section .scope-bar .clinical-input label,
+.ctms-section .form-row .clinical-input label,
 .ctms-section .scope-bar label,
 .ctms-section .form-row label {
+  margin-bottom: 0;
   font-weight: 600;
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.ctms-section .scope-bar .clinical-input .input-wrapper,
+.ctms-section .form-row .clinical-input .input-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .ctms-section .scope-bar input,
 .ctms-section .scope-bar select,
 .ctms-section .form-row input,
 .ctms-section .form-row select {
-  padding: 7px 10px;
+  padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.88rem;
@@ -62,20 +81,8 @@
 
 .ctms-section .table-wrap {
   overflow-x: auto;
-}
-
-.ctms-section .data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.88rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.ctms-section .data-table th,
-.ctms-section .data-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  text-align: left;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .ctms-section .action-cell {

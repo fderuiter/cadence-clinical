@@ -123,8 +123,12 @@ public sealed class ExecutionLockGuardRoutingTests : IDisposable
                 SendJsonAsync(crcClient, HttpMethod.Post, "/api/v1/execution/rtsm/cgt/manufacturing-bind",
                     new CgtManufacturingBindRequest(Study, seeded.CocId, "BATCH-01", "MFG-01"))),
             ("POST /api/v1/execution/rtsm/cgt/bedside-verify", () =>
-                SendJsonAsync(crcClient, HttpMethod.Post, "/api/v1/execution/rtsm/cgt/bedside-verify",
-                    new CgtBedsideVerificationRequest(Study, Site, EnrolledSubject, "DIN-SEED-01", "BATCH-01", "DIN-SEED-01", EnrolledSubject, "crc-lock", SecondaryVerifierId: "pi-lock"))),
+            {
+                const string path = "/api/v1/execution/rtsm/cgt/bedside-verify";
+                string sig = TestSecurityContext.CreateSigToken("crc-lock", path, CgtEndpoints.BedsideVerifySemanticAction, ["CRC"]);
+                return SendJsonAsync(crcClient, HttpMethod.Post, path,
+                    new CgtBedsideVerificationRequest(Study, Site, EnrolledSubject, "DIN-SEED-01", "BATCH-01", "DIN-SEED-01", EnrolledSubject, "crc-lock", SecondaryVerifierId: "pi-lock"), sig);
+            }),
             ("POST /api/v1/execution/rtsm/cgt/infuse", () =>
                 SendJsonAsync(crcClient, HttpMethod.Post, "/api/v1/execution/rtsm/cgt/infuse",
                     new CgtInfusionExecuteRequest(Study, Site, EnrolledSubject, seeded.CocId, "unlock-tok", "crc-lock"))),
@@ -132,8 +136,12 @@ public sealed class ExecutionLockGuardRoutingTests : IDisposable
                 SendJsonAsync(crcClient, HttpMethod.Post, "/api/v1/execution/rtsm/cgt/returns",
                     new CgtVialReturnReconciliationRequest(Study, Site, EnrolledSubject, "KIT-LOCK-01", "VIAL-01"))),
             ("POST /api/v1/execution/rtsm/cgt/destruction-certificate", () =>
-                SendJsonAsync(crcClient, HttpMethod.Post, "/api/v1/execution/rtsm/cgt/destruction-certificate",
-                    new CgtDestructionCertificateCreateRequest(Study, Site, "LOT-LOCK-01", ["KIT-LOCK-01"], ["VIAL-01"], "Expired", "INCINERATION", "Site Lab", "crc-lock", Witness2Id: "pi-lock", SubjectId: EnrolledSubject, CocId: seeded.CocId))),
+            {
+                const string path = "/api/v1/execution/rtsm/cgt/destruction-certificate";
+                string sig = TestSecurityContext.CreateSigToken("crc-lock", path, CgtEndpoints.DestructionCertificateSemanticAction, ["CRC"]);
+                return SendJsonAsync(crcClient, HttpMethod.Post, path,
+                    new CgtDestructionCertificateCreateRequest(Study, Site, "LOT-LOCK-01", ["KIT-LOCK-01"], ["VIAL-01"], "Expired", "INCINERATION", "Site Lab", "crc-lock", Witness2Id: "pi-lock", SubjectId: EnrolledSubject, CocId: seeded.CocId), sig);
+            }),
 
             // 3. DeviceEndpoints (5)
             ("POST /api/v1/execution/devices/inventory", () =>
@@ -149,13 +157,21 @@ public sealed class ExecutionLockGuardRoutingTests : IDisposable
                 SendJsonAsync(pharmClient, HttpMethod.Post, "/api/v1/execution/devices/quarantine",
                     new DeviceQuarantineCreateRequest(Study, Site, "Safety inspection", DeviceInventoryId: seeded.DeviceId.ToString(), SerialNumber: "SN-SEED-01"))),
             ("POST /api/v1/execution/devices/quarantine/release", () =>
-                SendJsonAsync(dmClient, HttpMethod.Post, "/api/v1/execution/devices/quarantine/release",
-                    new DeviceQuarantineReleaseRequest(seeded.QuarantineId.ToString(), "Inspection passed", "sig-tok"))),
+            {
+                const string path = "/api/v1/execution/devices/quarantine/release";
+                string sig = TestSecurityContext.CreateSigToken("dm-lock", path, DeviceEndpoints.QuarantineReleaseSemanticAction, ["DATA_MANAGER", "SPONSOR_DESIGNER", "Medical Coder", "Safety Officer"]);
+                return SendJsonAsync(dmClient, HttpMethod.Post, path,
+                    new DeviceQuarantineReleaseRequest(seeded.QuarantineId.ToString(), "Inspection passed", "sig-tok"), sig);
+            }),
 
             // 4. IpKitEndpoints (2)
             ("POST /api/v1/execution/rtsm/kits/reconcile-batch", () =>
-                SendJsonAsync(pharmClient, HttpMethod.Post, "/api/v1/execution/rtsm/kits/reconcile-batch",
-                    new IpKitBatchReconciliationRequest(Study, Site, [new IpKitItemReconcileRequest("KIT-SEED-01", "LOT-KIT-1", "LOT-KIT-1", 0, 0, "RETURNED", "Unused")], ReasonForChange: Reason))),
+            {
+                const string path = "/api/v1/execution/rtsm/kits/reconcile-batch";
+                string sig = TestSecurityContext.CreateSigToken("pharm-lock", path, IpKitEndpoints.ReconcileBatchSemanticAction, ["Pharmacist"]);
+                return SendJsonAsync(pharmClient, HttpMethod.Post, path,
+                    new IpKitBatchReconciliationRequest(Study, Site, [new IpKitItemReconcileRequest("KIT-SEED-01", "LOT-KIT-1", "LOT-KIT-1", 0, 0, "RETURNED", "Unused")], ReasonForChange: Reason), sig);
+            }),
             ("POST /api/v1/execution/rtsm/kits/seed-inventory", () =>
                 SendJsonAsync(dmClient, HttpMethod.Post, "/api/v1/execution/rtsm/kits/seed-inventory",
                     new SeedInventoryRequest(Study, Site, [new IpKitSeedItem("KIT-NEW-01", "LOT-KIT-1", FakeClock.DefaultStart.AddYears(1), "AVAILABLE")]))),

@@ -44,7 +44,7 @@ export const clinicalFieldBaseProps = {
   },
   gridSpan: {
     type: [Number, String],
-    default: 12,
+    default: null,
   },
   error: {
     type: String,
@@ -61,5 +61,25 @@ export const clinicalFieldBaseProps = {
   queryLabel: {
     type: String,
     default: "",
+  },
+  density: {
+    type: String,
+    default: "comfortable",
+  },
+  required: {
+    type: Boolean,
+    default: false,
+  },
+  hint: {
+    type: String,
+    default: "",
+  },
+  hideLabel: {
+    type: Boolean,
+    default: false,
+  },
+  showQueryFlag: {
+    type: Boolean,
+    default: true,
   },
 };

@@ -37,12 +37,13 @@
           </div>
         </div>
         <button
+          type="button"
           class="btn btn-secondary btn-close-batch-drawer"
           style="padding: 4px 10px; font-size: 14px; cursor: pointer"
           aria-label="Close batch upload drawer"
           @click="handleClose"
         >
-          ✕
+          ×
         </button>
       </div>
 
@@ -82,20 +83,15 @@
 
         <!-- 21 CFR Part 11 Change Justification -->
         <div class="reason-section">
-          <label
-            for="batch-reason-input"
-            class="form-label"
-            style="font-size: 12px; font-weight: 600"
-          >
-            21 CFR Part 11 Reason for Ingestion <span class="required">*</span>
-          </label>
-          <input
+          <ClinicalInput
             id="batch-reason-input"
             v-model="reasonForChange"
-            type="text"
-            class="form-control"
+            label="21 CFR Part 11 Reason for Ingestion"
+            required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
             placeholder="e.g. Site 101 regulatory documents initial filing for CRA review"
-            style="font-size: 12px"
           />
         </div>
 
@@ -141,6 +137,7 @@
             <div style="display: flex; gap: 8px">
               <button
                 v-if="!isProcessing && queue.length > 0"
+                type="button"
                 class="btn btn-secondary btn-sm"
                 style="font-size: 11px; padding: 4px 8px"
                 @click="clearQueue"
@@ -150,107 +147,88 @@
             </div>
           </div>
 
-          <div class="queue-table-wrapper">
-            <table class="queue-table">
-              <thead>
-                <tr>
-                  <th>File Name</th>
-                  <th>Size</th>
-                  <th>Status</th>
-                  <th>Predicted Classification</th>
-                  <th>Confidence</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(item, index) in queue"
-                  :key="index"
-                  class="queue-row"
+          <ClinicalDataTable
+            title="Batch Upload Queue"
+            hide-header
+            plain
+            :columns="queueColumns"
+            :data="queue"
+            :row-key="(item, idx) => `${item.file.name}-${idx}`"
+            :page-size="Math.max(queue.length, 50)"
+            wrapper-class="queue-table-wrapper"
+            table-class="queue-table"
+            row-class="queue-row"
+          >
+            <template #cell-filename="{ row }">
+              <span :title="row.file.name">{{ row.file.name }}</span>
+            </template>
+            <template #cell-size="{ row }">
+              {{ formatFileSize(row.file.size) }}
+            </template>
+            <template #cell-status="{ row }">
+              <span class="badge" :class="getStatusBadgeClass(row.status)">
+                {{ formatClinicalStatus(row.status) }}
+              </span>
+            </template>
+            <template #cell-classification="{ row }">
+              <div v-if="row.report" class="classification-preview">
+                <span class="font-mono text-bold">{{
+                  row.report.primary_classification.artifact_code
+                }}</span>
+                <span class="text-muted">
+                  ({{ row.report.primary_classification.artifact_type }})</span
                 >
-                  <td class="filename-cell font-mono" :title="item.file.name">
-                    {{ item.file.name }}
-                  </td>
-                  <td class="size-cell">
-                    {{ formatFileSize(item.file.size) }}
-                  </td>
-                  <td>
-                    <span
-                      class="badge"
-                      :class="getStatusBadgeClass(item.status)"
-                    >
-                      {{ formatClinicalStatus(item.status) }}
-                    </span>
-                  </td>
-                  <td>
-                    <div v-if="item.report" class="classification-preview">
-                      <span class="font-mono text-bold">{{
-                        item.report.primary_classification.artifact_code
-                      }}</span>
-                      <span class="text-muted">
-                        ({{
-                          item.report.primary_classification.artifact_type
-                        }})</span
-                      >
-                    </div>
-                    <span v-else class="text-muted">—</span>
-                  </td>
-                  <td>
-                    <span
-                      v-if="item.report"
-                      class="badge"
-                      :class="
-                        getConfidenceBadgeClass(item.report.confidence_tier)
-                      "
-                    >
-                      {{
-                        Math.round(
-                          item.report.primary_classification.confidence * 100
-                        )
-                      }}% {{ formatClinicalEnum(item.report.confidence_tier) }}
-                    </span>
-                    <span v-else class="text-muted">—</span>
-                  </td>
-                  <td>
-                    <button
-                      v-if="item.report"
-                      type="button"
-                      class="btn btn-secondary btn-xs btn-inspect-item"
-                      style="font-size: 10px; padding: 2px 6px"
-                      @click="inspectItem(item)"
-                    >
-                      <span aria-hidden="true">📋 </span>Inspect<span
-                        class="sr-only"
-                      >
-                        {{ item.file.name }}</span
-                      >
-                    </button>
-                    <ClinicalIconButton
-                      v-if="!isProcessing && item.status === 'PENDING'"
-                      class="btn btn-danger btn-xs btn-remove-item"
-                      style="
-                        min-width: 24px;
-                        min-height: 24px;
-                        font-size: 10px;
-                        padding: 2px 6px;
-                        margin-left: 4px;
-                      "
-                      :label="`Remove ${item.file.name} from upload queue`"
-                      @click="removeItem(index)"
-                    >
-                      ✕
-                    </ClinicalIconButton>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              </div>
+              <span v-else class="text-muted">—</span>
+            </template>
+            <template #cell-confidence="{ row }">
+              <span
+                v-if="row.report"
+                class="badge"
+                :class="getConfidenceBadgeClass(row.report.confidence_tier)"
+              >
+                {{
+                  Math.round(
+                    row.report.primary_classification.confidence * 100
+                  )
+                }}% {{ formatClinicalEnum(row.report.confidence_tier) }}
+              </span>
+              <span v-else class="text-muted">—</span>
+            </template>
+            <template #cell-action="{ row, index }">
+              <button
+                v-if="row.report"
+                type="button"
+                class="btn btn-secondary btn-xs btn-inspect-item"
+                style="font-size: 10px; padding: 2px 6px"
+                @click="inspectItem(row)"
+              >
+                Inspect<span class="sr-only"> {{ row.file.name }}</span>
+              </button>
+              <ClinicalIconButton
+                v-if="!isProcessing && row.status === 'PENDING'"
+                class="btn btn-danger btn-xs btn-remove-item"
+                style="
+                  min-width: 24px;
+                  min-height: 24px;
+                  font-size: 10px;
+                  padding: 2px 6px;
+                  margin-left: 4px;
+                "
+                :label="`Remove ${row.file.name} from upload queue`"
+                @click="removeItem(index)"
+              >
+                ×
+              </ClinicalIconButton>
+            </template>
+          </ClinicalDataTable>
         </div>
       </div>
 
       <!-- Drawer Footer Actions -->
       <div class="drawer-footer">
         <button
+          type="button"
           class="btn btn-secondary"
           style="padding: 8px 16px; font-size: 13px"
           :disabled="isProcessing"
@@ -260,6 +238,7 @@
         </button>
         <button
           v-if="isProcessing"
+          type="button"
           class="btn btn-warning"
           style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
           @click="cancelProcessing"
@@ -268,6 +247,7 @@
         </button>
         <button
           v-else
+          type="button"
           class="btn btn-primary btn-submit-batch"
           style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
           :disabled="
@@ -279,7 +259,7 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="startBatchUpload"
         >
-          🚀 Start Batch AI Auto-Classification &amp; Staging
+          Start Batch AI Auto-Classification &amp; Staging
         </button>
       </div>
     </div>
@@ -405,8 +385,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import {
+  ClinicalDataTable,
   ClinicalDropzone,
   ClinicalIconButton,
+  ClinicalInput,
   registerDraftSource,
   useFocusTrap,
 } from "ui";
@@ -460,6 +442,18 @@ const DEFAULT_BATCH_REASON =
 const drawerRef = ref(null);
 const inspectionCardRef = ref(null);
 const queue = ref([]);
+const queueColumns = [
+  {
+    key: "filename",
+    label: "File Name",
+    cellClass: "filename-cell font-mono",
+  },
+  { key: "size", label: "Size", cellClass: "size-cell" },
+  { key: "status", label: "Status" },
+  { key: "classification", label: "Predicted Classification" },
+  { key: "confidence", label: "Confidence" },
+  { key: "action", label: "Action" },
+];
 const reasonForChange = ref(DEFAULT_BATCH_REASON);
 const batchError = ref("");
 const isProcessing = ref(false);

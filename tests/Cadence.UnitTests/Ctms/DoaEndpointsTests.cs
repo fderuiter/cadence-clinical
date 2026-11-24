@@ -13,6 +13,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Database.Audit;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -583,8 +584,19 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         // 3. Authorized Principal Investigator CAN reach sign-off endpoint (returns 404 for non-existent record rather than 403 Forbidden)
         using var piClient = CreateClient(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-1");
-        var piSignOffResponse = await piClient.PostAsJsonAsync(
-            "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
+        using var piSignOffReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+        {
+            Content = JsonContent.Create(signOffPayload),
+        };
+        piSignOffReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-1",
+                "/api/v1/ctms/doa/sign-off",
+                "ctms.doa.sign_off",
+                [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR],
+                issuedAt: _clock.UtcNow));
+        var piSignOffResponse = await piClient.SendAsync(piSignOffReq, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // 4. Investigator assigned only to SITE-999 is blocked at route scope middleware on GET /sites/{site_id}/log,
@@ -710,7 +722,11 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 VersionIndex = 1,
             };
             seedDb.CtmsDelegations.Add(delegation);
-            await seedDb.SaveChangesAsync(ct);
+            using (AmbientAuditActorScope.BeginScope("svc:test-seed", "Test setup"))
+            {
+                await seedDb.SaveChangesAsync(ct);
+            }
+
             delegationId = delegation.Id;
         }
 
@@ -785,6 +801,13 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             });
         using (var req = BuildSignOffRequest(requestJson))
         {
+            req.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(
+                    "pi-1",
+                    "/api/v1/ctms/doa/sign-off",
+                    "ctms.doa.sign_off",
+                    [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR]));
             using var res = await piClient.SendAsync(req, ct);
             res.StatusCode.Should().Be(HttpStatusCode.OK);
             var dto = await res.Content.ReadFromJsonAsync<DelegationResponseDto>(ct);

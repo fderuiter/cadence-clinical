@@ -2,21 +2,12 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import SignatureCaptureModal from "../src/components/SignatureCaptureModal.vue";
-import { etmfService } from "../src/api/etmf";
-import { econsentService } from "../src/api/econsent";
+import { requestStepUpSignature } from "../src/api/signatureVerification";
 import { useConsentGating } from "../src/composables/useConsentGating";
 import { ref } from "vue";
 
-vi.mock("../src/api/etmf", () => ({
-  etmfService: {
-    verifySignature: vi.fn(),
-  },
-}));
-
-vi.mock("../src/api/econsent", () => ({
-  econsentService: {
-    verifySignature: vi.fn(),
-  },
+vi.mock("../src/api/signatureVerification", () => ({
+  requestStepUpSignature: vi.fn(),
 }));
 
 describe("Participant eConsent Step-Up Signature Verification", () => {
@@ -29,7 +20,7 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
   });
 
   it("SignatureCaptureModal sends verification request to /api/v1/auth/signature-verification and wipes password fields immediately", async () => {
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "valid-60s-stepup-token-abc123",
       expires_in: 60,
     });
@@ -60,8 +51,8 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
     // Click confirm
     await wrapper.find("#btn-confirm-sig").trigger("click");
 
-    // Check that verifySignature was called with actionUrl and semanticAction
-    expect(etmfService.verifySignature).toHaveBeenCalledWith({
+    // Check that step-up verification was called with actionUrl and semanticAction
+    expect(requestStepUpSignature).toHaveBeenCalledWith({
       username: "participant.cadence101",
       password: "SecretPassword123!", // pragma: allowlist secret
       totp: "654321",
@@ -84,7 +75,7 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
   });
 
   it("SignatureCaptureModal displays error when step-up verification fails with REAUTHENTICATION_REQUIRED", async () => {
-    vi.mocked(etmfService.verifySignature).mockRejectedValue({
+    vi.mocked(requestStepUpSignature).mockRejectedValue({
       message: "REAUTHENTICATION_REQUIRED",
       response: {
         status: 401,

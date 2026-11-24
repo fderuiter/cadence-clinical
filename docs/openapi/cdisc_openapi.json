@@ -186,6 +186,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -468,6 +478,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -907,6 +927,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1022,6 +1052,16 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1259,6 +1299,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1377,6 +1427,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -5106,6 +5166,16 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
             "content": {
@@ -6643,8 +6713,15 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -6709,8 +6786,15 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -7494,6 +7578,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -7577,8 +7671,15 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -8145,6 +8246,16 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9696,6 +9807,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -9749,6 +9870,16 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9816,6 +9947,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -9869,6 +10010,16 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -10377,6 +10528,70 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Kernel_AnonymousTypeOfstringAndstring"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/nodes": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Resolves up to 100 NodeRefs to their summaries in one batch.",
+        "description": "Returns a dictionary keyed by each requested ref that exists in the caller\u0027s tenant. Unknown objects are omitted; objects the caller may not see are masked in place (ADR-2471).",
+        "operationId": "KernelGetNodes",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelBatchNodesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
                 }
               }
             }
@@ -11443,7 +11658,7 @@
           "Kernel"
         ],
         "summary": "What happened in a scope, newest first.",
-        "description": "scope is any NodeRef (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page\u0027s next cursor; limit 1 to 200 (default 50). Entries about objects you may not see are masked in place.",
+        "description": "scope is any NodeRef or study code (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page\u0027s next cursor; limit 1 to 200 (default 50); include_nodes=true embeds resolved summaries for unmasked entry subjects. Entries about objects you may not see are masked in place.",
         "operationId": "KernelActivity",
         "parameters": [
           {
@@ -11495,6 +11710,13 @@
                 "string"
               ],
               "format": "int32"
+            }
+          },
+          {
+            "name": "include_nodes",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -16072,7 +16294,7 @@
           "Kernel proposals"
         ],
         "summary": "A study\u0027s proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired).",
-        "description": "A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).",
+        "description": "studyRef accepts a study NodeRef or study code. A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).",
         "operationId": "KernelListProposals",
         "parameters": [
           {
@@ -16865,7 +17087,7 @@
         "tags": [
           "Kernel validation"
         ],
-        "summary": "Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset.",
+        "summary": "Lists derived validation findings for a study, optionally filtered by stage, repeatable status, severity, rule pack or dataset.",
         "operationId": "KernelListStudyValidationFindings",
         "parameters": [
           {
@@ -16887,7 +17109,10 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           {
@@ -16931,6 +17156,80 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Kernel_KernelValidationFindingPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/attention": {
+      "get": {
+        "tags": [
+          "Kernel validation"
+        ],
+        "summary": "Lists a study\u0027s open proposals and active (Open or Investigating) validation findings in one attention read.",
+        "description": "studyRef accepts a study NodeRef or study code. Returns the pinned study NodeRef, open proposals masked in place, and visible Open or Investigating findings up to limit (default 20).",
+        "operationId": "KernelGetStudyAttention",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelStudyAttentionResponse"
                 }
               }
             }
@@ -17848,7 +18147,7 @@
           "Kernel work queues"
         ],
         "summary": "Reads the caller\u0027s capability-keyed work queues in the current tenant or within a scope.",
-        "description": "within is an optional NodeRef (for example study:\u003Cuuid\u003E or study_site:\u003Cuuid\u003E); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.",
+        "description": "within is an optional NodeRef or study code (for example study:\u003Cuuid\u003E, study_site:\u003Cuuid\u003E, or CADENCE-101); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.",
         "operationId": "KernelReadWorkQueues",
         "parameters": [
           {
@@ -20419,8 +20718,15 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -20453,8 +20759,15 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payments_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -34405,6 +34718,15 @@
               "null",
               "string"
             ]
+          },
+          "nodes": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Kernel_KernelNodeResponse"
+            }
           }
         }
       },
@@ -34714,6 +35036,20 @@
           },
           "asserted_by": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelBatchNodesResponse": {
+        "required": [
+          "nodes"
+        ],
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Kernel_KernelNodeResponse"
+            }
           }
         }
       },
@@ -38841,6 +39177,31 @@
           }
         }
       },
+      "Kernel_KernelStudyAttentionResponse": {
+        "required": [
+          "study_ref",
+          "proposals",
+          "findings"
+        ],
+        "type": "object",
+        "properties": {
+          "study_ref": {
+            "type": "string"
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelProposalResponse"
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelValidationFindingResponse"
+            }
+          }
+        }
+      },
       "Kernel_KernelStudyLocksResponse": {
         "required": [
           "study_ref",
@@ -41635,6 +41996,44 @@
             "default": false
           },
           "milestoneCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
             "type": [
               "null",
               "string"

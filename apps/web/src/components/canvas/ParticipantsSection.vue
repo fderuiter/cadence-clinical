@@ -7,22 +7,38 @@
   >
     <header class="participants-header">
       <h2 id="participants-title" tabindex="-1">Participants</h2>
-      <label for="participants-search">Search</label>
-      <input
+      <ClinicalFieldLayout
         id="participants-search"
-        ref="searchInputRef"
-        v-model="searchInput"
-        type="search"
-        placeholder="Subject code"
-        aria-label="Search participants by subject code"
-        @focus="searchFocused = true"
-        @blur="onSearchBlur"
-        @input="scheduleSearch"
-        @search="flushSearch"
-        @keydown.enter.prevent="flushSearch"
-      />
-      <label for="participants-status">State</label>
-      <select id="participants-status" :value="status" @change="onStatusChange">
+        label="Search"
+        density="compact"
+        :show-query-flag="false"
+        extra-class="participants-inline-field"
+      >
+        <input
+          id="participants-search"
+          ref="searchInputRef"
+          v-model="searchInput"
+          type="search"
+          class="clinical-input clinical-input--compact"
+          placeholder="Subject code"
+          aria-label="Search participants by subject code"
+          @focus="searchFocused = true"
+          @blur="onSearchBlur"
+          @input="scheduleSearch"
+          @search="flushSearch"
+          @keydown.enter.prevent="flushSearch"
+        />
+      </ClinicalFieldLayout>
+      <ClinicalInput
+        id="participants-status"
+        label="State"
+        type="select"
+        density="compact"
+        :show-query-flag="false"
+        extra-class="participants-inline-field"
+        :model-value="status"
+        @change="onStatusSelect"
+      >
         <option value="">Any state</option>
         <option
           v-for="state in PARTICIPANT_STATES"
@@ -31,14 +47,22 @@
         >
           {{ state.label }}
         </option>
-      </select>
-      <label for="participants-site">Site</label>
-      <select id="participants-site" :value="siteId" @change="onSiteChange">
+      </ClinicalInput>
+      <ClinicalInput
+        id="participants-site"
+        label="Site"
+        type="select"
+        density="compact"
+        :show-query-flag="false"
+        extra-class="participants-inline-field"
+        :model-value="siteId"
+        @change="onSiteSelect"
+      >
         <option value="">All sites</option>
         <option v-for="site in siteOptions" :key="site.code" :value="site.code">
           {{ site.label }}
         </option>
-      </select>
+      </ClinicalInput>
       <span v-if="siteId" id="participants-site-filter" class="filter-chip">
         Site {{ siteId }}
         <button
@@ -94,42 +118,43 @@
       {{ statusLine }}
     </p>
 
-    <div v-if="canvas.participants.length" class="scrollable-table-wrapper">
-      <table class="participants-table">
-        <thead>
-          <tr>
-            <th scope="col">Participant</th>
-            <th scope="col">State</th>
-            <th scope="col">Site</th>
-            <th scope="col" class="numeric">Enrollment</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="participant in canvas.participants"
-            :key="participant.id"
-            :class="{ selected: participant.id === selectedId }"
-          >
-            <th scope="row">
-              <button
-                :id="`participant-${participant.subject_id}`"
-                type="button"
-                class="row-select"
-                :aria-pressed="participant.id === selectedId"
-                @click="emit('select', participant)"
-              >
-                {{ participant.subject_id }}
-              </button>
-            </th>
-            <td>{{ participantStateLabel(participant.status) }}</td>
-            <td>{{ participant.site_id || "Not assigned" }}</td>
-            <td class="numeric">
-              {{ participant.enrollment_index }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ClinicalDataTable
+      v-if="canvas.participants.length"
+      title="Participants"
+      labelled-by="participants-title"
+      hide-header
+      plain
+      wrapper-class="scrollable-table-wrapper"
+      table-class="participants-table"
+      :columns="participantColumns"
+      :data="canvas.participants"
+      row-key="id"
+      :row-class="
+        (participant) => ({ selected: participant.id === selectedId })
+      "
+      external-pagination
+    >
+      <template #cell-subject_id="{ row }">
+        <button
+          :id="`participant-${row.subject_id}`"
+          type="button"
+          class="row-select"
+          :aria-pressed="row.id === selectedId"
+          @click="emit('select', row)"
+        >
+          {{ row.subject_id }}
+        </button>
+      </template>
+      <template #cell-status="{ row }">
+        {{ participantStateLabel(row.status) }}
+      </template>
+      <template #cell-site_id="{ row }">
+        {{ row.site_id || "Not assigned" }}
+      </template>
+      <template #pagination>
+        <span />
+      </template>
+    </ClinicalDataTable>
 
     <button
       v-if="canvas.hasMoreParticipants"
@@ -148,7 +173,13 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { handoffFocus, useInlineFocusHandoff } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalFieldLayout,
+  ClinicalInput,
+  handoffFocus,
+  useInlineFocusHandoff,
+} from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import {
   authorizedParticipantSiteCodes,
@@ -187,6 +218,13 @@ const emit = defineEmits<{
 }>();
 
 const SEARCH_DEBOUNCE_MS = 180;
+
+const participantColumns = [
+  { key: "subject_id", label: "Participant", rowHeader: true },
+  { key: "status", label: "State" },
+  { key: "site_id", label: "Site" },
+  { key: "enrollment_index", label: "Enrollment", align: "right" },
+];
 
 const canvas = useStudyCanvasStore();
 const authStore = useAuthStore();
@@ -391,16 +429,14 @@ function onSearchBlur() {
   flushSearch();
 }
 
-function onStatusChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value;
+function onStatusSelect(value: string | number) {
   clearTimeout(searchTimer);
-  emitFilter({ status: value });
+  emitFilter({ status: String(value ?? "") });
 }
 
-function onSiteChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value;
+function onSiteSelect(value: string | number) {
   clearTimeout(searchTimer);
-  emitFilter({ siteId: value });
+  emitFilter({ siteId: String(value ?? "") });
 }
 </script>
 
@@ -409,6 +445,8 @@ function onSiteChange(event: Event) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .participants-header {
@@ -423,18 +461,20 @@ function onSiteChange(event: Event) {
   font-size: 1rem;
 }
 
-.participants-header input[type="search"],
-.participants-header select {
-  max-width: 100%;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  padding: 6px 8px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  box-sizing: border-box;
+.participants-header :deep(.participants-inline-field) {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
 }
 
-#participants-site {
+.participants-header :deep(.participants-inline-field .clinical-field-header) {
+  margin: 0;
+}
+
+.participants-header :deep(.participants-inline-field .clinical-input) {
+  width: auto;
   max-width: 100%;
 }
 
@@ -482,25 +522,7 @@ function onSiteChange(event: Event) {
   font-size: 0.85rem;
 }
 
-.participants-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.participants-table th,
-.participants-table td {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-.participants-table thead th {
-  color: var(--neutral-dark);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.participants-table tr.selected {
+.participants-table :deep(tr.selected) {
   background: var(--accent-bg);
 }
 
@@ -517,14 +539,5 @@ function onSiteChange(event: Event) {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   cursor: pointer;
   box-sizing: border-box;
-}
-
-.numeric {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.participants-table th.numeric {
-  text-align: right;
 }
 </style>

@@ -29,6 +29,9 @@
   "sideEffects": [
     "*.css"
   ],
+  "dependencies": {
+    "lucide-vue-next": "catalog:"
+  },
   "peerDependencies": {
     "vue": "catalog:"
   },

@@ -1,9 +1,12 @@
+import crypto from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createMarkdownRenderer } from "vitepress";
 import { afterEach, describe, expect, it } from "vitest";
+
+import { buildPortalCspContent, injectHashedPortalCsp } from "./csp.mjs";
 
 import {
   assertThemeLinksExist,
@@ -15,6 +18,7 @@ import {
   toRepoUrl,
   vitepressSlugify,
 } from "./repoLinks.mjs";
+import { createRequire } from "module";
 import rootDocsModule from "./rootDocs.cjs";
 import {
   buildPortalSearchCatalog,
@@ -23,7 +27,12 @@ import {
   toSidebarLink,
 } from "./sidebar.mjs";
 
+const require = createRequire(import.meta.url);
 const { STAGED_ROOT_DOCS } = rootDocsModule;
+const {
+  extractMermaidBlocks,
+  validatePortalMermaidDiagrams,
+} = require("../../scripts/build-docs.js");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,7 +76,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
+  it("includes all 82 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -88,7 +97,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(80);
+    expect(activeDocsAndHomeRoutes.size).toBe(82);
 
     const allActiveNonAdrPortalRoutes = new Set(
       parsedEntries
@@ -102,8 +111,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    // 80 active docs/ + home pages plus the 7 additional staged root guides/policies = 87 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(87);
+    // 82 active docs/ + home pages plus the 7 additional staged root guides/policies = 89 portal pages
+    expect(allActiveNonAdrPortalRoutes.size).toBe(89);
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -153,7 +162,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(adrLinks.size).toBeLessThan(90);
   });
 
-  it("synthesizes the Engineering Blog group newest-first under /blog/ and excludes draft blog posts from portal routes", () => {
+  it("synthesizes the Engineering Blog group from published frontmatter newest-first under /blog/ and excludes draft blog posts", () => {
     const tmpRepo = makeTempWorkspace();
     const tmpDocs = path.join(tmpRepo, "docs");
     const tmpBlog = path.join(tmpDocs, "blog");
@@ -161,16 +170,16 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
 
     fs.writeFileSync(path.join(tmpBlog, "index.md"), "# Engineering Blog\n");
     fs.writeFileSync(
-      path.join(tmpBlog, "2026-09-29-older.md"),
-      '---\ntitle: "Older Post"\ndraft: false\n---\n# Older Post\n'
+      path.join(tmpBlog, "2026-11-19-alpha-slug.md"),
+      '---\ntitle: "Updated Frontmatter Title Older"\ndate: "2026-09-29"\ndraft: false\n---\n# Heading\n'
     );
     fs.writeFileSync(
-      path.join(tmpBlog, "2026-11-19-newer.md"),
-      '---\ntitle: "Newer Post"\ndraft: false\n---\n# Newer Post\n'
+      path.join(tmpBlog, "2026-09-29-zeta-slug.md"),
+      '---\ntitle: "Updated Frontmatter Title Newer"\ndate: "2026-11-20"\ndraft: false\n---\n# Heading\n'
     );
     fs.writeFileSync(
       path.join(tmpBlog, "2026-11-25-draft.md"),
-      '---\ntitle: "Draft Post"\ndraft: true\n---\n# Draft Post\n'
+      '---\ntitle: "Draft Post"\ndate: "2026-11-25"\ndraft: true\n---\n# Draft Post\n'
     );
 
     const sampleIndex = [
@@ -180,12 +189,20 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       "",
       "| Document | Status | What it is |",
       "| --- | --- | --- |",
-      "| [Older Post](blog/2026-09-29-older.md) | Current | Older milestone |",
+      "| [Stale Older Label](blog/2026-11-19-alpha-slug.md) | Current | Older milestone |",
       "| [Cadence Engineering Blog](blog/index.md) | Current | Blog overview |",
-      "| [Newer Post](blog/2026-11-19-newer.md) | Current | Newer milestone |",
+      "| [Stale Newer Label](blog/2026-09-29-zeta-slug.md) | Current | Newer milestone |",
       "| [Draft Post](blog/2026-11-25-draft.md) | Current | Draft milestone |",
       "",
     ].join("\n");
+
+    const parsed = parseDocumentationIndex(sampleIndex, {
+      docsDir: tmpDocs,
+      repoRoot: tmpRepo,
+    });
+    expect(parsed.some((e) => e.rawHref.includes("2026-11-25-draft.md"))).toBe(
+      false
+    );
 
     const sidebar = synthesizeSidebarFromIndex(
       path.join(tmpDocs, "DOCUMENTATION_INDEX.md"),
@@ -201,10 +218,16 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     const blogGroup = blogSection.find((g) => g.text === "Engineering Blog");
     expect(blogGroup).toBeDefined();
     expect(blogGroup.collapsed).toBe(false);
-    expect(blogGroup.items.map((item) => item.link)).toEqual([
-      "/blog/index",
-      "/blog/2026-11-19-newer",
-      "/blog/2026-09-29-older",
+    expect(blogGroup.items).toEqual([
+      { text: "All Engineering Posts", link: "/blog/index" },
+      {
+        text: "Updated Frontmatter Title Newer",
+        link: "/blog/2026-09-29-zeta-slug",
+      },
+      {
+        text: "Updated Frontmatter Title Older",
+        link: "/blog/2026-11-19-alpha-slug",
+      },
     ]);
   });
 
@@ -471,6 +494,51 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(anchors.has("duplicate-1")).toBe(true);
   });
 
+  it("hoists hashed Content-Security-Policy <meta> before all <script> and <link> tags and removes trailing placeholders", () => {
+    const inlineBody =
+      "(() => { const saved = localStorage.getItem('vitepress-theme-appearance'); })();";
+    const expectedDigest = crypto
+      .createHash("sha256")
+      .update(inlineBody, "utf8")
+      .digest("base64");
+
+    const vitepressSampleHtml = [
+      "<!DOCTYPE html>",
+      '<html lang="en-US" dir="ltr">',
+      "  <head>",
+      '    <meta charset="utf-8">',
+      '    <meta name="viewport" content="width=device-width,initial-scale=1">',
+      "    <title>Architecture | Cadence Clinical Portal</title>",
+      '    <link rel="preload" href="/cadence-clinical/assets/style.abc123.css" as="style">',
+      '    <script type="module" src="/cadence-clinical/assets/app.BhpmuQal.js"></script>',
+      '    <link rel="modulepreload" href="/cadence-clinical/assets/chunks/framework.xyz.js">',
+      `    <meta http-equiv="Content-Security-Policy" content="${buildPortalCspContent()}">`,
+      `    <script id="check-dark-mode">${inlineBody}</script>`,
+      "  </head>",
+      '  <body><div id="app"></div></body>',
+      "</html>",
+    ].join("\n");
+
+    const transformed = injectHashedPortalCsp(vitepressSampleHtml);
+    const cspMatches = [
+      ...transformed.matchAll(
+        /<meta\b[^>]*\bhttp-equiv=["']Content-Security-Policy["'][^>]*>/gi
+      ),
+    ];
+    expect(cspMatches).toHaveLength(1);
+
+    const cspIndex = cspMatches[0].index;
+    const firstScriptIndex = transformed.search(/<script\b/i);
+    const firstLinkIndex = transformed.search(/<link\b/i);
+
+    expect(cspIndex).toBeGreaterThan(0);
+    expect(cspIndex).toBeLessThan(firstLinkIndex);
+    expect(cspIndex).toBeLessThan(firstScriptIndex);
+    expect(cspMatches[0][0]).toContain(`'sha256-${expectedDigest}'`);
+    expect(cspMatches[0][0]).toContain("frame-src 'self'");
+    expect(cspMatches[0][0]).not.toContain("'unsafe-inline' 'sha256-");
+  });
+
   it("excludes Baseline, Historical, and superseded/pre-kernel ADRs from search while boosting Normative and Kernel docs", () => {
     const catalog = buildPortalSearchCatalog(indexPath, { docsDir, repoRoot });
 
@@ -523,4 +591,65 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       )
     ).toBeGreaterThan(catalog.getSearchBoostMultiplier("CI.md"));
   });
+
+  it("parses all 41 Mermaid diagrams across 20 portal pages cleanly via JSDOM and preserves inline code v-pre", async () => {
+    const result = await validatePortalMermaidDiagrams(docsDir, {
+      repoRoot,
+      includeUnstagedRootDocs: true,
+      silent: true,
+    });
+
+    expect(result.pagesWithMermaid).toBe(20);
+    expect(result.diagramCount).toBe(41);
+
+    const dataLifecycleMd = fs.readFileSync(
+      path.join(docsDir, "DATA_LIFECYCLE.md"),
+      "utf-8"
+    );
+    const dataLifecycleBlocks = extractMermaidBlocks(
+      dataLifecycleMd,
+      "docs/DATA_LIFECYCLE.md"
+    );
+    expect(dataLifecycleBlocks.length).toBe(3);
+
+    const md = await createMarkdownRenderer(docsDir);
+    md.use(dualHeadingAnchorsPlugin);
+    const ciSnippetHtml = md.render(
+      "Workflow expression `${{ steps.cadence-cli-cache.outputs.cache-hit }}`.\n",
+      { relativePath: "CI.md" }
+    );
+    expect(ciSnippetHtml).toContain("<code v-pre");
+  }, 30000);
+
+  it("rejects invalid Mermaid syntax in staged root docs and docs pages with exact file and line numbers", async () => {
+    const tmpDocs = makeTempWorkspace();
+    fs.writeFileSync(
+      path.join(tmpDocs, "ARCHITECTURE.md"),
+      [
+        "# Architecture",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "    S-->>C: stale; 403",
+        "```",
+        "",
+      ].join("\n")
+    );
+    fs.writeFileSync(
+      path.join(tmpDocs, "workflow.md"),
+      [
+        "# Workflow",
+        "",
+        "```mermaid",
+        "graph TD",
+        "    A -->|POST /api/protocols/{id}/amend| B",
+        "```",
+        "",
+      ].join("\n")
+    );
+
+    await expect(
+      validatePortalMermaidDiagrams(tmpDocs, { repoRoot, silent: true })
+    ).rejects.toThrow(/ARCHITECTURE\.md:3[\s\S]*docs\/workflow\.md:3/);
+  }, 30000);
 });

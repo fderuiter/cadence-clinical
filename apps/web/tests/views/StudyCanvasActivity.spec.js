@@ -169,16 +169,13 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
 
     await open();
 
-    expect(kernelApi.search).toHaveBeenCalledWith({
-      text: "CAD-101",
-      kinds: ["study"],
-      limit: 5,
-    });
+    expect(kernelApi.search).not.toHaveBeenCalled();
     expect(kernelApi.activity).toHaveBeenCalledWith({
-      scope: STUDY,
+      scope: "CAD-101",
       families: undefined,
       before: undefined,
       limit: 25,
+      includeNodes: true,
     });
     expect(rows()).toEqual([
       {
@@ -257,27 +254,29 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
     await flushPromises();
 
     expect(kernelApi.activity).toHaveBeenLastCalledWith({
-      scope: STUDY,
+      scope: "CAD-101",
       families: ["Execution"],
       before: undefined,
       limit: 25,
+      includeNodes: true,
     });
 
     await wrapper.find("#btn-activity-older").trigger("click");
     await flushPromises();
 
     expect(kernelApi.activity).toHaveBeenLastCalledWith({
-      scope: STUDY,
+      scope: "CAD-101",
       families: ["Execution"],
       before: "cursor-1",
       limit: 25,
+      includeNodes: true,
     });
     expect(rows().map((r) => r.what)).toEqual([
       "Participant screened",
       "Enrollment status changed",
     ]);
     expect(wrapper.find("#btn-activity-older").exists()).toBe(false);
-    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+    expect(kernelApi.search).not.toHaveBeenCalled();
   });
 
   it("says when the study has no activity yet", async () => {
@@ -313,13 +312,15 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
   });
 
   it("says in plain terms when the study wasn't found or isn't visible", async () => {
-    vi.mocked(kernelApi.search).mockResolvedValue([]);
+    vi.mocked(kernelApi.activity).mockRejectedValue(
+      new ApiError("Study 'CAD-101' was not found.", 404)
+    );
 
     await open();
 
     expect(wrapper.find("#activity-status").text()).toBe(
       "Study CAD-101 wasn't found or isn't visible to your account."
     );
-    expect(kernelApi.activity).not.toHaveBeenCalled();
+    expect(kernelApi.search).not.toHaveBeenCalled();
   });
 });

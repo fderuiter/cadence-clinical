@@ -6,8 +6,10 @@ import ClinicalContextBar from "./components/clinical/ClinicalContextBar.vue";
 import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
+import ClinicalExplanation from "./components/clinical/ClinicalExplanation.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
+import ClinicalGatedAction from "./components/clinical/ClinicalGatedAction.vue";
 import ClinicalIcon from "./components/clinical/ClinicalIcon.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
@@ -66,8 +68,10 @@ export {
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
+  ClinicalExplanation,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalGatedAction,
   ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
@@ -109,3 +113,10 @@ export {
   useInlineFocusHandoff,
   useSignOutGuard,
 };
+
+export { registerEntityPeekHandler } from "./utils/entityPeekHandler.js";
+export {
+  parseNodeRef,
+  stripRawPermissionTokens,
+  openEntityPeek,
+} from "./utils/entityPeekRegistry.js";

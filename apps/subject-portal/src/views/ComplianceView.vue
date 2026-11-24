@@ -85,24 +85,49 @@
 
       <!-- History Card -->
       <div class="card history-card">
-        <h3>My Survey History</h3>
-        <div class="table-responsive">
-          <table class="compliance-history-table">
-            <thead>
-              <tr>
-                <th>Questionnaire</th>
-                <th>Scheduled Date</th>
-                <th>Submitted Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="compliance-history-tbody">
-              <tr>
-                <td colspan="4" class="no-data">No history found.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <h3 id="compliance-history-heading">My Survey History</h3>
+        <ClinicalDataTable
+          title="My Survey History"
+          labelled-by="compliance-history-heading"
+          hide-header
+          plain
+          wrapper-class="table-responsive"
+          table-class="compliance-history-table"
+          tbody-id="compliance-history-tbody"
+          :columns="historyColumns"
+          :data="complianceStore.complianceHistory"
+          :row-key="(row, idx) => row.id ?? `compliance-row-${idx}`"
+          :row-id="(_, idx) => `compliance-row-${idx}`"
+          :row-attrs="
+            (_, idx) => ({
+              'data-row-index': String(idx),
+              style: 'cursor: pointer;',
+            })
+          "
+          external-pagination
+          empty-message="No history found."
+          @row-click="onHistoryRowClick"
+        >
+          <template #cell-instName="{ row, index }">
+            <div class="compliance-row-title">
+              <strong>{{ row.instName }}</strong>
+              <button
+                :id="`btn-peek-compliance-${index}`"
+                type="button"
+                class="btn btn-secondary btn-peek-compliance"
+                :data-id="String(index)"
+                @click.stop="openPeek(row, index, $event.currentTarget)"
+              >
+                View Details<span class="sr-only"> for {{ row.instName }}</span>
+              </button>
+            </div>
+          </template>
+          <template #cell-statusLabel="{ row }">
+            <span :class="['status-pill', row.pillClass]">{{
+              row.statusLabel
+            }}</span>
+          </template>
+        </ClinicalDataTable>
       </div>
     </div>
   </section>
@@ -110,13 +135,46 @@
 
 <script setup>
 import { computed } from "vue";
+import { ClinicalDataTable } from "ui";
+import { openCompliancePeek } from "../features/peek.js";
 import { isScreenAvailable } from "../router/availability.js";
+import { useComplianceStore } from "../stores/compliance.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
+const complianceStore = useComplianceStore();
+
+const historyColumns = [
+  { key: "instName", label: "Questionnaire" },
+  {
+    key: "scheduledText",
+    label: "Scheduled Date",
+    cellClass: "tabular-nums",
+  },
+  {
+    key: "submittedText",
+    label: "Submitted Date",
+    cellClass: "tabular-nums",
+  },
+  { key: "statusLabel", label: "Status" },
+];
+
+function openPeek(row, index, triggerEl) {
+  if (!row) return;
+  openCompliancePeek(row, index, triggerEl);
+}
+
+function onHistoryRowClick(row) {
+  if (!row) return;
+  const idx = Number.isFinite(row.rowIndex) ? row.rowIndex : 0;
+  const triggerEl =
+    document.getElementById(`btn-peek-compliance-${idx}`) ||
+    document.getElementById(`compliance-row-${idx}`);
+  openCompliancePeek(row, idx, triggerEl);
+}
 
 const hasComplianceTab = computed(() => {
   void session.session?.isDemoMode;

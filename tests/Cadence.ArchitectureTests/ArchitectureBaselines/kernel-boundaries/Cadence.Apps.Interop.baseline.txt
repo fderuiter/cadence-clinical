@@ -46,6 +46,7 @@ K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SubjectAssignment.Tenan
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SubjectNotification.SubjectId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SubjectNotification.TenantId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Interop|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Application.Services.FhirObservationMapper.Target.SubjectId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.BiostatExportAuditLog
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.BiostatExportAuditLog.StudyId

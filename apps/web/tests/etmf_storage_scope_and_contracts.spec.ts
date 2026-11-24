@@ -360,12 +360,12 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       global: { plugins: [pinia, router] },
     });
     await flushPromises();
-    expect(pharmCanvas.find("#etmf-read-role-guidance").text()).toContain(
-      "Clinical Research Coordinator"
-    );
-    expect(pharmCanvas.find("#etmf-read-role-guidance").text()).not.toContain(
-      "etmf_document:"
-    );
+    const readRoleGuidance = pharmCanvas
+      .find("#etmf-read-role-guidance")
+      .text();
+    expect(readRoleGuidance).toContain("Clinical Research Coordinator");
+    expect(readRoleGuidance).not.toContain("etmf_document:");
+    expect(readRoleGuidance).not.toContain("etmf_document:read");
     expect(getDocsSpy).not.toHaveBeenCalled();
     pharmCanvas.unmount();
 
@@ -414,15 +414,12 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
     expect(
       piGrid.find("button.batch-upload-trigger-btn").attributes("disabled")
     ).toBeDefined();
-    expect(piGrid.find("#document-grid-role-note").text()).toContain(
-      "Uploading or staging trial documents"
-    );
-    expect(piGrid.find("#document-grid-role-note").text()).toContain(
-      "Updating document classifications"
-    );
-    expect(piGrid.find("#document-grid-role-note").text()).not.toContain(
-      "etmf_document:"
-    );
+    const gridRoleNote = piGrid.find("#document-grid-role-note").text();
+    expect(gridRoleNote).toContain("Uploading or staging trial documents");
+    expect(gridRoleNote).toContain("Updating document classifications");
+    expect(gridRoleNote).not.toContain("etmf_document:");
+    expect(gridRoleNote).not.toContain("etmf_document:create");
+    expect(gridRoleNote).not.toContain("etmf_document:tag");
     await piGrid.find('td[data-row="0"][data-col="1"]').trigger("dblclick");
     expect(piGrid.find("select.inline-select").exists()).toBe(false);
     expect(tagSpy).not.toHaveBeenCalled();
@@ -471,12 +468,10 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
     expect(
       tree.find(".btn-export-full-binder").attributes("disabled")
     ).toBeDefined();
-    expect(tree.find("#etmf-export-role-note").text()).toContain(
-      "Sponsor Data Manager"
-    );
-    expect(tree.find("#etmf-export-role-note").text()).not.toContain(
-      "etmf_document:"
-    );
+    const exportRoleNote = tree.find("#etmf-export-role-note").text();
+    expect(exportRoleNote).toContain("Sponsor Data Manager");
+    expect(exportRoleNote).not.toContain("etmf_document:");
+    expect(exportRoleNote).not.toContain("etmf_document:export");
     expect(tree.findAll(".unread-badge").length).toBe(0);
 
     // Inline taxonomy edit persists through PATCH /api/v1/etmf/documents/{document_id}/taxonomy
@@ -519,12 +514,10 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       global: { plugins: [pinia] },
     });
     await flushPromises();
-    expect(qcWrapper.find("#cra-qc-role-note").text()).toContain(
-      "Clinical Research Associate (CRA)"
-    );
-    expect(qcWrapper.find("#cra-qc-role-note").text()).not.toContain(
-      "etmf_document:"
-    );
+    const craQcRoleNote = qcWrapper.find("#cra-qc-role-note").text();
+    expect(craQcRoleNote).toContain("Clinical Research Associate (CRA)");
+    expect(craQcRoleNote).not.toContain("etmf_document:");
+    expect(craQcRoleNote).not.toContain("etmf_document:transition_clinical_qc");
     expect(
       qcWrapper.find("button.btn-batch-accept").attributes("disabled")
     ).toBeDefined();

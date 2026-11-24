@@ -20,6 +20,22 @@ function cleanScopeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+interface ExplicitWorkspaceScopeFlags {
+  studyExplicit: boolean;
+  siteExplicit: boolean;
+}
+
+const explicitScopeByPinia = new WeakMap<Pinia, ExplicitWorkspaceScopeFlags>();
+
+function getOrCreateExplicitFlags(pinia: Pinia): ExplicitWorkspaceScopeFlags {
+  let flags = explicitScopeByPinia.get(pinia);
+  if (!flags) {
+    flags = { studyExplicit: false, siteExplicit: false };
+    explicitScopeByPinia.set(pinia, flags);
+  }
+  return flags;
+}
+
 export interface SyncWorkspaceScopeOptions {
   studyId?: string | null;
   siteId?: string | null;
@@ -62,6 +78,8 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
     | undefined;
   const scopeStore = useClinicalScopeStore(pinia);
   const canvasStore = useStudyCanvasStore(pinia);
+  const demoDefaults = shouldUseDemoDefaults(pinia);
+  const explicitFlags = pinia ? getOrCreateExplicitFlags(pinia) : null;
   const etmfInstance = pinia?._s?.get("etmf");
   const clinicalInstance = pinia?._s?.get("clinical");
   const prevEtmfStudy = cleanScopeString(etmfInstance?.currentStudyId);
@@ -82,10 +100,22 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
   let nextSite: string;
   if (hasExplicitSite) {
     nextSite = cleanScopeString(options.siteId);
+    if (explicitFlags) {
+      explicitFlags.siteExplicit = Boolean(nextSite);
+    }
   } else if (studyChanged) {
+    nextSite = "";
+    if (explicitFlags) {
+      explicitFlags.siteExplicit = false;
+    }
+  } else if (demoDefaults && !explicitFlags?.siteExplicit) {
     nextSite = "";
   } else {
     nextSite = cleanScopeString(scopeStore.activeSiteId);
+  }
+
+  if (hasExplicitStudy && explicitFlags) {
+    explicitFlags.studyExplicit = Boolean(nextStudy);
   }
 
   if (hasExplicitStudy) {
@@ -178,9 +208,22 @@ export function resolveHydratedWorkspaceScope(
   props?: { studyId?: string | null; siteId?: string | null }
 ): { studyId: string; siteId: string } {
   const pinia = getActivePinia();
-  const scopeStore = useClinicalScopeStore(pinia);
-  const canvasStore = useStudyCanvasStore(pinia);
   const demoDefaults = shouldUseDemoDefaults(pinia);
+  const explicitFlags = pinia ? explicitScopeByPinia.get(pinia) : undefined;
+  const existingCanvas = (
+    pinia as (Pinia & { _s?: Map<string, { studyCode?: string }> }) | undefined
+  )?._s?.get("studyCanvas");
+  const rawCanvasStudy = cleanScopeString(
+    existingCanvas
+      ? existingCanvas.studyCode
+      : demoDefaults
+        ? ""
+        : useStudyCanvasStore(pinia).studyCode
+  );
+  const scopeStore = useClinicalScopeStore(pinia);
+  if (!existingCanvas && !demoDefaults) {
+    useStudyCanvasStore(pinia);
+  }
 
   const explicitStudy =
     cleanScopeString(props?.studyId) ||
@@ -189,10 +232,13 @@ export function resolveHydratedWorkspaceScope(
     cleanScopeString(route?.query?.study_id) ||
     cleanScopeString(route?.query?.study);
 
-  const canvasStudy = cleanScopeString(canvasStore.studyCode);
+  const canvasStudy =
+    !demoDefaults || explicitFlags?.studyExplicit || Boolean(existingCanvas)
+      ? rawCanvasStudy
+      : "";
   const clinicalStudy = !demoDefaults
     ? cleanScopeString(scopeStore.activeStudyId)
-    : canvasStudy
+    : canvasStudy || explicitFlags?.studyExplicit
       ? cleanScopeString(scopeStore.activeStudyId)
       : "";
   const bridgedStudy = !demoDefaults
@@ -212,7 +258,7 @@ export function resolveHydratedWorkspaceScope(
     !explicitSite &&
     !explicitStudy &&
     studyId &&
-    (!demoDefaults || Boolean(canvasStudy)) &&
+    (!demoDefaults || Boolean(explicitFlags?.siteExplicit)) &&
     cleanScopeString(scopeStore.activeStudyId) === studyId
   ) {
     fallbackSite = cleanScopeString(scopeStore.activeSiteId);
@@ -235,6 +281,7 @@ export function clearSynchronizedWorkspaceScope(): void {
       })
     | undefined;
   if (!pinia) return;
+  explicitScopeByPinia.delete(pinia);
   const demoDefaults = shouldUseDemoDefaults(pinia);
 
   clearActiveStudyScope();

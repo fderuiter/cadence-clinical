@@ -1,5 +1,6 @@
 using System;
-using System.Text.Json;
+
+using Cadence.ToolingCore.Services;
 
 namespace Cadence.Cli.Services;
 
@@ -10,24 +11,8 @@ namespace Cadence.Cli.Services;
 public static class PnpmPin
 {
     /// <summary>Reads the pinned version from <c>package.json</c> text, or <see langword="null"/> when no pnpm pin is declared.</summary>
-    public static string? PinnedVersion(string packageJson)
-    {
-        using var document = JsonDocument.Parse(packageJson);
-        if (!document.RootElement.TryGetProperty("packageManager", out var field) || field.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        string value = field.GetString() ?? string.Empty;
-        if (!value.StartsWith("pnpm@", StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        string version = value["pnpm@".Length..];
-        int hash = version.IndexOf('+', StringComparison.Ordinal);
-        return hash >= 0 ? version[..hash] : version;
-    }
+    public static string? PinnedVersion(string packageJson) =>
+        DoctorProvisioningService.ReadPinnedPnpmVersion(packageJson);
 
     /// <summary>
     /// Describes how the installed pnpm compares with the pin. <paramref name="installed"/> is the trimmed output of

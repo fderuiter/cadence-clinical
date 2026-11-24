@@ -218,12 +218,10 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     await grid.vm.$emit("inspect", store.documentsList[0]);
     await flushPromises();
 
-    expect(wrapper.find("#etmf-qc-role-note").text()).toContain(
-      "Clinical Research Associate (CRA)"
-    );
-    expect(wrapper.find("#etmf-qc-role-note").text()).not.toContain(
-      "etmf_document:"
-    );
+    const qcRoleNote = wrapper.find("#etmf-qc-role-note").text();
+    expect(qcRoleNote).toContain("Clinical Research Associate (CRA)");
+    expect(qcRoleNote).not.toContain("etmf_document:");
+    expect(qcRoleNote).not.toContain("etmf_document:transition_clinical_qc");
     expect(
       wrapper.find("#btn-accept-ai-classification").attributes("disabled")
     ).toBeDefined();

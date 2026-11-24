@@ -82,12 +82,15 @@
             >
           </div>
           <div class="scanner-input-row">
-            <input
+            <ClinicalInput
               id="barcode-scanner-input"
-              ref="barcodeInputRef"
               v-model="barcodeInputValue"
-              type="text"
-              class="barcode-input"
+              label="Multi-Barcode Scanner Buffer Input"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              extra-class="scanner-field"
+              control-class="barcode-input"
               placeholder="Scan or enter kit barcode (e.g. KIT-1001 or KIT-1001|LOT-A100)..."
               autocomplete="off"
               @keydown.enter.prevent="handleBarcodeScan"
@@ -197,180 +200,186 @@
           </p>
         </div>
 
-        <div v-else class="table-container">
-          <table
-            class="batch-table"
-            role="grid"
-            aria-label="Scanned Kits Reconciliation Buffer"
-          >
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Kit Barcode</th>
-                <th>Scanned Lot</th>
-                <th>Expected Inventory Lot</th>
-                <th>Residual Vol (mL / %)</th>
-                <th>Disposition Action</th>
-                <th>Disposition Reason</th>
-                <th>Validation Flags</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(item, index) in scannedItems"
-                :key="item.kitNumber"
-                class="kit-row"
-                :class="{
-                  'row-quarantine':
-                    item.disposition === 'QUARANTINED_FOR_DESTRUCTION' ||
-                    item.dispositionReason === 'DAMAGED_SEAL' ||
-                    item.hasLotMismatch,
-                  'row-lot-mismatch': item.hasLotMismatch,
-                }"
-              >
-                <td class="col-index">
-                  {{ index + 1 }}
-                </td>
-                <td class="col-kit mono fw-bold">
-                  {{ item.kitNumber }}
-                </td>
-                <td class="col-lot mono">
-                  {{ item.scannedLotNumber }}
-                </td>
-                <td class="col-expected-lot mono">
-                  {{ item.expectedLotNumber }}
-                  <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
-                    >LOT MISMATCH</span
-                  >
-                </td>
-                <td class="col-volume">
-                  <div class="volume-inputs">
-                    <input
-                      v-model.number="item.residualVolumeMl"
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      class="input-sm volume-input"
-                      placeholder="mL"
-                      aria-label="Residual volume in mL"
-                    />
-                    <input
-                      v-model.number="item.residualVolumePercentage"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      class="input-sm volume-input"
-                      placeholder="%"
-                      aria-label="Residual percentage"
-                    />
-                  </div>
-                </td>
-                <td class="col-disposition">
-                  <select
-                    v-model="item.disposition"
-                    class="select-sm disposition-select"
-                    :class="`disp-${item.disposition.toLowerCase()}`"
-                    aria-label="Disposition Action"
-                  >
-                    <option value="RETURNED_TO_SITE">Returned to Site</option>
-                    <option value="QUARANTINED_FOR_DESTRUCTION">
-                      Quarantined for Destruction
-                    </option>
-                    <option value="RETURNED_TO_DEPOT">Returned to Depot</option>
-                  </select>
-                </td>
-                <td class="col-reason">
-                  <select
-                    v-model="item.dispositionReason"
-                    class="select-sm reason-select"
-                    aria-label="Disposition Reason"
-                  >
-                    <option value="NORMAL_RETURN">Normal Return</option>
-                    <option value="PATIENT_RETURN">
-                      Patient Return / Adherence
-                    </option>
-                    <option value="DAMAGED_SEAL">
-                      Damaged Seal / Tampered
-                    </option>
-                    <option value="EXPIRED">Expired Lot</option>
-                    <option value="LOT_MISMATCH">Lot Mismatch</option>
-                    <option value="OTHER">Other / Notes</option>
-                  </select>
-                </td>
-                <td class="col-flags">
-                  <span
-                    v-if="item.hasLotMismatch"
-                    class="status-flag flag-warning"
-                    >⚠️ Lot Mismatch</span
-                  >
-                  <span
-                    v-else-if="
-                      item.disposition === 'QUARANTINED_FOR_DESTRUCTION'
-                    "
-                    class="status-flag flag-quarantine"
-                    >🔒 Quarantined</span
-                  >
-                  <span v-else class="status-flag flag-valid">✓ Valid</span>
-                </td>
-                <td class="col-action">
-                  <ClinicalIconButton
-                    class="btn-icon btn-remove"
-                    :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
-                    title="Remove item"
-                    @click="removeItem(index)"
-                  >
-                    ✕
-                  </ClinicalIconButton>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ClinicalDataTable
+          v-else
+          title="Scanned Kits Reconciliation Buffer"
+          hide-header
+          plain
+          :columns="batchColumns"
+          :data="scannedItems"
+          row-key="kitNumber"
+          :page-size="Math.max(scannedItems.length, 50)"
+          wrapper-class="table-container"
+          table-class="batch-table"
+          :row-class="resolveKitRowClass"
+        >
+          <template #cell-index="{ index }">
+            {{ index + 1 }}
+          </template>
+          <template #cell-kitNumber="{ row }">
+            {{ row.kitNumber }}
+          </template>
+          <template #cell-scannedLotNumber="{ row }">
+            {{ row.scannedLotNumber }}
+          </template>
+          <template #cell-expectedLotNumber="{ row }">
+            {{ row.expectedLotNumber }}
+            <span v-if="row.hasLotMismatch" class="badge badge-alert-lot"
+              >LOT MISMATCH</span
+            >
+          </template>
+          <template #cell-volume="{ row, index }">
+            <div class="volume-inputs">
+              <ClinicalInput
+                :id="`kit-residual-ml-${index}`"
+                :model-value="row.residualVolumeMl ?? ''"
+                type="number"
+                min="0"
+                step="0.1"
+                label="Residual volume in mL"
+                hide-label
+                density="compact"
+                :show-query-flag="false"
+                control-class="input-sm volume-input"
+                placeholder="mL"
+                :attributes="{ 'aria-label': 'Residual volume in mL' }"
+                @update:model-value="
+                  (val) =>
+                    (row.residualVolumeMl =
+                      val === '' || val === null ? null : Number(val))
+                "
+              />
+              <ClinicalInput
+                :id="`kit-residual-pct-${index}`"
+                :model-value="row.residualVolumePercentage ?? ''"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                label="Residual percentage"
+                hide-label
+                density="compact"
+                :show-query-flag="false"
+                control-class="input-sm volume-input"
+                placeholder="%"
+                :attributes="{ 'aria-label': 'Residual percentage' }"
+                @update:model-value="
+                  (val) =>
+                    (row.residualVolumePercentage =
+                      val === '' || val === null ? null : Number(val))
+                "
+              />
+            </div>
+          </template>
+          <template #cell-disposition="{ row, index }">
+            <ClinicalInput
+              :id="`kit-disposition-${index}`"
+              v-model="row.disposition"
+              as="select"
+              label="Disposition Action"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              :control-class="[
+                'select-sm',
+                'disposition-select',
+                `disp-${row.disposition.toLowerCase()}`,
+              ]"
+              :attributes="{ 'aria-label': 'Disposition Action' }"
+            >
+              <option value="RETURNED_TO_SITE">Returned to Site</option>
+              <option value="QUARANTINED_FOR_DESTRUCTION">
+                Quarantined for Destruction
+              </option>
+              <option value="RETURNED_TO_DEPOT">Returned to Depot</option>
+            </ClinicalInput>
+          </template>
+          <template #cell-dispositionReason="{ row, index }">
+            <ClinicalInput
+              :id="`kit-reason-${index}`"
+              v-model="row.dispositionReason"
+              as="select"
+              label="Disposition Reason"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              control-class="select-sm reason-select"
+              :attributes="{ 'aria-label': 'Disposition Reason' }"
+            >
+              <option value="NORMAL_RETURN">Normal Return</option>
+              <option value="PATIENT_RETURN">Patient Return / Adherence</option>
+              <option value="DAMAGED_SEAL">Damaged Seal / Tampered</option>
+              <option value="EXPIRED">Expired Lot</option>
+              <option value="LOT_MISMATCH">Lot Mismatch</option>
+              <option value="OTHER">Other / Notes</option>
+            </ClinicalInput>
+          </template>
+          <template #cell-flags="{ row }">
+            <span v-if="row.hasLotMismatch" class="status-flag flag-warning"
+              >Lot Mismatch</span
+            >
+            <span
+              v-else-if="row.disposition === 'QUARANTINED_FOR_DESTRUCTION'"
+              class="status-flag flag-quarantine"
+              >Quarantined</span
+            >
+            <span v-else class="status-flag flag-valid">Valid</span>
+          </template>
+          <template #cell-action="{ row, index }">
+            <ClinicalIconButton
+              class="btn-icon btn-remove"
+              :label="`Remove kit ${row.kitNumber || index + 1} from reconciliation`"
+              title="Remove item"
+              @click="removeItem(index)"
+            >
+              ×
+            </ClinicalIconButton>
+          </template>
+        </ClinicalDataTable>
 
         <!-- 21 CFR Part 11 Electronic Signature / Change Rationale -->
         <section v-if="scannedItems.length > 0" class="esign-section">
           <div class="esign-card">
             <h4 class="esign-title">
-              ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Rationale
+              21 CFR Part 11 Electronic Signature &amp; Audit Rationale
             </h4>
             <div class="esign-form-grid">
               <div class="form-group">
-                <label for="pharmacist-signature-id" class="form-label"
-                  >Signer Identity / User ID: *</label
-                >
-                <input
+                <ClinicalInput
                   id="pharmacist-signature-id"
                   v-model="signerUserId"
-                  type="text"
-                  class="input-text"
+                  label="Signer Identity / User ID:"
+                  required
+                  density="compact"
+                  :show-query-flag="false"
+                  control-class="input-text"
                   placeholder="e.g. site_pharmacist_01"
                 />
               </div>
 
               <div class="form-group">
-                <label for="reason-for-change-input" class="form-label"
-                  >Audit Change Rationale (X-Change-Reason): *</label
-                >
-                <input
+                <ClinicalInput
                   id="reason-for-change-input"
                   v-model="reasonForChange"
-                  type="text"
-                  class="input-text"
+                  label="Audit Change Rationale (X-Change-Reason):"
+                  required
+                  density="compact"
+                  :show-query-flag="false"
+                  control-class="input-text"
                   placeholder="e.g. Shipment return carton batch reconciliation intake"
                 />
               </div>
 
               <div class="form-group form-group-full">
-                <label for="batch-notes-input" class="form-label"
-                  >Pharmacist Notes / Shipment Reference:</label
-                >
-                <textarea
+                <ClinicalInput
                   id="batch-notes-input"
                   v-model="batchNotes"
-                  class="textarea-input"
-                  rows="2"
+                  as="textarea"
+                  :rows="2"
+                  label="Pharmacist Notes / Shipment Reference:"
+                  density="compact"
+                  :show-query-flag="false"
+                  control-class="textarea-input"
                   placeholder="Additional observations, courier tracking numbers, or carton condition..."
                 />
               </div>
@@ -526,7 +535,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalIconButton,
+  ClinicalInput,
+  useFocusTrap,
+} from "ui";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;
@@ -569,9 +583,47 @@ const emit = defineEmits<{
 
 const drawerRef = ref<HTMLElement | null>(null);
 const certificateModalRef = ref<HTMLElement | null>(null);
-const barcodeInputRef = ref<HTMLInputElement | null>(null);
 const barcodeInputValue = ref("");
 const scannedItems = ref<ScannedKitBufferItem[]>([]);
+
+const batchColumns = [
+  { key: "index", label: "#", cellClass: "col-index" },
+  {
+    key: "kitNumber",
+    label: "Kit Barcode",
+    cellClass: "col-kit mono fw-bold",
+  },
+  { key: "scannedLotNumber", label: "Scanned Lot", cellClass: "col-lot mono" },
+  {
+    key: "expectedLotNumber",
+    label: "Expected Inventory Lot",
+    cellClass: "col-expected-lot mono",
+  },
+  { key: "volume", label: "Residual Vol (mL / %)", cellClass: "col-volume" },
+  {
+    key: "disposition",
+    label: "Disposition Action",
+    cellClass: "col-disposition",
+  },
+  {
+    key: "dispositionReason",
+    label: "Disposition Reason",
+    cellClass: "col-reason",
+  },
+  { key: "flags", label: "Validation Flags", cellClass: "col-flags" },
+  { key: "action", label: "Action", cellClass: "col-action" },
+];
+
+const resolveKitRowClass = (item: ScannedKitBufferItem) => [
+  "kit-row",
+  {
+    "row-quarantine":
+      item.disposition === "QUARANTINED_FOR_DESTRUCTION" ||
+      item.dispositionReason === "DAMAGED_SEAL" ||
+      item.hasLotMismatch,
+    "row-lot-mismatch": item.hasLotMismatch,
+  },
+];
 const warningMessage = ref("");
 const isLoadingInventory = ref(false);
 const isSubmitting = ref(false);
@@ -619,9 +671,10 @@ watch(
 
 function focusScannerInput() {
   nextTick(() => {
-    if (barcodeInputRef.value) {
-      barcodeInputRef.value.focus();
-    }
+    const el = drawerRef.value?.querySelector<HTMLInputElement>(
+      "#barcode-scanner-input"
+    );
+    el?.focus();
   });
 }
 
@@ -813,7 +866,7 @@ function closeDrawer() {
 
 useFocusTrap(drawerRef, {
   isOpen: () => props.isOpen,
-  initialFocus: () => barcodeInputRef.value,
+  initialFocus: "#barcode-scanner-input",
   onEscape: closeDrawer,
 });
 
@@ -939,7 +992,7 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-.btn-close:hover {
+.btn-close:hover:not(:disabled) {
   color: var(--semantic-color-text-inverse);
   background: var(--semantic-color-border-inverse);
 }
@@ -1006,6 +1059,10 @@ onMounted(() => {
 .scanner-input-row {
   display: flex;
   gap: 12px;
+}
+
+.scanner-field {
+  flex: 1;
 }
 
 .barcode-input {
@@ -1266,7 +1323,7 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-.btn-icon:hover {
+.btn-icon:hover:not(:disabled) {
   color: var(--semantic-color-error);
   background: rgba(239, 68, 68, 0.1);
 }
@@ -1362,14 +1419,14 @@ onMounted(() => {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--semantic-color-interactive-primary);
 }
 .btn-success {
   background: var(--semantic-color-success);
   color: var(--semantic-color-surface);
 }
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
   background: var(--semantic-color-success);
 }
 .btn-secondary {
@@ -1377,7 +1434,7 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
   border-color: var(--semantic-color-border-control);
 }
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-text-secondary);
 }
 
@@ -1386,7 +1443,7 @@ onMounted(() => {
   border-color: var(--semantic-color-success);
   color: var(--semantic-color-success);
 }
-.btn-outline-success:hover {
+.btn-outline-success:hover:not(:disabled) {
   background: rgba(16, 185, 129, 0.1);
 }
 .btn-outline-warning {
@@ -1394,7 +1451,7 @@ onMounted(() => {
   border-color: var(--semantic-color-warning-border-strong);
   color: var(--semantic-color-warning);
 }
-.btn-outline-warning:hover {
+.btn-outline-warning:hover:not(:disabled) {
   background: rgba(245, 158, 11, 0.1);
 }
 .btn-outline-primary {
@@ -1402,7 +1459,7 @@ onMounted(() => {
   border-color: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-interactive-primary);
 }
-.btn-outline-primary:hover {
+.btn-outline-primary:hover:not(:disabled) {
   background: rgba(59, 130, 246, 0.1);
 }
 
@@ -1411,7 +1468,7 @@ onMounted(() => {
   color: var(--semantic-color-error);
   border: 1px solid transparent;
 }
-.btn-ghost-danger:hover {
+.btn-ghost-danger:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.1);
   border-color: var(--semantic-color-error);
 }

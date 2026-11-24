@@ -8,7 +8,7 @@ import { ctmsApi } from "../src/api/ctmsApi";
 import { executionApi } from "../src/api/executionApi";
 import { kernelApi } from "../src/api/kernelApi";
 import { kernelGovernanceApi } from "../src/api/kernelGovernanceApi";
-import apiClient from "../src/services/api";
+import { apiClient } from "../src/api/apiClient";
 import CtmsView from "../src/views/CtmsView.vue";
 
 vi.mock("../src/api/kernelApi", () => ({

@@ -20,6 +20,7 @@
           </p>
         </div>
         <button
+          type="button"
           class="close-modal-btn"
           aria-label="Close modal"
           @click="$emit('close')"

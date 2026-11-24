@@ -182,3 +182,28 @@ Indexes:
 - `IX_notification_records_RecipientRoleId`: (`RecipientRoleId`)
 - `IX_notification_records_RecipientUserId`: (`RecipientUserId`)
 - `IX_notification_records_tenant_id`: (`tenant_id`)
+
+## notifications.transactional_outbox
+
+Entity: `TransactionalOutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AggregateId` | `character varying(255)` | no |  |  |
+| `AggregateType` | `character varying(255)` | no |  |  |
+| `Attempts` | `integer` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
+| `EventId` | `uuid` | no |  |  |
+| `EventType` | `character varying(255)` | no |  |  |
+| `LastError` | `character varying(2000)` | yes |  |  |
+| `Payload` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_transactional_outbox_CreatedAt_DispatchedAt`: (`CreatedAt`, `DispatchedAt`)
+- `IX_transactional_outbox_EventId`: (`EventId`)
+- `IX_transactional_outbox_tenant_id`: (`tenant_id`)

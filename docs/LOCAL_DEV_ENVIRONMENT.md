@@ -16,17 +16,20 @@ requests see [CONTRIBUTING.md](../CONTRIBUTING.md); for every setting see
 | PowerShell (optional) | 7+                                                                                                                                           | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
 
 If Corepack is missing from your Node.js installation, install it with `npm install --global corepack`,
-then run `corepack enable`. Use the setup wizard to prepare the workspace:
+then run `corepack enable`. Prepare the workspace with `make wizard` (full bootstrap including `.NET 10` SDK
+installation) or `make setup` / `pnpm cadence doctor --auto-fix` when `.NET 10`, Node.js, and `pnpm` are
+already installed:
 
 ```bash
-make wizard                                  # interactive: bash scripts/setup_wizard.sh; Windows: scripts/setup_wizard.ps1
+make wizard                                  # interactive: bash scripts/setup_wizard.sh; Windows: pwsh scripts/setup_wizard.ps1
 make setup                                   # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
+pnpm cadence doctor --auto-fix --minimal     # self-heal .cadence/bin, .cadence/venv, local .NET tools, pnpm workspace & .githooks
 ```
 
-It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install --frozen-lockfile`,
-provisions `.cadence/venv` (`detect-secrets`) and `.cadence/bin` (`actionlint`, `hadolint`, `shellcheck`),
-sets `git config core.hooksPath .githooks`, creates `.env` from `.env.example`, and finishes with
-`cadence doctor`.
+`setup_wizard.{sh,ps1}` validates or installs the `.NET 10` SDK and HTTPS dev certificate (`setup_dotnet_env.{sh,ps1}`),
+requires `dotnet`, `node`, and `pnpm`, and delegates workspace provisioning to `cadence doctor --auto-fix` (which runs
+`dotnet tool restore`, `dotnet restore Cadence.sln`, `pnpm install --frozen-lockfile`, `.cadence/venv` and
+SHA-256-verified `.cadence/bin` linter setup, `.env` initialization, and `git config core.hooksPath .githooks`).
 
 ## 2. Build and test
 

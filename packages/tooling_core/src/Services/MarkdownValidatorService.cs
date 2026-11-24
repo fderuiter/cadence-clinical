@@ -81,7 +81,7 @@ public static class MarkdownValidatorService
                 issuesCount++;
             }
 
-            // Rule 3: Heading space validation
+            // Rule 3: Code fence closure, fence length parity, swallowed headings, and heading spacing
             foreach (var file in mdFiles)
             {
                 string[] lines;
@@ -97,41 +97,10 @@ public static class MarkdownValidatorService
                     try { lines = File.ReadAllLines(file); } catch { continue; }
                 }
 
-                bool inFencedBlock = false;
-                for (int i = 0; i < lines.Length; i++)
+                foreach (var issue in MarkdownParser.ValidateCodeFencesAndHeadings(repoRoot, file, lines))
                 {
-                    string line = lines[i];
-                    string trimmed = line.TrimStart();
-                    if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
-                    {
-                        inFencedBlock = !inFencedBlock;
-                        continue;
-                    }
-
-                    if (inFencedBlock)
-                    {
-                        continue;
-                    }
-
-                    if (trimmed.StartsWith('#'))
-                    {
-                        int hashCount = 0;
-                        while (hashCount < trimmed.Length && trimmed[hashCount] == '#')
-                        {
-                            hashCount++;
-                        }
-
-                        if (hashCount >= 1 && hashCount <= 6 && hashCount < trimmed.Length)
-                        {
-                            char nextChar = trimmed[hashCount];
-                            if (nextChar != ' ' && nextChar != '\t' && nextChar != '#' && !char.IsDigit(nextChar))
-                            {
-                                string relPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-                                Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Heading missing space after '#': '{line.Trim()}'");
-                                issuesCount++;
-                            }
-                        }
-                    }
+                    Console.WriteLine($"[MARKDOWN FORMAT] {issue.Message}");
+                    issuesCount++;
                 }
             }
 

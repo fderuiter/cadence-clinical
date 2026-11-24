@@ -34,7 +34,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
-| 2660–2669 | Security (continued)                                                              |
+| 2660–2669 | Security and GxP compliance (continued)                                           |
 | 2670–2679 | Web and design system (continued)                                                 |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
@@ -420,6 +420,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
 - [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
+- [ADR-2664: Enforce Default GxP Audits, Step-Up Electronic Signatures, and Attribution Sentinels Across Standalone Services](2026-11-23-enforce-default-gxp-audits-signatures-and-sentinels.md) (2026-11-23)
 
 ### 6. Frontend & Design System
 
@@ -467,9 +468,12 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
+- [ADR-2665: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) (2026-11-23)
 - [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
 - [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
-- [ADR-2672: Shared EntityLink Peek Drawers and Scoped eTMF Workspace Synchronization](2026-11-23-shared-entity-link-drawers-and-scoped-etmf-sync.md) (2026-11-23)
+- [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
+- [ADR-2673: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives](2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md) (2026-11-24)
+- [ADR-2674: Shared EntityLink Peek Drawers and Scoped eTMF Workspace Synchronization](2026-11-23-shared-entity-link-drawers-and-scoped-etmf-sync.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -579,6 +583,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) (2026-09-29)
 - [ADR-2496: Parse the CLI with System.CommandLine and Publish It as Native AOT Without Suppressions](2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md) (2026-09-30)
 - [ADR-2497: Dual-Layer Gates for Source and Public Bundles](2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) (2026-11-20)
+- [ADR-2498: Hoist CSP Meta Directives, Delegate Clinical Widgets, and Scope Mode-Aware Vite CSP Profiles](2026-11-22-hoist-csp-delegate-widgets-and-mode-aware-vite-profiles.md) (2026-11-22)
 - [ADR-2500: One Folder per Test Project and a Separate Integration Test Project](2026-09-30-one-folder-per-test-project-and-a-separate-integration-project.md) (2026-09-30)
 - [ADR-2256: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) (2026-09-29)
 - [ADR-2257: Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md) (2026-09-29)
@@ -616,6 +621,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) (2026-11-23)
 - [ADR-2661: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) (2026-11-22)
 - [ADR-2662: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist](2026-11-23-enforce-trial-tenant-writes-and-sponsor-comment-allowlist.md) (2026-11-23)
+- [ADR-2663: Inline Explanation Primitives and RBAC Problem Details](2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md) (2026-11-22)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

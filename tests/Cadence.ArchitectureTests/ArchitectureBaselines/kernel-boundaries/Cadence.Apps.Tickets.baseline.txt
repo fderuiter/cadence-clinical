@@ -9,6 +9,7 @@ K-MOD-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.TicketAuditLog.TenantId
 K-MOD-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.TicketComment.TenantId
 K-MOD-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.TicketRevision.TenantId
 K-MOD-1|Cadence.Apps.Tickets|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Tickets|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.Ticket.SiteId
 K-XS-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.Ticket.StudyId
 K-XS-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.TicketAuditLog

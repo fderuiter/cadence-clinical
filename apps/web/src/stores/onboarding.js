@@ -2,7 +2,11 @@ import { defineStore, getActivePinia } from "pinia";
 import { registerOnboardingSessionBridge } from "../auth/sessionCoordinator.js";
 import { useAuthStore } from "./auth";
 import {
+  DATA_COLLECTION_ROLES,
   DEFAULT_SETUP_TASKS,
+  ETMF_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
   effectiveRolesForPersona,
   hasRequiredRole,
   isTourRouteAuthorized,
@@ -16,7 +20,11 @@ import {
 } from "../utils/demoMode";
 
 export {
+  DATA_COLLECTION_ROLES,
   DEFAULT_SETUP_TASKS,
+  ETMF_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
   hasRequiredRole,
   isTourRouteAuthorized,
   resolveAuthorizedTaskRoute,

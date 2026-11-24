@@ -15,6 +15,7 @@ using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Security;
@@ -96,6 +97,11 @@ namespace Cadence.IntegrationTests.Execution;
 /// <item><description><c>INV-018</c>/<c>INV-019</c> -- `Program.cs`'s own `AddProblemDetails` registration
 /// comment confirms this port deliberately does not reproduce raise site #19's legacy "catch-all downgrades
 /// to 400" bug; a bare, non-<see cref="DomainError"/> exception keeps ASP.NET Core's ordinary 500.</description></item>
+/// <item><description><c>ADR-2664</c> -- mutating execution routes now enforce <c>RequireChangeReasonHeader()</c>
+/// (&gt;= 10 chars) and regulated <c>WITHDRAWN</c>/<c>UNBLINDED</c> transitions on
+/// <c>PATCH /api/v1/execution/subjects/{subjectId}/state</c> enforce a &gt;= 50-character clinical justification
+/// and single-use <c>X-Sig-Token</c> step-up signature. <see cref="CreateClientFor"/> signs pre-ADR-2664 legacy
+/// fixtures accordingly just as ADR-2516 (#5361) signs gateway identity headers.</description></item>
 /// </list>
 /// </para>
 /// </summary>
@@ -886,11 +892,15 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         await ReplayHttpErrorScenarioAsync(scenario);
     }
 
+    private const string DefaultLegacyChangeReason = "Golden-master parity verification scenario";
+
     /// <summary>
-    /// Signs the scenario as the caller a deployment would (ADR-2516, #5361): the eTMF completeness webhook as the eTMF
-    /// service, which alone holds <c>site_compliance:etmf_sync</c>; site activation and compliance reads, which name a
-    /// site, as the sponsor data manager, who certifies activation and is not site-scoped. Every other route uses the
-    /// default test identity.
+    /// Signs the scenario as the caller a deployment would (ADR-2516, #5361; ADR-2664): the eTMF completeness webhook as
+    /// the eTMF service, which alone holds <c>site_compliance:etmf_sync</c>; site activation and compliance reads, which
+    /// name a site, as the sponsor data manager, who certifies activation and is not site-scoped; and regulated
+    /// <c>WITHDRAWN</c>/<c>UNBLINDED</c> state transitions with a step-up <c>X-Sig-Token</c> and &gt;= 50-character
+    /// clinical justification. Every other route uses the default test identity with a fallback
+    /// <c>X-Change-Reason</c> when the legacy fixture omitted headers.
     /// </summary>
     private HttpClient CreateClientFor(GoldenMasterScenario scenario)
     {
@@ -919,7 +929,66 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
             identity = TestSecurityContext.Identity("sponsor-dm", RoleNormalization.ROLE_SPONSOR_DM);
         }
 
+        identity = identity with { ChangeReason = DefaultLegacyChangeReason };
+
+        string? regulatedSemanticAction = ResolveRegulatedStateSemanticAction(scenario);
+        if (regulatedSemanticAction is not null)
+        {
+            identity = identity with
+            {
+                SigToken = TestSecurityContext.CreateSigToken(
+                    identity.UserId,
+                    route,
+                    regulatedSemanticAction,
+                    [.. identity.Roles]),
+            };
+
+            return _testApi.CreateDefaultClient(
+                new LegacyRegulatedStateHeaderNormalizer(),
+                new TestSecurityContext.GatewaySigningHandler(identity));
+        }
+
         return _testApi.CreateSignedClient(identity);
+    }
+
+    private static string? ResolveRegulatedStateSemanticAction(GoldenMasterScenario scenario)
+    {
+        string route = scenario.Route ?? string.Empty;
+        if (!string.Equals(scenario.Method, HttpMethods.Patch, StringComparison.OrdinalIgnoreCase)
+            || !route.EndsWith("/state", StringComparison.Ordinal)
+            || scenario.RequestBody is not { ValueKind: JsonValueKind.Object } body
+            || !body.TryGetProperty("status", out JsonElement statusEl)
+            || statusEl.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return statusEl.GetString()?.Trim().ToUpperInvariant() switch
+        {
+            "UNBLINDED" => SubjectEndpoints.UnblindSubjectSemanticAction,
+            "WITHDRAWN" => SubjectEndpoints.WithdrawSubjectSemanticAction,
+            _ => null,
+        };
+    }
+
+    private sealed class LegacyRegulatedStateHeaderNormalizer : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.Headers.TryGetValues(GatewayHeaders.ChangeReason, out IEnumerable<string>? values))
+            {
+                string? raw = values.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(raw) && raw.Trim().Length < 50)
+                {
+                    request.Headers.Remove(GatewayHeaders.ChangeReason);
+                    request.Headers.TryAddWithoutValidation(
+                        GatewayHeaders.ChangeReason,
+                        $"{raw.Trim()} -- clinical justification documented per protocol.");
+                }
+            }
+
+            return base.SendAsync(request, cancellationToken);
+        }
     }
 
     private async Task ReplayHttpErrorScenarioAsync(GoldenMasterScenario scenario)

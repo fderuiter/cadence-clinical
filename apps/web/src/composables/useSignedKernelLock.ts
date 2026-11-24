@@ -280,6 +280,8 @@ function resolveLabel(
 export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   const authStore = useAuthStore();
 
+  const canApplyExplanation = ref<Record<string, unknown> | null>(null);
+  const canReleaseExplanation = ref<Record<string, unknown> | null>(null);
   const canApply = ref(false);
   const canRelease = ref(false);
   const readiness = ref<KernelLockReadiness | null>(null);
@@ -388,6 +390,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     if (!targetStudyRef || typeof kernelApi.canI !== "function") {
       canApply.value = false;
       canRelease.value = false;
+      canApplyExplanation.value = null;
+      canReleaseExplanation.value = null;
       resetReadiness();
       return;
     }
@@ -399,6 +403,11 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       if (seq !== authProbeSeq) return;
       canApply.value = Boolean(applyDec?.permitted);
       canRelease.value = Boolean(releaseDec?.permitted);
+      canApplyExplanation.value =
+        (applyDec?.explanation as Record<string, unknown> | undefined) ?? null;
+      canReleaseExplanation.value =
+        (releaseDec?.explanation as Record<string, unknown> | undefined) ??
+        null;
       if (!canApply.value) {
         resetReadiness();
       }
@@ -406,6 +415,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       if (seq !== authProbeSeq) return;
       canApply.value = false;
       canRelease.value = false;
+      canApplyExplanation.value = null;
+      canReleaseExplanation.value = null;
       resetReadiness();
     }
   }
@@ -546,6 +557,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     LOCK_SIGNING_REASONS,
     canApply,
     canRelease,
+    canApplyExplanation,
+    canReleaseExplanation,
     readiness,
     readinessLoading,
     readinessGates,

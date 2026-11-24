@@ -402,6 +402,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
     currentRoute: "/ecrf",
     rawRoute: "/ecrf",
     hasLoadedContextualHelp: false,
+    needsContextualRefresh: false,
     activePersona: "super_admin",
     primaryArticle: null,
     primaryVersion: null,
@@ -507,6 +508,40 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.escalationPayload = null;
     },
 
+    syncDeferredContext(rawRouteInput, canonicalRouteInput, personaInput) {
+      const authStore = useAuthStore();
+      const nextRaw =
+        String(
+          rawRouteInput || canonicalRouteInput || this.currentRoute || "/"
+        ).trim() || "/";
+      const nextCanonical = canonicalizeContextualRoute(
+        canonicalRouteInput || nextRaw
+      );
+      const nextPersona =
+        personaInput ||
+        authStore.currentPersona ||
+        this.activePersona ||
+        "super_admin";
+      const routeChanged = nextCanonical !== this.currentRoute;
+      const personaChanged = nextPersona !== this.activePersona;
+
+      this.rawRoute = nextRaw;
+      this.currentRoute = nextCanonical;
+      this.activePersona = nextPersona;
+      this.needsContextualRefresh = true;
+
+      if (routeChanged || personaChanged) {
+        this.invalidateContextualState();
+        this.matchedMapping = null;
+        this.primaryArticle = null;
+        this.primaryVersion = null;
+        this.sectionAnchor = null;
+        this.relatedArticles = [];
+        this.error = null;
+        this.lastFailedAction = null;
+      }
+    },
+
     setCanvasEscalationContext(context) {
       this.canvasEscalationContext =
         context && typeof context === "object" ? { ...context } : null;
@@ -581,6 +616,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.currentRoute = targetRoute;
       this.activePersona = targetPersona;
       this.hasLoadedContextualHelp = true;
+      this.needsContextualRefresh = false;
       this.loading = true;
       this.error = null;
       this.lastFailedAction = null;

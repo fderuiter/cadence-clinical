@@ -226,18 +226,18 @@ export interface WorkspaceScopeSnapshot {
   inspectorNodeParam?: string;
 }
 
-const SITE_READINESS_SPONSOR_ROLES = [
+export const SITE_READINESS_SPONSOR_ROLES = [
   "cra",
   "monitor",
   "data_manager",
   "sponsor_admin",
 ];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
-const DATA_COLLECTION_ROLES = [
+export const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+export const DATA_COLLECTION_ROLES = [
   ...SITE_READINESS_SITE_ROLES,
   ...SITE_READINESS_SPONSOR_ROLES,
 ];
-const ETMF_ROLES = [
+export const ETMF_ROLES = [
   "cra",
   "monitor",
   "data_manager",

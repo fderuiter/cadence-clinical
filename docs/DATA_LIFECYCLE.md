@@ -96,15 +96,19 @@ This section defines the operational lifecycle for extracting clinical trial dat
                                                             │
                                                             ▼
 [ BiostatExport Audit Log ] ◄── [ Validation Gate ] ◄── [ Dataset-JSON Serializer ]
+```
 
 ### Access Control (RBAC)
+
 Exports are protected by `GatewayAuthMiddleware` and `require_roles`. Authorized roles include:
-* `Data Manager`
-* `CRA`
-* `Sponsor Statistician`
-* `Statistician`
+
+- `Data Manager`
+- `CRA`
+- `Sponsor Statistician`
+- `Statistician`
 
 ### Privacy & PII Boundary
+
 Raw patient demographics are encrypted at rest (`ClinicalSubject.encrypted_demographics`). Subject identifiers in exports are pseudonymous (`subject_id`/`USUBJID`). Standard CDISC variables (such as `BRTHDTC`) are included in accordance with CDISC domain specifications.
 
 Other secrets follow the field-level protection rule (#4770): eConsent signer e-mail addresses and payment processor references are AES-256-GCM encrypted at rest, interop device tokens are stored only as keyed HMAC-SHA256 lookup hashes, eConsent signature captures are kept only as a SHA-256 binding to the signed content, and card numbers and bank routing/account numbers are not stored at all.
@@ -113,6 +117,7 @@ Other secrets follow the field-level protection rule (#4770): eConsent signer e-
 # Data Lifecycle Specification: Medical Coding Lifecycle
 
 ## 1. Overview
+
 The Medical Coding Engine translates raw, unstructured clinical verbatim descriptions (e.g., adverse events, medical history, or concomitant medications) into standard codes from dictionaries like MedDRA and WHODrug. This workflow supports precise analysis, clinical safety reporting, and submission-ready database generation while enforcing strict regulatory auditing compliance under FDA 21 CFR Part 11.
 
 ---
@@ -136,15 +141,17 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
 ▼ (Up-versioning dictionary impact)
 [ ClinicalCodingLedger ] (Audit historical trail & status transitions)
 
-````
+```
 
 ### Stage 1: Ingest (Dictionary Loading)
+
 - **Action**: Standard dictionaries are imported dynamically via the authenticated Gateway.
 - **Accountable Roles**: `TERMINOLOGY_MANAGER` and `SYSTEM_ADMIN` hold exclusive privileges.
 - **Process**: Parsing handles ASCII files inside `.zip` archives containing either MedDRA format files or WHODrug format files.
 - **Auditing**: Records an immutable `DictionaryImportJob` tracking the job state, percentage completion, row counts, errors, and standard audit log entries for full lifecycle traceability.
 
 ### Stage 2: Match (Fuzzy Similarity Matching)
+
 - **Process**: Raw text ingested into the system is normalized via:
   - Case folding.
   - Suffix-stripping stemming rules (e.g., stripping `s`, `es`, `ing`, `ed`, `ly`, etc.).
@@ -157,6 +164,7 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
   3. **UNCODABLE (Score $<$ 0.60)**: Verbatim strings with low matcher confidence are placed into `QUERY_PENDING`.
 
 ### Stage 3: Assignment / Review (Manual Coder Loop)
+
 - **Process**: Data Managers and Coders review and resolve `SUGGESTED` or `QUERY_PENDING` records.
 - **Allowed Actions**:
   - **ACCEPT**: Commits suggestion index as final coding meaning.
@@ -164,6 +172,7 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
 - **Auditing / Part 11**: Coder actions require standard Gateway Signature Version 2 authentication headers, validating credentials and carrying an explicit, non-empty GxP `reason_for_change` justification. Each manual decision is recorded permanently in `ClinicalCodingLedger`.
 
 ### Stage 4: Query (Uncodable Query Generation)
+
 - **Process**: For any `UNCODABLE` assignment, the system automatically triggers an open, actionable `ClinicalQuery` with origin `SYSTEM_CODING` and action required `RE-ENTER_VERBATIM`.
 - **Identity & PII Isolation**: Query logs specify the exact table, field, and observation coordinates, but omit clinical subject IDs and demographics to maintain blinding and isolate PII data.
 - **Resolution Transitions**:
@@ -171,6 +180,7 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
   - Conversely, a manual coder action (`ACCEPT` or `OVERRIDE`) on the pending assignment automatically transitions the query status to `CLOSED` and attaches resolution notes.
 
 ### Stage 5: Recoding & Up-Versioning Ledger
+
 - **Process**: When a new dictionary version is imported, an impact analysis compares existing coded records.
 - **Outcomes**:
   - **Unchanged**: Automatic promotion to the new version.
@@ -182,18 +192,19 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
 
 ## 3. Accountable Roles & Access Control Matrix
 
-| Workflow Transition | Required Roles / Privileges | GxP / Part 11 Constraints |
-| :--- | :--- | :--- |
-| **Dictionary Ingestion** | `TERMINOLOGY_MANAGER`, `SYSTEM_ADMIN` | Synchronous layout verification & transaction rollback on failure. |
-| **Fuzzy Matching** | System | Automated, deterministic logic. |
-| **Accept Suggestions** | `sponsor_dm` (Data Manager), Coder synonyms | Requires gateway signature validation. |
-| **Manual Override** | `sponsor_dm` (Data Manager), Coder synonyms | Requires signature validation + non-empty `reason_for_change`. |
-| **Query Closure** | Coder Action or System Event | Automatically synced on manual coder decision. |
-| **Impact Analysis** | `TERMINOLOGY_MANAGER`, `SYSTEM_ADMIN` | Idempotent ledger updates. |
+| Workflow Transition      | Required Roles / Privileges                 | GxP / Part 11 Constraints                                          |
+| :----------------------- | :------------------------------------------ | :----------------------------------------------------------------- |
+| **Dictionary Ingestion** | `TERMINOLOGY_MANAGER`, `SYSTEM_ADMIN`       | Synchronous layout verification & transaction rollback on failure. |
+| **Fuzzy Matching**       | System                                      | Automated, deterministic logic.                                    |
+| **Accept Suggestions**   | `sponsor_dm` (Data Manager), Coder synonyms | Requires gateway signature validation.                             |
+| **Manual Override**      | `sponsor_dm` (Data Manager), Coder synonyms | Requires signature validation + non-empty `reason_for_change`.     |
+| **Query Closure**        | Coder Action or System Event                | Automatically synced on manual coder decision.                     |
+| **Impact Analysis**      | `TERMINOLOGY_MANAGER`, `SYSTEM_ADMIN`       | Idempotent ledger updates.                                         |
 
 ---
 
 ## 4. Operational & Cache Configuration
+
 - **Cache TTL**: The thread-safe medical coding lookup cache uses a configurable expiration parameter via the `CODING_CACHE_TTL` environment variable (default: `10.0` seconds).
 - **Graceful Cache Fallback**: In the event of backend database errors or connectivity failures, the system automatically falls back to serving stale/expired cached results to prevent user interface degradation.
 - **Supported Dictionary Formats**:
@@ -206,6 +217,7 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
 # Data Lifecycle Specification: eTMF Document Redaction Lifecycle
 
 ## 1. Overview
+
 The eTMF Document Redaction Lifecycle defines the security boundaries, operational flows, and regulatory data-handling logic for removing Personally Identifiable Information (PII) and Protected Health Information (PHI) from clinical documents before external distribution, auditor review, or public disclosure. This lifecycle fulfills the traceability and verification requirements of **PRD-TMF-005** and **Trace-12**.
 
 ---
@@ -227,7 +239,7 @@ graph TD
     style E fill:#dfd,stroke:#6b6,stroke-width:2px
     style B fill:#eef,stroke:#99b,stroke-width:2px
     style H fill:#eef,stroke:#99b,stroke-width:2px
-````
+```
 
 The redaction engine is split into two layers:
 
@@ -403,7 +415,7 @@ When a study designer initiates an amendment on a finalized protocol version, th
 
 ```mermaid
 graph TD
-    Parent[Parent Version: LOCKED/PUBLISHED] -->|POST /api/designer/protocols/{id}/amend| Amend[Amend Engine]
+    Parent[Parent Version: LOCKED/PUBLISHED] -->|"POST /api/designer/protocols/{id}/amend"| Amend[Amend Engine]
     Amend -->|Deep-Copy Subgraph| Successor[New Version: DRAFT]
     Successor -->|PREVIOUS_VERSION Link| Parent
     Successor -->|version_index increment| IncIndex[version_index = parent + 1]

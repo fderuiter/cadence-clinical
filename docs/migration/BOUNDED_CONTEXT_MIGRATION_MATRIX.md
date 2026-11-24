@@ -102,7 +102,7 @@ Migration must follow a disciplined, topologically sorted dependency graph acros
 
 ```mermaid
 graph TD
-    subgraph Tier 1: Leaf Nodes & Shared Foundations
+    subgraph "Tier 1: Leaf Nodes & Shared Foundations"
         T1A[Cadence.Core.Domain]
         T1B[Cadence.Security]
         T1C[Cadence.Contracts]
@@ -111,13 +111,13 @@ graph TD
         T1F[Cadence.Cli]
     end
 
-    subgraph Tier 2: Core Entities & Persistent Engines
+    subgraph "Tier 2: Core Entities & Persistent Engines"
         T2A[Cadence.Apps.Execution: EDC Engine]
         T2B[Cadence.Apps.Designer: Neo4j USDM]
         T2C[Cadence.Apps.Org: Directory & DOA]
     end
 
-    subgraph Tier 3: Orchestrators & Regulatory Services
+    subgraph "Tier 3: Orchestrators & Regulatory Services"
         T3A[Cadence.Apps.Ctms]
         T3B[Cadence.Apps.Etmf]
         T3C[Cadence.Apps.Eisf]
@@ -128,7 +128,7 @@ graph TD
         T3H[Cadence.Apps.Tickets]
     end
 
-    subgraph Tier 4: Edge, Consumers & Gateways
+    subgraph "Tier 4: Edge, Consumers & Gateways"
         T4A[Cadence.Apps.Gateway]
         T4B[Cadence.Apps.Notifications]
         T4C[Cadence.Apps.Interop]

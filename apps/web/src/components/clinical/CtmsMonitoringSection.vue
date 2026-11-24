@@ -60,87 +60,89 @@
       <p v-if="!visits.length" class="muted-status">
         No monitoring visits scheduled yet for this scope.
       </p>
-      <div v-else class="table-wrap">
-        <table id="monitoring-visits-table" class="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Site</th>
-              <th scope="col">Type</th>
-              <th scope="col">Monitor</th>
-              <th scope="col">Scheduled</th>
-              <th scope="col">Status</th>
-              <th scope="col">Findings</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="visit in visits" :key="visit.id">
-              <td>
-                <strong>{{ visit.site_id }}</strong>
-              </td>
-              <td>{{ formatClinicalEnum(visit.visit_type) }}</td>
-              <td>{{ visit.cra_id }}</td>
-              <td>{{ formatIsoDateShort(visit.scheduled_date) }}</td>
-              <td>
-                <span
-                  class="status-pill"
-                  :class="`visit-${visit.status.toLowerCase()}`"
-                >
-                  {{ formatClinicalStatus(visit.status) }}
-                </span>
-              </td>
-              <td>{{ visit.findings?.length ?? 0 }}</td>
-              <td class="action-cell">
-                <button
-                  :id="`btn-visit-letters-${visit.id}`"
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  @click="viewLetters(visit)"
-                >
-                  Letters<span class="sr-only">
-                    for {{ visit.visit_type }} visit at
-                    {{ visit.site_id }}</span
-                  >
-                </button>
-                <button
-                  v-if="canSchedule"
-                  :data-testid="`btn-compile-letter-${visit.id}`"
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  @click="prepareCompileLetter(visit)"
-                >
-                  Compile letter<span class="sr-only">
-                    for {{ visit.visit_type }} visit at
-                    {{ visit.site_id }}</span
-                  >
-                </button>
-                <button
-                  v-if="canComplete && visit.status === 'SCHEDULED'"
-                  :data-testid="`btn-complete-visit-${visit.id}`"
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  @click="prepareComplete(visit)"
-                >
-                  Complete<span class="sr-only">
-                    {{ visit.visit_type }} visit at {{ visit.site_id }}</span
-                  >
-                </button>
-                <button
-                  v-if="canSignOff && visit.status === 'COMPLETED'"
-                  :data-testid="`btn-signoff-visit-${visit.id}`"
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  @click="prepareSignOff(visit)"
-                >
-                  Sign off<span class="sr-only">
-                    {{ visit.visit_type }} visit at {{ visit.site_id }}</span
-                  >
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ClinicalDataTable
+        v-else
+        hide-header
+        plain
+        labelled-by="ctms-monitoring-title"
+        wrapper-class="table-wrap"
+        table-id="monitoring-visits-table"
+        table-class="data-table"
+        :columns="visitColumns"
+        :data="visits"
+        row-key="id"
+      >
+        <template #cell-site_id="{ row: visit }">
+          <strong>{{ visit.site_id }}</strong>
+        </template>
+        <template #cell-visit_type="{ row: visit }">
+          {{ formatClinicalEnum(visit.visit_type) }}
+        </template>
+        <template #cell-cra_id="{ row: visit }">
+          {{ visit.cra_id }}
+        </template>
+        <template #cell-scheduled_date="{ row: visit }">
+          {{ formatIsoDateShort(visit.scheduled_date) }}
+        </template>
+        <template #cell-status="{ row: visit }">
+          <span
+            class="status-pill"
+            :class="`visit-${visit.status.toLowerCase()}`"
+          >
+            {{ formatClinicalStatus(visit.status) }}
+          </span>
+        </template>
+        <template #cell-findings="{ row: visit }">
+          {{ visit.findings?.length ?? 0 }}
+        </template>
+        <template #cell-actions="{ row: visit }">
+          <div class="action-cell">
+            <button
+              :id="`btn-visit-letters-${visit.id}`"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="viewLetters(visit)"
+            >
+              Letters<span class="sr-only">
+                for {{ visit.visit_type }} visit at {{ visit.site_id }}</span
+              >
+            </button>
+            <button
+              v-if="canSchedule"
+              :data-testid="`btn-compile-letter-${visit.id}`"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="prepareCompileLetter(visit)"
+            >
+              Compile letter<span class="sr-only">
+                for {{ visit.visit_type }} visit at {{ visit.site_id }}</span
+              >
+            </button>
+            <button
+              v-if="canComplete && visit.status === 'SCHEDULED'"
+              :data-testid="`btn-complete-visit-${visit.id}`"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="prepareComplete(visit)"
+            >
+              Complete<span class="sr-only">
+                {{ visit.visit_type }} visit at {{ visit.site_id }}</span
+              >
+            </button>
+            <button
+              v-if="canSignOff && visit.status === 'COMPLETED'"
+              :data-testid="`btn-signoff-visit-${visit.id}`"
+              type="button"
+              class="btn btn-primary btn-sm"
+              @click="prepareSignOff(visit)"
+            >
+              Sign off<span class="sr-only">
+                {{ visit.visit_type }} visit at {{ visit.site_id }}</span
+              >
+            </button>
+          </div>
+        </template>
+      </ClinicalDataTable>
 
       <div
         v-if="compiledLetters.length"
@@ -247,18 +249,22 @@
           {{ activeCompleteVisit.site_id }}
         </h4>
         <div class="form-row">
-          <label for="complete-visit-date">Actual date</label>
-          <input
+          <ClinicalInput
             id="complete-visit-date"
             v-model="completeActualDate"
+            label="Actual date"
             type="date"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="complete-finding-desc">Quick observation</label>
-          <input
+          <ClinicalInput
             id="complete-finding-desc"
             v-model="completeFindingDesc"
+            label="Quick observation"
             type="text"
             placeholder="Describe any monitoring observation"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-add-visit-finding"
@@ -275,28 +281,39 @@
           :key="idx"
           class="form-row"
         >
-          <label :for="`finding-text-${idx}`">Finding {{ idx + 1 }}</label>
-          <input
+          <ClinicalInput
             :id="`finding-text-${idx}`"
             v-model="finding.text"
+            :label="`Finding ${idx + 1}`"
             type="text"
             placeholder="Monitoring finding description"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label :for="`finding-severity-${idx}`">Severity</label>
-          <select :id="`finding-severity-${idx}`" v-model="finding.severity">
+          <ClinicalInput
+            :id="`finding-severity-${idx}`"
+            v-model="finding.severity"
+            as="select"
+            label="Severity"
+            density="compact"
+            :show-query-flag="false"
+          >
             <option value="MINOR">Minor</option>
             <option value="MAJOR">Major</option>
             <option value="CRITICAL">Critical</option>
-          </select>
-          <label :for="`finding-resolution-${idx}`">Resolution</label>
-          <select
+          </ClinicalInput>
+          <ClinicalInput
             :id="`finding-resolution-${idx}`"
             v-model="finding.resolution_status"
+            as="select"
+            label="Resolution"
+            density="compact"
+            :show-query-flag="false"
           >
             <option value="OPEN">Open</option>
             <option value="IN_PROGRESS">In progress</option>
             <option value="RESOLVED">Resolved</option>
-          </select>
+          </ClinicalInput>
           <button
             type="button"
             class="btn btn-secondary btn-sm"
@@ -307,12 +324,14 @@
         </div>
 
         <div class="form-row">
-          <label for="complete-visit-reason">Reason for change</label>
-          <input
+          <ClinicalInput
             id="complete-visit-reason"
             v-model="completeReason"
+            label="Reason for change"
             type="text"
             placeholder="Trip completion summary"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-confirm-complete-visit"
@@ -344,11 +363,17 @@
           }})
         </h4>
         <div class="form-row">
-          <label for="compile-letter-template">Template</label>
-          <select id="compile-letter-template" v-model="compileTemplateName">
+          <ClinicalInput
+            id="compile-letter-template"
+            v-model="compileTemplateName"
+            as="select"
+            label="Template"
+            density="compact"
+            :show-query-flag="false"
+          >
             <option value="confirmation_letter">Confirmation letter</option>
             <option value="follow_up_letter">Follow-up letter</option>
-          </select>
+          </ClinicalInput>
           <label class="checkbox-inline">
             <input
               id="compile-letter-finalize"
@@ -357,21 +382,29 @@
             />
             Finalize with Part 11 signature &amp; eTMF filing
           </label>
-          <template v-if="compileFinalize">
-            <label for="compile-sig-password">Password (Part 11)</label>
+          <ClinicalFieldLayout
+            v-if="compileFinalize"
+            id="compile-sig-password"
+            label="Password (Part 11)"
+            density="compact"
+            :show-query-flag="false"
+          >
             <input
               id="compile-sig-password"
               v-model="compilePassword"
+              class="clinical-input-control"
               v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               placeholder="Re-enter password to sign"
             />
-          </template>
-          <label for="compile-letter-reason">Reason for change</label>
-          <input
+          </ClinicalFieldLayout>
+          <ClinicalInput
             id="compile-letter-reason"
             v-model="compileReason"
+            label="Reason for change"
             type="text"
             placeholder="Reason for issuing visit letter"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-confirm-compile-letter"
@@ -403,12 +436,14 @@
           }})
         </h4>
         <div class="form-row">
-          <label for="signoff-visit-reason">Endorsement rationale</label>
-          <input
+          <ClinicalInput
             id="signoff-visit-reason"
             v-model="signOffReason"
+            label="Endorsement rationale"
             type="text"
             placeholder="Supervisory review endorsement"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-confirm-signoff-visit"
@@ -437,34 +472,52 @@
       >
         <h4>Schedule monitoring visit</h4>
         <div class="form-row">
-          <label for="new-visit-site">Site</label>
-          <input
+          <ClinicalInput
             id="new-visit-site"
             v-model="newSiteId"
+            label="Site"
             type="text"
             placeholder="Site code"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="new-visit-type">Type</label>
-          <select id="new-visit-type" v-model="newVisitType">
+          <ClinicalInput
+            id="new-visit-type"
+            v-model="newVisitType"
+            as="select"
+            label="Type"
+            density="compact"
+            :show-query-flag="false"
+          >
             <option value="SIV">Site Initiation (SIV)</option>
             <option value="IMV">Interim Monitoring (IMV)</option>
             <option value="COV">Close-Out (COV)</option>
-          </select>
-          <label for="new-visit-cra">Monitor ID</label>
-          <input
+          </ClinicalInput>
+          <ClinicalInput
             id="new-visit-cra"
             v-model="newCraId"
+            label="Monitor ID"
             type="text"
             placeholder="cra_monitor"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="new-visit-date">Scheduled date</label>
-          <input id="new-visit-date" v-model="newScheduledDate" type="date" />
-          <label for="new-visit-reason">Reason for change</label>
-          <input
+          <ClinicalInput
+            id="new-visit-date"
+            v-model="newScheduledDate"
+            label="Scheduled date"
+            type="date"
+            density="compact"
+            :show-query-flag="false"
+          />
+          <ClinicalInput
             id="new-visit-reason"
             v-model="newReason"
+            label="Reason for change"
             type="text"
             placeholder="Scheduling justification"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-schedule-visit"
@@ -496,7 +549,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import {
-  buildStepUpVerificationPayload,
+  ClinicalDataTable,
+  ClinicalFieldLayout,
+  ClinicalInput,
   EntityLink,
   handoffFocus,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
@@ -510,6 +565,7 @@ import {
   type MonitoringVisit,
   type VisitLetterCompilationResult,
 } from "../../api/ctmsApi";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import {
   normalizeSubjectCodeValue,
   readRouteScopeQuery,
@@ -527,7 +583,6 @@ import {
   scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
-import apiClient from "../../services/api";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -585,6 +640,16 @@ const {
 const canSchedule = computed(() => canScheduleMonitoringVisits(authStore));
 const canComplete = computed(() => canCompleteMonitoringVisits(authStore));
 const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));
+
+const visitColumns = [
+  { key: "site_id", label: "Site", rowHeader: true },
+  { key: "visit_type", label: "Type" },
+  { key: "cra_id", label: "Monitor" },
+  { key: "scheduled_date", label: "Scheduled" },
+  { key: "status", label: "Status" },
+  { key: "findings", label: "Findings" },
+  { key: "actions", label: "Actions" },
+];
 
 const visits = ref<MonitoringVisitRow[]>([]);
 const newVisitType = ref("IMV");
@@ -888,23 +953,14 @@ async function confirmCompileLetter() {
       visit.cra_id;
 
     if (compileFinalize.value) {
-      const verificationPayload = buildStepUpVerificationPayload({
+      const verifyRes = await requestStepUpSignature({
         username: signerUsername,
         password,
         totp: null,
         action: "/api/v1/ctms/letters/compile",
         semanticAction: "ctms.letter.compile",
       });
-      const verifyRes = await apiClient.post(
-        "/api/v1/auth/signature-verification",
-        verificationPayload
-      );
-      sigToken = verifyRes?.sig_token;
-      if (!sigToken) {
-        throw new Error(
-          "Signature verification did not return a signature token."
-        );
-      }
+      sigToken = verifyRes.sig_token;
     }
 
     const compiled = await ctmsApi.compileVisitLetter(

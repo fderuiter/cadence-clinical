@@ -310,4 +310,128 @@ describe("ClinicalDataTable WCAG 2.2 keyboard & ARIA primitive", () => {
     const emptyAudit = await toBeAccessible({ element: host });
     expect(emptyAudit.pass, emptyAudit.message()).toBe(true);
   });
+
+  it("supports externalPagination, load-more, page-change, and masked-row slots without firing row-click on masked records", async () => {
+    const onRowClick = vi.fn();
+    const onLoadMore = vi.fn();
+    const onPageChange = vi.fn();
+    const mixedRows = [
+      { id: "SITE-01", name: "Academic Medical Center", masked: false },
+      { id: "SITE-99", masked: true, maskReason: "Outside assigned sites" },
+    ];
+
+    const host = mountHost(
+      () => () =>
+        h(
+          ClinicalDataTable,
+          {
+            title: "Trial Sites",
+            tableId: "study-sites-table",
+            columns: [
+              { key: "id", label: "Site Code", sortable: true },
+              { key: "name", label: "Site Name", sortable: true },
+            ],
+            data: mixedRows,
+            externalPagination: true,
+            totalRecords: 5,
+            hasMore: true,
+            loadMoreLabel: "Show more sites",
+            isRowMasked: (row) => Boolean(row.masked),
+            "onRow-click": onRowClick,
+            "onLoad-more": onLoadMore,
+            "onPage-change": onPageChange,
+          },
+          {
+            "masked-row": ({ row }) =>
+              h(
+                "span",
+                { class: "masked-note" },
+                `Restricted: ${row.maskReason}`
+              ),
+          }
+        )
+    );
+
+    await nextTick();
+
+    const table = host.querySelector("#study-sites-table");
+    expect(table).not.toBeNull();
+    const maskedRow = table.querySelector("tbody tr.masked-row");
+    expect(maskedRow).not.toBeNull();
+    expect(maskedRow.hasAttribute("tabindex")).toBe(false);
+    expect(maskedRow.textContent).toContain(
+      "Restricted: Outside assigned sites"
+    );
+
+    maskedRow.click();
+    expect(onRowClick).not.toHaveBeenCalled();
+
+    const activeRow = table.querySelector("tbody tr.data-row");
+    activeRow.querySelector("td").click();
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    expect(onRowClick).toHaveBeenCalledWith(mixedRows[0]);
+
+    const status = host.querySelector(".pagination-info");
+    expect(status.textContent.trim()).toBe("Showing 2 of 5");
+
+    const loadMoreBtn = host.querySelector(".table-pagination button");
+    expect(loadMoreBtn.textContent.trim()).toBe("Show more sites");
+    loadMoreBtn.click();
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+
+    const audit = await toBeAccessible({ element: host });
+    expect(audit.pass, audit.message()).toBe(true);
+  });
+
+  it("prevents duplicate landmark names when nested inside an aria-labelledby section with hideHeader=true and supports explicit ariaLabel", async () => {
+    const host = mountHost(
+      () => () =>
+        h("div", {}, [
+          h(
+            "section",
+            {
+              id: "study-locks-section",
+              "aria-labelledby": "study-locks-title",
+            },
+            [
+              h("h3", { id: "study-locks-title" }, "Study Locks"),
+              h(ClinicalDataTable, {
+                title: "Study Locks",
+                labelledBy: "study-locks-title",
+                hideHeader: true,
+                columns: [
+                  { key: "scope", label: "Scope" },
+                  { key: "target", label: "Target" },
+                ],
+                data: [{ id: "L-1", scope: "Subject", target: "SUBJ-001" }],
+              }),
+            ]
+          ),
+          h(ClinicalDataTable, {
+            title: "Explicit Label Cohort",
+            ariaLabel: "Explicit cohort table",
+            hideHeader: true,
+            columns: [{ key: "id", label: "Subject ID" }],
+            data: [{ id: "SUBJ-002" }],
+          }),
+        ])
+    );
+
+    await nextTick();
+
+    const tables = host.querySelectorAll("table.clinical-table");
+    expect(tables).toHaveLength(2);
+    expect(tables[0].getAttribute("aria-labelledby")).toBe("study-locks-title");
+    expect(tables[1].getAttribute("aria-label")).toBe("Explicit cohort table");
+    expect(tables[1].hasAttribute("aria-labelledby")).toBe(false);
+
+    const regions = host.querySelectorAll(".table-wrapper[role='region']");
+    expect(regions[0].getAttribute("aria-labelledby")).not.toBe(
+      "study-locks-title"
+    );
+    expect(regions[1].getAttribute("aria-label")).toBe("Explicit cohort table");
+
+    const audit = await toBeAccessible({ element: host });
+    expect(audit.pass, audit.message()).toBe(true);
+  });
 });

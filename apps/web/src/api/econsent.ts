@@ -1,4 +1,3 @@
-import { buildStepUpVerificationPayload, SEMANTIC_ACTIONS } from "ui";
 import { createOpenApiClient, openApiClient, unwrapResponse } from "./client";
 import type { paths as EconsentPaths } from "./generated/econsent";
 import type { paths } from "./types";
@@ -105,38 +104,6 @@ export const econsentService = {
     return unwrapResponse(
       openApiClient.PUT("/api/v1/econsent/translations/{translation_id}", {
         params: { path: { translation_id: translationId } },
-        body,
-        ...options,
-      })
-    );
-  },
-
-  // --- Signature Verification ---
-  verifySignature(
-    payload: {
-      username: string;
-      password?: string;
-      totp?: string | null;
-      action: string;
-      semanticAction?: string;
-    },
-    options: Record<string, unknown> = {}
-  ) {
-    const { username, password, totp = null, action, semanticAction } = payload;
-    const semantic =
-      semanticAction ||
-      (action.includes("reconsent")
-        ? SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN
-        : SEMANTIC_ACTIONS.ECONSENT_CAPTURE);
-    const body = buildStepUpVerificationPayload({
-      username,
-      password: password || "",
-      totp,
-      action,
-      semanticAction: semantic,
-    });
-    return unwrapResponse(
-      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
         body,
         ...options,
       })

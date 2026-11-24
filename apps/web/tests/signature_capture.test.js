@@ -2,16 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import SignatureCaptureModal from "../src/components/SignatureCaptureModal.vue";
-import { etmfService } from "../src/api/etmf";
+import { requestStepUpSignature } from "../src/api/signatureVerification";
 
-// Mock the eTMF API client
-vi.mock("../src/api/etmf", () => {
-  return {
-    etmfService: {
-      verifySignature: vi.fn(),
-    },
-  };
-});
+vi.mock("../src/api/signatureVerification", () => ({
+  requestStepUpSignature: vi.fn(),
+}));
 
 describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
   let pinia;
@@ -65,7 +60,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
   });
 
   it("captures 21 CFR Part 11 signature with Signer Name, Role (Subject), and Meaning ('I agree to participate')", async () => {
-    etmfService.verifySignature.mockResolvedValue({
+    requestStepUpSignature.mockResolvedValue({
       sig_token: "mock-econsent-token",
     });
 
@@ -114,7 +109,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
 
   it("triggers verifySignature and explicit onSign callback on happy path, emits success, and clears credentials", async () => {
     // Mock API success responses
-    etmfService.verifySignature.mockResolvedValue({
+    requestStepUpSignature.mockResolvedValue({
       sig_token: "mock-tmf-signature-token",
     });
 
@@ -154,8 +149,8 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
     // Click confirm
     await wrapper.find("#btn-confirm-sig").trigger("click");
 
-    // Verify verifySignature call
-    expect(etmfService.verifySignature).toHaveBeenCalledWith({
+    // Verify step-up verification call
+    expect(requestStepUpSignature).toHaveBeenCalledWith({
       username: "fderuiter",
       password: "valid_password", // pragma: allowlist secret
       totp: "123456",
@@ -212,8 +207,8 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
   });
 
   it("maps ROLE_INSUFFICIENT error correctly to a clear message and wipes credentials", async () => {
-    // Mock verifySignature failure with ROLE_INSUFFICIENT
-    etmfService.verifySignature.mockRejectedValue({
+    // Mock step-up verification failure with ROLE_INSUFFICIENT
+    requestStepUpSignature.mockRejectedValue({
       response: {
         status: 403,
         data: {
@@ -253,8 +248,8 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
   });
 
   it("maps expired/invalid step-up token error correctly to a clear message and wipes credentials", async () => {
-    // Mock verifySignature success but onSign failing on REAUTHENTICATION_REQUIRED (expired token)
-    etmfService.verifySignature.mockResolvedValue({
+    // Mock step-up verification success but onSign failing on REAUTHENTICATION_REQUIRED (expired token)
+    requestStepUpSignature.mockResolvedValue({
       sig_token: "expired-token",
     });
 
@@ -299,8 +294,8 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
   });
 
   it("maps invalid credentials error correctly to a clear message and wipes credentials", async () => {
-    // Mock verifySignature failure with 401 Invalid credentials
-    etmfService.verifySignature.mockRejectedValue({
+    // Mock step-up verification failure with 401 Invalid credentials
+    requestStepUpSignature.mockRejectedValue({
       response: {
         status: 401,
         data: {

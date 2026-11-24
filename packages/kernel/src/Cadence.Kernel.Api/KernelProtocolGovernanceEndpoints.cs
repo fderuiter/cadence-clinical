@@ -334,12 +334,21 @@ public static class KernelProtocolGovernanceEndpoints
                 && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
             {
                 var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
-                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor ?? Actor.Person(sigToken.Subject ?? "system");
+                var resolvedActor = context.RequestServices.GetService<ICurrentActor>()?.Actor
+                    ?? (!string.IsNullOrWhiteSpace(sigToken.Subject) ? Actor.Person(sigToken.Subject) : null);
+                if (resolvedActor is null)
+                {
+                    return TypedResults.Problem(
+                        title: "Authenticated actor required",
+                        detail: "Protocol version approval requires an authenticated caller identity.",
+                        statusCode: StatusCodes.Status401Unauthorized);
+                }
+
                 var precheck = await ProtocolApprovalSimulationGate.CheckAsync(
                     tenant,
                     unitOfWorkFactory,
                     verifier,
-                    actor,
+                    resolvedActor,
                     clock.UtcNow,
                     versionId,
                     reviewAttestationId,

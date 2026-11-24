@@ -1,12 +1,30 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - Automated .NET 10 Developer Environment Setup (Linux/macOS)
-# Requirements: PRD-SYS-053, ADR-2233
+# Requirements: PRD-SYS-053, ADR-2233, ADR-2527
 # ==============================================================================
 
 set -euo pipefail
 
-TARGET_CHANNEL="${1:-10.0}"
+TARGET_CHANNEL="10.0"
+SKIP_CERT_TRUST=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --skip-cert-trust)
+            SKIP_CERT_TRUST=true
+            ;;
+        -*)
+            echo "Unknown option: $arg" >&2
+            exit 1
+            ;;
+        *)
+            TARGET_CHANNEL="$arg"
+            ;;
+    esac
+done
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo -e "\n================================================================="
 echo -e "  Cadence Clinical Research Software — .NET 10 Environment Setup "
@@ -31,8 +49,6 @@ if [ "$SDK_INSTALLED" = false ]; then
     if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
 
     if command -v apt-get &>/dev/null && [ -f /etc/debian_version ]; then
-        # .NET 10 GA is packaged in Ubuntu 24.04+/Debian 13+ apt feeds; prefer it
-        # since it's faster and stays patched via the normal OS update path.
         echo "  [ACTION] Installing dotnet-sdk-10.0 via apt..."
         if $SUDO apt-get -o Acquire::http::Timeout="3" -o Acquire::https::Timeout="3" update -qq && $SUDO apt-get install -y --no-install-recommends dotnet-sdk-10.0; then
             SDK_INSTALLED=true
@@ -88,19 +104,15 @@ if [ "$SDK_INSTALLED" = false ]; then
     echo -e "  \033[32m[OK] .NET 10 SDK successfully installed: $NEW_VERSION\033[0m"
 fi
 
-# 2. Install essential global dotnet tools
-echo -e "\n[2/5] Checking & Installing Global .NET Tools..."
-TOOLS=("dotnet-ef" "dotnet-format")
-for tool in "${TOOLS[@]}"; do
-    echo "  Installing/Updating $tool..."
-    dotnet tool update --global "$tool" 2>/dev/null || dotnet tool install --global "$tool" 2>/dev/null || true
-    echo -e "  \033[32m[OK] $tool is configured.\033[0m"
-done
+# 2. Restore pinned local .NET tools (.config/dotnet-tools.json)
+echo -e "\n[2/5] Restoring Local .NET Tools (.config/dotnet-tools.json)..."
+(cd "$REPO_ROOT" && dotnet tool restore)
+echo -e "  \033[32m[OK] Local .NET tools restored.\033[0m"
 
 mkdir -p "$HOME/.dotnet/tools"
-cat << "EOF" > "$HOME/.dotnet/tools/dotnet-cadence"
+cat << 'EOF' > "$HOME/.dotnet/tools/dotnet-cadence"
 #!/usr/bin/env bash
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "/app/cadence-clinical")"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 CLI_PROJECT="$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj"
 exec dotnet run --project "$CLI_PROJECT" -- "$@"
 EOF
@@ -109,13 +121,16 @@ echo -e "  \033[32m[OK] dotnet cadence CLI wrapper is configured.\033[0m"
 
 # 3. Development HTTPS certificates
 echo -e "\n[3/5] Configuring HTTPS Development Certificates..."
-dotnet dev-certs https --clean || true
-dotnet dev-certs https --trust || true
-echo -e "  \033[32m[OK] Development HTTPS certificate configured.\033[0m"
+if [ "$SKIP_CERT_TRUST" = true ]; then
+    echo "  [SKIPPED] Skipping certificate trust (--skip-cert-trust)."
+else
+    dotnet dev-certs https --clean || true
+    dotnet dev-certs https --trust || true
+    echo -e "  \033[32m[OK] Development HTTPS certificate configured.\033[0m"
+fi
 
 # 4. Environment Configuration (.env)
 echo -e "\n[4/5] Checking Environment Configuration (.env)..."
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ ! -f "$REPO_ROOT/.env" ]; then
     if [ -f "$REPO_ROOT/.env.example" ]; then
         cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env"
@@ -127,12 +142,11 @@ fi
 
 # 5. Database Connectivity Checks (Docker / Local)
 echo -e "\n[5/5] Checking Local Clinical Datastores..."
-if nc -z 127.0.0.1 5432 2>/dev/null; then
+if command -v nc &>/dev/null && nc -z 127.0.0.1 5432 2>/dev/null; then
     echo -e "  \033[32m[OK] PostgreSQL detected on port 5432.\033[0m"
 else
     echo "  [INFO] PostgreSQL not reachable on port 5432 (Run 'docker compose -f docker/docker-compose.yml up -d postgres' to start)."
 fi
-
 
 echo -e "\n================================================================="
 echo -e "  \033[32m.NET 10 Developer Environment Setup Complete!\033[0m"

@@ -38,6 +38,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/nodes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Resolves up to 100 NodeRefs to their summaries in one batch.
+     * @description Returns a dictionary keyed by each requested ref that exists in the caller's tenant. Unknown objects are omitted; objects the caller may not see are masked in place (ADR-2471).
+     */
+    get: operations["KernelGetNodes"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/nodes/{nodeRef}": {
     parameters: {
       query?: never;
@@ -301,7 +321,7 @@ export interface paths {
     };
     /**
      * What happened in a scope, newest first.
-     * @description scope is any NodeRef (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page's next cursor; limit 1 to 200 (default 50). Entries about objects you may not see are masked in place.
+     * @description scope is any NodeRef or study code (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page's next cursor; limit 1 to 200 (default 50); include_nodes=true embeds resolved summaries for unmasked entry subjects. Entries about objects you may not see are masked in place.
      */
     get: operations["KernelActivity"];
     put?: never;
@@ -859,7 +879,7 @@ export interface paths {
     };
     /**
      * A study's proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired).
-     * @description A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).
+     * @description studyRef accepts a study NodeRef or study code. A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).
      */
     get: operations["KernelListProposals"];
     put?: never;
@@ -979,8 +999,28 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset. */
+    /** Lists derived validation findings for a study, optionally filtered by stage, repeatable status, severity, rule pack or dataset. */
     get: operations["KernelListStudyValidationFindings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/studies/{studyRef}/attention": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Lists a study's open proposals and active (Open or Investigating) validation findings in one attention read.
+     * @description studyRef accepts a study NodeRef or study code. Returns the pinned study NodeRef, open proposals masked in place, and visible Open or Investigating findings up to limit (default 20).
+     */
+    get: operations["KernelGetStudyAttention"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1100,7 +1140,7 @@ export interface paths {
     };
     /**
      * Reads the caller's capability-keyed work queues in the current tenant or within a scope.
-     * @description within is an optional NodeRef (for example study:<uuid> or study_site:<uuid>); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.
+     * @description within is an optional NodeRef or study code (for example study:<uuid>, study_site:<uuid>, or CADENCE-101); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.
      */
     get: operations["KernelReadWorkQueues"];
     put?: never;
@@ -1320,6 +1360,9 @@ export interface components {
     Kernel_KernelActivityPageResponse: {
       entries: components["schemas"]["Kernel_KernelActivityEntryResponse"][];
       next: null | string;
+      nodes?: null | {
+        [key: string]: components["schemas"]["Kernel_KernelNodeResponse"];
+      };
     };
     Kernel_KernelAmendmentImpactResponse: {
       amended: string;
@@ -1408,6 +1451,11 @@ export interface components {
       /** Format: date-time */
       asserted_at: string;
       asserted_by: string;
+    };
+    Kernel_KernelBatchNodesResponse: {
+      nodes: {
+        [key: string]: components["schemas"]["Kernel_KernelNodeResponse"];
+      };
     };
     Kernel_KernelCandidateSummaryResponse: {
       kind: string;
@@ -2319,6 +2367,11 @@ export interface components {
       window_after: number | string;
       locations: string[];
     };
+    Kernel_KernelStudyAttentionResponse: {
+      study_ref: string;
+      proposals: components["schemas"]["Kernel_KernelProposalResponse"][];
+      findings: components["schemas"]["Kernel_KernelValidationFindingResponse"][];
+    };
     Kernel_KernelStudyLocksResponse: {
       study_ref: string;
       study_code: string;
@@ -2696,6 +2749,55 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_AnonymousTypeOfstringAndstring"];
+        };
+      };
+    };
+  };
+  KernelGetNodes: {
+    parameters: {
+      query?: {
+        ref?: string[];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelBatchNodesResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
     };
@@ -3438,6 +3540,7 @@ export interface operations {
         from?: string;
         before?: string;
         limit?: number | string;
+        include_nodes?: boolean;
       };
       header?: never;
       path?: never;
@@ -6350,7 +6453,7 @@ export interface operations {
     parameters: {
       query?: {
         stage?: string;
-        status?: string;
+        status?: string[];
         severity?: string;
         dataset?: string;
         pack_key?: string;
@@ -6371,6 +6474,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelValidationFindingPageResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetStudyAttention: {
+    parameters: {
+      query?: {
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelStudyAttentionResponse"];
         };
       };
       /** @description Bad Request */

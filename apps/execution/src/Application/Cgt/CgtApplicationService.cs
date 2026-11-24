@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -19,10 +20,18 @@ namespace Cadence.Apps.Execution.Application.Cgt;
 
 public sealed class CgtApplicationService(
     ExecutionDbContext dbContext,
-    IClock clock) : ICgtApplicationService
+    IClock clock,
+    ICurrentAuditContextAccessor? auditContext = null) : ICgtApplicationService
 {
     private readonly ExecutionDbContext _dbContext = dbContext;
     private readonly IClock _clock = clock;
+
+    private string ResolveActor(string? explicitActor) =>
+        !string.IsNullOrWhiteSpace(explicitActor)
+            ? explicitActor
+            : (auditContext?.UserId
+                ?? Cadence.Database.Audit.AmbientAuditActorScope.Current?.Actor
+                ?? throw new AuditActorUnresolvedException());
 
     public async Task<CgtChainOfCustodyResponse> InitializeApheresisAsync(CgtApheresisCreateRequest request, CancellationToken cancellationToken = default)
     {
@@ -46,7 +55,7 @@ public sealed class CgtApplicationService(
             din: din,
             collectionSiteId: request.CollectionSiteId,
             harvestedAt: request.CollectionTimestamp ?? _clock.UtcNow,
-            createdBy: request.CustodianId ?? "system",
+            createdBy: ResolveActor(request.CustodianId),
             reasonForChange: request.Notes ?? "Apheresis harvest initialized");
 
         _dbContext.CGTChainsOfCustody.Add(coc);
@@ -64,7 +73,7 @@ public sealed class CgtApplicationService(
             custodianName: request.CustodianName,
             custodianRole: request.CustodianRole,
             notes: request.Notes,
-            createdBy: request.CustodianId ?? "system",
+            createdBy: ResolveActor(request.CustodianId),
             reasonForChange: "Apheresis harvest milestone logged");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -99,7 +108,7 @@ public sealed class CgtApplicationService(
             milestoneType: request.MilestoneType,
             tempCelsius: request.TemperatureCelsius,
             isExcursion: isExcursion,
-            updatedBy: request.CustodianId ?? "system",
+            updatedBy: ResolveActor(request.CustodianId),
             reasonForChange: request.Notes ?? $"Milestone {request.MilestoneType} logged");
 
         var milestone = new CgtMilestoneEvent(
@@ -124,7 +133,7 @@ public sealed class CgtApplicationService(
             sealId: request.SealId,
             dryShipperId: request.DryShipperId,
             notes: request.Notes,
-            createdBy: request.CustodianId ?? "system",
+            createdBy: ResolveActor(request.CustodianId),
             reasonForChange: $"Milestone {request.MilestoneType} logged");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -142,7 +151,7 @@ public sealed class CgtApplicationService(
         coc.BindManufacturingBatch(
             batchId: request.BatchId,
             manufacturingFacilityId: request.ManufacturingFacilityId,
-            updatedBy: request.QualifiedPersonSignoffId ?? "system",
+            updatedBy: ResolveActor(request.QualifiedPersonSignoffId),
             reasonForChange: request.Notes ?? $"Manufacturing batch '{request.BatchId}' bound");
 
         var milestone = new CgtMilestoneEvent(
@@ -155,7 +164,7 @@ public sealed class CgtApplicationService(
             facilityId: request.ManufacturingFacilityId,
             custodianId: request.QualifiedPersonSignoffId,
             notes: request.Notes,
-            createdBy: request.QualifiedPersonSignoffId ?? "system",
+            createdBy: ResolveActor(request.QualifiedPersonSignoffId),
             reasonForChange: $"Batch '{request.BatchId}' bound");
 
         _dbContext.CGTMilestoneEvents.Add(milestone);
@@ -213,7 +222,7 @@ public sealed class CgtApplicationService(
             verifiedAt: now,
             isMatch: true,
             notes: request.Notes,
-            createdBy: request.PrimaryVerifierId ?? "system",
+            createdBy: ResolveActor(request.PrimaryVerifierId),
             reasonForChange: request.Notes ?? "Bedside dual verification completed");
 
         _dbContext.CGTBedsideVerifications.Add(verification);
@@ -223,7 +232,7 @@ public sealed class CgtApplicationService(
 
         if (coc != null)
         {
-            coc.SetBedsideVerified(unlockToken, request.PrimaryVerifierId ?? "system", "Bedside verification completed");
+            coc.SetBedsideVerified(unlockToken, ResolveActor(request.PrimaryVerifierId), "Bedside verification completed");
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -295,10 +304,10 @@ public sealed class CgtApplicationService(
             residualVolumeMl: request.ResidualVolumeMl,
             adherencePercentage: adherencePct,
             disposition: "QUARANTINED_FOR_DESTRUCTION",
-            loggedBy: request.LoggedBy ?? "system",
+            loggedBy: ResolveActor(request.LoggedBy),
             loggedAt: now,
             notes: request.Notes,
-            createdBy: request.LoggedBy ?? "system",
+            createdBy: ResolveActor(request.LoggedBy),
             reasonForChange: request.Notes ?? $"Vial return reconciliation logged for kit {request.KitNumber}");
 
         _dbContext.CGTVialReturnReconciliations.Add(recon);
@@ -380,7 +389,7 @@ public sealed class CgtApplicationService(
             cryptographicSeal: sealHex,
             status: "COMPLETED",
             reconciliationNotes: request.Notes,
-            createdBy: request.Witness1Id ?? "system",
+            createdBy: ResolveActor(request.Witness1Id),
             reasonForChange: request.DestructionReason ?? "Certificate of Destruction");
 
         _dbContext.CGTDestructionCertificates.Add(cert);
@@ -391,7 +400,7 @@ public sealed class CgtApplicationService(
                 .FirstOrDefaultAsync(x => x.Id == request.CocId.Value, cancellationToken);
             if (coc != null)
             {
-                coc.SetDestroyed(now, request.Witness1Id ?? "system", request.DestructionReason ?? "Certificate of Destruction");
+                coc.SetDestroyed(now, ResolveActor(request.Witness1Id), request.DestructionReason ?? "Certificate of Destruction");
             }
         }
 
@@ -403,7 +412,7 @@ public sealed class CgtApplicationService(
 
             foreach (var recon in recons)
             {
-                recon.MarkDestroyed(cert.Id.ToString(), request.Witness1Id ?? "system", "Destroyed under certificate " + certNum);
+                recon.MarkDestroyed(cert.Id.ToString(), ResolveActor(request.Witness1Id), "Destroyed under certificate " + certNum);
             }
         }
 

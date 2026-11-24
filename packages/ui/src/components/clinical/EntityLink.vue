@@ -37,7 +37,7 @@
         descriptor.chipLabel
       }}</span>
       <span
-        v-if="showCode && descriptor.artifactCode"
+        v-if="showArtifactCode && descriptor.artifactCode"
         class="clinical-entity-link__code"
         >{{ ` (${descriptor.artifactCode})` }}</span
       >
@@ -61,6 +61,20 @@
       </template>
     </EntityPeekDrawer>
   </span>
+  <span
+    v-else-if="isStringNodeRef && parsed.masked"
+    class="entity-link entity-link--masked"
+    :data-node-kind="parsed.kind"
+    :data-mask-reason="parsed.maskReason"
+  >
+    <EyeOff
+      :size="16"
+      :stroke-width="1.75"
+      aria-hidden="true"
+      class="entity-link__icon"
+    />
+    <span class="entity-link__label">{{ label || parsed.displayLabel }}</span>
+  </span>
   <a
     v-else-if="href"
     :id="id"
@@ -68,14 +82,33 @@
     :href="href"
     :class="[
       'clinical-entity-link',
-      'clinical-entity-link--plain',
-      { 'clinical-entity-link-tabular': tabular },
+      isStringNodeRef
+        ? 'entity-link entity-link--interactive'
+        : 'clinical-entity-link--plain',
+      {
+        'clinical-entity-link-tabular': tabular,
+        'entity-link--compact': isStringNodeRef && compact,
+      },
     ]"
+    :data-node-ref="isStringNodeRef ? parsed.raw : undefined"
+    :data-node-kind="isStringNodeRef ? parsed.kind : undefined"
     :data-entity-type="resolvedNodeRef.type"
     :data-entity-id="resolvedNodeRef.id"
-    @click="handlePlainClick"
+    @click="handleClick"
   >
-    <slot>{{ resolvedLabel }}</slot>
+    <ExternalLink
+      v-if="isStringNodeRef && !$slots.default"
+      :size="16"
+      :stroke-width="1.75"
+      aria-hidden="true"
+      class="entity-link__icon"
+    />
+    <slot>
+      <span class="entity-link__label">{{ resolvedLabel }}</span>
+      <span v-if="showRefCode" class="entity-link__code">{{
+        parsed.shortRef
+      }}</span>
+    </slot>
     <span v-if="srContext" class="sr-only">: {{ srContext }}</span>
   </a>
   <button
@@ -85,23 +118,47 @@
     type="button"
     :class="[
       'clinical-entity-link',
-      'clinical-entity-link--plain',
-      { 'clinical-entity-link-tabular': tabular },
+      isStringNodeRef
+        ? 'entity-link entity-link--interactive'
+        : 'clinical-entity-link--plain',
+      {
+        'clinical-entity-link-tabular': tabular,
+        'entity-link--compact': isStringNodeRef && compact,
+      },
     ]"
+    :data-node-ref="isStringNodeRef ? parsed.raw : undefined"
+    :data-node-kind="isStringNodeRef ? parsed.kind : undefined"
     :data-entity-type="resolvedNodeRef.type"
     :data-entity-id="resolvedNodeRef.id"
     :disabled="disabled"
-    @click="handlePlainClick"
+    @click="handleClick"
   >
-    <slot>{{ resolvedLabel }}</slot>
+    <ExternalLink
+      v-if="isStringNodeRef && !$slots.default"
+      :size="16"
+      :stroke-width="1.75"
+      aria-hidden="true"
+      class="entity-link__icon"
+    />
+    <slot>
+      <span class="entity-link__label">{{ resolvedLabel }}</span>
+      <span v-if="showRefCode" class="entity-link__code">{{
+        parsed.shortRef
+      }}</span>
+    </slot>
     <span v-if="srContext" class="sr-only">: {{ srContext }}</span>
   </button>
 </template>
 
 <script setup>
 import { computed, getCurrentInstance, ref } from "vue";
+import { ExternalLink, EyeOff } from "lucide-vue-next";
 import EntityPeekDrawer from "./EntityPeekDrawer.vue";
 import { resolveEntityLinkDescriptor } from "./entityLinkAdapter.js";
+import {
+  openEntityPeek,
+  parseNodeRef,
+} from "../../utils/entityPeekRegistry.js";
 
 const props = defineProps({
   id: {
@@ -109,7 +166,7 @@ const props = defineProps({
     default: undefined,
   },
   nodeRef: {
-    type: Object,
+    type: [String, Object],
     default: null,
   },
   entityType: {
@@ -129,6 +186,10 @@ const props = defineProps({
     default: true,
   },
   tabular: {
+    type: Boolean,
+    default: false,
+  },
+  compact: {
     type: Boolean,
     default: false,
   },
@@ -206,7 +267,7 @@ const props = defineProps({
   },
   showCode: {
     type: Boolean,
-    default: false,
+    default: undefined,
   },
   teleport: {
     type: Boolean,
@@ -265,6 +326,12 @@ const descriptor = computed(() =>
   })
 );
 
+const isStringNodeRef = computed(() => typeof props.nodeRef === "string");
+
+const parsed = computed(() =>
+  parseNodeRef(isStringNodeRef.value ? props.nodeRef : "")
+);
+
 const resolvedNodeRef = computed(() => {
   if (isArtifactMode.value) {
     return {
@@ -278,6 +345,15 @@ const resolvedNodeRef = computed(() => {
       siteId: descriptor.value.siteId || null,
     };
   }
+  if (isStringNodeRef.value) {
+    return {
+      type: parsed.value.kind || props.entityType || "record",
+      id: String(parsed.value.id ?? ""),
+      label: props.label || parsed.value.displayLabel,
+      studyId: null,
+      siteId: null,
+    };
+  }
   const base =
     props.nodeRef && typeof props.nodeRef === "object" ? props.nodeRef : {};
   return {
@@ -289,8 +365,24 @@ const resolvedNodeRef = computed(() => {
   };
 });
 
-const resolvedLabel = computed(
-  () => props.label || resolvedNodeRef.value.label || resolvedNodeRef.value.id
+const resolvedLabel = computed(() => {
+  if (props.label) {
+    return props.label;
+  }
+  if (isStringNodeRef.value) {
+    return parsed.value.displayLabel;
+  }
+  return resolvedNodeRef.value.label || resolvedNodeRef.value.id;
+});
+
+const showArtifactCode = computed(() => Boolean(props.showCode));
+
+const showRefCode = computed(
+  () =>
+    isStringNodeRef.value &&
+    (props.showCode ?? true) &&
+    Boolean(parsed.value.shortRef) &&
+    parsed.value.shortRef !== resolvedLabel.value
 );
 
 function buildPeekEventPayload(event) {
@@ -301,10 +393,31 @@ function buildPeekEventPayload(event) {
   };
 }
 
-function handlePlainClick(event) {
+function handleClick(event) {
   if (props.disabled) return;
+  if (isStringNodeRef.value && parsed.value.masked) {
+    return;
+  }
   if (props.href && props.preventNavigation) {
     event.preventDefault();
+  }
+  const triggerEl = triggerRef.value || event?.currentTarget || null;
+  if (isStringNodeRef.value) {
+    const payload = {
+      nodeRef: parsed.value.raw,
+      label: resolvedLabel.value,
+      parsed: parsed.value,
+      triggerEl,
+      event,
+      originalEvent: event,
+    };
+    openEntityPeek(parsed.value.raw, {
+      label: resolvedLabel.value,
+      triggerEl,
+    });
+    emit("peek", payload);
+    emit("select", parsed.value.raw);
+    return;
   }
   const payload = buildPeekEventPayload(event);
   emit("peek", payload);
@@ -406,6 +519,62 @@ function handleNavigate(payload) {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.entity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: left;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.entity-link--compact {
+  min-height: 2.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.entity-link--interactive {
+  border-color: var(--color-border-control);
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.entity-link--interactive:hover:not(:disabled),
+.entity-link--interactive:focus-visible {
+  color: var(--color-text);
+  background: transparent;
+  border-color: var(--color-primary);
+}
+
+.entity-link--masked {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.entity-link__icon {
+  flex-shrink: 0;
+}
+
+.entity-link__label {
+  font-weight: 500;
+}
+
+.entity-link__code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 @media (max-width: 640px) {

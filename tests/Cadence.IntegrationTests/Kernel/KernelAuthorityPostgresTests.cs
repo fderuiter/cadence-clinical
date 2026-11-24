@@ -252,9 +252,13 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
 
         expired.Permitted.Should().BeFalse();
         expired.Reason.Should().Be(
-            $"{Crc.Id} is not qualified to eligibility.sign: Renew protocol_training for protocol version {version.ProtocolVersionId}; it expired on {expiresAt:yyyy-MM-dd}.");
+            $"{Crc.Id} is not qualified to eligibility.sign: Renew protocol_training for protocol version 1; it expired on {expiresAt:yyyy-MM-dd}.");
+        expired.Reason.Should().NotContain(version.ProtocolVersionId.Value.ToString("D"));
         expired.Conditions.Should().ContainSingle(c => !c.Met)
-            .Which.Evidence.Should().Equal(NodeRef.For(requirement.RequirementId), NodeRef.For(training.QualificationId));
+            .Which.Evidence.Should().Equal(
+                NodeRef.For(requirement.RequirementId),
+                NodeRef.For(training.QualificationId),
+                NodeRef.For(version.ProtocolVersionId));
     }
 
     /// <summary>

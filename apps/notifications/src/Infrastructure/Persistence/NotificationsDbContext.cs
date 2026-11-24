@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Notifications.Domain;
 using Cadence.Apps.Notifications.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Tenancy;
@@ -25,6 +26,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
     public DbSet<NotificationAuditLog> NotificationAuditLogs => Set<NotificationAuditLog>();
     public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +36,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
         modelBuilder.ApplyConfiguration(new NotificationAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationDeliveryConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
         modelBuilder.ConfigureStandaloneTenancy(this);

@@ -707,6 +707,11 @@ function submitOpenNew() {
 </script>
 
 <style scoped>
+.ecrf-form-open {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .ecrf-form-hint {
   font-size: 0.85rem;
   color: var(--semantic-color-text-secondary);
@@ -717,16 +722,36 @@ function submitOpenNew() {
   align-items: center;
   gap: 8px;
   margin: 8px 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.ecrf-form-row > *,
+.ecrf-form-grid > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .ecrf-form-grid {
   display: grid;
-  grid-template-columns: minmax(140px, max-content) 1fr;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   gap: 6px 12px;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 .ecrf-form-grid button {
   grid-column: 2;
   justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .ecrf-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ecrf-form-grid button {
+    grid-column: 1;
+  }
 }
 .ecrf-form-reuse-block {
   display: flex;
@@ -742,9 +767,14 @@ function submitOpenNew() {
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-direct-id-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 3px 2px;
   cursor: pointer;
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
+  box-sizing: border-box;
 }
 </style>
 

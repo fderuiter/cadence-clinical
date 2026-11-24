@@ -211,8 +211,7 @@ public static class CiPlan
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
         ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
-        ["classify"] = "labels the pull request through the GitHub API",
-        ["automerge"] = "approves and merges the pull request through the GitHub API",
+        ["classify"] = "classifies changed paths and labels same-repository pull requests through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on pushes or ref-guarded dispatches to main, release/* and v* tags",
         ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on pushes or ref-guarded dispatches to main",
     };
@@ -337,7 +336,7 @@ public static class CiPlan
             new("actionlint", "Run actionlint")
             {
                 RequiredTool = "actionlint",
-                ToolHint = "provision actionlint 1.7.12 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
+                ToolHint = "provision actionlint 1.7.12 into .cadence/bin via 'pnpm cadence doctor --auto-fix'",
                 Commands = [new CiCommand("actionlint", [])],
             },
         ]);
@@ -360,14 +359,14 @@ public static class CiPlan
             new("lint-and-static", "Run Hadolint on Dockerfiles")
             {
                 RequiredTool = "hadolint",
-                ToolHint = "provision hadolint 2.15.1 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
+                ToolHint = "provision hadolint 2.15.1 into .cadence/bin via 'pnpm cadence doctor --auto-fix'",
                 Files = CiFileSource.Dockerfiles,
                 Commands = [new CiCommand("hadolint", ["--failure-threshold", "warning"])],
             },
             new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
-                ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
+                ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via 'pnpm cadence doctor --auto-fix' (or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", ["-x"])],
             },
@@ -463,7 +462,7 @@ public static class CiPlan
             {
                 Always = true,
                 RequiredTool = "detect-secrets-hook",
-                ToolHint = $"run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
+                ToolHint = $"run 'pnpm cadence doctor --auto-fix' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
                 EnvironmentIfPassed = NativeAotCacheHit,
                 Commands = [NodeCli("check", "detect-secrets") with { ForwardsBaseRef = true }],
             },
