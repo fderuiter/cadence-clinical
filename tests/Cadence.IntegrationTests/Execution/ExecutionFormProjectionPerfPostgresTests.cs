@@ -555,6 +555,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {
@@ -625,6 +626,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
 
         private EfSqlCounter()
         {
+            Current.Value = this;
             _subscription = DiagnosticListener.AllListeners.Subscribe(this);
         }
 
@@ -634,12 +636,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             c.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
             && !c.Contains("set_config(", StringComparison.OrdinalIgnoreCase));
 
-        public static EfSqlCounter Start()
-        {
-            var counter = new EfSqlCounter();
-            Current.Value = counter;
-            return counter;
-        }
+        public static EfSqlCounter Start() => new();
 
         public void Reset() => _commands.Clear();
 

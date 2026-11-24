@@ -97,10 +97,12 @@ in the canonical form.
    `ApproveLibraryItem` with it. That approval is the release; drafts never load (`K.Rules.PackNotReleased`).
 3. A study pins the version in `DeclareStudyStandards`. `RulePackLoader.LoadForStudyAsync` loads the pinned versions,
    even after deprecation.
-4. Evaluate with `IRuleEvaluator.Evaluate(pack, new RuleEvaluationContext(stage, asOf) { Standard = …, … }, records)`,
-   or validate and record the result in one step with `ValidationRunner.RunAsync(new ValidationRequest(...))`: it
-   evaluates every pack the study pins and sends one `RecordValidationRun`, whose findings `IValidationFindings` reads
-   (ADR-2462). Stages and severities are the kernel's `ValidationStage` and `ValidationSeverity`.
+4. Evaluate buffered records with `IRuleEvaluator.Evaluate(pack, new RuleEvaluationContext(stage, asOf) { Standard = …, … }, records)`,
+   stream rows without allocating per-record maps or violation lists via `IRuleEvaluator.Evaluate(pack, context, cursor, sink)`
+   (`IRuleRecordCursor` / `IRuleViolationSink`), or validate and record the result in one step with
+   `ValidationRunner.RunAsync(new ValidationRequest(...))`: it evaluates every pack the study pins and sends one
+   `RecordValidationRun`, whose findings `IValidationFindings` reads (ADR-2462). Stages and severities are the kernel's
+   `ValidationStage` and `ValidationSeverity`.
 
 To change a rule, raise its `version`, draft the pack again (the library item's next version) and release it. Studies
 keep their pinned version until their standards profile is revised.

@@ -124,7 +124,8 @@ public sealed class EconsentEndpointsTests : IDisposable
         if (expectedErrorKey != "liveness_token")
         {
             string tokenSubject = string.IsNullOrWhiteSpace(subjectPseudonym) ? "SUBJ-1" : subjectPseudonym;
-            livenessToken = BiometricLivenessTokenService.IssueToken(tokenSubject, 0.95m, true, now: clock.UtcNow);
+            livenessToken = BiometricLivenessTokenService.IssueToken(
+                tokenSubject, 0.95m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
         }
 
         var request = new CaptureConsentRequest(
@@ -143,7 +144,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -161,7 +162,8 @@ public sealed class EconsentEndpointsTests : IDisposable
         var clock = new FakeClock();
         string signerName = "Jane \"The Doctor\" O'Connor\tSpecialist";
         string meaning = "Reason with \"quotes\", newlines:\nLine 2\ttab and \\backslash.";
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-999", 0.98m, true, now: clock.UtcNow);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-999", 0.98m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
 
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-999",
@@ -179,7 +181,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 2, request, context, Caller(), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 2, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
 
@@ -202,7 +204,8 @@ public sealed class EconsentEndpointsTests : IDisposable
     {
         using var context = CreateContext();
         var clock = new FakeClock();
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-123", 0.98m, true, now: clock.UtcNow);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-123", 0.98m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-123",
             StudyId: "STUDY-101",
@@ -219,7 +222,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
         var okResult = (Ok<CaptureConsentResponse>)result;
@@ -246,7 +249,8 @@ public sealed class EconsentEndpointsTests : IDisposable
         using var context = CreateContext();
         var clock = new FakeClock();
         var past = clock.UtcNow.AddMinutes(-30);
-        string expiredToken = BiometricLivenessTokenService.IssueToken("SUBJ-EXP", 0.95m, true, now: past);
+        string expiredToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-EXP", 0.95m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: past);
 
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-EXP",
@@ -264,7 +268,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -348,16 +352,242 @@ public sealed class EconsentEndpointsTests : IDisposable
     {
         using var context = CreateContext();
         var clock = new FakeClock();
-        string livenessToken = BiometricLivenessTokenService.IssueToken("SUBJ-1", 0.95m, true, now: clock.UtcNow);
+        var useStore = new ReplayCache(clock);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-1", 0.95m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
         var request = new CaptureConsentRequest(
             "SUBJ-1", "STUDY-1", "SITE-1", "Signer", null, "Subject", "I agree", null, "v1.0", "digest123", "sigdata123", livenessToken, clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller("STUDY-2"), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller("STUDY-2"), TestSecurityContext.BiometricLivenessOptions, useStore, clock, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
         (await context.ConsentSignatures.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+
+        // Study mismatch must not burn the subject's fresh liveness check; retrying with authorized caller succeeds.
+        var retry = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-001", 1, request, context, Caller("STUDY-1"), TestSecurityContext.BiometricLivenessOptions, useStore, clock, TestContext.Current.CancellationToken);
+        retry.Should().BeOfType<Ok<CaptureConsentResponse>>();
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task ProcessCaptureConsentAsync_UnkeyedMintingThrowsAndOversizedTtlTokenIsRejected()
+    {
+        using var context = CreateContext();
+        var clock = new FakeClock();
+
+        Action unkeyedMint = () => BiometricLivenessTokenService.IssueToken(
+            "SUBJ-VERIFY-01", 0.99m, true, "camera", secret: null, lifetime: TimeSpan.FromDays(3650));
+        unkeyedMint.Should().Throw<ArgumentException>();
+
+        string oversizedTtlToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-VERIFY-01",
+            0.99m,
+            true,
+            "camera",
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow,
+            lifetime: TimeSpan.FromDays(3650));
+
+        var request = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-VERIFY-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-01",
+            SignerName: "Jane Participant",
+            SignerEmail: "jane@example.com",
+            SignerRole: "Subject",
+            Meaning: "I agree to participate",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+            SignatureData: "DATA_BINDING_V1_SUBJ-VERIFY-01",
+            LivenessToken: oversizedTtlToken,
+            DeviceTimestamp: clock.UtcNow);
+
+        var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-verify-01",
+            1,
+            request,
+            context,
+            Caller(),
+            TestSecurityContext.BiometricLivenessOptions,
+            new ReplayCache(clock),
+            clock,
+            TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ValidationProblem>();
+        var problem = (ValidationProblem)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Errors.Should().ContainKey("liveness_token");
+        (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task ProcessCaptureConsentAsync_ReplayedLivenessTokenAcrossVersions_FailsClosed()
+    {
+        using var context = CreateContext();
+        var clock = new FakeClock();
+        var sharedUseStore = new ReplayCache(clock);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-VERIFY-01",
+            0.99m,
+            true,
+            "camera",
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow);
+
+        var firstRequest = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-VERIFY-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-01",
+            SignerName: "Jane Participant",
+            SignerEmail: "jane@example.com",
+            SignerRole: "Subject",
+            Meaning: "I agree to participate",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+            SignatureData: "DATA_BINDING_V1_SUBJ-VERIFY-01",
+            LivenessToken: livenessToken,
+            DeviceTimestamp: clock.UtcNow);
+
+        var firstResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-verify-01",
+            1,
+            firstRequest,
+            context,
+            Caller(),
+            TestSecurityContext.BiometricLivenessOptions,
+            sharedUseStore,
+            clock,
+            TestContext.Current.CancellationToken);
+        firstResult.Should().BeOfType<Ok<CaptureConsentResponse>>();
+
+        var secondRequest = firstRequest with
+        {
+            ProtocolVersion = "v2.0",
+            SignatureData = "DATA_BINDING_V2_SUBJ-VERIFY-01",
+        };
+        var replayResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-verify-01",
+            2,
+            secondRequest,
+            context,
+            Caller(),
+            TestSecurityContext.BiometricLivenessOptions,
+            sharedUseStore,
+            clock,
+            TestContext.Current.CancellationToken);
+
+        replayResult.Should().BeOfType<ValidationProblem>();
+        var problem = (ValidationProblem)replayResult;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Errors.Should().ContainKey("liveness_token");
+        (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ProcessCaptureConsentAsync_ValidationErrorBeforeConsume_DoesNotBurnLivenessToken()
+    {
+        using var context = CreateContext();
+        var clock = new FakeClock();
+        var sharedUseStore = new ReplayCache(clock);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-RETRY-01",
+            0.98m,
+            true,
+            "camera",
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow);
+
+        var incompleteRequest = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-RETRY-01",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-01",
+            SignerName: "Jane Participant",
+            SignerEmail: "jane@example.com",
+            SignerRole: "Subject",
+            Meaning: "I agree",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+            SignatureData: null,
+            LivenessToken: livenessToken,
+            DeviceTimestamp: clock.UtcNow);
+
+        var badResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-retry-01",
+            1,
+            incompleteRequest,
+            context,
+            Caller(),
+            TestSecurityContext.BiometricLivenessOptions,
+            sharedUseStore,
+            clock,
+            TestContext.Current.CancellationToken);
+        badResult.Should().BeOfType<ValidationProblem>();
+
+        var validRequest = incompleteRequest with { SignatureData = "SIG-RETRY-01" };
+        var retryResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-retry-01",
+            1,
+            validRequest,
+            context,
+            Caller(),
+            TestSecurityContext.BiometricLivenessOptions,
+            sharedUseStore,
+            clock,
+            TestContext.Current.CancellationToken);
+        retryResult.Should().BeOfType<Ok<CaptureConsentResponse>>();
+    }
+
+    [Fact]
+    public async Task BiometricLivenessVerification_DuplicateTokenHash_RejectedByUniqueIndex()
+    {
+        using var context = CreateContext();
+        var now = new FakeClock().UtcNow;
+        const string duplicateHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"; // pragma: allowlist secret
+
+        context.BiometricLivenessVerifications.Add(new BiometricLivenessVerification
+        {
+            Id = Guid.NewGuid().ToString(),
+            ConsentId = Guid.NewGuid().ToString(),
+            SubjectPseudonym = "SUBJ-IDX-1",
+            LivenessToken = "tok-1",
+            LivenessTokenHash = duplicateHash,
+            AntiSpoofScore = 0.99m,
+            IsLive = true,
+            Status = "VERIFIED",
+            VerifiedAt = now,
+            CreatedAt = now,
+            CreatedBy = "crc-1",
+            ReasonForChange = "Initial liveness verification",
+        });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        context.BiometricLivenessVerifications.Add(new BiometricLivenessVerification
+        {
+            Id = Guid.NewGuid().ToString(),
+            ConsentId = Guid.NewGuid().ToString(),
+            SubjectPseudonym = "SUBJ-IDX-1",
+            LivenessToken = "tok-1",
+            LivenessTokenHash = duplicateHash,
+            AntiSpoofScore = 0.99m,
+            IsLive = true,
+            Status = "VERIFIED",
+            VerifiedAt = now,
+            CreatedAt = now,
+            CreatedBy = "crc-1",
+            ReasonForChange = "Duplicate liveness verification",
+        });
+
+        Func<Task> saveDuplicate = () => context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await saveDuplicate.Should().ThrowAsync<DbUpdateException>();
     }
 
     /// <summary>Publishing a template of a study the caller is not assigned to is refused and announces nothing (#5361).</summary>

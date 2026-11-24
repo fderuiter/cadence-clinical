@@ -3644,12 +3644,6 @@ public static class PaymentEndpoints
 
                 resolvedWalletId = wallet.Id;
 
-                async Task<IResult> PersistAndBuildFlaggedDiaryStipendAsync(string reason, string? w9Status = null)
-                {
-                    await dbContext.SaveChangesAsync(ct);
-                    return BuildFlaggedDiaryStipendResponse(wallet, caller.UserId, idempotencyKey, reason, w9Status);
-                }
-
                 var existingTx = await dbContext.ParticipantTransactions.AsNoTracking()
                     .FirstOrDefaultAsync(t =>
                         t.WalletId == wallet.Id
@@ -3701,7 +3695,9 @@ public static class PaymentEndpoints
                         ReasonForChange = "Unverified self-service diary stipend request held for review",
                         VersionIndex = wallet.VersionIndex
                     });
-                    return await PersistAndBuildFlaggedDiaryStipendAsync(invalidReason);
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return BuildFlaggedDiaryStipendResponse(wallet, caller.UserId, idempotencyKey, invalidReason);
                 }
 
                 bool syncTokenAlreadyConsumed = await dbContext.PaymentAuditLogs.AsNoTracking()
@@ -3730,7 +3726,12 @@ public static class PaymentEndpoints
                         ReasonForChange = "Replayed single-use diary sync verification token held for review",
                         VersionIndex = wallet.VersionIndex
                     });
-                    return await PersistAndBuildFlaggedDiaryStipendAsync(
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return BuildFlaggedDiaryStipendResponse(
+                        wallet,
+                        caller.UserId,
+                        idempotencyKey,
                         "ePRO diary synchronization token was already consumed by a prior stipend evaluation; routed to coordinator review.");
                 }
 
@@ -3777,7 +3778,12 @@ public static class PaymentEndpoints
                         ReasonForChange = "Clinician-verified or milestone stipend rule cannot be auto-credited via participant self-service",
                         VersionIndex = wallet.VersionIndex
                     });
-                    return await PersistAndBuildFlaggedDiaryStipendAsync(
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return BuildFlaggedDiaryStipendResponse(
+                        wallet,
+                        caller.UserId,
+                        idempotencyKey,
                         $"Protocol rule '{explicitRestrictedRule.VisitCode}' requires clinician verification or milestone sign-off and cannot be auto-credited via self-service.");
                 }
 
@@ -3840,7 +3846,12 @@ public static class PaymentEndpoints
                         ReasonForChange = "Diary stipend exceeds IRB anti-coercion cap; routed to review",
                         VersionIndex = wallet.VersionIndex
                     });
-                    return await PersistAndBuildFlaggedDiaryStipendAsync(
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return BuildFlaggedDiaryStipendResponse(
+                        wallet,
+                        caller.UserId,
+                        idempotencyKey,
                         $"Protocol stipend (${stipendAmount:F2}) exceeds IRB anti-coercion cap (${effectiveCap:F2}); routed to coordinator review.");
                 }
 
@@ -3873,7 +3884,12 @@ public static class PaymentEndpoints
                         ReasonForChange = "Stipend amount exceeds auto-disbursement safety threshold",
                         VersionIndex = wallet.VersionIndex
                     });
-                    return await PersistAndBuildFlaggedDiaryStipendAsync(
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return BuildFlaggedDiaryStipendResponse(
+                        wallet,
+                        caller.UserId,
+                        idempotencyKey,
                         $"Payment of ${stipendAmount:F2} exceeds configured auto-disbursement threshold limit (${effectiveThreshold:F2}). Routed to administrator review queue.");
                 }
 
@@ -3910,7 +3926,12 @@ public static class PaymentEndpoints
                         ReasonForChange = "Diary stipend halted pending Form W-9 verification",
                         VersionIndex = wallet.VersionIndex
                     });
-                    return await PersistAndBuildFlaggedDiaryStipendAsync(
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return BuildFlaggedDiaryStipendResponse(
+                        wallet,
+                        caller.UserId,
+                        idempotencyKey,
                         $"Annual taxable payments reach ${projectedTaxable:F2} without a verified Form W-9. Stipend credit halted for review.",
                         wallet.W9Status);
                 }

@@ -1113,6 +1113,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {
