@@ -657,12 +657,14 @@ public static class PaymentEndpoints
         group.MapPost("/invoices/{id}/approve", ApproveInvoice)
             .WithName("ApproveInvoice")
             .RequirePermission("payments_invoice:approve").RequireCallerStudyScope()
-            .WithSummary("Approve draft self-billing invoice for ERP export and settlement.");
+            .WithSummary("Approve draft self-billing invoice for ERP export and settlement.")
+            .RequireElectronicSignature("payments.invoice.approve", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
             .RequirePermission("payments_invoice:sign_remittance").RequireCallerStudyScope()
-            .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.");
+            .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.")
+            .RequireElectronicSignature("payments.remittance.sign", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)
             .WithName("DownloadRemittancePdf")
@@ -3694,6 +3696,12 @@ public static class PaymentEndpoints
 
                 resolvedWalletId = wallet.Id;
 
+                async Task<IResult> SaveFlaggedAsync(string reason, string? w9Status = null)
+                {
+                    await dbContext.SaveChangesAsync(ct);
+                    return BuildFlaggedDiaryStipendResponse(wallet, caller.UserId, idempotencyKey, reason, w9Status);
+                }
+
                 var existingTx = await dbContext.ParticipantTransactions.AsNoTracking()
                     .FirstOrDefaultAsync(t =>
                         t.WalletId == wallet.Id
@@ -3745,9 +3753,7 @@ public static class PaymentEndpoints
                         ReasonForChange = "Unverified self-service diary stipend request held for review",
                         VersionIndex = wallet.VersionIndex
                     });
-                    await dbContext.SaveChangesAsync(ct);
-
-                    return BuildFlaggedDiaryStipendResponse(wallet, caller.UserId, idempotencyKey, invalidReason);
+                    return await SaveFlaggedAsync(invalidReason);
                 }
 
                 bool syncTokenAlreadyConsumed = await dbContext.PaymentAuditLogs.AsNoTracking()
@@ -3776,12 +3782,7 @@ public static class PaymentEndpoints
                         ReasonForChange = "Replayed single-use diary sync verification token held for review",
                         VersionIndex = wallet.VersionIndex
                     });
-                    await dbContext.SaveChangesAsync(ct);
-
-                    return BuildFlaggedDiaryStipendResponse(
-                        wallet,
-                        caller.UserId,
-                        idempotencyKey,
+                    return await SaveFlaggedAsync(
                         "ePRO diary synchronization token was already consumed by a prior stipend evaluation; routed to coordinator review.");
                 }
 
@@ -3828,12 +3829,7 @@ public static class PaymentEndpoints
                         ReasonForChange = "Clinician-verified or milestone stipend rule cannot be auto-credited via participant self-service",
                         VersionIndex = wallet.VersionIndex
                     });
-                    await dbContext.SaveChangesAsync(ct);
-
-                    return BuildFlaggedDiaryStipendResponse(
-                        wallet,
-                        caller.UserId,
-                        idempotencyKey,
+                    return await SaveFlaggedAsync(
                         $"Protocol rule '{explicitRestrictedRule.VisitCode}' requires clinician verification or milestone sign-off and cannot be auto-credited via self-service.");
                 }
 
@@ -3896,12 +3892,7 @@ public static class PaymentEndpoints
                         ReasonForChange = "Diary stipend exceeds IRB anti-coercion cap; routed to review",
                         VersionIndex = wallet.VersionIndex
                     });
-                    await dbContext.SaveChangesAsync(ct);
-
-                    return BuildFlaggedDiaryStipendResponse(
-                        wallet,
-                        caller.UserId,
-                        idempotencyKey,
+                    return await SaveFlaggedAsync(
                         $"Protocol stipend (${stipendAmount:F2}) exceeds IRB anti-coercion cap (${effectiveCap:F2}); routed to coordinator review.");
                 }
 
@@ -3934,12 +3925,7 @@ public static class PaymentEndpoints
                         ReasonForChange = "Stipend amount exceeds auto-disbursement safety threshold",
                         VersionIndex = wallet.VersionIndex
                     });
-                    await dbContext.SaveChangesAsync(ct);
-
-                    return BuildFlaggedDiaryStipendResponse(
-                        wallet,
-                        caller.UserId,
-                        idempotencyKey,
+                    return await SaveFlaggedAsync(
                         $"Payment of ${stipendAmount:F2} exceeds configured auto-disbursement threshold limit (${effectiveThreshold:F2}). Routed to administrator review queue.");
                 }
 
@@ -3976,12 +3962,7 @@ public static class PaymentEndpoints
                         ReasonForChange = "Diary stipend halted pending Form W-9 verification",
                         VersionIndex = wallet.VersionIndex
                     });
-                    await dbContext.SaveChangesAsync(ct);
-
-                    return BuildFlaggedDiaryStipendResponse(
-                        wallet,
-                        caller.UserId,
-                        idempotencyKey,
+                    return await SaveFlaggedAsync(
                         $"Annual taxable payments reach ${projectedTaxable:F2} without a verified Form W-9. Stipend credit halted for review.",
                         wallet.W9Status);
                 }

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
+using Cadence.Database.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -140,7 +141,8 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
         factory.SkipIfUnavailable();
         var study = await SeedStudyAsync();
         string before = await SnapshotAsync(study);
-        using var client = Client(TestSecurityContext.Identity($"outsider-{Guid.NewGuid():N}", role) with { StudyIds = [$"S-OTHER-{Guid.NewGuid():N}"] });
+        var caller = TestSecurityContext.Identity($"outsider-{Guid.NewGuid():N}", role) with { StudyIds = [$"S-OTHER-{Guid.NewGuid():N}"] };
+        using var client = Client(caller);
 
         (await IdsAsync(client, "/participant/wallets")).Should().BeEmpty();
         (await IdsAsync(client, "/participant/expenses")).Should().BeEmpty();
@@ -155,7 +157,12 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
 
         if (role == "Grants Manager")
         {
-            (await client.PostAsync($"{Base}/invoices/{study.InvoiceA}/approve", null, Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            string approvePath = $"{Base}/invoices/{study.InvoiceA}/approve";
+            using var approveReq = new HttpRequestMessage(HttpMethod.Post, approvePath);
+            approveReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(caller.UserId, approvePath, "payments.invoice.approve", ["finance_officer"]));
+            (await client.SendAsync(approveReq, Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
             (await client.PostAsJsonAsync($"{Base}/invoices/{study.InvoiceA}/reconcile", new { payment_reference = "WIRE-9" }, Ct))
                 .StatusCode.Should().Be(HttpStatusCode.NotFound);
             (await client.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -181,7 +188,12 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
         var study = await SeedStudyAsync();
         using (var finance = Client(TestSecurityContext.Identity("finance-1", "Grants Manager") with { StudyIds = [study.StudyId] }))
         {
-            (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/approve", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+            string approvePath = $"{Base}/invoices/{study.InvoiceA}/approve";
+            using var approveReq = new HttpRequestMessage(HttpMethod.Post, approvePath);
+            approveReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken("finance-1", approvePath, "payments.invoice.approve", ["finance_officer"]));
+            (await finance.SendAsync(approveReq, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
             (await finance.PostAsJsonAsync($"{Base}/invoices/{study.InvoiceA}/reconcile", new { payment_reference = "WIRE-1" }, Ct))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
@@ -229,6 +241,7 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
         string tag = Guid.NewGuid().ToString("N")[..12];
         var study = new SeededStudy($"S-{tag}", $"SITE-A-{tag}", $"SITE-B-{tag}", $"SUBJ-A-{tag}", $"SUBJ-B-{tag}");
         await using var scope = factory.Services.CreateAsyncScope();
+        using var _ = scope.ServiceProvider.GetRequiredService<IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
         var db = scope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
         DateTimeOffset now = DateTimeOffset.UnixEpoch;
 

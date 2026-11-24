@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Eisf.Domain;
 using Cadence.Apps.Eisf.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Tenancy;
@@ -25,6 +26,7 @@ public sealed class EisfDbContext(DbContextOptions<EisfDbContext> options) : DbC
     public DbSet<EisfDocumentRecord> EisfDocumentRecords => Set<EisfDocumentRecord>();
     public DbSet<EisfDocumentRevision> EisfDocumentRevisions => Set<EisfDocumentRevision>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +38,7 @@ public sealed class EisfDbContext(DbContextOptions<EisfDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new EisfDocumentRecordConfiguration());
         modelBuilder.ApplyConfiguration(new EisfDocumentRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -160,9 +161,9 @@ public sealed class VisitLetterPdfPipelineTests
         string renderedHtml = await renderResp.Content.ReadAsStringAsync(ct);
         renderedHtml.Should().NotContain(Canary).And.Contain("&lt;div data-canary=&quot;ctms-finding-marker&quot;&gt;");
 
-        var compileResp = await craClient.PostAsJsonAsync(
-            "/api/v1/ctms/letters/compile?templateName=follow_up_letter",
-            new
+        using var compileReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/letters/compile?templateName=follow_up_letter")
+        {
+            Content = JsonContent.Create(new
             {
                 craId = "CRA-01",
                 createdAt = "2026-11-19",
@@ -170,8 +171,12 @@ public sealed class VisitLetterPdfPipelineTests
                 siteId = "SITE-01",
                 visitId = "VISIT-VERIFY-001",
                 findings = new[] { new { text = Canary, severity = "MINOR", resolutionStatus = "OPEN" } },
-            },
-            ct);
+            }),
+        };
+        compileReq.Headers.Add(
+            "X-Sig-Token",
+            TestSecurityContext.CreateSigToken("CRA-01", "/api/v1/ctms/letters/compile", "ctms.letter.compile", ["CRA"]));
+        var compileResp = await craClient.SendAsync(compileReq, ct);
         compileResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var compiled = await compileResp.Content.ReadFromJsonAsync<VisitLetterCompilationResultDto>(ct);
         Encoding.UTF8.GetString(Convert.FromBase64String(compiled!.PdfBase64))

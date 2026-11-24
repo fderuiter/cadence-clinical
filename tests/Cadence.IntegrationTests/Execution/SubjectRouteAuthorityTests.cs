@@ -91,9 +91,14 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Screening);
-        using var client = factory.CreateSignedClient(Caller("crc", "crc"));
+        var caller = Caller("crc", "crc");
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(caller with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(caller.UserId, path, "execution.subject.withdraw", [.. caller.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "WITHDRAWN" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "WITHDRAWN" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Withdrawn);
@@ -135,9 +140,14 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller($"no-unblind-{role}", role));
+        var caller = Caller($"no-unblind-{role}", role);
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(caller with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(caller.UserId, path, "execution.subject.unblind", [.. caller.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNAUTHORIZED_UNBLIND_ROLE");
@@ -171,9 +181,13 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         var unblinder = Caller($"unblinder-{role}", role);
-        using var client = factory.CreateSignedClient(unblinder);
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(unblinder with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(unblinder.UserId, path, "execution.subject.unblind", [.. unblinder.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
         var stored = await ReadSubjectAsync(subject);
@@ -202,9 +216,15 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("unblinder-short", "Principal Investigator") with { ChangeReason = "SAE" });
+        var caller = Caller("unblinder-short", "Principal Investigator");
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(caller with
+        {
+            ChangeReason = "Acute SAE clinical review",
+            SigToken = TestSecurityContext.CreateSigToken(caller.UserId, path, "execution.subject.unblind", [.. caller.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNBLINDING_REASON_TOO_SHORT");

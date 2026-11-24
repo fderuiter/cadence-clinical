@@ -53,6 +53,11 @@ public static class SubjectErrors
         DomainError.Validation("UNBLINDING_REASON_TOO_SHORT",
             $"An emergency unblinding needs a reason for change of at least {minimumLength} characters explaining the clinical necessity.");
 
+    /// <summary>A participant withdrawal's reason is shorter than the required 50-character clinical justification.</summary>
+    public static DomainError WithdrawalReasonTooShort(int minimumLength) =>
+        DomainError.Validation("WITHDRAWAL_REASON_TOO_SHORT",
+            $"Withdrawing a participant needs a reason for change of at least {minimumLength} characters explaining the clinical justification.");
+
     /// <summary>A signed consent was submitted without <c>icf_signed_date</c> and no date is on file for that
     /// consent version. The legacy system defaulted the date to the time of the request; this port rejects it
     /// instead (#4824).</summary>

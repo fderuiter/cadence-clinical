@@ -13,8 +13,10 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Audit;
 using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
+using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -52,6 +54,7 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
 
         await using (var scope = factory.Services.CreateAsyncScope())
         {
+            using var _ = scope.ServiceProvider.GetRequiredService<IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
             var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
 
             db.CtmsDelegations.Add(new CtmsDelegation("DEL-BETA-ONLY")
@@ -237,6 +240,9 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
                 Encoding.UTF8,
                 "application/json"),
         };
+        signCrossReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("pi-alpha-shared", "/api/v1/ctms/doa/sign-off", "ctms.doa.sign_off", ["principal_investigator"]));
         using var revCrossReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/revoke")
         {
             Content = new StringContent(
@@ -248,7 +254,11 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
         var resDoaLogDelegOnly = await alphaDm.GetAsync("/api/v1/ctms/doa/sites/SITE-BETA-DELEG/log", Ct);
         var resDoaLogShared = await alphaPiShared.GetAsync("/api/v1/ctms/doa/sites/SITE-SHARED/log", Ct);
         var resDoaAuditLeak = await alphaPiSite1.GetAsync("/api/v1/ctms/doa/sites/SITE-1/log", Ct);
-        var resDoaPdf = await alphaDm.GetAsync("/api/v1/ctms/doa/sites/SITE-BETA-DELEG/export-pdf", Ct);
+        using var doaPdfReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/ctms/doa/sites/SITE-BETA-DELEG/export-pdf");
+        doaPdfReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("dm-alpha-1", "/api/v1/ctms/doa/sites/SITE-BETA-DELEG/export-pdf", "ctms.doa.export_pdf", ["sponsor_dm"]));
+        var resDoaPdf = await alphaDm.SendAsync(doaPdfReq, Ct);
         var resDoaDelegate = await alphaDm.SendAsync(delCrossReq, Ct);
         var resDoaSignOff = await alphaPiShared.SendAsync(signCrossReq, Ct);
         var resDoaRevoke = await alphaDm.SendAsync(revCrossReq, Ct);
@@ -257,10 +267,14 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
             "/api/v1/ctms/letters/render?templateName=confirmation_letter",
             new { craId = "cra-alpha-nosite", createdAt = "2026-11-22", studyId = "STUDY-ALPHA", siteId = "SITE-ALPHA-UNASSIGNED-99", visitType = "IMV" },
             Ct);
-        var resLetterCompile = await alphaCraSite1.PostAsJsonAsync(
-            "/api/v1/ctms/letters/compile?templateName=follow_up_letter",
-            new { craId = "cra-alpha-1", createdAt = "2026-11-22", studyId = "STUDY-ALPHA", siteId = "SITE-1", visitId = visitBetaId, visitType = "IMV" },
-            Ct);
+        using var compileReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/letters/compile?templateName=follow_up_letter")
+        {
+            Content = JsonContent.Create(new { craId = "cra-alpha-1", createdAt = "2026-11-22", studyId = "STUDY-ALPHA", siteId = "SITE-1", visitId = visitBetaId, visitType = "IMV" }),
+        };
+        compileReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("cra-alpha-1", "/api/v1/ctms/letters/compile", "ctms.letter.compile", ["cra"]));
+        var resLetterCompile = await alphaCraSite1.SendAsync(compileReq, Ct);
         var resLetterPdf = await alphaCraSite1.GetAsync("/api/v1/ctms/letters/LTR-BETA-NOKEY/pdf", Ct);
 
         resDoaLogDelegOnly.StatusCode.Should().Be(HttpStatusCode.Forbidden);

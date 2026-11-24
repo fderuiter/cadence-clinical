@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Database.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -188,6 +189,7 @@ public sealed class SceStudyScopeTests(InteropPostgresApiFactory factory) : ICla
     private async Task<string> SeedProgramAsync(string study)
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var _ = scope.ServiceProvider.GetRequiredService<IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
         var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
         var program = new StatisticalProgram
         {
