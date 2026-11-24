@@ -188,16 +188,6 @@ public static partial class TicketEndpoints
         TicketStatus.PENDING_REGULATORY_REVIEW,
     ];
 
-    private static readonly HashSet<string> SiteCommentRestrictedRoles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        RoleNormalization.ROLE_CRC,
-        RoleNormalization.ROLE_INVESTIGATOR,
-        RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR,
-        RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
-        RoleNormalization.ROLE_LEAD_INVESTIGATOR,
-        RoleNormalization.ROLE_PHARMACIST,
-    };
-
     private static readonly HashSet<string> SponsorCommentCapableRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         RoleNormalization.ROLE_SYSADMIN,
@@ -211,6 +201,8 @@ public static partial class TicketEndpoints
         RoleNormalization.ROLE_REVIEWER,
         RoleNormalization.ROLE_FINANCE_OFFICER,
         RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        "tmf_auditor",
+        "tmf auditor",
         RoleNormalization.ROLE_UNBLINDED_STATISTICIAN,
         RoleNormalization.ROLE_IDMC,
         RoleNormalization.ROLE_EMERGENCY_UNBLINDER,
@@ -892,7 +884,7 @@ public static partial class TicketEndpoints
             && IsSiteRestrictedCommentCaller(principal))
         {
             return ClinicalScopeGuard.Forbidden(
-                detail: "Site-bound clinical personnel may read and post PUBLIC comments only.",
+                detail: "Only callers holding sponsor or oversight roles may read or post INTERNAL_SPONSOR comments.",
                 title: "Internal sponsor comment forbidden");
         }
 
@@ -1325,13 +1317,8 @@ public static partial class TicketEndpoints
 
     private static bool IsSiteRestrictedCommentCaller(Principal principal)
     {
-        var normalized = RoleNormalization.GetNormalizedRoles(principal.Roles);
-        if (normalized.Any(SponsorCommentCapableRoles.Contains))
-        {
-            return false;
-        }
-
-        return normalized.Any(SiteCommentRestrictedRoles.Contains);
+        var normalized = RoleNormalization.GetNormalizedRoles(principal.Roles.Concat(principal.RawRoles));
+        return !normalized.Any(SponsorCommentCapableRoles.Contains);
     }
 
     private static TicketCommentResponseDto ToCommentDto(TicketComment comment) =>

@@ -170,7 +170,6 @@
 
 <script setup>
 import { computed, watch } from "vue";
-import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer, ClinicalIcon } from "ui";
 import {
@@ -183,17 +182,38 @@ import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
+import { resolveStorePinia } from "../stores/onboardingSummary.js";
 import { useAuthStore } from "../stores/auth";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
+const props = defineProps({
+  openOnMount: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["mounted-open"]);
+
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
-const activeCanvasStore = computed(() => {
-  const pinia = getActivePinia();
-  return pinia ? useStudyCanvasStore(pinia) : null;
-});
+const activeCanvasStore = computed(
+  () => resolveStorePinia(authStore)?.state?.value?.studyCanvas || null
+);
+
+watch(
+  () => props.openOnMount,
+  (shouldOpen) => {
+    if (shouldOpen) {
+      if (!onboardingStore.isDrawerOpen) {
+        onboardingStore.openDrawer();
+      }
+      emit("mounted-open");
+    }
+  },
+  { immediate: true }
+);
 const router = useRouter();
 let activeRoute = null;
 try {

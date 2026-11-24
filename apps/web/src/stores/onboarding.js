@@ -1,106 +1,40 @@
 import { defineStore, getActivePinia } from "pinia";
-import { registerLogoutCleanup } from "../auth/sessionCoordinator.js";
 import {
-  buildDataCollectionPath,
-  buildScopedWorkflowPath,
-  buildStudiesWorkspacePath,
-  resolveSiteReadinessPath,
-} from "../canvas/palette";
-import {
-  ROLE_ALIASES,
-  resolveLensEffectiveRoles,
-  resolvePersonaCatalogKey,
-} from "../catalog/staffPersonaCore.js";
-import {
-  DEFAULT_SETUP_TASKS,
-  PERSONA_TOUR_SEQUENCES,
-  getPersonaOnboardingEntry,
-} from "../catalog/staffPersonaOnboarding.js";
-import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
+  registerLogoutCleanup,
+  registerOnboardingSessionBridge,
+} from "../auth/sessionCoordinator.js";
+import { resolvePersonaCatalogKey } from "../catalog/staffPersonaCore.js";
+import { PERSONA_TOUR_SEQUENCES } from "../catalog/staffPersonaOnboarding.js";
 import {
   demoNowIso,
   demoNowMs,
   demoRandomToken,
-  isDemoBuild,
   nextDemoStep,
 } from "../utils/demoMode";
+import { scopePrefix, storageScopeOf } from "../utils/userScopedStorage.js";
 import {
-  scopePrefix,
-  scopedKey,
-  storageScopeOf,
-} from "../utils/userScopedStorage.js";
-import { useAuthStore } from "./auth";
+  DEFAULT_SETUP_TASKS,
+  cloneCatalogChecklist,
+  effectiveRolesForPersona,
+  effectiveRolesForPersonaLens,
+  getAuthStoreSafe,
+  hasRequiredRole,
+  isTourRouteAuthorized,
+  readOnboardingJsonArray,
+  resolveAuthorizedTaskRoute,
+  resolveOnboardingStorageKey,
+} from "./onboardingSummary";
 
-export { DEFAULT_SETUP_TASKS };
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
-
-const DATA_COLLECTION_ROLES = [
-  ...SITE_READINESS_SITE_ROLES,
-  ...SITE_READINESS_SPONSOR_ROLES,
-];
-
-const AUDITOR_PAIR = ["auditor", "tmf_auditor"];
-
-const OBSERVATION_ROLES = [...DATA_COLLECTION_ROLES, ...AUDITOR_PAIR];
-
-const ETMF_ROLES = OBSERVATION_ROLES;
-
-const DATA_LOCK_ROLES = [
-  "data_manager",
-  "sponsor_designer",
-  "sponsor_admin",
-  "super_admin",
-];
-
-const EXPORTS_ROLES = [...DATA_LOCK_ROLES, ...AUDITOR_PAIR];
-
-const SAFETY_ROLES = [
-  "safety_reviewer",
-  "safety_physician",
-  "qppv",
-  "qppv_officer",
-  "qualified_person_pv",
-  "safety_officer",
-  "sponsor_pv_officer",
-  "sponsor_medical_monitor",
-  "medical_monitor",
-  "sponsor_admin",
-  "data_manager",
-  "super_admin",
-];
-
-const SITE_READINESS_ALL_ROLES = DATA_COLLECTION_ROLES;
-
-const ROUTE_REQUIRED_ROLES = {
-  study: null,
-  overview: null,
-  training: null,
-  tickets: null,
-  knowledge: null,
-  ecrf: DATA_COLLECTION_ROLES,
-  observation: OBSERVATION_ROLES,
-  ctms: SITE_READINESS_SPONSOR_ROLES,
-  ssu: SITE_READINESS_ALL_ROLES,
-  etmf: ETMF_ROLES,
-  "data-lock": DATA_LOCK_ROLES,
-  exports: EXPORTS_ROLES,
-  safety: SAFETY_ROLES,
+export {
+  DEFAULT_SETUP_TASKS,
+  effectiveRolesForPersona,
+  effectiveRolesForPersonaLens,
+  hasRequiredRole,
+  isTourRouteAuthorized,
+  resolveAuthorizedTaskRoute,
 };
 
-const NON_ONBOARDING_ROUTES = new Set([
-  "landing",
-  "login",
-  "forbidden",
-  "unavailable",
-]);
+export const ROLE_STEP_SEQUENCES = PERSONA_TOUR_SEQUENCES;
 
 const LEGACY_FIELDS = [
   "current_step",
@@ -110,254 +44,8 @@ const LEGACY_FIELDS = [
   "tasks",
 ];
 
-export const ROLE_STEP_SEQUENCES = PERSONA_TOUR_SEQUENCES;
-
-export function hasRequiredRole(userRoles, requiredRoles) {
-  if (!requiredRoles || requiredRoles.length === 0) return true;
-  return (userRoles || []).some((uRole) => {
-    if (requiredRoles.includes(uRole)) return true;
-    const aliases = ROLE_ALIASES[uRole] || [];
-    return aliases.some((alias) => requiredRoles.includes(alias));
-  });
-}
-
-function getAuthStoreSafe() {
-  try {
-    return useAuthStore();
-  } catch {
-    return null;
-  }
-}
-
-export function effectiveRolesForPersonaLens(personaKey, authStoreOverride) {
-  const authStore = authStoreOverride || getAuthStoreSafe();
-  return resolveLensEffectiveRoles(personaKey, authStore?.rawRoles || []);
-}
-
-function extractObservationRefFromTask(task) {
-  const raw =
-    typeof task === "string"
-      ? task.trim()
-      : typeof task?.route === "string"
-        ? task.route.trim()
-        : "";
-  const cleanPath = raw.split("?")[0];
-  if (!cleanPath.startsWith("/observations/")) return "";
-  return decodeURIComponent(cleanPath.slice("/observations/".length)).trim();
-}
-
-function normalizeTaskRouteName(task) {
-  if (typeof task === "object" && task?.routeName) return task.routeName;
-  const raw =
-    typeof task === "string"
-      ? task.trim()
-      : typeof task?.route === "string"
-        ? task.route.trim()
-        : "";
-  if (!raw) return null;
-  const cleanPath = raw.split("?")[0];
-  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
-    return "study";
-  }
-  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
-    return "observation";
-  }
-  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
-}
-
-function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
-  if (explicitScope && typeof explicitScope === "object") {
-    const siteId = String(explicitScope.siteId || "").trim();
-    return {
-      studyCode: String(explicitScope.studyCode || "").trim(),
-      siteId,
-      explicitSiteId:
-        explicitScope.explicitSiteId !== undefined
-          ? String(explicitScope.explicitSiteId || "").trim()
-          : siteId,
-      subjectCode: String(explicitScope.subjectCode || "").trim(),
-      participantRef: String(explicitScope.participantRef || "").trim(),
-      enrollmentId: String(explicitScope.enrollmentId || "").trim(),
-      observationRef: String(explicitScope.observationRef || "").trim(),
-    };
-  }
-  const piniaState = (explicitPinia || getActivePinia())?.state?.value;
-  if (!piniaState) {
-    return {
-      studyCode: "",
-      siteId: "",
-      explicitSiteId: "",
-      subjectCode: "",
-      participantRef: "",
-      enrollmentId: "",
-      observationRef: "",
-    };
-  }
-  const demo = isDemoBuild();
-  const canvasState = piniaState.studyCanvas;
-  const clinicalState = piniaState.clinicalScope ?? piniaState.clinical;
-  const canvasStudy = String(canvasState?.studyCode || "").trim();
-  const clinicalStudy = !demo
-    ? String(clinicalState?.activeStudyId || "").trim()
-    : "";
-  const studyCode = canvasStudy || clinicalStudy;
-  let siteId = "";
-  if (studyCode) {
-    if (canvasStudy === studyCode) {
-      siteId = String(canvasState?.participantsFilter?.siteId || "").trim();
-    }
-    if (
-      !siteId &&
-      !demo &&
-      String(clinicalState?.activeStudyId || "").trim() === studyCode
-    ) {
-      siteId = String(clinicalState?.activeSiteId || "").trim();
-    }
-  }
-  return {
-    studyCode,
-    siteId,
-    explicitSiteId: siteId,
-    subjectCode: "",
-    participantRef: "",
-    enrollmentId: "",
-    observationRef: "",
-  };
-}
-
-export function resolveAuthorizedTaskRoute(
-  task,
-  userRoles,
-  explicitScope,
-  explicitPinia
-) {
-  if (!task) return null;
-  const routeName = normalizeTaskRouteName(task);
-  if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
-  const scope = readOnboardingWorkspaceScope(explicitScope, explicitPinia);
-
-  const studyCode = scope?.studyCode?.trim() || "";
-  const siteId = scope?.siteId?.trim() || "";
-  const explicitSiteId =
-    scope?.explicitSiteId !== undefined ? scope.explicitSiteId.trim() : siteId;
-  const subjectCode = scope?.subjectCode?.trim() || "";
-  const participantRef = scope?.participantRef?.trim() || "";
-  const enrollmentId = scope?.enrollmentId?.trim() || "";
-  const observationRef = scope?.observationRef?.trim() || "";
-  const workflowScope = { studyCode, siteId, subjectCode };
-
-  if (routeName === "site-readiness") {
-    return resolveSiteReadinessPath(userRoles, workflowScope);
-  }
-  if (routeName === "study") {
-    return isScreenAvailable("study")
-      ? buildStudiesWorkspacePath({ ...workflowScope, participantRef })
-      : null;
-  }
-  if (routeName === "ecrf") {
-    if (!hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)) return null;
-    if (isDemoBuild()) {
-      return isScreenAvailable("ecrf")
-        ? buildDataCollectionPath({
-            studyCode,
-            siteId: explicitSiteId,
-            subjectCode,
-            enrollmentId,
-          })
-        : null;
-    }
-    if (!isScreenAvailable("study")) return null;
-    return studyCode || explicitSiteId || participantRef || subjectCode
-      ? buildDataCollectionPath({
-          studyCode,
-          siteId: explicitSiteId,
-          participantRef,
-          subjectCode,
-          enrollmentId,
-        })
-      : "/studies";
-  }
-  if (routeName === "observation") {
-    if (!isTourRouteAuthorized("observation", userRoles)) return null;
-    const resolvedObsRef =
-      observationRef || extractObservationRefFromTask(task);
-    if (resolvedObsRef) {
-      return buildScopedWorkflowPath(
-        `/observations/${encodeURIComponent(resolvedObsRef)}`,
-        workflowScope
-      );
-    }
-    if (isDemoBuild() && DEMO_MODULE_CATALOG.observation?.defaultPath) {
-      return DEMO_MODULE_CATALOG.observation.defaultPath;
-    }
-    return isScreenAvailable("study")
-      ? buildStudiesWorkspacePath({ ...workflowScope, participantRef })
-      : "/observations/OBS-1001";
-  }
-  if (routeName in ROUTE_REQUIRED_ROLES) {
-    return isTourRouteAuthorized(routeName, userRoles)
-      ? buildScopedWorkflowPath(`/${routeName}`, workflowScope)
-      : null;
-  }
-  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
-  if (catalogEntry) {
-    if (!isScreenAvailable(routeName)) return null;
-    if (
-      catalogEntry.requiresRole.length > 0 &&
-      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
-    ) {
-      return null;
-    }
-    if (catalogEntry.routeName === "observation") {
-      return catalogEntry.defaultPath;
-    }
-    return buildScopedWorkflowPath(catalogEntry.defaultPath, workflowScope);
-  }
-  return null;
-}
-
-export function isTourRouteAuthorized(routeName, userRoles) {
-  if (!routeName) return true;
-  if (NON_ONBOARDING_ROUTES.has(routeName)) {
-    return false;
-  }
-  if (!isScreenAvailable(routeName)) return false;
-  if (routeName in ROUTE_REQUIRED_ROLES) {
-    return hasRequiredRole(userRoles, ROUTE_REQUIRED_ROLES[routeName]);
-  }
-  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
-  if (catalogEntry) {
-    return (
-      catalogEntry.requiresRole.length === 0 ||
-      hasRequiredRole(userRoles, catalogEntry.requiresRole)
-    );
-  }
-  return false;
-}
-
 function getActivePersona() {
   return getAuthStoreSafe()?.currentPersona || "super_admin";
-}
-
-function cloneCatalogChecklist(personaKey) {
-  const authStore = getAuthStoreSafe();
-  const entry = getPersonaOnboardingEntry(
-    personaKey,
-    authStore?.rawRoles || []
-  );
-  const source = entry?.checklist || DEFAULT_SETUP_TASKS;
-  return source.map((task) => ({
-    ...task,
-    completed: Boolean(task.completed),
-    keywords: Array.isArray(task.keywords) ? [...task.keywords] : [],
-  }));
-}
-
-function resolveOnboardingKey(personaKey, field) {
-  const scope = storageScopeOf(getAuthStoreSafe());
-  return scope
-    ? scopedKey(scope, "onboarding", personaKey, field)
-    : `onboarding_${personaKey}_${field}`;
 }
 
 function migrateLegacyKeysIfUnscoped() {
@@ -391,24 +79,14 @@ function migrateLegacyKeysIfUnscoped() {
   }
 }
 
-function readJsonArray(ls, key) {
-  const raw = key ? ls.getItem(key) : null;
-  if (raw === null) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
 function readStorageForPersona(personaKey) {
   let currentStep = 1;
   let isActive = false;
   let disabled = false;
   let bypassOverview = false;
   let events = [];
-  let tasks = cloneCatalogChecklist(personaKey);
+  const authStore = getAuthStoreSafe();
+  let tasks = cloneCatalogChecklist(personaKey, authStore);
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -416,7 +94,7 @@ function readStorageForPersona(personaKey) {
       migrateLegacyKeysIfUnscoped();
 
       const storedStep = ls.getItem(
-        resolveOnboardingKey(personaKey, "current_step")
+        resolveOnboardingStorageKey(personaKey, "current_step", authStore)
       );
       if (storedStep !== null) {
         const parsed = parseInt(storedStep, 10);
@@ -426,34 +104,37 @@ function readStorageForPersona(personaKey) {
       }
 
       disabled =
-        ls.getItem(resolveOnboardingKey(personaKey, "disabled")) === "true";
+        ls.getItem(
+          resolveOnboardingStorageKey(personaKey, "disabled", authStore)
+        ) === "true";
       bypassOverview =
-        ls.getItem(resolveOnboardingKey(personaKey, "bypass_overview")) ===
-        "true";
+        ls.getItem(
+          resolveOnboardingStorageKey(personaKey, "bypass_overview", authStore)
+        ) === "true";
       const storedIsActive = ls.getItem(
-        resolveOnboardingKey(personaKey, "is_active")
+        resolveOnboardingStorageKey(personaKey, "is_active", authStore)
       );
       isActive = disabled ? false : storedIsActive === "true";
 
-      const parsedCompleted = readJsonArray(
+      const parsedCompleted = readOnboardingJsonArray(
         ls,
-        resolveOnboardingKey(personaKey, "completed_tasks")
+        resolveOnboardingStorageKey(personaKey, "completed_tasks", authStore)
       );
       const storedCompletedIds = parsedCompleted
         ? parsedCompleted.filter((id) => typeof id === "string")
         : [];
 
-      const parsedEvents = readJsonArray(
+      const parsedEvents = readOnboardingJsonArray(
         ls,
-        resolveOnboardingKey(personaKey, "events")
+        resolveOnboardingStorageKey(personaKey, "events", authStore)
       );
       if (parsedEvents) {
         events = parsedEvents;
       }
 
-      const parsedTasks = readJsonArray(
+      const parsedTasks = readOnboardingJsonArray(
         ls,
-        resolveOnboardingKey(personaKey, "tasks")
+        resolveOnboardingStorageKey(personaKey, "tasks", authStore)
       );
       if (parsedTasks && parsedTasks.length > 0) {
         tasks = tasks.map((defTask) => {
@@ -663,6 +344,7 @@ export const useOnboardingStore = defineStore("onboarding", {
     persist() {
       if (typeof window !== "undefined" && window.localStorage) {
         try {
+          const authStore = getAuthStoreSafe();
           const targetPersona = this.currentPersona || getActivePersona();
           const entries = [
             ["current_step", String(this.currentStep)],
@@ -674,7 +356,11 @@ export const useOnboardingStore = defineStore("onboarding", {
             ["tasks", JSON.stringify(this.tasks)],
           ];
           for (const [field, value] of entries) {
-            const key = resolveOnboardingKey(targetPersona, field);
+            const key = resolveOnboardingStorageKey(
+              targetPersona,
+              field,
+              authStore
+            );
             if (key) {
               window.localStorage.setItem(key, value);
             }
@@ -874,4 +560,17 @@ registerLogoutCleanup(() => {
   ) {
     onboardingStore.clearSessionState();
   }
+});
+
+registerOnboardingSessionBridge({
+  onRehydratePersona(personaKey, pinia) {
+    const targetPinia = pinia || getActivePinia();
+    if (!targetPinia?._s?.has("onboarding")) {
+      return;
+    }
+    const store = useOnboardingStore(targetPinia);
+    if (typeof store.loadPersonaState === "function") {
+      store.loadPersonaState(personaKey);
+    }
+  },
 });
