@@ -3,7 +3,7 @@
     Cadence Clinical Platform - Automated .NET 10 Developer Environment Setup (Windows / PowerShell)
 
 .DESCRIPTION
-    Verifies and provisions the .NET 10 SDK, global CLI tools, development HTTPS certificates,
+    Verifies and provisions the .NET 10 SDK, pinned local CLI tools, development HTTPS certificates,
     environment configuration (.env), and validates local database connectivity (Postgres).
     Requirements: PRD-SYS-053, ADR-2233
 #>
@@ -97,18 +97,19 @@ if (-not $sdkInstalled -and -not $SkipSdkInstall) {
     Write-Host "  [OK] .NET 10 SDK successfully installed: $newVersion" -ForegroundColor Green
 }
 
-# 2. Install essential global dotnet tools
-Write-Host "`n[2/5] Checking & Installing Global .NET Tools..." -ForegroundColor Yellow
-$tools = @("dotnet-ef", "dotnet-format")
-foreach ($tool in $tools) {
-    try {
-        Write-Host "  Installing/Updating $tool..." -ForegroundColor Gray
-        & dotnet tool update --global $tool 2>$null
-        Write-Host "  [OK] $tool is up to date." -ForegroundColor Green
+# 2. Restore pinned local .NET tools (.config/dotnet-tools.json)
+Write-Host "`n[2/5] Restoring Local .NET Tools (.config/dotnet-tools.json)..." -ForegroundColor Yellow
+$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+Push-Location $repoRoot
+try {
+    & dotnet tool restore
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet tool restore failed with exit code $LASTEXITCODE."
     }
-    catch {
-        Write-Host "  [WARNING] Could not install tool $tool: $_" -ForegroundColor DarkYellow
-    }
+    Write-Host "  [OK] Local .NET tools restored." -ForegroundColor Green
+}
+finally {
+    Pop-Location
 }
 
 $toolsDir = Join-Path $env:USERPROFILE ".dotnet\tools"
