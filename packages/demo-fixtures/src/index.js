@@ -1,4 +1,4 @@
-import { DEMO_MANIFEST } from "./manifest.js";
+import { DEMO_MANIFEST } from "virtual:demo-fixtures-manifest";
 
 export { DEMO_MANIFEST };
 

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,20 +27,23 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// Native C# DbContext seeder for Execution microservice.
-/// Populates GxP demo reference data and initial entities strictly inside <see cref="DemoTenantCode"/>
-/// (<c>cadence-local</c>) so customer and self-serve trial tenants never observe seeded demo participants or compliance
-/// rows. Writes no audit entries: every audit chain entry must come from the audit writer or interceptor so its hashes verify.
+/// Populates GxP demo reference data and initial entities from embedded <c>packages/demo-fixtures/demo-seed.json</c>
+/// strictly inside <see cref="DemoTenantCode"/> (<c>cadence-local</c>) so customer and self-serve trial tenants never
+/// observe seeded demo participants or compliance rows. Writes no audit entries: every audit chain entry must come from
+/// the audit writer or interceptor so its hashes verify.
 /// @req:PRD-SUB-001
 /// @req:PRD-SYS-192
 /// </summary>
-public static class ExecutionDbSeeder
+public static partial class ExecutionDbSeeder
 {
     public const string DemoTenantCode = "cadence-local";
+    private const string SeedResourceName = "Cadence.Apps.Execution.demo-seed.json";
     private const string DemoStudyId = "CADENCE-101";
     private const string DemoDraftReason = "Seed baseline CADENCE-101 randomization scheme for local demo workspace.";
     private const string DemoApproveReason = "Approve baseline CADENCE-101 randomization scheme for local demo workspace.";
     private const string DemoKitSeedReason = "Seed baseline CADENCE-101 site IP kit inventory for local demo workspace.";
 
+    private static readonly ExecutionDemoSeed Seed = ReadEmbeddedDemoSeed();
     private static readonly DateTimeOffset DemoSeedTimestamp = new(2026, 1, 5, 9, 0, 0, TimeSpan.Zero); // deid-ignore
     private static readonly DateTimeOffset DemoSeedApprovalTimestamp = new(2026, 1, 5, 9, 15, 0, TimeSpan.Zero); // deid-ignore
     private static readonly DateTimeOffset DemoKitExpiration = new(2030, 12, 31, 0, 0, 0, TimeSpan.Zero); // deid-ignore
@@ -98,77 +104,48 @@ public static class ExecutionDbSeeder
         }
 
         using IDisposable? rebound = bound is null ? tenantScope?.Bind(demoTenantId) : null;
+        var studyCode = new StudyCode(Seed.Study.Code);
 
         // 1. Seed Site Compliance Caches for the demo tenant only.
         if (!await dbContext.SiteComplianceCaches.AnyAsync(c => c.TenantId == demoTenantId, ct).ConfigureAwait(false))
         {
-            var initialCaches = new[]
-            {
-                SiteComplianceCache.Create(
-                    new StudyCode("CADENCE-101"),
-                    new SiteCode("SITE-101"),
-                    "SITE_ACTIVATION",
-                    isComplete: true,
-                    missingDocuments: Array.Empty<string>()
-                ),
-                SiteComplianceCache.Create(
-                    new StudyCode("CADENCE-101"),
-                    new SiteCode("SITE-102"),
-                    "CONDUCT",
-                    isComplete: true,
-                    missingDocuments: Array.Empty<string>()
-                )
-            };
-
-            foreach (var cache in initialCaches)
-            {
-                cache.TenantId = demoTenantId;
-            }
+            var initialCaches = Seed.Sites
+                .Select(site =>
+                {
+                    var cache = SiteComplianceCache.Create(
+                        studyCode,
+                        new SiteCode(site.Code),
+                        site.ComplianceStage,
+                        isComplete: true,
+                        missingDocuments: Array.Empty<string>());
+                    cache.TenantId = demoTenantId;
+                    return cache;
+                })
+                .ToArray();
 
             await dbContext.SiteComplianceCaches.AddRangeAsync(initialCaches, ct).ConfigureAwait(false);
         }
 
         // 2. Seed canonical demo ClinicalSubjects matching packages/demo-fixtures/demo-seed.json and DevelopmentDemoData.DemoIds.
-        if (!await dbContext.ClinicalSubjects.AnyAsync(s => s.TenantId == demoTenantId, ct).ConfigureAwait(false))
+        if (Seed.Participants.Length > 0 &&
+            !await dbContext.ClinicalSubjects.AnyAsync(s => s.TenantId == demoTenantId, ct).ConfigureAwait(false))
         {
-            var initialSubjects = new[]
-            {
-                ClinicalSubject.Create(
-                    subjectCode: new SubjectCode("SUBJ-101-001"),
-                    studyCode: new StudyCode("CADENCE-101"),
-                    siteCode: new SiteCode("SITE-101"),
-                    enrollmentIndex: 0,
-                    encryptedDemographics: null,
-                    stratFactors: null,
-                    id: new SubjectId(DeriveDemoGuid(demoTenantId, "participant", "SUBJ-101-001")),
-                    kernelEnrollmentId: DeriveDemoGuid(demoTenantId, "enrollment", "SUBJ-101-001")
-                ),
-                ClinicalSubject.Create(
-                    subjectCode: new SubjectCode("SUBJ-101-002"),
-                    studyCode: new StudyCode("CADENCE-101"),
-                    siteCode: new SiteCode("SITE-101"),
-                    enrollmentIndex: 1,
-                    encryptedDemographics: null,
-                    stratFactors: null,
-                    id: new SubjectId(DeriveDemoGuid(demoTenantId, "participant", "SUBJ-101-002")),
-                    kernelEnrollmentId: DeriveDemoGuid(demoTenantId, "enrollment", "SUBJ-101-002")
-                ),
-                ClinicalSubject.Create(
-                    subjectCode: new SubjectCode("SUBJ-102-001"),
-                    studyCode: new StudyCode("CADENCE-101"),
-                    siteCode: new SiteCode("SITE-102"),
-                    enrollmentIndex: 2,
-                    encryptedDemographics: null,
-                    stratFactors: null,
-                    id: new SubjectId(DeriveDemoGuid(demoTenantId, "participant", "SUBJ-102-001")),
-                    kernelEnrollmentId: DeriveDemoGuid(demoTenantId, "enrollment", "SUBJ-102-001")
-                ),
-            };
-
-            foreach (var subject in initialSubjects)
-            {
-                subject.TenantId = demoTenantId;
-            }
+            var initialSubjects = Seed.Participants
+                .Select((participant, index) =>
+                {
+                    var subject = ClinicalSubject.Create(
+                        subjectCode: new SubjectCode(participant.SubjectCode),
+                        studyCode: studyCode,
+                        siteCode: new SiteCode(participant.SiteCode),
+                        enrollmentIndex: index,
+                        encryptedDemographics: null,
+                        stratFactors: null,
+                        id: new SubjectId(DeriveDemoGuid(demoTenantId, "participant", participant.SubjectCode)),
+                        kernelEnrollmentId: DeriveDemoGuid(demoTenantId, "enrollment", participant.SubjectCode));
+                    subject.TenantId = demoTenantId;
+                    return subject;
+                })
+                .ToArray();
 
             await dbContext.ClinicalSubjects.AddRangeAsync(initialSubjects, ct).ConfigureAwait(false);
         }
@@ -317,4 +294,27 @@ public static class ExecutionDbSeeder
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
         return new Guid(bytes, bigEndian: true);
     }
+
+    private static ExecutionDemoSeed ReadEmbeddedDemoSeed()
+    {
+        using Stream stream = typeof(ExecutionDbSeeder).Assembly.GetManifestResourceStream(SeedResourceName)
+            ?? throw new InvalidOperationException($"Missing embedded Execution demo seed '{SeedResourceName}'.");
+        return JsonSerializer.Deserialize(stream, ExecutionDemoSeedJsonContext.Default.ExecutionDemoSeed)
+            ?? throw new InvalidOperationException($"Null Execution demo seed payload in '{SeedResourceName}'.");
+    }
 }
+
+internal sealed record ExecutionDemoSeed(
+    ExecutionStudySeed Study,
+    ExecutionSiteSeed[] Sites,
+    ExecutionParticipantSeed[] Participants);
+
+internal sealed record ExecutionStudySeed(string Code);
+
+internal sealed record ExecutionSiteSeed(string Code, string ComplianceStage);
+
+internal sealed record ExecutionParticipantSeed(string SubjectCode, string SiteCode);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(ExecutionDemoSeed))]
+internal sealed partial class ExecutionDemoSeedJsonContext : JsonSerializerContext;

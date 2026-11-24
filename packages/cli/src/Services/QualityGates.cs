@@ -284,7 +284,7 @@ public static class QualityGates
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("demo-manifest", ["validate-demo-manifest"],
-            "`packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`",
+            "`packages/demo-fixtures/demo-seed.json` matches `docker/cadence-realm.json` in memory with zero committed `manifest.js` or `manifest.d.ts` files",
             ctx => CheckDemoManifest(ctx))
         {
             TakesFiles = true,
@@ -642,7 +642,6 @@ public static class QualityGates
                     using var stagedWorkspace = reader.Materialize(
                     [
                         DemoManifestGeneratorService.DemoSeedRelativePath,
-                        DemoManifestGeneratorService.ExecutionSeedRelativePath,
                         DemoManifestGeneratorService.RealmRelativePath,
                         DemoManifestGeneratorService.ManifestJsRelativePath,
                         DemoManifestGeneratorService.ManifestDtsRelativePath,

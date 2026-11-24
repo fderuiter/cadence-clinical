@@ -40,14 +40,39 @@ describe("Canonical Demo Manifest & Deterministic Demo Ledger (apps/web)", () =>
 
   it("exports canonical CADENCE-101 study, sites, participants, and all synthetic realm personas", () => {
     expect(DEMO_EPOCH_ISO).toBe("2026-01-05T09:00:00Z");
+    expect(DEMO_TENANT_UUID).toBe("3f40baf9-2549-8f65-b106-a1ccdca57d83");
     expect(DEMO_STUDY.code).toBe("CADENCE-101");
+    expect(DEMO_STUDY.uuid).toBe("535717ef-3976-8a05-9b8f-16701fe0febe");
     expect(DEMO_SPONSOR.code).toBe("CADENCE-PHARMA");
-    expect(DEMO_SITES.map((s) => s.code)).toEqual(["SITE-101", "SITE-102"]);
+    expect(DEMO_SPONSOR.organizationUuid).toBe(
+      "2cb1062c-ed44-860a-ba91-c09142e293d0"
+    );
+    expect(
+      DEMO_SITES.map((s) => ({
+        code: s.code,
+        complianceStage: s.complianceStage,
+        siteUuid: s.siteUuid,
+      }))
+    ).toEqual([
+      {
+        code: "SITE-101",
+        complianceStage: "SITE_ACTIVATION",
+        siteUuid: "dd8bf79d-67bd-872a-8299-23eff41807f0",
+      },
+      {
+        code: "SITE-102",
+        complianceStage: "CONDUCT",
+        siteUuid: "4be976d7-2880-892b-85e5-5d990257cd51",
+      },
+    ]);
     expect(DEMO_PARTICIPANTS.map((p) => p.subjectCode)).toEqual([
       "SUBJ-101-001",
       "SUBJ-101-002",
       "SUBJ-102-001",
     ]);
+    expect(DEMO_PARTICIPANTS[0]?.enrollmentUuid).toBe(
+      "04468158-43bd-80f8-92d0-27759ba5b15f"
+    );
     expect(DEMO_PERSONAS.map((p) => p.username)).toEqual([
       "crc.site101",
       "pi.site101",
