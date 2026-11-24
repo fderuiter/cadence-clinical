@@ -105,7 +105,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
-- `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
+- `IX_audit_log_entries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_audit_log_entries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
 ## econsent.biometric_liveness_verifications
@@ -132,7 +133,7 @@ Entity: `BiometricLivenessVerification`
 Indexes:
 
 - `IX_biometric_liveness_verifications_ConsentId`: (`ConsentId`)
-- `IX_biometric_liveness_verifications_LivenessTokenHash`: (`LivenessTokenHash`)
+- `IX_biometric_liveness_verifications_LivenessTokenHash`: unique (`LivenessTokenHash`)
 - `IX_biometric_liveness_verifications_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_biometric_liveness_verifications_tenant_id`: (`tenant_id`)
 

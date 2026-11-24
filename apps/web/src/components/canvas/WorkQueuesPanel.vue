@@ -349,6 +349,7 @@ function normalizeExplanation(
   explanation: KernelExplanationDto
 ): KernelExplanationDto {
   return {
+    ...explanation,
     claim: humanizeExplanationText(explanation.claim),
     steps: (explanation.steps ?? []).map((s) => ({
       claim: humanizeExplanationText(s.claim),
@@ -362,6 +363,7 @@ function normalizeExplanation(
     })),
     next_actions: (explanation.next_actions ?? []).map((n) => ({
       description: humanizeExplanationText(n.description),
+      capability: n.capability ?? null,
       target: n.target,
     })),
   };
@@ -380,7 +382,7 @@ function explainTargetForQueue(queue: KernelWorkQueue): string | null {
     return resolvedStudyRef.value;
   }
   const fallbackStudy =
-    props.studies[0]?.ref ?? loadedStudies.value[0]?.ref ?? null;
+    props.studies?.[0]?.ref ?? loadedStudies.value[0]?.ref ?? null;
   return fallbackStudy && parseNodeRef(fallbackStudy) ? fallbackStudy : null;
 }
 

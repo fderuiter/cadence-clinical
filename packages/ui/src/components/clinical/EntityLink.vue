@@ -16,6 +16,8 @@ defineOptions({
 });
 
 const KIND_LABELS = {
+  tenant: "Workspace",
+  organization: "Organization",
   study: "Study",
   study_site: "Study site",
   site: "Study site",
@@ -23,17 +25,29 @@ const KIND_LABELS = {
   enrollment: "Enrollment",
   person: "Staff member",
   concept: "Concept",
+  concept_mapping: "Concept mapping",
+  code_system: "Code system",
+  code_system_version: "Code system version",
+  standard_version: "Standard version",
+  library_item: "Library item",
+  study_standards_profile: "Standards profile",
   protocol_version: "Protocol version",
   collection_instance: "Form",
   collection_spec: "Form definition",
   observation: "Observation",
   assertion: "Verification",
+  form_query: "Query",
   proposal: "Proposal",
+  artifact: "Document",
   artifact_version: "Document version",
   attestation: "Signature record",
   consent: "Consent record",
   grant: "Role grant",
   role: "Role",
+  qualification: "Qualification",
+  qualification_requirement: "Qualification requirement",
+  effectivity: "Effectivity rule",
+  tenant_membership: "Workspace membership",
   query: "Query",
   validation_finding: "Validation finding",
   validation_run: "Validation run",
@@ -53,7 +67,8 @@ const BARE_UUID_PATTERN =
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:@[1-9][0-9]*)?\b/gi;
 
 function parseEntityRef(raw) {
-  const trimmed = String(raw ?? "").trim();
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
   if (!trimmed) return null;
   const match = NODE_REF_PATTERN.exec(trimmed);
   if (!match) return null;
@@ -115,6 +130,14 @@ function stripTechnicalIds(text, fallbackKind) {
 
 const props = defineProps({
   nodeRef: {
+    type: [String, Object],
+    default: null,
+  },
+  entityType: {
+    type: String,
+    default: "",
+  },
+  entityId: {
     type: String,
     default: "",
   },
@@ -158,9 +181,21 @@ const props = defineProps({
     type: [String, Object],
     default: null,
   },
+  href: {
+    type: String,
+    default: "",
+  },
+  preventNavigation: {
+    type: Boolean,
+    default: true,
+  },
+  tabular: {
+    type: Boolean,
+    default: false,
+  },
   previewMode: {
     type: String,
-    default: "drawer",
+    default: "",
   },
   fullViewLabel: {
     type: String,
@@ -188,7 +223,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["select", "preview", "inspect", "navigate"]);
+const emit = defineEmits(["peek", "select", "preview", "inspect", "navigate"]);
 
 const slots = useSlots();
 const instance = getCurrentInstance();
@@ -205,10 +240,20 @@ const router = computed(
   () => instance?.appContext?.config?.globalProperties?.$router ?? null
 );
 
-const parsedRef = computed(() => parseEntityRef(props.nodeRef));
-const effectiveRef = computed(
-  () => parsedRef.value?.canonical || String(props.nodeRef ?? "").trim()
+const isObjectNodeRef = computed(() =>
+  Boolean(props.nodeRef && typeof props.nodeRef === "object")
 );
+const isStringNodeRef = computed(() => typeof props.nodeRef === "string");
+
+const parsedRef = computed(() =>
+  isStringNodeRef.value ? parseEntityRef(props.nodeRef) : null
+);
+const effectiveRef = computed(() => {
+  if (isStringNodeRef.value) {
+    return parsedRef.value?.canonical || props.nodeRef.trim();
+  }
+  return "";
+});
 
 watch(
   () => [effectiveRef.value, props.resolveRemotely, props.resolveNode],
@@ -261,8 +306,14 @@ const resolvedMeta = computed(() => {
 });
 
 const effectiveKind = computed(() => {
+  const objectType = isObjectNodeRef.value ? props.nodeRef.type : "";
   return (
-    props.kind || resolvedMeta.value?.kind || parsedRef.value?.kind || "record"
+    props.kind ||
+    objectType ||
+    props.entityType ||
+    resolvedMeta.value?.kind ||
+    parsedRef.value?.kind ||
+    "record"
   );
 });
 
@@ -307,9 +358,31 @@ const effectiveStatus = computed(() => {
     .trim();
 });
 
+const resolvedObjectNodeRef = computed(() => {
+  const base = isObjectNodeRef.value ? props.nodeRef : {};
+  const id = String(
+    base.id ??
+      (props.entityId || parsedRef.value?.id || effectiveRef.value || "")
+  );
+  return {
+    type: base.type || props.entityType || effectiveKind.value || "record",
+    id,
+    label: base.label || props.label || id,
+    studyId: base.studyId ?? null,
+    siteId: base.siteId ?? null,
+  };
+});
+
 const baseLabel = computed(() => {
   const explicitLabel = stripTechnicalIds(props.label, "");
   if (explicitLabel) return explicitLabel;
+
+  if (isObjectNodeRef.value) {
+    const objectLabel = stripTechnicalIds(props.nodeRef.label, "");
+    if (objectLabel) return objectLabel;
+    const objectId = stripTechnicalIds(props.nodeRef.id, "");
+    if (objectId) return objectId;
+  }
 
   const metaLabel = stripTechnicalIds(resolvedMeta.value?.label, "");
   if (metaLabel) return metaLabel;
@@ -322,6 +395,11 @@ const baseLabel = computed(() => {
   }
   if (cleanTitle) return cleanTitle;
   if (cleanCode) return cleanCode;
+
+  if (props.entityId) {
+    const cleanEntityId = stripTechnicalIds(props.entityId, "");
+    if (cleanEntityId) return cleanEntityId;
+  }
 
   if (parsedRef.value?.version) {
     return `${kindLabel.value} v${parsedRef.value.version}`;
@@ -338,16 +416,28 @@ const displayText = computed(() => {
   return `${kindLabel.value}: ${label}`;
 });
 
+const fullViewTarget = computed(() => props.to || props.inspectorTo || null);
+
+const effectivePreviewMode = computed(() => {
+  if (props.previewMode) return props.previewMode;
+  if (
+    isObjectNodeRef.value ||
+    (!effectiveRef.value && !fullViewTarget.value && !slots.preview)
+  ) {
+    return "peek";
+  }
+  return "drawer";
+});
+
 const navigationTarget = computed(() => {
-  if (props.previewMode === "inspector" && props.inspectorTo) {
+  if (effectivePreviewMode.value === "inspector" && props.inspectorTo) {
     return props.inspectorTo;
   }
   return props.to || props.inspectorTo || null;
 });
 
-const fullViewTarget = computed(() => props.to || props.inspectorTo || null);
-
 const resolvedHref = computed(() => {
+  if (props.href) return props.href;
   const target = navigationTarget.value;
   if (!target) return "";
   if (typeof target === "string") return target;
@@ -361,7 +451,22 @@ const resolvedHref = computed(() => {
   return "";
 });
 
+const dataEntityType = computed(() => {
+  if (isStringNodeRef.value && !props.entityType && !props.entityId) {
+    return undefined;
+  }
+  return resolvedObjectNodeRef.value.type;
+});
+
+const dataEntityId = computed(() => {
+  if (isStringNodeRef.value && !props.entityType && !props.entityId) {
+    return undefined;
+  }
+  return resolvedObjectNodeRef.value.id;
+});
+
 const tooltipText = computed(() => {
+  if (effectivePreviewMode.value === "peek") return undefined;
   return `Inspect ${formatKindInline(effectiveKind.value)} (${baseLabel.value})`;
 });
 
@@ -439,7 +544,29 @@ async function navigateToFullView() {
 }
 
 async function handleClick(event) {
-  emit("select", effectiveRef.value);
+  const peekPayload = {
+    nodeRef: resolvedObjectNodeRef.value,
+    triggerEl: triggerRef.value || event?.currentTarget || null,
+    event,
+  };
+  emit("peek", peekPayload);
+  emit(
+    "select",
+    effectivePreviewMode.value === "peek" ? peekPayload : effectiveRef.value
+  );
+
+  if (props.href) {
+    if (
+      props.preventNavigation &&
+      event &&
+      typeof event.preventDefault === "function"
+    ) {
+      event.preventDefault();
+    }
+    if (effectivePreviewMode.value === "peek" || !props.preventNavigation) {
+      return;
+    }
+  }
 
   if (
     resolvedHref.value &&
@@ -457,12 +584,16 @@ async function handleClick(event) {
     event.preventDefault();
   }
 
-  if (props.previewMode === "navigate") {
+  if (effectivePreviewMode.value === "peek") {
+    return;
+  }
+
+  if (effectivePreviewMode.value === "navigate") {
     await navigateToFullView();
     return;
   }
 
-  if (props.previewMode === "inspector") {
+  if (effectivePreviewMode.value === "inspector") {
     emit("inspect", effectiveRef.value);
     const inspectTarget = props.inspectorTo || props.to;
     if (
@@ -495,32 +626,56 @@ async function handleClick(event) {
       ref="triggerRef"
       v-bind="$attrs"
       :href="resolvedHref"
-      class="entity-link noderef-chip node-ref-chip"
+      :class="[
+        'entity-link',
+        'clinical-entity-link',
+        'noderef-chip',
+        'node-ref-chip',
+        {
+          'clinical-entity-link-tabular': tabular,
+          'clinical-entity-link-peek': effectivePreviewMode === 'peek',
+        },
+      ]"
+      :data-entity-type="dataEntityType"
+      :data-entity-id="dataEntityId"
       :title="tooltipText"
       @click="handleClick"
     >
-      <span class="entity-link-label noderef-chip-label">{{
-        displayText
-      }}</span>
-      <span v-if="srContext" class="sr-only"> ({{ srContext }})</span>
+      <span class="entity-link-label noderef-chip-label">
+        <slot>{{ displayText }}</slot>
+      </span>
+      <span v-if="srContext" class="sr-only">: {{ srContext }}</span>
     </a>
     <button
       v-else
       ref="triggerRef"
       v-bind="$attrs"
       type="button"
-      class="entity-link entity-link-button noderef-chip node-ref-chip noderef-chip-button"
+      :class="[
+        'entity-link',
+        'clinical-entity-link',
+        'entity-link-button',
+        'noderef-chip',
+        'node-ref-chip',
+        'noderef-chip-button',
+        {
+          'clinical-entity-link-tabular': tabular,
+          'clinical-entity-link-peek': effectivePreviewMode === 'peek',
+        },
+      ]"
+      :data-entity-type="dataEntityType"
+      :data-entity-id="dataEntityId"
       :title="tooltipText"
       @click="handleClick"
     >
-      <span class="entity-link-label noderef-chip-label">{{
-        displayText
-      }}</span>
-      <span v-if="srContext" class="sr-only"> ({{ srContext }})</span>
+      <span class="entity-link-label noderef-chip-label">
+        <slot>{{ displayText }}</slot>
+      </span>
+      <span v-if="srContext" class="sr-only">: {{ srContext }}</span>
     </button>
 
     <ClinicalDrawer
-      v-if="previewMode === 'drawer'"
+      v-if="effectivePreviewMode === 'drawer'"
       v-model="isPreviewOpen"
       :title="baseLabel"
       :subtitle="drawerSubtitle"
@@ -634,17 +789,19 @@ async function handleClick(event) {
 </template>
 
 <style scoped>
-.entity-link {
+.entity-link,
+.clinical-entity-link {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-2xs);
-  min-height: var(--control-target-min);
+  gap: var(--spacing-2xs, 4px);
+  min-height: var(--control-target-min, 24px);
   max-width: 100%;
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--semantic-color-primary);
   font-weight: 500;
+  line-height: 1.35;
   text-decoration: underline;
   text-underline-offset: 2px;
   background: none;
@@ -656,14 +813,32 @@ async function handleClick(event) {
   text-align: left;
 }
 
-.entity-link:hover {
+.entity-link:hover,
+.clinical-entity-link:hover {
   color: var(--semantic-color-primary-dark);
 }
 
-.entity-link:focus-visible {
+.entity-link:focus-visible,
+.clinical-entity-link:focus-visible {
   outline: 2px solid var(--semantic-color-accent);
   outline-offset: 2px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-xs, 4px);
+}
+
+.clinical-entity-link-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .entity-link-masked {
@@ -753,5 +928,16 @@ async function handleClick(event) {
 .entity-link-btn-primary:hover {
   background: var(--semantic-color-primary-dark);
   border-color: var(--semantic-color-primary-dark);
+}
+
+@media (max-width: 640px) {
+  .clinical-entity-link {
+    min-height: var(--touch-target-min, 48px);
+  }
+
+  .clinical-entity-link-peek {
+    min-width: var(--touch-target-min, 48px);
+    padding: 8px 10px;
+  }
 }
 </style>

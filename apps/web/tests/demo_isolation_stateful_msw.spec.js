@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
 import { setupServer } from "msw/node";
 import { createPinia, setActivePinia } from "pinia";
 import { getApiBaseUrl } from "../src/api/authorization.js";
 import { createOpenApiClient, getBaseUrl } from "../src/api/client";
+import ProposalReview from "../src/components/ai/ProposalReview.vue";
 import {
   ensureServiceWorkerController,
   normalizeBasePath,
@@ -827,6 +829,113 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       );
       expect(seenRequests[0].method).toBe("POST");
       expect(JSON.parse(seenRequests[0].body)).toEqual({ value: "125" });
+    });
+  });
+
+  describe("Governed AI proposal review & deterministic rejection (ADR-2635)", () => {
+    let store;
+    let server;
+
+    beforeEach(() => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      store = createWebDemoStore();
+      server = setupServer(
+        ...buildWebGatewayHandlers({ forceDemo: true, store })
+      );
+      server.listen({ onUnhandledRequest: "error" });
+    });
+
+    afterEach(() => {
+      server.close();
+    });
+
+    it("seeds Open AutomationAgent proposal on CADENCE-101, resolves plan/proposal nodes, and records deterministic Rejected decision in ProposalReview.vue", async () => {
+      const pinia = createPinia();
+      setActivePinia(pinia);
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      authStore.switchPersona("sponsor_designer");
+
+      const origin = window.location.origin;
+      const openListRes = await fetch(
+        `${origin}/api/v1/kernel/studies/CADENCE-101/proposals?status=Open&limit=5`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(openListRes.status).toBe(200);
+      const openProposals = await openListRes.json();
+      expect(openProposals).toHaveLength(1);
+      const seeded = openProposals[0];
+      expect(seeded.status).toBe("Open");
+      expect(seeded.proposed_by_kind).toBe("AutomationAgent");
+      expect(seeded.model_id).toBe("cadence-protocol-guardian-1.2");
+
+      const planNodeRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(seeded.plan.ref)}`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(planNodeRes.status).toBe(200);
+      const planNode = await planNodeRes.json();
+      expect(planNode.kind).toBe("plan");
+      expect(planNode.title).toContain("Protocol Amendment 2");
+
+      const propNodeRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(seeded.ref)}`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(propNodeRes.status).toBe(200);
+      const propNode = await propNodeRes.json();
+      expect(propNode.kind).toBe("proposal");
+      expect(propNode.status).toBe("Open");
+
+      await router.push("/studies/CADENCE-101");
+      await router.isReady();
+
+      const wrapper = mount(ProposalReview, {
+        props: {
+          studyCode: "CADENCE-101",
+          proposalRef: seeded.ref,
+          reviewer: "qa_director",
+        },
+        global: { plugins: [pinia, router] },
+      });
+      await vi.waitFor(() => {
+        expect(wrapper.find("#proposal-review-ai").exists()).toBe(true);
+      });
+
+      expect(wrapper.find("#proposal-review-state").text()).toBe("Open");
+      expect(wrapper.find("#proposal-approve-blockers").text()).toContain(
+        "source"
+      );
+
+      // Open both sources (plan + protocol_version)
+      await wrapper.find("#proposal-source-open-0").trigger("click");
+      await flushPromises();
+      await wrapper.find("#proposal-source-open-1").trigger("click");
+      await vi.waitFor(() => {
+        expect(wrapper.find("#proposal-review-open-rule").text()).toContain(
+          "2 of 2 opened"
+        );
+      });
+
+      // Reject proposal with reason
+      await wrapper
+        .find("#proposal-reject-reason")
+        .setValue(
+          "Week 4 PK trough window cannot widen beyond +/-2 days per clinical pharmacology plan."
+        );
+      await wrapper.find("#proposal-reject-form").trigger("submit");
+      await vi.waitFor(() => {
+        expect(wrapper.find("#proposal-review-state").text()).toBe("Rejected");
+      });
+
+      expect(wrapper.find("#proposal-review-decision-text").text()).toContain(
+        "Rejected by"
+      );
+      expect(wrapper.find("#proposal-review-decision-text").text()).toContain(
+        "Week 4 PK trough window"
+      );
+
+      wrapper.unmount();
     });
   });
 });

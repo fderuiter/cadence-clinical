@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain.Audit;
+using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
@@ -137,6 +138,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
+        AuditLogEntryConfiguration.ConfigureChainIndexes(modelBuilder.Entity<AuditLogEntry>());
 
         modelBuilder.AddTransactionalOutboxEntities();
 

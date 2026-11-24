@@ -1,6 +1,13 @@
 import { defineStore } from "pinia";
+import {
+  buildCanvasSectionPath,
+  buildDataCollectionPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
+  resolveSiteReadinessPath,
+} from "../canvas/palette";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
-import { isScreenAvailable } from "../router/availability";
+import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
@@ -42,93 +49,138 @@ export function hasRequiredRole(userRoles, requiredRoles) {
 }
 
 function effectiveRolesForStore(personaKey) {
+  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
   try {
     const authStore = useAuthStore();
     if (authStore?.rawRoles?.length > 0) {
-      return authStore.normalizedRoles || [];
+      const roles = authStore.normalizedRoles || [];
+      return preset &&
+        personaKey !== "super_admin" &&
+        roles.includes("sponsor_admin")
+        ? preset.requires
+        : roles;
     }
   } catch {
     // Pinia or auth store may not be initialized yet
   }
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+  return preset?.requires || ["sponsor_admin"];
 }
 
 function normalizeTaskRouteName(task) {
   if (task?.routeName) return task.routeName;
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
-  if (rawRoute === "/studies" || rawRoute.startsWith("/studies/")) {
+  const cleanPath = rawRoute.split("?")[0];
+  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
     return "study";
   }
-  if (rawRoute === "/overview") return "overview";
-  if (rawRoute === "/ecrf") return "ecrf";
-  if (rawRoute === "/ctms") return "ctms";
-  if (rawRoute === "/ssu") return "ssu";
-  return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
+  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
+    return "observation";
+  }
+  if (cleanPath === "/overview") return "overview";
+  if (cleanPath === "/ecrf") return "ecrf";
+  if (cleanPath === "/ctms") return "ctms";
+  if (cleanPath === "/ssu") return "ssu";
+  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles) {
+export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
 
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  const explicitSiteId =
+    scope?.explicitSiteId !== undefined ? scope.explicitSiteId.trim() : siteId;
+  const subjectCode = scope?.subjectCode?.trim() || "";
+  const participantRef = scope?.participantRef?.trim() || "";
+  const enrollmentId = scope?.enrollmentId?.trim() || "";
+
   if (routeName === "study") {
-    return isScreenAvailable("study") ? "/studies" : null;
+    return isScreenAvailable("study")
+      ? buildStudiesWorkspacePath({
+          studyCode,
+          siteId,
+          subjectCode,
+          participantRef,
+        })
+      : null;
   }
   if (routeName === "overview") {
     if (isDemoBuild()) {
-      return isScreenAvailable("overview") ? "/overview" : null;
+      return isScreenAvailable("overview")
+        ? buildScopedWorkflowPath("/overview", {
+            studyCode,
+            siteId,
+            subjectCode,
+          })
+        : null;
     }
-    return isScreenAvailable("study") ? "/studies" : null;
+    return isScreenAvailable("study")
+      ? buildStudiesWorkspacePath({
+          studyCode,
+          siteId,
+          subjectCode,
+          participantRef,
+        })
+      : null;
   }
   if (routeName === "ecrf") {
     if (isDemoBuild()) {
       return isScreenAvailable("ecrf") &&
         hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-        ? "/ecrf"
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
-    return isScreenAvailable("study") &&
-      hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/studies"
-      : null;
-  }
-  if (routeName === "site-readiness") {
-    if (!isDemoBuild()) {
-      if (!isScreenAvailable("study")) return null;
-      if (hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)) {
-        return "/studies?stage=start&section=startup-greenlight";
-      }
-      if (hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)) {
-        return "/studies?stage=start&section=site-activation";
-      }
+    if (
+      !isScreenAvailable("study") ||
+      !hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+    ) {
       return null;
     }
-    if (
-      isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-    ) {
-      return "/ctms";
-    }
-    if (
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
-    ) {
-      return "/ssu";
-    }
-    return null;
+    return studyCode || explicitSiteId || participantRef || subjectCode
+      ? buildDataCollectionPath({
+          studyCode,
+          siteId: explicitSiteId,
+          participantRef,
+          subjectCode,
+          enrollmentId,
+        })
+      : "/studies";
+  }
+  if (routeName === "site-readiness") {
+    return resolveSiteReadinessPath(userRoles, {
+      studyCode,
+      siteId,
+      subjectCode,
+      participantRef,
+    });
   }
   if (routeName === "ctms") {
     if (!isDemoBuild()) {
       return isScreenAvailable("study") &&
         hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-        ? "/studies?stage=start&section=startup-greenlight"
+        ? buildCanvasSectionPath("start", "startup-greenlight", {
+            studyCode,
+            siteId,
+            subjectCode,
+            participantRef,
+          })
         : null;
     }
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-      ? "/ctms"
+      ? buildScopedWorkflowPath("/ctms", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "ssu") {
@@ -138,10 +190,32 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
     ]);
     if (!isDemoBuild()) {
       return isScreenAvailable("study") && allowed
-        ? "/studies?stage=start&section=site-activation"
+        ? buildCanvasSectionPath("start", "site-activation", {
+            studyCode,
+            siteId,
+            subjectCode,
+            participantRef,
+          })
         : null;
     }
-    return isScreenAvailable("ssu") && allowed ? "/ssu" : null;
+    return isScreenAvailable("ssu") && allowed
+      ? buildScopedWorkflowPath("/ssu", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
+      : null;
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(routeName)) return null;
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    ) {
+      return null;
+    }
+    return catalogEntry.defaultPath;
   }
   return null;
 }
@@ -155,11 +229,12 @@ export function isTourRouteAuthorized(routeName, userRoles) {
     return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
   }
   if (routeName === "observation") {
-    return hasRequiredRole(userRoles, [
+    const obsRoles = DEMO_MODULE_CATALOG.observation?.requiresRole || [
       "site_investigator",
       "crc",
       "data_manager",
-    ]);
+    ];
+    return hasRequiredRole(userRoles, obsRoles);
   }
   if (routeName === "ctms") {
     return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
@@ -169,6 +244,13 @@ export function isTourRouteAuthorized(routeName, userRoles) {
       ...SITE_READINESS_SPONSOR_ROLES,
       ...SITE_READINESS_SITE_ROLES,
     ]);
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    return (
+      catalogEntry.requiresRole.length === 0 ||
+      hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    );
   }
   return false;
 }
@@ -339,7 +421,11 @@ function readStorageForPersona(personaKey) {
   let bypassOverview = false;
   let completedTasks = [];
   let events = [];
-  let tasks = JSON.parse(JSON.stringify(DEFAULT_SETUP_TASKS));
+  /** @type {typeof DEFAULT_SETUP_TASKS} */
+  let tasks = DEFAULT_SETUP_TASKS.map((t) => ({
+    ...t,
+    keywords: [...t.keywords],
+  }));
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -457,7 +543,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Workspace",
       description:
         "Open any study by code to navigate its lifecycle across Design, Start, Conduct, Data, Analyze, and Submit.",
@@ -477,7 +563,8 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "overview",
-      targetSelector: "#btn-onboarding-checklist-trigger",
+      targetSelector:
+        "#btn-onboarding-checklist-trigger, #btn-header-actions-menu",
       title: "Workspace Orientation",
       description:
         "Review role-tailored setup milestones and customize your default sign-in landing preference.",
@@ -487,7 +574,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your protocol design workspace orientation is complete. Open Help anytime for standard operating procedure guidance.",
@@ -510,7 +597,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Data Collection & Validation",
       description:
         "Verify range checks, required clinical observations, and discrepancy query transitions in real time.",
@@ -520,7 +607,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Conduct & Data Stages",
       description:
         "Open a study workspace to inspect participant counts, review proposals, and trace study activity.",
@@ -540,7 +627,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "ecrf",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your data management orientation is complete. Access SOP guidance via Help in the top bar anytime.",
@@ -563,7 +650,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ctms",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness & Activation",
       description:
         "Track site activation requirements, operational readiness, and site startup progress.",
@@ -573,7 +660,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Source Data Verification",
       description:
         "Navigate to participant case report forms to verify clinical observations and manage queries.",
@@ -583,7 +670,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Lifecycle Overview",
       description:
         "Open a study workspace to inspect participant state counts, site progress, and open proposals.",
@@ -593,7 +680,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "ctms",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your clinical monitoring orientation is complete. Use Search (⌘K), Orientation, and Help anytime.",
@@ -616,7 +703,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Activity & Provenance",
       description:
         "Open a study by code to review its activity stream, protocol version history, and proposal decisions.",
@@ -636,7 +723,8 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "overview",
-      targetSelector: "#btn-onboarding-checklist-trigger",
+      targetSelector:
+        "#btn-onboarding-checklist-trigger, #btn-header-actions-menu",
       title: "Inspection Orientation",
       description:
         "Review inspection readiness tasks and configure your workspace landing preferences.",
@@ -646,7 +734,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your regulatory audit orientation is complete. Open Help anytime to consult compliance SOPs.",
@@ -669,7 +757,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ecrf",
-      targetSelector: ".subject-selector-card",
+      targetSelector: "#ecrf-participant-bar, .subject-enrollment-card",
       title: "Participant Selection & Visits",
       description:
         "Select study participants, review visit progress, and enroll new subjects for your site.",
@@ -679,7 +767,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: ".ecrf-form-renderer",
+      targetSelector: ".crc-form-renderer, #ecrf-form-instance",
       title: "Case Report Form Entry",
       description:
         "Enter vital signs and clinical observations with real-time validation checks and query flags.",
@@ -689,7 +777,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "ssu",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness",
       description:
         "Check site activation tasks and operational readiness status for your clinical site.",
@@ -699,7 +787,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Tour Complete!",
       description:
         "Your site coordinator orientation is complete. Move seamlessly across Studies, Data collection, and Site readiness.",
@@ -722,7 +810,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Studies & Lifecycle",
       description:
         "Open any study by code to follow its lifecycle from Design through Submit in three panes.",
@@ -732,7 +820,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Data Collection",
       description:
         "Review clinical case report forms, field validations, and discrepancy management.",
@@ -742,7 +830,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "ctms",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness",
       description:
         "Monitor site activation checklists, startup progress, and site operational status.",
@@ -752,7 +840,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Use Search (⌘K), View switcher, Orientation, and Help anytime from the persistent header.",
@@ -780,7 +868,7 @@ function buildOverviewFallbackSteps(baseSequence) {
     {
       step: 2,
       routeName: "overview",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: lastStep?.title || "Tour Complete!",
       description:
         lastStep?.description ||
@@ -823,11 +911,11 @@ function getSequenceForPersona(personaKey) {
     baseSequence = ROLE_STEP_SEQUENCES[personaKey];
   } else if (personaKey === "designer" || personaKey === "study_designer") {
     baseSequence = ROLE_STEP_SEQUENCES.sponsor_designer;
-  } else if (personaKey === "crc") {
+  } else if (personaKey === "crc" || personaKey === "site_investigator") {
     baseSequence = ROLE_STEP_SEQUENCES.site_crc;
   } else if (personaKey === "cra" || personaKey === "monitor") {
     baseSequence = ROLE_STEP_SEQUENCES.cra_monitor;
-  } else if (personaKey === "tmf_auditor") {
+  } else if (personaKey === "tmf_auditor" || personaKey === "safety_officer") {
     baseSequence = ROLE_STEP_SEQUENCES.auditor;
   } else if (personaKey === "sponsor_admin") {
     baseSequence = ROLE_STEP_SEQUENCES.super_admin;
@@ -858,10 +946,7 @@ function getSequenceForPersona(personaKey) {
       ROLE_STEP_SEQUENCES.sponsor_designer;
   }
 
-  const effectiveRoles =
-    authStore?.rawRoles?.length > 0
-      ? roles
-      : effectiveRolesForStore(personaKey);
+  const effectiveRoles = effectiveRolesForStore(personaKey);
   const filtered = baseSequence
     .filter((step) => isTourRouteAuthorized(step.routeName, effectiveRoles))
     .map((step, idx) => ({ ...step, step: idx + 1 }));
@@ -894,12 +979,15 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
-      return (state.tasks || [])
-        .map((task) => {
-          const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
-          return resolvedRoute ? { ...task, route: resolvedRoute } : null;
-        })
-        .filter(Boolean);
+      /** @type {typeof DEFAULT_SETUP_TASKS} */
+      const visible = [];
+      for (const task of state.tasks || []) {
+        const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+        if (resolvedRoute) {
+          visible.push({ ...task, route: resolvedRoute });
+        }
+      }
+      return visible;
     },
     completedTasksCount() {
       return this.visibleTasks.filter((t) => t.completed).length;

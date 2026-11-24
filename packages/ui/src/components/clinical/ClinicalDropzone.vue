@@ -208,9 +208,13 @@ defineExpose({
     />
 
     <div class="clinical-dropzone-body">
-      <span v-if="icon" class="clinical-dropzone-icon" aria-hidden="true">{{
-        icon
-      }}</span>
+      <span
+        v-if="$slots.icon || icon"
+        class="clinical-dropzone-icon"
+        aria-hidden="true"
+      >
+        <slot name="icon">{{ icon }}</slot>
+      </span>
 
       <div v-if="$slots.prompt || promptText" class="clinical-dropzone-prompt">
         <slot name="prompt">

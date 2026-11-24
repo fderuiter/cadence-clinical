@@ -1,5 +1,7 @@
-import { openApiClient, unwrapResponse } from "./client";
-import type { paths } from "./types";
+import { createOpenApiClient, unwrapResponse } from "./client";
+import type { paths as InteropPaths } from "./generated/interop";
+
+const interopClient = createOpenApiClient<InteropPaths>();
 
 export const statisticalComputingService = {
   /**
@@ -7,8 +9,8 @@ export const statisticalComputingService = {
    */
   createProgram(payload: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/sce/programs", {
-        body: payload as paths["/api/v1/interop/sce/programs"]["post"]["requestBody"]["content"]["application/json"],
+      interopClient.POST("/api/v1/interop/sce/programs", {
+        body: payload as InteropPaths["/api/v1/interop/sce/programs"]["post"]["requestBody"]["content"]["application/json"],
         ...options,
       })
     );
@@ -19,7 +21,7 @@ export const statisticalComputingService = {
    */
   getPrograms(studyId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/sce/programs", {
+      interopClient.GET("/api/v1/interop/sce/programs", {
         params: { query: { study_id: studyId } },
         ...options,
       })
@@ -31,8 +33,8 @@ export const statisticalComputingService = {
    */
   validateLockfile(payload: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/sce/validate-lockfile", {
-        body: payload as paths["/api/v1/interop/sce/validate-lockfile"]["post"]["requestBody"]["content"]["application/json"],
+      interopClient.POST("/api/v1/interop/sce/validate-lockfile", {
+        body: payload as InteropPaths["/api/v1/interop/sce/validate-lockfile"]["post"]["requestBody"]["content"]["application/json"],
         ...options,
       })
     );
@@ -43,8 +45,8 @@ export const statisticalComputingService = {
    */
   issueLockToken(payload: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/sce/lock-tokens", {
-        body: payload as paths["/api/v1/interop/sce/lock-tokens"]["post"]["requestBody"]["content"]["application/json"],
+      interopClient.POST("/api/v1/interop/sce/lock-tokens", {
+        body: payload as InteropPaths["/api/v1/interop/sce/lock-tokens"]["post"]["requestBody"]["content"]["application/json"],
         ...options,
       })
     );
@@ -55,7 +57,7 @@ export const statisticalComputingService = {
    */
   getLockTokens(studyId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/sce/lock-tokens", {
+      interopClient.GET("/api/v1/interop/sce/lock-tokens", {
         params: { query: { study_id: studyId } },
         ...options,
       })
@@ -71,7 +73,7 @@ export const statisticalComputingService = {
     options: Record<string, unknown> = {}
   ) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/sce/lock-tokens/{token_id}/revoke", {
+      interopClient.POST("/api/v1/interop/sce/lock-tokens/{token_id}/revoke", {
         params: {
           path: { token_id: tokenId },
           query: { reason },
@@ -86,8 +88,8 @@ export const statisticalComputingService = {
    */
   executeProgram(payload: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/sce/execute", {
-        body: payload as paths["/api/v1/interop/sce/execute"]["post"]["requestBody"]["content"]["application/json"],
+      interopClient.POST("/api/v1/interop/sce/execute", {
+        body: payload as InteropPaths["/api/v1/interop/sce/execute"]["post"]["requestBody"]["content"]["application/json"],
         ...options,
       })
     );
@@ -103,7 +105,7 @@ export const statisticalComputingService = {
     options: Record<string, unknown> = {}
   ) {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/sce/runs", {
+      interopClient.GET("/api/v1/interop/sce/runs", {
         params: {
           query: {
             study_id: studyId,
@@ -121,7 +123,7 @@ export const statisticalComputingService = {
    */
   getExecutionRun(runId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/sce/runs/{run_id}", {
+      interopClient.GET("/api/v1/interop/sce/runs/{run_id}", {
         params: { path: { run_id: runId } },
         ...options,
       })
@@ -133,7 +135,7 @@ export const statisticalComputingService = {
    */
   verifyRunManifest(runId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/sce/runs/{run_id}/verify", {
+      interopClient.POST("/api/v1/interop/sce/runs/{run_id}/verify", {
         params: { path: { run_id: runId } },
         ...options,
       })

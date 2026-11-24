@@ -14,15 +14,19 @@
     :subtitle="previewSubtitle"
     :resolve-remotely="false"
     @select="emit('select', summary.ref)"
+    @inspect="requestCanvasFocus"
+    @navigate="requestCanvasFocus"
   />
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, watch } from "vue";
+import { computed, getCurrentInstance, nextTick, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
 import { EntityLink } from "ui";
 import { resolveEntityFullViewLocation } from "../../canvas/entityDestination";
 import { ensureNodesResolved, getNodeDisplay } from "../../canvas/nodeResolver";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 const props = withDefaults(
   defineProps<{
@@ -135,4 +139,22 @@ const previewSubtitle = computed(() => {
   if (!activeStudyCode.value) return "";
   return `Study ${activeStudyCode.value}`;
 });
+
+function requestCanvasFocus() {
+  if (currentRoute.value?.name === "study" && summary.value.ref) {
+    const pinia = getActivePinia();
+    if (pinia) {
+      const canvasStore = useStudyCanvasStore(pinia);
+      const targetRef = summary.value.ref;
+      void Promise.resolve()
+        .then(() => nextTick())
+        .then(() =>
+          canvasStore.requestInspectorFocus({
+            nodeRef: targetRef,
+            scrollIntoView: true,
+          })
+        );
+    }
+  }
+}
 </script>

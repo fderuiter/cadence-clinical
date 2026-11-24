@@ -1,12 +1,14 @@
 import AiActionButton from "./components/clinical/AiActionButton.vue";
 import AiSuggestionDrawer from "./components/clinical/AiSuggestionDrawer.vue";
 import AuditLogViewer from "./components/clinical/AuditLogViewer.vue";
+import ClinicalBreadcrumbs from "./components/clinical/ClinicalBreadcrumbs.vue";
 import ClinicalContextBar from "./components/clinical/ClinicalContextBar.vue";
 import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
+import ClinicalIcon from "./components/clinical/ClinicalIcon.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
@@ -50,12 +52,14 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalBreadcrumbs,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalLookupInput,

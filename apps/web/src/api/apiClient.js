@@ -1,10 +1,12 @@
 import { encodeChangeReason } from "./changeReason";
 import {
+  applyDemoIdentityHeaders,
   getApiBaseUrl,
   getBearerToken,
   notifySubscriptionExpiredIfNeeded,
   refreshBearerTokenOnUnauthorized,
 } from "./authorization.js";
+import { isDemoBuild } from "../utils/demoMode";
 
 // Helper to get the current API base URL dynamically
 export const getBaseUrl = getApiBaseUrl;
@@ -64,6 +66,9 @@ async function request(path, options = {}) {
 
   if (token) {
     requestHeaders["Authorization"] = `Bearer ${token}`;
+  }
+  if (isDemoBuild()) {
+    applyDemoIdentityHeaders(requestHeaders);
   }
 
   // Caller can supply a change reason for mutations, passed as X-Change-Reason

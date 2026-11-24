@@ -74,7 +74,7 @@
 
       <ul class="facet-list">
         <li
-          v-for="facet in singleGate.facets"
+          v-for="facet in getGateFacets(singleGate)"
           :key="facet.facet_code"
           class="facet-row"
         >
@@ -89,14 +89,14 @@
         </li>
       </ul>
 
-      <p v-if="singleGate.certified_at" class="certified-meta">
-        Certified by {{ singleGate.certified_by }} on
-        {{ formatUtcDate(singleGate.certified_at) }}
+      <p v-if="singleGate.greenlight_certified_at" class="certified-meta">
+        Certified by {{ singleGate.greenlight_certified_by }} on
+        {{ formatUtcDate(singleGate.greenlight_certified_at) }}
       </p>
 
       <div
         v-if="
-          singleGate.is_ready_for_certification &&
+          singleGate.is_compliant &&
           singleGate.overall_status !== 'CERTIFIED' &&
           canCertify
         "
@@ -123,7 +123,7 @@
       </div>
       <p
         v-else-if="
-          singleGate.is_ready_for_certification &&
+          singleGate.is_compliant &&
           singleGate.overall_status !== 'CERTIFIED' &&
           !canCertify
         "
@@ -166,8 +166,7 @@
                     type="checkbox"
                     :value="row.site_id"
                     :disabled="
-                      !row.is_ready_for_certification ||
-                      row.overall_status === 'CERTIFIED'
+                      !row.is_compliant || row.overall_status === 'CERTIFIED'
                     "
                     :aria-label="`Select ${row.site_id} for batch certification`"
                   />
@@ -184,18 +183,18 @@
                   </span>
                 </td>
                 <td>
-                  {{ row.facets.filter((f) => f.is_satisfied).length }} /
-                  {{ row.facets.length }}
+                  {{ getGateFacets(row).filter((f) => f.is_satisfied).length }}
+                  / {{ getGateFacets(row).length }}
                 </td>
                 <td>
-                  <span v-if="row.blocking_reasons.length">
-                    {{ row.blocking_reasons.join("; ") }}
+                  <span v-if="(row.unfulfilled_reasons ?? []).length">
+                    {{ (row.unfulfilled_reasons ?? []).join("; ") }}
                   </span>
                   <span v-else class="text-ok">None</span>
                 </td>
                 <td>
-                  <span v-if="row.certified_by">
-                    {{ row.certified_by }}
+                  <span v-if="row.greenlight_certified_by">
+                    {{ row.greenlight_certified_by }}
                   </span>
                   <span v-else class="muted-inline">—</span>
                 </td>
@@ -241,27 +240,25 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { handoffFocus } from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadReadiness(),
+  fallbackErrorTitle: "Startup readiness could not be loaded",
+  fallbackErrorMessage: "Startup readiness could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
@@ -270,15 +267,7 @@ const {
   loaded,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadReadiness();
-  },
-  fallbackErrorTitle: "Startup readiness could not be loaded",
-  fallbackErrorMessage: "Startup readiness could not be loaded.",
-});
+} = workspace;
 
 const canCertify = computed(() => canCertifyGreenlight(authStore));
 const countryCode = ref("US");
@@ -288,6 +277,66 @@ const selectedMatrixSites = ref<string[]>([]);
 const certifyReason = ref("");
 const batchReason = ref("");
 const certifying = ref(false);
+
+interface GateFacetSummary {
+  facet_code: string;
+  display_name: string;
+  evidence_summary: string;
+  is_satisfied: boolean;
+}
+
+function getGateFacets(gate: SiteGreenlightGate): GateFacetSummary[] {
+  return [
+    {
+      facet_code: "REGULATORY_IRB",
+      display_name: "IRB / EC Favorable Opinion",
+      evidence_summary: gate.facet_regulatory_irb
+        ? "Approved regulatory milestone on file"
+        : "Pending IRB / EC approval",
+      is_satisfied: Boolean(gate.facet_regulatory_irb),
+    },
+    {
+      facet_code: "CTA_BUDGET",
+      display_name: "CTA & Budget Executed",
+      evidence_summary: gate.facet_cta_budget
+        ? "Executed clinical trial agreement verified"
+        : "Pending CTA / budget execution",
+      is_satisfied: Boolean(gate.facet_cta_budget),
+    },
+    {
+      facet_code: "EISF_BASELINE",
+      display_name: "eISF Baseline Complete",
+      evidence_summary: gate.facet_eisf_baseline
+        ? "Essential investigator site file complete"
+        : "Missing baseline eISF artifacts",
+      is_satisfied: Boolean(gate.facet_eisf_baseline),
+    },
+    {
+      facet_code: "DOA_LOG",
+      display_name: "PI Delegation Log Signed",
+      evidence_summary: gate.facet_doa_log
+        ? "PI-endorsed DoA log active"
+        : "Pending PI delegation sign-off",
+      is_satisfied: Boolean(gate.facet_doa_log),
+    },
+    {
+      facet_code: "STAFF_TRAINING",
+      display_name: "GCP & Protocol Training",
+      evidence_summary: gate.facet_staff_training
+        ? "Delegated staff training verified"
+        : "Incomplete staff training records",
+      is_satisfied: Boolean(gate.facet_staff_training),
+    },
+    {
+      facet_code: "IP_RELEASE",
+      display_name: "Investigational Supply Released",
+      evidence_summary: gate.facet_ip_release
+        ? "Site supply authorization active"
+        : "Investigational product hold",
+      is_satisfied: Boolean(gate.facet_ip_release),
+    },
+  ];
+}
 
 function formatUtcDate(iso?: string | null): string {
   if (!iso) return "";
@@ -348,6 +397,7 @@ async function certifySingleSite() {
       message: "Startup greenlight certification recorded.",
     });
     await loadReadiness();
+    void handoffFocus("#ctms-greenlight-title");
   } catch (err) {
     toasts.apiError("Site certification failed", err);
   } finally {
@@ -372,6 +422,7 @@ async function certifyBatch() {
         study_id: study,
         country_code: countryCode.value,
         site_ids: selectedMatrixSites.value,
+        meaning: batchReason.value.trim(),
       },
       batchReason.value.trim()
     );
@@ -379,10 +430,11 @@ async function certifyBatch() {
     selectedMatrixSites.value = [];
     toasts.push({
       tone: "success",
-      title: `Certified ${res.total_certified} site(s)`,
+      title: `Certified ${res.certified_count} site(s)`,
       message: `Country ${res.country_code} startup greenlight updated.`,
     });
     await loadReadiness();
+    void handoffFocus("#ctms-greenlight-title");
   } catch (err) {
     toasts.apiError("Batch certification failed", err);
   } finally {

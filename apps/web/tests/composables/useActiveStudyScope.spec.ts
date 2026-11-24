@@ -91,7 +91,7 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     const authStore = useAuthStore();
     signInAs(authStore, ["CRA", "Data Manager"], { username: "cra_lead" });
     const canvasStore = useStudyCanvasStore();
-    vi.spyOn(canvasStore, "ensurePaletteParticipants").mockResolvedValue();
+    vi.spyOn(canvasStore, "ensurePaletteParticipants").mockResolvedValue(false);
 
     const router = createTestRouter();
     await router.push("/studies/CADENCE-101");

@@ -136,6 +136,9 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .queries h3 {

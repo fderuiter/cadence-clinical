@@ -1,8 +1,15 @@
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
 import { demoNowIso, demoNowMs, nextDemoStep } from "../utils/demoMode.js";
+import {
+  evaluateCapabilityDecision,
+  evaluateDemoRequestPolicy,
+  evaluateNodeCommands,
+  resolveDemoCaller,
+} from "./demoPolicy.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
+import { buildUsdmSoaSchedule } from "../stores/demo/usdmSoaSchedule";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -39,7 +46,7 @@ async function readJsonBody(request) {
 }
 
 export function createWebDemoHandlers(store = webDemoStore) {
-  const etmfDocuments = [
+  const createInitialEtmfDocuments = () => [
     {
       id: "doc-demo-01",
       filename: "DEMO-01-Protocol-v2.0.pdf",
@@ -53,7 +60,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
       uploaded_at: "2026-07-01T10:00:00Z", // deid-ignore
     },
   ];
-  const etmfAuditLogs = [
+  const createInitialEtmfAuditLogs = () => [
     {
       id: "elog-seed-01",
       timestamp: "2026-07-01T10:00:00Z", // deid-ignore
@@ -67,7 +74,27 @@ export function createWebDemoHandlers(store = webDemoStore) {
       reason_for_change: "Initial protocol eTMF baseline registration",
     },
   ];
+  const etmfDocuments = createInitialEtmfDocuments();
+  const etmfAuditLogs = createInitialEtmfAuditLogs();
   let demoLocks = Array.isArray(store.locks) ? [...store.locks] : [];
+  let resetSoaState = () => {};
+
+  if (store && typeof store.onReset === "function") {
+    store.onReset(() => {
+      etmfDocuments.splice(
+        0,
+        etmfDocuments.length,
+        ...createInitialEtmfDocuments()
+      );
+      etmfAuditLogs.splice(
+        0,
+        etmfAuditLogs.length,
+        ...createInitialEtmfAuditLogs()
+      );
+      demoLocks = Array.isArray(store.locks) ? [...store.locks] : [];
+      resetSoaState();
+    });
+  }
 
   return [
     // Health & identity
@@ -84,6 +111,16 @@ export function createWebDemoHandlers(store = webDemoStore) {
         version: "1.0.0",
       })
     ),
+    http.all("*/api/*", async ({ request }) => {
+      const denied = await evaluateDemoRequestPolicy(request, store);
+      if (denied) {
+        return HttpResponse.json(denied.problem, {
+          status: denied.status,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return undefined;
+    }),
     http.post("*/api/v1/auth/signature-verification", async ({ request }) => {
       const body = await readJsonBody(request);
       if (
@@ -294,29 +331,91 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
     http.get("*/api/v1/kernel/authorization/can-i", ({ request }) => {
       const url = new URL(request.url);
-      const capability = url.searchParams.get("capability") || "kernel.read";
-      const resource = url.searchParams.get("resource") || "study:demo";
-      return HttpResponse.json(store.buildDecision(capability, resource, true));
+      const capability =
+        url.searchParams.get("capability") ||
+        url.searchParams.get("action") ||
+        "kernel.read";
+      const resource =
+        url.searchParams.get("resource") ||
+        url.searchParams.get("scope") ||
+        "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
+    }),
+    http.get("*/api/v1/kernel/capabilities/can-i", ({ request }) => {
+      const url = new URL(request.url);
+      const capability =
+        url.searchParams.get("capability") ||
+        url.searchParams.get("action") ||
+        "kernel.read";
+      const resource =
+        url.searchParams.get("resource") ||
+        url.searchParams.get("scope") ||
+        "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
     }),
     http.post("*/api/v1/kernel/authorization/can-i", async ({ request }) => {
       const body = await readJsonBody(request);
-      const capability = body?.capability || "kernel.read";
-      const resource = body?.resource || "study:demo";
-      return HttpResponse.json(store.buildDecision(capability, resource, true));
+      const capability = body?.capability || body?.action || "kernel.read";
+      const resource = body?.resource || body?.scope || "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
     }),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/path", ({ params }) =>
+    http.post("*/api/v1/kernel/capabilities/can-i", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const capability = body?.capability || body?.action || "kernel.read";
+      const resource = body?.resource || body?.scope || "study:demo";
+      return HttpResponse.json(
+        evaluateCapabilityDecision(
+          resolveDemoCaller(request),
+          capability,
+          resource,
+          store
+        )
+      );
+    }),
+    http.get("*/api/v1/kernel/nodes/:nodeRef/path", ({ params, request }) =>
       HttpResponse.json(
-        store.getZoomPath(decodeURIComponent(String(params.nodeRef)))
+        store.getZoomPath(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/children", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef/children", ({ params, request }) =>
       HttpResponse.json(
-        store.getChildren(decodeURIComponent(String(params.nodeRef)))
+        store.getChildren(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef/commands", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef/commands", ({ params, request }) =>
       HttpResponse.json(
-        store.getCommands(decodeURIComponent(String(params.nodeRef)))
+        evaluateNodeCommands(
+          resolveDemoCaller(request),
+          decodeURIComponent(String(params.nodeRef)),
+          store
+        )
       )
     ),
     http.get(
@@ -327,7 +426,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
           store.getLineage(
             decodeURIComponent(String(params.nodeRef)),
             url.searchParams.get("direction") || "upstream",
-            Number(url.searchParams.get("depth") || 3)
+            Number(url.searchParams.get("depth") || 3),
+            resolveDemoCaller(request)
           )
         );
       }
@@ -339,14 +439,18 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(
           store.getDependents(
             decodeURIComponent(String(params.nodeRef)),
-            Number(url.searchParams.get("depth") || 3)
+            Number(url.searchParams.get("depth") || 3),
+            resolveDemoCaller(request)
           )
         );
       }
     ),
-    http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params }) =>
+    http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params, request }) =>
       HttpResponse.json(
-        store.getNode(decodeURIComponent(String(params.nodeRef)))
+        store.getNode(
+          decodeURIComponent(String(params.nodeRef)),
+          resolveDemoCaller(request)
+        )
       )
     ),
 
@@ -511,9 +615,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
         store.getProtocolVersion(decodeURIComponent(String(params.versionRef)))
       )
     ),
-    http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
-      HttpResponse.json(store.listProposals())
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/proposals", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listProposals({
+          status: url.searchParams.get("status") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        })
+      );
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/locks",
       ({ params, request }) => {
@@ -781,13 +891,21 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post(
       "*/api/v1/kernel/proposals/:proposalRef/rejection",
-      ({ params, request }) =>
-        HttpResponse.json(
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const caller = resolveDemoCaller(request);
+        const reason =
+          readRequiredReasonHeader(request) ||
+          (typeof body?.reason === "string" ? body.reason.trim() : "") ||
+          decodeReasonHeader(request);
+        return HttpResponse.json(
           store.rejectProposal(
             decodeURIComponent(String(params.proposalRef)),
-            decodeReasonHeader(request)
+            reason,
+            caller
           )
-        )
+        );
+      }
     ),
     http.get("*/api/v1/kernel/activity", ({ request }) => {
       const url = new URL(request.url);
@@ -801,16 +919,22 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const targetRef =
         body?.stored_version_ref || body?.base_version_ref || DEFAULT_STUDY_REF;
       return HttpResponse.json({
-        scope: targetRef,
+        scope: DEFAULT_STUDY_REF,
         as_of: { valid_at: now, known_at: now },
-        candidate: body?.stored_version_ref
-          ? { source: "stored", version_ref: body.stored_version_ref }
-          : {
-              title: "Candidate Protocol Simulation",
-              content_hash: "sha256-demo-sim-cand",
-              element_count: 14,
-            },
-        engine_versions: [{ component: "demo-simulator", version: "1.0.0" }],
+        candidate: {
+          kind: "ProtocolVersion",
+          version: body?.stored_version_ref || null,
+          base_version: body?.base_version_ref || null,
+          content_hash: "sha256:demo-sim-cand",
+          base_content_hash: body?.base_version_ref
+            ? "sha256:demo-sim-base"
+            : null,
+        },
+        engine_versions: [
+          { name: "protocol.expected_schedule", version: "1" },
+          { name: "protocol.matrix_gap", version: "1" },
+          { name: "protocol.structural_diff", version: "1" },
+        ],
         input_hash: "sha256-demo-sim-in",
         result_hash: "sha256-demo-sim-out",
         structural_diff: [],
@@ -846,10 +970,30 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
 
     // Kernel Observations & Stateful Corrections
-    http.get("*/api/v1/kernel/observations/:observationRef", ({ params }) =>
-      HttpResponse.json(
-        store.getObservation(decodeURIComponent(String(params.observationRef)))
-      )
+    http.get(
+      "*/api/v1/kernel/observations/:observationRef",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        return HttpResponse.json(
+          store.getObservation(
+            decodeURIComponent(String(params.observationRef)),
+            {
+              studyCode:
+                url.searchParams.get("studyId") ||
+                url.searchParams.get("study_code") ||
+                "",
+              siteCode:
+                url.searchParams.get("siteId") ||
+                url.searchParams.get("site_code") ||
+                "",
+              subjectCode:
+                url.searchParams.get("subjectId") ||
+                url.searchParams.get("subject_code") ||
+                "",
+            }
+          )
+        );
+      }
     ),
     http.post(
       "*/api/v1/kernel/observations/:observationRef/corrections",
@@ -925,9 +1069,12 @@ export function createWebDemoHandlers(store = webDemoStore) {
         })
       );
     }),
-    http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
+    http.get("*/api/v1/execution/subjects/:subjectId", ({ params, request }) =>
       HttpResponse.json(
-        store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
+        store.getSubjectDetail(
+          decodeURIComponent(String(params.subjectId)),
+          resolveDemoCaller(request)
+        )
       )
     ),
     http.patch(
@@ -2477,90 +2624,12 @@ export function createWebDemoHandlers(store = webDemoStore) {
 
     // USDM Interactive SoA Builder Mutations (stateful in-memory demo projection)
     ...(() => {
-      const soaState = {
-        arms: [
-          { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
-          { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
-        ],
-        epochs: [
-          { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
-          {
-            epoch_id: "EP-TRT-A",
-            epoch_name: "Treatment Phase",
-            sequence: 2,
-            arm_id: "ARM-A",
-          },
-          {
-            epoch_id: "EP-TRT-B",
-            epoch_name: "Treatment Phase",
-            sequence: 2,
-            arm_id: "ARM-B",
-          },
-        ],
-        encounters: [
-          {
-            encounter_id: "V-SCR",
-            encounter_name: "Day -7 to -1",
-            epoch_id: "EP-SCR",
-            sequence: 1,
-          },
-          {
-            encounter_id: "V-TRT-A1",
-            encounter_name: "Week 2",
-            epoch_id: "EP-TRT-A",
-            sequence: 2,
-          },
-          {
-            encounter_id: "V-TRT-A2",
-            encounter_name: "Week 4",
-            epoch_id: "EP-TRT-A",
-            sequence: 3,
-          },
-          {
-            encounter_id: "V-TRT-B1",
-            encounter_name: "Week 2",
-            epoch_id: "EP-TRT-B",
-            sequence: 4,
-          },
-        ],
-        rows: [
-          {
-            activity_id: "ACT-DEM",
-            activity_name: "Informed Consent & Demographics",
-            cells: [
-              {
-                encounter_id: "V-SCR",
-                is_applicable: true,
-                details: "Mandatory",
-              },
-              { encounter_id: "V-TRT-A1", is_applicable: false },
-              { encounter_id: "V-TRT-A2", is_applicable: false },
-              { encounter_id: "V-TRT-B1", is_applicable: false },
-            ],
-          },
-          {
-            activity_id: "ACT-VS",
-            activity_name: "Vital Signs (BP & Pulse)",
-            cells: [
-              { encounter_id: "V-SCR", is_applicable: true, details: "Day -7" },
-              {
-                encounter_id: "V-TRT-A1",
-                is_applicable: true,
-                details: "Within 10 mins",
-              },
-              {
-                encounter_id: "V-TRT-A2",
-                is_applicable: true,
-                details: "Conditional",
-              },
-              {
-                encounter_id: "V-TRT-B1",
-                is_applicable: true,
-                details: "Within 10 mins",
-              },
-            ],
-          },
-        ],
+      const createInitialSoaState = () =>
+        buildUsdmSoaSchedule(["ACT-DEM", "ACT-VS"]);
+
+      let soaState = createInitialSoaState();
+      resetSoaState = () => {
+        soaState = createInitialSoaState();
       };
 
       const upsertArm = (armId, props) => {

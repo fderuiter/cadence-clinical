@@ -15,7 +15,7 @@ export interface EntityDestinationContext {
 
 /**
  * Resolves the canonical Clinical Canvas full-view route for a `NodeRef` while preserving
- * active study, site, and participant scope (ADR-2651, ADR-2657).
+ * active study, site, and participant scope (ADR-2651, ADR-2594).
  */
 export function resolveEntityFullViewLocation(
   nodeRefText: string | null | undefined,
@@ -44,6 +44,7 @@ export function resolveEntityFullViewLocation(
   if (!studyCode) return null;
 
   switch (parsed.kind) {
+    case "enrollment":
     case "participant": {
       const query: LocationQueryRaw = {
         stage: "conduct",
@@ -97,7 +98,8 @@ export function resolveEntityFullViewLocation(
       if (site) query.site = site;
       return { name: "study", params: { studyCode }, query };
     }
-    case "assertion": {
+    case "assertion":
+    case "form_query": {
       const query: LocationQueryRaw = {
         stage: "data",
         section: "queries",

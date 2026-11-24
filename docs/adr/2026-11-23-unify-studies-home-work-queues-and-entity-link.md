@@ -1,4 +1,4 @@
-# ADR-2657: Unify Cross-Study Home, Scoped Work Queues, and Shared EntityLink Navigation
+# ADR-2594: Unify Cross-Study Home, Scoped Work Queues, and Shared EntityLink Navigation
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
