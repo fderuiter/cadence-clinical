@@ -1,4 +1,13 @@
-import { DEFAULT_DEMO_PARTICIPANT, DEMO_STUDY } from "demo-fixtures";
+import {
+  DEFAULT_DEMO_PARTICIPANT,
+  DEFAULT_DEMO_SITE,
+  DEMO_STUDY,
+} from "demo-fixtures";
+import {
+  buildAmendmentReconsentPayload,
+  buildDemoHealthPayload,
+  buildSignatureVerificationOutcome,
+} from "demo-fixtures/mocks";
 import { http, HttpResponse } from "msw";
 import {
   MOCK_APPROVED_CONTENT,
@@ -9,7 +18,10 @@ import {
 } from "../data/mock-data.js";
 import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
 
-const DEFAULT_DEMO_SUBJECT_ID = DEFAULT_DEMO_PARTICIPANT?.subjectCode || "";
+const DEFAULT_DEMO_SUBJECT_ID =
+  DEFAULT_DEMO_PARTICIPANT?.subjectCode || "SUBJ-101-001";
+const DEFAULT_DEMO_STUDY_ID = DEMO_STUDY?.code || "CADENCE-101";
+const DEFAULT_DEMO_SITE_ID = DEFAULT_DEMO_SITE?.code || "SITE-101";
 
 const DEFAULT_PENDING_RECONSENT = {
   id: "req_amendment_v2",
@@ -23,6 +35,35 @@ function clonePortalData(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function createInitialPortalWallet(subjectId = DEFAULT_DEMO_SUBJECT_ID) {
+  return {
+    id: `wallet_${subjectId}`,
+    subjectId,
+    studyId: DEFAULT_DEMO_STUDY_ID,
+    siteId: DEFAULT_DEMO_SITE_ID,
+    currentBalance: 125.0,
+    lifetimeStipends: 125.0,
+    lifetimeReimbursements: 0.0,
+    lifetimeDisbursements: 0.0,
+    taxableYtd: 125.0,
+    is1099ThresholdExceeded: false,
+    w9Status: "NOT_REQUIRED",
+    currency: "USD",
+    status: "ACTIVE",
+    virtualCardMask: "**** **** **** 4821",
+    virtualCardExpiry: "12/29",
+    achRoutingNumber: "*****0021",
+    achRoutingMask: "*****0021",
+    achAccountMask: "ACH-***4321",
+    achAccountHolder: `Participant ${subjectId}`,
+    recentTransactions: [],
+    expenseClaims: [],
+    creditedKeys: new Set(),
+    expenseIdempotencyMap: new Map(),
+    disburseIdempotencyMap: new Map(),
+  };
+}
+
 export function createPortalDemoStore() {
   const state = {
     assignments: [],
@@ -34,7 +75,37 @@ export function createPortalDemoStore() {
     walletBalance: 125.0,
     complianceScore: 92,
     actionSeq: 0,
+    walletLedger: new Map(),
+    ocrTokens: new Map(),
+    consumedOcrTokens: new Set(),
+    recordedReceiptDigests: new Set(),
+    walletActionSeq: 0,
   };
+
+  function resetWalletLedger() {
+    state.walletLedger.clear();
+    state.ocrTokens.clear();
+    state.consumedOcrTokens.clear();
+    state.recordedReceiptDigests.clear();
+    state.walletActionSeq = 0;
+  }
+
+  function getOrCreateWallet(subjectId = DEFAULT_DEMO_SUBJECT_ID) {
+    if (!state.walletLedger.has(subjectId)) {
+      state.walletLedger.set(subjectId, createInitialPortalWallet(subjectId));
+    }
+    return state.walletLedger.get(subjectId);
+  }
+
+  function nextWalletTimestampMs() {
+    state.walletActionSeq += 1;
+    return demoNowMs(state.walletActionSeq);
+  }
+
+  function nextWalletTimestampIso() {
+    state.walletActionSeq += 1;
+    return demoNowIso(state.walletActionSeq);
+  }
 
   function reset() {
     state.assignments = clonePortalData(MOCK_ASSIGNMENTS);
@@ -46,6 +117,7 @@ export function createPortalDemoStore() {
     state.walletBalance = 125.0;
     state.complianceScore = 92;
     state.actionSeq = 0;
+    resetWalletLedger();
   }
 
   reset();
@@ -53,6 +125,10 @@ export function createPortalDemoStore() {
   return {
     state,
     reset,
+    resetWalletLedger,
+    getOrCreateWallet,
+    nextWalletTimestampMs,
+    nextWalletTimestampIso,
   };
 }
 
@@ -66,16 +142,18 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
 
   return [
     http.get("*/health", () =>
-      HttpResponse.json({ status: "healthy", portal: "demo" })
+      HttpResponse.json(
+        buildDemoHealthPayload({ surface: "portal", value: "demo" })
+      )
     ),
     http.post("*/api/v1/auth/signature-verification", async ({ request }) => {
       const body = await request.json().catch(() => ({}));
-      const seq = nextSeq();
-      return HttpResponse.json({
-        sig_token: `portal_demo_sig_${demoNowMs(seq)}`,
-        action: body?.action || "portal.sign",
-        expires_in: 300,
+      const outcome = buildSignatureVerificationOutcome(body, {
+        tokenPrefix: "portal_demo_sig_",
+        defaultAction: "portal.sign",
+        timestampMs: demoNowMs(nextSeq()),
       });
+      return HttpResponse.json(outcome.body, { status: outcome.status });
     }),
     http.get("*/api/v1/interop/assignments/subject/:subjectId", ({ params }) =>
       HttpResponse.json(
@@ -195,10 +273,12 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
       HttpResponse.json(store.state.pendingReconsents)
     ),
     http.post("*/api/v1/execution/amendments/reconsent", () =>
-      HttpResponse.json({
-        status: "RECORDED",
-        recorded_at: demoNowIso(nextSeq()),
-      })
+      HttpResponse.json(
+        buildAmendmentReconsentPayload({
+          status: "RECORDED",
+          recordedAt: demoNowIso(nextSeq()),
+        })
+      )
     ),
     http.post(
       "*/api/v1/econsent/reconsent/complete/:requirementId",

@@ -14,13 +14,15 @@
       "code": "SITE-101",
       "name": "Riverside University Hospital",
       "country": "US",
-      "institutionCode": "INST-SITE-101"
+      "institutionCode": "INST-SITE-101",
+      "complianceStage": "SITE_ACTIVATION"
     },
     {
       "code": "SITE-102",
       "name": "Lakeshore Medical Center",
       "country": "US",
-      "institutionCode": "INST-SITE-102"
+      "institutionCode": "INST-SITE-102",
+      "complianceStage": "CONDUCT"
     }
   ],
   "participants": [

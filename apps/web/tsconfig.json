@@ -17,10 +17,11 @@
       "ui": ["../../packages/ui/index.d.ts"],
       "ui/testing": ["../../packages/ui/mockGateway.js"],
       "ui/vitest": ["../../packages/ui/accessibility-matcher.d.ts"],
-      "demo-fixtures": ["../../packages/demo-fixtures/src/index.js"],
+      "demo-fixtures": ["../../packages/demo-fixtures/src/index.d.ts"],
       "demo-fixtures/runtime": [
         "../../packages/demo-fixtures/src/runtime.d.ts"
       ],
+      "demo-fixtures/mocks": ["../../packages/demo-fixtures/src/mocks.d.ts"],
       "usdm-schemas": ["../../packages/usdm-schemas/src/index.ts"]
     },
     "skipLibCheck": true,

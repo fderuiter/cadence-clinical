@@ -43,6 +43,20 @@ describe("vite-strip-demo-fixtures plugin", () => {
     expect(runtimeStub).toContain("export function createUnbackedActionGuard");
     expect(runtimeStub).not.toContain("2026-01-05T09:00:00Z");
 
+    const mocksId = resolveId("demo-fixtures/mocks");
+    expect(mocksId).toContain("\0virtual:demo-fixtures-mocks-prod-stub");
+    const mocksStub = load(mocksId!)!;
+    expect(mocksStub).toContain("export function buildDemoHealthPayload");
+    expect(mocksStub).toContain(
+      "export function buildSignatureVerificationOutcome"
+    );
+    expect(mocksStub).toContain(
+      "export function buildAmendmentReconsentPayload"
+    );
+    expect(mocksStub).toContain("export function extractDemoReceiptOcr");
+    expect(mocksStub).toContain("export function evaluateDemoExpenseClaim");
+    expect(mocksStub).not.toContain("CADENCE-101");
+
     const demoViewId = resolveId("./demo/CtmsDemoWorkspace.vue", viewsImporter);
     expect(demoViewId).toContain(
       "\0virtual:demo-view-prod-stub:CtmsDemoWorkspace.vue"
@@ -83,7 +97,17 @@ describe("vite-strip-demo-fixtures plugin", () => {
       ) => string | null;
     };
 
-    const demoBuildResolve = resolveIdFor("build", "demo");
+    const demoBuildPlugin = createDemoFixturesPlugin(webAppDir);
+    demoBuildPlugin.configResolved?.({
+      command: "build",
+      mode: "demo",
+      env: {},
+    } as never);
+    const demoBuildResolve = demoBuildPlugin.resolveId as (
+      source: string,
+      importer?: string
+    ) => string | null;
+    const demoBuildLoad = demoBuildPlugin.load as (id: string) => string | null;
     expect(
       demoBuildResolve("./demo/CtmsDemoWorkspace.vue", viewsImporter)
     ).toBeNull();
@@ -91,11 +115,21 @@ describe("vite-strip-demo-fixtures plugin", () => {
     expect(demoBuildResolve("demo-fixtures")).toContain(
       "packages/demo-fixtures/src/index.js"
     );
+    expect(demoBuildResolve("demo-fixtures/mocks")).toContain(
+      "packages/demo-fixtures/src/mocks.js"
+    );
+    const manifestId = demoBuildResolve("virtual:demo-fixtures-manifest");
+    expect(manifestId).toBe("\0virtual:demo-fixtures-manifest");
+    expect(demoBuildLoad(manifestId!)).toContain("CADENCE-101");
+    const tldtsId = demoBuildResolve("tldts");
+    expect(tldtsId).toBe("\0virtual:demo-tldts-shim");
+    expect(demoBuildLoad(tldtsId!)).toContain("export function getDomain");
 
     const devServeResolve = resolveIdFor("serve", "development");
     expect(
       devServeResolve("./demo/EcrfDemoWorkspace.vue", viewsImporter)
     ).toBeNull();
     expect(devServeResolve("./demo/clinicalUsdm", storesImporter)).toBeNull();
+    expect(devServeResolve("tldts")).toBeNull();
   });
 });

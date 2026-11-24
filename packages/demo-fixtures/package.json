@@ -14,6 +14,10 @@
     "./runtime": {
       "types": "./src/runtime.d.ts",
       "default": "./src/runtime.js"
+    },
+    "./mocks": {
+      "types": "./src/mocks.d.ts",
+      "default": "./src/mocks.js"
     }
   },
   "scripts": {

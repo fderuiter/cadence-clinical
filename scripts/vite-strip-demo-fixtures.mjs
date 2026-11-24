@@ -1,8 +1,13 @@
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 
+const VIRTUAL_DEMO_MANIFEST_SOURCE = "virtual:demo-fixtures-manifest";
+const VIRTUAL_DEMO_MANIFEST_ID = "\0virtual:demo-fixtures-manifest";
 const VIRTUAL_DEMO_FIXTURES_ID = "\0virtual:demo-fixtures-prod-stub";
 const VIRTUAL_DEMO_RUNTIME_ID = "\0virtual:demo-fixtures-runtime-prod-stub";
+const VIRTUAL_DEMO_MOCKS_ID = "\0virtual:demo-fixtures-mocks-prod-stub";
+const VIRTUAL_DEMO_TLDTS_SHIM_ID = "\0virtual:demo-tldts-shim";
 const VIRTUAL_DEMO_VIEW_PREFIX = "\0virtual:demo-view-prod-stub:";
 const VIRTUAL_DEMO_STORE_PREFIX = "\0virtual:demo-store-prod-stub:";
 
@@ -139,6 +144,75 @@ export function createUnbackedActionGuard({
     refuseUnbackedAction,
     unbackedActionsEnabled: (env) => Boolean(isAllowed(env)),
   };
+}
+`;
+
+const EMPTY_PROD_MOCKS_STUB_SOURCE = `
+const EMPTY_RECORD = /* @__PURE__ */ Object.freeze({});
+
+export function buildDemoHealthPayload() {
+  return EMPTY_RECORD;
+}
+
+export function buildSignatureVerificationOutcome() {
+  return { status: 400, body: EMPTY_RECORD };
+}
+
+export function buildAmendmentReconsentPayload() {
+  return EMPTY_RECORD;
+}
+
+export function computeMockReceiptDigest() {
+  return null;
+}
+
+export function decodeReceiptImageText() {
+  return "";
+}
+
+export function extractDemoReceiptOcr() {
+  return EMPTY_RECORD;
+}
+
+export function evaluateDemoExpenseClaim() {
+  return EMPTY_RECORD;
+}
+`;
+
+const DEMO_TLDTS_SHIM_SOURCE = `
+const MULTI_LABEL_PUBLIC_SUFFIXES = /* @__PURE__ */ new Set([
+  "ac.uk",
+  "co.jp",
+  "co.nz",
+  "co.uk",
+  "com.au",
+  "com.br",
+  "github.io",
+  "gov.uk",
+  "org.uk",
+]);
+
+export function getDomain(input, options) {
+  if (typeof input !== "string" || !input) return null;
+  const host = input
+    .trim()
+    .toLowerCase()
+    .replace(/\\.+$/, "");
+  if (!host || host.includes(":") || /^[\\d.]+$/.test(host)) {
+    return null;
+  }
+  const labels = host.split(".");
+  if (labels.length < 2 || labels.some((part) => !part)) {
+    return null;
+  }
+  const lastTwo = \`\${labels[labels.length - 2]}.\${labels[labels.length - 1]}\`;
+  if (
+    MULTI_LABEL_PUBLIC_SUFFIXES.has(lastTwo) &&
+    (lastTwo !== "github.io" || options?.allowPrivateDomains !== false)
+  ) {
+    return labels.length >= 3 ? labels.slice(-3).join(".") : null;
+  }
+  return lastTwo;
 }
 `;
 
@@ -306,11 +380,208 @@ function toPosixPath(value) {
   return value.split(path.sep).join("/");
 }
 
+function deriveUuidV8(tenantScope, kind, name) {
+  const digest = crypto
+    .createHash("sha256")
+    .update(`cadence-development-demo:${tenantScope}:${kind}:${name}`, "utf8")
+    .digest();
+  const bytes = Uint8Array.from(digest.subarray(0, 16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x80;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Buffer.from(bytes).toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+function formatUtcIsoSeconds(epochMs) {
+  return new Date(epochMs).toISOString().replace(".000Z", "Z");
+}
+
+function resolveWorkflowAndWorkspace(username, kernelRoleCode, realmRoles) {
+  switch (kernelRoleCode) {
+    case "DEMO_CRC":
+      return ["coordinator", "site_crc"];
+    case "DEMO_INVESTIGATOR":
+      return ["investigator", "site_investigator"];
+    case "DEMO_MONITOR":
+      return ["monitor", "cra_monitor"];
+    case "DEMO_DATA_MANAGER":
+      return ["data_manager", "data_manager"];
+    case "DEMO_DESIGNER":
+      return realmRoles.includes("Sponsor Admin")
+        ? ["designer_lead", "super_admin"]
+        : ["designer", "sponsor_designer"];
+    case "DEMO_SAFETY":
+      return ["safety", "safety_officer"];
+    case "DEMO_AUDITOR":
+      return ["auditor", "auditor"];
+    case "DEMO_STATISTICIAN":
+      return username === "stat.approver"
+        ? ["statistician_approver", "unblinded_statistician"]
+        : ["statistician", "unblinded_statistician"];
+    case "DEMO_PHARMACIST":
+      return ["pharmacist", "pharmacist"];
+    default:
+      return [String(kernelRoleCode || "").toLowerCase(), "super_admin"];
+  }
+}
+
+export function synthesizeDemoManifestModuleSource(demoSeedPath, realmPath) {
+  const seed = JSON.parse(fs.readFileSync(demoSeedPath, "utf8"));
+  const realm = JSON.parse(fs.readFileSync(realmPath, "utf8"));
+  const realmUsersByName = new Map();
+  let defaultTenantCode = "cadence-local";
+
+  for (const user of realm.users || []) {
+    if (!user?.username) continue;
+    const attrs = user.attributes || {};
+    const tenantId =
+      Array.isArray(attrs.tenant_id) && attrs.tenant_id.length > 0
+        ? String(attrs.tenant_id[0])
+        : "";
+    if (tenantId && defaultTenantCode === "cadence-local") {
+      defaultTenantCode = tenantId;
+    }
+    realmUsersByName.set(user.username, {
+      id: String(user.id || ""),
+      email: String(user.email || ""),
+      firstName: String(user.firstName || ""),
+      lastName: String(user.lastName || ""),
+      tenantCode: tenantId || "cadence-local",
+      realmRoles: Array.isArray(user.realmRoles)
+        ? user.realmRoles.map((r) => String(r))
+        : [],
+    });
+  }
+
+  const tenantCode = defaultTenantCode;
+  const tenantUuid = deriveUuidV8(tenantCode, "tenant", tenantCode);
+  const epochMs = Date.parse(seed.epoch);
+  const epochIso = formatUtcIsoSeconds(epochMs);
+  const sponsor = {
+    code: seed.sponsor.code,
+    name: seed.sponsor.name,
+    organizationUuid: deriveUuidV8(tenantUuid, "organization", "sponsor"),
+  };
+  const studyUuid = deriveUuidV8(tenantUuid, "study", seed.study.code);
+  const study = {
+    code: seed.study.code,
+    title: seed.study.title,
+    phase: seed.study.phase,
+    sponsorCode: seed.sponsor.code,
+    uuid: studyUuid,
+    ref: `study:${studyUuid}`,
+  };
+
+  const sites = (seed.sites || []).map((site) => {
+    const institutionUuid = deriveUuidV8(tenantUuid, "organization", site.code);
+    const siteUuid = deriveUuidV8(tenantUuid, "site", site.code);
+    const studySiteUuid = deriveUuidV8(tenantUuid, "study-site", site.code);
+    return {
+      code: site.code,
+      name: site.name,
+      country: site.country,
+      institutionCode: site.institutionCode,
+      complianceStage: site.complianceStage || "CONDUCT",
+      institutionUuid,
+      siteUuid,
+      studySiteUuid,
+      studySiteRef: `study_site:${studySiteUuid}`,
+    };
+  });
+
+  const participants = (seed.participants || []).map((participant, index) => {
+    const participantUuid = deriveUuidV8(
+      tenantUuid,
+      "participant",
+      participant.subjectCode
+    );
+    const enrollmentUuid = deriveUuidV8(
+      tenantUuid,
+      "enrollment",
+      participant.subjectCode
+    );
+    return {
+      subjectCode: participant.subjectCode,
+      siteCode: participant.siteCode,
+      enrollmentIndex: index,
+      status: "SCREENED",
+      screenedAt: formatUtcIsoSeconds(epochMs + (7 + index) * 86_400_000),
+      participantUuid,
+      enrollmentUuid,
+      enrollmentRef: `enrollment:${enrollmentUuid}`,
+    };
+  });
+
+  const roles = (seed.roles || []).map((role) => ({
+    code: role.code,
+    name: role.name,
+    roleUuid: deriveUuidV8(tenantUuid, "role", role.code),
+    capabilities: [...(role.capabilities || [])],
+  }));
+
+  const personas = (seed.users || []).map((user) => {
+    const realmUser = realmUsersByName.get(user.username) || {
+      id: user.subject,
+      email: "",
+      firstName: "",
+      lastName: "",
+      tenantCode,
+      realmRoles: [],
+    };
+    const [workflow, workspacePersona] = resolveWorkflowAndWorkspace(
+      user.username,
+      user.role,
+      realmUser.realmRoles
+    );
+    return {
+      username: user.username,
+      id: user.subject,
+      email: realmUser.email,
+      firstName: realmUser.firstName,
+      lastName: realmUser.lastName,
+      tenantId: realmUser.tenantCode || tenantCode,
+      kernelRole: user.role,
+      workflow,
+      workspacePersona,
+      siteCode: user.site ?? null,
+      grantUuid: deriveUuidV8(tenantUuid, "grant", user.username),
+      realmRoles: [...realmUser.realmRoles],
+    };
+  });
+
+  const manifest = {
+    tenantCode,
+    tenantUuid,
+    epochIso,
+    epochMs,
+    sponsor,
+    study,
+    sites,
+    participants,
+    roles,
+    personas,
+  };
+
+  return `function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const key of Object.keys(value)) {
+    deepFreeze(value[key]);
+  }
+  return Object.freeze(value);
+}
+
+export const DEMO_MANIFEST = /* @__PURE__ */ deepFreeze(${JSON.stringify(manifest, null, 2)});
+`;
+}
+
 /**
  * Excludes \`packages/demo-fixtures\`, \`src/views/demo/*\`, and \`src/stores/demo/*\`
  * from non-demo production Rollup bundles by resolving them to inert virtual modules
- * during production builds, while preserving real modules in demo builds (\`build:demo\`),
- * dev servers, and test runs.
+ * during production builds, while synthesizing \`DEMO_MANIFEST\` virtually from
+ * \`packages/demo-fixtures/demo-seed.json\` and \`docker/cadence-realm.json\` in demo
+ * builds (\`build:demo\`), dev servers, and Vitest runs.
  *
  * @param {string} appDir - Absolute directory of the Vite app.
  * @returns {import("vite").Plugin}
@@ -332,13 +603,24 @@ export function isDemoBuildResolved(appDir, resolved) {
 
 export function createDemoFixturesPlugin(appDir) {
   let stripDemoFixtures = false;
-  const demoFixturesEntry = path.resolve(
-    appDir,
-    "../../packages/demo-fixtures/src/index.js"
+  let isDemoStaticBuild = false;
+  const repoRoot = path.resolve(appDir, "../..");
+  const demoSeedPath = path.join(
+    repoRoot,
+    "packages/demo-fixtures/demo-seed.json"
   );
-  const demoFixturesRuntimeEntry = path.resolve(
-    appDir,
-    "../../packages/demo-fixtures/src/runtime.js"
+  const realmPath = path.join(repoRoot, "docker/cadence-realm.json");
+  const demoFixturesEntry = path.join(
+    repoRoot,
+    "packages/demo-fixtures/src/index.js"
+  );
+  const demoFixturesRuntimeEntry = path.join(
+    repoRoot,
+    "packages/demo-fixtures/src/runtime.js"
+  );
+  const demoFixturesMocksEntry = path.join(
+    repoRoot,
+    "packages/demo-fixtures/src/mocks.js"
   );
   const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
   const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
@@ -368,8 +650,17 @@ export function createDemoFixturesPlugin(appDir) {
     configResolved(resolved) {
       const isDemo = isDemoBuildResolved(appDir, resolved);
       stripDemoFixtures = resolved.command === "build" && !isDemo;
+      isDemoStaticBuild = resolved.command === "build" && isDemo;
     },
     resolveId(source, importer) {
+      if (isDemoStaticBuild && source === "tldts") {
+        return VIRTUAL_DEMO_TLDTS_SHIM_ID;
+      }
+      if (source === VIRTUAL_DEMO_MANIFEST_SOURCE) {
+        return stripDemoFixtures
+          ? VIRTUAL_DEMO_FIXTURES_ID
+          : VIRTUAL_DEMO_MANIFEST_ID;
+      }
       if (source === "demo-fixtures") {
         return stripDemoFixtures ? VIRTUAL_DEMO_FIXTURES_ID : demoFixturesEntry;
       }
@@ -377,6 +668,11 @@ export function createDemoFixturesPlugin(appDir) {
         return stripDemoFixtures
           ? VIRTUAL_DEMO_RUNTIME_ID
           : demoFixturesRuntimeEntry;
+      }
+      if (source === "demo-fixtures/mocks") {
+        return stripDemoFixtures
+          ? VIRTUAL_DEMO_MOCKS_ID
+          : demoFixturesMocksEntry;
       }
       if (!stripDemoFixtures) {
         return null;
@@ -394,11 +690,22 @@ export function createDemoFixturesPlugin(appDir) {
       return null;
     },
     load(id) {
+      if (id === VIRTUAL_DEMO_MANIFEST_ID) {
+        this?.addWatchFile?.(demoSeedPath);
+        this?.addWatchFile?.(realmPath);
+        return synthesizeDemoManifestModuleSource(demoSeedPath, realmPath);
+      }
       if (id === VIRTUAL_DEMO_FIXTURES_ID) {
         return EMPTY_PROD_STUB_SOURCE;
       }
       if (id === VIRTUAL_DEMO_RUNTIME_ID) {
         return EMPTY_PROD_RUNTIME_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_DEMO_MOCKS_ID) {
+        return EMPTY_PROD_MOCKS_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_DEMO_TLDTS_SHIM_ID) {
+        return DEMO_TLDTS_SHIM_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
         return EMPTY_DEMO_VIEW_STUB_SOURCE;

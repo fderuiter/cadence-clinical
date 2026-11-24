@@ -60,7 +60,7 @@ public static class SelfHealService
             Console.WriteLine($"✔ Requirement tags verified ({sanitized} Markdown file(s) updated).");
         }
 
-        Console.WriteLine("\n  5. Synchronizing Documentation, Demo & ADR Indexes...");
+        Console.WriteLine("\n  5. Synchronizing Documentation & ADR Indexes...");
         if (Directory.Exists(Path.Combine(repoRoot, "docs", "adr")))
         {
             ok &= AdrValidatorService.SyncAdrIndex(repoRoot) == 0;
@@ -70,13 +70,6 @@ public static class SelfHealService
         if (Directory.Exists(Path.Combine(repoRoot, "docs")))
         {
             ok &= DocIndexSyncService.SyncDocIndex(check: false, repoRoot: repoRoot) == 0;
-        }
-
-        if (File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.DemoSeedRelativePath)) &&
-            File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.ExecutionSeedRelativePath)) &&
-            File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.RealmRelativePath)))
-        {
-            ok &= DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: false, repoRoot: repoRoot) == 0;
         }
 
         Console.WriteLine("\n  6. Synchronizing EF Core Schema Documentation...");
