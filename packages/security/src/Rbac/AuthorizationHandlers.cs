@@ -31,7 +31,10 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         ArgumentNullException.ThrowIfNull(requirement);
 
         Principal? principal = ResolvePrincipal(context);
-        if (principal is not null && PermissionMatrix.HasPermission(principal, requirement.Permission))
+        if (principal is not null
+            && PermissionMatrix.HasPermission(
+                FilterEffectivePrincipalForPermission(principal, requirement.Permission),
+                requirement.Permission))
         {
             context.Succeed(requirement);
             return Task.CompletedTask;
@@ -39,6 +42,59 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 
         context.Fail();
         return Task.CompletedTask;
+    }
+
+    private static Principal FilterEffectivePrincipalForPermission(Principal principal, string permission)
+    {
+        if (ClinicalScopeGuard.IsVerifiedTrialTenant(principal.TenantId) || IsReadPermission(permission))
+        {
+            return principal;
+        }
+
+        bool holdsTrialCoordinator =
+            principal.Roles.Any(IsTrialCoordinatorRole) || principal.RawRoles.Any(IsTrialCoordinatorRole);
+        if (!holdsTrialCoordinator)
+        {
+            return principal;
+        }
+
+        var filteredRawRoles = principal.RawRoles
+            .Where(role => !IsTrialCoordinatorRole(role))
+            .ToArray();
+        var filteredRoles = principal.Roles
+            .Where(role => !IsTrialCoordinatorRole(role))
+            .ToArray();
+
+        return new Principal
+        {
+            UserId = principal.UserId,
+            TenantId = principal.TenantId,
+            Roles = filteredRoles,
+            RawRoles = filteredRawRoles,
+            AssignedStudies = principal.AssignedStudies,
+            AssignedSites = principal.AssignedSites,
+            SponsorId = principal.SponsorId,
+            UnblindedAccess = principal.UnblindedAccess,
+        };
+    }
+
+    private static bool IsTrialCoordinatorRole(string role) =>
+        string.Equals(
+            RoleNormalization.NormalizeRole(role),
+            RoleNormalization.ROLE_TRIAL_COORDINATOR,
+            StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsReadPermission(string permission)
+    {
+        int separatorIndex = permission.IndexOf(':', StringComparison.Ordinal);
+        if (separatorIndex < 0 || separatorIndex == permission.Length - 1)
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> action = permission.AsSpan(separatorIndex + 1).Trim();
+        return action.Equals("read", StringComparison.OrdinalIgnoreCase)
+            || action.StartsWith("read_", StringComparison.OrdinalIgnoreCase);
     }
 
     internal static Principal? ResolvePrincipal(AuthorizationHandlerContext context)

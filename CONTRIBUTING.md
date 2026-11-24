@@ -75,7 +75,7 @@ To run the services locally, see [README: Running the services](README.md#runnin
 
 ## 3. Local checks
 
-The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts/run-cli.js check --pre-commit` on Linux, macOS, and Windows, reading staged Git index blobs via `git cat-file --batch` (without mutating working-tree files or scanning the full repository on deletion/clean-merge commits) and running Prettier, ESLint, `actionlint`, `hadolint`, `dotnet format` (`whitespace` and `style`), `detect-secrets`, GitHub Actions workflow security and SHA pinning (`workflow-security`), YAML syntax, trailing-whitespace, EOF newline, and all Cadence policy gates fail-closed. Before opening a PR also run the full checks and tests:
+The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts/run-cli.js check --pre-commit` on Linux, macOS, and Windows, reading staged Git index blobs via `git cat-file --batch` (without mutating working-tree files or scanning the full repository on deletion/clean-merge commits) and running Prettier, ESLint, `actionlint`, `hadolint`, `shellcheck`, `dotnet format` (`whitespace` and `style`), `detect-secrets`, GitHub Actions workflow security and SHA pinning (`workflow-security`), YAML syntax, trailing-whitespace, EOF newline, and all Cadence policy gates fail-closed. Before opening a PR also run the full checks and tests:
 
 ```bash
 dotnet build Cadence.sln
@@ -88,7 +88,7 @@ pnpm cadence check
 
 `make verify` runs `pnpm cadence check`, `pnpm test`, and `pnpm cadence test` in sequence.
 
-Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `shellcheck`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
 `duplication`, `security`, `deid`, `vulnerabilities`.
 

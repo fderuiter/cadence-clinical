@@ -16,10 +16,38 @@ export type KernelUpgradeSubscriptionRequest =
 export type KernelActivateSubscriptionRequest =
   KernelSchemas["Kernel_KernelActivateSubscriptionRequest"];
 
+function requestKernelEntitlements(): Promise<KernelEntitlements> {
+  return unwrapResponse(kernelClient.GET("/api/v1/kernel/entitlements"));
+}
+
+type EntitlementsFacade = {
+  entitlements: () => Promise<KernelEntitlements>;
+};
+
+let boundEntitlementsFacade: EntitlementsFacade | null = null;
+let delegatingToFacade = false;
+
+export function bindKernelEntitlementsFacade(facade: EntitlementsFacade): void {
+  boundEntitlementsFacade = facade;
+}
+
 export const kernelEntitlementsApi = {
   /** Reads the caller's resolved kernel tenant commercial subscription tier and enabled product families. */
   entitlements(): Promise<KernelEntitlements> {
-    return unwrapResponse(kernelClient.GET("/api/v1/kernel/entitlements"));
+    if (
+      !delegatingToFacade &&
+      boundEntitlementsFacade &&
+      boundEntitlementsFacade.entitlements !==
+        kernelEntitlementsApi.entitlements
+    ) {
+      delegatingToFacade = true;
+      try {
+        return boundEntitlementsFacade.entitlements();
+      } finally {
+        delegatingToFacade = false;
+      }
+    }
+    return requestKernelEntitlements();
   },
 
   /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */

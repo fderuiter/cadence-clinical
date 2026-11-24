@@ -8,7 +8,7 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Fail-closed <c>actionlint</c> and <c>hadolint</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>,
+/// Fail-closed <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>,
 /// plus <c>.cadence/bin</c> / <c>PATH</c> binary resolution for <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c>.
 /// </summary>
 public static class CliLinterGateService
@@ -259,6 +259,115 @@ public static class CliLinterGateService
         }
     }
 
+    public static int RunShellcheck(
+        string? repoRoot = null,
+        string[]? targetFiles = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null,
+        Func<string, string?>? getEnvironmentVariable = null)
+    {
+        repoRoot ??= FindRepoRoot();
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        using (ownedReader)
+        {
+            if (preCommit || targetFiles is not null)
+            {
+                var rawFiles = preCommit && targetFiles is null
+                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
+                    : (IReadOnlyList<string>)targetFiles!;
+
+                if (rawFiles.Count == 0)
+                {
+                    return 0;
+                }
+
+                var tool = ResolveShellcheck(repoRoot, getEnvironmentVariable);
+                if (tool is null)
+                {
+                    PrintMissingToolError("shellcheck", ShellcheckVersion);
+                    return 1;
+                }
+
+                var matchedScripts = new List<string>();
+                bool configChanged = false;
+
+                foreach (string raw in rawFiles)
+                {
+                    string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
+                    if (string.IsNullOrEmpty(rel) || !ExistsInSnapshot(repoRoot, rel, reader))
+                    {
+                        continue;
+                    }
+
+                    if (IsShellScriptPath(rel))
+                    {
+                        matchedScripts.Add(rel);
+                    }
+                    else if (IsShellcheckConfig(rel))
+                    {
+                        configChanged = true;
+                    }
+                }
+
+                if (matchedScripts.Count == 0 && !configChanged)
+                {
+                    return 0;
+                }
+
+                if (reader is { HasAuthoritativeIndex: true })
+                {
+                    var shellIndexPaths = reader.Paths
+                        .Where(p => IsShellScriptPath(p) || IsShellcheckConfig(p))
+                        .Order(StringComparer.Ordinal)
+                        .ToList();
+
+                    var scriptsToValidate = configChanged
+                        ? shellIndexPaths.Where(IsShellScriptPath).ToList()
+                        : matchedScripts.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
+                    if (scriptsToValidate.Count == 0)
+                    {
+                        return 0;
+                    }
+
+                    using var workspace = reader.Materialize(shellIndexPaths);
+                    return ExecuteShellcheckBatches(workspace.RootPath, tool.FileName, scriptsToValidate);
+                }
+
+                var diskScripts = configChanged
+                    ? DiscoverShellScripts(repoRoot)
+                    : matchedScripts.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
+                if (diskScripts.Count == 0)
+                {
+                    return 0;
+                }
+
+                return ExecuteShellcheckBatches(repoRoot, tool.FileName, diskScripts);
+            }
+
+            var fullScanTool = ResolveShellcheck(repoRoot, getEnvironmentVariable);
+            if (fullScanTool is null)
+            {
+                PrintMissingToolError("shellcheck", ShellcheckVersion);
+                return 1;
+            }
+
+            var allScripts = DiscoverShellScripts(repoRoot);
+            if (allScripts.Count == 0)
+            {
+                return 0;
+            }
+
+            return ExecuteShellcheckBatches(repoRoot, fullScanTool.FileName, allScripts);
+        }
+    }
+
     public static bool IsWorkflowYaml(string relativePath)
     {
         string normalized = relativePath.Replace('\\', '/');
@@ -319,6 +428,46 @@ public static class CliLinterGateService
                string.Equals(normalized, ".hadolint.yml", StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool IsShellScriptPath(string relativePath)
+    {
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        if (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        string[] segments = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (ExcludedDirectories.Contains(segments[i], StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        string fileName = segments[^1];
+        if (fileName.EndsWith(".sh", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return segments.Length >= 2 &&
+               string.Equals(segments[0], ".githooks", StringComparison.Ordinal) &&
+               !fileName.EndsWith(".sample", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsShellcheckConfig(string relativePath)
+    {
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        return string.Equals(normalized, ".shellcheckrc", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "shellcheckrc", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool ExistsInSnapshot(string repoRoot, string relativePath, GitIndexReader? reader) =>
         reader is not null ? reader.FileExists(relativePath) : File.Exists(Path.Combine(repoRoot, relativePath));
 
@@ -373,6 +522,42 @@ public static class CliLinterGateService
         }
     }
 
+    private static List<string> DiscoverShellScripts(string repoRoot)
+    {
+        var results = new List<string>();
+        CollectShellScriptsRecursive(repoRoot, repoRoot, results);
+        results.Sort(StringComparer.Ordinal);
+        return results;
+    }
+
+    private static void CollectShellScriptsRecursive(string repoRoot, string currentDir, List<string> results)
+    {
+        if (!Directory.Exists(currentDir))
+        {
+            return;
+        }
+
+        foreach (string file in Directory.EnumerateFiles(currentDir))
+        {
+            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            if (IsShellScriptPath(rel))
+            {
+                results.Add(rel);
+            }
+        }
+
+        foreach (string subDir in Directory.EnumerateDirectories(currentDir))
+        {
+            string dirName = Path.GetFileName(subDir);
+            if (ExcludedDirectories.Contains(dirName, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            CollectShellScriptsRecursive(repoRoot, subDir, results);
+        }
+    }
+
     private static int ExecuteActionlintBatches(string workingDirectory, string executable, List<string> workflowFiles)
     {
         bool failed = false;
@@ -399,7 +584,7 @@ public static class CliLinterGateService
         bool failed = false;
         foreach (string[] batch in dockerfiles.Chunk(MaxFilesPerBatch))
         {
-            var args = new List<string>(batch.Length + 2) { "--failure-threshold", "error" };
+            var args = new List<string>(batch.Length + 2) { "--failure-threshold", "warning" };
             args.AddRange(batch);
             if (RunLinterProcess(workingDirectory, executable, args) != 0)
             {
@@ -409,11 +594,34 @@ public static class CliLinterGateService
 
         if (failed)
         {
-            Console.WriteLine("[ERROR] hadolint reported Dockerfile error-level violations.");
+            Console.WriteLine("[ERROR] hadolint reported Dockerfile warning- or error-level violations.");
             return 1;
         }
 
         Console.WriteLine($"✔ hadolint validated {dockerfiles.Count} Dockerfile(s).");
+        return 0;
+    }
+
+    private static int ExecuteShellcheckBatches(string workingDirectory, string executable, List<string> shellScripts)
+    {
+        bool failed = false;
+        foreach (string[] batch in shellScripts.Chunk(MaxFilesPerBatch))
+        {
+            var args = new List<string>(batch.Length + 1) { "-x" };
+            args.AddRange(batch);
+            if (RunLinterProcess(workingDirectory, executable, args) != 0)
+            {
+                failed = true;
+            }
+        }
+
+        if (failed)
+        {
+            Console.WriteLine("[ERROR] shellcheck reported shell script violations.");
+            return 1;
+        }
+
+        Console.WriteLine($"✔ shellcheck validated {shellScripts.Count} shell script(s).");
         return 0;
     }
 

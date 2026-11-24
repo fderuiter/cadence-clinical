@@ -1,4 +1,4 @@
-import { vi, expect } from "vitest";
+import { beforeEach, vi, expect } from "vitest";
 import { config } from "@vue/test-utils";
 import { toBeAccessible } from "ui/vitest";
 import * as usdmSchemas from "usdm-schemas";
@@ -10,6 +10,13 @@ config.global.plugins = [i18n];
 
 expect.extend({
   toBeAccessible,
+});
+
+beforeEach(async () => {
+  const pending = globalThis.__CADENCE_LAZY_OVERLAY_PROMISES__;
+  while (pending && pending.size > 0) {
+    await Promise.all(Array.from(pending));
+  }
 });
 
 // In-memory Storage mock for jsdom environment
