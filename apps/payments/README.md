@@ -95,8 +95,8 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   database mutations). Every `/participant/me/*` handler resolves the wallet through `ResolveOwnWalletAsync` bound to
   `PaymentsCaller.UserId`, refuses (`403`) any cross-participant `subjectId` or `walletId`, masks card/routing/account
   identifiers before serialization, enforces the server-computed `<= $100.00` (`<= $75.00` server meal per-diem cap) /
-  `>= 0.90` server-bound OCR confidence (from receipt bytes or a single-use HMAC token issued by `ocr-extract`, with
-  manual field edits and duplicate receipt SHA-256 digests held in `PENDING_REVIEW`) / IRS `$600.00` verified W-9
+  `>= 0.90` server-bound OCR confidence (from verified image/document bytes or a single-use HMAC token minted exclusively from readable image/document bytes when `rawText` is absent, with plain-text uploads,
+  manual field edits, and duplicate receipt SHA-256 digests held in `PENDING_REVIEW`) / IRS `$600.00` verified W-9
   auto-approval policy, persists `(WalletId, IdempotencyKey)` deduplication keys across `/participant/me/expenses` and
   `/participant/me/disburse` so retries never double-credit or double-debit balances, and computes diary synchronization
   stipends strictly from eligible (`RequiresVerification = false`, `IsMilestone = false`) server-side

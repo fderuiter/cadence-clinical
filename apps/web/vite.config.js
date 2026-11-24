@@ -132,7 +132,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
+      ...createUiWorkspaceAliases(__dirname),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",
@@ -164,7 +164,12 @@ export default defineConfig({
     ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
   optimizeDeps: {
-    entries: ["index.html", "tests/browser/observation.html"],
+    entries: [
+      "index.html",
+      "tests/browser/observation.html",
+      "../../packages/ui/index.js",
+    ],
+    include: ["ui > axe-core"],
   },
   build: {
     outDir: "dist",
@@ -179,6 +184,13 @@ export default defineConfig({
               const normalizedId = id.replace(/\\/g, "/");
               if (normalizedId.includes("vite/preload-helper")) {
                 return "preload-helper";
+              }
+              if (
+                /\/packages\/ui\/(?:session|callerScope)\.js(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "ui-shell";
               }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
