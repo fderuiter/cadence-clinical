@@ -342,44 +342,7 @@ const handleSign = async () => {
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   margin-bottom: 12px;
-  min-width: 0;
-}
-
-.form-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-body);
-}
-
-.form-control {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: var(--semantic-color-text-dark);
-  background: var(--semantic-color-surface);
-}
-
-.text-danger {
-  color: var(--semantic-color-error);
-}
-
-.form-control:disabled {
-  background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-secondary);
-  cursor: not-allowed;
-}
-
-.btn {
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 .spinner {
@@ -398,3 +361,5 @@ const handleSign = async () => {
   }
 }
 </style>
+
+<style scoped src="./ticketModalControls.css"></style>

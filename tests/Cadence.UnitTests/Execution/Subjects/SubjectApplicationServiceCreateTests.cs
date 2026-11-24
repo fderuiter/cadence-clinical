@@ -151,7 +151,11 @@ public class SubjectApplicationServiceCreateTests
     [Fact]
     public async Task CreateAsync_GivenKernelEnrollmentSynchronizerAndSite_ScreensParticipantBeforePersistingSubject()
     {
-        var synchronizer = new RecordingKernelEnrollmentSynchronizer();
+        var expectedEnrollmentId = Guid.Parse("0192f3c4-5e6a-7b8c-9d0e-00000000e909");
+        var synchronizer = new RecordingKernelEnrollmentSynchronizer
+        {
+            NextResult = Cadence.Core.Domain.Result<Guid>.Success(expectedEnrollmentId),
+        };
         var subjects = new InMemorySubjectRepository();
         var service = new SubjectApplicationService(
             subjects,
@@ -162,16 +166,40 @@ public class SubjectApplicationServiceCreateTests
             new FakeCurrentAuditContextAccessor(),
             kernelEnrollmentSynchronizer: synchronizer);
 
+        var ct = TestContext.Current.CancellationToken;
         var result = await service.CreateAsync(
             CreateRequest("SUBJ-101-009", studyId: "CADENCE-101", siteId: "SITE-101"),
-            TestContext.Current.CancellationToken);
+            ct);
 
         result.IsSuccess.Should().BeTrue();
+        var expectedEnrollmentRef = $"enrollment:{expectedEnrollmentId:D}";
+        result.Value!.EnrollmentRef.Should().Be(expectedEnrollmentRef);
         synchronizer.Calls.Should().ContainSingle().Which.Should().Match<(Guid ParticipantId, string StudyCode, string SiteCode, string SubjectCode)>(c =>
             c.ParticipantId == result.Value!.Id.Value
             && c.StudyCode == "CADENCE-101"
             && c.SiteCode == "SITE-101"
             && c.SubjectCode == "SUBJ-101-009");
+
+        var persisted = await subjects.GetByCodeAsync("SUBJ-101-009", ct);
+        persisted.Should().NotBeNull();
+        persisted!.KernelEnrollmentId.Should().Be(expectedEnrollmentId);
+
+        var list = await service.ListAsync("CADENCE-101", "SITE-101", null, 50, 0, ct);
+        list.IsSuccess.Should().BeTrue();
+        list.Value!.Items.Should().ContainSingle().Which.EnrollmentRef.Should().Be(expectedEnrollmentRef);
+
+        var detailByEnrollmentRef = await service.GetDetailAsync(expectedEnrollmentRef, ct);
+        detailByEnrollmentRef.IsSuccess.Should().BeTrue();
+        detailByEnrollmentRef.Value!.SubjectId.Value.Should().Be("SUBJ-101-009");
+        detailByEnrollmentRef.Value.EnrollmentRef.Should().Be(expectedEnrollmentRef);
+
+        var detailByVersionedEnrollmentRef = await service.GetDetailAsync($"{expectedEnrollmentRef}@1", ct);
+        detailByVersionedEnrollmentRef.IsSuccess.Should().BeTrue();
+        detailByVersionedEnrollmentRef.Value!.EnrollmentRef.Should().Be(expectedEnrollmentRef);
+
+        var detailByLegacyParticipantRef = await service.GetDetailAsync($"participant:{result.Value.Id.Value:D}", ct);
+        detailByLegacyParticipantRef.IsSuccess.Should().BeTrue();
+        detailByLegacyParticipantRef.Value!.EnrollmentRef.Should().Be(expectedEnrollmentRef);
     }
 
     [Fact]

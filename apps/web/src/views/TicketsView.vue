@@ -18,39 +18,59 @@
         </p>
       </div>
 
-      <div class="header-action-group">
-        <button
-          v-if="demoBuild"
-          class="btn btn-secondary"
-          title="Export Regulatory Audit Trail CSV"
-          @click="exportAuditTrail('csv')"
+      <div class="header-action-stack">
+        <div class="header-action-group">
+          <button
+            v-if="demoBuild"
+            type="button"
+            class="btn btn-secondary"
+            title="Export Regulatory Audit Trail CSV"
+            @click="exportAuditTrail('csv')"
+          >
+            <ClinicalIcon name="download" :size="16" class="btn-icon-svg" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            v-if="demoBuild"
+            type="button"
+            class="btn btn-secondary"
+            title="Export Regulatory Audit Trail JSON"
+            @click="exportAuditTrail('json')"
+          >
+            <ClinicalIcon name="file-text" :size="16" class="btn-icon-svg" />
+            <span>Export JSON</span>
+          </button>
+          <button
+            id="btn-create-ticket"
+            type="button"
+            class="btn btn-primary"
+            :disabled="!canMutateTicket"
+            :aria-disabled="!canMutateTicket ? 'true' : undefined"
+            :aria-describedby="
+              !canMutateTicket ? 'tickets-auditor-readonly-note' : undefined
+            "
+            :title="
+              !canMutateTicket
+                ? auditorReadOnlyExplanation
+                : 'Log New Clinical Issue'
+            "
+            @click="openCreateTicketModal"
+          >
+            <ClinicalIcon
+              :name="!canMutateTicket ? 'lock' : 'plus'"
+              :size="16"
+              class="btn-icon-svg"
+            />
+            <span>Log Issue</span>
+          </button>
+        </div>
+        <p
+          v-if="!canMutateTicket"
+          id="tickets-auditor-readonly-note"
+          class="auditor-readonly-note"
         >
-          <span class="btn-icon"
-            ><ClinicalIcon name="bar-chart-3" :size="16"
-          /></span>
-          Export CSV
-        </button>
-        <button
-          v-if="demoBuild"
-          class="btn btn-secondary"
-          title="Export Regulatory Audit Trail JSON"
-          @click="exportAuditTrail('json')"
-        >
-          <span class="btn-icon"
-            ><ClinicalIcon name="file-text" :size="16"
-          /></span>
-          Export JSON
-        </button>
-        <button
-          id="btn-create-ticket"
-          type="button"
-          class="btn btn-primary"
-          title="Log New Clinical Issue"
-          @click="isCreateModalOpen = true"
-        >
-          <span class="btn-icon"><ClinicalIcon name="plus" :size="16" /></span>
-          Log Issue
-        </button>
+          {{ auditorReadOnlyExplanation }}
+        </p>
       </div>
     </div>
 
@@ -229,6 +249,7 @@
       <ClinicalTabs
         v-model="viewMode"
         :tabs="viewModeTabs"
+        variant="segmented"
         aria-label="Tickets workspace view mode"
         id-prefix="tickets-view"
         list-class="view-mode-toggle"
@@ -237,7 +258,10 @@
     </div>
 
     <!-- Bulk Action Toolbar (Demo mode only) -->
-    <div v-if="demoBuild && selectedTicketCount > 0" class="bulk-action-bar">
+    <div
+      v-if="demoBuild && canMutateTicket && selectedTicketCount > 0"
+      class="bulk-action-bar"
+    >
       <div class="bulk-info">
         <span class="bulk-count-badge"
           >{{ selectedTicketCount }} ticket(s) selected</span
@@ -733,7 +757,11 @@
 
     <!-- Ticket Create Modal -->
     <TicketCreateModal
+      v-if="canMutateTicket"
       :is-open="isCreateModalOpen"
+      :default-study-id="defaultCreateStudyId"
+      :default-site-id="defaultCreateSiteId"
+      :default-subject-id="defaultCreateSubjectId"
       @close="isCreateModalOpen = false"
       @created="handleTicketCreated"
     />
@@ -758,15 +786,24 @@ import {
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
+import { useAuthStore } from "../stores/auth.js";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
-import { useKnowledgeStore } from "../stores/knowledge.js";
+import {
+  sanitizePseudonymousSubjectCode,
+  useKnowledgeStore,
+} from "../stores/knowledge.js";
+import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { useTicketMutationPermission } from "../utils/ticketPermissions";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const demoBuild = isDemoBuild();
 const instance = getCurrentInstance();
 const { route, router } = resolveRouteAndRouter();
+const authStore = useAuthStore();
+const { canMutateTicket, auditorReadOnlyExplanation } =
+  useTicketMutationPermission(authStore);
 const scopeStore = useClinicalScopeStore();
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
@@ -856,6 +893,50 @@ const selectedTicket = ref({});
 const selectedTicketComments = ref([]);
 const selectedTicketAttachments = ref([]);
 const selectedTicketAuditLogs = ref([]);
+
+const defaultCreateStudyId = computed(
+  () =>
+    filterStudyId.value.trim() ||
+    scopeStore.activeStudyId.trim() ||
+    (getSyncedStudyScope() || "").trim()
+);
+
+const defaultCreateSiteId = computed(() => {
+  if (filterSiteId.value.trim()) {
+    return filterSiteId.value.trim();
+  }
+  const activeStudy = defaultCreateStudyId.value;
+  const storeStudy = scopeStore.activeStudyId.trim();
+  if (!activeStudy || !storeStudy || storeStudy === activeStudy) {
+    return scopeStore.activeSiteId.trim();
+  }
+  return "";
+});
+
+const defaultCreateSubjectId = computed(() => {
+  const candidate =
+    filterSubjectId.value.trim() ||
+    (!defaultCreateStudyId.value ||
+    !scopeStore.activeStudyId.trim() ||
+    scopeStore.activeStudyId.trim() === defaultCreateStudyId.value
+      ? scopeStore.activeSubjectId.trim()
+      : "");
+  return sanitizePseudonymousSubjectCode(candidate);
+});
+
+const openCreateTicketModal = () => {
+  if (!canMutateTicket.value) {
+    return;
+  }
+  isCreateModalOpen.value = true;
+};
+
+watch(canMutateTicket, (allowed) => {
+  if (!allowed) {
+    isCreateModalOpen.value = false;
+    clearSelection();
+  }
+});
 
 // Initial Seed Scenario Data for Demo Workspace
 const initialMockTickets = [
@@ -1629,9 +1710,29 @@ const exportAuditTrail = (format) => {
   margin: 0;
 }
 
+.header-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .header-action-group {
   display: flex;
   gap: 10px;
+}
+
+.btn-icon-svg {
+  flex-shrink: 0;
+}
+
+.auditor-readonly-note {
+  margin: 0;
+  max-width: 420px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--semantic-color-text-secondary);
+  text-align: right;
 }
 
 /* Stats Cards Grid */
@@ -1779,30 +1880,6 @@ const exportAuditTrail = (format) => {
 .scope-filter-input {
   width: 132px;
   font-family: var(--font-mono);
-}
-
-.view-mode-toggle {
-  display: flex;
-  background: var(--semantic-color-surface-header);
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.view-toggle-btn {
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.view-toggle-btn.active {
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* KANBAN BOARD VIEW */
