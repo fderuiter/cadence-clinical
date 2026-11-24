@@ -844,3 +844,37 @@ export function findStudyScheduleOptions(
   bucket.scheduleOptionsInFlight.set(key, lookup);
   return lookup;
 }
+
+export interface CallerSiteScopeAuthStore {
+  refresh: (minValidity: number) => Promise<unknown>;
+  siteIds?: string[];
+  assignedSites?: string[];
+}
+
+export async function syncCallerSiteScope(
+  authStore: CallerSiteScopeAuthStore,
+  siteCode?: string | null
+): Promise<void> {
+  if (!siteCode) return;
+  try {
+    await authStore.refresh(-1);
+  } catch {
+    // Non-OIDC test sessions continue with the existing in-memory session.
+  }
+  if (
+    Array.isArray(authStore.siteIds) &&
+    !authStore.siteIds.some(
+      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
+    )
+  ) {
+    authStore.siteIds = [...authStore.siteIds, siteCode];
+  }
+  if (
+    Array.isArray(authStore.assignedSites) &&
+    !authStore.assignedSites.some(
+      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
+    )
+  ) {
+    authStore.assignedSites = [...authStore.assignedSites, siteCode];
+  }
+}
