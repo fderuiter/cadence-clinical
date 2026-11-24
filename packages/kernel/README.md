@@ -525,7 +525,9 @@ the enrollment:
   one at a time. `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in the governing version's
   order) with hydrated codelist options, its values with their revisions, the assertions about them, the signatures over the form and the locks in
   force in one call (`FindAsync`), enrollment summaries with active/answered query assertion ids (`ListForEnrollmentAsync`),
-  and narrow projections for headers (`FindHeaderAsync`, `FindHeadersAsync`), query targets (`FindQueryTargetsAsync`),
+  and narrow projections for headers (`FindHeaderAsync`, `FindHeadersAsync`), batch instances (`FindManyAsync`),
+  observation revisions and blinding signals (`FindObservationRevisionsAsync`, `FindObservationProjectionsAsync`),
+  query targets (`FindQueryTargetAsync`, `FindQueryTargetsAsync`), attestations (`FindAttestationAsync`, `FindAttestationForReaderAsync`),
   lock/revision scope state (`FindScopeStateAsync`), and rule inputs (`ListRuleInputsForEnrollmentAsync`).
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
   or `ObservationCorrected`. Nothing consumes `CollectedValuesSaved` yet; edit checks will (#5368).

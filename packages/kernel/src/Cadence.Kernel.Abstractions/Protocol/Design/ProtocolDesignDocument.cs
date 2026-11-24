@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 using Cadence.Kernel.Knowledge;
 
@@ -58,6 +59,37 @@ public static partial class ProtocolDesignDocument
     /// <summary>The longest element id.</summary>
     public const int MaxIdLength = 128;
 
+    private static readonly AsyncLocal<ReadScopeCounter?> AmbientReadCounter = new();
+    private static readonly AsyncLocal<ReadObserver?> AmbientReadObserver = new();
+    private static long _totalReadCount;
+
+    /// <summary>Total number of <see cref="Read"/> invocations in the current process (for regression diagnostics).</summary>
+    public static long TotalReadCount => Interlocked.Read(ref _totalReadCount);
+
+    /// <summary>
+    /// Captures <see cref="Read"/> invocations within the current asynchronous execution flow for deterministic test assertions.
+    /// </summary>
+    public static ReadScope MeasureReads()
+    {
+        var previous = AmbientReadCounter.Value;
+        var current = new ReadScopeCounter(previous);
+        AmbientReadCounter.Value = current;
+        return new ReadScope(current, previous);
+    }
+
+    /// <summary>
+    /// Observes valid <see cref="ProtocolDesign"/> instances parsed by <see cref="Read"/> within the current asynchronous
+    /// execution flow so a single request can reuse the design its command just validated without cross-request caching.
+    /// </summary>
+    public static IDisposable OnRead(Action<ProtocolDesign> observer)
+    {
+        ArgumentNullException.ThrowIfNull(observer);
+        var previous = AmbientReadObserver.Value;
+        var current = new ReadObserver(observer, previous);
+        AmbientReadObserver.Value = current;
+        return current;
+    }
+
     /// <summary>Serializes a design in the document's form (camel case, enums by name).</summary>
     public static string Write(ProtocolDesign design)
     {
@@ -69,6 +101,8 @@ public static partial class ProtocolDesignDocument
     public static ProtocolDesignRead Read(string content)
     {
         ArgumentNullException.ThrowIfNull(content);
+        Interlocked.Increment(ref _totalReadCount);
+        AmbientReadCounter.Value?.Increment();
         ProtocolDesign? design;
         try
         {
@@ -89,7 +123,13 @@ public static partial class ProtocolDesignDocument
         }
 
         var problems = Check(design);
-        return problems.Count == 0 ? new ProtocolDesignRead(design, []) : new ProtocolDesignRead(null, problems);
+        if (problems.Count > 0)
+        {
+            return new ProtocolDesignRead(null, problems);
+        }
+
+        AmbientReadObserver.Value?.Notify(design);
+        return new ProtocolDesignRead(design, []);
     }
 
     /// <summary>Every element of the design with its kind, collection items after their specification.</summary>
@@ -403,6 +443,64 @@ public static partial class ProtocolDesignDocument
             Refs(owner, "purpose.endpointIds", purpose.EndpointIds, ProtocolElementKind.Endpoint);
             Refs(owner, "purpose.estimandIds", purpose.EstimandIds, ProtocolElementKind.Estimand);
             Refs(owner, "purpose.safetyRuleIds", purpose.SafetyRuleIds, ProtocolElementKind.SafetyRule);
+        }
+    }
+
+    /// <summary>Scoped diagnostic counter returned by <see cref="MeasureReads"/>.</summary>
+    public sealed class ReadScope : IDisposable
+    {
+        private readonly ReadScopeCounter _counter;
+        private readonly ReadScopeCounter? _previous;
+        private int _disposed;
+
+        internal ReadScope(ReadScopeCounter counter, ReadScopeCounter? previous)
+        {
+            _counter = counter;
+            _previous = previous;
+        }
+
+        /// <summary>Number of <see cref="Read"/> invocations recorded within this scope.</summary>
+        public int Count => _counter.Count;
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0 && ReferenceEquals(AmbientReadCounter.Value, _counter))
+            {
+                AmbientReadCounter.Value = _previous;
+            }
+        }
+    }
+
+    internal sealed class ReadScopeCounter(ReadScopeCounter? parent)
+    {
+        private int _count;
+
+        public int Count => Volatile.Read(ref _count);
+
+        public void Increment()
+        {
+            Interlocked.Increment(ref _count);
+            parent?.Increment();
+        }
+    }
+
+    private sealed class ReadObserver(Action<ProtocolDesign> observer, ReadObserver? previous) : IDisposable
+    {
+        private int _disposed;
+
+        public void Notify(ProtocolDesign design)
+        {
+            observer(design);
+            previous?.Notify(design);
+        }
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0 && ReferenceEquals(AmbientReadObserver.Value, this))
+            {
+                AmbientReadObserver.Value = previous;
+            }
         }
     }
 }
