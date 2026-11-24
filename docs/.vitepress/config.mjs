@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import {
   BLOG_FEED_PATH,
   getDraftBlogPostExcludes,
+  resolveBaseHref,
   writeRssFeed,
 } from "./blog.mjs";
 import {
@@ -27,6 +28,7 @@ const docsDir = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(__dirname, "../..");
 const indexPath = path.join(docsDir, "DOCUMENTATION_INDEX.md");
 const siteBase = process.env.VITEPRESS_BASE || "/cadence-clinical/";
+const rssFeedHref = resolveBaseHref(BLOG_FEED_PATH, siteBase);
 const isDevServer = process.argv.includes("dev");
 
 function buildPortalCspContent(inlineScriptHashes = []) {
@@ -105,7 +107,7 @@ const config = defineConfig({
         rel: "alternate",
         type: "application/rss+xml",
         title: "Cadence Clinical Engineering Blog RSS Feed",
-        href: `${siteBase.replace(/\/?$/, "/")}feed.xml`,
+        href: rssFeedHref,
       },
     ],
   ],
@@ -122,6 +124,7 @@ const config = defineConfig({
       md.use(repoLinksPlugin, {
         docsDir,
         repoRoot,
+        isDevServer,
       });
     },
   },
@@ -150,12 +153,20 @@ const config = defineConfig({
         },
         _render(src, env, md) {
           const relPath = env.relativePath ?? "";
-          if (!searchCatalog.shouldIndexPage(relPath, null, src)) {
+          if (
+            env.frontmatter?.draft === true ||
+            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||
+            !searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)
+          ) {
             return "";
           }
           const preparedSrc = searchCatalog.prepareSearchMarkdown(relPath, src);
           const html = md.render(preparedSrc, env);
-          if (!searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)) {
+          if (
+            env.frontmatter?.draft === true ||
+            /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||
+            !searchCatalog.shouldIndexPage(relPath, env.frontmatter, src)
+          ) {
             return "";
           }
           return searchCatalog.applyHeadingBoostHtml(relPath, html);
@@ -174,7 +185,7 @@ const config = defineConfig({
       { text: "API Reference", link: "/api/index" },
       { text: "Data Models", link: "/schema/README" },
       { text: "ADRs", link: "/adr/index" },
-      { text: "RSS", link: BLOG_FEED_PATH, target: "_blank" },
+      { text: "RSS", link: rssFeedHref, target: "_blank" },
     ],
     sidebar: synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -184,6 +195,6 @@ const config = defineConfig({
 });
 
 // VitePress checks links inside pages without fragments; assertThemeLinksExist validates nav and sidebar pages and anchors.
-assertThemeLinksExist(config.themeConfig, docsDir);
+assertThemeLinksExist(config.themeConfig, docsDir, { base: siteBase });
 
 export default config;
