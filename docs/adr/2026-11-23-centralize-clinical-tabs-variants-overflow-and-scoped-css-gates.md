@@ -1,4 +1,4 @@
-# ADR-2658: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates
+# ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -36,7 +36,7 @@ Following the adoption of `ClinicalTabs` across seven operational workspaces in 
   - Guarantees `>= 4.5:1` label contrast, `>= 3:1` active state contrast, `>= 44px` hit areas, and visible keyboard-focused tabs in both light and dark themes.
   - Prevents unscoped `ClinicalTabs` CSS regressions statically at lint time before code merges.
 - **Cons:**
-  - Increases `packages/ui/dist/index.css` slightly (~2.5 kB uncompressed) to ship the three shared visual variants and scroll-mask rules.
+  - Increases `packages/ui/dist/index.css` (and compiled shared component styles in consuming apps per [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md)) slightly (~2.5 kB uncompressed) to ship the three shared visual variants and scroll-mask rules.
 
 ### Option 2: Wrap Existing Local Tab Rules in `:deep(...)` Across Individual `apps/web` Views
 
