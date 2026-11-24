@@ -442,7 +442,7 @@ import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { getLoadedStudyCanvasStore } from "../stores/studyScopeBridge";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import { isRouteAuthorizedForRoles } from "../router";
@@ -470,7 +470,7 @@ provide("inAppShell", true);
 const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
-const canvasStore = useStudyCanvasStore();
+const activeCanvasStore = computed(() => getLoadedStudyCanvasStore());
 const route = useRoute();
 const router = useRouter();
 
@@ -509,7 +509,7 @@ const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
 const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
 const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore)
+  resolveActiveWorkspaceScope(route, activeCanvasStore.value)
 );
 const activeStudyCode = computed(
   () => workspaceScope.value.studyCode || syncedStudyCode.value
@@ -858,7 +858,7 @@ useEscapeClose(() => closeSecondaryMenu({ restoreFocus: true }), {
 
 function handleGlobalKeydown(event) {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
-    canvasStore.handleExplainShortcut(event);
+    activeCanvasStore.value?.handleExplainShortcut(event);
     return;
   }
   if (!authStore.isAuthenticated) return;

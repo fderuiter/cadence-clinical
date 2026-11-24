@@ -15,7 +15,11 @@ import {
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES } from "../canvas/lifecycle";
-import { formatNodeRef, parseNodeRef, tryNodeRef } from "../canvas/nodeRef";
+import {
+  enrollmentIdFromParticipant,
+  enrollmentNodeRefFromParticipant,
+  participantNodeRef,
+} from "../canvas/nodeRef";
 import {
   clearNodeResolutionCache,
   resetNodeResolutionSession,
@@ -24,38 +28,11 @@ import {
 import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
-/** Extracts the unversioned `enrollment:<uuid>` reference from a participant summary when present. */
-export function enrollmentNodeRefFromParticipant(
-  participant: Pick<SubjectSummary, "enrollment_ref"> | null | undefined
-): string | null {
-  const parsed = parseNodeRef(participant?.enrollment_ref);
-  return parsed?.kind === "enrollment"
-    ? formatNodeRef({ kind: "enrollment", id: parsed.id })
-    : null;
-}
-
-/** Extracts the lower-case enrollment UUID from `participant.enrollment_ref`, or null when absent. */
-export function enrollmentIdFromParticipant(
-  participant: Pick<SubjectSummary, "enrollment_ref"> | null | undefined
-): string | null {
-  const parsed = parseNodeRef(participant?.enrollment_ref);
-  return parsed?.kind === "enrollment" ? parsed.id : null;
-}
-
-/**
- * Canonical Clinical Canvas `NodeRef` for a participant: `enrollment:<uuid>` when Execution has persisted
- * `KernelEnrollmentId`, falling back to `participant:<uuid>` for legacy or unlinked Execution rows.
- */
-export function participantNodeRef(
-  participant: Pick<SubjectSummary, "id" | "enrollment_ref"> | null | undefined
-): string {
-  const enrollmentRef = enrollmentNodeRefFromParticipant(participant);
-  if (enrollmentRef) return enrollmentRef;
-  const fallback = participant
-    ? tryNodeRef("participant", participant.id)
-    : null;
-  return fallback ? formatNodeRef(fallback) : "";
-}
+export {
+  enrollmentIdFromParticipant,
+  enrollmentNodeRefFromParticipant,
+  participantNodeRef,
+};
 
 function seedParticipantNode(participant: SubjectSummary): void {
   seedNodeSummary(`participant:${participant.id}`, {

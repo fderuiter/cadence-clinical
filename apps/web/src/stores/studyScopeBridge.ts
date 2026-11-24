@@ -5,6 +5,12 @@ import {
   type Pinia,
   type StoreGeneric,
 } from "pinia";
+import type { useStudyCanvasStore } from "./studyCanvas";
+
+export type StudyCanvasStoreInstance = ReturnType<typeof useStudyCanvasStore>;
+
+let studyCanvasModulePromise: Promise<typeof import("./studyCanvas")> | null =
+  null;
 
 const scopeByPinia = new WeakMap<Pinia, Ref<string>>();
 const installedPinias = new WeakSet<Pinia>();
@@ -18,6 +24,28 @@ export function normalizeStudyCode(value: unknown): string {
 
 function getRegistry(pinia: Pinia): Map<string, StoreGeneric> | undefined {
   return (pinia as unknown as { _s?: Map<string, StoreGeneric> })._s;
+}
+
+export function getLoadedStudyCanvasStore(
+  pinia: Pinia | undefined = getActivePinia()
+): StudyCanvasStoreInstance | null {
+  if (!pinia) return null;
+  void pinia.state.value?.studyCanvas;
+  return (
+    (getRegistry(pinia)?.get("studyCanvas") as
+      StudyCanvasStoreInstance | undefined) ?? null
+  );
+}
+
+export async function loadStudyCanvasStore(
+  pinia: Pinia | undefined = getActivePinia()
+): Promise<StudyCanvasStoreInstance | null> {
+  if (!pinia) return null;
+  const existing = getLoadedStudyCanvasStore(pinia);
+  if (existing) return existing;
+  studyCanvasModulePromise ??= import("./studyCanvas");
+  const { useStudyCanvasStore: useStore } = await studyCanvasModulePromise;
+  return useStore(pinia);
 }
 
 export function getPiniaStudyScopeRef(

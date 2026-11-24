@@ -95,3 +95,36 @@ export function observationNodeRef(value: unknown): string | null {
     ? formatNodeRef({ kind: "observation", id: parsed.id })
     : null;
 }
+
+/** Extracts the unversioned `enrollment:<uuid>` reference from a participant summary when present. */
+export function enrollmentNodeRefFromParticipant(
+  participant: { enrollment_ref?: string | null } | null | undefined
+): string | null {
+  const parsed = parseNodeRef(participant?.enrollment_ref);
+  return parsed?.kind === "enrollment"
+    ? formatNodeRef({ kind: "enrollment", id: parsed.id })
+    : null;
+}
+
+/** Extracts the lower-case enrollment UUID from `participant.enrollment_ref`, or null when absent. */
+export function enrollmentIdFromParticipant(
+  participant: { enrollment_ref?: string | null } | null | undefined
+): string | null {
+  const parsed = parseNodeRef(participant?.enrollment_ref);
+  return parsed?.kind === "enrollment" ? parsed.id : null;
+}
+
+/**
+ * Canonical Clinical Canvas `NodeRef` for a participant: `enrollment:<uuid>` when Execution has persisted
+ * `KernelEnrollmentId`, falling back to `participant:<uuid>` for legacy or unlinked Execution rows.
+ */
+export function participantNodeRef(
+  participant: { id: string; enrollment_ref?: string | null } | null | undefined
+): string {
+  const enrollmentRef = enrollmentNodeRefFromParticipant(participant);
+  if (enrollmentRef) return enrollmentRef;
+  const fallback = participant
+    ? tryNodeRef("participant", participant.id)
+    : null;
+  return fallback ? formatNodeRef(fallback) : "";
+}

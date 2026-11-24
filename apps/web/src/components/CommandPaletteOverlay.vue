@@ -2,7 +2,7 @@
   <CanvasPalette
     v-if="isOpen"
     :study-code="activeStudyCode"
-    :participants="canvasStore.paletteParticipants"
+    :participants="activeCanvasStore?.paletteParticipants ?? []"
     :workspace-items="workspaceItems"
     @close="emit('close')"
     @go="handleGo"
@@ -11,6 +11,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, watch } from "vue";
+import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import CanvasPalette from "./canvas/CanvasPalette.vue";
 import {
@@ -23,7 +24,10 @@ import {
 import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import {
+  getLoadedStudyCanvasStore,
+  loadStudyCanvasStore,
+} from "../stores/studyScopeBridge";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 
 const props = defineProps<{
@@ -34,16 +38,17 @@ const emit = defineEmits<{
   close: [];
 }>();
 
+const pinia = getActivePinia();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
-const canvasStore = useStudyCanvasStore();
+const activeCanvasStore = computed(() => getLoadedStudyCanvasStore(pinia));
 const { activeStudyCode: syncedStudyCode, setActiveStudyCode } =
   useActiveStudyScope();
 const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore)
+  resolveActiveWorkspaceScope(route, activeCanvasStore.value)
 );
 const activeStudyCode = computed(
   () => workspaceScope.value.studyCode || syncedStudyCode.value
@@ -51,9 +56,12 @@ const activeStudyCode = computed(
 
 watch(
   [() => props.isOpen, activeStudyCode],
-  ([open, code]) => {
-    if (open && code) {
-      canvasStore.ensurePaletteParticipants(code);
+  async ([open, code]) => {
+    if (!open) return;
+    const store =
+      getLoadedStudyCanvasStore(pinia) ?? (await loadStudyCanvasStore(pinia));
+    if (code) {
+      store?.ensurePaletteParticipants(code);
     }
   },
   { immediate: true }
@@ -94,11 +102,15 @@ async function handleGo(target: PaletteTarget) {
   if (target.studyCode) {
     setActiveStudyCode(target.studyCode);
   }
+  let canvasStore = getLoadedStudyCanvasStore(pinia);
   if (target.participant) {
-    if (target.studyCode && target.studyCode !== canvasStore.studyCode) {
-      canvasStore.openStudy(target.studyCode);
+    canvasStore ??= await loadStudyCanvasStore(pinia);
+    if (canvasStore) {
+      if (target.studyCode && target.studyCode !== canvasStore.studyCode) {
+        canvasStore.openStudy(target.studyCode);
+      }
+      canvasStore.rememberParticipants([target.participant]);
     }
-    canvasStore.rememberParticipants([target.participant]);
   }
   emit("close");
   await nextTick();
@@ -120,11 +132,14 @@ async function handleGo(target: PaletteTarget) {
     activeStudyCode: priorStudyCode,
     workspaceScope: priorScope,
     onAction: handleAction,
-    onFocusInspector: (nodeRef) =>
-      canvasStore.requestInspectorFocus({
+    onFocusInspector: async (nodeRef) => {
+      const store =
+        getLoadedStudyCanvasStore(pinia) ?? (await loadStudyCanvasStore(pinia));
+      return store?.requestInspectorFocus({
         nodeRef,
         scrollIntoView: true,
-      }),
+      });
+    },
   });
 }
 </script>
