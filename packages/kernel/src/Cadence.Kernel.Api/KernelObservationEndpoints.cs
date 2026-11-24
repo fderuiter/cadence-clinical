@@ -83,16 +83,18 @@ public static class KernelObservationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        if (await observations.FindAsync(tenant, observation, cancellationToken).ConfigureAwait(false) is not { } record)
+        var observationNode = NodeRef.For(observation);
+        var observationMask = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [observationNode], cancellationToken).ConfigureAwait(false);
+        var unblinded = observationMask.For(observationNode) != MaskReason.Blinded;
+        if (await observations.FindForReaderAsync(tenant, observation, unblinded, cancellationToken).ConfigureAwait(false) is not { } record)
         {
-            return KernelProblems.NotFound(NodeRef.For(observation));
+            return KernelProblems.NotFound(observationNode);
         }
 
         // An observation requires both enrollment scope visibility (ADR-2457) and unblinded access when blinded (K-AUTH-4).
         var enrollment = NodeRef.For(record.EnrollmentId);
-        var observationNode = NodeRef.For(record.ObservationId);
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [enrollment, observationNode], cancellationToken).ConfigureAwait(false);
-        return masks.For(enrollment) is null && masks.For(observationNode) is null
+        return masks.For(enrollment) is null && masks.For(observationNode) is null && !record.ObservationId.IsEmpty
             ? TypedResults.Ok(KernelObservationResponse.From(record))
             : KernelProblems.NotVisible($"You may not see {observationNode}.");
     }

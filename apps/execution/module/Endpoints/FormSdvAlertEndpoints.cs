@@ -177,8 +177,12 @@ internal static class FormSdvAlertEndpoints
                 continue;
             }
 
-            var obs = await observations.FindAsync(tenant, alert.ObservationId, cancellationToken).ConfigureAwait(false);
-            if (obs is null)
+            var obs = await observations.FindForReaderAsync(
+                tenant,
+                alert.ObservationId,
+                (eId, ct) => access.CanUnblindAsync(tenant, eId, ct),
+                cancellationToken).ConfigureAwait(false);
+            if (obs is null || (obs.IsBlindedTreatment && obs.ObservationId.IsEmpty))
             {
                 continue;
             }
@@ -208,7 +212,11 @@ internal static class FormSdvAlertEndpoints
             .Distinct()
             .ToList();
         var formsById = formIds.Count > 0
-            ? await forms.FindManyAsync(tenant, formIds, cancellationToken).ConfigureAwait(false)
+            ? await forms.FindManyForReaderAsync(
+                tenant,
+                formIds,
+                (eId, ct) => access.CanUnblindAsync(tenant, eId, ct),
+                cancellationToken).ConfigureAwait(false)
             : new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
 
         var nodesToResolve = new List<NodeRef>();

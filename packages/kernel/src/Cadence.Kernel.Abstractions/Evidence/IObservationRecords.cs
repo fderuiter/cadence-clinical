@@ -16,6 +16,78 @@ public interface IObservationRecords
 {
     /// <summary>The observation, or null when it does not exist in <paramref name="tenant"/>.</summary>
     Task<ObservationRecord?> FindAsync(TenantId tenant, ObservationId observation, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads <paramref name="observation"/> for a caller whose unblinding status is <paramref name="unblinded"/>,
+    /// masking blinded current values, historical revisions, assertions, locks, audit reasons, and observation handles
+    /// before returning (K-AUTH-4).
+    /// </summary>
+    async Task<ObservationRecord?> FindForReaderAsync(
+        TenantId tenant,
+        ObservationId observation,
+        bool unblinded,
+        CancellationToken cancellationToken)
+    {
+        var record = await FindAsync(tenant, observation, cancellationToken).ConfigureAwait(false);
+        if (record is null || unblinded)
+        {
+            return record;
+        }
+
+        var isBlinded = record.IsBlindedTreatment
+            || BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+                record.Concept.ConceptId,
+                record.Value,
+                concept: null,
+                collectionSpecId: null,
+                record.ItemId,
+                []);
+        return isBlinded ? record.MaskBlinded() : record;
+    }
+
+    /// <summary>
+    /// Reads <paramref name="observation"/> and evaluates <paramref name="canUnblindAsync"/> against its enrollment
+    /// before returning so blinded observations are masked inside the port when the caller lacks <c>enrollment.unblind</c>.
+    /// </summary>
+    async Task<ObservationRecord?> FindForReaderAsync(
+        TenantId tenant,
+        ObservationId observation,
+        Func<EnrollmentId, CancellationToken, ValueTask<bool>> canUnblindAsync,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(canUnblindAsync);
+        var record = await FindAsync(tenant, observation, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return null;
+        }
+
+        var isBlinded = record.IsBlindedTreatment
+            || BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+                record.Concept.ConceptId,
+                record.Value,
+                concept: null,
+                collectionSpecId: null,
+                record.ItemId,
+                []);
+        if (!isBlinded)
+        {
+            return record;
+        }
+
+        var unblinded = await canUnblindAsync(record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        return unblinded ? record : record.MaskBlinded();
+    }
+
+    /// <summary>
+    /// Reads <paramref name="observation"/> and evaluates unblinding authority against the ambient caller when available,
+    /// failing closed (masked) when no unblinding probe permits disclosure.
+    /// </summary>
+    Task<ObservationRecord?> FindForReaderAsync(
+        TenantId tenant,
+        ObservationId observation,
+        CancellationToken cancellationToken) =>
+        FindForReaderAsync(tenant, observation, unblinded: false, cancellationToken);
 }
 
 /// <summary>
@@ -51,7 +123,95 @@ public sealed record ObservationRecord(
     string? ExpectedUnit = null,
     CodeSystemVersionId? ExpectedCodeSystemVersionId = null,
     string? ExpectedCodelist = null,
-    IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null);
+    IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null,
+    bool IsBlindedTreatment = false)
+{
+    private const string MaskedLiteral = "masked";
+
+    /// <summary>
+    /// Returns a copy with current values, revisions, assertions, observation-scoped locks, audit details, and the
+    /// direct observation identifier redacted in place (K-AUTH-4).
+    /// </summary>
+    public ObservationRecord MaskBlinded()
+    {
+        var maskedScope = CollectionInstanceId is { IsEmpty: false } formId
+            ? NodeRef.For(formId)
+            : NodeRef.For(EnrollmentId);
+        var maskedValue = Value is MissingValue { Reason: NullFlavor.NotAsked }
+            ? Value
+            : new MissingValue(NullFlavor.Masked);
+        var maskedRevisions = new List<ObservationRevisionView>(Revisions.Count);
+        foreach (var rev in Revisions)
+        {
+            var revValue = rev.Value is MissingValue { Reason: NullFlavor.NotAsked }
+                ? rev.Value
+                : new MissingValue(NullFlavor.Masked);
+            maskedRevisions.Add(rev with
+            {
+                Value = revValue,
+                ReasonForChange = MaskedLiteral,
+                RecordedBy = MaskedLiteral,
+            });
+        }
+
+        var maskedLocks = new List<LockView>(Locks.Count);
+        foreach (var l in Locks)
+        {
+            if (l.Scope.Kind == NodeKinds.Observation)
+            {
+                maskedLocks.Add(l with
+                {
+                    Scope = maskedScope,
+                    LockedBy = MaskedLiteral,
+                    ReasonForChange = MaskedLiteral,
+                    Masked = true,
+                });
+            }
+            else
+            {
+                maskedLocks.Add(l);
+            }
+        }
+
+        var maskedAssertions = new List<AssertionView>(Assertions.Count);
+        foreach (var a in Assertions)
+        {
+            maskedAssertions.Add(a with
+            {
+                Target = maskedScope,
+                Text = a.Text is null ? null : MaskedLiteral,
+                AssertedBy = MaskedLiteral,
+                ReasonForChange = MaskedLiteral,
+                Masked = true,
+            });
+        }
+
+        var maskedAudit = new List<ObservationAuditView>(Audit.Count);
+        foreach (var entry in Audit)
+        {
+            maskedAudit.Add(entry with
+            {
+                ActorId = MaskedLiteral,
+                Subject = MaskedLiteral,
+                ReasonForChange = MaskedLiteral,
+            });
+        }
+
+        return this with
+        {
+            ObservationId = ObservationId.Empty,
+            Value = maskedValue,
+            Locks = maskedLocks,
+            Revisions = maskedRevisions,
+            Assertions = maskedAssertions,
+            Audit = maskedAudit,
+            ExpectedCodeSystemVersionId = null,
+            ExpectedCodelist = null,
+            ExpectedCodelistOptions = null,
+            IsBlindedTreatment = true,
+        };
+    }
+}
 
 /// <summary>One revision of an observation's value.</summary>
 /// <remarks>
@@ -77,7 +237,8 @@ public sealed record LockView(
     AttestationId AttestationId,
     DateTimeOffset LockedAt,
     string LockedBy,
-    string ReasonForChange);
+    string ReasonForChange,
+    bool Masked = false);
 
 /// <summary>One assertion about an observation, or about another assertion about it (spec §8.2).</summary>
 /// <remarks>
@@ -96,7 +257,8 @@ public sealed record AssertionView(
     DateTimeOffset AssertedAt,
     string ReasonForChange,
     AssertionId? RetractedBy,
-    DateTimeOffset? RetractedAt);
+    DateTimeOffset? RetractedAt,
+    bool Masked = false);
 
 /// <summary>One kernel audit-chain entry about an observation or an assertion covering it.</summary>
 /// <remarks>

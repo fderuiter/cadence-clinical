@@ -192,6 +192,7 @@ describe("ObservationView (ADR-2620)", () => {
           locked_at: "2026-10-15T10:00:00Z",
           locked_by: "dm@sponsor.test",
           reason_for_change: "Data review complete",
+          masked: false,
         },
       ],
     });
@@ -493,6 +494,7 @@ describe("ObservationView (ADR-2620)", () => {
               locked_at: "2026-10-15T10:00:00Z",
               locked_by: dmPersonRef,
               reason_for_change: "Interim review cut",
+              masked: false,
             },
           ],
         })
@@ -734,6 +736,7 @@ describe("ObservationView (ADR-2620)", () => {
             reason_for_change: "Verified against nursing chart",
             retracted_at: null,
             retracted_by: null,
+            masked: false,
           },
         ],
       })
@@ -826,6 +829,7 @@ describe("ObservationView (ADR-2620)", () => {
             reason_for_change: "Verified against nursing chart",
             retracted_at: null,
             retracted_by: null,
+            masked: false,
           },
           {
             assertion_id: OPEN_Q_ID,
@@ -838,6 +842,7 @@ describe("ObservationView (ADR-2620)", () => {
             reason_for_change: "Manual monitor query",
             retracted_at: null,
             retracted_by: null,
+            masked: false,
           },
           {
             assertion_id: ANSWERED_Q_ID,
@@ -850,6 +855,7 @@ describe("ObservationView (ADR-2620)", () => {
             reason_for_change: "Data review",
             retracted_at: null,
             retracted_by: null,
+            masked: false,
           },
           {
             assertion_id: ANSWER_ID,
@@ -862,6 +868,7 @@ describe("ObservationView (ADR-2620)", () => {
             reason_for_change: "Site response",
             retracted_at: null,
             retracted_by: null,
+            masked: false,
           },
           {
             assertion_id: CLOSED_Q_ID,
@@ -874,6 +881,7 @@ describe("ObservationView (ADR-2620)", () => {
             reason_for_change: "Raised in error",
             retracted_at: "2026-10-15T09:45:00Z",
             retracted_by: "cra@sponsor.test",
+            masked: false,
           },
         ],
       })

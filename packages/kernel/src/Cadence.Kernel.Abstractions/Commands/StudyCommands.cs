@@ -55,6 +55,7 @@ public sealed record RegisterSite(
 /// </summary>
 [KernelCapability("study_site.link", VerbClass.Execute, Resource = nameof(StudyId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(typeof(ObservationErrors), nameof(ObservationErrors.Locked))]
 [RaisesKernelErrors(
     typeof(StudyErrors),
     nameof(StudyErrors.StudyUnknown),
