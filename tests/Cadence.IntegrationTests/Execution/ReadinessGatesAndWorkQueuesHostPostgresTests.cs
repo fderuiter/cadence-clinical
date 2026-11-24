@@ -935,6 +935,319 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         cappedVerifications.Truncated.Should().BeTrue();
     }
 
+    [Fact(DisplayName = "BlindedReadinessGates_AndCommandHeaderGuardrails_ScrubBlindedErrorFindings_AndRejectUnsignedWrites")]
+    [KernelRule("K-AUTH-4")]
+    [KernelRule("K-TX-3")]
+    public async Task BlindedReadinessGatesAndCommandHeaderGuardrailsScrubBlindedErrorFindingsAndRejectUnsignedWrites()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var seed = await SeedWorkspaceAsync(ct);
+
+        // Provision a blinded study in the workspace tenant with a cross-form Error rule referencing RAND.TRT_ARM.
+        var (_, blindedStudy) = await _scenario.Protocol.NewStudyAsync(seed.Tenant, ct);
+        var sbpConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(seed.Tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic blood pressure.", KernelProtocolScenario.Key(), "Concept"),
+            ct);
+        var armConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(seed.Tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Assigned arm (randomization_treatment_assignment)", "Blinded randomization allocation.", KernelProtocolScenario.Key(), "Blinded concept"),
+            ct);
+
+        const string RandSpecId = "RAND";
+        const string ArmItemId = "TRT_ARM";
+        var blindedDesign = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.blind", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity(VisitId, "Day 1 randomization", "ep.blind", [ActivityLocation.Site], [RandSpecId, SpecId], new ActivityTiming(1, 0, 1)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    RandSpecId,
+                    "Randomization assignment",
+                    [new CollectionItem(ArmItemId, armConcept, ValueKind: ObservationValueKind.Text, Required: true)]),
+                new CollectionSpec(
+                    SpecId,
+                    "Vital signs",
+                    [new CollectionItem(Systolic, sbpConcept, "mm[Hg]", Required: true)]),
+            ],
+        };
+
+        var versionId = ProtocolVersionId.New();
+        var draft = await _scenario.Protocol.CreateDraftAsync(seed.Tenant, blindedStudy, versionId, ct, ProtocolDesignDocument.Write(blindedDesign));
+        draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
+        var submitted = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(seed.Tenant, versionId, KernelProtocolScenario.Key(), "Submit"), ct);
+        var approvalSig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(seed.Tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(submitted)), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(seed.Tenant, versionId, approvalSig, KernelProtocolScenario.Key(), "Approve"), ct);
+
+        var effectivity = EffectivityId.New();
+        await _scenario.Protocol.OkAsync(new DeclareEffectivity(seed.Tenant, effectivity, versionId, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Declare"), ct);
+        var irbBytes = Encoding.UTF8.GetBytes($"irb-blind-{Guid.NewGuid():N}");
+        var irbArtifact = ArtifactVersionId.New();
+        await _scenario.Protocol.OkAsync(
+            new RegisterArtifact(seed.Tenant, ArtifactId.New(), irbArtifact, ArtifactKind.EthicsApproval, blindedStudy, "IRB approval", new ArtifactContent(ContentHash.OfBytes(irbBytes), irbBytes.Length, "application/pdf", "blob://irb/blind.pdf"), KernelProtocolScenario.Key(), "Register"),
+            ct);
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(seed.Tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [irbArtifact], KernelProtocolScenario.Key(), "Activate"), ct);
+
+        var armVar = new VariableExpression($"{RandSpecId}.{ArmItemId}");
+        var sbpVar = new VariableExpression(Systolic);
+        var blindedRulePack = new RulePack(
+            RuleAuthority.Study,
+            "Blinded Arm Safety Checks",
+            [
+                new Rule(
+                    "RAND_ARM_BP_ALERT",
+                    1,
+                    RuleAuthority.Study,
+                    new SourceCitation("DSMB Charter", "Section 4", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, SpecId),
+                    ValidationSeverity.Error,
+                    new LogicalExpression(
+                        LogicalOperator.And,
+                        [
+                            new ComparisonExpression(ComparisonOperator.Equal, armVar, new LiteralExpression(RuleValue.FromText("Active Arm 200mg"))),
+                            new ComparisonExpression(ComparisonOperator.Greater, sbpVar, new LiteralExpression(RuleValue.FromNumber(180m))),
+                        ]),
+                    "Active Arm 200mg participant has elevated systolic BP (> 180 mm[Hg]).",
+                    "DSMB unblinded review required.",
+                    EffectivePeriod.Always),
+            ]);
+        var packItem = LibraryItemId.New();
+        var draftedPack = await _scenario.Protocol.OkAsync(
+            new DraftLibraryItem(seed.Tenant, packItem, LibraryItemKind.RulePack, "blinded-arm-pack", blindedRulePack.Title, RulePackJson.ToJson(blindedRulePack), [], KernelProtocolScenario.Key(), "Draft blinded pack"),
+            ct);
+        var packAtt = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(seed.Tenant, AttestationMeaning.Approved, new AttestationTarget(NodeKinds.LibraryItem, packItem.Value, draftedPack.ContentHash)),
+            ct);
+        await _scenario.Protocol.OkAsync(new ApproveLibraryItem(seed.Tenant, packItem, packAtt, KernelProtocolScenario.Key(), "Approve blinded pack"), ct);
+
+        var stdId = StandardVersionId.New();
+        var stdPkg = new StandardPackage(
+            "CDASHIG",
+            "2.3-blind",
+            "CDASHIG",
+            "CDISC",
+            "/mdr/cdashig/2-3-blind",
+            new DateOnly(2023, 1, 1),
+            [new DatasetDefinitionData("VS", "Vital Signs", "Findings", "Vital signs", 1, [new VariableDefinitionData("VSORRES", "Result", 1, StandardDataType.Num, "Qualifier", VariableCore.Expected, [], [], null, null)])],
+            [],
+            []);
+        await _scenario.Protocol.OkAsync(new RegisterStandardVersion(seed.Tenant, stdId, stdPkg, null, KernelProtocolScenario.Key(), "Register std"), ct);
+        var stdInfo = (await fixture.Standards.FindStandardVersionAsync(seed.Tenant, stdId, ct))!;
+        var stdAtt = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(seed.Tenant, AttestationMeaning.Approved, new AttestationTarget(NodeKinds.StandardVersion, stdId.Value, stdInfo.ContentHash)),
+            ct);
+        await _scenario.Protocol.OkAsync(new ApproveStandardVersion(seed.Tenant, stdId, stdAtt, KernelProtocolScenario.Key(), "Approve std"), ct);
+        await _scenario.Protocol.OkAsync(
+            new DeclareStudyStandards(seed.Tenant, blindedStudy, StudyStandardsProfileId.New(), [stdId], [], [packItem], KernelProtocolScenario.Key(), "Pin blinded pack"),
+            ct);
+
+        var blindSite = await _scenario.Observations.AddStudySiteAsync(seed.Tenant, blindedStudy, ct);
+        var blindEnrollment = await _scenario.Observations.ScreenAsync(seed.Tenant, blindSite, ct);
+        foreach (var cap in new[]
+        {
+            "enrollment.unblind",
+            "execution.query.manage",
+            "assertion.retract",
+            "lock.apply",
+            "validation_finding.investigate",
+            "attestation.sign",
+        })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(seed.Tenant, GrantId.New(), Actor.Person(UnblindedReviewer), cap, null, AuthorityScope.Study(blindedStudy), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Unblinded grant"),
+                ct);
+        }
+
+        using var dm = CreateClient(seed.TenantCode, DataManager);
+        using var unblinded = CreateClient(seed.TenantCode, UnblindedReviewer);
+
+        var blindSubject = new KernelObservationScenario.Subject(seed.Tenant, blindedStudy, blindSite, blindEnrollment);
+        var randForm = await _scenario.Protocol.OkAsync(
+            new OpenCollectionInstance(seed.Tenant, CollectionInstanceId.New(), blindSubject.Enrollment, RandSpecId, VisitId, _scenario.Tick(), KernelProtocolScenario.Key(), "Open RAND"),
+            ct);
+        var vsForm = await _scenario.Protocol.OkAsync(Open(blindSubject, CollectionInstanceId.New(), _scenario.Tick()), ct);
+        await RelayOutboxAsync(ct);
+
+        await SendJsonAsync<FormSavedResponse>(
+            dm,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{randForm.CollectionInstanceId.Value:D}/values",
+            "Record IRT treatment arm",
+            token: null,
+            new
+            {
+                values = new object[]
+                {
+                    new { item_id = ArmItemId, value = new { type = "text", value = "Active Arm 200mg" }, expected_revision = 0 },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        await SendJsonAsync<FormSavedResponse>(
+            dm,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{vsForm.CollectionInstanceId.Value:D}/values",
+            "Record elevated systolic BP",
+            token: null,
+            new
+            {
+                values = new object[]
+                {
+                    new { item_id = Systolic, value = new { type = "quantity", value = 195m, unit = "mm[Hg]" }, expected_revision = 0 },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        await RelayOutboxAsync(ct);
+
+        // Close any auto-query as the unblinded reviewer so ONLY the cross-form blinded ErrorFinding blocks lock readiness.
+        var vsQueries = await GetJsonAsync<FormQueryResponse[]>(unblinded, $"{FormEndpoints.RoutePrefix}/{vsForm.CollectionInstanceId.Value:D}/queries", ct);
+        foreach (var openQuery in vsQueries.Where(q => q.Status == "open"))
+        {
+            await SendJsonAsync<FormQueryResponse>(
+                unblinded,
+                HttpMethod.Post,
+                $"{FormEndpoints.RoutePrefix}/{vsForm.CollectionInstanceId.Value:D}/queries/{openQuery.QueryId:D}/close",
+                "Close auto-query to isolate blinded ErrorFinding gate",
+                token: null,
+                body: null,
+                HttpStatusCode.OK,
+                ct);
+        }
+
+        await RelayOutboxAsync(ct);
+
+        var blindedStudyRef = NodeRef.For(blindedStudy).ToString();
+        var vsFormRef = NodeRef.For(vsForm.CollectionInstanceId).ToString();
+
+        // Unblinded reviewer sees the full ErrorFinding details on VS form readiness.
+        var unblindedReadiness = await GetJsonAsync<KernelLockReadinessResponse>(
+            unblinded,
+            $"/api/v1/kernel/studies/{blindedStudyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(vsFormRef)}",
+            ct);
+        unblindedReadiness.ReadyForLock.Should().BeFalse();
+        unblindedReadiness.OpenErrorFindingCount.Should().Be(1);
+        var unblindedBlocker = unblindedReadiness.Blockers.Should().ContainSingle(b => b.Kind == "ErrorFinding").Subject;
+        unblindedBlocker.Masked.Should().BeFalse();
+        unblindedBlocker.FindingRef.Should().StartWith("validation_finding:");
+        unblindedBlocker.RuleId.Should().Be("blinded-arm-pack/RAND_ARM_BP_ALERT");
+        unblindedBlocker.Detail.Should().Contain("Active Arm 200mg");
+        var findingRef = unblindedBlocker.FindingRef!;
+
+        // Blinded Data Manager sees Masked=true (Blinded) on BOTH form-scoped and study-scoped readiness, with zero treatment leakage.
+        foreach (var scopeRef in new[] { vsFormRef, blindedStudyRef })
+        {
+            using var readinessRes = await dm.GetAsync(
+                new Uri($"/api/v1/kernel/studies/{blindedStudyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(scopeRef)}", UriKind.Relative),
+                ct);
+            readinessRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            var rawReadiness = await readinessRes.Content.ReadAsStringAsync(ct);
+            rawReadiness.Should().NotContain("Active Arm 200mg");
+            rawReadiness.Should().NotContain("RAND_ARM_BP_ALERT");
+            rawReadiness.Should().NotContain(findingRef);
+
+            var dmReadiness = JsonSerializer.Deserialize<KernelLockReadinessResponse>(rawReadiness, Json)!;
+            dmReadiness.ReadyForLock.Should().BeFalse();
+            dmReadiness.OpenErrorFindingCount.Should().Be(1);
+            var maskedBlocker = dmReadiness.Blockers.Should().ContainSingle(b => b.Kind == "ErrorFinding").Subject;
+            maskedBlocker.Masked.Should().BeTrue();
+            maskedBlocker.Mask.Should().Be("Blinded");
+            maskedBlocker.TargetRef.Should().BeNull();
+            maskedBlocker.FindingRef.Should().BeNull();
+            maskedBlocker.RuleId.Should().BeNull();
+            maskedBlocker.Detail.Should().BeNull();
+        }
+
+        // POST /api/v1/kernel/locks (409 K.Assertion.ScopeNotReady) ALSO scrubs blinded ErrorFinding text and NodeRefs for blinded callers!
+        using (var dmLockBlocked = await dm.SendAsync(BuildRequest(
+            HttpMethod.Post,
+            "/api/v1/kernel/locks",
+            "Attempt study lock as blinded Data Manager",
+            TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction),
+            new { study_ref = blindedStudyRef, scope_ref = blindedStudyRef, kind = "Locked", meaning = "Approved" }), ct))
+        {
+            dmLockBlocked.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var lockProblemBody = await dmLockBlocked.Content.ReadAsStringAsync(ct);
+            lockProblemBody.Should().NotContain("Active Arm 200mg");
+            lockProblemBody.Should().NotContain("RAND_ARM_BP_ALERT");
+            lockProblemBody.Should().NotContain(findingRef);
+            lockProblemBody.Should().Contain("Blinded");
+            using var lockDoc = JsonDocument.Parse(lockProblemBody);
+            lockDoc.RootElement.GetProperty("code").GetString().Should().Be(AssertionErrors.ScopeNotReady.Code);
+        }
+
+        // Guardrail 4: Every finding-decision and queue-definition write enforces Idempotency-Key and signed X-Change-Reason.
+        var protectedRoutes = new (HttpClient Client, string Path, object? Body)[]
+        {
+            (unblinded, $"/api/v1/kernel/validation/findings/{findingRef}/investigate", null),
+            (dm, "/api/v1/kernel/work-queues", new
+            {
+                code = "guardrail_check_queue",
+                title = "Guardrail check",
+                capability = "observation.verify",
+                verb_class = "Execute",
+                source = KernelWorkItemSources.ObservationsAwaitingVerification,
+            }),
+        };
+
+        foreach (var (client, path, body) in protectedRoutes)
+        {
+            using (var noIdempotency = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative)))
+            {
+                noIdempotency.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Header check"));
+                if (body is not null)
+                {
+                    noIdempotency.Content = JsonContent.Create(body);
+                }
+
+                using var res = await client.SendAsync(noIdempotency, ct);
+                res.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+                (await ReadProblemCodeAsync(res, ct)).Should().Be(KernelErrors.IdempotencyKeyRequired.Code);
+            }
+
+            using (var noReason = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative)))
+            {
+                noReason.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+                if (body is not null)
+                {
+                    noReason.Content = JsonContent.Create(body);
+                }
+
+                using var res = await client.SendAsync(noReason, ct);
+                res.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+                (await ReadProblemCodeAsync(res, ct)).Should().Be(KernelErrors.ReasonForChangeRequired.Code);
+            }
+        }
+
+        // Injecting an unsigned/forged X-Change-Reason header without gateway HMAC coverage fails closed with 401 Unauthorized.
+        using var rawClient = _host!.CreateClient();
+        using var forgedReason = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/kernel/work-queues", UriKind.Relative));
+        var signedHeaders = new GatewayIdentity(DataManager, [], TestSecurityContext.AllStudies, TenantId: seed.TenantCode, ProductFamilies: TestSecurityContext.AllProductFamilies)
+            .ToSignedHeaders(SystemClock.Instance.UtcNow, GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret));
+        foreach (var (headerName, headerVal) in signedHeaders)
+        {
+            forgedReason.Headers.TryAddWithoutValidation(headerName, headerVal);
+        }
+
+        forgedReason.Headers.Remove(GatewayHeaders.ChangeReason);
+        forgedReason.Headers.TryAddWithoutValidation(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Forged unsigned reason"));
+        forgedReason.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+        forgedReason.Content = JsonContent.Create(new
+        {
+            code = "forged_reason_queue",
+            title = "Forged reason",
+            capability = "observation.verify",
+            verb_class = "Execute",
+            source = KernelWorkItemSources.ObservationsAwaitingVerification,
+        });
+
+        using var forgedRes = await rawClient.SendAsync(forgedReason, ct);
+        forgedRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private sealed record WorkspaceSeed(
         string TenantCode,
         TenantId Tenant,

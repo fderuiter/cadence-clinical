@@ -347,6 +347,7 @@ public static class LockReadinessEvaluator
         var designsByVersion = versionsById.ToDictionary(
             kvp => kvp.Key,
             kvp => ProtocolDesignDocument.Read(kvp.Value.Content).Design);
+        var designs = designsByVersion.Values.Where(d => d is not null).Select(d => d!).ToList();
         var specsByVersion = designsByVersion.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value?.CollectionSpecs ?? []);
@@ -707,6 +708,11 @@ public static class LockReadinessEvaluator
         if (activeErrorFindings is { Count: > 0 })
         {
             var instancesById = instances.ToDictionary(i => i.Id);
+            var instancesByEnrollment = (membershipInstances ?? instances)
+                .Concat(instances)
+                .DistinctBy(i => i.Id)
+                .GroupBy(i => i.EnrollmentId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstance>)[.. g]);
             foreach (var finding in activeErrorFindings
                 .OrderBy(f => f.Stage)
                 .ThenBy(f => f.PackKey, StringComparer.Ordinal)
@@ -738,6 +744,9 @@ public static class LockReadinessEvaluator
                 var findingRef = NodeRef.For(finding.Id);
                 var ruleLabel = $"{finding.PackKey}/{finding.RuleId}";
                 var nextAction = $"{MonitorOwner}: resolve, accept, or explain Error validation finding {findingRef} ({ruleLabel}: {finding.Message}) on {targetRef}.";
+                var isBlindedFinding = (obsId is { } matchedObsId && blindedObservationIds.Contains(matchedObsId))
+                    || BlindedTreatmentClassifier.Instance.IsBlindedFinding(finding.Target, finding.Observed, designs)
+                    || ReferencesBlindedObservation(finding, collectionInstanceId, enrollmentId, instancesById, instancesByEnrollment, blindedObservationIds);
 
                 blockers.Add(new LockReadinessBlocker(
                     LockBlockerKind.ErrorFinding,
@@ -755,7 +764,7 @@ public static class LockReadinessEvaluator
                     itemLabel,
                     QueryText: null,
                     Answered: false,
-                    Blinded: obsId is { } matchedObsId && blindedObservationIds.Contains(matchedObsId),
+                    Blinded: isBlindedFinding,
                     nextAction,
                     NextCapability: "validation_finding.investigate",
                     NextTarget: findingRef,
@@ -1154,6 +1163,100 @@ public static class LockReadinessEvaluator
         }
 
         return false;
+    }
+
+    private static bool ReferencesBlindedObservation(
+        ValidationFindingView finding,
+        CollectionInstanceId? collectionInstanceId,
+        EnrollmentId? enrollmentId,
+        IReadOnlyDictionary<CollectionInstanceId, CollectionInstance> instancesById,
+        IReadOnlyDictionary<EnrollmentId, IReadOnlyList<CollectionInstance>> instancesByEnrollment,
+        IReadOnlySet<ObservationId> blindedObservationIds)
+    {
+        if (blindedObservationIds.Count == 0)
+        {
+            return false;
+        }
+
+        CollectionInstance? targetInstance = null;
+        if (collectionInstanceId is { } cid)
+        {
+            instancesById.TryGetValue(cid, out targetInstance);
+        }
+
+        IReadOnlyList<CollectionInstance> siblingForms = [];
+        if (enrollmentId is { } eid && instancesByEnrollment.TryGetValue(eid, out var forms))
+        {
+            siblingForms = forms;
+        }
+        else if (targetInstance is not null)
+        {
+            siblingForms = [targetInstance];
+        }
+
+        if (siblingForms.Count == 0)
+        {
+            return false;
+        }
+
+        var hasVariableReference = false;
+        if (!string.IsNullOrWhiteSpace(finding.Target.Variable))
+        {
+            hasVariableReference = true;
+            if (VariableMatchesBlindedObservation(finding.Target.Variable, targetInstance, siblingForms, blindedObservationIds))
+            {
+                return true;
+            }
+        }
+
+        foreach (var observed in finding.Observed)
+        {
+            if (string.IsNullOrWhiteSpace(observed.Variable))
+            {
+                continue;
+            }
+
+            hasVariableReference = true;
+            if (VariableMatchesBlindedObservation(observed.Variable, targetInstance, siblingForms, blindedObservationIds))
+            {
+                return true;
+            }
+        }
+
+        return !hasVariableReference
+            && targetInstance is not null
+            && targetInstance.Members.Any(m => blindedObservationIds.Contains(m.ObservationId));
+    }
+
+    private static bool VariableMatchesBlindedObservation(
+        string variable,
+        CollectionInstance? targetInstance,
+        IReadOnlyList<CollectionInstance> siblingForms,
+        IReadOnlySet<ObservationId> blindedObservationIds)
+    {
+        var dot = variable.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < variable.Length - 1)
+        {
+            var specId = variable[..dot];
+            var itemId = variable[(dot + 1)..];
+            return siblingForms.Any(form =>
+                string.Equals(form.CollectionSpecId, specId, StringComparison.Ordinal)
+                && form.Members.Any(m =>
+                    string.Equals(m.ItemId, itemId, StringComparison.Ordinal)
+                    && blindedObservationIds.Contains(m.ObservationId)));
+        }
+
+        if (targetInstance is not null)
+        {
+            return targetInstance.Members.Any(m =>
+                string.Equals(m.ItemId, variable, StringComparison.Ordinal)
+                && blindedObservationIds.Contains(m.ObservationId));
+        }
+
+        return siblingForms.Any(form =>
+            form.Members.Any(m =>
+                string.Equals(m.ItemId, variable, StringComparison.Ordinal)
+                && blindedObservationIds.Contains(m.ObservationId)));
     }
 
     private static async Task<IReadOnlyList<ValidationFindingView>> ReadActiveErrorFindingsAsync(

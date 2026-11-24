@@ -53,8 +53,10 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
     /// <summary>
     /// A form opens under the protocol version effective at the participant's site when the values were collected, and
-    /// records a GovernedBy edge from that version. It is refused before any version is effective, for a CollectionSpec
-    /// the version lacks or a visit that does not collect it, for an unknown enrollment and for a time in the future.
+    /// records <see cref="LineageEdgeKind.CollectedBy"/> edges from its governing CollectionSpec and PlannedActivity
+    /// <c>protocol_element</c> nodes (or from CollectionSpec only when unscheduled). It is refused before any version is
+    /// effective, for a CollectionSpec the version lacks or a visit that does not collect it, for an unknown enrollment
+    /// and for a time in the future.
     /// </summary>
     [Fact(DisplayName = "Open_ResolvesTheGoverningVersion_AndRefusesWhatItDoesNotGovern")]
     public async Task OpenResolvesTheGoverningVersionAndRefusesWhatItDoesNotGovern()
@@ -77,13 +79,33 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
         var collectedAt = Tick();
         var opened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), collectedAt), ct);
+        var unscheduled = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), Tick(), visit: null), ct);
 
         opened.Should().BeEquivalentTo(new CollectionInstanceState(opened.CollectionInstanceId, subject.Enrollment, version, SpecId, VisitId, collectedAt, 1));
         opened.VisitTimingAssessment.Should().BeNull("a screening enrollment without an Enrolled period has no reference start");
         await using var db = fixture.CreateContext(tenant);
         (await db.LineageEdges.AsNoTracking().CountAsync(
-            e => e.Kind == LineageEdgeKind.GovernedBy && e.FromId == version.Value && e.ToId == opened.CollectionInstanceId.Value, ct))
-            .Should().Be(1);
+            e => e.Kind == LineageEdgeKind.GovernedBy && e.ToKind == NodeKinds.CollectionInstance, ct))
+            .Should().Be(0);
+        var specElement = ProtocolElementId.For(study, SpecId).Value;
+        var visitElement = ProtocolElementId.For(study, VisitId).Value;
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.CollectionInstance && e.ToId == opened.CollectionInstanceId.Value)
+            .Select(e => new { e.FromKind, e.FromId, e.FromVersion, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.ProtocolElement, FromId = specElement, FromVersion = 1L, Kind = LineageEdgeKind.CollectedBy },
+                new { FromKind = NodeKinds.ProtocolElement, FromId = visitElement, FromVersion = 1L, Kind = LineageEdgeKind.CollectedBy },
+            ]);
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.CollectionInstance && e.ToId == unscheduled.CollectionInstanceId.Value)
+            .Select(e => new { e.FromKind, e.FromId, e.FromVersion, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.ProtocolElement, FromId = specElement, FromVersion = 1L, Kind = LineageEdgeKind.CollectedBy },
+            ]);
         (await SendAsync(Open(subject, opened.CollectionInstanceId, Tick()), ct)).Error.Should().Be(KernelErrors.AlreadyExists);
     }
 
@@ -225,8 +247,9 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// <summary>
     /// A first page records two values and a second records a third and corrects one, leaving one unchanged: each save
     /// is one activity that writes the form, its changed observations, their audit links and events together; every new
-    /// observation version has a GovernedBy edge from the protocol version; and the result and the form read return
-    /// every value at its current revision, with the specification's items in their order.
+    /// observation version has a <see cref="LineageEdgeKind.CollectedBy"/> edge from its governing CollectionItem
+    /// <c>protocol_element</c> node only; and the result and the form read return every value at its current revision,
+    /// with the specification's items in their order.
     /// </summary>
     [Fact(DisplayName = "Save_RecordsAndCorrectsAPage_AsOneActivity")]
     [KernelRule("K-FACT-6")]
@@ -270,17 +293,35 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
             .Should().BeEquivalentTo("ObservationCorrected", "ObservationRecorded", "CollectedValuesSaved");
         (await db.ProvenanceActivities.AsNoTracking().SingleAsync(p => p.Id == secondActivity, ct)).Outcome.Should().Be("Committed");
 
-        var versionId = form.Version.Value;
-        var governed = await db.LineageEdges.AsNoTracking()
-            .Where(e => e.Kind == LineageEdgeKind.GovernedBy && e.FromId == versionId && e.ToKind == NodeKinds.Observation)
-            .Select(e => new { e.ToId, e.ToVersion })
+        var study = form.Subject.Study;
+        (await db.LineageEdges.AsNoTracking().CountAsync(
+            e => e.Kind == LineageEdgeKind.GovernedBy && (e.ToKind == NodeKinds.CollectionInstance || e.ToKind == NodeKinds.Observation), ct))
+            .Should().Be(0);
+        var collectedObservations = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.Kind == LineageEdgeKind.CollectedBy && e.ToKind == NodeKinds.Observation)
+            .Select(e => new { e.FromId, e.FromVersion, e.ToId, e.ToVersion })
             .ToListAsync(ct);
-        governed.Select(e => (e.ToId, e.ToVersion)).Should().BeEquivalentTo(
+        collectedObservations.Select(e => (e.FromId, e.FromVersion, e.ToId, e.ToVersion)).Should().BeEquivalentTo(
             [
-                (first.Values[0].ObservationId.Value, 1L), (first.Values[1].ObservationId.Value, 1L),
-                (second.Values[2].ObservationId.Value, 2L), (second.Values[0].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Diastolic).Value, 1L, first.Values[0].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Systolic).Value, 1L, first.Values[1].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Comment).Value, 1L, second.Values[0].ObservationId.Value, 1L),
+                (ProtocolElementId.For(study, Systolic).Value, 1L, second.Values[2].ObservationId.Value, 2L),
             ],
-            "every observation version a save writes is governed by the form's protocol version");
+            "each observation version a save writes is collected only by its own CollectionItem protocol_element");
+        var collectedInstance = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.Kind == LineageEdgeKind.CollectedBy && e.ToKind == NodeKinds.CollectionInstance && e.ToId == form.Instance.Value)
+            .Select(e => new { e.FromId, e.FromVersion, e.ToVersion })
+            .ToListAsync(ct);
+        collectedInstance.Select(e => (e.FromId, e.FromVersion, e.ToVersion)).Should().BeEquivalentTo(
+            [
+                (ProtocolElementId.For(study, SpecId).Value, 1L, 1L),
+                (ProtocolElementId.For(study, VisitId).Value, 1L, 1L),
+                (ProtocolElementId.For(study, SpecId).Value, 1L, 2L),
+                (ProtocolElementId.For(study, VisitId).Value, 1L, 2L),
+                (ProtocolElementId.For(study, SpecId).Value, 1L, 3L),
+                (ProtocolElementId.For(study, VisitId).Value, 1L, 3L),
+            ]);
     }
 
     /// <summary>

@@ -1,20 +1,34 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Identity;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Evidence;
+using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Testing;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
+
+using Npgsql;
 
 using Xunit;
 
@@ -326,6 +340,195 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
             .Should().Be(ObservationErrors.ValueInvalid.Code);
     }
 
+    /// <summary>
+    /// Validates that <c>KernelObservationRecords.FindAsync</c> serves <c>kernel.audit_entries</c> from
+    /// <c>IX_audit_entries_tenant_id_aggregate_type_aggregate_id_sequence</c> without a sort or sequential scan, accepts
+    /// null-aggregate audit entries, and leases one connection (two <c>pg_catalog.set_config</c> calls) across standard,
+    /// queried, form-bound codelist, missing, and cancelled reads while resetting <c>cadence.tenant_id</c> in <c>finally</c>.
+    /// </summary>
+    [Fact(DisplayName = "FindAsync_UsesAuditAggregateIndex_AndLeasesOneConnectionAcrossQueries")]
+    [KernelRule("K-ID-2")]
+    public async Task FindAsyncUsesAuditAggregateIndexAndLeasesOneConnectionAcrossQueries()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
+        Tick();
+        await _observations.Protocol.OkAsync(Correct(subject.Tenant, recorded, Mmhg(128)), ct);
+
+        // Seed non-matching observations in the same tenant so kernel.audit_entries spans multiple heap pages,
+        // and ensure NoChange audit entries with null AggregateType and AggregateId commit cleanly under the B-tree index.
+        for (var i = 0; i < 60; i++)
+        {
+            await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(110 + (i % 30)), ct);
+        }
+
+        var person = new Person(PersonId.New(), KernelPostgresFixture.ActorId, EntryReason);
+        await fixture.SeedAsync(person);
+        await fixture.SeedAsync(new TenantMembership(TenantMembershipId.New(), subject.Tenant, person.Id, KernelPostgresFixture.ActorId, EntryReason));
+        await _observations.Protocol.OkAsync(
+            new RecordPersonIdentity(
+                subject.Tenant,
+                person.Id,
+                new IdentityDetails { GivenName = "Synthetic", FamilyName = "Participant" },
+                KernelProtocolScenario.Key(),
+                EntryReason),
+            ct);
+        await using (var auditDb = fixture.CreateContext(subject.Tenant))
+        {
+            (await auditDb.AuditEntries.AsNoTracking()
+                .AnyAsync(a => a.Action == "NoChange" && a.AggregateType == null && a.AggregateId == null, ct))
+                .Should().BeTrue();
+        }
+
+        await using (var adminConn = new NpgsqlConnection(fixture.AdminConnectionString!))
+        {
+            await adminConn.OpenAsync(ct);
+            await using var analyze = new NpgsqlCommand("ANALYZE kernel.audit_entries", adminConn);
+            await analyze.ExecuteNonQueryAsync(ct);
+        }
+
+        // 1. Verify EXPLAIN plan under the non-superuser application role with forced RLS and default enable_seqscan = on.
+        await using (var db = fixture.CreateContext(subject.Tenant))
+        {
+            await db.Database.OpenConnectionAsync(ct);
+            try
+            {
+                var conn = db.Database.GetDbConnection();
+                await using var explain = conn.CreateCommand();
+                explain.CommandText = """
+                    EXPLAIN SELECT a.sequence, a.recorded_at, a.actor_id, a.action, a.aggregate_type, a.aggregate_version, a.reason_for_change
+                    FROM kernel.audit_entries AS a
+                    WHERE a.tenant_id = @tenant AND a.aggregate_type = 'Observation' AND a.aggregate_id = @key
+                    ORDER BY a.sequence
+                    """;
+                explain.Parameters.Add(new NpgsqlParameter("tenant", subject.Tenant.Value));
+                explain.Parameters.Add(new NpgsqlParameter("key", recorded.ObservationId.ToString()));
+
+                var plan = new StringBuilder();
+                await using (var reader = await explain.ExecuteReaderAsync(ct))
+                {
+                    while (await reader.ReadAsync(ct))
+                    {
+                        plan.AppendLine(reader.GetString(0));
+                    }
+                }
+
+                var planText = plan.ToString();
+                planText.Should().Contain("IX_audit_entries_tenant_id_aggregate_type_aggregate_id_sequence");
+                planText.Should().NotContain("Seq Scan");
+                planText.Should().NotContain("Sort");
+            }
+            finally
+            {
+                await db.Database.CloseConnectionAsync();
+            }
+        }
+
+        // 2. Verify connection lease and wire-level pg_catalog.set_config count across standard, queried, form-bound codelist, missing, and cancelled reads.
+        await using var harness = CreateObservationHarness();
+
+        // Standard read: 5 SELECTs under 1 connection lease -> 2 set_config statements.
+        harness.Recorder.Reset();
+        var standard = await harness.Records.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        standard.Should().NotBeNull();
+        standard!.Audit.Select(a => (a.Action, a.Version)).Should().Equal(("Created", 1L), ("Updated", 2L));
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+        harness.Recorder.SelectStatements.Should().Be(5);
+
+        // Queried read: open Queried assertion + QueryAnswered assertion adds a 6th SELECT inside ScopedAssertions.ReadAsync,
+        // reusing the same open connection without nested set_config calls.
+        var query = await _observations.Protocol.OkAsync(
+            new RaiseQuery(subject.Tenant, AssertionId.New(), subject.Enrollment, recorded.ObservationId, "Confirm systolic reading.", KernelProtocolScenario.Key(), "Data review"),
+            ct);
+        await _observations.Protocol.OkAsync(
+            new AnswerQuery(subject.Tenant, AssertionId.New(), subject.Enrollment, query.AssertionId, "Confirmed on source chart.", KernelProtocolScenario.Key(), "Site response"),
+            ct);
+
+        harness.Recorder.Reset();
+        var queried = await harness.Records.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        queried.Should().NotBeNull();
+        queried!.Assertions.Select(a => a.Kind).Should().Equal(AssertionKind.Queried, AssertionKind.QueryAnswered);
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+        harness.Recorder.SelectStatements.Should().Be(6);
+
+        // Form-bound coded observation with open query + answer + terminology codelist: all 8 SELECTs
+        // (Observations, Enrollments, CollectionInstances + Members, ProtocolVersions, Assertions x2, AuditEntries, CodeSystemEntries)
+        // run in 1 connection lease (2 set_config calls instead of 16).
+        var collections = new KernelCollectionScenario(fixture);
+        var (codedForm, csVersion) = await collections.NewCodedFormAsync(ct);
+        var savedForm = await _observations.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                codedForm,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Position, new CodedValue(csVersion, "SUPINE"))),
+            ct);
+        var codedObservationId = savedForm.Values.Single(v => v.ItemId == KernelCollectionScenario.Position).ObservationId;
+        var codedQuery = await _observations.Protocol.OkAsync(
+            new RaiseQuery(codedForm.Subject.Tenant, AssertionId.New(), codedForm.Subject.Enrollment, codedObservationId, "Confirm body position.", KernelProtocolScenario.Key(), "Data review"),
+            ct);
+        await _observations.Protocol.OkAsync(
+            new AnswerQuery(codedForm.Subject.Tenant, AssertionId.New(), codedForm.Subject.Enrollment, codedQuery.AssertionId, "Confirmed supine.", KernelProtocolScenario.Key(), "Site response"),
+            ct);
+
+        harness.Recorder.Reset();
+        var codedRead = await harness.Records.FindAsync(codedForm.Subject.Tenant, codedObservationId, ct);
+        codedRead.Should().NotBeNull();
+        codedRead!.ExpectedCodelist.Should().Be(KernelCollectionScenario.PositionCodelist);
+        codedRead.ExpectedCodelistOptions.Should().NotBeNull();
+        codedRead.ExpectedCodelistOptions!.Select(o => o.Code).Should().Equal("SITTING", "SUPINE");
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+        harness.Recorder.SelectStatements.Should().Be(8);
+
+        // Missing observation read: returns null and still closes the lease in finally (2 set_config statements).
+        harness.Recorder.Reset();
+        var missing = await harness.Records.FindAsync(subject.Tenant, ObservationId.New(), ct);
+        missing.Should().BeNull();
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+        harness.Recorder.SelectStatements.Should().Be(1);
+
+        // Mid-read cancellation: finally still closes the connection and resets cadence.tenant_id on the pooled session.
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        harness.Recorder.Reset();
+        harness.Recorder.CancelOnReaderCount = 2;
+        harness.Recorder.CancellationSource = cts;
+        var cancelledAct = () => harness.Records.FindAsync(subject.Tenant, recorded.ObservationId, cts.Token);
+        await cancelledAct.Should().ThrowAsync<OperationCanceledException>();
+        harness.Recorder.CancelOnReaderCount = 0;
+        harness.Recorder.CancellationSource = null;
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+
+        await using var rawConn = await harness.DataSource.OpenConnectionAsync(ct);
+        await using var checkCmd = rawConn.CreateCommand();
+        checkCmd.CommandText = $"SELECT COALESCE(pg_catalog.current_setting('{TenantIsolationSql.TenantSetting}', true), '')";
+        var setting = (string?)await checkCmd.ExecuteScalarAsync(ct);
+        setting.Should().BeEmpty("CloseConnectionAsync in finally resets cadence.tenant_id before returning the connection");
+    }
+
+    private ObservationReadHarness CreateObservationHarness()
+    {
+        var recorder = new ObservationWireRecorder();
+        var loggerFactory = new LoggerFactory([recorder]);
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(fixture.ConnectionString!);
+        dataSourceBuilder.UseLoggerFactory(loggerFactory);
+        var dataSource = dataSourceBuilder.Build();
+
+        var optionsBuilder = new DbContextOptionsBuilder<KernelDbContext>();
+        optionsBuilder.UseNpgsql(
+            dataSource,
+            npgsql => npgsql.MigrationsHistoryTable(KernelDatabase.MigrationsHistoryTable, KernelDbContext.Schema));
+        optionsBuilder.AddInterceptors(new KernelTenantConnectionInterceptor(), recorder);
+
+        var tenantContexts = new KernelTenantDbContextFactory(new PooledOptionsContextFactory(optionsBuilder.Options));
+        var records = new KernelObservationRecords(tenantContexts);
+        return new ObservationReadHarness(records, dataSource, recorder, loggerFactory);
+    }
+
     private static string Describe<T>(Task<CommandResult<T>> task) =>
         task.IsCompletedSuccessfully ? $"completed: {task.Result.Error?.Code ?? "success"} {task.Result.Error?.Message}" : task.Status.ToString();
 
@@ -389,4 +592,144 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
     private Task<StudySiteId> AddStudySiteAsync(TenantId tenant, StudyId study, CancellationToken ct) => _observations.AddStudySiteAsync(tenant, study, ct);
 
     private Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, CancellationToken ct) => _observations.ScreenAsync(tenant, studySite, ct);
+
+    private sealed class PooledOptionsContextFactory(DbContextOptions<KernelDbContext> options) : IDbContextFactory<KernelDbContext>
+    {
+        public KernelDbContext CreateDbContext() => new(options);
+    }
+
+    private sealed class ObservationReadHarness(
+        KernelObservationRecords records,
+        NpgsqlDataSource dataSource,
+        ObservationWireRecorder recorder,
+        LoggerFactory loggerFactory) : IAsyncDisposable
+    {
+        public KernelObservationRecords Records { get; } = records;
+
+        public NpgsqlDataSource DataSource { get; } = dataSource;
+
+        public ObservationWireRecorder Recorder { get; } = recorder;
+
+        public async ValueTask DisposeAsync()
+        {
+            await DataSource.DisposeAsync().ConfigureAwait(false);
+            loggerFactory.Dispose();
+        }
+    }
+
+    private sealed class ObservationWireRecorder : DbCommandInterceptor, IDbConnectionInterceptor, ILoggerProvider
+    {
+        private readonly ConcurrentQueue<string> _efCommands = new();
+        private readonly ConcurrentQueue<string> _wireCommands = new();
+        private int _connectionsOpened;
+        private int _connectionsClosed;
+
+        public int ConnectionsOpened => Volatile.Read(ref _connectionsOpened);
+
+        public int SetConfigStatements
+        {
+            get
+            {
+                var fromWire = _wireCommands.Count(sql => sql.Contains("pg_catalog.set_config", StringComparison.Ordinal));
+                return fromWire > 0 ? fromWire : ConnectionsOpened + Volatile.Read(ref _connectionsClosed);
+            }
+        }
+
+        public int SelectStatements => _efCommands.Count;
+
+        public int CancelOnReaderCount { get; set; }
+
+        public CancellationTokenSource? CancellationSource { get; set; }
+
+        public void Reset()
+        {
+            _efCommands.Clear();
+            _wireCommands.Clear();
+            Interlocked.Exchange(ref _connectionsOpened, 0);
+            Interlocked.Exchange(ref _connectionsClosed, 0);
+        }
+
+        public void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData) =>
+            Interlocked.Increment(ref _connectionsOpened);
+
+        public Task ConnectionOpenedAsync(DbConnection connection, ConnectionEndEventData eventData, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _connectionsOpened);
+            return Task.CompletedTask;
+        }
+
+        public InterceptionResult ConnectionClosing(DbConnection connection, ConnectionEventData eventData, InterceptionResult result)
+        {
+            if (connection.State == ConnectionState.Open)
+            {
+                Interlocked.Increment(ref _connectionsClosed);
+            }
+
+            return result;
+        }
+
+        public ValueTask<InterceptionResult> ConnectionClosingAsync(DbConnection connection, ConnectionEventData eventData, InterceptionResult result)
+        {
+            if (connection.State == ConnectionState.Open)
+            {
+                Interlocked.Increment(ref _connectionsClosed);
+            }
+
+            return ValueTask.FromResult(result);
+        }
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
+        {
+            RecordReader(command.CommandText);
+            return result;
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            RecordReader(command.CommandText);
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(result);
+        }
+
+        public ILogger CreateLogger(string categoryName) =>
+            string.Equals(categoryName, "Npgsql.Command", StringComparison.Ordinal)
+                ? new WireCommandLogger(_wireCommands)
+                : Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+
+        public void Dispose()
+        {
+        }
+
+        private void RecordReader(string commandText)
+        {
+            _efCommands.Enqueue(commandText);
+            if (CancelOnReaderCount > 0 && _efCommands.Count == CancelOnReaderCount)
+            {
+                CancellationSource?.Cancel();
+            }
+        }
+
+        private sealed class WireCommandLogger(ConcurrentQueue<string> commands) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel == LogLevel.Information;
+
+            public void Log<TState>(
+                LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Information && state is IReadOnlyList<KeyValuePair<string, object?>> values)
+                {
+                    var commandText = values.FirstOrDefault(kv => string.Equals(kv.Key, "CommandText", StringComparison.Ordinal)).Value as string;
+                    if (commandText is not null)
+                    {
+                        commands.Enqueue(commandText);
+                    }
+                }
+            }
+        }
+    }
 }

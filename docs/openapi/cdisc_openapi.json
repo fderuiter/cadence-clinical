@@ -11384,7 +11384,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Kernel_SimulationResult"
+                  "$ref": "#/components/schemas/Kernel_KernelSimulationResponse"
                 }
               }
             }
@@ -11429,6 +11429,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Simulation.VersionStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Unprocessable Entity. Kernel errors: \u0060K.Simulation.BaseNotFrozen\u0060, \u0060K.Simulation.ContentInvalid\u0060, \u0060K.Simulation.ElementIdDuplicated\u0060.",
             "content": {
@@ -11452,6 +11462,10 @@
           {
             "code": "K.Simulation.VersionUnknown",
             "status": 404
+          },
+          {
+            "code": "K.Simulation.VersionStale",
+            "status": 409
           },
           {
             "code": "K.Simulation.BaseNotFrozen",
@@ -11493,7 +11507,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+                    "$ref": "#/components/schemas/Kernel_KernelMatrixGapFindingResponse"
                   }
                 }
               }
@@ -17321,11 +17335,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                  }
+                ]
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -32699,60 +32719,14 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
       "Kernel_AttestationId": {},
-      "Kernel_CandidateKind": {
-        "type": "integer"
-      },
-      "Kernel_CandidateSummary": {
-        "required": [
-          "kind",
-          "version",
-          "base_version",
-          "content_hash",
-          "base_content_hash"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/Kernel_CandidateKind"
-          },
-          "version": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_NodeRef"
-              }
-            ]
-          },
-          "base_version": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_NodeRef"
-              }
-            ]
-          },
-          "content_hash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "base_content_hash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Kernel_CodelistOptionView": {
         "required": [
           "code",
@@ -32784,130 +32758,6 @@
           "Second",
           null
         ]
-      },
-      "Kernel_DependentGroup": {
-        "required": [
-          "kind",
-          "count",
-          "objects"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          },
-          "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "objects": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_LineageNode"
-            }
-          }
-        }
-      },
-      "Kernel_DependentsReport": {
-        "required": [
-          "start",
-          "depth",
-          "valid_at",
-          "known_at",
-          "groups",
-          "total",
-          "truncated"
-        ],
-        "type": "object",
-        "properties": {
-          "start": {
-            "type": "string"
-          },
-          "depth": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "valid_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "known_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "groups": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_DependentGroup"
-            }
-          },
-          "total": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "truncated": {
-            "type": "boolean"
-          }
-        }
-      },
-      "Kernel_ElementChange": {
-        "required": [
-          "element_id",
-          "instance_type",
-          "change",
-          "properties"
-        ],
-        "type": "object",
-        "properties": {
-          "element_id": {
-            "type": "string"
-          },
-          "instance_type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "change": {
-            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
-          },
-          "properties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "Kernel_ElementChangeKind": {
-        "type": "integer"
-      },
-      "Kernel_EngineVersion": {
-        "required": [
-          "name",
-          "version"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          }
-        }
       },
       "Kernel_EvaluatedCondition": {
         "required": [
@@ -33418,6 +33268,45 @@
           },
           "asserted_by": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelCandidateSummaryResponse": {
+        "required": [
+          "kind",
+          "version",
+          "base_version",
+          "content_hash",
+          "base_content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "base_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "base_content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -34011,6 +33900,21 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Kernel_KernelEngineVersionResponse": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
           }
         }
       },
@@ -35016,6 +34920,55 @@
           }
         }
       },
+      "Kernel_KernelMaskedPartResponse": {
+        "required": [
+          "part",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "part": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelMatrixGapFindingResponse": {
+        "required": [
+          "element_id",
+          "kind",
+          "severity",
+          "json_pointer_path",
+          "description",
+          "recommendation"
+        ],
+        "type": "object",
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "json_pointer_path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_KernelNextActionResponse": {
         "required": [
           "description",
@@ -35255,6 +35208,61 @@
           },
           "kind": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelPlannedVisitResponse": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "epoch_order",
+          "study_day",
+          "window_before",
+          "window_after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "epoch_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -36255,6 +36263,43 @@
           }
         }
       },
+      "Kernel_KernelScheduleChangeResponse": {
+        "required": [
+          "activity_id",
+          "change",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "change": {
+            "type": "string"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelPlannedVisitResponse"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelPlannedVisitResponse"
+              }
+            ]
+          }
+        }
+      },
       "Kernel_KernelScheduleOfActivitiesResponse": {
         "required": [
           "version",
@@ -36421,6 +36466,100 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Kernel_KernelSimulationAsOfResponse": {
+        "required": [
+          "valid_at",
+          "known_at"
+        ],
+        "type": "object",
+        "properties": {
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_KernelSimulationResponse": {
+        "required": [
+          "scope",
+          "as_of",
+          "candidate",
+          "engine_versions",
+          "input_hash",
+          "result_hash",
+          "structural_diff",
+          "schedule_changes",
+          "masked",
+          "dependents",
+          "matrix_gaps",
+          "is_empty"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/Kernel_KernelSimulationAsOfResponse"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Kernel_KernelCandidateSummaryResponse"
+          },
+          "engine_versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelEngineVersionResponse"
+            }
+          },
+          "input_hash": {
+            "type": "string"
+          },
+          "result_hash": {
+            "type": "string"
+          },
+          "structural_diff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelElementChangeResponse"
+            }
+          },
+          "schedule_changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelScheduleChangeResponse"
+            }
+          },
+          "masked": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelMaskedPartResponse"
+            }
+          },
+          "dependents": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelDependentsResponse"
+              }
+            ]
+          },
+          "matrix_gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelMatrixGapFindingResponse"
+            }
+          },
+          "is_empty": {
+            "type": "boolean"
           }
         }
       },
@@ -37704,55 +37843,6 @@
           }
         }
       },
-      "Kernel_LineageNode": {
-        "required": [
-          "handle",
-          "kind",
-          "ref",
-          "mask",
-          "distance"
-        ],
-        "type": "object",
-        "properties": {
-          "handle": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "ref": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_NodeRef"
-              }
-            ]
-          },
-          "mask": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_MaskReason"
-              }
-            ]
-          },
-          "distance": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "is_masked": {
-            "type": "boolean"
-          }
-        }
-      },
       "Kernel_LockKind": {
         "enum": [
           "Frozen",
@@ -37792,26 +37882,12 @@
           },
           "reason_for_change": {
             "type": "string"
-          }
-        }
-      },
-      "Kernel_MaskedPart": {
-        "required": [
-          "part",
-          "reason"
-        ],
-        "type": "object",
-        "properties": {
-          "part": {
-            "type": "string"
           },
-          "reason": {
-            "$ref": "#/components/schemas/Kernel_MaskReason"
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
-      },
-      "Kernel_MaskReason": {
-        "type": "integer"
       },
       "Kernel_MatrixGapCheckRequest": {
         "required": [
@@ -37823,45 +37899,6 @@
             "type": "string"
           }
         }
-      },
-      "Kernel_MatrixGapFinding": {
-        "required": [
-          "element_id",
-          "kind",
-          "severity",
-          "json_pointer_path",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "element_id": {
-            "type": "string"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/Kernel_MatrixGapKind"
-          },
-          "severity": {
-            "$ref": "#/components/schemas/Kernel_MatrixGapSeverity"
-          },
-          "json_pointer_path": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "recommendation": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_MatrixGapKind": {
-        "type": "integer"
-      },
-      "Kernel_MatrixGapSeverity": {
-        "type": "integer"
       },
       "Kernel_NextAction": {
         "required": [
@@ -38145,61 +38182,6 @@
           }
         }
       },
-      "Kernel_PlannedVisit": {
-        "required": [
-          "activity_id",
-          "name",
-          "epoch_id",
-          "epoch_order",
-          "study_day",
-          "window_before",
-          "window_after"
-        ],
-        "type": "object",
-        "properties": {
-          "activity_id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "epoch_id": {
-            "type": "string"
-          },
-          "epoch_order": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "study_day": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "window_before": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "window_after": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -38247,43 +38229,6 @@
           null
         ]
       },
-      "Kernel_ScheduleChange": {
-        "required": [
-          "activity_id",
-          "change",
-          "before",
-          "after"
-        ],
-        "type": "object",
-        "properties": {
-          "activity_id": {
-            "type": "string"
-          },
-          "change": {
-            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
-          },
-          "before": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_PlannedVisit"
-              }
-            ]
-          },
-          "after": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_PlannedVisit"
-              }
-            ]
-          }
-        }
-      },
       "Kernel_SimulateProtocolRequest": {
         "required": [
           "base_version_ref",
@@ -38323,100 +38268,6 @@
               "string"
             ],
             "format": "date-time"
-          }
-        }
-      },
-      "Kernel_SimulationAsOf": {
-        "required": [
-          "valid_at",
-          "known_at"
-        ],
-        "type": "object",
-        "properties": {
-          "valid_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "known_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "Kernel_SimulationResult": {
-        "required": [
-          "scope",
-          "as_of",
-          "candidate",
-          "engine_versions",
-          "input_hash",
-          "result_hash",
-          "structural_diff",
-          "schedule_changes",
-          "masked"
-        ],
-        "type": "object",
-        "properties": {
-          "scope": {
-            "$ref": "#/components/schemas/Kernel_NodeRef"
-          },
-          "as_of": {
-            "$ref": "#/components/schemas/Kernel_SimulationAsOf"
-          },
-          "candidate": {
-            "$ref": "#/components/schemas/Kernel_CandidateSummary"
-          },
-          "engine_versions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_EngineVersion"
-            }
-          },
-          "input_hash": {
-            "type": "string"
-          },
-          "result_hash": {
-            "type": "string"
-          },
-          "structural_diff": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ElementChange"
-            }
-          },
-          "schedule_changes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ScheduleChange"
-            }
-          },
-          "masked": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_MaskedPart"
-            }
-          },
-          "dependents": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DependentsReport"
-              }
-            ]
-          },
-          "matrix_gaps": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
-            }
-          },
-          "is_empty": {
-            "type": "boolean"
           }
         }
       },

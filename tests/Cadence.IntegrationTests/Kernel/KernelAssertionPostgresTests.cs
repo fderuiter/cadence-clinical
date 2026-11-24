@@ -6,6 +6,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
@@ -71,6 +72,32 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         stored.Select(a => (a.Kind, a.RetractsId)).Should().Equal((AssertionKind.Locked, (AssertionId?)null), (AssertionKind.Locked, locked.LockId));
         var events = await db.DomainEvents.AsNoTracking().Where(e => e.Type == "LockApplied" || e.Type == "LockReleased").Select(e => e.Type).ToListAsync(ct);
         events.Should().BeEquivalentTo("LockApplied", "LockReleased");
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.Observation && e.ToId == recorded.ObservationId.Value && e.ToVersion == 1)
+            .Select(e => new { e.FromKind, e.FromId, e.FromVersion, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.Concept, FromId = recorded.Concept.ConceptId.Value, FromVersion = (long)recorded.Concept.Version, Kind = LineageEdgeKind.DefinedBy },
+            ]);
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.Assertion && e.ToId == locked.LockId.Value)
+            .Select(e => new { e.FromKind, e.FromId, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.Study, FromId = subject.Study.Value, Kind = LineageEdgeKind.DefinedBy },
+            ]);
+        var releaseId = stored[1].Id.Value;
+        (await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.Assertion && e.ToId == releaseId)
+            .Select(e => new { e.FromKind, e.FromId, e.Kind })
+            .ToListAsync(ct))
+            .Should().BeEquivalentTo(
+            [
+                new { FromKind = NodeKinds.Assertion, FromId = locked.LockId.Value, Kind = LineageEdgeKind.DerivedFrom },
+                new { FromKind = NodeKinds.Study, FromId = subject.Study.Value, Kind = LineageEdgeKind.DefinedBy },
+            ]);
     }
 
     /// <summary>
@@ -192,7 +219,7 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
             .Should().Be(AssertionErrors.AlreadyRetracted.Code);
 
         var frozen = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Enrollment), ct, LockKind.Frozen), ct);
-        await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
+        var verified = await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
         (await fixture.Sender.SendAsync(Retract(subject, frozen.LockId), cancellationToken: ct)).Error!.Code
             .Should().Be(AssertionErrors.NotRetractable.Code);
         await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct), ct);
@@ -206,6 +233,23 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
             .Should().Equal((AssertionKind.Queried, true), (AssertionKind.QueryAnswered, false), (AssertionKind.Verified, false));
         view.Assertions[0].RetractedBy.Should().Be(closed.AssertionId);
         view.Locks.Select(l => l.Kind).Should().Equal(LockKind.Locked, LockKind.Frozen);
+
+        await using var db = fixture.CreateContext(subject.Tenant);
+        var assertionIds = new[] { query.AssertionId.Value, answer.AssertionId.Value, closed.AssertionId.Value, verified.AssertionId.Value, frozen.LockId.Value };
+        var edges = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.ToKind == NodeKinds.Assertion && assertionIds.Contains(e.ToId))
+            .Select(e => new { e.FromKind, e.FromId, e.FromVersion, e.ToId, e.Kind })
+            .ToListAsync(ct);
+        edges.Select(e => (e.FromKind, e.FromId, e.FromVersion, e.ToId, e.Kind)).Should().BeEquivalentTo(
+            [
+                (NodeKinds.Observation, recorded.ObservationId.Value, 1L, query.AssertionId.Value, LineageEdgeKind.DerivedFrom),
+                (NodeKinds.Assertion, query.AssertionId.Value, 1L, answer.AssertionId.Value, LineageEdgeKind.DerivedFrom),
+                (NodeKinds.Observation, recorded.ObservationId.Value, 1L, answer.AssertionId.Value, LineageEdgeKind.DerivedFrom),
+                (NodeKinds.Assertion, query.AssertionId.Value, 1L, closed.AssertionId.Value, LineageEdgeKind.DerivedFrom),
+                (NodeKinds.Observation, recorded.ObservationId.Value, 1L, closed.AssertionId.Value, LineageEdgeKind.DerivedFrom),
+                (NodeKinds.Observation, recorded.ObservationId.Value, 1L, verified.AssertionId.Value, LineageEdgeKind.DerivedFrom),
+                (NodeKinds.Enrollment, subject.Enrollment.Value, 1L, frozen.LockId.Value, LineageEdgeKind.DefinedBy),
+            ]);
     }
 
     /// <summary>A lock statement is signed before it is recorded; an attestation naming an assertion already recorded is refused.</summary>

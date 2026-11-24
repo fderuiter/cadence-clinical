@@ -311,19 +311,33 @@ describe("useSignedKernelLock", () => {
   it("evaluates scope lock readiness, blocks Locked while allowing Frozen on open blockers, and refreshes after signing", async () => {
     const blockedReadiness: KernelLockReadiness = {
       study_ref: STUDY_A,
+      study_code: "CAD-101",
       scope_ref: SCOPE_REF,
       scope_kind: "enrollment",
       ready_for_lock: false,
+      can_freeze: true,
       open_query_count: 1,
       missing_required_item_count: 0,
+      unverified_value_count: 0,
+      unsigned_form_count: 0,
+      unopened_visit_count: 0,
+      open_error_finding_count: 0,
+      blocker_count: 1,
       blockers: [],
-      valid_at: "2026-06-01T10:00:00Z",
-      known_at: "2026-06-01T10:00:00Z",
+      explanation: {
+        subject: SCOPE_REF,
+        claim: "Blocked",
+        producer: "test",
+        steps: [],
+        conditions: [],
+        next_actions: [],
+      },
     };
     const clearReadiness: KernelLockReadiness = {
       ...blockedReadiness,
       ready_for_lock: true,
       open_query_count: 0,
+      blocker_count: 0,
     };
     mockGetStudyLockReadiness
       .mockResolvedValueOnce(blockedReadiness)
@@ -375,6 +389,7 @@ describe("useSignedKernelLock", () => {
   it("maps all six lock readiness gate counts, category labels, and blocker detail descriptions", () => {
     const fullReadiness: KernelLockReadiness = {
       study_ref: STUDY_A,
+      study_code: "CAD-101",
       scope_ref: SCOPE_REF,
       scope_kind: "study",
       ready_for_lock: false,
@@ -385,10 +400,16 @@ describe("useSignedKernelLock", () => {
       unsigned_form_count: 4,
       unopened_visit_count: 5,
       open_error_finding_count: 6,
-      masked_blocker_count: 1,
+      blocker_count: 21,
       blockers: [],
-      valid_at: "2026-06-01T10:00:00Z",
-      known_at: "2026-06-01T10:00:00Z",
+      explanation: {
+        subject: SCOPE_REF,
+        claim: "Blocked",
+        producer: "test",
+        steps: [],
+        conditions: [],
+        next_actions: [],
+      },
     };
 
     const gates = buildLockReadinessGates(fullReadiness);

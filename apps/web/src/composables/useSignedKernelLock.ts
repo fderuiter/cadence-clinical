@@ -103,6 +103,11 @@ export function formatLockBlockerFallbackTitle(
 export function formatLockBlockerDetail(
   blocker: Partial<KernelLockBlocker>
 ): string | null {
+  if (blocker.masked) {
+    return blocker.detail && blocker.detail.trim()
+      ? blocker.detail.trim()
+      : null;
+  }
   if (blocker.detail && blocker.detail.trim()) {
     return blocker.detail.trim();
   }
@@ -306,8 +311,10 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       | (typeof authStore.user & { name?: string; full_name?: string })
       | null
       | undefined;
-    if (identity) {
-      const fullName = [identity.firstName, identity.lastName]
+    const identityRecord = identity as
+      { firstName?: string; lastName?: string } | null | undefined;
+    if (identityRecord) {
+      const fullName = [identityRecord.firstName, identityRecord.lastName]
         .filter(Boolean)
         .join(" ")
         .trim();

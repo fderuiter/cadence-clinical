@@ -69,13 +69,16 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             return null;
         }
 
-        var lockRows = await db.Assertions.AsNoTracking()
+        var lockRows = new List<Assertion>();
+        var lockStream = db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == study
                 && (a.Kind == AssertionKind.Frozen || a.Kind == AssertionKind.Locked)
-                && a.AssertedAt <= validAt
                 && a.AssertedAt <= knownAt)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .AsAsyncEnumerable();
+        await foreach (var row in lockStream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            lockRows.Add(row);
+        }
 
         var applied = lockRows
             .Where(a => a.RetractsId is null)
@@ -631,27 +634,8 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         var activeErrorFindings = await KernelValidationStore.LoadActiveErrorFindingsAsync(db, study, cancellationToken)
             .ConfigureAwait(false);
 
-        var unverifiedObservationIds = coveredObservations
-            .Where(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked } && !verifiedRevisions.Contains((o.Id, o.Revision)))
-            .Select(o => o.Id);
-
-        var candidateBlindedObservations = openQueries
-            .Select(q => ObservationId.FromGuid(q.TargetId))
-            .Concat(unverifiedObservationIds)
-            .Concat(activeErrorFindings
-                .Select(f => f.Target.Node is { Kind: NodeKinds.Observation } obsNode ? ObservationId.FromGuid(obsNode.Id) : ObservationId.Empty)
-                .Where(id => !id.IsEmpty))
-            .Concat(activeErrorFindings.Count > 0 ? instances.SelectMany(i => i.Members.Select(m => m.ObservationId)) : [])
-            .Where(obsById.ContainsKey)
-            .Select(id => obsById[id])
-            .DistinctBy(o => o.Id)
-            .ToList();
-        var blindedObservations = candidateBlindedObservations.Count == 0
-            ? new HashSet<ObservationId>()
-            : await ResolveBlindedObservationsAsync(db, study, candidateBlindedObservations, cancellationToken).ConfigureAwait(false);
-
-        // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation),
-        // load its containing CollectionInstance so the query, SDV, or finding blocker names its form and item prompt when present.
+        // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation
+        // or a single form referencing cross-form edit checks), load the enrollment's CollectionInstances so blockers and blinding resolve accurately.
         IReadOnlyList<CollectionInstance>? containingInstances = null;
         if (scope.Kind == NodeKinds.Observation && coveredObservations.Count > 0)
         {
@@ -678,6 +662,70 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
                 }
             }
         }
+        else if (scope.Kind == NodeKinds.CollectionInstance && activeErrorFindings.Count > 0 && enrollmentsById.Count > 0)
+        {
+            var siblingEnrollmentIds = enrollmentsById.Keys.ToList();
+            var siblingInstances = await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
+                .Where(c => c.StudyId == study && siblingEnrollmentIds.Contains(c.EnrollmentId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (siblingInstances.Count > instances.Count)
+            {
+                containingInstances = siblingInstances;
+                var extraSiblingObsIds = siblingInstances
+                    .SelectMany(c => c.Members.Select(m => m.ObservationId))
+                    .Where(id => !obsById.ContainsKey(id))
+                    .Distinct()
+                    .ToList();
+                if (extraSiblingObsIds.Count > 0)
+                {
+                    var extraSiblingObs = await db.Observations.AsNoTracking()
+                        .Where(o => extraSiblingObsIds.Contains(o.Id))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var extra in extraSiblingObs)
+                    {
+                        obsById[extra.Id] = extra;
+                    }
+                }
+
+                var missingVersions = siblingInstances.Select(c => c.ProtocolVersionId).Where(id => !versionsById.ContainsKey(id)).Distinct().ToList();
+                if (missingVersions.Count > 0)
+                {
+                    var extraVersions = await db.ProtocolVersions.AsNoTracking()
+                        .Where(v => missingVersions.Contains(v.Id))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var v in extraVersions)
+                    {
+                        versionsById[v.Id] = v;
+                    }
+                }
+            }
+        }
+
+        var unverifiedObservationIds = coveredObservations
+            .Where(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked } && !verifiedRevisions.Contains((o.Id, o.Revision)))
+            .Select(o => o.Id);
+
+        var candidateBlindedObservations = openQueries
+            .Select(q => ObservationId.FromGuid(q.TargetId))
+            .Concat(unverifiedObservationIds)
+            .Concat(activeErrorFindings
+                .Select(f => f.Target.Node is { Kind: NodeKinds.Observation } obsNode ? ObservationId.FromGuid(obsNode.Id) : ObservationId.Empty)
+                .Where(id => !id.IsEmpty))
+            .Concat(activeErrorFindings.Count > 0
+                ? coveredObservations.Select(o => o.Id)
+                    .Concat((containingInstances ?? instances).SelectMany(i => i.Members.Select(m => m.ObservationId)))
+                : [])
+            .Where(obsById.ContainsKey)
+            .Select(id => obsById[id])
+            .DistinctBy(o => o.Id)
+            .ToList();
+        var blindedObservations = candidateBlindedObservations.Count == 0
+            ? new HashSet<ObservationId>()
+            : await ResolveBlindedObservationsAsync(db, study, candidateBlindedObservations, cancellationToken).ConfigureAwait(false);
 
         return LockReadinessEvaluator.BuildSnapshot(
             study,

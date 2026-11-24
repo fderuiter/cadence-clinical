@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
@@ -28,8 +29,9 @@ namespace Cadence.Kernel.Application.Evidence;
 /// <summary>
 /// Handles <see cref="OpenCollectionInstance"/> (K-FACT-6, K-TIME-8): it resolves the protocol version governing the
 /// enrollment's study site at the collection time, checks that its design has the CollectionSpec (and that the planned
-/// activity collects it), and opens the form instance with a <see cref="LineageEdgeKind.GovernedBy"/> edge from that
-/// version. A withdrawn participant gets no new form (<see cref="CaptureConditions"/>).
+/// activity collects it), and opens the form instance with <see cref="LineageEdgeKind.CollectedBy"/> edges from its
+/// governing <c>protocol_element</c> spec and planned activity. A withdrawn participant gets no new form
+/// (<see cref="CaptureConditions"/>).
 /// </summary>
 internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollectionInstance, CollectionInstanceState>
 {
@@ -75,11 +77,12 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return CollectionErrors.SpecUnknown.WithMessage(problem);
         }
 
+        var elements = await ProtocolElementLineage.ElementsAsync(context.Work, version, cancellationToken).ConfigureAwait(false);
         var instance = CollectionInstance.Open(
             command.CollectionInstanceId, enrollment, version.Id, command.CollectionSpecId, command.PlannedActivityId, collectedAt,
             context.Actor.Id, context.RecordedAt);
         context.Work.Add(instance);
-        context.Work.LinkInput(NodeRef.For(version.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, collectedAt);
+        CollectionLineage.LinkInstance(context.Work, instance, elements);
         context.Work.Raise(
             new CollectionInstanceOpened(
                 instance.TenantId, instance.Id, instance.EnrollmentId, instance.ParticipantId, instance.StudyId, version.Id,
@@ -248,9 +251,15 @@ internal sealed class RecordCollectedValuesHandler(IConceptRegistry? concepts = 
         var instanceVersion = instance.VersionIndex;
         if (changes.Count > 0)
         {
+            var elements = await ProtocolElementLineage.ElementsAsync(work, version!, cancellationToken).ConfigureAwait(false);
             instance.Saved(context.RecordedAt);
             instanceVersion++;
-            work.LinkInput(NodeRef.For(version!.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, instance.CollectedAt);
+            CollectionLineage.LinkInstance(work, instance, elements);
+            foreach (var change in changes)
+            {
+                CollectionLineage.LinkItem(work, current[change.ItemId], change.ItemId, elements);
+            }
+
             work.Raise(new CollectedValuesSaved(
                 instance.TenantId, instance.Id, instance.EnrollmentId, instance.StudyId, instance.ProtocolVersionId, instance.CollectionSpecId,
                 instanceVersion, changes));
@@ -492,8 +501,7 @@ internal sealed class SignCollectionInstanceHandler(IValidationFindings? finding
             return TrustErrors.TargetNotSignable;
         }
 
-        var memberObservations = await work.ReadAllAsync<Observation>(o => memberIds.Contains(o.Id), cancellationToken).ConfigureAwait(false);
-        var current = CollectionInstance.ContentHashOf(memberObservations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+        var (current, observations) = await CollectionContent.ReadAsync(work, instance, cancellationToken).ConfigureAwait(false);
         if (!string.Equals(current, command.ContentHash, StringComparison.Ordinal))
         {
             return TrustErrors.TargetContentChanged;
@@ -502,7 +510,7 @@ internal sealed class SignCollectionInstanceHandler(IValidationFindings? finding
         if (await EvidenceReadiness.CheckCollectionSignableAsync(
                 command.TenantId,
                 instance,
-                memberObservations,
+                observations,
                 work,
                 findings,
                 cancellationToken).ConfigureAwait(false) is { } notReady)
@@ -526,6 +534,13 @@ internal sealed class SignCollectionInstanceHandler(IValidationFindings? finding
         }
 
         work.Add(attestation);
+        var attestationTarget = NodeRef.For(attestation.Id);
+        work.LinkInput(NodeRef.For(instance.Id, Math.Max(1L, instance.VersionIndex)), LineageEdgeKind.AttestedBy, target: attestationTarget);
+        foreach (var observation in observations.OrderBy(o => o.Id))
+        {
+            work.LinkInput(NodeRef.For(observation.Id, Math.Max(1L, observation.VersionIndex)), LineageEdgeKind.AttestedBy, target: attestationTarget);
+        }
+
         work.Raise(new AttestationRecorded(attestation.TenantId, attestation.Id, attestation.ActorId, attestation.Meaning, attestation.Target));
         return CommandResult<AttestationId>.Success(attestation.Id);
     }
@@ -535,12 +550,37 @@ internal sealed class SignCollectionInstanceHandler(IValidationFindings? finding
 internal static class CollectionContent
 {
     /// <summary>The content hash of <paramref name="instance"/>'s current revisions (<see cref="CollectionInstance.ContentHashOf"/>).</summary>
-    public static async Task<string> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
+    public static async Task<string> HashAsync(IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken) =>
+        (await ReadAsync(work, instance, cancellationToken).ConfigureAwait(false)).Hash;
+
+    /// <summary>Reads <paramref name="instance"/>'s member observations and computes their current content hash.</summary>
+    public static async Task<(string Hash, IReadOnlyList<Observation> Observations)> ReadAsync(
+        IKernelUnitOfWork work, CollectionInstance instance, CancellationToken cancellationToken)
     {
         var members = instance.Members.Select(m => m.ObservationId).ToList();
         var observations = await work.ReadAllAsync<Observation>(o => members.Contains(o.Id), cancellationToken).ConfigureAwait(false);
-        return CollectionInstance.ContentHashOf(observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+        var hash = CollectionInstance.ContentHashOf(observations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+        return (hash, observations);
     }
+}
+
+/// <summary>Links a form instance and its saved item observations to their governing <c>protocol_element</c> nodes (ADR-2474).</summary>
+internal static class CollectionLineage
+{
+    public static void LinkInstance(
+        IKernelUnitOfWork work, CollectionInstance instance, IReadOnlyDictionary<string, NodeRef> elements)
+    {
+        var target = NodeRef.For(instance.Id);
+        work.LinkInput(elements[instance.CollectionSpecId], LineageEdgeKind.CollectedBy, instance.CollectedAt, target);
+        if (instance.PlannedActivityId is { } activityId && elements.TryGetValue(activityId, out var activity))
+        {
+            work.LinkInput(activity, LineageEdgeKind.CollectedBy, instance.CollectedAt, target);
+        }
+    }
+
+    public static void LinkItem(
+        IKernelUnitOfWork work, Observation observation, string itemId, IReadOnlyDictionary<string, NodeRef> elements) =>
+        work.LinkInput(elements[itemId], LineageEdgeKind.CollectedBy, observation.ObservedAt, NodeRef.For(observation.Id));
 }
 
 /// <summary>Shared steps of the form instance handlers.</summary>
@@ -664,11 +704,13 @@ internal sealed class RecordUnaskedCollectionItemHandler : ICommandHandler<Recor
             return recorded.Error!;
         }
 
+        var elements = await ProtocolElementLineage.ElementsAsync(work, version!, cancellationToken).ConfigureAwait(false);
         work.Add(added);
         instance.Join(command.ItemId, added.Id, context.RecordedAt);
         instance.Saved(context.RecordedAt);
         var instanceVersion = instance.VersionIndex + 1;
-        work.LinkInput(NodeRef.For(version!.Id, version.VersionIndex), LineageEdgeKind.GovernedBy, instance.CollectedAt);
+        CollectionLineage.LinkInstance(work, instance, elements);
+        CollectionLineage.LinkItem(work, added, item.Id, elements);
         work.Raise(
             new ObservationRecorded(
                 added.TenantId, added.Id, added.EnrollmentId, added.ParticipantId, added.StudyId, added.Concept, added.Value, added.ObservedAt),

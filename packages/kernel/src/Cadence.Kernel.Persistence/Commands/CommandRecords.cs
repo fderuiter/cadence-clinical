@@ -127,3 +127,29 @@ internal sealed class IdempotencyRecord
     public Guid ActivityId { get; init; }
     public DateTimeOffset RecordedAt { get; init; }
 }
+
+/// <summary>
+/// Immutable biostatistical export audit record persisted atomically alongside the Merkle <see cref="AuditEntryRecord"/>
+/// for every study snapshot and participant casebook export request (PRD-CDR-006, K-PROV-1). Insert-only.
+/// </summary>
+internal sealed class BiostatExportAuditLog
+{
+    public Guid Id { get; init; }
+    public TenantId TenantId { get; init; }
+    public StudyId StudyId { get; init; }
+    public EnrollmentId? EnrollmentId { get; init; }
+    public ArtifactId ArtifactId { get; init; }
+    public Guid ActivityId { get; init; }
+    public DateTimeOffset Timestamp { get; init; }
+    public string UserId { get; init; } = string.Empty;
+    public string Action { get; init; } = string.Empty;
+    public string Outcome { get; init; } = string.Empty;
+    public string Format { get; init; } = string.Empty;
+    public string? LockFilter { get; init; }
+    public DateTimeOffset ValidAt { get; init; }
+    public DateTimeOffset KnownAt { get; init; }
+    public bool IsUnblinded { get; init; }
+    public string DetailsJson { get; init; } = "{}";
+    public string Sha256Hash { get; init; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; init; }
+}

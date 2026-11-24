@@ -610,7 +610,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (tenant, code, study, _, _, _, enrollmentA, enrollmentB, _, _) = await SeedStudyAsync(ct);
+        var (tenant, code, study, _, _, siteB, enrollmentA, enrollmentB, _, _) = await SeedStudyAsync(ct);
         var studyRef = NodeRef.For(study).ToString();
         var enrollmentARef = NodeRef.For(enrollmentA).ToString();
         var enrollmentBRef = NodeRef.For(enrollmentB).ToString();
@@ -676,19 +676,89 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         crcLocks.Locks.Should().ContainSingle(l => l.ScopeKind == NodeKinds.Enrollment && l.Masked && l.Mask == "NotPermitted" && l.SubjectCode == null && l.ScopeRef == null);
         crcLocks.Locks.Should().ContainSingle(l => l.ScopeKind == NodeKinds.Observation && l.Masked && l.Mask == "Blinded" && l.ScopeRef == null);
 
-        foreach (var (format, mediaType) in new[] { ("csv", "text/csv"), ("odm_xml", "application/xml"), ("dataset_json", "application/json") })
+        // Site A coordinator: exports omit per-record cross-site placeholders, collapse unauthorized Site B into a single
+        // hidden-scope indicator (ADR-2590), and partition visibility BEFORE lock_filter.
+        using (var csvRes = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/studies/{studyRef}/exports?format=csv&lock_filter=all", UriKind.Relative), ct))
         {
-            var crcExport = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format={format}&lock_filter=all", mediaType, ct);
-            crcExport.Should().Contain("SUBJ-A", $"Site A coordinator may see SUBJ-A in {format}");
-            crcExport.Should().Contain("120.50", $"Site A coordinator may see SUBJ-A vitals in {format}");
-            crcExport.Should().NotContain("SUBJ-B", $"Site B subject code must be masked in {format}");
-            crcExport.Should().NotContain("138.25", $"Site B vitals value must be masked in {format}");
-            crcExport.Should().NotContain("Active Drug 100mg", $"Blinded treatment arm must be masked in {format}");
-            crcExport.Should().Contain("NotPermitted", $"Unauthorized site rows must carry NotPermitted mask in {format}");
-            crcExport.Should().Contain("Blinded", $"Blinded treatment rows must carry Blinded mask in {format}");
+            var crcCsv = await csvRes.Content.ReadAsStringAsync(ct);
+            csvRes.StatusCode.Should().Be(HttpStatusCode.OK, crcCsv);
+            csvRes.Headers.TryGetValues(KernelExportEndpoints.HiddenScopesHeader, out var hiddenValues).Should().BeTrue();
+            hiddenValues!.Single().Should().Be("more_exist=true;reasons=NotPermitted");
+            crcCsv.Should().Contain("SUBJ-A").And.Contain("120.50").And.Contain("Blinded");
+            crcCsv.Should().NotContain("SUBJ-B").And.NotContain("138.25").And.NotContain("Active Drug 100mg").And.NotContain("NotPermitted");
         }
 
-        // Site A coordinator requesting SUBJ-B's casebook receives an explicit masked NotPermitted casebook without leaking SUBJ-B.
+        // Under lock_filter=locked_only, Site B's Locked enrollment must NOT appear as a cross-site row (Site A has zero Locked rows, only Frozen).
+        var crcLockedOnlyCsv = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format=csv&lock_filter=locked_only", "text/csv", ct);
+        crcLockedOnlyCsv.Split('\n', StringSplitOptions.RemoveEmptyEntries).Should().HaveCount(1, "header only: Site B's Locked enrollment was excluded before lock_filter");
+        crcLockedOnlyCsv.Should().NotContain("SUBJ-B").And.NotContain("NotPermitted");
+
+        var crcUnlockedOnlyCsv = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format=csv&lock_filter=unlocked_only", "text/csv", ct);
+        crcUnlockedOnlyCsv.Split('\n', StringSplitOptions.RemoveEmptyEntries).Should().HaveCount(3, "header + 2 unlocked Site A vitals (Frozen blinded arm and Site B excluded)");
+        crcUnlockedOnlyCsv.Should().Contain("SUBJ-A").And.Contain("120.50").And.NotContain("SUBJ-B").And.NotContain("NotPermitted");
+
+        var crcOdm = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format=odm_xml&lock_filter=all", "application/xml", ct);
+        crcOdm.Should().Contain("SUBJ-A").And.Contain("120.50").And.Contain("Blinded");
+        crcOdm.Should().NotContain("SUBJ-B").And.NotContain("138.25").And.NotContain("Active Drug 100mg").And.NotContain("PlaceholderSequence");
+        var crcOdmDoc = XDocument.Parse(crcOdm);
+        XNamespace odmNs = "http://www.cdisc.org/ns/odm/v1.3";
+        XNamespace cadenceNs = "https://cadence.clinical/ns/kernel-export/v1";
+        crcOdmDoc.Descendants(odmNs + "SubjectData").Should().ContainSingle();
+        var hiddenOdm = crcOdmDoc.Descendants(cadenceNs + "HiddenScopes").Single();
+        hiddenOdm.Attribute("MoreExist")!.Value.Should().Be("true");
+        hiddenOdm.Attribute("Reasons")!.Value.Should().Be("NotPermitted");
+
+        var crcDatasetJson = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format=dataset_json&lock_filter=all", "application/json", ct);
+        crcDatasetJson.Should().Contain("SUBJ-A").And.Contain("120.50").And.Contain("Blinded");
+        crcDatasetJson.Should().NotContain("SUBJ-B").And.NotContain("138.25").And.NotContain("Active Drug 100mg").And.NotContain("IG.masked");
+        using (var dsDoc = JsonDocument.Parse(crcDatasetJson))
+        {
+            var hiddenJson = dsDoc.RootElement.GetProperty("hiddenScopes");
+            hiddenJson.GetProperty("more_exist").GetBoolean().Should().BeTrue();
+            hiddenJson.GetProperty("reasons").EnumerateArray().Select(e => e.GetString()).Should().Equal("NotPermitted");
+        }
+
+        var (crcArchiveBytes, _) = await GetBytesWithShaHeaderAsync(siteACrc, $"studies/{studyRef}/exports?format=study_archive&lock_filter=all", "application/zip", ct);
+        using (var zip = new ZipArchive(new MemoryStream(crcArchiveBytes), ZipArchiveMode.Read))
+        {
+            var entryNames = zip.Entries.Select(e => e.FullName).ToList();
+            entryNames.Should().NotContain(p => p.Contains("collection_masked_records", StringComparison.OrdinalIgnoreCase));
+            entryNames.Should().NotContain(p => p.Contains("masked-", StringComparison.OrdinalIgnoreCase));
+            await using var manifestStream = await zip.GetEntry("manifest.json")!.OpenAsync(ct);
+            using var manifestReader = new StreamReader(manifestStream, Encoding.UTF8);
+            using var manifestDoc = JsonDocument.Parse(await manifestReader.ReadToEndAsync(ct));
+            manifestDoc.RootElement.GetProperty("hidden_scopes").GetProperty("more_exist").GetBoolean().Should().BeTrue();
+            await using var locksStream = await zip.GetEntry("locks/locks.json")!.OpenAsync(ct);
+            using var locksReader = new StreamReader(locksStream, Encoding.UTF8);
+            var locksJson = await locksReader.ReadToEndAsync(ct);
+            locksJson.Should().NotContain("NotPermitted").And.NotContain("SUBJ-B");
+            await using var auditStream = await zip.GetEntry("audit/audit_trail.json")!.OpenAsync(ct);
+            using var auditReader = new StreamReader(auditStream, Encoding.UTF8);
+            var auditJson = await auditReader.ReadToEndAsync(ct);
+            auditJson.Should().NotContain("SUBJ-B").And.NotContain("138.25");
+        }
+
+        // ADR-2590 count invariance: adding another participant + observations on Site B changes ZERO bytes/counts of Site A's hidden-scope exports.
+        ProtocolVersionId versionB2;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            versionB2 = await db.ProtocolVersions.AsNoTracking().Where(v => v.StudyId == study).Select(v => v.Id).SingleAsync(ct);
+        }
+        var participantB2 = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented B2"), ct);
+        SubjectCode.TryFrom("SUBJ-B2", out var subjB2);
+        var screenedB2 = await _scenario.Protocol.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participantB2, siteB, subjB2, Tick().AddDays(-1), KernelProtocolScenario.Key(), "Screened B2"), ct);
+        var subjectObjB2 = new KernelObservationScenario.Subject(tenant, study, siteB, screenedB2.EnrollmentId);
+        var openedB2 = await _scenario.Protocol.OkAsync(Open(subjectObjB2, CollectionInstanceId.New(), Tick()), ct);
+        await _scenario.Protocol.OkAsync(
+            Save(new Form(subjectObjB2, versionB2, openedB2.CollectionInstanceId), Value(Systolic, new QuantityValue(144.00m, "mm[Hg]"))),
+            ct);
+
+        var crcCsvAfterB2 = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format=csv&lock_filter=all", "text/csv", ct);
+        crcCsvAfterB2.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length.Should().Be(4, "Site B growth must not add rows to Site A's export");
+        crcCsvAfterB2.Should().NotContain("SUBJ-B2").And.NotContain("144.00");
+
+        // Site A coordinator requesting SUBJ-B's casebook receives an explicit masked NotPermitted casebook with collapsed empty collections.
         var (maskedCasebookBytes, _) = await GetBytesWithShaHeaderAsync(siteACrc, $"enrollments/{enrollmentBRef}/casebook?format=json", "application/json", ct);
         var maskedCasebookText = System.Text.Encoding.UTF8.GetString(maskedCasebookBytes);
         maskedCasebookText.Should().NotContain("SUBJ-B").And.NotContain("138.25");
@@ -696,6 +766,9 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         maskedCasebook.Masked.Should().BeTrue();
         maskedCasebook.Mask.Should().Be("NotPermitted");
         maskedCasebook.SubjectCode.Should().Be("masked");
+        maskedCasebook.Forms.Should().BeEmpty();
+        maskedCasebook.Observations.Should().BeEmpty();
+        maskedCasebook.Locks.Should().BeEmpty();
 
         // Blinded statistician (Study-wide grant, no enrollment.unblind): sees both SUBJ-A and SUBJ-B vitals, but treatment arm is Blinded!
         var statCsv = await GetTextAsync(blindedStat, $"studies/{studyRef}/exports?format=csv&lock_filter=all", "text/csv", ct);
@@ -724,6 +797,126 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
 
         var (pharmCasebookBytes, _) = await GetBytesWithShaHeaderAsync(unblindedPharm, $"enrollments/{enrollmentARef}/casebook?format=json", "application/json", ct);
         System.Text.Encoding.UTF8.GetString(pharmCasebookBytes).Should().Contain("Active Drug 100mg");
+    }
+
+    /// <summary>
+    /// Independent <c>(valid_at, known_at)</c> bitemporal cuts evaluate lock assertions and releases on the
+    /// <c>known_at</c> axis (CLINICAL_KERNEL_SPECIFICATION §4.1), and repeated live casebook downloads without
+    /// <c>as_of</c> return identical <c>X-Content-Sha256</c> digests across wall-clock ticks while appending fresh
+    /// <c>AuditEntry</c> and <c>BiostatExportAuditLog</c> rows on every download.
+    /// </summary>
+    [Fact(DisplayName = "HostSplitBitemporalLockCutsAndLiveCasebookDigest_PreserveLockKnownAtAndDeterministicSha256")]
+    [KernelRule("K-TRUTH-1")]
+    [KernelRule("K-PROV-1")]
+    public async Task HostSplitBitemporalLockCutsAndLiveCasebookDigestPreserveLockKnownAtAndDeterministicSha256()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, _, _, _, enrollmentA, _, _, _) = await SeedStudyAsync(ct);
+        var studyRef = NodeRef.For(study).ToString();
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+
+        using var dm = Client(code, DataManager);
+
+        // Capture a valid_at cutoff strictly after observations were recorded, but BEFORE the lock is applied!
+        await Task.Delay(20, ct);
+        var tValidBeforeLock = SystemClock.Instance.UtcNow;
+        await Task.Delay(20, ct);
+
+        var appliedLock = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        var tKnownAfterLock = appliedLock.LockedAt!.Value.AddMilliseconds(5);
+
+        // AC 5: valid_at < lock_ts and known_at >= lock_ts MUST return locked observations under locked_only!
+        var vBeforeLockParam = Uri.EscapeDataString(tValidBeforeLock.ToString("O"));
+        var kAfterLockParam = Uri.EscapeDataString(tKnownAfterLock.ToString("O"));
+        var splitLockedCsv = await GetTextAsync(
+            dm,
+            $"studies/{studyRef}/exports?format=csv&lock_filter=locked_only&valid_at={vBeforeLockParam}&known_at={kAfterLockParam}",
+            "text/csv",
+            ct);
+        splitLockedCsv.Should().Contain("SUBJ-A").And.Contain("120.50");
+
+        // Whereas when known_at is ALSO before lock_ts, zero observations are locked yet.
+        var preLockCsv = await GetTextAsync(
+            dm,
+            $"studies/{studyRef}/exports?format=csv&lock_filter=locked_only&valid_at={vBeforeLockParam}&known_at={vBeforeLockParam}",
+            "text/csv",
+            ct);
+        preLockCsv.Should().NotContain("SUBJ-A");
+
+        var splitLocks = await SendAsync<KernelStudyLocksResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks?valid_at={vBeforeLockParam}&known_at={kAfterLockParam}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        splitLocks.Locks.Should().ContainSingle(l => l.Ref == appliedLock.Ref && l.ReleasedAt == null);
+
+        // Release the lock strictly after tValidBeforeRelease.
+        await Task.Delay(20, ct);
+        var tValidBeforeRelease = SystemClock.Instance.UtcNow;
+        await Task.Delay(20, ct);
+
+        var releasedLock = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, $"locks/{appliedLock.Ref}/release", ReleaseReason, ReleaseToken(DataManager, appliedLock.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            HttpStatusCode.OK,
+            ct);
+        var tKnownAfterRelease = releasedLock.ReleasedAt!.Value.AddMilliseconds(5);
+
+        // AC 6: known_at >= release_ts excludes that released lock even when valid_at < release_ts!
+        var vBeforeReleaseParam = Uri.EscapeDataString(tValidBeforeRelease.ToString("O"));
+        var kAfterReleaseParam = Uri.EscapeDataString(tKnownAfterRelease.ToString("O"));
+        var postReleaseLockedCsv = await GetTextAsync(
+            dm,
+            $"studies/{studyRef}/exports?format=csv&lock_filter=locked_only&valid_at={vBeforeReleaseParam}&known_at={kAfterReleaseParam}",
+            "text/csv",
+            ct);
+        postReleaseLockedCsv.Should().NotContain("SUBJ-A");
+
+        var postReleaseUnlockedCsv = await GetTextAsync(
+            dm,
+            $"studies/{studyRef}/exports?format=csv&lock_filter=unlocked_only&valid_at={vBeforeReleaseParam}&known_at={kAfterReleaseParam}",
+            "text/csv",
+            ct);
+        postReleaseUnlockedCsv.Should().Contain("SUBJ-A").And.Contain("120.50");
+
+        // AC 8: Repeated live casebook downloads without as_of return identical X-Content-Sha256 and wire bytes across formats,
+        // while still appending a new BiostatExportAuditLog row on every download!
+        int biostatLogsBefore;
+        await using (var db = fixture.CreateAdminContext())
+        {
+            biostatLogsBefore = await db.BiostatExportAuditLogs.CountAsync(l => l.TenantId == tenant && l.EnrollmentId == enrollmentA, ct);
+        }
+
+        foreach (var (fmt, media) in new[] { ("json", "application/json"), ("odm_xml", "application/xml"), ("html", "text/html"), ("pdf", "application/pdf") })
+        {
+            var (bytes1, sha1) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentARef}/casebook?format={fmt}", media, ct);
+            fixture.Clock.Advance(TimeSpan.FromSeconds(7));
+            await Task.Delay(15, ct);
+            var (bytes2, sha2) = await GetBytesWithShaHeaderAsync(dm, $"enrollments/{enrollmentARef}/casebook?format={fmt}", media, ct);
+            sha2.Should().Be(sha1, $"repeated live {fmt} casebook downloads on unchanged enrollment data must return identical X-Content-Sha256");
+            bytes2.Should().Equal(bytes1, $"repeated live {fmt} casebook downloads on unchanged enrollment data must return identical bytes");
+        }
+
+        await using (var db = fixture.CreateAdminContext())
+        {
+            var biostatLogsAfter = await db.BiostatExportAuditLogs.CountAsync(l => l.TenantId == tenant && l.EnrollmentId == enrollmentA, ct);
+            biostatLogsAfter.Should().Be(biostatLogsBefore + 8, "every live casebook download must persist an immutable BiostatExportAuditLog entry");
+        }
     }
 
     /// <summary>

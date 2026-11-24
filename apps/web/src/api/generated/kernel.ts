@@ -1228,16 +1228,10 @@ export interface components {
       retracted_by: null | components["schemas"]["Kernel_AssertionId"];
       /** Format: date-time */
       retracted_at: null | string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_AttestationId: unknown;
-    Kernel_CandidateKind: number;
-    Kernel_CandidateSummary: {
-      kind: components["schemas"]["Kernel_CandidateKind"];
-      version: null | components["schemas"]["Kernel_NodeRef"];
-      base_version: null | components["schemas"]["Kernel_NodeRef"];
-      content_hash: null | string;
-      base_content_hash: null | string;
-    };
     Kernel_CodelistOptionView: {
       code: string;
       display: string;
@@ -1247,36 +1241,6 @@ export interface components {
     /** @enum {unknown} */
     Kernel_DateTimePrecision:
       "Year" | "Month" | "Day" | "Minute" | "Second" | null;
-    Kernel_DependentGroup: {
-      kind: string;
-      /** Format: int32 */
-      count: number | string;
-      objects: components["schemas"]["Kernel_LineageNode"][];
-    };
-    Kernel_DependentsReport: {
-      start: string;
-      /** Format: int32 */
-      depth: number | string;
-      /** Format: date-time */
-      valid_at: string;
-      /** Format: date-time */
-      known_at: string;
-      groups: components["schemas"]["Kernel_DependentGroup"][];
-      /** Format: int32 */
-      total: number | string;
-      truncated: boolean;
-    };
-    Kernel_ElementChange: {
-      element_id: string;
-      instance_type: null | string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      properties: string[];
-    };
-    Kernel_ElementChangeKind: number;
-    Kernel_EngineVersion: {
-      name: string;
-      version: string;
-    };
     Kernel_EvaluatedCondition: {
       code: string;
       description: string;
@@ -1396,6 +1360,13 @@ export interface components {
       /** Format: date-time */
       asserted_at: string;
       asserted_by: string;
+    };
+    Kernel_KernelCandidateSummaryResponse: {
+      kind: string;
+      version: null | string;
+      base_version: null | string;
+      content_hash: null | string;
+      base_content_hash: null | string;
     };
     Kernel_KernelChangeEffectivityStatusRequest: {
       status: null | string;
@@ -1529,6 +1500,10 @@ export interface components {
       instance_type: null | string;
       change: string;
       properties: string[];
+    };
+    Kernel_KernelEngineVersionResponse: {
+      name: string;
+      version: string;
     };
     Kernel_KernelEnrollmentLookupResponse: {
       study_ref: string;
@@ -1764,6 +1739,18 @@ export interface components {
       masked: boolean;
       mask: null | string;
     };
+    Kernel_KernelMaskedPartResponse: {
+      part: string;
+      reason: string;
+    };
+    Kernel_KernelMatrixGapFindingResponse: {
+      element_id: string;
+      kind: string;
+      severity: string;
+      json_pointer_path: string;
+      description: string;
+      recommendation: null | string;
+    };
     Kernel_KernelNextActionResponse: {
       description: string;
       capability: null | string;
@@ -1814,6 +1801,19 @@ export interface components {
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelPlannedVisitResponse: {
+      activity_id: string;
+      name: string;
+      epoch_id: string;
+      /** Format: int32 */
+      epoch_order: number | string;
+      /** Format: int32 */
+      study_day: number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
     };
     Kernel_KernelPostureScopingResponse: {
       study_phase: string;
@@ -2022,6 +2022,12 @@ export interface components {
       remediation_guidance: null | string;
       condition?: null | string;
     };
+    Kernel_KernelScheduleChangeResponse: {
+      activity_id: string;
+      change: string;
+      before: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+      after: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+    };
     Kernel_KernelScheduleOfActivitiesResponse: {
       version: string;
       content_hash: null | string;
@@ -2058,6 +2064,27 @@ export interface components {
       exact_code: boolean;
       /** Format: double */
       rank: number | string;
+    };
+    Kernel_KernelSimulationAsOfResponse: {
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+    };
+    Kernel_KernelSimulationResponse: {
+      scope: string;
+      as_of: components["schemas"]["Kernel_KernelSimulationAsOfResponse"];
+      candidate: components["schemas"]["Kernel_KernelCandidateSummaryResponse"];
+      engine_versions: components["schemas"]["Kernel_KernelEngineVersionResponse"][];
+      input_hash: string;
+      result_hash: string;
+      structural_diff: components["schemas"]["Kernel_KernelElementChangeResponse"][];
+      schedule_changes: components["schemas"]["Kernel_KernelScheduleChangeResponse"][];
+      masked: components["schemas"]["Kernel_KernelMaskedPartResponse"][];
+      dependents:
+        null | components["schemas"]["Kernel_KernelDependentsResponse"];
+      matrix_gaps: components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
+      is_empty: boolean;
     };
     Kernel_KernelSiteSummaryResponse: {
       ref: string;
@@ -2341,15 +2368,6 @@ export interface components {
       ref: null | string;
       mask: null | string;
     };
-    Kernel_LineageNode: {
-      handle: string;
-      kind: string;
-      ref: null | components["schemas"]["Kernel_NodeRef"];
-      mask: null | components["schemas"]["Kernel_MaskReason"];
-      /** Format: int32 */
-      distance: number | string;
-      is_masked?: boolean;
-    };
     /** @enum {unknown} */
     Kernel_LockKind: "Frozen" | "Locked";
     Kernel_LockView: {
@@ -2361,25 +2379,12 @@ export interface components {
       locked_at: string;
       locked_by: string;
       reason_for_change: string;
+      /** @default false */
+      masked: boolean;
     };
-    Kernel_MaskedPart: {
-      part: string;
-      reason: components["schemas"]["Kernel_MaskReason"];
-    };
-    Kernel_MaskReason: number;
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
     };
-    Kernel_MatrixGapFinding: {
-      element_id: string;
-      kind: components["schemas"]["Kernel_MatrixGapKind"];
-      severity: components["schemas"]["Kernel_MatrixGapSeverity"];
-      json_pointer_path: string;
-      description: string;
-      recommendation?: null | string;
-    };
-    Kernel_MatrixGapKind: number;
-    Kernel_MatrixGapSeverity: number;
     Kernel_NextAction: {
       description: string;
       capability?: null | string;
@@ -2460,19 +2465,6 @@ export interface components {
       type?: "text";
       value: string;
     };
-    Kernel_PlannedVisit: {
-      activity_id: string;
-      name: string;
-      epoch_id: string;
-      /** Format: int32 */
-      epoch_order: number | string;
-      /** Format: int32 */
-      study_day: number | string;
-      /** Format: int32 */
-      window_before: number | string;
-      /** Format: int32 */
-      window_after: number | string;
-    };
     Kernel_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -2483,12 +2475,6 @@ export interface components {
     };
     /** @enum {unknown} */
     Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
-    Kernel_ScheduleChange: {
-      activity_id: string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      before: null | components["schemas"]["Kernel_PlannedVisit"];
-      after: null | components["schemas"]["Kernel_PlannedVisit"];
-    };
     Kernel_SimulateProtocolRequest: {
       base_version_ref: null | string;
       stored_version_ref: null | string;
@@ -2497,26 +2483,6 @@ export interface components {
       valid_at?: null | string;
       /** Format: date-time */
       known_at?: null | string;
-    };
-    Kernel_SimulationAsOf: {
-      /** Format: date-time */
-      valid_at: string;
-      /** Format: date-time */
-      known_at: string;
-    };
-    Kernel_SimulationResult: {
-      scope: components["schemas"]["Kernel_NodeRef"];
-      as_of: components["schemas"]["Kernel_SimulationAsOf"];
-      candidate: components["schemas"]["Kernel_CandidateSummary"];
-      engine_versions: components["schemas"]["Kernel_EngineVersion"][];
-      input_hash: string;
-      result_hash: string;
-      structural_diff: components["schemas"]["Kernel_ElementChange"][];
-      schedule_changes: components["schemas"]["Kernel_ScheduleChange"][];
-      masked: components["schemas"]["Kernel_MaskedPart"][];
-      dependents?: null | components["schemas"]["Kernel_DependentsReport"];
-      matrix_gaps?: null | components["schemas"]["Kernel_MatrixGapFinding"][];
-      is_empty?: boolean;
     };
   };
   responses: never;
@@ -3483,7 +3449,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_SimulationResult"];
+          "application/json": components["schemas"]["Kernel_KernelSimulationResponse"];
         };
       };
       /** @description Bad Request */
@@ -3522,6 +3488,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Conflict. Kernel errors: `K.Simulation.VersionStale`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
       /** @description Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`. */
       422: {
         headers: {
@@ -3552,7 +3527,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_MatrixGapFinding"][];
+          "application/json": components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
         };
       };
       /** @description Bad Request */
@@ -6690,9 +6665,10 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody: {
+    requestBody?: {
       content: {
-        "application/json": components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
+        "application/json":
+          null | components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
       };
     };
     responses: {
