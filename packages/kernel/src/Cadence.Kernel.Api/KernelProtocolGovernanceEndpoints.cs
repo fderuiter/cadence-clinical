@@ -246,7 +246,7 @@ public static class KernelProtocolGovernanceEndpoints
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
     {
-        if (context.VerifiedSigToken() is not { } sigToken)
+        if (context.VerifiedSigToken() is not { Subject: { Length: > 0 } sigSubject } sigToken)
         {
             return TypedResults.Problem(
                 title: "Electronic signature required",
@@ -334,7 +334,7 @@ public static class KernelProtocolGovernanceEndpoints
                 && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
             {
                 var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
-                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor ?? Actor.Person(sigToken.Subject ?? "system");
+                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor ?? Actor.Person(sigSubject);
                 var precheck = await ProtocolApprovalSimulationGate.CheckAsync(
                     tenant,
                     unitOfWorkFactory,

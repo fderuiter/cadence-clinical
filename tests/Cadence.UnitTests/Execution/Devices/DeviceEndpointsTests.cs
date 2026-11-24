@@ -66,6 +66,7 @@ public sealed class DeviceEndpointsTests : IDisposable
         _client = new HttpClient(new TestSecurityContext.GatewaySigningHandler(
             TestSecurityContext.Identity("pharmacist-01", "Pharmacist") with
             {
+                SiteIds = ["SITE-1"],
                 ChangeReason = "Pharmacist device accountability update",
             })
         {
