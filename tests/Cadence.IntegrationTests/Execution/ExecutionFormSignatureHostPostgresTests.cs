@@ -457,6 +457,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error the signature route returns must be one its command declares (ADR-2600 §4.5).

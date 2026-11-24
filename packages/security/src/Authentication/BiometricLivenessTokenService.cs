@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Cadence.Kernel.Time;
+using Cadence.Security.FieldProtection;
 
 namespace Cadence.Security.Authentication;
 
@@ -28,9 +29,18 @@ public sealed record BiometricLivenessTokenData(
 /// <summary>Service for issuing and verifying HMAC-SHA256 signed biometric liveness tokens.</summary>
 public static class BiometricLivenessTokenService
 {
-    private static readonly byte[] DefaultSecret = Encoding.UTF8.GetBytes("CadenceBiometricsLivenessSecret2026Key32Bytes!");
+    /// <summary>Maximum allowed liveness token lifetime (15 minutes).</summary>
+    public static readonly TimeSpan MaxLifetime = TimeSpan.FromMinutes(15);
 
-    /// <summary>Issues a signed liveness verification token valid for 15 minutes.</summary>
+    /// <summary>Allowed clock skew between issuing and verifying services (5 seconds, matching <see cref="SigTokenVerifier.ClockSkew"/>).</summary>
+    public static readonly TimeSpan ClockSkew = SigTokenVerifier.ClockSkew;
+
+    /// <summary>Prefix prepended when recording single-use liveness token IDs in <see cref="ISigTokenUseStore"/>.</summary>
+    public const string UseStoreKeyPrefix = "liveness:";
+
+    private const int MaxJtiLength = 128 - 9; // ConsumedSignatureTokenConfiguration.MaxTokenIdLength minus "liveness:".Length
+
+    /// <summary>Issues a signed liveness verification token valid for up to 15 minutes using the required 32-byte HMAC secret.</summary>
     public static string IssueToken(
         string subjectPseudonym,
         decimal antiSpoofScore,
@@ -40,9 +50,18 @@ public static class BiometricLivenessTokenService
         DateTimeOffset? now = null,
         TimeSpan? lifetime = null)
     {
-        secret ??= DefaultSecret;
+        ValidateSecret(secret);
+        if (string.IsNullOrWhiteSpace(subjectPseudonym))
+        {
+            throw new ArgumentException("Subject pseudonym is required.", nameof(subjectPseudonym));
+        }
+
         DateTimeOffset currentTime = now ?? SystemClock.Instance.UtcNow;
-        TimeSpan ttl = lifetime ?? TimeSpan.FromMinutes(15);
+        TimeSpan ttl = lifetime ?? MaxLifetime;
+        if (ttl <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(lifetime), "Token lifetime must be positive.");
+        }
 
         long iat = currentTime.ToUnixTimeSeconds();
         long exp = currentTime.Add(ttl).ToUnixTimeSeconds();
@@ -60,7 +79,7 @@ public static class BiometricLivenessTokenService
         string base64Payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonPayload))
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
-        using var hmac = new HMACSHA256(secret);
+        using var hmac = new HMACSHA256(secret!);
         byte[] sigBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(base64Payload));
         string base64Sig = Convert.ToBase64String(sigBytes)
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
@@ -68,15 +87,17 @@ public static class BiometricLivenessTokenService
         return $"{base64Payload}.{base64Sig}";
     }
 
-    /// <summary>Verifies signature, expiration, and subject of a biometric liveness token.</summary>
+    /// <summary>Verifies HMAC-SHA256 signature, 15-minute acceptance window, JTI presence, and subject binding of a biometric liveness token.</summary>
     public static bool VerifyToken(
         string? token,
         string? expectedSubject,
         out BiometricLivenessTokenData? tokenData,
-        byte[]? secret = null,
+        byte[]? secret,
         DateTimeOffset? now = null)
     {
         tokenData = null;
+        ValidateSecret(secret);
+
         if (string.IsNullOrWhiteSpace(token))
         {
             return false;
@@ -91,8 +112,7 @@ public static class BiometricLivenessTokenService
         string base64Payload = parts[0];
         string base64Sig = parts[1];
 
-        secret ??= DefaultSecret;
-        using var hmac = new HMACSHA256(secret);
+        using var hmac = new HMACSHA256(secret!);
         byte[] expectedSigBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(base64Payload));
         string expectedBase64Sig = Convert.ToBase64String(expectedSigBytes)
             .TrimEnd('=').Replace('+', '-').Replace('/', '_');
@@ -115,37 +135,62 @@ public static class BiometricLivenessTokenService
             }
 
             byte[] jsonBytes = Convert.FromBase64String(paddedPayload);
-            tokenData = JsonSerializer.Deserialize<BiometricLivenessTokenData>(jsonBytes);
+            var parsed = JsonSerializer.Deserialize<BiometricLivenessTokenData>(jsonBytes);
 
-            if (tokenData is null)
+            if (parsed is null
+                || string.IsNullOrWhiteSpace(parsed.SubjectPseudonym)
+                || string.IsNullOrWhiteSpace(parsed.Jti)
+                || parsed.Jti.Length > MaxJtiLength)
             {
                 return false;
             }
 
             DateTimeOffset currentTime = now ?? SystemClock.Instance.UtcNow;
-            long currentUnix = currentTime.ToUnixTimeSeconds();
+            DateTimeOffset issuedAt = DateTimeOffset.FromUnixTimeSeconds(parsed.IssuedAtUnix);
+            DateTimeOffset expires = DateTimeOffset.FromUnixTimeSeconds(parsed.ExpiresAtUnix);
 
-            if (tokenData.ExpiresAtUnix < currentUnix)
+            if (!WithinAcceptanceWindow(issuedAt, expires, currentTime))
             {
                 return false;
             }
 
-            if (!tokenData.IsLive)
+            if (!parsed.IsLive)
             {
                 return false;
             }
 
             if (!string.IsNullOrEmpty(expectedSubject) &&
-                !string.Equals(tokenData.SubjectPseudonym, expectedSubject, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(parsed.SubjectPseudonym, expectedSubject, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
+            tokenData = parsed;
             return true;
         }
         catch
         {
+            tokenData = null;
             return false;
+        }
+    }
+
+    private static bool WithinAcceptanceWindow(
+        DateTimeOffset issuedAt,
+        DateTimeOffset expires,
+        DateTimeOffset now) =>
+        expires > issuedAt
+        && expires - issuedAt <= MaxLifetime
+        && now >= issuedAt - ClockSkew
+        && now < expires + ClockSkew;
+
+    private static void ValidateSecret(byte[]? secret)
+    {
+        if (secret is null || secret.Length != FieldProtectionKey.KeySizeBytes)
+        {
+            throw new ArgumentException(
+                $"A {FieldProtectionKey.KeySizeBytes}-byte HMAC secret ({BiometricLivenessOptions.ConfigurationKey}) is required.",
+                nameof(secret));
         }
     }
 }

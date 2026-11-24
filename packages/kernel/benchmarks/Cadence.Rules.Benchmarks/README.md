@@ -1,7 +1,8 @@
 # Cadence.Rules.Benchmarks
 
-Measures an `IRuleEvaluator` (spec §10.1, K-RULE-3) over a seeded, streamed synthetic dataset with a 12-rule pack that
-uses every operator and function of the rule language.
+Measures an `IRuleEvaluator` (spec §10.1, K-RULE-3) over a seeded synthetic `IRuleRecordCursor` streamed into an
+incremental SHA-256 `IRuleViolationSink` with a 12-rule pack that uses every operator and function of the rule
+language (`RuleBenchmark.Dataset` remains available for buffered equivalence tests).
 
 ```bash
 dotnet run -c Release --project packages/kernel/benchmarks/Cadence.Rules.Benchmarks -- [records] [runs] [seed]

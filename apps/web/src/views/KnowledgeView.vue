@@ -541,9 +541,9 @@
           <ClinicalTabs
             :model-value="activeReaderTab"
             :tabs="readerTabs"
+            variant="underline"
             aria-label="SOP document inspection tabs"
             id-prefix="knowledge-reader"
-            list-class="reader-tab-nav"
             tab-class="reader-tab-btn"
             @update:model-value="handleReaderTabChange"
           />
@@ -2624,47 +2624,6 @@ export default {
   color: var(--semantic-color-text-secondary);
 }
 
-/* Reader Tab Navigation */
-.reader-tab-nav,
-:deep(.reader-tab-nav) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  background-color: var(--semantic-color-surface-header);
-  border-bottom: 1px solid var(--border);
-  padding: 0 16px;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.reader-tab-btn,
-:deep(.reader-tab-btn) {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--neutral-dark);
-  cursor: pointer;
-  transition: all 0.15s;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.reader-tab-btn:hover,
-:deep(.reader-tab-btn:hover) {
-  color: var(--primary);
-}
-
-.reader-tab-btn.active,
-:deep(.reader-tab-btn.active) {
-  color: var(--semantic-color-primary);
-  border-bottom-color: var(--semantic-color-primary);
-  background-color: var(--semantic-color-surface);
-}
-
 .reader-body-card {
   padding: 24px;
   flex: 1;
@@ -3145,11 +3104,6 @@ export default {
 
   .reader-header-card {
     padding: 14px 16px;
-  }
-
-  .reader-tab-nav,
-  :deep(.reader-tab-nav) {
-    padding: 0 12px;
   }
 
   .reader-body-card {
