@@ -586,6 +586,8 @@ export const SEMANTIC_ACTIONS = Object.freeze({
   ECONSENT_CAPTURE: "econsent.consent.capture",
   ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign",
   CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate",
+  CGT_BEDSIDE_VERIFY: "execution.cgt.bedside_verify",
+  CGT_DESTRUCTION_CERTIFICATE: "execution.cgt.destruction_certificate",
   ETMF_DOCUMENT_SIGN_OFF: "etmf.document.sign_off",
   COLLECTION_SIGN: "collection.sign",
   SOA_APPROVE: "designer.soa.approve",
@@ -701,6 +703,36 @@ export function buildStepUpVerificationPayload(input = {}) {
 }
 
 /**
+ * Formats the canonical target-record binding identifier (`batch_id` claim) for CGT bedside dual verification.
+ * Matches `CgtBedsideVerificationRequest.TargetRecordBindingId()` (`{studyId}:{subjectId}:{din}:{batchId}`).
+ *
+ * @param {{ studyId?: string | null, subjectId?: string | null, din?: string | null, batchId?: string | null }} input
+ * @returns {string}
+ */
+export function formatCgtBedsideBindingId(input = {}) {
+  const studyId = String(input?.studyId ?? "").trim();
+  const subjectId = String(input?.subjectId ?? "").trim();
+  const din = String(input?.din ?? "").trim();
+  const batchId = String(input?.batchId ?? "").trim();
+  return `${studyId}:${subjectId}:${din}:${batchId}`;
+}
+
+/**
+ * Formats the canonical target-record binding identifier (`batch_id` claim) for CGT destruction certification.
+ * Matches `CgtDestructionCertificateCreateRequest.TargetRecordBindingId()` (`{studyId}:{siteId}:{lotNumber}:{din}`).
+ *
+ * @param {{ studyId?: string | null, siteId?: string | null, lotNumber?: string | null, din?: string | null }} input
+ * @returns {string}
+ */
+export function formatCgtDestructionBindingId(input = {}) {
+  const studyId = String(input?.studyId ?? "").trim();
+  const siteId = String(input?.siteId ?? "").trim();
+  const lotNumber = String(input?.lotNumber ?? "").trim();
+  const din = String(input?.din ?? "").trim();
+  return `${studyId}:${siteId}:${lotNumber}:${din}`;
+}
+
+/**
  * Canonical gateway path for 21 CFR Part 11 step-up signature verification.
  */
 export const STEP_UP_VERIFICATION_PATH = "/api/v1/auth/signature-verification";
@@ -728,6 +760,12 @@ export function resolveDefaultSemanticAction(action = "") {
   }
   if (normalized.includes("chair-adjudicate")) {
     return SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE;
+  }
+  if (normalized.includes("bedside-verify")) {
+    return SEMANTIC_ACTIONS.CGT_BEDSIDE_VERIFY;
+  }
+  if (normalized.includes("destruction-certificate")) {
+    return SEMANTIC_ACTIONS.CGT_DESTRUCTION_CERTIFICATE;
   }
   if (normalized.includes("/forms/")) {
     return SEMANTIC_ACTIONS.COLLECTION_SIGN;

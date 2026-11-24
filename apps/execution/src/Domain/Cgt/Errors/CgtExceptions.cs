@@ -26,3 +26,10 @@ public class ChainOfCustodyNotFoundException : Exception
 {
     public ChainOfCustodyNotFoundException(string message) : base(message) { }
 }
+
+public class CallerIdentityMismatchException : Exception
+{
+    public const string ErrorCode = "SIGNER_MISMATCH";
+
+    public CallerIdentityMismatchException(string message) : base(message) { }
+}

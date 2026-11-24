@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,12 +29,39 @@ public sealed class PostgresSigTokenUseStore<TContext>(IServiceScopeFactory scop
     where TContext : DbContext
 {
     /// <inheritdoc />
-    public async Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken)
+    public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
-        if (tokenId.Length > ConsumedSignatureTokenConfiguration.MaxTokenIdLength)
+        return TryRecordFirstUseAsync([(tokenId, retainUntil)], cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> TryRecordFirstUseBatchAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uses);
+        return TryRecordFirstUseAsync(uses, cancellationToken);
+    }
+
+    private async Task<bool> TryRecordFirstUseAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+        CancellationToken cancellationToken)
+    {
+        if (uses.Count == 0)
         {
             return false;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (tokenId, _) in uses)
+        {
+            if (string.IsNullOrWhiteSpace(tokenId)
+                || tokenId.Length > ConsumedSignatureTokenConfiguration.MaxTokenIdLength
+                || !seen.Add(tokenId))
+            {
+                return false;
+            }
         }
 
         await using var scope = scopes.CreateAsyncScope();
@@ -56,13 +84,17 @@ public sealed class PostgresSigTokenUseStore<TContext>(IServiceScopeFactory scop
                 tokens.RemoveRange(expired);
             }
 
-            if (allTokens.Any(t => t.RetainUntil >= now && string.Equals(t.TokenId, tokenId, StringComparison.Ordinal)))
+            if (allTokens.Any(t => t.RetainUntil >= now && seen.Contains(t.TokenId)))
             {
                 return false;
             }
         }
 
-        tokens.Add(new ConsumedSignatureToken { TokenId = tokenId, ConsumedAt = now, RetainUntil = retainUntil });
+        foreach (var (tokenId, retainUntil) in uses)
+        {
+            tokens.Add(new ConsumedSignatureToken { TokenId = tokenId, ConsumedAt = now, RetainUntil = retainUntil });
+        }
+
         try
         {
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

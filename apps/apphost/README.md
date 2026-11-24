@@ -74,6 +74,9 @@ issuer never asks for the Keycloak admin):
 - `randomization-allocation-key`, passed to execution as `RANDOMIZATION_ALLOCATION_KEY` (base64 of 32 bytes, a
   different key; it encrypts randomisation lists, allocations and kit arm labels, and execution refuses to start
   without one, ADR-2640);
+- `cgt-barcode-hmac-key`, passed to execution as `CGT_BARCODE_HMAC_KEY` (base64 of 32 bytes, a different key; it
+  verifies CGT chain-of-custody bag barcodes, and execution refuses to start without one,
+  [ADR-2666](../../docs/adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md));
 - `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
   passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
 - `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock
@@ -96,6 +99,7 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:audit-log-secret-key" "<secret>"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:demographics-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:randomization-allocation-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:cgt-barcode-hmac-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-lookup-hash-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:sce-signing-key" "$(openssl rand -base64 32)"
@@ -136,6 +140,7 @@ env AppHost__Profile=core \
     "Parameters__audit-log-secret-key=$(openssl rand -hex 24)" \
     "Parameters__demographics-encryption-key=$(openssl rand -base64 32)" \
     "Parameters__randomization-allocation-key=$(openssl rand -base64 32)" \
+    "Parameters__cgt-barcode-hmac-key=$(openssl rand -base64 32)" \
     "Parameters__biometric-liveness-key=$(openssl rand -base64 32)" \
     ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
     dotnet run --project apps/apphost/src/Cadence.AppHost.csproj --launch-profile http

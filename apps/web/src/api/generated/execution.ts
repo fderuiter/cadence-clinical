@@ -609,6 +609,15 @@ export interface paths {
             "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
           };
         };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
+        };
       };
     };
     delete?: never;
@@ -639,12 +648,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
         };
       };
     };
@@ -715,6 +726,15 @@ export interface paths {
       responses: {
         /** @description Unauthorized */
         401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
+        };
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown;
           };

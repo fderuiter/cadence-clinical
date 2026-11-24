@@ -54,7 +54,7 @@ holds only PostgreSQL extensions. When you query a standalone service schema by 
 
 A migrate-only job runs the normal service image with the same connection string and secrets as the service.
 Services refuse to start without their required settings (`GATEWAY_SECRET`, `AUDIT_LOG_SECRET_KEY` and, for
-execution, `DemographicsEncryption__KeyBase64` and `RANDOMIZATION_ALLOCATION_KEY`; see
+execution, `DemographicsEncryption__KeyBase64`, `RANDOMIZATION_ALLOCATION_KEY` and `CGT_BARCODE_HMAC_KEY`; see
 [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)):
 
 ```bash

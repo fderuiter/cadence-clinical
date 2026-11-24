@@ -26,6 +26,7 @@ public static partial class DevEnvironmentValidatorService
         "AUDIT_LOG_SECRET_KEY",
         "DemographicsEncryption__KeyBase64",
         "RANDOMIZATION_ALLOCATION_KEY",
+        "CGT_BARCODE_HMAC_KEY",
     ];
 
     [GeneratedRegex(@"GetServiceUrl\s*\(\s*""([^""]+)""\s*,\s*(\d+)\s*\)")]

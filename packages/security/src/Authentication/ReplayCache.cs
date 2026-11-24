@@ -26,6 +26,16 @@ public interface ISigTokenUseStore
     /// concurrent attempts. Implementations must make check-and-record one atomic step.
     /// </summary>
     Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Atomically records the first use of every token in <paramref name="uses"/>. Returns <see langword="true"/> only
+    /// when every token id in the batch is distinct and none has been recorded before; if any token id is invalid,
+    /// duplicated within the batch, or already recorded, returns <see langword="false"/> without recording any token in
+    /// the batch (so a dual-signer failure never burns the innocent co-signer's step-up token).
+    /// </summary>
+    Task<bool> TryRecordFirstUseBatchAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -53,6 +63,15 @@ public class ReplayCache(IClock? clock = null) : ISigTokenUseStore
         return Task.FromResult(TryRecordFirstUse(tokenId, retainUntil));
     }
 
+    /// <inheritdoc />
+    public Task<bool> TryRecordFirstUseBatchAsync(
+        IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uses);
+        return Task.FromResult(TryRecordFirstUseBatch(uses));
+    }
+
     /// <summary>The synchronous form of <see cref="TryRecordFirstUseAsync"/>.</summary>
     public bool TryRecordFirstUse(string tokenId, DateTimeOffset retainUntil)
     {
@@ -66,6 +85,49 @@ public class ReplayCache(IClock? clock = null) : ISigTokenUseStore
             }
 
             return _used.TryAdd(tokenId, retainUntil);
+        }
+    }
+
+    /// <summary>The synchronous form of <see cref="TryRecordFirstUseBatchAsync"/>.</summary>
+    public bool TryRecordFirstUseBatch(IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses)
+    {
+        ArgumentNullException.ThrowIfNull(uses);
+        if (uses.Count == 0)
+        {
+            return false;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var (tokenId, _) in uses)
+        {
+            if (string.IsNullOrWhiteSpace(tokenId) || !seen.Add(tokenId))
+            {
+                return false;
+            }
+        }
+
+        var now = _clock.UtcNow;
+        lock (_lock)
+        {
+            foreach (string expired in _used.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList())
+            {
+                _used.Remove(expired);
+            }
+
+            foreach (var (tokenId, _) in uses)
+            {
+                if (_used.ContainsKey(tokenId))
+                {
+                    return false;
+                }
+            }
+
+            foreach (var (tokenId, retainUntil) in uses)
+            {
+                _used.Add(tokenId, retainUntil);
+            }
+
+            return true;
         }
     }
 

@@ -72,6 +72,8 @@ up() {
   # Added with randomisation (#5607); a state directory from before it gets the key appended once.
   grep -q '^Parameters__randomization-allocation-key=' "$STATE/secrets.env" ||
     echo "Parameters__randomization-allocation-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
+  grep -q '^Parameters__cgt-barcode-hmac-key=' "$STATE/secrets.env" ||
+    echo "Parameters__cgt-barcode-hmac-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
   grep -q '^Parameters__biometric-liveness-key=' "$STATE/secrets.env" ||
     echo "Parameters__biometric-liveness-key=$(openssl rand -base64 32)" >>"$STATE/secrets.env"
 
