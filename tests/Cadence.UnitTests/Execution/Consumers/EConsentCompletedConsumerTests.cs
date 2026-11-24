@@ -186,7 +186,10 @@ public class EConsentCompletedConsumerTests
     // ---- Harness plumbing ------------------------------------------------------------------------------
 
     private static async Task<ServiceProvider> StartHarnessAsync(
-        FakeUnitOfWork unitOfWork, RecordingAuditLogWriter auditWriter, IClock clock)
+        FakeUnitOfWork unitOfWork,
+        RecordingAuditLogWriter auditWriter,
+        IClock clock,
+        IKernelLockGuard? lockGuard = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ISubjectRepository>(new FakeSubjectRepository(unitOfWork));
@@ -194,6 +197,10 @@ public class EConsentCompletedConsumerTests
         services.AddSingleton<IAuditLogWriter>(auditWriter);
         services.AddScoped<IAuditActorScope>(_ => new AmbientAuditContextAccessor(new HttpContextAccessor()));
         services.AddSingleton(clock);
+        if (lockGuard is not null)
+        {
+            services.AddSingleton(lockGuard);
+        }
 
         // ConcurrentMessageLimit = 1: the redelivery test publishes the same event twice and asserts the
         // second delivery observes what the first one committed. The real, at-most-one-writer guarantee for
@@ -557,6 +564,72 @@ public class EConsentCompletedConsumerTests
         finally
         {
             await harness.Stop(ct);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task Consume_WhenKernelLockGuardReportsLockedStudy_FaultsToTheErrorQueueAndWritesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unitOfWork = new FakeUnitOfWork();
+        var auditWriter = new RecordingAuditLogWriter();
+        var lockGuard = new RejectingServiceLockGuard();
+
+        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, new FakeClock(), lockGuard);
+        var harness = provider.GetRequiredService<ITestHarness>();
+        try
+        {
+            await harness.Bus.Publish(
+                new EConsentCompletedEvent("SUBJ-LOCKED-01", StudyA.Value, "SITE-101", "v1.0", 1, SignedAt),
+                sendCtx =>
+                {
+                    sendCtx.Headers.Set("X-Tenant-Id", "tenant-locked-1");
+                    sendCtx.Headers.Set("X-Tenant-Read-Only", "false");
+                    sendCtx.Headers.Set("X-Tenant-Product-Families", "Blueprint,Capture,Engage");
+                },
+                ct);
+
+            (await harness.Published.Any<Fault<EConsentCompletedEvent>>(ct)).Should().BeTrue(
+                "auto-enrollment on a frozen or locked study must reject with ConsentEventRejectedException");
+            lockGuard.Calls.Should().ContainSingle().Which.Should().Be((
+                ServiceAccounts.EConsentConsumer.UserId,
+                "tenant-locked-1",
+                StudyA.Value,
+                "SITE-101",
+                "SUBJ-LOCKED-01"));
+            unitOfWork.Subjects.Should().BeEmpty();
+            unitOfWork.Consents.Should().BeEmpty();
+            auditWriter.Calls.Should().BeEmpty();
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    private sealed class RejectingServiceLockGuard : IKernelLockGuard
+    {
+        public List<(string UserId, string? TenantCode, string? StudyCode, string? SiteCode, string? SubjectCode)> Calls { get; } = [];
+
+        public Task<Cadence.Core.Domain.Result<bool>> EnsureUnlockedAsync(
+            string? studyCode,
+            string? siteCode = null,
+            string? subjectCode = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<Cadence.Core.Domain.Result<bool>>(true);
+
+        public Task<Cadence.Core.Domain.Result<bool>> EnsureUnlockedForServiceAsync(
+            ServiceAccount serviceAccount,
+            string? tenantCode,
+            string? studyCode,
+            string? siteCode = null,
+            string? subjectCode = null,
+            CancellationToken cancellationToken = default)
+        {
+            Calls.Add((serviceAccount.UserId, tenantCode, studyCode, siteCode, subjectCode));
+            return Task.FromResult<Cadence.Core.Domain.Result<bool>>(
+                Cadence.Core.Domain.DomainError.Conflict("K.Observation.Locked", "Study is frozen or locked."));
         }
     }
 }

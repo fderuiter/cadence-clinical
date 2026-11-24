@@ -601,6 +601,13 @@ public sealed class SubjectApplicationService(
         return subject is null ? null : (subject.StudyCode, subject.SiteCode);
     }
 
+    /// <inheritdoc />
+    public async Task<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?> GetSubjectLockScopeAsync(string subjectIdOrCode, CancellationToken ct = default)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        return subject is null ? null : (subject.StudyCode, subject.SiteCode, subject.SubjectCode);
+    }
+
     /// <summary>
     /// Evaluates screening eligibility and transitions to <see cref="SubjectState.ScreenFailed"/> or
     /// <see cref="SubjectState.Enrolled"/> (SCN-005/SCN-007), single-lookup by domain code only (matching

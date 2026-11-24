@@ -7,6 +7,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
@@ -49,6 +50,7 @@ public static class KernelExecutionEndpoints
         KernelScreenEnrollmentRequest request,
         HttpContext context,
         IEnrollmentDirectory enrollments,
+        ILockRecords locks,
         IAuthorizationProbe probe,
         KernelCommandCatalog catalog,
         IKernelCommandSender sender,
@@ -98,6 +100,16 @@ public static class KernelExecutionEndpoints
             && existing.StudySiteId == studySiteId)
         {
             return TypedResults.Ok(KernelEnrollmentStateResponse.From(existing));
+        }
+
+        var lockCheck = await locks.CheckScopeWriteLockAsync(
+            tenant,
+            request.StudyCode.Trim(),
+            request.SiteCode.Trim(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (lockCheck.Locked)
+        {
+            return KernelErrorEndpoints.Problem(ObservationErrors.Locked);
         }
 
         string participantKey = string.IsNullOrEmpty(key) ? string.Empty : $"{key}:participant";

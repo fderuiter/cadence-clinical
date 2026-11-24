@@ -16,16 +16,20 @@ using Cadence.Compliance;
 using Cadence.IntegrationTests.Execution;
 using Cadence.Kernel;
 using Cadence.Kernel.Api;
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Rules.Packs;
 using Cadence.Security.Authentication;
@@ -320,20 +324,40 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (tenant, code, study, studyCode, _, _, enrollmentA, _, formA, sbpObservationA) = await SeedStudyAsync(ct);
+        var (tenant, code, study, studyCode, _, _, enrollmentA, _, formA, sbpObservationA) = await SeedStudyAsync(ct, verifyAndSignA: false);
         var studyRef = NodeRef.For(study).ToString();
         var enrollmentRef = NodeRef.For(enrollmentA).ToString();
         var obsRef = NodeRef.For(sbpObservationA).ToString();
+
+        ObservationId dbpObservationA;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var memberIds = await db.CollectionInstances.AsNoTracking()
+                .Where(c => c.Id == formA)
+                .SelectMany(c => c.Members.Select(m => m.ObservationId))
+                .ToListAsync(ct);
+            dbpObservationA = memberIds.Single(id => id != sbpObservationA);
+        }
 
         using var dm = Client(code, DataManager);
         using var crc = Client(code, SiteACoordinator);
         using var monitor = Client(code, Monitor);
 
-        // Verify revision 1 (120.50 mm[Hg]) via HTTP and raise a query assertion + form signature in the kernel.
+        // Verify revision 1 (120.50 mm[Hg] and 80.00 mm[Hg]) via HTTP and raise a query assertion + form signature in the kernel.
         Tick();
         await SendAsync<KernelAssertionStateResponse>(
             monitor,
             BuildRequest(HttpMethod.Post, $"observations/{obsRef}/verifications", "Verified against inpatient vital chart", null, KernelProtocolScenario.Key(), new
+            {
+                enrollment_ref = enrollmentRef,
+                revision = 1,
+            }),
+            HttpStatusCode.Created,
+            ct);
+        Tick();
+        await SendAsync<KernelAssertionStateResponse>(
+            monitor,
+            BuildRequest(HttpMethod.Post, $"observations/{NodeRef.For(dbpObservationA)}/verifications", "Verified diastolic against inpatient vital chart", null, KernelProtocolScenario.Key(), new
             {
                 enrollment_ref = enrollmentRef,
                 revision = 1,
@@ -429,6 +453,64 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             HttpStatusCode.OK,
             ct);
 
+        // Relocking over unverified revision 2 fails with 409 Conflict (K.Assertion.ScopeNotReady).
+        await Task.Delay(15, ct);
+        using (var unverifiedRelock = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", "Attempted relock over unverified revision 2", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = studyRef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            unverifiedRelock.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ProblemCodeAsync(unverifiedRelock, ct)).Should().Be(AssertionErrors.ScopeNotReady.Code);
+        }
+
+        // Verify revision 2 via HTTP; relocking STILL fails with 409 Conflict until the superseded signature on formA is re-signed.
+        await SendAsync<KernelAssertionStateResponse>(
+            monitor,
+            BuildRequest(HttpMethod.Post, $"observations/{obsRef}/verifications", "Verified addendum reading 132.75 against source", null, KernelProtocolScenario.Key(), new
+            {
+                enrollment_ref = enrollmentRef,
+                revision = 2,
+            }),
+            HttpStatusCode.Created,
+            ct);
+
+        using (var supersededSigRelock = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", "Attempted relock over superseded form signature", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = studyRef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            supersededSigRelock.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ProblemCodeAsync(supersededSigRelock, ct)).Should().Be(AssertionErrors.ScopeNotReady.Code);
+        }
+
+        // Re-sign formA over its updated content hash, then apply Lock 2 cleanly.
+        using (var formGet2 = await dm.GetAsync(new Uri($"{FormEndpoints.RoutePrefix}/{formA.Value:D}", UriKind.Relative), ct))
+        {
+            formGet2.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var formJson2 = JsonDocument.Parse(await formGet2.Content.ReadAsStringAsync(ct));
+            var contentHash2 = formJson2.RootElement.GetProperty("content_hash").GetString()!;
+            using var signReq2 = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/{formA.Value:D}/signatures", UriKind.Relative));
+            signReq2.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+            signReq2.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("PI re-approved corrected vitals"));
+            signReq2.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(DataManager, FormSignatureEndpoints.SignAction(formA.Value), FormSignatureEndpoints.SignSemanticAction));
+            signReq2.Content = JsonContent.Create(new { meaning = "approved", content_hash = contentHash2 });
+            using var signRes2 = await dm.SendAsync(signReq2, ct);
+            signRes2.StatusCode.Should().Be(HttpStatusCode.Created, await signRes2.Content.ReadAsStringAsync(ct));
+        }
+
         await Task.Delay(15, ct);
         var lock2 = await SendAsync<KernelLockResponse>(
             dm,
@@ -488,7 +570,8 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         sbpCasebook.Revisions.Select(r => (r.Revision, r.NumericValue, r.Superseded))
             .Should().Equal((1, 120.50m, true), (2, 132.75m, false));
         casebook.Queries.Should().ContainSingle(q => q.Text == "Confirm cuff size used at screening");
-        casebook.Verifications.Should().ContainSingle(v => v.Revision == 1 && v.VerifiedBy == Monitor);
+        casebook.Verifications.Should().Contain(v => v.Revision == 1 && v.VerifiedBy == Monitor);
+        casebook.Verifications.Should().ContainSingle(v => v.Revision == 2 && v.VerifiedBy == Monitor);
         casebook.Attestations.Should().NotBeEmpty();
         AssertNoDirectIdentifiers(System.Text.Encoding.UTF8.GetString(casebookJsonBytes));
 
@@ -1134,8 +1217,9 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         using var siteACrc = Client(code, SiteACoordinator);
         using var blindedStat = Client(code, BlindedStatistician);
 
-        // 1. Readiness endpoint for DataManager (study-scoped, blinded by default) reports 2 open queries + 1 missing required item,
-        // with the blinded treatment query masked as Blinded!
+        // 1. Readiness endpoint for DataManager (study-scoped, blinded by default) reports 2 open queries + 1 missing required item
+        // + 2 unverified values (1 on incompleteFormB + 1 blinded on blindedObsId) + 1 unsigned form (incompleteFormB),
+        // with the blinded treatment blockers masked as Blinded!
         var dmReadiness = await SendAsync<KernelLockReadinessResponse>(
             dm,
             BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
@@ -1144,18 +1228,21 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         dmReadiness.ReadyForLock.Should().BeFalse();
         dmReadiness.OpenQueryCount.Should().Be(2);
         dmReadiness.MissingRequiredItemCount.Should().Be(1);
-        dmReadiness.Blockers.Should().ContainSingle(b => !b.Masked && b.TargetRef == NodeRef.For(sbpObservationA).ToString() && b.Owner != null);
-        dmReadiness.Blockers.Should().ContainSingle(b => b.Masked && b.Mask == "Blinded" && b.TargetRef == null);
+        dmReadiness.UnverifiedValueCount.Should().Be(2);
+        dmReadiness.UnsignedFormCount.Should().Be(1);
+        dmReadiness.Blockers.Should().ContainSingle(b => !b.Masked && b.Kind == "OpenQuery" && b.TargetRef == NodeRef.For(sbpObservationA).ToString() && b.Owner != null);
+        dmReadiness.Blockers.Where(b => b.Masked && b.Mask == "Blinded" && b.TargetRef == null).Should().HaveCount(2);
         dmReadiness.Blockers.Should().ContainSingle(b => !b.Masked && b.Kind == "MissingRequiredItem" && b.TargetRef == NodeRef.For(incompleteFormB.CollectionInstanceId).ToString());
+        dmReadiness.Blockers.Should().ContainSingle(b => !b.Masked && b.Kind == "UnsignedForm" && b.TargetRef == NodeRef.For(incompleteFormB.CollectionInstanceId).ToString());
 
-        // Site A coordinator sees Site B's missing required item masked as NotPermitted and blinded query masked as Blinded.
+        // Site A coordinator sees Site B blockers masked as NotPermitted and blinded blockers masked as Blinded.
         var crcReadiness = await SendAsync<KernelLockReadinessResponse>(
             siteACrc,
             BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
             HttpStatusCode.OK,
             ct);
-        crcReadiness.Blockers.Should().ContainSingle(b => b.Masked && b.Mask == "NotPermitted" && b.TargetRef == null);
-        crcReadiness.Blockers.Should().ContainSingle(b => b.Masked && b.Mask == "Blinded" && b.TargetRef == null);
+        crcReadiness.Blockers.Where(b => b.Masked && b.Mask == "NotPermitted" && b.TargetRef == null).Should().HaveCount(3);
+        crcReadiness.Blockers.Where(b => b.Masked && b.Mask == "Blinded" && b.TargetRef == null).Should().HaveCount(2);
 
         // 2. Navigation /nodes/{ref}/children resolves collection_instance and observation scopes and masks unauthorized/blinded nodes.
         using (var enrollFormsRes = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{enrollmentARef}/children", UriKind.Relative), ct))
@@ -1274,6 +1361,9 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             ct);
         await _scenario.Protocol.OkAsync(
             new RetractAssertion(tenant, AssertionId.New(), enrollmentA, blindedQuery.AssertionId, KernelProtocolScenario.Key(), "Pharmacy closed query"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new VerifyObservation(tenant, AssertionId.New(), enrollmentA, blindedObsId, 1, KernelProtocolScenario.Key(), "Unblinded pharmacy SDV while frozen"),
             ct);
 
         // Release Frozen, verify enrollmentA readiness is now ready_for_lock == true, and apply Locked!
@@ -1467,7 +1557,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         EnrollmentId EnrollmentA,
         EnrollmentId EnrollmentB,
         CollectionInstanceId FormA,
-        ObservationId SbpObservationA)> SeedStudyAsync(CancellationToken ct)
+        ObservationId SbpObservationA)> SeedStudyAsync(CancellationToken ct, bool verifyAndSignA = true, bool verifyAndSignB = true)
     {
         var code = $"T-LCK-{Guid.NewGuid():N}"[..16];
         var tenant = TenantId.New();
@@ -1516,6 +1606,16 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         await _scenario.Protocol.OkAsync(
             Save(new Form(subjectObjB, version, openedB.CollectionInstanceId), Value(Systolic, new QuantityValue(138.25m, "mm[Hg]")), Value(Diastolic, new QuantityValue(88.00m, "mm[Hg]"))),
             ct);
+
+        if (verifyAndSignA)
+        {
+            await _scenario.VerifyAndSignAsync(new Form(subjectObjA, version, openedA.CollectionInstanceId), ct);
+        }
+
+        if (verifyAndSignB)
+        {
+            await _scenario.VerifyAndSignAsync(new Form(subjectObjB, version, openedB.CollectionInstanceId), ct);
+        }
 
         // Issue scoped grants:
         // - DataManager: attestation.sign at Tenant(), plus lock.apply, lock.release, collection.sign at Study(study)
@@ -1712,6 +1812,384 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             HttpStatusCode.OK,
             ct);
         releasedLock.ReleasedAt.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Validates the scheduled-visit and validation-finding readiness gates: active enrollments with due or closed
+    /// scheduled visits lacking opened forms block <see cref="LockKind.Locked"/> (<c>UnopenedVisit</c>) while
+    /// screen-failed enrollments and withdrawn enrollments whose scheduled visits fall after participation ended do not
+    /// trigger blockers; open and investigating <see cref="ValidationSeverity.Error"/> findings block
+    /// <see cref="LockKind.Locked"/> (<c>ErrorFinding</c>) while warnings and explained/accepted findings do not.
+    /// </summary>
+    [Fact(DisplayName = "HostLockReadiness_GatesUnopenedScheduledVisitsAndErrorFindings_WhileSkippingPostTerminationVisits")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task HostLockReadinessGatesUnopenedScheduledVisitsAndErrorFindingsWhileSkippingPostTerminationVisits()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenantCode = $"T-SCH-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(tenant, tenantCode, "Scheduled visit and finding gate tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+
+        var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
+        var sbp = await DefineConceptWithCodeAsync(tenant, "sbp_sched", "Systolic BP", ct);
+        var design = new ProtocolDesign
+        {
+            Title = "SCHED-GATE-1",
+            Epochs = [new Epoch("ep.treat", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.day1", "Day 1 Baseline", "ep.treat", [ActivityLocation.Site], [SpecId], new ActivityTiming(1, 1, 1)),
+                new PlannedActivity("act.day28", "Day 28 Follow-up", "ep.treat", [ActivityLocation.Site], [SpecId], new ActivityTiming(28, 2, 2)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(SpecId, "Vital signs", [new CollectionItem(Systolic, sbp, "mm[Hg]", Required: true)]),
+            ],
+        };
+
+        var version = ProtocolVersionId.New();
+        var baseTime = Tick();
+        var originAt = baseTime.AddDays(-32);
+        await _scenario.Protocol.OkAsync(new CreateProtocolDraft(tenant, study, version, ProtocolDesignDocument.Write(design), KernelProtocolScenario.Key(), "Draft timed SOA"), ct);
+        Tick();
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Review timed SOA"), ct);
+        var protoSig = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, new AttestationTarget(AttestationTarget.ProtocolVersionKind, version.Value, inReview.ContentHash!)),
+            ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, protoSig, KernelProtocolScenario.Key(), "Approved"), ct);
+
+        var ethicsBytes = Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
+        var ethicsVer = ArtifactVersionId.New();
+        await _scenario.Protocol.OkAsync(
+            new RegisterArtifact(tenant, ArtifactId.New(), ethicsVer, ArtifactKind.EthicsApproval, study, "Ethics approval",
+                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://ethics/1"), KernelProtocolScenario.Key(), "Ethics"),
+            ct);
+        var effId = EffectivityId.New();
+        await _scenario.Protocol.OkAsync(new DeclareEffectivity(tenant, effId, version, EffectivityScope.Study(), originAt, KernelProtocolScenario.Key(), "Declare"), ct);
+        Tick();
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, effId, EffectivityStatus.Effective, originAt.AddMinutes(1), [ethicsVer], KernelProtocolScenario.Key(), "Effective"), ct);
+
+        StudySiteId site;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
+            var rawSite = new Site(SiteId.New(), tenant, sponsor, $"SITE-SCH-{Guid.NewGuid():N}"[..12], "Schedule Clinic", "US", KernelPostgresFixture.ActorId, "Seeded");
+            var link = new StudySite(StudySiteId.New(), tenant, study, rawSite.Id, "Active", KernelPostgresFixture.ActorId, "Seeded");
+            await fixture.SeedAsync(rawSite, link);
+            site = link.Id;
+        }
+
+        // 1. Active enrolled participant (enrolled 30 days ago): Day 1 opened/verified/signed; Day 28 unopened & overdue!
+        var partActive = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Active"), ct);
+        var screenedActive = await _scenario.Protocol.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), partActive, site, SubjectCode.From("SUBJ-ACT"), baseTime.AddDays(-31), KernelProtocolScenario.Key(), "Screened active"), ct);
+        Tick();
+        var enrolledActive = await _scenario.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, screenedActive.EnrollmentId, EnrollmentStatus.Enrolled, baseTime.AddDays(-30), KernelProtocolScenario.Key(), "Enrolled active"), ct);
+        var subjActive = new KernelObservationScenario.Subject(tenant, study, site, enrolledActive.EnrollmentId);
+        var day1Active = await _scenario.Protocol.OkAsync(
+            new OpenCollectionInstance(tenant, CollectionInstanceId.New(), enrolledActive.EnrollmentId, SpecId, "act.day1", baseTime.AddDays(-30).AddHours(1), KernelProtocolScenario.Key(), "Day 1 active"), ct);
+        await _scenario.Protocol.OkAsync(Save(new Form(subjActive, version, day1Active.CollectionInstanceId), Value(Systolic, Mmhg(122))), ct);
+        await _scenario.VerifyAndSignAsync(new Form(subjActive, version, day1Active.CollectionInstanceId), ct);
+
+        // 2. Screen-failed participant (screen-failed 29 days ago): unopened visits must NOT block!
+        var partFailed = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "ScreenFailed"), ct);
+        var screenedFailed = await _scenario.Protocol.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), partFailed, site, SubjectCode.From("SUBJ-SF"), baseTime.AddDays(-30), KernelProtocolScenario.Key(), "Screened SF"), ct);
+        Tick();
+        await _scenario.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, screenedFailed.EnrollmentId, EnrollmentStatus.ScreenFailed, baseTime.AddDays(-29), KernelProtocolScenario.Key(), "Failed screening"), ct);
+
+        // 3. Withdrawn participant (enrolled 30 days ago, Day 1 completed/verified/signed, withdrawn 10 days after enrollment — before Day 28 target!):
+        var partWithdrawn = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Withdrawn"), ct);
+        var screenedWithdrawn = await _scenario.Protocol.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), partWithdrawn, site, SubjectCode.From("SUBJ-WD"), baseTime.AddDays(-31), KernelProtocolScenario.Key(), "Screened WD"), ct);
+        Tick();
+        var enrolledWithdrawn = await _scenario.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, screenedWithdrawn.EnrollmentId, EnrollmentStatus.Enrolled, baseTime.AddDays(-30), KernelProtocolScenario.Key(), "Enrolled WD"), ct);
+        var subjWithdrawn = new KernelObservationScenario.Subject(tenant, study, site, enrolledWithdrawn.EnrollmentId);
+        var day1Withdrawn = await _scenario.Protocol.OkAsync(
+            new OpenCollectionInstance(tenant, CollectionInstanceId.New(), enrolledWithdrawn.EnrollmentId, SpecId, "act.day1", baseTime.AddDays(-30).AddHours(1), KernelProtocolScenario.Key(), "Day 1 WD"), ct);
+        await _scenario.Protocol.OkAsync(Save(new Form(subjWithdrawn, version, day1Withdrawn.CollectionInstanceId), Value(Systolic, Mmhg(119))), ct);
+        await _scenario.VerifyAndSignAsync(new Form(subjWithdrawn, version, day1Withdrawn.CollectionInstanceId), ct);
+        var wdSig = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Withdrawn, new AttestationTarget(NodeKinds.Enrollment, enrolledWithdrawn.EnrollmentId.Value, enrolledWithdrawn.ContentHash)), ct);
+        await _scenario.Protocol.OkAsync(
+            new WithdrawParticipant(tenant, enrolledWithdrawn.EnrollmentId, WithdrawalKind.WithdrawalBySubject, wdSig, baseTime.AddDays(-20), KernelProtocolScenario.Key(), "Withdrew before Day 28"), ct);
+
+        // 4. Seed a released RulePack and record one Error finding + one Warning finding on the study.
+        var draftedPack = await _scenario.Protocol.OkAsync(
+            new DraftLibraryItem(tenant, LibraryItemId.New(), LibraryItemKind.RulePack, "sched-pack", "Schedule Pack", RulePackJson.ToJson(SampleRulePacks.Sample()), [], KernelProtocolScenario.Key(), "Draft pack"), ct);
+        var packSig = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, new AttestationTarget(NodeKinds.LibraryItem, draftedPack.Id.Value, draftedPack.ContentHash)), ct);
+        await _scenario.Protocol.OkAsync(new ApproveLibraryItem(tenant, draftedPack.Id, packSig, KernelProtocolScenario.Key(), "Approved pack"), ct);
+
+        var valRunId = ValidationRunId.New();
+        var runAt = Tick();
+        await _scenario.Protocol.OkAsync(
+            new RecordValidationRun(
+                tenant,
+                valRunId,
+                study,
+                ValidationStage.Collection,
+                [draftedPack.Id],
+                DateOnly.FromDateTime(runAt.UtcDateTime),
+                null,
+                null,
+                null,
+                [],
+                ["VITALS"],
+                runAt.AddMinutes(-2),
+                runAt.AddMinutes(-1),
+                [
+                    new ValidationDetection("sched-pack", "R1", 1, ValidationSeverity.Error,
+                        new FindingTarget(FindingTargetKind.DatasetRecord, "VITALS", day1Active.CollectionInstanceId.Value.ToString("D"), Systolic),
+                        "Systolic out of range", null, [new ObservedVariable("SYS", "122")]),
+                    new ValidationDetection("sched-pack", "R2", 1, ValidationSeverity.Warning,
+                        new FindingTarget(FindingTargetKind.DatasetRecord, "VITALS", day1Active.CollectionInstanceId.Value.ToString("D"), Systolic),
+                        "Advisory check", null, [new ObservedVariable("SYS", "122")]),
+                ],
+                KernelProtocolScenario.Key(),
+                "Record findings"),
+            ct);
+
+        await IssueAsync(tenant, DataManager, "attestation.sign", AuthorityScope.Tenant(), ct);
+        foreach (var cap in new[] { "lock.apply", "lock.release", "collection.sign" })
+        {
+            await IssueAsync(tenant, DataManager, cap, AuthorityScope.Study(study), ct);
+        }
+
+        using var dm = Client(tenantCode, DataManager);
+        var studyRef = NodeRef.For(study).ToString();
+
+        var readiness = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        readiness.ReadyForLock.Should().BeFalse();
+        readiness.CanFreeze.Should().BeTrue();
+        readiness.UnopenedVisitCount.Should().Be(1, "only SUBJ-ACT's overdue Day 28 visit blocks; ScreenFailed and post-withdrawal visits are excluded");
+        readiness.OpenErrorFindingCount.Should().Be(1, "only the Error finding blocks; the Warning finding does not");
+        readiness.Blockers.Should().ContainSingle(b =>
+            b.Kind == "UnopenedVisit"
+            && b.SubjectCode == "SUBJ-ACT"
+            && b.PlannedActivityId == "act.day28"
+            && b.Owner == "Site coordinator / investigator"
+            && b.NextCapability == "collection.open");
+        readiness.Blockers.Should().ContainSingle(b =>
+            b.Kind == "ErrorFinding"
+            && b.RuleId == "sched-pack/R1"
+            && b.Owner == LockReadinessEvaluator.MonitorOwner
+            && b.NextCapability == "validation_finding.investigate");
+
+        using (var blockedRes = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = studyRef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            blockedRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var body = await blockedRes.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(body);
+            doc.RootElement.GetProperty("code").GetString().Should().Be(AssertionErrors.ScopeNotReady.Code);
+            var conditionCodes = doc.RootElement.GetProperty("explanation").GetProperty("conditions")
+                .EnumerateArray()
+                .Where(c => !c.GetProperty("met").GetBoolean())
+                .Select(c => c.GetProperty("code").GetString())
+                .ToList();
+            conditionCodes.Should().Contain([
+                LockReadinessEvaluator.ScheduledVisitsOpenedCondition,
+                LockReadinessEvaluator.ErrorFindingsResolvedCondition,
+            ]);
+        }
+
+        // Move the Error finding to Investigating -> still blocks Locked!
+        var errorFinding = (await fixture.Findings.ListAsync(tenant, new FindingQuery(study) { Severity = ValidationSeverity.Error }, ct)).Findings.Single();
+        await _scenario.Protocol.OkAsync(new InvestigateFinding(tenant, errorFinding.Id, KernelProtocolScenario.Key(), "Investigating R1"), ct);
+
+        var investigatingReadiness = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        investigatingReadiness.OpenErrorFindingCount.Should().Be(1, "Investigating error findings still block hard locks");
+
+        // Explain the Error finding with a signed attestation -> OpenErrorFindingCount drops to 0, while UnopenedVisitCount == 1 still blocks!
+        const string FindingExplanation = "Confirmed clinical exception with investigator.";
+        var explainSig = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(
+                tenant,
+                AttestationMeaning.Approved,
+                new AttestationTarget(NodeKinds.ValidationFinding, errorFinding.Id.Value, FindingDecisionContent.Hash(errorFinding.Id, valRunId, FindingStatus.Explained, FindingExplanation))),
+            ct);
+        await _scenario.Protocol.OkAsync(new ExplainFinding(tenant, errorFinding.Id, FindingExplanation, explainSig, KernelProtocolScenario.Key(), "Explained R1"), ct);
+
+        var afterExplain = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        afterExplain.OpenErrorFindingCount.Should().Be(0);
+        afterExplain.UnopenedVisitCount.Should().Be(1);
+        afterExplain.ReadyForLock.Should().BeFalse();
+
+        // Open, complete, verify, and sign SUBJ-ACT's Day 28 visit -> ReadyForLock becomes true and hard lock succeeds!
+        var day28Active = await _scenario.Protocol.OkAsync(
+            new OpenCollectionInstance(tenant, CollectionInstanceId.New(), enrolledActive.EnrollmentId, SpecId, "act.day28", Tick().AddMinutes(-1), KernelProtocolScenario.Key(), "Day 28 performed"), ct);
+        await _scenario.Protocol.OkAsync(Save(new Form(subjActive, version, day28Active.CollectionInstanceId), Value(Systolic, Mmhg(118))), ct);
+        await _scenario.VerifyAndSignAsync(new Form(subjActive, version, day28Active.CollectionInstanceId), ct);
+
+        var ready = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        ready.ReadyForLock.Should().BeTrue();
+        ready.UnopenedVisitCount.Should().Be(0);
+        ready.OpenErrorFindingCount.Should().Be(0);
+
+        var applied = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = studyRef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        applied.Kind.Should().Be("Locked");
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/kernel/locks/in-force</c> reports covering <c>Frozen</c> and <c>Locked</c> write locks across
+    /// study, site, and subject scopes, and <c>POST /api/v1/kernel/enrollments/screen</c> rejects screening under a
+    /// covering lock with <c>423 K.Observation.Locked</c> before registering any orphan <see cref="Participant"/> row.
+    /// </summary>
+    [Fact(DisplayName = "HostLocksInForceAndScreenEndpoint_EnforceCoveringLocksWithoutOrphanParticipants")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task HostLocksInForceAndScreenEndpointEnforceCoveringLocksWithoutOrphanParticipants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, studyCode, siteA, _, _, _, _, _) = await SeedStudyAsync(ct);
+        await IssueAsync(tenant, SiteACoordinator, "participant.register", AuthorityScope.Tenant(), ct);
+        await IssueAsync(tenant, SiteACoordinator, "participant.screen", AuthorityScope.StudySite(siteA), ct);
+
+        string siteACode;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            siteACode = await (from ss in db.StudySites.AsNoTracking()
+                               join s in db.Sites.AsNoTracking() on ss.SiteId equals s.Id
+                               where ss.Id == siteA
+                               select s.SiteCode).SingleAsync(ct);
+        }
+
+        using var dm = Client(code, DataManager);
+        using var siteACrc = Client(code, SiteACoordinator);
+        var studyRef = NodeRef.For(study).ToString();
+        var siteARef = NodeRef.For(siteA).ToString();
+
+        var unlocked = await SendAsync<KernelScopeWriteLockResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&site_code={Uri.EscapeDataString(siteACode)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        unlocked.Locked.Should().BeFalse();
+
+        // Freeze Site A -> locks/in-force reports locked == true for Site A and SUBJ-A, but locked == false for study-only query!
+        var frozenSiteA = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze Site A", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = siteARef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+
+        var studyCheck = await SendAsync<KernelScopeWriteLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        studyCheck.Locked.Should().BeFalse("a site-level lock does not lock the whole study");
+
+        var siteACheck = await SendAsync<KernelScopeWriteLockResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&site_code={Uri.EscapeDataString(siteACode)}", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        siteACheck.Locked.Should().BeTrue();
+        siteACheck.LockKind.Should().Be("Frozen");
+
+        var subjACheck = await SendAsync<KernelScopeWriteLockResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&subject_code=SUBJ-A", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        subjACheck.Locked.Should().BeTrue("SUBJ-A is enrolled at frozen Site A");
+
+        // Attempting POST /api/v1/kernel/enrollments/screen on frozen Site A returns 423 K.Observation.Locked and writes ZERO orphan Participants!
+        int participantsBefore;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            participantsBefore = await db.Participants.CountAsync(ct);
+        }
+
+        using (var screenRes = await siteACrc.SendAsync(
+            BuildRequest(HttpMethod.Post, "enrollments/screen", "Attempt screening on frozen site", null, KernelProtocolScenario.Key(), new
+            {
+                study_code = studyCode,
+                site_code = siteACode,
+                subject_code = "SUBJ-NEW-LOCKED",
+                screened_at = SystemClock.Instance.UtcNow.AddMinutes(-1),
+            }),
+            ct))
+        {
+            screenRes.StatusCode.Should().Be((HttpStatusCode)423);
+            (await ProblemCodeAsync(screenRes, ct)).Should().Be(ObservationErrors.Locked.Code);
+        }
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Participants.CountAsync(ct)).Should().Be(
+                participantsBefore,
+                "screening rejected by a covering lock must not register an orphan Participant row");
+        }
+
+        // Release Site A freeze -> screening succeeds!
+        await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, $"locks/{frozenSiteA.Ref}/release", ReleaseReason, ReleaseToken(DataManager, frozenSiteA.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            HttpStatusCode.OK,
+            ct);
+
+        await SendAsync<KernelEnrollmentStateResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Post, "enrollments/screen", "Screen after unlock", null, KernelProtocolScenario.Key(), new
+            {
+                study_code = studyCode,
+                site_code = siteACode,
+                subject_code = "SUBJ-NEW-UNLOCKED",
+                screened_at = SystemClock.Instance.UtcNow.AddMinutes(-1),
+            }),
+            HttpStatusCode.Created,
+            ct);
     }
 
     private static HttpRequestMessage BuildRequest(
