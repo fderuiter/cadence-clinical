@@ -3,11 +3,71 @@ import { findSection, findStage } from "../canvas/lifecycle";
 import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
 import { resolveSopEscalationCategory } from "../router/registry.js";
 import { describeApiError } from "../utils/apiErrors.js";
-import { isDemoBuild } from "../utils/demoMode.js";
+import { demoNowIso, isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+import { useClinicalScopeStore } from "./clinicalScope";
+import { getSyncedStudyScope } from "./studyScopeBridge";
 
 function getLoadedStudyCanvasStore() {
   return getActivePinia()?._s?.get("studyCanvas") || null;
+}
+
+function readAuthorizedStandaloneClinicalScope(
+  authStore,
+  preferredStudyId = ""
+) {
+  const pinia = getActivePinia();
+  const instantiatedScopeStore = pinia?._s?.get("clinicalScope")
+    ? useClinicalScopeStore(pinia)
+    : pinia?.state?.value?.clinicalScope || null;
+  const rawStoreStudy =
+    typeof instantiatedScopeStore?.activeStudyId === "string"
+      ? instantiatedScopeStore.activeStudyId.trim()
+      : "";
+  const rawBridgedStudy =
+    typeof getSyncedStudyScope() === "string"
+      ? getSyncedStudyScope().trim()
+      : "";
+  const candidateStudy = rawStoreStudy || rawBridgedStudy;
+  const authorizedStudy = resolveAuthorizedScope(
+    candidateStudy,
+    [authStore?.assignedStudies || [], authStore?.studyIds || []],
+    Boolean(authStore?.hasAllStudiesScope)
+  );
+  if (candidateStudy && !authorizedStudy) {
+    return { study_id: "", site_id: "", subject_id: "" };
+  }
+
+  const effectiveStudy = preferredStudyId.trim() || authorizedStudy;
+  const canInheritScopedChildren =
+    !effectiveStudy || !rawStoreStudy || rawStoreStudy === effectiveStudy;
+  if (!canInheritScopedChildren) {
+    return { study_id: authorizedStudy, site_id: "", subject_id: "" };
+  }
+
+  const rawStoreSite =
+    typeof instantiatedScopeStore?.activeSiteId === "string"
+      ? instantiatedScopeStore.activeSiteId.trim()
+      : "";
+  const authorizedSite = resolveAuthorizedScope(rawStoreSite, [
+    authStore?.assignedSites || [],
+    authStore?.siteIds || [],
+  ]);
+  if (rawStoreSite && !authorizedSite) {
+    return { study_id: authorizedStudy, site_id: "", subject_id: "" };
+  }
+
+  const rawStoreSubject =
+    typeof instantiatedScopeStore?.activeSubjectId === "string"
+      ? instantiatedScopeStore.activeSubjectId.trim()
+      : "";
+  const subject_id = sanitizePseudonymousSubjectCode(rawStoreSubject);
+
+  return {
+    study_id: authorizedStudy,
+    site_id: authorizedSite,
+    subject_id,
+  };
 }
 
 let knowledgeServicePromise;
@@ -326,6 +386,8 @@ export const useKnowledgeStore = defineStore("knowledge", {
     error: null,
     lastFailedAction: null,
     isEscalating: false,
+    wasOpenBeforeEscalation: false,
+    drawerTriggerElement: null,
     escalationPayload: null,
     canvasEscalationContext: null,
     escalatedTickets: isDemoBuild() ? loadSessionEscalatedTickets() : [],
@@ -352,6 +414,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       return state.sectionAnchor;
     },
     activeRouteScope: (state) => {
+      const authStore = useAuthStore();
       const scope = extractClinicalScopeFromRoute(
         resolveEffectiveRawRoute(state)
       );
@@ -371,6 +434,28 @@ export const useKnowledgeStore = defineStore("knowledge", {
         ) {
           scope.site_id = ctx.siteCode;
         }
+        if (
+          !scope.subject_id &&
+          ctx.subjectCode &&
+          (!scope.study_id ||
+            !ctx.studyCode ||
+            ctx.studyCode === scope.study_id)
+        ) {
+          scope.subject_id = sanitizePseudonymousSubjectCode(ctx.subjectCode);
+        }
+      }
+      const standalone = readAuthorizedStandaloneClinicalScope(
+        authStore,
+        scope.study_id
+      );
+      if (!scope.study_id && standalone.study_id) {
+        scope.study_id = standalone.study_id;
+      }
+      if (!scope.site_id && standalone.site_id) {
+        scope.site_id = standalone.site_id;
+      }
+      if (!scope.subject_id && standalone.subject_id) {
+        scope.subject_id = standalone.subject_id;
       }
       return scope;
     },
@@ -387,6 +472,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
     invalidateContextualState() {
       this.resetDrawerViewState();
       this.isEscalating = false;
+      this.wasOpenBeforeEscalation = false;
       this.escalationPayload = null;
     },
 
@@ -400,6 +486,14 @@ export const useKnowledgeStore = defineStore("knowledge", {
     },
 
     openDrawer(tab) {
+      if (
+        !this.isOpen &&
+        typeof document !== "undefined" &&
+        document.activeElement &&
+        document.activeElement !== document.body
+      ) {
+        this.drawerTriggerElement = document.activeElement;
+      }
       if (tab === "tickets" || tab === "guidance") {
         this.activeDrawerTab = tab;
       }
@@ -408,6 +502,8 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
     closeDrawer() {
       this.isOpen = false;
+      this.wasOpenBeforeEscalation = false;
+      this.drawerTriggerElement = null;
       this.activeDrawerTab = "guidance";
       this.selectedTicketId = null;
       this.selectedTicket = null;
@@ -648,12 +744,19 @@ export const useKnowledgeStore = defineStore("knowledge", {
         ? matchedSection.stage.id
         : findStage(rawStage)?.id || rawStage;
 
-      const candidateStudy =
+      const explicitStudyCandidate =
         overrides.studyId ||
         studyFromRoute ||
         canvasCtx?.studyCode ||
         (isCanvasRoute ? canvasStore?.studyCode : "") ||
         "";
+      const standaloneScope = readAuthorizedStandaloneClinicalScope(
+        authStore,
+        explicitStudyCandidate
+      );
+
+      const candidateStudy =
+        explicitStudyCandidate || standaloneScope.study_id || "";
 
       const participantQueryRef = parseNodeRef(
         overrides.participant ||
@@ -673,6 +776,11 @@ export const useKnowledgeStore = defineStore("knowledge", {
         : null;
 
       const subjectFromEcrfPath = path.match(/\/subjects\/([^/?#]+)/);
+      const hasExplicitUnmappedParticipantRef = Boolean(
+        (participantUuid && !knownParticipant) ||
+        (getQuery("participant") &&
+          !sanitizePseudonymousSubjectCode(getQuery("participant")))
+      );
       const rawSubjectCandidate =
         overrides.subjectCode ||
         canvasCtx?.subjectCode ||
@@ -686,7 +794,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
           "subject",
         ]) ||
         routeScope.subject_id ||
-        (subjectFromEcrfPath ? safeDecodeSegment(subjectFromEcrfPath[1]) : "");
+        (subjectFromEcrfPath
+          ? safeDecodeSegment(subjectFromEcrfPath[1])
+          : "") ||
+        (!hasExplicitUnmappedParticipantRef ? standaloneScope.subject_id : "");
       const subjectCode = sanitizePseudonymousSubjectCode(rawSubjectCandidate);
 
       const candidateSite =
@@ -696,6 +807,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         getQueryAny(["site", "siteId", "site_id", "siteCode", "site_code"]) ||
         routeScope.site_id ||
         (isCanvasRoute ? canvasStore?.participantsFilter?.siteId : "") ||
+        standaloneScope.site_id ||
         "";
 
       const authorizedStudyId = resolveAuthorizedScope(
@@ -808,7 +920,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
           `- Proposal: ${formatSafeForTicketFreeText(proposalRef)}`
         );
       }
-      contextLines.push(`- Timestamp: ${new Date().toISOString()}`);
+      const escalatedAt = isDemoBuild()
+        ? demoNowIso()
+        : new Date().toISOString();
+      contextLines.push(`- Timestamp: ${escalatedAt}`);
 
       this.escalationPayload = {
         title: `[Help Escalation] Operational Assistance on ${safeRouteLabel}`,
@@ -826,6 +941,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         reason_for_change: `Escalated to Support Ticket from Contextual Help on ${safeRouteLabel}`,
       };
 
+      this.wasOpenBeforeEscalation = Boolean(this.isOpen);
       this.isEscalating = true;
       return this.escalationPayload;
     },
@@ -946,6 +1062,17 @@ export const useKnowledgeStore = defineStore("knowledge", {
     cancelEscalation() {
       this.isEscalating = false;
       this.escalationPayload = null;
+      if (this.wasOpenBeforeEscalation) {
+        if (
+          this.drawerTriggerElement &&
+          typeof this.drawerTriggerElement.focus === "function" &&
+          this.drawerTriggerElement.isConnected
+        ) {
+          this.drawerTriggerElement.focus({ preventScroll: true });
+        }
+        this.isOpen = true;
+        this.wasOpenBeforeEscalation = false;
+      }
     },
   },
 });

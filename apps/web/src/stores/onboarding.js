@@ -6,7 +6,7 @@ import {
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import { PERSONA_PRESETS, useAuthStore } from "./auth";
-import { isScreenAvailable } from "../router/availability";
+import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router/helpers.js";
 import {
   findRouteDescriptorBySpec,
@@ -47,9 +47,10 @@ function normalizeTaskRouteName(task) {
   if (task?.routeName) return task.routeName;
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
-  const matched = findRouteDescriptorBySpec(rawRoute);
+  const cleanPath = rawRoute.split("?")[0];
+  const matched = findRouteDescriptorBySpec(cleanPath);
   if (matched) return matched.route.name;
-  return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
+  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
 }
 
 export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
@@ -74,7 +75,6 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   }
 
   const descriptor = getRouteDescriptor(routeName);
-  if (!descriptor) return null;
 
   if (routeName === "study") {
     return isScreenAvailable("study") &&
@@ -88,7 +88,7 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
       : null;
   }
 
-  if (descriptor.dataCollectionHub) {
+  if (descriptor?.dataCollectionHub) {
     if (isDemoBuild()) {
       return isScreenAvailable(routeName) &&
         isRouteRoleAuthorized(routeName, userRoles)
@@ -119,22 +119,44 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
       : fallbackStudyPath;
   }
 
-  if (!descriptor.onboardingTaskPath) return null;
-  return isScreenAvailable(routeName) &&
-    isRouteRoleAuthorized(routeName, userRoles)
-    ? buildScopedWorkflowPath(descriptor.onboardingTaskPath, {
-        studyCode,
-        siteId,
-        subjectCode,
-      })
-    : null;
+  if (descriptor?.onboardingTaskPath) {
+    return isScreenAvailable(routeName) &&
+      isRouteRoleAuthorized(routeName, userRoles)
+      ? buildScopedWorkflowPath(descriptor.onboardingTaskPath, {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
+      : null;
+  }
+
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(routeName)) return null;
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    ) {
+      return null;
+    }
+    return catalogEntry.defaultPath;
+  }
+  return null;
 }
 
 export function isTourRouteAuthorized(routeName, userRoles) {
   if (!routeName) return true;
   if (NON_ONBOARDING_ROUTE_NAMES.has(routeName)) return false;
   if (!isScreenAvailable(routeName)) return false;
-  return isRouteTourRoleAuthorized(routeName, userRoles);
+  if (isRouteTourRoleAuthorized(routeName, userRoles)) return true;
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    return (
+      catalogEntry.requiresRole.length === 0 ||
+      hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    );
+  }
+  return false;
 }
 
 export const DEFAULT_SETUP_TASKS = [

@@ -10,6 +10,7 @@ import {
   createDemoFixturesPlugin,
   createUiAutoBarrelPlugin,
   createUiWorkspaceAliases,
+  createWebRouteCatalogPlugin,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -81,6 +82,7 @@ export default defineConfig({
   plugins: [
     createUiAutoBarrelPlugin(),
     createCanvasSectionMetaPlugin(__dirname),
+    createWebRouteCatalogPlugin(__dirname),
     vue(),
     {
       // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be
@@ -136,7 +138,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
+      ...createUiWorkspaceAliases(__dirname),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",
@@ -168,7 +170,12 @@ export default defineConfig({
     ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
   optimizeDeps: {
-    entries: ["index.html", "tests/browser/observation.html"],
+    entries: [
+      "index.html",
+      "tests/browser/observation.html",
+      "../../packages/ui/index.js",
+    ],
+    include: ["ui > axe-core"],
   },
   build: {
     outDir: "dist",
@@ -181,6 +188,13 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (
+                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "ui-shell";
+              }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
               }

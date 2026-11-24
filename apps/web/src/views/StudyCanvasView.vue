@@ -338,10 +338,8 @@ import { STAGES } from "../canvas/lifecycle";
 import {
   collectionInstanceId,
   collectionInstanceRef,
-  formatNodeRef,
   observationNodeRef,
   parseNodeRef,
-  tryNodeRef,
 } from "../canvas/nodeRef";
 import {
   canAnswerQueries,
@@ -376,8 +374,8 @@ import {
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge.js";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { participantNodeRef, useStudyCanvasStore } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
 import CanvasPalette from "../components/canvas/CanvasPalette.vue";
@@ -474,81 +472,81 @@ function syncTopbarHeight() {
 }
 
 const {
-  studyCode,
-  section,
-  sectionDescriptor,
-  stage,
-  statusFilter,
-  queryStatusFilter,
-  queryOwnerFilter,
-  queryOriginFilter,
-  queryPriorityFilter,
-  siteFilter,
-  participantSearchFilter,
-  queryParticipantFilter,
-  queryChangedFilter,
-  loadedForm,
-  loadedObservation,
-  resolvedLineage,
-  resolvedParticipantId,
-  recordRef,
-  rawParticipantQuery,
-  participantCodeQuery,
-  codeQueryParticipant,
-  isParticipantRecordOpen,
-  recordParticipant,
+  activeEnrollmentId,
   activeFormParticipant,
+  activeInspectorParticipantNodeParam,
   activeParticipantNodeText,
-  inspectedParticipant,
-  inspectorContextParticipant,
+  activeParticipantScopeParam,
+  askText,
+  codeQueryParticipant,
   conductSubjectQuery,
-  isResolvingConductSubject,
+  dataEntryLocationFor,
+  ecrfHandoffLocationFor,
+  formBackLabel,
+  formBackLocation,
+  formLocationById,
   formQuery,
-  isNewForm,
-  openFormId,
-  openObservationRef,
-  proposalRef,
-  selectedNode,
-  selectedParticipant,
-  isSelectedParticipantLoading,
-  selectedVersionText,
-  selectedGenericNodeRef,
-  inspectedNodeText,
+  hasOpenForm,
   highlightItemQuery,
   initialSpecId,
   initialVisitId,
-  hasOpenForm,
-  askText,
+  inspectedNodeText,
+  inspectedParticipant,
+  inspectorContextParticipant,
+  invalidateLineage,
+  isCurrentLineageRequest,
+  isNewForm,
+  isParticipantRecordOpen,
   isRecordParticipantLoading,
-  activeEnrollmentId,
-  zoomParticipant,
-  zoomParticipantCode,
-  zoomSite,
+  isResolvingConductSubject,
+  isSelectedParticipantLoading,
+  loadedForm,
+  loadedObservation,
+  newFormCellLocationFor,
+  newFormLocationFor,
+  observationLocationFromForm,
+  observationLocationFromRecord,
+  observationReturnLabel,
+  observationReturnLocation,
+  openFormId,
+  openObservationRef,
+  participantCodeQuery,
+  participantSearchFilter,
+  proposalRef,
+  queryChangedFilter,
+  queryOriginFilter,
+  queryOwnerFilter,
+  queryParticipantFilter,
+  queryPriorityFilter,
+  queryStatusFilter,
+  rawParticipantQuery,
+  recordLocationFor,
+  recordParticipant,
+  recordRef,
+  resetLoadedRouteContext,
+  resolveEnrollmentLineage,
+  resolvedLineage,
+  resolvedParticipantId,
+  scopedStudyLocation,
+  section,
+  sectionDescriptor,
+  selectedGenericNodeRef,
+  selectedNode,
+  selectedParticipant,
+  selectedVersionText,
+  siteFilter,
+  stage,
+  statusFilter,
+  studyCode,
+  studyLocation,
   zoomCurrent,
   zoomFormLabel,
-  zoomObservationLabel,
-  activeParticipantScopeParam,
-  activeInspectorParticipantNodeParam,
-  studyLocation,
-  scopedStudyLocation,
-  recordLocationFor,
-  newFormLocationFor,
-  newFormCellLocationFor,
-  ecrfHandoffLocationFor,
-  dataEntryLocationFor,
-  formLocationById,
-  observationLocationFromRecord,
-  observationLocationFromForm,
-  zoomParticipantLocation,
   zoomFormLocation,
-  formBackLocation,
-  formBackLabel,
-  observationReturnLocation,
-  observationReturnLabel,
-  resolveEnrollmentLineage,
-  isCurrentLineageRequest,
-  invalidateLineage,
-  resetLoadedRouteContext,
+  zoomObservationLabel,
+  zoomParticipant,
+  zoomParticipantCode,
+  zoomParticipantLocation,
+  zoomSite,
 } = useCanvasRouteState({ route, canvas });
 
 // The protocol version in the inspector, read from the kernel whenever the URL names one.
@@ -678,9 +676,8 @@ function onOpenStudy(payload: {
 }
 
 async function selectParticipant(participant: SubjectSummary) {
-  const node = tryNodeRef("participant", participant.id);
-  if (!node) return;
-  const nodeText = formatNodeRef(node);
+  const nodeText = participantNodeRef(participant);
+  if (!nodeText) return;
   await router.push(
     studyLocation({
       stage: "conduct",
@@ -913,8 +910,7 @@ async function goToPaletteTarget(target: PaletteTarget) {
       canvas.openStudy(targetStudy);
     }
     canvas.rememberParticipants([target.participant]);
-    const node = tryNodeRef("participant", target.participant.id);
-    const nodeText = node ? formatNodeRef(node) : "";
+    const nodeText = participantNodeRef(target.participant);
     const activeSite = siteFilter.value || zoomSite.value;
     const compatibleSite =
       !isCrossStudy &&
@@ -972,7 +968,13 @@ const sectionContext = computed<CanvasSectionContext>(() => ({
   statusFilter: statusFilter.value,
   participantSearchFilter: participantSearchFilter.value,
   selectedParticipantOrRecordId:
-    (selectedNode.value ?? recordRef.value)?.id ?? "",
+    selectedParticipant.value?.id ??
+    recordParticipant.value?.id ??
+    (selectedNode.value?.kind === "participant"
+      ? selectedNode.value.id
+      : recordRef.value?.kind === "participant"
+        ? recordRef.value.id
+        : ""),
   selectedVersionText: selectedVersionText.value,
   canChangeParticipants: canChangeParticipants.value,
   canManageSites: Boolean(authStore.canManageWorkspaceSites),
@@ -1112,33 +1114,60 @@ watch(callerAuthKey, (next, prev) => {
 watch(
   [
     studyCode,
-    () => recordRef.value?.id,
-    () => selectedNode.value?.id,
+    () =>
+      recordRef.value ? `${recordRef.value.kind}:${recordRef.value.id}` : "",
+    () =>
+      selectedNode.value
+        ? `${selectedNode.value.kind}:${selectedNode.value.id}`
+        : "",
     () => loadedForm.value?.participant_id,
     () => codeQueryParticipant.value?.id,
     callerAuthKey,
   ],
-  ([code, recordId, selectedId, formParticipantId, codeParticipantId]) => {
+  ([code, , , formParticipantId, codeParticipantId]) => {
     if (!code) return;
-    const ids = new Set(
-      [recordId, selectedId, formParticipantId, codeParticipantId].filter(
-        (id): id is string => Boolean(id)
+    const postRandomizationStates = [
+      "RANDOMIZED",
+      "ACTIVE",
+      "UNBLINDED",
+      "RECONSENT_REQUIRED",
+      "COMPLETED",
+      "WITHDRAWN",
+    ];
+    const hydratedIds = new Set<string>();
+    for (const node of [recordRef.value, selectedNode.value]) {
+      if (!node) continue;
+      const known = canvas.findKnownParticipant(node);
+      if (!known) {
+        if (node.kind === "enrollment") {
+          void canvas.ensureParticipantByEnrollmentId(node.id);
+        } else {
+          void canvas.ensureParticipantById(node.id);
+        }
+      } else if (!hydratedIds.has(known.id)) {
+        hydratedIds.add(known.id);
+        if (
+          known.treatment_group === undefined &&
+          postRandomizationStates.includes(known.status)
+        ) {
+          void refreshParticipantDetailMutation(canvas, known.id);
+        }
+      }
+    }
+    const directIds = new Set(
+      [formParticipantId, codeParticipantId].filter((id): id is string =>
+        Boolean(id)
       )
     );
-    for (const id of ids) {
+    for (const id of directIds) {
+      if (hydratedIds.has(id)) continue;
+      hydratedIds.add(id);
       const known = canvas.knownParticipants[id];
       if (!known) {
         void canvas.ensureParticipantById(id);
       } else if (
         known.treatment_group === undefined &&
-        [
-          "RANDOMIZED",
-          "ACTIVE",
-          "UNBLINDED",
-          "RECONSENT_REQUIRED",
-          "COMPLETED",
-          "WITHDRAWN",
-        ].includes(known.status)
+        postRandomizationStates.includes(known.status)
       ) {
         void refreshParticipantDetailMutation(canvas, id);
       }
@@ -1159,14 +1188,14 @@ watch(
     try {
       const resolved = await canvas.resolveParticipantByCode(subjectCode, code);
       if (seq !== conductSubjectSeq) return;
-      const node = resolved ? tryNodeRef("participant", resolved.id) : null;
-      if (node) {
+      const nodeText = resolved ? participantNodeRef(resolved) : "";
+      if (nodeText) {
         await router.replace(
           studyLocation(
             {
               stage: "conduct",
               site: siteFilter.value || undefined,
-              participant: formatNodeRef(node),
+              participant: nodeText,
               form: formQuery.value || undefined,
               spec: initialSpecId.value || undefined,
               visit: initialVisitId.value || undefined,

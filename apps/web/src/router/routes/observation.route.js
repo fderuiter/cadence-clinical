@@ -7,7 +7,6 @@ export default {
     category: "DATA_QUERY",
   },
   tourEnabled: true,
-  tourRoles: ["site_investigator", "crc", "data_manager"],
   route: {
     path: "/observations/:observationRef",
     name: "observation",

@@ -19,9 +19,43 @@ function firstQueryValue(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function isParticipantNodeKind(
+  kind: string | undefined
+): kind is "enrollment" | "participant" {
+  return kind === "enrollment" || kind === "participant";
+}
+
 function parseParticipantNode(value: unknown): NodeRef | null {
   const parsed = parseNodeRef(value);
-  return parsed?.kind === "participant" ? parsed : null;
+  return isParticipantNodeKind(parsed?.kind) ? parsed : null;
+}
+
+function canonicalParticipantNode(participant: SubjectSummary): NodeRef | null {
+  const enrollmentNode = parseNodeRef(participant.enrollment_ref);
+  if (enrollmentNode?.kind === "enrollment") {
+    return { kind: "enrollment", id: enrollmentNode.id };
+  }
+  return tryNodeRef("participant", participant.id);
+}
+
+function findInKnownParticipants(
+  known: Record<string, SubjectSummary>,
+  node: NodeRef | null | undefined
+): SubjectSummary | null {
+  if (!node) return null;
+  if (known[node.id]) return known[node.id];
+  if (node.kind === "enrollment") {
+    for (const participant of Object.values(known)) {
+      const enrollmentNode = parseNodeRef(participant.enrollment_ref);
+      if (
+        enrollmentNode?.kind === "enrollment" &&
+        enrollmentNode.id === node.id
+      ) {
+        return participant;
+      }
+    }
+  }
+  return null;
 }
 
 function parseObservationQuery(value: unknown): NodeRef | null {
@@ -69,25 +103,37 @@ function parseProposalQuery(value: unknown): NodeRef | null {
 export interface UseCanvasSelectionOptions {
   query: () => LocationQuery;
   knownParticipants: () => Record<string, SubjectSummary>;
+  findParticipant?: (node: NodeRef | null | undefined) => SubjectSummary | null;
   loadedFormParticipant?:
     Ref<SubjectSummary | null> | ComputedRef<SubjectSummary | null>;
   lineageParticipant?:
     Ref<SubjectSummary | null> | ComputedRef<SubjectSummary | null>;
   isParticipantPending?: (id: string | undefined) => boolean;
+  isParticipantNodePending?: (node: NodeRef | null | undefined) => boolean;
   canResolveRemotely?: () => boolean;
 }
 
 /**
  * Resolves the active Clinical Canvas selection (`NodeRef`) in deterministic priority order:
- *   1. `?node=` (explicit inspector target, e.g. participant, protocol_version, site, or source chip)
+ *   1. `?node=` (explicit inspector target, e.g. enrollment, participant, protocol_version, site, or source chip)
  *   2. `?observation=` (`observation:<uuid>`)
- *   3. `?form=` when bound to a saved `collection_instance:<uuid>` (`?form=new` stays bound to `participant:<id>`)
+ *   3. `?form=` when bound to a saved `collection_instance:<uuid>` (`?form=new` stays bound to `enrollment:<id>` / `participant:<id>`)
  *   4. `?proposal=` (`proposal:<uuid>`)
- *   5. `?participant=` (`participant:<uuid>`) or participant resolved from a loaded form / lineage
+ *   5. `?participant=` (`enrollment:<uuid>` or `participant:<uuid>`) or participant resolved from a loaded form / lineage
  */
 export function useCanvasSelection(options: UseCanvasSelectionOptions) {
   const canRemote = options.canResolveRemotely ?? canResolveNodesRemotely;
   const isPending = options.isParticipantPending ?? (() => false);
+  const lookupParticipant = (
+    node: NodeRef | null | undefined
+  ): SubjectSummary | null =>
+    options.findParticipant
+      ? options.findParticipant(node)
+      : findInKnownParticipants(options.knownParticipants(), node);
+  const isNodePending = (node: NodeRef | null | undefined): boolean =>
+    options.isParticipantNodePending
+      ? options.isParticipantNodePending(node)
+      : isPending(node?.id);
 
   const explicitNode = computed<NodeRef | null>(() =>
     parseNodeRef(options.query().node)
@@ -122,10 +168,9 @@ export function useCanvasSelection(options: UseCanvasSelectionOptions) {
     proposalNode.value ? formatNodeRef(proposalNode.value) : ""
   );
 
-  const recordParticipant = computed<SubjectSummary | null>(() => {
-    const id = recordRef.value?.id;
-    return id ? (options.knownParticipants()[id] ?? null) : null;
-  });
+  const recordParticipant = computed<SubjectSummary | null>(() =>
+    lookupParticipant(recordRef.value)
+  );
 
   const activeFormParticipant = computed<SubjectSummary | null>(
     () =>
@@ -136,9 +181,12 @@ export function useCanvasSelection(options: UseCanvasSelectionOptions) {
   );
 
   const fallbackParticipantNode = computed<NodeRef | null>(() => {
-    if (recordRef.value) return recordRef.value;
     const participant = activeFormParticipant.value;
-    return participant ? tryNodeRef("participant", participant.id) : null;
+    if (participant) {
+      const canonical = canonicalParticipantNode(participant);
+      if (canonical) return canonical;
+    }
+    return recordRef.value;
   });
 
   /** Highest-priority active `NodeRef` inspected by `#canvas-inspector`. */
@@ -151,7 +199,7 @@ export function useCanvasSelection(options: UseCanvasSelectionOptions) {
   });
 
   const selectedNode = computed<NodeRef | null>(() =>
-    activeNode.value?.kind === "participant" ? activeNode.value : null
+    isParticipantNodeKind(activeNode.value?.kind) ? activeNode.value : null
   );
 
   const selectedVersionNode = computed<NodeRef | null>(() =>
@@ -164,27 +212,32 @@ export function useCanvasSelection(options: UseCanvasSelectionOptions) {
 
   const selectedParticipant = computed<SubjectSummary | null>(() => {
     if (!selectedNode.value) return null;
-    const byId = options.knownParticipants()[selectedNode.value.id];
-    if (byId) return byId;
-    if (
-      !explicitNode.value &&
-      activeFormParticipant.value?.id === selectedNode.value.id
-    ) {
-      return activeFormParticipant.value;
+    const found = lookupParticipant(selectedNode.value);
+    if (found) return found;
+    if (!explicitNode.value && activeFormParticipant.value) {
+      const canonical = canonicalParticipantNode(activeFormParticipant.value);
+      if (
+        activeFormParticipant.value.id === selectedNode.value.id ||
+        (canonical &&
+          canonical.kind === selectedNode.value.kind &&
+          canonical.id === selectedNode.value.id)
+      ) {
+        return activeFormParticipant.value;
+      }
     }
     return null;
   });
 
   const isSelectedParticipantLoading = computed(() =>
-    isPending(selectedNode.value?.id)
+    isNodePending(selectedNode.value)
   );
 
   const selectedGenericNodeRef = computed(() => {
     const node = activeNode.value;
     if (!node || node.kind === "protocol_version") return "";
-    if (node.kind === "participant") {
-      // Only fall back to remote generic node lookup when ?node=participant:<id> was explicitly requested
-      // and Execution has neither loaded nor is still loading that participant.
+    if (isParticipantNodeKind(node.kind)) {
+      // Only fall back to remote generic node lookup when ?node=enrollment:<id> or ?node=participant:<id>
+      // was explicitly requested and Execution has neither loaded nor is still loading that participant.
       if (
         !explicitNode.value ||
         selectedParticipant.value ||
@@ -203,11 +256,20 @@ export function useCanvasSelection(options: UseCanvasSelectionOptions) {
 
   const inspectedNodeText = computed(() => {
     if (!activeNode.value) return "";
-    if (activeNode.value.kind === "participant") {
+    if (isParticipantNodeKind(activeNode.value.kind)) {
       // Preserve cold-link behavior: if ?participant= points to an unloaded participant without ?node=,
       // only emit a participant NodeRef once the participant is loaded (or when ?node= explicitly selected it).
       if (!explicitNode.value && !selectedParticipant.value) {
         return "";
+      }
+      if (selectedParticipant.value) {
+        const canonical = canonicalParticipantNode(selectedParticipant.value);
+        if (
+          canonical &&
+          (canonical.kind === "enrollment" || !explicitNode.value)
+        ) {
+          return formatNodeRef(canonical);
+        }
       }
     }
     return formatNodeRef(activeNode.value);

@@ -32,13 +32,24 @@ export function findRouteDescriptorBySpec(routeSpec) {
   const directByCleanSpec = descriptorByName.get(specPath);
   if (directByCleanSpec) return directByCleanSpec;
   return (
-    webRouteDescriptors.find(
-      (descriptor) =>
+    webRouteDescriptors.find((descriptor) => {
+      if (
         descriptor.onboardingTaskPath === specPath ||
         descriptor.route.path === specPath ||
         (descriptor.onboardingTaskPath &&
           specPath.startsWith(`${descriptor.onboardingTaskPath}/`))
-    ) || null
+      ) {
+        return true;
+      }
+      const dynamicIdx = String(descriptor.route?.path || "").indexOf("/:");
+      if (dynamicIdx > 0) {
+        const staticPrefix = descriptor.route.path.slice(0, dynamicIdx);
+        return (
+          specPath === staticPrefix || specPath.startsWith(`${staticPrefix}/`)
+        );
+      }
+      return false;
+    }) || null
   );
 }
 

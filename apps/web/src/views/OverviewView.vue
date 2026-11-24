@@ -229,6 +229,64 @@
             </div>
           </div>
         </div>
+
+        <div
+          v-if="demoCatalogGroups.length > 0"
+          id="overview-demo-catalog"
+          class="demo-catalog-groups"
+        >
+          <div class="demo-catalog-intro">
+            <h3 class="demo-catalog-heading">
+              Authorized Module Catalog Preview
+            </h3>
+            <p class="demo-catalog-subcopy">
+              Interactive sandbox modules enabled for your active role, grouped
+              by product family.
+            </p>
+          </div>
+
+          <div
+            v-for="group in demoCatalogGroups"
+            :key="group.family"
+            class="demo-family-group"
+            :data-family="group.family"
+          >
+            <div class="demo-family-header">
+              <h4 class="demo-family-title">{{ group.family }}</h4>
+              <span class="demo-family-count">
+                {{ group.items.length }}
+                {{ group.items.length === 1 ? "module" : "modules" }}
+              </span>
+            </div>
+
+            <div class="launchers-grid">
+              <div
+                v-for="item in group.items"
+                :key="item.routeName"
+                class="launcher-card demo-catalog-card"
+                :data-route-name="item.routeName"
+              >
+                <div class="launcher-header">
+                  <span class="launcher-badge badge-neutral">
+                    {{ item.family }} &middot; Demo Preview
+                  </span>
+                </div>
+                <h5 class="launcher-title">{{ item.title }}</h5>
+                <p class="launcher-description">{{ item.summary }}</p>
+                <div class="launcher-action">
+                  <button
+                    :id="`demo-launch-${item.routeName}`"
+                    type="button"
+                    class="btn btn-launcher-action"
+                    @click="navigateToRoute(item.route)"
+                  >
+                    Launch {{ item.title }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   </div>
@@ -250,7 +308,12 @@ import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
-import { isScreenAvailable } from "../router/availability";
+import {
+  DEMO_MODULE_CATALOG,
+  DEMO_PRODUCT_FAMILY_ORDER,
+  isScreenAvailable,
+  listDemoCatalogModules,
+} from "../router/availability";
 import { hasRequiredRole } from "../router/helpers.js";
 import {
   findRouteDescriptorBySpec,
@@ -317,6 +380,24 @@ const effectiveRoles = computed(() => {
   return preset ? [...preset.requires] : ["sponsor_admin"];
 });
 
+function normalizeSpecToRouteName(routeSpec) {
+  const raw = String(routeSpec || "")
+    .trim()
+    .split("?")[0];
+  if (!raw) return "";
+  if (raw === "study" || raw === "/studies" || raw.startsWith("/studies/")) {
+    return "study";
+  }
+  if (
+    raw === "observation" ||
+    raw === "/observations" ||
+    raw.startsWith("/observations/")
+  ) {
+    return "observation";
+  }
+  return raw.replace(/^\//, "");
+}
+
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
   const scope = workspaceScope.value;
@@ -336,56 +417,80 @@ function resolveAuthorizedRoute(routeSpec) {
     });
   }
   const descriptor = findRouteDescriptorBySpec(routeSpec);
-  if (!descriptor) return null;
-  const routeName = descriptor.route.name;
+  if (descriptor) {
+    const routeName = descriptor.route.name;
 
-  if (routeName === "study") {
-    if (!isScreenAvailable("study")) return null;
-    return buildStudiesWorkspacePath({
-      studyCode,
-      siteId,
-      subjectCode,
-      participantRef,
-    });
-  }
+    if (routeName === "study") {
+      if (!isScreenAvailable("study")) return null;
+      return buildStudiesWorkspacePath({
+        studyCode,
+        siteId,
+        subjectCode,
+        participantRef,
+      });
+    }
 
-  if (descriptor.dataCollectionHub) {
-    if (isDemoBuild()) {
+    if (descriptor.dataCollectionHub) {
+      if (isDemoBuild()) {
+        return isScreenAvailable(routeName) &&
+          isRouteRoleAuthorized(routeName, effectiveRoles.value)
+          ? buildDataCollectionPath({
+              studyCode,
+              siteId: explicitSiteId,
+              subjectCode,
+              enrollmentId,
+            })
+          : null;
+      }
+      return isScreenAvailable("study") &&
+        isRouteRoleAuthorized(routeName, effectiveRoles.value)
+        ? studyCode || explicitSiteId || participantRef || subjectCode
+          ? buildDataCollectionPath({
+              studyCode,
+              siteId: explicitSiteId,
+              participantRef,
+              subjectCode,
+              enrollmentId,
+            })
+          : "/studies"
+        : null;
+    }
+
+    if (descriptor.siteReadinessTier || descriptor.studyScopedLaunch) {
       return isScreenAvailable(routeName) &&
         isRouteRoleAuthorized(routeName, effectiveRoles.value)
-        ? buildDataCollectionPath({
+        ? buildScopedWorkflowPath(descriptor.route.path, {
             studyCode,
-            siteId: explicitSiteId,
+            siteId,
             subjectCode,
-            enrollmentId,
           })
         : null;
     }
-    return isScreenAvailable("study") &&
-      isRouteRoleAuthorized(routeName, effectiveRoles.value)
-      ? studyCode || explicitSiteId || participantRef || subjectCode
-        ? buildDataCollectionPath({
-            studyCode,
-            siteId: explicitSiteId,
-            participantRef,
-            subjectCode,
-            enrollmentId,
-          })
-        : "/studies"
-      : null;
   }
 
-  if (descriptor.siteReadinessTier || descriptor.studyScopedLaunch) {
-    return isScreenAvailable(routeName) &&
-      isRouteRoleAuthorized(routeName, effectiveRoles.value)
-      ? buildScopedWorkflowPath(descriptor.route.path, {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
+  const normalizedName = normalizeSpecToRouteName(routeSpec);
+  const catalogEntry = isDemoBuild()
+    ? DEMO_MODULE_CATALOG[normalizedName]
+    : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(catalogEntry.routeName)) {
+      return null;
+    }
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(effectiveRoles.value, catalogEntry.requiresRole)
+    ) {
+      return null;
+    }
+    if (catalogEntry.routeName === "observation") {
+      return catalogEntry.defaultPath;
+    }
+    return buildScopedWorkflowPath(catalogEntry.defaultPath, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
-
   return null;
 }
 
@@ -712,6 +817,43 @@ const personaLaunchers = computed(() => {
     const resolvedRoute = resolveAuthorizedRoute(launcher.routeSpec);
     return resolvedRoute ? { ...launcher, route: resolvedRoute } : null;
   }).filter(Boolean);
+});
+
+const demoCatalogGroups = computed(() => {
+  if (!isDemoBuild()) {
+    return [];
+  }
+  const featuredRouteNames = new Set(["study"]);
+  if (resolveAuthorizedRoute("ecrf")) {
+    featuredRouteNames.add("ecrf");
+  }
+  const readinessRoute = resolveAuthorizedRoute("site-readiness");
+  if (readinessRoute?.startsWith("/ctms")) {
+    featuredRouteNames.add("ctms");
+  } else if (readinessRoute?.startsWith("/ssu")) {
+    featuredRouteNames.add("ssu");
+  }
+
+  const byFamily = new Map();
+  for (const mod of listDemoCatalogModules()) {
+    if (featuredRouteNames.has(mod.routeName)) continue;
+    const resolved = resolveAuthorizedRoute(mod.routeName);
+    if (!resolved) continue;
+    if (!byFamily.has(mod.family)) {
+      byFamily.set(mod.family, []);
+    }
+    byFamily.get(mod.family).push({
+      ...mod,
+      route: resolved,
+    });
+  }
+
+  return DEMO_PRODUCT_FAMILY_ORDER.filter((family) => byFamily.has(family)).map(
+    (family) => ({
+      family,
+      items: byFamily.get(family),
+    })
+  );
 });
 
 function handleBypassToggle(event) {
@@ -1233,5 +1375,63 @@ function startGuidedTour() {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
   border-color: var(--semantic-color-interactive-primary);
+}
+
+.demo-catalog-groups {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--semantic-color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.demo-catalog-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.demo-catalog-heading {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+}
+
+.demo-catalog-subcopy {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.demo-family-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.demo-family-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.demo-family-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--semantic-color-text-dark);
+}
+
+.demo-family-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-secondary);
+  background: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
+  padding: 2px 8px;
+  border-radius: var(--semantic-radius-sm, 6px);
 }
 </style>

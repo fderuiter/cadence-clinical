@@ -7,14 +7,18 @@ import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
 import { kernelApi, type KernelObservation } from "../api/kernelApi";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
-import type { useStudyCanvasStore } from "../stores/studyCanvas";
+import {
+  enrollmentIdFromParticipant,
+  participantNodeRef,
+  type useStudyCanvasStore,
+} from "../stores/studyCanvas";
 import { isDemoBuild } from "../utils/demoMode";
 import { findSection, findStage, isParticipantState } from "./lifecycle";
 import {
   collectionInstanceRef,
   formatNodeRef,
   observationNodeRef,
-  tryNodeRef,
+  type NodeRef,
 } from "./nodeRef";
 import { canResolveNodesRemotely } from "./nodeResolver";
 import { findSectionDescriptor } from "./sections/registry";
@@ -116,11 +120,15 @@ export function useCanvasRouteState(options: {
   const resolvedParticipantId = ref("");
   let lineageRequest = 0;
 
-  function isParticipantPending(id: string | undefined): boolean {
-    if (!studyCode.value || !id) return false;
-    if (canvas.knownParticipants[id]) return false;
-    if (canvas.participantLookups[id]) return true;
-    return !canvas.failedParticipantIds[id];
+  function isParticipantNodePending(node: NodeRef | null | undefined): boolean {
+    if (!studyCode.value || !node) return false;
+    if (canvas.findKnownParticipant(node)) return false;
+    if (node.kind === "enrollment") {
+      if (canvas.enrollmentLookups[node.id]) return true;
+      return !canvas.failedEnrollmentIds[node.id];
+    }
+    if (canvas.participantLookups[node.id]) return true;
+    return !canvas.failedParticipantIds[node.id];
   }
 
   const loadedFormParticipant: ComputedRef<SubjectSummary | null> = computed(
@@ -138,9 +146,10 @@ export function useCanvasRouteState(options: {
   const selection = useCanvasSelection({
     query: () => route.query,
     knownParticipants: () => canvas.knownParticipants,
+    findParticipant: (node) => canvas.findKnownParticipant(node),
     loadedFormParticipant,
     lineageParticipant,
-    isParticipantPending,
+    isParticipantNodePending,
     canResolveRemotely: canResolveNodesRemotely,
   });
 
@@ -150,18 +159,13 @@ export function useCanvasRouteState(options: {
     recordParticipant: selectionRecordParticipant,
     activeFormParticipant: selectionActiveFormParticipant,
     activeParticipantNodeText: selectionActiveParticipantNodeText,
-    formQuery,
     isNewForm,
     openFormId,
     openObservationRef,
     proposalRef,
     selectedNode,
     selectedParticipant,
-    isSelectedParticipantLoading,
-    selectedVersionText,
-    selectedGenericNodeRef,
     inspectedParticipant: selectionInspectedParticipant,
-    inspectedNodeText,
   } = selection;
 
   const rawParticipantQuery = computed(() =>
@@ -199,8 +203,7 @@ export function useCanvasRouteState(options: {
       return selectionActiveParticipantNodeText.value;
     }
     if (codeQueryParticipant.value) {
-      const node = tryNodeRef("participant", codeQueryParticipant.value.id);
-      return node ? formatNodeRef(node) : "";
+      return participantNodeRef(codeQueryParticipant.value);
     }
     return "";
   });
@@ -245,7 +248,7 @@ export function useCanvasRouteState(options: {
 
   const isRecordParticipantLoading = computed(() =>
     recordRef.value
-      ? isParticipantPending(recordRef.value.id)
+      ? isParticipantNodePending(recordRef.value)
       : Boolean(
           studyCode.value &&
           participantCodeQuery.value &&
@@ -255,12 +258,16 @@ export function useCanvasRouteState(options: {
   );
 
   const activeEnrollmentId = computed(() => {
+    const persisted = enrollmentIdFromParticipant(activeFormParticipant.value);
+    if (persisted) return persisted;
     if (
       activeFormParticipant.value &&
-      canvas.record.subjectCode === activeFormParticipant.value.subject_id
+      canvas.record.subjectCode === activeFormParticipant.value.subject_id &&
+      canvas.record.enrollmentId
     ) {
       return canvas.record.enrollmentId;
     }
+    if (recordRef.value?.kind === "enrollment") return recordRef.value.id;
     if (loadedForm.value?.enrollment_id) return loadedForm.value.enrollment_id;
     return null;
   });
@@ -357,14 +364,12 @@ export function useCanvasRouteState(options: {
   }
 
   function recordLocationFor(participant: SubjectSummary) {
-    const node = tryNodeRef("participant", participant.id);
-    const text = node ? formatNodeRef(node) : "";
+    const text = participantNodeRef(participant);
     return studyLocation({ stage: "conduct", participant: text });
   }
 
   function newFormLocationFor(participant: SubjectSummary) {
-    const node = tryNodeRef("participant", participant.id);
-    const text = node ? formatNodeRef(node) : "";
+    const text = participantNodeRef(participant);
     return studyLocation({ stage: "conduct", participant: text, form: "new" });
   }
 
@@ -373,8 +378,7 @@ export function useCanvasRouteState(options: {
     specId: string,
     visitId?: string | null
   ) {
-    const node = tryNodeRef("participant", participant.id);
-    const text = node ? formatNodeRef(node) : "";
+    const text = participantNodeRef(participant);
     return studyLocation({
       stage: "conduct",
       participant: text,
@@ -398,11 +402,12 @@ export function useCanvasRouteState(options: {
       query.siteId = siteIdForHandoff;
     }
     const enrollmentForParticipant =
-      canvas.record.subjectCode === participant.subject_id
+      enrollmentIdFromParticipant(participant) ??
+      (canvas.record.subjectCode === participant.subject_id
         ? canvas.record.enrollmentId
         : loadedForm.value?.participant_id === participant.id
           ? loadedForm.value.enrollment_id
-          : null;
+          : null);
     if (enrollmentForParticipant) {
       query.enrollmentId = enrollmentForParticipant;
     }
@@ -660,6 +665,7 @@ export function useCanvasRouteState(options: {
   }
 
   return {
+    ...selection,
     studyCode,
     section,
     sectionDescriptor,
@@ -677,8 +683,6 @@ export function useCanvasRouteState(options: {
     loadedObservation,
     resolvedLineage,
     resolvedParticipantId,
-    explicitNode,
-    recordRef,
     rawParticipantQuery,
     participantCodeQuery,
     codeQueryParticipant,
@@ -691,17 +695,6 @@ export function useCanvasRouteState(options: {
     inspectorContextParticipant,
     conductSubjectQuery,
     isResolvingConductSubject,
-    formQuery,
-    isNewForm,
-    openFormId,
-    openObservationRef,
-    proposalRef,
-    selectedNode,
-    selectedParticipant,
-    isSelectedParticipantLoading,
-    selectedVersionText,
-    selectedGenericNodeRef,
-    inspectedNodeText,
     highlightItemQuery,
     initialSpecId,
     initialVisitId,

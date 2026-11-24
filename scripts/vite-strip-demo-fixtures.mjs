@@ -672,3 +672,256 @@ export function sectionsForStage(stageId) {
     },
   };
 }
+
+function getPropNameText(nameNode) {
+  if (!nameNode) return "";
+  if (ts.isIdentifier(nameNode) || ts.isStringLiteralLike(nameNode)) {
+    return nameNode.text;
+  }
+  return "";
+}
+
+function parsePlainObjectLiteral(objNode) {
+  const out = {};
+  for (const prop of objNode.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue;
+    const key = getPropNameText(prop.name);
+    if (!key) continue;
+    const init = prop.initializer;
+    if (ts.isStringLiteralLike(init)) {
+      out[key] = init.text;
+    } else if (init.kind === ts.SyntaxKind.TrueKeyword) {
+      out[key] = true;
+    } else if (init.kind === ts.SyntaxKind.FalseKeyword) {
+      out[key] = false;
+    } else if (ts.isNumericLiteral(init)) {
+      out[key] = Number(init.text);
+    }
+  }
+  return out;
+}
+
+function findHelperRouteCatalog(helpersPath) {
+  if (!fs.existsSync(helpersPath)) return null;
+  const src = fs.readFileSync(helpersPath, "utf8");
+  const sf = ts.createSourceFile(
+    path.basename(helpersPath),
+    src,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS
+  );
+  let found = null;
+  function visit(node) {
+    if (found) return;
+    if (ts.isObjectLiteralExpression(node)) {
+      const hasRoute = node.properties.some(
+        (p) => ts.isPropertyAssignment(p) && getPropNameText(p.name) === "route"
+      );
+      const catalogProp = node.properties.find(
+        (p) =>
+          ts.isPropertyAssignment(p) &&
+          getPropNameText(p.name) === "catalog" &&
+          ts.isObjectLiteralExpression(p.initializer)
+      );
+      if (hasRoute && catalogProp && ts.isPropertyAssignment(catalogProp)) {
+        found = parsePlainObjectLiteral(catalogProp.initializer);
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sf);
+  return found;
+}
+
+function extractRouteFileCatalogEntry(filePath, helperCatalog) {
+  const src = fs.readFileSync(filePath, "utf8");
+  const sf = ts.createSourceFile(
+    path.basename(filePath),
+    src,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS
+  );
+  for (const stmt of sf.statements) {
+    if (!ts.isExportAssignment(stmt) || stmt.isExportEquals) continue;
+    const expr = stmt.expression;
+    if (
+      ts.isCallExpression(expr) &&
+      expr.arguments.length > 0 &&
+      ts.isObjectLiteralExpression(expr.arguments[0]) &&
+      helperCatalog
+    ) {
+      const argObj = parsePlainObjectLiteral(expr.arguments[0]);
+      if (typeof argObj.name === "string" && argObj.name) {
+        return [argObj.name, { ...helperCatalog }];
+      }
+    }
+    if (ts.isObjectLiteralExpression(expr)) {
+      let routeName = "";
+      let catalog = null;
+      for (const prop of expr.properties) {
+        if (!ts.isPropertyAssignment(prop)) continue;
+        const propName = getPropNameText(prop.name);
+        if (
+          propName === "route" &&
+          ts.isObjectLiteralExpression(prop.initializer)
+        ) {
+          const routeFields = parsePlainObjectLiteral(prop.initializer);
+          if (typeof routeFields.name === "string") {
+            routeName = routeFields.name;
+          }
+        } else if (
+          propName === "catalog" &&
+          ts.isObjectLiteralExpression(prop.initializer)
+        ) {
+          catalog = parsePlainObjectLiteral(prop.initializer);
+        }
+      }
+      if (routeName && catalog) {
+        return [routeName, catalog];
+      }
+    }
+  }
+  return null;
+}
+
+function stripRouteDescriptorCatalogProperty(code, filePath) {
+  const sf = ts.createSourceFile(
+    path.basename(filePath),
+    code,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS
+  );
+  const removals = [];
+  function visit(node) {
+    if (ts.isObjectLiteralExpression(node)) {
+      const hasRoute = node.properties.some(
+        (p) => ts.isPropertyAssignment(p) && getPropNameText(p.name) === "route"
+      );
+      if (hasRoute) {
+        for (const prop of node.properties) {
+          if (
+            ts.isPropertyAssignment(prop) &&
+            getPropNameText(prop.name) === "catalog" &&
+            ts.isObjectLiteralExpression(prop.initializer)
+          ) {
+            const start = prop.getStart(sf);
+            let end = prop.getEnd();
+            while (end < code.length && /[ \t]/.test(code[end])) end++;
+            if (code[end] === ",") end++;
+            removals.push([start, end]);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sf);
+  if (removals.length === 0) return null;
+  removals.sort((a, b) => b[0] - a[0]);
+  let updated = code;
+  for (const [start, end] of removals) {
+    updated = `${updated.slice(0, start)}${updated.slice(end)}`;
+  }
+  return updated;
+}
+
+/**
+ * Isolates colocated `*.route.js` `catalog` metadata into lazy `screenCatalog.js`
+ * during production builds so `/unavailable` roadmap copy never inflates cold-boot JS.
+ *
+ * @param {string} appDir - Absolute directory of `apps/web`.
+ * @returns {import("vite").Plugin}
+ */
+export function createWebRouteCatalogPlugin(appDir) {
+  const routerDir = path.resolve(appDir, "src/router");
+  const routesDir = toPosixPath(path.join(routerDir, "routes"));
+  const helpersFile = toPosixPath(path.join(routerDir, "helpers.js"));
+  const availabilityFile = toPosixPath(path.join(routerDir, "availability.js"));
+  const screenCatalogFile = toPosixPath(
+    path.join(routerDir, "screenCatalog.js")
+  );
+  let isProdBuild = false;
+
+  return {
+    name: "cadence-web-route-catalog",
+    enforce: "pre",
+    configResolved(resolved) {
+      isProdBuild = resolved.command === "build";
+    },
+    transform(code, id) {
+      if (!isProdBuild) return null;
+      const cleanId = toPosixPath(id.split("?")[0]);
+      if (cleanId === availabilityFile) {
+        const cleaned = code.replace(
+          /export\s*\{[\s\S]*?\}\s*from\s*["']\.\/screenCatalog(?:\.js)?["'];?/,
+          ""
+        );
+        return cleaned !== code ? { code: cleaned, map: null } : null;
+      }
+
+      if (cleanId === screenCatalogFile && fs.existsSync(routesDir)) {
+        if (
+          typeof this?.addWatchFile === "function" &&
+          fs.existsSync(helpersFile)
+        ) {
+          this.addWatchFile(helpersFile);
+        }
+        const helperCatalog = findHelperRouteCatalog(helpersFile);
+        const entries = [];
+        const files = fs
+          .readdirSync(routesDir, { withFileTypes: true })
+          .filter((e) => e.isFile() && e.name.endsWith(".route.js"))
+          .map((e) => e.name)
+          .sort();
+        for (const name of files) {
+          const fullPath = path.join(routesDir, name);
+          if (typeof this?.addWatchFile === "function") {
+            this.addWatchFile(fullPath);
+          }
+          const entry = extractRouteFileCatalogEntry(fullPath, helperCatalog);
+          if (entry) {
+            entries.push(entry);
+          }
+        }
+        const catalogMap = Object.fromEntries(entries);
+        return {
+          code: `export const SCREEN_CATALOG = /* @__PURE__ */ Object.freeze(${JSON.stringify(catalogMap)});
+const DEFAULT_SCREEN_METADATA = Object.freeze({
+  title: "This screen",
+  family: "Blueprint",
+  minimumTier: "Individual",
+  isBaselineCapability: false,
+  roadmapStage: "Pre-release module roadmap",
+  summary:
+    "This workspace module is progressing through pre-release Clinical Kernel integration.",
+});
+export function screenMetadata(routeName) {
+  if (!routeName) return DEFAULT_SCREEN_METADATA;
+  return SCREEN_CATALOG[routeName] || DEFAULT_SCREEN_METADATA;
+}
+export function screenTitle(routeName) {
+  return SCREEN_CATALOG[routeName]?.title || "This screen";
+}
+`,
+          map: null,
+        };
+      }
+
+      if (
+        cleanId === helpersFile ||
+        (cleanId.startsWith(`${routesDir}/`) && cleanId.endsWith(".route.js"))
+      ) {
+        const stripped = stripRouteDescriptorCatalogProperty(code, cleanId);
+        if (stripped !== null) {
+          return { code: stripped, map: null };
+        }
+      }
+
+      return null;
+    },
+  };
+}

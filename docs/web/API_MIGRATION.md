@@ -90,7 +90,7 @@ Screens with no .NET backend are hidden until their module serves the endpoints 
 - `/` lands each role on `/overview` by default, or when `bypassOverview` is enabled on its primary live workflow screen (`/ecrf`, `/ctms`) and falls back to `/studies` when the role has no dedicated non-canvas screen (`sponsor_designer`, `auditor`).
 - The shell doesn't fetch notifications, because no .NET service serves them yet.
 
-The list of available screens is derived into `AVAILABLE_SCREENS` in `apps/web/src/router/availability.js` from per-screen `availability: "available"` descriptors under `apps/web/src/router/routes/*.route.js` ([ADR-2658](../adr/2026-11-23-vite-glob-discovery-and-generated-ui-barrels.md)). The hidden screens' code stays in the repo as a reference for the UI, the way the Python services are the reference for the .NET port.
+The list of available screens is derived into `AVAILABLE_SCREENS` in `apps/web/src/router/availability.js` from per-screen `availability: "available"` descriptors under `apps/web/src/router/routes/*.route.js` ([ADR-2661](../adr/2026-11-23-vite-glob-discovery-and-generated-ui-barrels.md)). The hidden screens' code stays in the repo as a reference for the UI, the way the Python services are the reference for the .NET port.
 
 The missing endpoints are tracked by module, not one issue per Python path:
 

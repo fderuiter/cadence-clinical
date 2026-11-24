@@ -18,6 +18,24 @@ const DEV_PORT = 5174;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint; docker compose names
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
+const VIRTUAL_DEMO_TLDTS_STUB_ID = "\0virtual:demo-msw-tldts-stub";
+
+const DEMO_TLDTS_STUB = `
+export function getDomain(input, options = {}) {
+  if (typeof input !== "string" || !input) return null;
+  const host = input.trim().toLowerCase().replace(/\\.+$/, "");
+  if (!host || /^\\d+(?:\\.\\d+){3}$/.test(host) || host.includes(":")) {
+    return null;
+  }
+  const labels = host.split(".").filter(Boolean);
+  if (labels.length < 2) return null;
+  const tailTwo = labels.slice(-2).join(".");
+  if (options.allowPrivateDomains && tailTwo === "github.io") {
+    return labels.length >= 3 ? labels.slice(-3).join(".") : null;
+  }
+  return tailTwo;
+}
+`;
 
 export default defineConfig(({ mode }) => ({
   base: process.env.VITE_BASE_PATH || "/subject-portal/",
@@ -160,6 +178,25 @@ export default defineConfig(({ mode }) => ({
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
     createConstantFoldDemoModePlugin(__dirname),
+    {
+      name: "slim-demo-msw-tldts",
+      apply: "build",
+      enforce: "pre",
+      resolveId(source, importer) {
+        if (
+          mode !== "demo" ||
+          source !== "tldts" ||
+          !importer ||
+          !importer.replace(/\\/g, "/").includes("/tough-cookie/")
+        ) {
+          return null;
+        }
+        return VIRTUAL_DEMO_TLDTS_STUB_ID;
+      },
+      load(id) {
+        return id === VIRTUAL_DEMO_TLDTS_STUB_ID ? DEMO_TLDTS_STUB : null;
+      },
+    },
   ],
   server: {
     port: DEV_PORT,

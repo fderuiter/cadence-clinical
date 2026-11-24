@@ -219,6 +219,7 @@ describe("Glob-discovered Clinical Canvas & Router registries", () => {
     ]);
 
     expect(findInspectorForKind("participant")?.id).toBe("participant");
+    expect(findInspectorForKind("enrollment")?.id).toBe("participant");
     expect(findInspectorForKind("protocol_version")?.id).toBe(
       "protocol-version"
     );
