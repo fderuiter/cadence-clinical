@@ -3138,7 +3138,7 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (10)</summary>
+<summary>Properties (11)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
@@ -3146,6 +3146,7 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 | `asserted_by` | `string` | `required` |  |
 | `assertion_id` | [`Kernel_AssertionId`](#schema-kernel-assertionid) | `required` |  |
 | `kind` | [`Kernel_AssertionKind`](#schema-kernel-assertionkind) | `required` |  |
+| `masked` | `boolean` | `optional` |  |
 | `reason_for_change` | `string` | `required` |  |
 | `retracted_at` | `string` (`date-time`) \| `null` | `required` |  |
 | `retracted_by` | [`Kernel_AssertionId`](#schema-kernel-assertionid) \| `null` | `required` |  |
@@ -5456,7 +5457,7 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (7)</summary>
+<summary>Properties (8)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
@@ -5465,6 +5466,7 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 | `lock_id` | [`Kernel_AssertionId`](#schema-kernel-assertionid) | `required` |  |
 | `locked_at` | `string` (`date-time`) | `required` |  |
 | `locked_by` | `string` | `required` |  |
+| `masked` | `boolean` | `optional` |  |
 | `reason_for_change` | `string` | `required` |  |
 | `scope` | [`Kernel_NodeRef`](#schema-kernel-noderef) | `required` |  |
 
