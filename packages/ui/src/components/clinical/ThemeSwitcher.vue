@@ -34,14 +34,9 @@
       >
         <template v-if="option.value === 'light'">
           <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2" />
-          <path d="M12 20v2" />
-          <path d="m4.93 4.93 1.41 1.41" />
-          <path d="m17.66 17.66 1.41 1.41" />
-          <path d="M2 12h2" />
-          <path d="M20 12h2" />
-          <path d="m6.34 17.66-1.41 1.41" />
-          <path d="m19.07 4.93-1.41 1.41" />
+          <path
+            d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+          />
         </template>
         <path
           v-else-if="option.value === 'dark'"
@@ -49,8 +44,7 @@
         />
         <template v-else>
           <rect width="20" height="14" x="2" y="3" rx="2" />
-          <line x1="8" x2="16" y1="21" y2="21" />
-          <line x1="12" x2="12" y1="17" y2="21" />
+          <path d="M8 21h8m-4-4v4" />
         </template>
       </svg>
       <span v-if="showLabels" class="clinical-theme-switcher__label"

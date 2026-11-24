@@ -163,25 +163,46 @@
 
 <script setup>
 import { computed } from "vue";
+import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer } from "ui";
+import {
+  buildScopedWorkflowPath,
+  resolveWorkspaceNavigationScope,
+} from "../canvas/palette";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
 const router = useRouter();
-let route = null;
+let activeRoute = null;
 try {
-  route = useRoute();
+  activeRoute = useRoute();
 } catch {
-  // Gracefully fallback in isolated unit test mounts without route injection
+  activeRoute = null;
 }
+const { activeStudyCode } = useActiveStudyScope();
+
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -221,7 +242,8 @@ function navigateToTask(task) {
   if (!task) return;
   const authorizedRoute = resolveAuthorizedTaskRoute(
     task,
-    effectiveRoles.value
+    effectiveRoles.value,
+    workspaceScope.value
   );
   if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
     router.push(authorizedRoute);
@@ -230,8 +252,13 @@ function navigateToTask(task) {
 }
 
 function openOrientationHub() {
-  if (isScreenAvailable("overview") && canPushResolvedPath("/overview")) {
-    router.push("/overview");
+  const targetPath = buildScopedWorkflowPath("/overview", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+  });
+  if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
+    router.push(targetPath);
     onboardingStore.closeDrawer();
   }
 }
@@ -240,17 +267,25 @@ function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
   if (
-    route?.name === "forbidden" ||
-    route?.path === "/forbidden" ||
-    route?.name === "unavailable" ||
-    route?.path === "/unavailable"
+    activeRoute?.name === "forbidden" ||
+    activeRoute?.path === "/forbidden" ||
+    activeRoute?.name === "unavailable" ||
+    activeRoute?.path === "/unavailable"
   ) {
     const stepRoute = resolveAuthorizedTaskRoute(
       { routeName: onboardingStore.currentStepConfig?.routeName || "overview" },
-      effectiveRoles.value
+      effectiveRoles.value,
+      workspaceScope.value
     );
+    const fallbackOverview = buildScopedWorkflowPath("/overview", {
+      studyCode: workspaceScope.value.studyCode,
+      siteId: workspaceScope.value.siteId,
+      subjectCode: workspaceScope.value.subjectCode,
+    });
     const nextPath =
-      stepRoute && canPushResolvedPath(stepRoute) ? stepRoute : "/overview";
+      stepRoute && canPushResolvedPath(stepRoute)
+        ? stepRoute
+        : fallbackOverview;
     if (canPushResolvedPath(nextPath)) {
       router.push(nextPath);
     }

@@ -267,6 +267,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  defaultSubjectId: {
+    type: String,
+    default: "",
+  },
   initialData: {
     type: Object,
     default: () => ({}),
@@ -286,7 +290,7 @@ const form = reactive({
   priority: "MEDIUM",
   study_id: props.defaultStudyId || "",
   site_id: props.defaultSiteId || "",
-  subject_id: "",
+  subject_id: props.defaultSubjectId || "",
   entity_type: "",
   entity_id: "",
   reason_for_change: "Initial clinical issue logged",
@@ -301,7 +305,7 @@ function applyInitialData() {
   form.priority = init.priority || "MEDIUM";
   form.study_id = init.study_id ?? props.defaultStudyId ?? "";
   form.site_id = init.site_id ?? props.defaultSiteId ?? "";
-  form.subject_id = init.subject_id || "";
+  form.subject_id = init.subject_id ?? props.defaultSubjectId ?? "";
   form.entity_type = init.entity_type || "";
   form.entity_id = init.entity_id || "";
   form.reason_for_change =
