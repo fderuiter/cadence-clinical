@@ -64,6 +64,18 @@ public static class RbacExplanationBuilder
                     {
                         string actionPhrase = PermissionMatrix.DescribePermission(permReq.Permission);
                         IReadOnlyList<string> holders = PermissionMatrix.RolesHolding(permReq.Permission);
+                        if (!ClinicalScopeGuard.IsVerifiedTrialTenant(principal?.TenantId)
+                            && !PermissionAuthorizationHandler.IsReadPermission(permReq.Permission))
+                        {
+                            var nonTrialHolders = holders
+                                .Where(r => !string.Equals(r, RoleNormalization.ROLE_TRIAL_COORDINATOR, StringComparison.OrdinalIgnoreCase))
+                                .ToArray();
+                            if (nonTrialHolders.Length > 0)
+                            {
+                                holders = nonTrialHolders;
+                            }
+                        }
+
                         string rolePhrase = PermissionMatrix.DescribeRoles(holders);
                         string conditionText = $"Assign a {rolePhrase} role to {actionPhrase}.";
                         conditions.Add(EvaluatedCondition.Unsatisfied(RolePermissionCondition, conditionText));

@@ -30,7 +30,7 @@ using Xunit;
 namespace Cadence.UnitTests.Security;
 
 /// <summary>
-/// Verifies ADR-2482 <c>ProblemDetails.extensions["explanation"]</c> across standalone core services (PRD-SYS-001,
+/// Verifies ADR-2482 and ADR-2663 <c>ProblemDetails.extensions["explanation"]</c> across standalone core services (PRD-SYS-001,
 /// PRD-CRF-015, PRD-SYS-192): every protected standalone route answered with HTTP 403 by the authorization middleware,
 /// <see cref="ClinicalScopeGuard"/>, or <see cref="CtmsScopeGuard"/> returns structured plain-English explanations
 /// without leaking raw <c>resource:action</c> permission tokens in user-facing claims or condition descriptions.
@@ -164,7 +164,10 @@ public sealed partial class RbacProblemDetailsTests
         };
         httpContext.Response.Body = new System.IO.MemoryStream();
 
-        IResult? deniedStudy = ClinicalScopeGuard.RequireStudy(httpContext, studyId.Value.ToString("D"));
+        IResult? deniedStudy = ClinicalScopeGuard.RequireStudy(
+            httpContext,
+            studyId.Value.ToString("D"),
+            ClinicalScopeGuard.ForbiddenCode);
         deniedStudy.Should().NotBeNull();
         await deniedStudy!.ExecuteAsync(httpContext);
 
@@ -176,6 +179,10 @@ public sealed partial class RbacProblemDetailsTests
         studyExp.GetProperty("producer").GetString().Should().Be(RbacExplanationBuilder.RbacProducer);
         studyExp.GetProperty("subject").GetString().Should().Be(NodeRef.For(studyId).ToString());
         studyExp.GetProperty("next_actions")[0].GetProperty("target").GetString().Should().Be(NodeRef.For(studyId).ToString());
+
+        var outsideStudy = ClinicalScopeGuard.OutsideStudy(studyId: studyId.Value.ToString("D"));
+        outsideStudy.ProblemDetails.Extensions.Should().NotContainKey("code");
+        outsideStudy.ProblemDetails.Extensions.Should().ContainKey("explanation");
 
         var ctmsSiteDenied = CtmsScopeGuard.RequireSite(httpContext, siteId.Value.ToString("D"));
         ctmsSiteDenied.Should().NotBeNull();

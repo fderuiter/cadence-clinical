@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Supply;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -77,8 +79,7 @@ public static class IpKitEndpoints
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-                 ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+            if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
             {
                 return callerDenied;
             }
@@ -89,7 +90,7 @@ public static class IpKitEndpoints
                 return Results.NotFound(new { detail = $"Certificate '{certificateId}' not found." });
             }
 
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, result.StudyId, result.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
             {
                 return recordDenied;
             }
@@ -105,7 +106,7 @@ public static class IpKitEndpoints
             IIpKitApplicationService service,
             CancellationToken ct) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } denied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
             {
                 return denied;
             }
@@ -164,7 +165,7 @@ public static class IpKitEndpoints
         string siteId,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } requestDenied)
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
         {
             return (requestDenied, []);
         }
@@ -172,7 +173,7 @@ public static class IpKitEndpoints
         var existingSites = await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false);
         foreach (string existingSite in existingSites)
         {
-            if (ExecutionScopeGuard.RequireSite(httpContext, existingSite) is { } existingDenied)
+            if (ClinicalScopeGuard.RequireSite(httpContext, existingSite, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } existingDenied)
             {
                 return (existingDenied, []);
             }

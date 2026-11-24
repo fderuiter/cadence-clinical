@@ -1010,18 +1010,73 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
     });
   });
 
-  describe("Requirement 6: Tabular Numeral Alignment Across Shared & Application Data Tables", () => {
-    it("enforces global font-variant-numeric: tabular-nums in tokens.css and ClinicalDataTable.vue with zero redundant app scoped table blocks", () => {
+  describe("Requirement 6: Tabular Numeral Alignment Across Tokens, Form Controls, Readouts, & AST Lint (ADR-2670)", () => {
+    it("enforces --font-variant-numeric-tabular in tokens.css across tables, time, badges, and numeric/date controls while preserving coarse-pointer >=16px font-size and proportional textareas", () => {
       const tokensCss = fs.readFileSync(
         path.join(uiDir, "tokens.css"),
         "utf-8"
       );
-      const globalTableMatch = tokensCss.match(
-        /table,\s*th,\s*td,\s*\.clinical-table,\s*\.clinical-visit-matrix,\s*\.data-table\s*\{([\s\S]*?)\}/
+      const rootVars = parseCssBlockVars(tokensCss, /:root\s*\{/);
+      expect(rootVars["--font-variant-numeric-tabular"]).toBe("tabular-nums");
+      expect(
+        resolveVar("--semantic-font-variant-numeric-tabular", rootVars)
+      ).toBe("tabular-nums");
+
+      const globalTabularMatch = tokensCss.match(
+        /table,\s*th,\s*td,\s*time,\s*\.tabular-nums,\s*\[data-tabular-nums\]:not\(\[data-tabular-nums="false"\]\),\s*\.clinical-table,\s*\.clinical-visit-matrix,\s*\.data-table\s*\{([\s\S]*?)\}/
       );
-      expect(globalTableMatch).not.toBeNull();
-      expect(globalTableMatch[1]).toContain(
+      expect(globalTabularMatch).not.toBeNull();
+      expect(globalTabularMatch[1]).toContain(
         "font-variant-numeric: tabular-nums"
+      );
+      expect(globalTabularMatch[1]).toContain(
+        "font-variant-numeric: var(--font-variant-numeric-tabular)"
+      );
+
+      // Verify UA font reset override for numeric/date inputs, table controls, and clinical-input-control
+      for (const selectorFragment of [
+        'input[type="number"]',
+        'input[type="date"]',
+        'input[type="datetime-local"]',
+        'input[type="time"]',
+        'input[type="tel"]',
+        'input[type="range"]',
+        'input[inputmode="numeric"]',
+        'input[inputmode="decimal"]',
+        "input.tabular-nums",
+        "select.tabular-nums",
+        'td input:not([type="checkbox"]):not([type="radio"])',
+        "td select",
+        ".clinical-input-control.tabular-nums",
+        '.clinical-input-control[data-tabular-nums]:not([data-tabular-nums="false"])',
+      ]) {
+        expect(tokensCss).toContain(selectorFragment);
+      }
+
+      // Verify .clinical-badge applies tabular numerals
+      const badgeMatch = tokensCss.match(/\.clinical-badge\s*\{([\s\S]*?)\}/);
+      expect(badgeMatch).not.toBeNull();
+      expect(badgeMatch[1]).toContain("var(--font-variant-numeric-tabular)");
+
+      // Verify narrative <textarea> is never forced into tabular-nums
+      const tokensCssNoComments = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
+      const tabularRuleBlocks =
+        tokensCssNoComments.match(
+          /[^{}]*\{[^{}]*font-variant-numeric:\s*tabular-nums[^{}]*\}/g
+        ) || [];
+      expect(tabularRuleBlocks.length).toBeGreaterThanOrEqual(3);
+      for (const rule of tabularRuleBlocks) {
+        const selectorPart = rule.slice(0, rule.indexOf("{"));
+        expect(selectorPart).not.toMatch(/\btextarea\b/i);
+      }
+
+      // Verify touch viewports preserve >= 16px (1rem) font-size to prevent iOS auto-zoom
+      const coarsePointerMatch = tokensCss.match(
+        /@media\s*\(\s*pointer:\s*coarse\s*\)\s*\{([\s\S]*?\})\s*\}/
+      );
+      expect(coarsePointerMatch).not.toBeNull();
+      expect(coarsePointerMatch[1]).toContain(
+        "font-size: max(1rem, var(--font-size-md, 16px))"
       );
 
       const dataTableVue = fs.readFileSync(
@@ -1044,24 +1099,32 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(portalStyleCss).toContain(
         '@import "../../../packages/ui/tokens.css"'
       );
+    });
 
+    it("scans all Vue, CSS, and JS files across packages/ui, apps/web, and apps/subject-portal for zero font-variant-numeric: normal overrides and full surface adoption", () => {
       const appVueFiles = [
         ...walkFiles(webSrcDir, [".vue"]),
         ...walkFiles(portalSrcDir, [".vue"]),
       ];
-      const allVueFiles = [
+      const allFrontendFiles = [
+        ...walkFiles(path.join(uiDir, "src"), [".vue", ".css", ".js"]),
+        path.join(uiDir, "tokens.css"),
+        path.join(uiDir, "responsive.css"),
+        path.join(uiDir, "index.js"),
+        ...walkFiles(webSrcDir, [".vue", ".css", ".js", ".ts"]),
+        ...walkFiles(portalSrcDir, [".vue", ".css", ".js", ".ts"]),
+      ];
+
+      const tableVueFiles = [
         ...walkFiles(path.join(uiDir, "src"), [".vue"]),
         ...appVueFiles,
-      ];
-      const tableVueFiles = allVueFiles.filter((file) =>
-        /<table[\s>]/.test(fs.readFileSync(file, "utf-8"))
-      );
+      ].filter((file) => /<table[\s>]/.test(fs.readFileSync(file, "utf-8")));
       expect(tableVueFiles.length + 2).toBeGreaterThanOrEqual(52);
 
-      // Ensure no table component overrides global tabular-nums with normal numerals
-      const overridingTabularNums = tableVueFiles
+      // Scan ALL frontend files (not just <table> files) for forbidden normal overrides
+      const overridingTabularNums = allFrontendFiles
         .filter((file) =>
-          /font-variant-numeric:\s*normal\b/.test(
+          /font-variant-numeric\s*:\s*normal\b|fontVariantNumeric\s*:\s*["'`]normal["'`]/.test(
             fs.readFileSync(file, "utf-8")
           )
         )
@@ -1097,6 +1160,179 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
       expect(redundantTableRuleFiles).toEqual([]);
       expect(emptyStyleTagFiles).toEqual([]);
+
+      // Verify key clinician web and subject portal surfaces adopt shared tabular tokens/classes
+      const expectedAdoptions = [
+        [
+          path.join(uiDir, "src/components/clinical/ClinicalInput.vue"),
+          ":data-tabular-nums=",
+        ],
+        [
+          path.join(webSrcDir, "views/ObservationView.vue"),
+          ":data-tabular-nums=",
+        ],
+        [
+          path.join(webSrcDir, "components/ecrf/EcrfItemTable.vue"),
+          ":data-tabular-nums=",
+        ],
+        [
+          path.join(webSrcDir, "components/ecrf/EcrfSignaturesSection.vue"),
+          "tabular-nums",
+        ],
+        [
+          path.join(webSrcDir, "components/clinical/LabGovernanceConsole.vue"),
+          "var(--font-variant-numeric-tabular)",
+        ],
+        [
+          path.join(
+            webSrcDir,
+            "components/clinical/SensorTelemetryConsole.vue"
+          ),
+          "var(--font-variant-numeric-tabular)",
+        ],
+        [
+          path.join(webSrcDir, "views/OverviewView.vue"),
+          "var(--font-variant-numeric-tabular)",
+        ],
+        [
+          path.join(webSrcDir, "views/TicketsView.vue"),
+          "var(--font-variant-numeric-tabular)",
+        ],
+        [
+          path.join(portalSrcDir, "style.css"),
+          "var(--font-variant-numeric-tabular)",
+        ],
+        [
+          path.join(portalSrcDir, "widgets/clinical-fields.js"),
+          "var(--font-variant-numeric-tabular)",
+        ],
+        [path.join(portalSrcDir, "views/ComplianceView.vue"), "tabular-nums"],
+        [path.join(portalSrcDir, "components/SyncDrawer.vue"), "tabular-nums"],
+        [
+          path.join(portalSrcDir, "components/PortalHeader.vue"),
+          "tabular-nums",
+        ],
+        [path.join(portalSrcDir, "views/WalletView.vue"), "tabular-nums"],
+      ];
+      for (const [filePath, needle] of expectedAdoptions) {
+        expect(
+          fs.readFileSync(filePath, "utf-8"),
+          `${path.relative(repoRoot, filePath)} must contain ${needle}`
+        ).toContain(needle);
+      }
+    });
+
+    it("enforces custom-vue/require-tabular-nums across numeric controls, countdowns, badges, KPIs, and CSS overrides via ESLint AST checks", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const violatingVue = await eslint.lintText(
+        `<template>
+  <div class="synthetic-panel">
+    <label for="dose-input">Dose</label>
+    <input id="dose-input" v-model.number="dose" type="text" />
+    <label for="cohort-select">Cohort</label>
+    <select id="cohort-select" v-model.number="cohort">
+      <option :value="1">Cohort 1</option>
+    </select>
+    <ClinicalInput id="VS.SYSBP" v-model="sysbp" label="Systolic BP" type="numeric" :tabular-nums="false" />
+    <span class="sla-timer">{{ remainingSeconds }}s</span>
+    <span class="badge-unread">{{ unreadCount }}</span>
+    <div id="wallet-balance-amount">\${{ balanceAmount.toFixed(2) }}</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { ClinicalInput } from "ui";
+const dose = ref(10);
+const cohort = ref(1);
+const sysbp = ref(120);
+const remainingSeconds = ref(42);
+const unreadCount = ref(5);
+const balanceAmount = ref(125);
+</script>
+<style scoped>
+.synthetic-panel {
+  font-variant-numeric: normal;
+}
+</style>
+`,
+        {
+          filePath: path.join(
+            webSrcDir,
+            "views/__SyntheticTabularViolations.vue"
+          ),
+        }
+      );
+
+      const violationMessages = violatingVue[0].messages.filter(
+        (m) => m.ruleId === "custom-vue/require-tabular-nums"
+      );
+      expect(violationMessages.length).toBeGreaterThanOrEqual(7);
+
+      const violatingJs = await eslint.lintText(
+        `export function buildStyle() {
+  return "font-variant-numeric: normal; color: inherit;";
+}
+`,
+        {
+          filePath: path.join(
+            portalSrcDir,
+            "widgets/__syntheticTabularViolation.js"
+          ),
+        }
+      );
+      expect(
+        violatingJs[0].messages.some(
+          (m) => m.ruleId === "custom-vue/require-tabular-nums"
+        )
+      ).toBe(true);
+
+      const compliantVue = await eslint.lintText(
+        `<template>
+  <div class="synthetic-panel">
+    <label for="dose-input">Dose</label>
+    <input id="dose-input" v-model.number="dose" type="number" />
+    <label for="cohort-select">Cohort</label>
+    <select id="cohort-select" v-model.number="cohort" class="tabular-nums">
+      <option :value="1">Cohort 1</option>
+    </select>
+    <ClinicalInput id="VS.SYSBP" v-model="sysbp" label="Systolic BP" type="numeric" />
+    <time class="sla-timer">{{ remainingSeconds }}s</time>
+    <span class="badge-unread tabular-nums">{{ unreadCount }}</span>
+    <div id="wallet-balance-amount" class="tabular-nums">\${{ balanceAmount.toFixed(2) }}</div>
+    <p class="prose-note">
+      Participants whose cumulative stipends reach \${{ thresholdAmount.toFixed(2) }} within a calendar year receive IRS Form 1099-MISC documentation.
+    </p>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { ClinicalInput } from "ui";
+const dose = ref(10);
+const cohort = ref(1);
+const sysbp = ref(120);
+const remainingSeconds = ref(42);
+const unreadCount = ref(5);
+const balanceAmount = ref(125);
+const thresholdAmount = ref(600);
+</script>
+`,
+        {
+          filePath: path.join(
+            webSrcDir,
+            "views/__SyntheticTabularCompliant.vue"
+          ),
+        }
+      );
+
+      const compliantErrors = compliantVue[0].messages.filter(
+        (m) => m.ruleId === "custom-vue/require-tabular-nums"
+      );
+      expect(compliantErrors).toEqual([]);
     });
   });
 
@@ -1678,7 +1914,9 @@ const open = () => {};
       const baseBadge = parseRuleProps(tokensCss, /\.clinical-badge\s*\{/);
       expect(baseBadge).not.toBeNull();
       expect(baseBadge["font-size"]).toBe("0.75rem");
-      expect(baseBadge["font-variant-numeric"]).toBe("tabular-nums");
+      expect(
+        resolveCssColorExpr(baseBadge["font-variant-numeric"], lightTheme)
+      ).toBe("tabular-nums");
 
       const modifiers = [
         "draft",

@@ -1,4 +1,4 @@
-# ADR-2661: Inline Explanation Primitives and RBAC Problem Details
+# ADR-2663: Inline Explanation Primitives and RBAC Problem Details
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
@@ -24,7 +24,7 @@ ADR-2482 defined the Clinical Kernel `Explanation` structure (`subject`, `claim`
 
 1. Populate `NextAction.Target` and `NextAction.Capability` across `AuthorizationDecision.Explain`, `CaptureConditions`, `LocksInForce` (HTTP 423), and subscription refusals, and replace raw actor and `ProtocolVersionId` UUIDs in `AuthorityEvaluator` with sequential protocol version numbers and `NodeRef` evidence.
 2. Apply bulk `INodeVisibility` masking (`masked:<kind>:<Reason>`) via `IKernelExplanationMasker` across `can-i`, `commands`, and kernel HTTP error responses while keeping persistent `AuditEntries` unredacted (`K-EXP-2`).
-3. Register `CadenceAuthorizationMiddlewareResultHandler` and `RbacExplanationBuilder` in `Cadence.Security` (and scope guards in `ClinicalScopeGuard`, `CtmsScopeGuard`, `Etmf`, and `Execution`) so all protected standalone routes emit HTTP 403 `ProblemDetails` with `explanation` (`K-XS-1`, `K-XS-2`).
+3. Register `CadenceAuthorizationMiddlewareResultHandler` and `RbacExplanationBuilder` in `Cadence.Security` (and scope guards in `ClinicalScopeGuard` and `CtmsScopeGuard`) so all protected standalone routes emit HTTP 403 `ProblemDetails` with `explanation` (`K-XS-1`, `K-XS-2`).
 4. Export `EntityLink`, `ClinicalExplanation`, and `ClinicalGatedAction` from `packages/ui`, wired to a scope-preserving peek drawer and 403/422/423 toast error explanations in `apps/web`.
 
 ## 5. Consequences & Trade-offs

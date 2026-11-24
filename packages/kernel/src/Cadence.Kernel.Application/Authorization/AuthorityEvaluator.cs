@@ -461,7 +461,7 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             }
         }
 
-        if (token is "study.export" or "enrollment.export" && path.Study is not null && carrying.Count > 0)
+        if (token == "study.export" && path.Study is not null && carrying.Count > 0)
         {
             var grantPaths = await store.PathsOfAsync(
                 request.Tenant,
@@ -717,7 +717,7 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
 }
 
 /// <summary>Checks a grant together with every grant above it (K-AUTH-3).</summary>
-internal static class GrantChain
+public static class GrantChain
 {
     /// <summary>
     /// True when <paramref name="grant"/> and every grant above it are in effect at <paramref name="at"/> as known at

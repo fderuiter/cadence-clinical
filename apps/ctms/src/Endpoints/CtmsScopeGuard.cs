@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
-using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 using Cadence.Security.Rbac;
 
@@ -93,11 +92,8 @@ public static class CtmsScopeGuard
         string? siteId,
         out HashSet<string>? siteFilter)
     {
-        if (ClinicalScopeGuard.ResolveSiteFilter(httpContext, siteId, out var allowedSites, out _))
+        if (ClinicalScopeGuard.ResolveSiteFilter(httpContext, siteId, out siteFilter, out _))
         {
-            siteFilter = allowedSites is null
-                ? null
-                : new HashSet<string>(allowedSites, StringComparer.OrdinalIgnoreCase);
             return null;
         }
 
@@ -287,12 +283,7 @@ public static class CtmsScopeGuard
         Func<T, string?> studySelector,
         HashSet<string>? siteFilter,
         Func<T, string?> siteSelector) =>
-        ClinicalScopeGuard.ApplyFilters(
-                items,
-                studyFilter,
-                siteFilter,
-                item => studySelector(item)?.Trim(),
-                item => siteSelector(item) is { } site && !string.IsNullOrWhiteSpace(site) ? site.Trim() : null)
+        ClinicalScopeGuard.ApplyFilters(items, studyFilter, siteFilter, studySelector, siteSelector)
             .ToList();
 
     public static ProblemHttpResult Forbidden(
@@ -300,22 +291,6 @@ public static class CtmsScopeGuard
         string title = "Forbidden",
         string conditionCode = RbacExplanationBuilder.StudyScopeCondition,
         string? targetKind = null,
-        string? targetIdentifier = null)
-    {
-        string resolvedCode = string.Equals(detail, ClinicalScopeGuard.SiteAccessDeniedDetail, StringComparison.Ordinal)
-            || string.Equals(title, "Outside your sites", StringComparison.Ordinal)
-            ? RbacExplanationBuilder.SiteScopeCondition
-            : conditionCode;
-
-        return TypedResults.Problem(
-            detail: detail,
-            statusCode: StatusCodes.Status403Forbidden,
-            title: title,
-            extensions: new Dictionary<string, object?>
-            {
-                ["code"] = ForbiddenCode,
-                ["explanation"] = ProblemExplanation.From(
-                    RbacExplanationBuilder.ForScopeDenial(detail, resolvedCode, targetKind, targetIdentifier)),
-            });
-    }
+        string? targetIdentifier = null) =>
+        ClinicalScopeGuard.Forbidden(detail, title, ForbiddenCode, conditionCode, targetKind, targetIdentifier);
 }

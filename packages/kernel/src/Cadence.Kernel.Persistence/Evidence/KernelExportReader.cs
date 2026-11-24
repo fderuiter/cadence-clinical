@@ -173,7 +173,12 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Concat(attestations.Select(a => a.AttestationId.ToString()))
             .ToHashSet(StringComparer.Ordinal);
         var blindedAuditKeys = BuildBlindedAuditKeys(collectionSnapshots, observationSnapshots, lockEntries, attestations, designs);
-        var (audit, blindedAuditSequences, auditAggregateIdsBySequence) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
+        var (audit, blindedAuditSequences, auditAggregateIdsBySequence) = await ReadAuditEntriesAsync(
+            db,
+            auditKeys,
+            blindedAuditKeys,
+            knownAt,
+            cancellationToken).ConfigureAwait(false);
 
         return new StudyExportSnapshot(
             foundStudy.Id,
@@ -924,7 +929,10 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         return keys;
     }
 
-    private static async Task<(IReadOnlyList<ObservationAuditView> Entries, IReadOnlySet<long> BlindedSequences, IReadOnlyDictionary<long, string> AggregateIdsBySequence)> ReadAuditEntriesAsync(
+    private static async Task<(
+        IReadOnlyList<ObservationAuditView> Entries,
+        IReadOnlySet<long> BlindedSequences,
+        IReadOnlyDictionary<long, string> AggregateIdsBySequence)> ReadAuditEntriesAsync(
         KernelDbContext db,
         HashSet<string> aggregateKeys,
         HashSet<string> blindedAggregateKeys,
@@ -960,10 +968,10 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Select(r => r.View.Sequence)
             .ToHashSet();
 
-        var aggregateBySequence = rows
+        var aggregateIdsBySequence = rows
             .Where(r => r.AggregateId is not null)
             .ToDictionary(r => r.View.Sequence, r => r.AggregateId!);
 
-        return ([.. rows.Select(r => r.View)], blindedSequences, aggregateBySequence);
+        return ([.. rows.Select(r => r.View)], blindedSequences, aggregateIdsBySequence);
     }
 }

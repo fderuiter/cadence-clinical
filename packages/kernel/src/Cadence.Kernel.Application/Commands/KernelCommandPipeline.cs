@@ -66,7 +66,7 @@ public sealed class KernelCommandPipeline(
             return invalid;
         }
 
-        if ((consumerActor.Actor ?? currentActor.Actor) is not { } actor)
+        if ((consumerActor.Actor ?? services.GetService<ModuleServiceActor>()?.Actor ?? currentActor.Actor) is not { } actor)
         {
             return KernelErrors.ActorUnresolved;
         }
@@ -224,7 +224,26 @@ public sealed class KernelCommandPipeline(
     /// </summary>
     internal static string ComputeRequestHash(ICommand command, Type commandType, ProposalId? proposal = null)
     {
-        var payload = commandType.FullName + "\n" + JsonSerializer.Serialize(command, commandType, JsonOptions);
+        string serializedPayload;
+        if (command is ImportProtocolDraft { RequestFingerprint: { Length: > 0 } } importDraft)
+        {
+            serializedPayload = JsonSerializer.Serialize(
+                new
+                {
+                    importDraft.TenantId,
+                    importDraft.StudyId,
+                    importDraft.RequestFingerprint,
+                    importDraft.IdempotencyKey,
+                    importDraft.ReasonForChange,
+                },
+                JsonOptions);
+        }
+        else
+        {
+            serializedPayload = JsonSerializer.Serialize(command, commandType, JsonOptions);
+        }
+
+        var payload = commandType.FullName + "\n" + serializedPayload;
         if (proposal is { } executed)
         {
             payload += "\nproposal:" + executed;
@@ -338,6 +357,7 @@ public sealed class KernelCommandPipeline(
             or ApproveProtocolVersion
             or WithdrawProtocolVersion
             or ForkProtocolVersion
+            or ImportProtocolDraft
             or RegisterCodeSystem
             or ImportCodeSystemVersion
             or DefineConcept
@@ -385,7 +405,8 @@ public sealed class KernelCommandPipeline(
             return BlueprintCommandFamilies;
         }
 
-        if (ns.StartsWith("Cadence.Apps.Execution", StringComparison.Ordinal))
+        if (ns.StartsWith("Cadence.Apps.Execution", StringComparison.Ordinal)
+            || ns.StartsWith("Cadence.Modules.Execution", StringComparison.Ordinal))
         {
             return CaptureCommandFamilies;
         }
@@ -589,6 +610,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddScoped<IKernelCommandSender, KernelCommandPipeline>();
         services.TryAddScoped<IKernelExplanationMasker, KernelExplanationMasker>();
         services.TryAddScoped<ConsumerActor>();
+        services.TryAddScoped<ModuleServiceActor>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
         services.AddTransient<ICommandHandler<RegisterPerson, PersonId>, RegisterPersonHandler>();
