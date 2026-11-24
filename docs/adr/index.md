@@ -34,6 +34,7 @@ New ADRs scaffolded via `pnpm adr:new` receive deterministic SHA-256 date-and-sl
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
+| 2660–2669 | Security (continued)                                                              |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 ## Clinical Kernel Decisions

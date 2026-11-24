@@ -9,12 +9,14 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 
 | Task                    | Command                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------ |
-| Set up a new machine    | `make wizard`                                                                  |
+| Set up a new machine    | `make wizard` (headless: `make setup`)                                         |
 | Build                   | `dotnet build Cadence.sln`                                                     |
-| Unit tests              | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| Unit tests (.NET)       | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
 | Architecture tests      | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| Frontend & docs tests   | `pnpm test`                                                                    |
 | Format check            | `dotnet format Cadence.sln --verify-no-changes`                                |
 | All quality gates       | `pnpm cadence check`                                                           |
+| Full local verification | `make verify`                                                                  |
 | Auto-fix                | `pnpm cadence fix`                                                             |
 | Traceability validation | `pnpm cadence gxp sync`                                                        |
 | New ADR                 | `pnpm cadence scaffold adr "<title>"`                                          |
@@ -32,17 +34,19 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
-make wizard            # or: bash scripts/setup_wizard.sh   (Windows: scripts/setup_wizard.ps1)
+make wizard            # interactive: bash scripts/setup_wizard.sh (Windows: scripts/setup_wizard.ps1)
+make setup             # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
 ```
 
 The wizard detects the environment (workstation, Codespaces, devcontainer, Claude Code remote session
 or CI), installs or validates the .NET 10 SDK and dev certificate, installs the pnpm workspace,
+provisions `.cadence/venv` (`detect-secrets`) and `.cadence/bin` (`actionlint`, `hadolint`, `shellcheck`),
 points Git at the repository hooks (`git config core.hooksPath .githooks`), creates `.env` from
-`.env.example`, and runs `cadence doctor`. Use `--dev` (or `-y`) to skip prompts and `--minimal` to
-skip the Playwright browser download.
+`.env.example`, and runs `cadence doctor`. `make setup` passes `--dev --minimal` to skip prompts and
+the Playwright browser download.
 
-With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the workspaces
-with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
+With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites) and developer tools
+already provisioned, restore the workspaces directly with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -71,10 +75,13 @@ dotnet build Cadence.sln
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 dotnet format Cadence.sln --verify-no-changes
+pnpm test
 pnpm cadence check
 ```
 
-Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
+`make verify` runs `pnpm cadence check`, `pnpm test`, and `pnpm cadence test` in sequence.
+
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
 `duplication`, `security`, `deid`, `vulnerabilities`.
 
@@ -165,11 +172,12 @@ Every PR updates what its change makes stale, in the same PR:
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]`.
 - Ratchet baselines (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`,
   `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`,
+  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/{direct-state-writes,permission-matrix,cross-service-isolation}.baseline.txt`,
   `baselines/deid/<unit>.baseline.txt`, `baselines/secrets/<unit>.secrets.baseline.json`, and any other
   `*.baseline.txt`) may only shrink, aggregated per gate across all shards. The `baseline-ratchet` gate fails on uncommitted
-  working-tree growth and when any commit on the branch or push range adds an entry without a matching
-  `Baseline-Growth: <path> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> - <reason>"`).
-  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+  working-tree growth and when any commit on the branch or push range adds an entry without a matching file-and-count-scoped
+  `Baseline-Growth: <path> +<count> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> +<count> - <reason>"`).
+  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` so the pre-commit hook admits it
   ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are

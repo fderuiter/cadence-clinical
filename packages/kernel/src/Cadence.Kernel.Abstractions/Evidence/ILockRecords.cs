@@ -37,8 +37,10 @@ public interface ILockRecords
 
     /// <summary>
     /// Evaluates whether <paramref name="scope"/> in <paramref name="study"/> is ready for a <see cref="LockKind.Locked"/>
-    /// assertion, listing open queries, missing required collection items, and unresolved Error validation findings.
-    /// Returns null when <paramref name="study"/> or <paramref name="scope"/> does not exist in <paramref name="study"/>.
+    /// assertion across all six readiness gates: open queries, missing required collection items, unverified observation
+    /// revisions, unsigned or superseded populated forms, unopened due/closed scheduled visits, and unresolved Error
+    /// validation findings. Returns null when <paramref name="study"/> or <paramref name="scope"/> does not exist in
+    /// <paramref name="study"/>.
     /// </summary>
     Task<LockReadinessSnapshot?> ReadReadinessAsync(
         TenantId tenant,
@@ -59,7 +61,28 @@ public interface ILockRecords
         LockKind kind,
         CancellationToken cancellationToken) =>
         Task.FromResult(new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: false, Readiness: null));
+
+    /// <summary>
+    /// Checks whether any active write-denying lock (<see cref="LockKind.Frozen"/> or <see cref="LockKind.Locked"/>)
+    /// covers <paramref name="studyCodeOrId"/> and any optional <paramref name="siteCodeOrId"/>,
+    /// <paramref name="subjectCode"/>, or <paramref name="enrollmentId"/> within <paramref name="tenant"/>.
+    /// </summary>
+    Task<ScopeWriteLockCheck> CheckScopeWriteLockAsync(
+        TenantId tenant,
+        string studyCodeOrId,
+        string? siteCodeOrId = null,
+        string? subjectCode = null,
+        Guid? enrollmentId = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null));
 }
+
+/// <summary>Result of checking whether any active write-denying lock covers a study, site, or enrollment scope.</summary>
+public sealed record ScopeWriteLockCheck(
+    bool StudyExists,
+    bool Locked,
+    LockKind? LockKind,
+    string? ScopeKind);
 
 /// <summary>What blocks a <see cref="LockKind.Locked"/> assertion at a target scope.</summary>
 public enum LockBlockerKind
@@ -69,6 +92,15 @@ public enum LockBlockerKind
 
     /// <summary>A required <c>CollectionItem</c> on an opened <c>CollectionInstance</c> in scope with no recorded value.</summary>
     MissingRequiredItem,
+
+    /// <summary>A recorded observation in scope whose current revision lacks an unretracted <see cref="AssertionKind.Verified"/> assertion.</summary>
+    UnverifiedValue,
+
+    /// <summary>A populated <c>CollectionInstance</c> in scope lacking a current <c>Approved</c> or <c>Responsibility</c> signature (including forms with only superseded signatures).</summary>
+    UnsignedForm,
+
+    /// <summary>A due or closed scheduled visit on an active enrollment in scope with an unopened form.</summary>
+    UnopenedVisit,
 
     /// <summary>An active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> validation finding in scope.</summary>
     ErrorFinding,
@@ -97,7 +129,13 @@ public sealed record LockReadinessBlocker(
     NodeRef NextTarget,
     ValidationFindingId? FindingId = null,
     string? RuleId = null,
-    string? FindingMessage = null);
+    string? FindingMessage = null,
+    int? CurrentRevision = null,
+    bool SignatureSuperseded = false,
+    string? PlannedActivityId = null,
+    string? PlannedActivityName = null,
+    DateOnly? PlannedDate = null,
+    DateOnly? WindowEnd = null);
 
 /// <summary>Readiness snapshot of a lock scope in a study.</summary>
 public sealed record LockReadinessSnapshot(
@@ -110,7 +148,10 @@ public sealed record LockReadinessSnapshot(
     int MissingRequiredItemCount,
     IReadOnlyList<LockReadinessBlocker> Blockers,
     Explanation Explanation,
-    int OpenErrorFindingCount = 0);
+    int OpenErrorFindingCount = 0,
+    int UnverifiedValueCount = 0,
+    int UnsignedFormCount = 0,
+    int UnopenedVisitCount = 0);
 
 /// <summary>Pre-check result evaluated before recording an electronic signature for <c>ApplyLock</c>.</summary>
 public sealed record LockApplyPrecheck(

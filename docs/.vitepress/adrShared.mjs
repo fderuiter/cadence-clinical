@@ -125,7 +125,12 @@ function inferBlockDomainIndex(number) {
     return 0;
   }
   if (number >= 2460 && number <= 2479) return 3;
-  if (number >= 2510 && number <= 2519) return 2;
+  if (
+    (number >= 2510 && number <= 2519) ||
+    (number >= 2660 && number <= 2669)
+  ) {
+    return 2;
+  }
   if (number >= 2530 && number <= 2539) return 5;
   if (number >= 2550 && number <= 2559) return 7;
   if (
