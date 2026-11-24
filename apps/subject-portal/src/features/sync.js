@@ -180,12 +180,21 @@ async function isolateSubmissionsIndividually(validSubmissions) {
           ? rawStatus
           : "CREATED";
 
+      const syncVerificationToken =
+        singleRes?.syncVerificationToken ??
+        singleRes?.sync_verification_token ??
+        null;
+
       updates.push({
         sequence_number: item.sequence_number,
         status: resolvedStatus,
+        ...(syncVerificationToken ? { syncVerificationToken } : {}),
         additionalFields: {
           resolved_answers: singleRes?.answers ?? item.answers,
           resolved_at: new Date().toISOString(),
+          ...(syncVerificationToken
+            ? { sync_verification_token: syncVerificationToken }
+            : {}),
           error: isServerQuarantined
             ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
             : null,
@@ -319,6 +328,12 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     return;
   }
 
+  const lockedItems = queued.filter(
+    (item) =>
+      (item.status === "DECRYPTION_ERROR" || Boolean(item.locked)) &&
+      !item.unrecoverable
+  );
+  const lockedCount = lockedItems.length;
   const decryptable = queued.filter(
     (item) => item.status !== "DECRYPTION_ERROR"
   );
@@ -369,6 +384,24 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
   if (validSubmissions.length === 0) {
     if (isManual && manualRefreshResult.refreshed) {
       state.autoSyncSuspended = false;
+    }
+    if (lockedCount > 0) {
+      const lockedBase = `Locked — enter your security PIN to sync ${lockedCount} queued survey${lockedCount === 1 ? "" : "s"}.`;
+      const txtLocked =
+        preCheckQuarantinedCount > 0
+          ? `${lockedBase} ${preCheckQuarantinedCount} survey(s) quarantined for coordinator review.`
+          : lockedBase;
+      if (statusTextEl) {
+        statusTextEl.textContent = txtLocked;
+      }
+      state.syncStatusText = txtLocked;
+      emitSyncLifecycleEvent("sync:locked", {
+        syncedCount: 0,
+        lockedCount,
+        queuedCount: lockedCount,
+      });
+      await refreshSyncViews(candidateSnapshot);
+      return;
     }
     const txtComplete =
       preCheckQuarantinedCount > 0
@@ -439,12 +472,20 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
               if (isQuar) {
                 hasQuarantined = true;
               }
+              const syncVerificationToken =
+                res.syncVerificationToken ??
+                res.sync_verification_token ??
+                null;
               updates.push({
                 sequence_number: item.sequence_number,
                 status: res.status,
+                ...(syncVerificationToken ? { syncVerificationToken } : {}),
                 additionalFields: {
                   resolved_answers: res.answers,
                   resolved_at: new Date().toISOString(),
+                  ...(syncVerificationToken
+                    ? { sync_verification_token: syncVerificationToken }
+                    : {}),
                   error: isQuar
                     ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
                     : null,
@@ -462,12 +503,20 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
               if (isQuar) {
                 hasQuarantined = true;
               }
+              const syncVerificationToken =
+                res.syncVerificationToken ??
+                res.sync_verification_token ??
+                null;
               updates.push({
                 sequence_number: item.sequence_number,
                 status: res.status,
+                ...(syncVerificationToken ? { syncVerificationToken } : {}),
                 additionalFields: {
                   resolved_answers: res.answers,
                   resolved_at: new Date().toISOString(),
+                  ...(syncVerificationToken
+                    ? { sync_verification_token: syncVerificationToken }
+                    : {}),
                   error: isQuar
                     ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
                     : null,
@@ -511,7 +560,17 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
           (s) => s.sequence_number === upd.sequence_number
         );
         if (syncedSub) {
-          confirmedSubs.push(syncedSub);
+          const resolvedSyncToken =
+            upd.syncVerificationToken ??
+            upd.additionalFields?.sync_verification_token ??
+            syncedSub.syncVerificationToken ??
+            syncedSub.sync_verification_token ??
+            undefined;
+          confirmedSubs.push(
+            resolvedSyncToken
+              ? { ...syncedSub, syncVerificationToken: resolvedSyncToken }
+              : syncedSub
+          );
           if (syncedSub.assignment_id) {
             const assign = state.assignments.find(
               (a) => a.id === syncedSub.assignment_id
@@ -551,6 +610,10 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
         try {
           const targetSubjectId = sub.subject_id || state.session.userId;
           const idempotencyKey = `seq_${sub.sequence_number}_${targetSubjectId}`;
+          const syncVerificationToken =
+            sub.syncVerificationToken ??
+            sub.sync_verification_token ??
+            undefined;
           const stipendPayload = {
             studyId: sub.study_id || state.walletStudyId || undefined,
             siteId: sub.site_id || state.walletSiteId || undefined,
@@ -558,6 +621,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
             assignmentId: sub.assignment_id,
             diaryId: sub.diary_id,
             idempotencyKey,
+            ...(syncVerificationToken ? { syncVerificationToken } : {}),
           };
 
           const disburseRes = await dispatchApi(
@@ -630,6 +694,25 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       if (statusTextEl) {
         statusTextEl.textContent = msg;
       }
+    } else if (lockedCount > 0) {
+      if (isManual) {
+        state.autoSyncSuspended = false;
+      }
+      const totalQuarantined =
+        preCheckQuarantinedCount + isolatedQuarantinedCount;
+      const quarantineSuffix =
+        totalQuarantined > 0 ? ` ${totalQuarantined} quarantined.` : "";
+      const txtLockedRemaining = `Locked — ${confirmedSubs.length} synced; enter your security PIN to sync ${lockedCount} remaining queued survey${lockedCount === 1 ? "" : "s"}.${quarantineSuffix}`;
+      if (statusTextEl) {
+        statusTextEl.textContent = txtLockedRemaining;
+      }
+      state.syncStatusText = txtLockedRemaining;
+      emitSyncLifecycleEvent("sync:locked", {
+        syncedCount: confirmedSubs.length,
+        lockedCount,
+        sequenceNumber: seqNumber,
+        queuedCount: lockedCount,
+      });
     } else {
       if (isManual) {
         state.autoSyncSuspended = false;

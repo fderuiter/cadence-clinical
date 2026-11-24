@@ -229,8 +229,8 @@
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
             <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
-            {{ letter.subject }}
-            <pre class="letter-body">{{ letter.body_markdown }}</pre>
+            {{ formatIsoDateShort(letter.created_at) }}
+            <pre class="letter-body">{{ letter.rendered_content }}</pre>
           </li>
         </ul>
       </div>
@@ -497,7 +497,7 @@ import {
   buildStepUpVerificationPayload,
   EntityLink,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
-  type EntityLinkDescriptor,
+  type EntityLinkNavigatePayload,
 } from "ui";
 import {
   ctmsApi,
@@ -548,6 +548,14 @@ interface StructuredFindingDraft {
   resolution_status: string;
 }
 
+type MonitoringVisitRow = MonitoringVisit & {
+  findings?: Array<{
+    text: string;
+    severity: string;
+    resolution_status?: string | null;
+  }> | null;
+};
+
 const props = withDefaults(
   defineProps<{
     studyCode?: string;
@@ -590,13 +598,13 @@ const canSchedule = computed(() => canScheduleMonitoringVisits(authStore));
 const canComplete = computed(() => canCompleteMonitoringVisits(authStore));
 const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));
 
-const visits = ref<MonitoringVisit[]>([]);
+const visits = ref<MonitoringVisitRow[]>([]);
 const newVisitType = ref("IMV");
 const newCraId = ref(authStore.userId || "cra_monitor");
 const newScheduledDate = ref("");
 const newReason = ref("");
 
-const activeCompleteVisit = ref<MonitoringVisit | null>(null);
+const activeCompleteVisit = ref<MonitoringVisitRow | null>(null);
 const completeActualDate = ref("");
 const completeFindingDesc = ref("");
 const structuredFindings = ref<StructuredFindingDraft[]>([]);
@@ -607,9 +615,9 @@ const activeSubjectCode = computed(() =>
   normalizeSubjectCodeValue(readRouteScopeQuery(route).subjectId)
 );
 
-function navigateToEtmfDescriptor(descriptor: EntityLinkDescriptor) {
-  if (router && descriptor.href) {
-    void router.push(descriptor.href);
+function navigateToEtmfDescriptor(payload: EntityLinkNavigatePayload) {
+  if (router && payload.href) {
+    void router.push(payload.href);
   }
 }
 
@@ -617,7 +625,7 @@ type CompiledVisitLetterRow = VisitLetterCompilationResult & {
   siteId?: string;
 };
 
-const activeCompileVisit = ref<MonitoringVisit | null>(null);
+const activeCompileVisit = ref<MonitoringVisitRow | null>(null);
 const compileTemplateName = ref("follow_up_letter");
 const compileFinalize = ref(true);
 const compilePassword = ref("");
@@ -648,10 +656,10 @@ function openCompiledLetterPreview(item: CompiledVisitLetterRow) {
   };
 }
 
-const activeSignOffVisit = ref<MonitoringVisit | null>(null);
+const activeSignOffVisit = ref<MonitoringVisitRow | null>(null);
 const signOffReason = ref("");
 
-const selectedLettersVisit = ref<MonitoringVisit | null>(null);
+const selectedLettersVisit = ref<MonitoringVisitRow | null>(null);
 const letters = ref<GeneratedVisitLetter[]>([]);
 
 async function loadVisits() {

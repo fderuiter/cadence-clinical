@@ -240,11 +240,53 @@ function buildLocalIntelligenceReport(
   };
 }
 
+/**
+ * @typedef {Object} EtmfExportJobRecord
+ * @property {string} job_id
+ * @property {string} study_id
+ * @property {string} status
+ * @property {number} progress_percentage
+ * @property {number} total_documents
+ * @property {number} processed_documents
+ * @property {string} [requested_by]
+ * @property {string} [download_url]
+ * @property {string} [expires_at]
+ * @property {string} [created_at]
+ */
+
+/**
+ * @typedef {Object} EtmfDocumentRecord
+ * @property {string} id
+ * @property {string} study_id
+ * @property {string} [site_id]
+ * @property {number} [zone]
+ * @property {string} [section]
+ * @property {string} [artifact_code]
+ * @property {string} [taxonomy_code]
+ * @property {string} [artifact_type]
+ * @property {string} [filename]
+ * @property {string} [mime_type]
+ * @property {string} [status]
+ * @property {number} [version_index]
+ * @property {string} [created_by]
+ * @property {string} [created_at]
+ * @property {string} [reason_for_change]
+ * @property {string} [signer]
+ * @property {string} [signing_timestamp]
+ * @property {string} [content_checksum]
+ * @property {string} [object_key]
+ * @property {Record<string, unknown>} [signature_manifestation]
+ */
+
 export const useEtmfStore = defineStore("etmf", {
   state: () => ({
+    /** @type {Array<Record<string, unknown>>} */
     binderTree: [],
+    /** @type {string | null} */
     selectedArtifactId: null,
+    /** @type {EtmfDocumentRecord[]} */
     documentsList: [],
+    /** @type {EtmfDocumentRecord | null} */
     activeDocument: null,
     isUploading: false,
     currentStudyId:
@@ -253,13 +295,18 @@ export const useEtmfStore = defineStore("etmf", {
     currentSiteId: "",
     scopeForbiddenGuidance: "",
     documentsError: "",
+    /** @type {Array<Record<string, unknown>>} */
     batchQueue: [],
+    /** @type {Array<Record<string, unknown>>} */
     qcQueue: [],
     isBatchUploading: false,
     batchProgress: 0,
+    /** @type {EtmfExportJobRecord | null} */
     activeExportJob: null,
+    /** @type {EtmfExportJobRecord[]} */
     exportJobs: [],
     isExportDrawerOpen: false,
+    /** @type {string[]} */
     selectedDocumentIds: [],
   }),
 

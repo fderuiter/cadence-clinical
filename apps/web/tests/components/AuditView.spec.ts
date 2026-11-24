@@ -78,17 +78,22 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     vi.clearAllMocks();
 
     vi.mocked(auditorService.getAuditLogs).mockResolvedValue({
-      items: mockLogs,
+      items: mockLogs as unknown as Awaited<
+        ReturnType<typeof auditorService.getAuditLogs>
+      >["items"],
       total_count: 2,
       limit: 20,
       offset: 0,
+      has_more: false,
     });
 
     vi.mocked(auditorService.getExecutionIntegrity).mockResolvedValue({
       status: "VERIFIED",
       ledger_entries: 2,
       last_sealed_at: "2026-08-21T11:30:00Z",
-    });
+    } as unknown as Awaited<
+      ReturnType<typeof auditorService.getExecutionIntegrity>
+    >);
 
     vi.mocked(etmfService.getDocuments).mockResolvedValue([]);
     vi.stubGlobal(
