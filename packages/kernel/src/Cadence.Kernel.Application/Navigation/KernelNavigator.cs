@@ -15,7 +15,8 @@ namespace Cadence.Kernel.Application.Navigation;
 /// <param name="Summary">The object's summary.</param>
 /// <param name="ZoomParent">The object one level up (see <see cref="ZoomRules"/>), or null for the tenant root.</param>
 /// <param name="Group">The grouping label between the parent and this object (a study site's country), or null.</param>
-public sealed record ScopeNode(NodeSummary Summary, NodeRef? ZoomParent, string? Group = null);
+/// <param name="FallbackParent">The study or tenant root to resume from when <paramref name="ZoomParent"/> is absent, or null to fall back directly to the tenant root.</param>
+public sealed record ScopeNode(NodeSummary Summary, NodeRef? ZoomParent, string? Group = null, NodeRef? FallbackParent = null);
 
 /// <summary>
 /// Read port over the kernel's scope hierarchy, implemented by kernel persistence. Reads are tenant-bound (K-ID-2)
@@ -154,11 +155,14 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
             return null;
         }
 
+        var tenantRef = NodeRef.For(tenant);
         var reversed = new List<ZoomStep>();
+        var visited = new HashSet<NodeRef>();
         var depth = 1;
         while (true)
         {
             var summary = current.Summary;
+            visited.Add(summary.Ref.Unversioned());
             reversed.Add(new ZoomStep(summary.Ref.Kind, summary.Code ?? summary.Title, summary.Ref));
             if (current.Group is { } group)
             {
@@ -176,8 +180,25 @@ public sealed class KernelNavigator(IKernelScopeGraph graph) : IKernelNavigator
                 throw new InvalidOperationException($"The zoom hierarchy above {node} does not end at a tenant within {MaxDepth} levels.");
             }
 
-            current = await graph.FindAsync(tenant, parent, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"{summary.Ref} names parent {parent}, which does not exist.");
+            var next = await graph.FindAsync(tenant, parent, cancellationToken).ConfigureAwait(false);
+            if (next is null && current.FallbackParent is { } fallback && !visited.Contains(fallback.Unversioned()))
+            {
+                next = await graph.FindAsync(tenant, fallback, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (next is null)
+            {
+                if (visited.Contains(tenantRef))
+                {
+                    reversed.Reverse();
+                    return reversed;
+                }
+
+                next = await graph.FindAsync(tenant, tenantRef, cancellationToken).ConfigureAwait(false)
+                    ?? new ScopeNode(new NodeSummary(tenantRef, tenantRef.ToString(), Code: null), ZoomParent: null);
+            }
+
+            current = next;
         }
     }
 

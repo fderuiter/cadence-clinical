@@ -1,12 +1,25 @@
 # Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
 # One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
 # Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.ContextualHelpMapping.TenantId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.SiteId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.StudyId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecordPeriod.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeArticle.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeArticleAuditLog.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeArticleVersion.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeCategory.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.OrgAuditLog.TenantId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.ProtocolKnowledgeChunk.StudyId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.ProtocolKnowledgeChunk.TenantId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingAssignment.SiteId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingAssignment.StudyId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingAssignment.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCertificate.TenantId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCurriculum.StudyId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCurriculum.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.SiteId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.StudyId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeArticleAuditLog

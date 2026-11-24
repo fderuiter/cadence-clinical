@@ -10,9 +10,11 @@ using System.Xml.Linq;
 
 using Cadence.Ddf;
 using Cadence.Kernel;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
+using Cadence.Kernel.Trust;
 
 using FluentAssertions;
 
@@ -113,6 +115,53 @@ public sealed class OdmDesignImporterTests
         result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
         result.Design!.CollectionSpecs.Should().HaveCountGreaterThanOrEqualTo(36);
         result.Design.Elements().Select(e => e.Id).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public async Task All36BundledCdiscTemplates_WithTerminologyResolver_MapItemSchemasAndCompileSnapshot()
+    {
+        var catalog = new CdiscLibraryTemplateCatalog();
+        var service = new ProtocolDesignImporterService(catalog);
+        var allIds = catalog.ListTemplates().Select(t => t.Id).ToList();
+        var csVersion = CodeSystemVersionId.New();
+        var resolvedCodelists = new HashSet<string>(StringComparer.Ordinal);
+
+        var result = await service.ImportAsync(
+            new ProtocolDesignImportRequest(TemplateIds: allIds, FallbackTitle: "CDISC Full Suite"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken,
+            resolveTerminology: (candidate, _) =>
+            {
+                if (candidate.CodelistCode is { } cl)
+                {
+                    resolvedCodelists.Add(cl);
+                }
+
+                return ValueTask.FromResult(
+                    new ProtocolTerminologyResolution(new TerminologyBinding(csVersion, candidate.CodelistCode)));
+            });
+
+        result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
+        resolvedCodelists.Should().NotBeEmpty("CDISC Library templates include CodeList-backed items");
+
+        var allItems = result.Design!.CollectionSpecs.SelectMany(s => s.Items).ToList();
+        allItems.Should().Contain(i => i.Terminology != null && i.ExpectedKind == ObservationValueKind.Coded);
+        allItems.Should().Contain(i => i.ExpectedKind == ObservationValueKind.Quantity);
+        allItems.Should().Contain(i => i.ExpectedKind == ObservationValueKind.DateTime);
+        allItems.Should().OnlyContain(i =>
+            (i.Terminology == null || i.ExpectedKind == ObservationValueKind.Coded)
+            && (i.Unit == null || i.ExpectedKind == ObservationValueKind.Quantity));
+
+        var compiler = new ProtocolFormCompiler();
+        compiler.Compile(new ProtocolDesign { Title = "Empty" }, "STUDY-EMPTY", "1").Should().BeNull();
+
+        var compiled = compiler.Compile(result.Design, "STUDY-CDISC-36", "1");
+        compiled.Should().NotBeNull();
+        compiled!.FormId.Should().Be("STUDY-CDISC-36");
+        ContentHash.IsWellFormed(compiled.FormHash).Should().BeTrue();
+        compiled.OpenRosaXml.Should().NotBeNullOrWhiteSpace().And.Contain("<h:html");
+        compiled.DdfIrJson.Should().NotBeNullOrWhiteSpace().And.Contain("STUDY-CDISC-36");
+        compiled.OdmXml.Should().NotBeNullOrWhiteSpace().And.Contain("<ODM");
     }
 
     [Fact]

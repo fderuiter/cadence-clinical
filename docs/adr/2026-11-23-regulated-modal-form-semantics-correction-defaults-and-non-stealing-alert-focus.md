@@ -1,4 +1,4 @@
-# ADR-2658: Regulated Modal Form Semantics, Post-Entry Correction Defaults, and Non-Stealing Alert Focus
+# ADR-2670: Regulated Modal Form Semantics, Post-Entry Correction Defaults, and Non-Stealing Alert Focus
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
