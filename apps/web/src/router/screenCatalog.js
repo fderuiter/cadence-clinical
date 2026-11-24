@@ -1,7 +1,11 @@
 /**
  * Metadata for workspace routes, mapping each unmigrated screen to its product family
  * in docs/strategy/PRODUCT_CATALOG.md and its pre-release delivery status.
+ *
+ * Extracted into a dedicated leaf module so UnavailableView loads catalog copy on demand
+ * without bloating initial cold-boot route availability checks.
  */
+
 export const SCREEN_CATALOG = /* @__PURE__ */ Object.freeze({
   overview: {
     title: "Overview & Orientation Hub",

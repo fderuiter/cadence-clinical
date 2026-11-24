@@ -1414,7 +1414,7 @@ const thresholdAmount = ref(600);
         .map((file) => path.relative(repoRoot, file));
       expect(violatingFiles).toEqual([]);
 
-      // ADR-2671: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
+      // ADR-2672: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
       const rawAnyOverlayRe =
         /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop|[a-z0-9-]+-drawer-overlay|[a-z0-9-]+-modal-backdrop)\b/i;
       const rawDialogElementRe =

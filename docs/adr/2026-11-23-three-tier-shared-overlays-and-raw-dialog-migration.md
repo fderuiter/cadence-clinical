@@ -1,4 +1,4 @@
-# ADR-2671: Three-Tier Shared Overlay Architecture and Raw Dialog Migration
+# ADR-2672: Three-Tier Shared Overlay Architecture and Raw Dialog Migration
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

@@ -413,9 +413,9 @@ const noRawOverlaysRule = {
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited outside packages/ui. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2671).',
+        'Raw overlay container "{{className}}" is prohibited outside packages/ui. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2672).',
       noBackdropSuppression:
-        "Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (ADR-2671).",
+        "Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (ADR-2672).",
     },
   },
   create(context) {
