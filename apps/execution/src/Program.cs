@@ -269,9 +269,12 @@ app.MapIpKitEndpoints();
 if (args.Contains("--seed"))
 {
     using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<IAuditActorScope>()
+        .RunAs(new ServiceAccount("svc:execution-db-seeder", "Seed local demo reference data"));
     var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
     var tenantScope = scope.ServiceProvider.GetService<Cadence.Database.Tenancy.ITenantScope>();
-    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope);
+    var allocationProtector = scope.ServiceProvider.GetRequiredService<IAllocationProtector>();
+    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope, allocationProtector);
     Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");
     return;
 }

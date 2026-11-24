@@ -18,6 +18,7 @@ import {
 const DATA_COLLECTION_ROLES = [
   "site_investigator",
   "crc",
+  "trial_coordinator",
   "data_manager",
   "sponsor_admin",
   "cra",
@@ -29,8 +30,19 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "monitor",
   "data_manager",
   "sponsor_admin",
+  "unblinded_statistician",
 ];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const SITE_READINESS_SITE_ROLES = [
+  "site_investigator",
+  "crc",
+  "trial_coordinator",
+  "pharmacist",
+];
+const CTMS_AUTHORIZED_ROLES = [
+  ...SITE_READINESS_SPONSOR_ROLES,
+  "pharmacist",
+  "trial_coordinator",
+];
 const NON_ONBOARDING_ROUTES = new Set([
   "landing",
   "login",
@@ -148,7 +160,7 @@ export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   }
   if (routeName === "ctms") {
     return isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
+      hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES)
       ? buildScopedWorkflowPath("/ctms", {
           studyCode,
           siteId,
@@ -188,7 +200,7 @@ export function isTourRouteAuthorized(routeName, userRoles) {
     ]);
   }
   if (routeName === "ctms") {
-    return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
+    return hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES);
   }
   if (routeName === "ssu") {
     return hasRequiredRole(userRoles, [

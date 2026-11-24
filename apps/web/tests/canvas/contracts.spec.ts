@@ -32,6 +32,7 @@ import {
   canManageRulePacks,
   canManageSiteMilestones,
   canReadEtmf,
+  canReadChainOfCustody,
   canReadRandomizationSchemes,
   canReconcileIpKits,
   canRecordChainOfCustody,
@@ -294,7 +295,7 @@ describe("Generated canvas contracts freshness & drift gate", () => {
   });
 });
 
-describe("Canvas authority mirror & all 33 can* helpers", () => {
+describe("Canvas authority mirror & all 34 can* helpers", () => {
   const { roleAliases: csharpRoleAliases } = parseRoleNormalization();
   const { permissionRoles: csharpPermissionRoles } = parsePermissionMatrix();
 
@@ -410,7 +411,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
     }
   });
 
-  it("validates all 33 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
+  it("validates all 34 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
     const exportedCanNames = Object.keys(authority)
       .filter(
         (key) =>
@@ -498,6 +499,11 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
         name: "canSeedIpKits",
         fn: canSeedIpKits,
         permission: "ip_kit_inventory:seed",
+      },
+      {
+        name: "canReadChainOfCustody",
+        fn: canReadChainOfCustody,
+        permission: "cgt_chain_of_custody:read",
       },
       {
         name: "canRecordChainOfCustody",
@@ -631,10 +637,10 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
       ...matrixBackedChecks.map((c) => c.name),
       ...serviceBackedChecks.map((c) => c.name),
     ].sort();
-    expect(exportedCanNames).toHaveLength(33);
+    expect(exportedCanNames).toHaveLength(34);
     expect(testedNames).toEqual(exportedCanNames);
 
-    // Verify all 25 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
+    // Verify all 26 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
     for (const { name, fn, permission } of matrixBackedChecks) {
       const grantedSet = new Set(csharpPermissionRoles[permission] ?? []);
       expect(grantedSet.size, `${name} (${permission})`).toBeGreaterThan(0);
@@ -687,6 +693,22 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
     ]) {
       expect(canReconcileIpKits({ rawRoles: [role] }), role).toBe(false);
     }
+
+    // cgt_chain_of_custody:read -> includes trial_coordinator, pharmacist, crc, sponsor_dm, cra, auditor; withholds unblinded_statistician
+    for (const role of [
+      "trial_coordinator",
+      "pharmacist",
+      "crc",
+      "sponsor_dm",
+      "cra",
+      "auditor",
+      "sysadmin",
+    ]) {
+      expect(canReadChainOfCustody({ rawRoles: [role] }), role).toBe(true);
+    }
+    expect(
+      canReadChainOfCustody({ rawRoles: ["unblinded_statistician"] })
+    ).toBe(false);
 
     // randomization_scheme:draft/approve -> unblinded_statistician only
     expect(

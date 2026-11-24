@@ -75,6 +75,9 @@ function buildAllDemoRoles() {
             typeof r === "string" ? r : r.name
           ),
           "CRC",
+          "Trial Coordinator",
+          "Unblinded Statistician",
+          "Site Pharmacist",
           "Principal Investigator",
           "Safety Reviewer",
           "TMF Auditor",
@@ -109,6 +112,21 @@ function resolveDemoPersonaScope(personaKey) {
     },
     site_crc: {
       rawRoles: ["Site Investigator", "CRC"],
+      siteIds: ["SITE-101"],
+      hasAllStudiesScope: false,
+    },
+    trial_coordinator: {
+      rawRoles: ["trial_coordinator"],
+      siteIds: ["SITE-101"],
+      hasAllStudiesScope: false,
+    },
+    unblinded_statistician: {
+      rawRoles: ["unblinded_statistician"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    pharmacist: {
+      rawRoles: ["pharmacist"],
       siteIds: ["SITE-101"],
       hasAllStudiesScope: false,
     },
@@ -153,6 +171,9 @@ const ADMIN_ROLE_ALIASES = [
   "principal_investigator",
   "site_investigator",
   "crc",
+  "trial_coordinator",
+  "unblinded_statistician",
+  "pharmacist",
   "cra",
   "monitor",
   "safety_reviewer",
@@ -180,6 +201,8 @@ const BASELINE_CAPABILITIES = [
 export const ROLE_ALIASES = {
   crc: ["site_investigator", "crc"],
   trial_coordinator: ["site_investigator", "crc", "trial_coordinator"],
+  unblinded_statistician: ["unblinded_statistician"],
+  pharmacist: ["pharmacist"],
   site_investigator: ["site_investigator", "crc"],
   principal_investigator: [
     "principal_investigator",
@@ -224,14 +247,29 @@ export const PERSONA_PRESETS = [
     requires: ["data_manager"],
   },
   {
+    key: "trial_coordinator",
+    label: "Trial Coordinator",
+    requires: ["trial_coordinator"],
+  },
+  {
     key: "site_crc",
     label: "🩺 Site Coordinator / CRC",
-    requires: ["site_investigator", "crc", "trial_coordinator"],
+    requires: ["site_investigator", "crc"],
   },
   {
     key: "site_investigator",
     label: "🏥 Principal Investigator",
     requires: ["principal_investigator"],
+  },
+  {
+    key: "unblinded_statistician",
+    label: "Unblinded Statistician",
+    requires: ["unblinded_statistician"],
+  },
+  {
+    key: "pharmacist",
+    label: "Site Pharmacist",
+    requires: ["pharmacist"],
   },
   {
     key: "cra_monitor",
@@ -264,6 +302,15 @@ export function normalizeRole(role) {
   }
   if (normalized === "admin" || normalized === "super_admin") {
     return "sponsor_admin";
+  }
+  if (normalized === "lead_unblinded_statistician") {
+    return "unblinded_statistician";
+  }
+  if (
+    normalized === "site_pharmacist" ||
+    normalized === "unblinded_pharmacist"
+  ) {
+    return "pharmacist";
   }
   return normalized;
 }

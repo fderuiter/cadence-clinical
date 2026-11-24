@@ -45,7 +45,7 @@ signatures and audit digests shared by every Cadence service.
   gets `403` ([ADR-2510](../../docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md)).
   Routes are denied by default: the fallback policy refuses any route that declares neither a permission,
   `RequireSignedInCaller(reason)` (any signed caller, with the reason kept on the endpoint) nor `AllowAnonymous()`.
-  Module permissions live in `PermissionMatrix.<Module>.cs`, and a permission no role holds is refused (`RoleNormalization.ROLE_TRIAL_COORDINATOR` provides self-service trial subject and eCRF permissions outside `SiteAccessEvaluator.SITE_SCOPED_ROLES` while keeping `sponsor_dm` read-only separation of duties intact).
+  Module permissions live in `PermissionMatrix.<Module>.cs`, and a permission no role holds is refused (`RoleNormalization.ROLE_TRIAL_COORDINATOR` provides self-service trial subject, eCRF, randomisation, site-compliance, and CGT custody read permissions outside `SiteAccessEvaluator.SITE_SCOPED_ROLES` while keeping `sponsor_dm` read-only separation of duties intact; `RoleNormalization.ROLE_UNBLINDED_STATISTICIAN` holds `subject_enrollment:read` and `randomization_scheme` capabilities without CGT chain-of-custody grants).
   Standalone routes also declare explicit `EndpointScopeMetadata` via `RequireTenantScope()`, `RequireCallerStudyScope()`,
   `RequireCallerStudyAndSiteScope()`, `RequireStudyScope(routeParameter)` and `RequireSiteScope(routeParameter)`; study assignments
   arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim. Handlers check scope that the route path cannot name
