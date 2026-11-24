@@ -620,6 +620,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
 | [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
 | [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
+| [ADR-2659: Kernel Node History, Audit Entry Resolution, and Shared AuditLogViewer](adr/2026-11-23-kernel-node-history-and-shared-audit-viewer.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

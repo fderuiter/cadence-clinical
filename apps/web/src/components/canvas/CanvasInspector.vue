@@ -385,6 +385,68 @@
           </div>
         </section>
 
+        <section
+          v-else-if="currentVerb === 'history' && kernelRef"
+          id="kernel-history"
+          class="sdv kernel-history-panel"
+          aria-labelledby="kernel-history-title"
+        >
+          <div class="kernel-history-header">
+            <h3 id="kernel-history-title">History</h3>
+            <details class="inspector-ref-details kernel-history-window">
+              <summary class="inspector-ref-summary">As-of filter</summary>
+              <div class="kernel-history-filters">
+                <label class="kernel-history-filter-field">
+                  <span>Valid at (ISO UTC)</span>
+                  <input
+                    id="kernel-history-valid-at"
+                    v-model.trim="historyValidAt"
+                    type="text"
+                    placeholder="e.g. 2026-11-20T15:00:00Z"
+                    @change="loadNodeHistory()"
+                  />
+                </label>
+                <label class="kernel-history-filter-field">
+                  <span>Known at (ISO UTC)</span>
+                  <input
+                    id="kernel-history-known-at"
+                    v-model.trim="historyKnownAt"
+                    type="text"
+                    placeholder="e.g. 2026-11-20T15:00:00Z"
+                    @change="loadNodeHistory()"
+                  />
+                </label>
+              </div>
+            </details>
+          </div>
+          <p
+            v-if="historyLoading"
+            id="kernel-history-loading"
+            class="inspector-empty"
+          >
+            Loading bitemporal audit and attestation history…
+          </p>
+          <CanvasErrorAlert
+            v-else-if="historyError"
+            message="History couldn't be loaded right now."
+            :detail="historyError"
+            summary-label="Technical details"
+            detail-id="kernel-history-error"
+            @retry="loadNodeHistory()"
+            @explain="openExplain()"
+          />
+          <AuditLogViewer
+            v-else
+            id="kernel-history-viewer"
+            heading-tag="h4"
+            compact
+            hide-header
+            :entries="adaptedHistoryEntries"
+            :fetch-audit-entry="fetchInspectorAuditEntry"
+            empty-message="No audit, correction, or attestation history recorded for this object in the selected window."
+          />
+        </section>
+
         <dl v-else-if="protocolVersion" id="inspector-version" class="details">
           <dt>Status</dt>
           <dd id="inspector-version-status">
@@ -731,6 +793,7 @@
 </template>
 
 <script setup lang="ts">
+import { AuditLogViewer, adaptKernelHistoryEntries } from "ui";
 import {
   computed,
   nextTick,
@@ -740,6 +803,7 @@ import {
   watch,
 } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { useProvideCanvasEntityResolver } from "../../canvas/entityLinkResolver";
 import {
   participantStateChanges,
   participantStateLabel,
@@ -762,6 +826,7 @@ import {
   kernelApi,
   type KernelCommand,
   type KernelNode,
+  type KernelNodeHistory,
   type KernelPlannedVisit,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
@@ -1055,8 +1120,11 @@ const canSimulate = computed(() =>
   )
 );
 
+useProvideCanvasEntityResolver();
+
 interface Verb {
-  id: "trace" | "impact" | "explain" | "simulate" | "act" | "assist";
+  id:
+    "trace" | "impact" | "history" | "explain" | "simulate" | "act" | "assist";
   label: string;
   live: boolean;
   note: string;
@@ -1074,6 +1142,12 @@ const verbs = computed<Verb[]>(() => [
     label: "Impact",
     live: Boolean(kernelRef.value),
     note: `Impact shows downstream dependent records, when available — ${NO_RECORD_REF}`,
+  },
+  {
+    id: "history",
+    label: "History",
+    live: Boolean(kernelRef.value),
+    note: `History shows audit, correction, supersession, and attestation events, when available — ${NO_RECORD_REF}`,
   },
   {
     id: "explain",
@@ -1106,7 +1180,14 @@ const verbs = computed<Verb[]>(() => [
 ]);
 
 type VerbId =
-  "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
+  | "details"
+  | "trace"
+  | "impact"
+  | "history"
+  | "act"
+  | "explain"
+  | "simulate"
+  | "assist";
 const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
@@ -1175,6 +1256,58 @@ async function runSimulation() {
   }
 }
 
+const historyResult = ref<KernelNodeHistory | null>(null);
+const historyLoading = ref(false);
+const historyError = ref("");
+const historyValidAt = ref("");
+const historyKnownAt = ref("");
+let historyRequest = 0;
+
+const adaptedHistoryEntries = computed(() =>
+  adaptKernelHistoryEntries(historyResult.value?.entries ?? [])
+);
+
+async function fetchInspectorAuditEntry(auditRef: string) {
+  if (typeof kernelApi.getAuditEntry !== "function") return null;
+  return await kernelApi.getAuditEntry(auditRef);
+}
+
+async function loadNodeHistory() {
+  if (!kernelRef.value || typeof kernelApi.getNodeHistory !== "function") {
+    return;
+  }
+  const request = ++historyRequest;
+  historyLoading.value = true;
+  historyError.value = "";
+  try {
+    const result = await kernelApi.getNodeHistory(kernelRef.value, {
+      validAt: historyValidAt.value || undefined,
+      knownAt: historyKnownAt.value || undefined,
+    });
+    if (request !== historyRequest) return;
+    historyResult.value = result;
+    const refsToResolve: Array<string | null | undefined> = [];
+    for (const item of result.entries ?? []) {
+      if (item.mask) continue;
+      refsToResolve.push(
+        item.target_ref,
+        item.actor_ref,
+        item.audit_entry_ref,
+        item.attestation?.attestation_ref,
+        item.attestation?.actor_ref
+      );
+    }
+    ensureNodesResolved(refsToResolve);
+  } catch (e: unknown) {
+    if (request !== historyRequest) return;
+    historyError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    if (request === historyRequest) {
+      historyLoading.value = false;
+    }
+  }
+}
+
 watch(currentVerb, (verb) => {
   if (
     verb === "simulate" &&
@@ -1183,6 +1316,14 @@ watch(currentVerb, (verb) => {
     !simulationLoading.value
   ) {
     void runSimulation();
+  }
+  if (
+    verb === "history" &&
+    kernelRef.value &&
+    !historyResult.value &&
+    !historyLoading.value
+  ) {
+    void loadNodeHistory();
   }
 });
 const shownVerbNote = computed(
@@ -1275,6 +1416,10 @@ watch(
     simulationResult.value = null;
     simulationLoading.value = false;
     simulationError.value = "";
+    historyRequest++;
+    historyResult.value = null;
+    historyLoading.value = false;
+    historyError.value = "";
   }
 );
 
@@ -1663,5 +1808,37 @@ watch(aiEnabled, (on) => {
   align-items: center;
   gap: 6px;
   font-size: 0.86rem;
+}
+
+.kernel-history-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kernel-history-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.kernel-history-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+  color: var(--neutral-dark);
+}
+
+.kernel-history-filter-field input {
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 </style>

@@ -1434,6 +1434,9 @@ export function createWebDemoStore() {
         "designer.lead",
       subject_kind: subjectKind,
       subject: subjectRef,
+      reason_for_change: "Recorded clinical workflow update",
+      audit_entry_ref: `audit_entry:${makeUuidFromIndex("00000950", idx)}`,
+      attestation_ref: null,
       mask: null,
       correlation_id: makeUuidFromIndex("00000990", idx),
     });
@@ -1779,6 +1782,18 @@ export function createWebDemoStore() {
     },
 
     getNode(nodeRef, caller = null) {
+      if (String(nodeRef).startsWith("audit_entry:")) {
+        const suffix = String(nodeRef).split(":")[1]?.slice(-4) || "0001";
+        const seq = Number.parseInt(suffix, 16) || 1;
+        return {
+          ref: nodeRef,
+          kind: "audit_entry",
+          title: `Audit event #${seq}`,
+          code: `#${seq}`,
+          status: "Committed",
+          mask: null,
+        };
+      }
       if (String(nodeRef).startsWith("study:")) {
         return cloneJson(getStudyByRefOrCode(nodeRef));
       }
@@ -3225,6 +3240,113 @@ export function createWebDemoStore() {
           },
         ],
         truncated: false,
+      };
+    },
+
+    getNodeHistory(
+      nodeRef,
+      { validAt = null, knownAt = null } = {},
+      caller = null
+    ) {
+      const normalized = String(nodeRef || DEFAULT_STUDY_REF);
+      const kind = normalized.split(":")[0] || "study";
+      const resolvedNode = this.getNode(normalized, caller);
+      if (resolvedNode?.mask) {
+        return {
+          node: normalized,
+          mask: resolvedNode.mask,
+          valid_at: validAt,
+          known_at: knownAt,
+          entries: [
+            {
+              entry_id: "masked-demo-1",
+              audit_entry_ref: null,
+              event_kind: "Restricted",
+              action: "Restricted",
+              recorded_at: "2026-08-01T09:15:00Z",
+              valid_at: null,
+              actor_id: null,
+              actor_ref: null,
+              actor_kind: null,
+              command_type: null,
+              outcome: null,
+              reason_for_change: null,
+              target_ref: null,
+              target_kind: kind,
+              version: null,
+              summary: null,
+              field_changes: [],
+              attestation: null,
+              sequence: null,
+              hash: null,
+              predecessor_hash: null,
+              mask: resolvedNode.mask,
+            },
+          ],
+        };
+      }
+      const auditRef = `audit_entry:${makeUuidFromIndex("00000950", 1)}`;
+      return {
+        node: normalized,
+        mask: null,
+        valid_at: validAt,
+        known_at: knownAt,
+        entries: [
+          {
+            entry_id: auditRef,
+            audit_entry_ref: auditRef,
+            event_kind: "Recorded",
+            action: "Recorded",
+            recorded_at: "2026-08-01T09:15:00Z",
+            valid_at: "2026-08-01T09:15:00Z",
+            actor_id: "usr-crc-01",
+            actor_ref: null,
+            actor_kind: "Person",
+            command_type: "RecordClinicalObject",
+            outcome: "Committed",
+            reason_for_change: "Initial GxP clinical capture",
+            target_ref: normalized,
+            target_kind: kind,
+            version: 1,
+            summary: `Recorded ${kind.replace(/_/g, " ")}`,
+            field_changes: [],
+            attestation: null,
+            sequence: 1,
+            hash: "sha256:9f86d081884c7d659a2feaa0c55ad015",
+            predecessor_hash: null,
+            mask: null,
+          },
+        ],
+      };
+    },
+
+    getAuditEntry(auditRef, _caller = null) {
+      const normalized = String(auditRef || "").startsWith("audit_entry:")
+        ? String(auditRef)
+        : `audit_entry:${auditRef}`;
+      return {
+        audit_entry_ref: normalized,
+        activity_id: makeUuidFromIndex("00000960", 1),
+        recorded_at: "2026-08-01T09:15:00Z",
+        valid_at: "2026-08-01T09:15:00Z",
+        actor_id: "usr-crc-01",
+        actor_ref: null,
+        actor_kind: "Person",
+        command_type: "RecordClinicalObject",
+        action: "Recorded",
+        outcome: "Committed",
+        reason_for_change: "Initial GxP clinical capture",
+        target_ref: DEFAULT_STUDY_REF,
+        target_kind: "study",
+        version: 1,
+        summary: "Recorded study event",
+        field_changes: [],
+        attestation: null,
+        correlation_id: makeUuidFromIndex("00000990", 1),
+        sequence: 1,
+        hash: "sha256:9f86d081884c7d659a2feaa0c55ad015",
+        predecessor_hash: null,
+        mask: null,
       };
     },
 

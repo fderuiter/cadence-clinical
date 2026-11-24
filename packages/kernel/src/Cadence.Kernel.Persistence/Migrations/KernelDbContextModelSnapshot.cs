@@ -3615,6 +3615,16 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("actor_id");
 
+                    b.Property<string>("AttestationRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("attestation_ref");
+
+                    b.Property<string>("AuditEntryRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("audit_entry_ref");
+
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("uuid")
                         .HasColumnName("correlation_id");
@@ -3628,6 +3638,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.Property<DateTimeOffset?>("OccurredValid")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("occurred_valid");
+
+                    b.Property<string>("ReasonForChange")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("reason_for_change");
 
                     b.Property<DateTimeOffset>("Recorded")
                         .HasColumnType("timestamp with time zone")

@@ -283,6 +283,7 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             || StartsWithSegment(path, "/api/v1/kernel/entitlements")
             || StartsWithSegment(path, "/api/v1/kernel/locks")
             || StartsWithSegment(path, "/api/v1/kernel/nodes")
+            || StartsWithSegment(path, "/api/v1/kernel/audit-entries")
             || StartsWithSegment(path, "/api/v1/kernel/authorization")
             || StartsWithSegment(path, "/api/v1/kernel/search")
             || StartsWithSegment(path, "/api/v1/kernel/activity"))

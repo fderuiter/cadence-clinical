@@ -95,3 +95,13 @@ export function observationNodeRef(value: unknown): string | null {
     ? formatNodeRef({ kind: "observation", id: parsed.id })
     : null;
 }
+
+/** Canonical unversioned `audit_entry:<id>` reference from an audit entry UUID or NodeRef, or null. */
+export function auditEntryNodeRef(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  const parsed = parseNodeRef(trimmed) ?? tryNodeRef("audit_entry", trimmed);
+  return parsed?.kind === "audit_entry"
+    ? formatNodeRef({ kind: "audit_entry", id: parsed.id })
+    : null;
+}

@@ -542,6 +542,7 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       "verb-details",
       "verb-trace",
       "verb-impact",
+      "verb-history",
       "verb-explain",
       "verb-simulate",
       "verb-act",

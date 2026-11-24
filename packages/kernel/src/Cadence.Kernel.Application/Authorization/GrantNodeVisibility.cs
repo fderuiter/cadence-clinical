@@ -111,7 +111,7 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
 
         var evidenceCandidates = distinct
             .Select(n => n.Unversioned())
-            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery)
+            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery or NodeKinds.AuditEntry)
             .Distinct()
             .ToList();
 

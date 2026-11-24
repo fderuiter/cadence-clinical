@@ -10,15 +10,70 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onMounted } from "vue";
+import {
+  computed,
+  defineAsyncComponent,
+  getCurrentInstance,
+  onMounted,
+  shallowRef,
+} from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute } from "vue-router";
+import { provideEntityLinkResolver } from "ui";
 import AppShell from "./components/AppShell.vue";
 import ToastHost from "./components/ToastHost.vue";
 import { useAuthStore } from "./stores/auth.js";
 import { useConfirmStore } from "./stores/confirm.js";
 import { isDemoBuild } from "./utils/demoMode.js";
 import "./style.css";
+
+const appInstance = getCurrentInstance();
+const lazyEntityResolver = shallowRef(null);
+let entityResolverPromise = null;
+
+function ensureEntityResolverLoaded() {
+  if (!entityResolverPromise) {
+    entityResolverPromise = import("./canvas/entityLinkResolver").then(
+      ({ createCanvasEntityResolver }) => {
+        const impl = createCanvasEntityResolver(
+          () =>
+            appInstance?.appContext?.config?.globalProperties?.$router ?? null,
+          () =>
+            appInstance?.appContext?.config?.globalProperties?.$route ?? null
+        );
+        lazyEntityResolver.value = impl;
+        return impl;
+      }
+    );
+  }
+  return entityResolverPromise;
+}
+
+provideEntityLinkResolver({
+  resolve: (input) => {
+    const impl = lazyEntityResolver.value;
+    if (impl) {
+      return impl.resolve(input);
+    }
+    ensureEntityResolverLoaded();
+    return null;
+  },
+  navigate: async (payload) => {
+    const impl =
+      lazyEntityResolver.value ?? (await ensureEntityResolverLoaded());
+    await impl.navigate(payload);
+  },
+  openFullView: async (payload) => {
+    const impl =
+      lazyEntityResolver.value ?? (await ensureEntityResolverLoaded());
+    await impl.openFullView(payload);
+  },
+  fetchAuditEntry: async (auditRef) => {
+    const impl =
+      lazyEntityResolver.value ?? (await ensureEntityResolverLoaded());
+    return await impl.fetchAuditEntry(auditRef);
+  },
+});
 
 const ContextualHelpDrawer = defineAsyncComponent(
   () => import("./components/ContextualHelpDrawer.vue")

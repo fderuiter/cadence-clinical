@@ -182,6 +182,9 @@ public sealed record ActivityPage(IReadOnlyList<ActivityEntry> Entries, Activity
 /// <param name="Subject">The object, pinned to the version the event produced; null when masked or absent.</param>
 /// <param name="Masked">Why the object is hidden from this reader, or null when it is visible.</param>
 /// <param name="CorrelationId">Groups entries caused by one request.</param>
+/// <param name="ReasonForChange">The accountable actor's stated reason for change, or null when absent or masked.</param>
+/// <param name="AuditEntryRef">The primary <c>audit_entry</c> NodeRef written in the same activity, or null when absent or masked.</param>
+/// <param name="AttestationRef">The <c>attestation</c> NodeRef bound to the activity, or null when absent or masked.</param>
 public sealed record ActivityEntry(
     Guid EventId,
     string Type,
@@ -192,4 +195,7 @@ public sealed record ActivityEntry(
     string? SubjectKind,
     NodeRef? Subject,
     MaskReason? Masked,
-    Guid CorrelationId);
+    Guid CorrelationId,
+    string? ReasonForChange = null,
+    NodeRef? AuditEntryRef = null,
+    NodeRef? AttestationRef = null);

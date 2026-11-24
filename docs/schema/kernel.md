@@ -13,9 +13,12 @@ Entity: `ActivityEntryRecord`
 | `event_id` | `uuid` | no |  | PK |
 | `tenant_id` | `uuid` | no |  | PK |
 | `actor_id` | `character varying(255)` | no |  |  |
+| `attestation_ref` | `character varying(128)` | yes |  |  |
+| `audit_entry_ref` | `character varying(128)` | yes |  |  |
 | `correlation_id` | `uuid` | no |  |  |
 | `family` | `character varying(32)` | no |  |  |
 | `occurred_valid` | `timestamp with time zone` | yes |  |  |
+| `reason_for_change` | `character varying(2000)` | yes |  |  |
 | `recorded` | `timestamp with time zone` | no |  |  |
 | `scope` | `text[]` | no |  |  |
 | `subject` | `character varying(128)` | yes |  |  |

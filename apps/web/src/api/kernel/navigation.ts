@@ -28,6 +28,16 @@ export type KernelActivityEntry =
   KernelSchemas["Kernel_KernelActivityEntryResponse"];
 export type KernelActivityPage =
   KernelSchemas["Kernel_KernelActivityPageResponse"];
+export type KernelHistoryFieldChange =
+  KernelSchemas["Kernel_KernelHistoryFieldChangeResponse"];
+export type KernelHistoryAttestation =
+  KernelSchemas["Kernel_KernelHistoryAttestationResponse"];
+export type KernelHistoryEntry =
+  KernelSchemas["Kernel_KernelHistoryEntryResponse"];
+export type KernelNodeHistory =
+  KernelSchemas["Kernel_KernelNodeHistoryResponse"];
+export type KernelAuditEntryDetail =
+  KernelSchemas["Kernel_KernelAuditEntryDetailResponse"];
 
 /** The event families of the kernel's activity stream (spec §5.2). */
 export type KernelEventFamily =
@@ -167,6 +177,33 @@ export const kernelNavigationApi = {
     return unwrapResponse(
       kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/dependents", {
         params: { path: { nodeRef }, query: windowQuery(window) },
+      })
+    );
+  },
+
+  /**
+   * Bitemporal audit, correction, supersession, and attestation history for a single object
+   * (GET /api/v1/kernel/nodes/{nodeRef}/history, PX-12). Masked entries preserve timeline position.
+   */
+  getNodeHistory(
+    nodeRef: string,
+    window: KernelLineageWindow = {}
+  ): Promise<KernelNodeHistory> {
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/history", {
+        params: { path: { nodeRef }, query: windowQuery(window) },
+      })
+    );
+  },
+
+  /**
+   * Tamper-evident audit record detail for the Audit Event peek drawer
+   * (GET /api/v1/kernel/audit-entries/{auditRef}, K-AUTH-4).
+   */
+  getAuditEntry(auditRef: string): Promise<KernelAuditEntryDetail> {
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/audit-entries/{auditRef}", {
+        params: { path: { auditRef } },
       })
     );
   },

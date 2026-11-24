@@ -275,15 +275,42 @@
             <div class="meta-grid">
               <div class="meta-item">
                 <span class="meta-label">Study ID</span>
-                <span class="meta-value">{{ ticket.study_id || "N/A" }}</span>
+                <span class="meta-value" data-testid="ticket-study-link">
+                  <EntityLink
+                    v-if="ticket.study_id"
+                    entity-type="study"
+                    :entity-id="ticket.study_id"
+                    :label="ticket.study_id"
+                    kind-label=""
+                  />
+                  <template v-else>N/A</template>
+                </span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Site ID</span>
-                <span class="meta-value">{{ ticket.site_id || "N/A" }}</span>
+                <span class="meta-value" data-testid="ticket-site-link">
+                  <EntityLink
+                    v-if="ticket.site_id"
+                    entity-type="site"
+                    :entity-id="ticket.site_id"
+                    :label="ticket.site_id"
+                    kind-label=""
+                  />
+                  <template v-else>N/A</template>
+                </span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Subject ID</span>
-                <span class="meta-value">{{ ticket.subject_id || "N/A" }}</span>
+                <span class="meta-value" data-testid="ticket-subject-link">
+                  <EntityLink
+                    v-if="ticket.subject_id"
+                    entity-type="subject"
+                    :entity-id="ticket.subject_id"
+                    :label="ticket.subject_id"
+                    kind-label=""
+                  />
+                  <template v-else>N/A</template>
+                </span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Priority</span>
@@ -385,9 +412,16 @@
 
           <div v-if="relatedEntityType" class="section-card">
             <h4 class="card-title">Cross-App Entity Linkage</h4>
-            <div class="entity-badge-box">
-              <span class="entity-type-badge">{{ relatedEntityType }}</span>
-              <span class="entity-id-value">{{ relatedEntityId }}</span>
+            <div
+              class="entity-badge-box"
+              data-testid="ticket-related-entity-link"
+            >
+              <EntityLink
+                :entity-type="relatedEntityType"
+                :entity-id="relatedEntityId"
+                :label="relatedEntityId || relatedEntityType"
+                :kind-label="relatedEntityType"
+              />
             </div>
           </div>
 
@@ -710,27 +744,12 @@
               <SkeletonLoader type="timeline" :count="3" />
             </template>
             <template v-else-if="auditLogs && auditLogs.length > 0">
-              <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
-                <div class="audit-bullet" />
-                <div class="audit-content">
-                  <div class="audit-row-header">
-                    <span class="audit-action">{{ log.action }}</span>
-                    <span class="audit-user">{{ log.user_id }}</span>
-                    <span class="audit-time">{{
-                      formatDate(log.timestamp)
-                    }}</span>
-                  </div>
-                  <div class="audit-reason">
-                    Reason: {{ log.reason_for_change || log.change_reason }}
-                  </div>
-                  <div v-if="log.block_hash" class="audit-hash">
-                    Ledger Hash:
-                    <code
-                      >{{ String(log.block_hash).substring(0, 16) }}...</code
-                    >
-                  </div>
-                </div>
-              </div>
+              <AuditLogViewer
+                heading-tag="h4"
+                compact
+                :entries="adaptedTicketAuditLogs"
+                title="Ticket 21 CFR Part 11 Audit Trail"
+              />
             </template>
             <template v-else>
               <EmptyState
@@ -842,7 +861,15 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { ClinicalTabs, EmptyState, useFocusTrap } from "ui";
+import {
+  AuditLogViewer,
+  ClinicalTabs,
+  EmptyState,
+  EntityLink,
+  adaptTicketAuditLogs,
+  useFocusTrap,
+} from "ui";
+import { useProvideCanvasEntityResolver } from "../../canvas/entityLinkResolver";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore, normalizeRole } from "../../stores/auth";
@@ -917,6 +944,11 @@ const emit = defineEmits([
   "signed",
 ]);
 
+useProvideCanvasEntityResolver(() => ({
+  studyCode: props.ticket?.study_id || null,
+  siteId: props.ticket?.site_id || null,
+  subjectId: props.ticket?.subject_id || null,
+}));
 const demoBuild = isDemoBuild();
 const authStore = useAuthStore();
 const drawerRef = ref(null);
@@ -990,6 +1022,13 @@ const relatedEntityType = computed(
 );
 const relatedEntityId = computed(
   () => props.ticket?.related_entity_id || props.ticket?.entity_id || ""
+);
+const adaptedTicketAuditLogs = computed(() =>
+  adaptTicketAuditLogs(props.auditLogs || [], {
+    id: props.ticket?.id || "",
+    relatedEntityType: relatedEntityType.value,
+    relatedEntityId: relatedEntityId.value,
+  })
 );
 
 // AI RAG Triage and Citation State

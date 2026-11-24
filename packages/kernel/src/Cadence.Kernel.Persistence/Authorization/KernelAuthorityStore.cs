@@ -15,6 +15,7 @@ using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
@@ -62,6 +63,7 @@ internal sealed class KernelAuthorityStore(
         NodeKinds.Observation,
         NodeKinds.Assertion,
         NodeKinds.Attestation,
+        NodeKinds.AuditEntry,
         NodeKinds.ValidationFinding);
 
     private const string BlindedMarkerRegexSql =
@@ -800,10 +802,16 @@ internal sealed class KernelAuthorityStore(
             .Select(n => n.Id)
             .Distinct()
             .ToList();
+        var auditEntryIds = distinct
+            .Where(n => n.Kind == NodeKinds.AuditEntry)
+            .Select(n => n.Id)
+            .Distinct()
+            .ToArray();
         if (obsIds.Length == 0
             && findingIds.Length == 0
             && assertionIds.Count == 0
-            && formQueryIds.Count == 0)
+            && formQueryIds.Count == 0
+            && auditEntryIds.Length == 0)
         {
             return new Dictionary<NodeRef, EvidenceNodeClassification>();
         }
@@ -814,6 +822,10 @@ internal sealed class KernelAuthorityStore(
         await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            var auditTargets = await ResolveAuditEntryTargetsInOpenConnectionAsync(db, tenant, auditEntryIds, cancellationToken)
+                .ConfigureAwait(false);
+            MergeAuditTargetsIntoEvidenceInputs(auditTargets, ref obsIds, ref findingIds, assertionIds, formQueryIds);
+
             await ClassifyEvidenceInOpenConnectionAsync(
                     db,
                     tenant,
@@ -825,6 +837,7 @@ internal sealed class KernelAuthorityStore(
                     resolvedEvidence,
                     cancellationToken)
                 .ConfigureAwait(false);
+            PropagateAuditEntryEvidence(auditTargets, resolvedPaths, resolvedEvidence);
         }
         finally
         {
@@ -873,6 +886,7 @@ internal sealed class KernelAuthorityStore(
                 var findingIds = Array.Empty<Guid>();
                 var assertionIds = new List<AssertionId>();
                 var formQueryIds = new List<Guid>();
+                var auditEntryIds = Array.Empty<Guid>();
 
                 foreach (var group in byKind)
                 {
@@ -891,12 +905,21 @@ internal sealed class KernelAuthorityStore(
                         case NodeKinds.FormQuery:
                             formQueryIds = [.. ids];
                             break;
+                        case NodeKinds.AuditEntry:
+                            auditEntryIds = ids;
+                            await LoadPathsForKindAsync(db, tenant, group.Key, ids, resolvedPaths, dummyPotentiallyBlinded, cancellationToken)
+                                .ConfigureAwait(false);
+                            break;
                         default:
                             await LoadPathsForKindAsync(db, tenant, group.Key, ids, resolvedPaths, dummyPotentiallyBlinded, cancellationToken)
                                 .ConfigureAwait(false);
                             break;
                     }
                 }
+
+                var auditTargets = await ResolveAuditEntryTargetsInOpenConnectionAsync(db, tenant, auditEntryIds, cancellationToken)
+                    .ConfigureAwait(false);
+                MergeAuditTargetsIntoEvidenceInputs(auditTargets, ref obsIds, ref findingIds, assertionIds, formQueryIds);
 
                 if (obsIds.Length > 0 || findingIds.Length > 0 || assertionIds.Count > 0 || formQueryIds.Count > 0)
                 {
@@ -911,6 +934,7 @@ internal sealed class KernelAuthorityStore(
                             resolvedEvidence,
                             cancellationToken)
                         .ConfigureAwait(false);
+                    PropagateAuditEntryEvidence(auditTargets, resolvedPaths, resolvedEvidence);
                 }
             }
             finally
@@ -1777,6 +1801,10 @@ internal sealed class KernelAuthorityStore(
                 await LoadRawPathsAsync(db, tenant, kind, rawIds, ValidationFindingPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
+            case NodeKinds.AuditEntry:
+                await LoadAuditEntryPathsAsync(db, tenant, rawIds, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
+                break;
+
             default:
                 // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across
                 // studies), task configurations and reference data belong to no organization or study.
@@ -1904,5 +1932,208 @@ internal sealed class KernelAuthorityStore(
         var study = studyId is { } studyGuid ? StudyId.FromGuid(studyGuid) : (StudyId?)null;
         var studySite = studySiteId is { } siteGuid ? StudySiteId.FromGuid(siteGuid) : (StudySiteId?)null;
         return new ScopePath(OrganizationId.FromGuid(organization), study, country, studySite);
+    }
+
+    private static async Task<Dictionary<Guid, NodeRef>> ResolveAuditEntryTargetsInOpenConnectionAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        Guid[] auditEntryIds,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, NodeRef>();
+        if (auditEntryIds.Length == 0)
+        {
+            return result;
+        }
+
+        var rows = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.TenantId == tenant && auditEntryIds.Contains(a.Id))
+            .Select(a => new { a.Id, a.AggregateType, a.AggregateId, a.ActivityId })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        if (rows.Count == 0)
+        {
+            return result;
+        }
+
+        var attestationTargets = new Dictionary<Guid, NodeRef>();
+        var directAttestationIds = rows
+            .Select(r => KernelAggregateKinds.TryResolveTarget(r.AggregateType, r.AggregateId, out var t) && t.Kind == NodeKinds.Attestation
+                ? AttestationId.FromGuid(t.Id)
+                : (AttestationId?)null)
+            .Where(id => id is not null)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+        if (directAttestationIds.Count > 0)
+        {
+            var attRows = await db.Attestations.AsNoTracking()
+                .Where(a => a.TenantId == tenant && directAttestationIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.TargetKind, a.TargetId })
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+            foreach (var att in attRows)
+            {
+                if (NodeKinds.IsRegistered(att.TargetKind) && att.TargetId != Guid.Empty)
+                {
+                    attestationTargets[att.Id.Value] = new NodeRef(att.TargetKind, att.TargetId);
+                }
+            }
+        }
+
+        var unmappedActivityIds = rows
+            .Where(r => !KernelAggregateKinds.TryResolveTarget(r.AggregateType, r.AggregateId, out _) && r.ActivityId != Guid.Empty)
+            .Select(r => r.ActivityId)
+            .Distinct()
+            .ToList();
+        var lineageByActivity = new Dictionary<Guid, NodeRef>();
+        if (unmappedActivityIds.Count > 0)
+        {
+            var lineageRows = await db.LineageNodes.AsNoTracking()
+                .Where(l => l.TenantId == tenant && unmappedActivityIds.Contains(l.ActivityId) && l.Kind != NodeKinds.Tenant)
+                .OrderBy(l => l.RecordedAt)
+                .Select(l => new { l.ActivityId, l.Kind, l.NodeId })
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+            foreach (var row in lineageRows)
+            {
+                if (!lineageByActivity.ContainsKey(row.ActivityId) && NodeKinds.IsRegistered(row.Kind))
+                {
+                    lineageByActivity[row.ActivityId] = new NodeRef(row.Kind, row.NodeId);
+                }
+            }
+        }
+
+        foreach (var row in rows)
+        {
+            if (KernelAggregateKinds.TryResolveTarget(row.AggregateType, row.AggregateId, out var target)
+                && target.Kind != NodeKinds.AuditEntry)
+            {
+                if (target.Kind == NodeKinds.Attestation && attestationTargets.TryGetValue(target.Id, out var signedTarget))
+                {
+                    result[row.Id] = signedTarget;
+                }
+                else
+                {
+                    result[row.Id] = target;
+                }
+            }
+            else if (row.ActivityId is { } activityId && lineageByActivity.TryGetValue(activityId, out var lineageTarget))
+            {
+                result[row.Id] = lineageTarget;
+            }
+        }
+
+        return result;
+    }
+
+    private static async Task LoadAuditEntryPathsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        Guid[] rawIds,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolved,
+        HashSet<NodeRef> potentiallyBlinded,
+        CancellationToken ct)
+    {
+        var targetsByAuditId = await ResolveAuditEntryTargetsInOpenConnectionAsync(db, tenant, rawIds, ct).ConfigureAwait(false);
+        if (targetsByAuditId.Count == 0)
+        {
+            return;
+        }
+
+        var targetPaths = new Dictionary<(string Kind, Guid Id), ScopePath>();
+        var targetBlinded = new HashSet<NodeRef>();
+        foreach (var group in targetsByAuditId.Values
+                     .Where(t => PathBearingKinds.Contains(t.Kind) && t.Kind != NodeKinds.AuditEntry)
+                     .GroupBy(t => t.Kind, StringComparer.Ordinal))
+        {
+            await LoadPathsForKindAsync(
+                    db,
+                    tenant,
+                    group.Key,
+                    [.. group.Select(t => t.Id).Distinct()],
+                    targetPaths,
+                    targetBlinded,
+                    ct)
+                .ConfigureAwait(false);
+        }
+
+        foreach (var (auditId, target) in targetsByAuditId)
+        {
+            if (targetPaths.TryGetValue((target.Kind, target.Id), out var path))
+            {
+                resolved[(NodeKinds.AuditEntry, auditId)] = path;
+            }
+
+            if (targetBlinded.Contains(target)
+                || target.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery)
+            {
+                potentiallyBlinded.Add(new NodeRef(NodeKinds.AuditEntry, auditId));
+            }
+        }
+    }
+
+    private static void MergeAuditTargetsIntoEvidenceInputs(
+        Dictionary<Guid, NodeRef> auditTargets,
+        ref Guid[] obsIds,
+        ref Guid[] findingIds,
+        List<AssertionId> assertionIds,
+        List<Guid> formQueryIds)
+    {
+        if (auditTargets.Count == 0)
+        {
+            return;
+        }
+
+        var obsSet = new HashSet<Guid>(obsIds);
+        var findingSet = new HashSet<Guid>(findingIds);
+        var assertionSet = new HashSet<AssertionId>(assertionIds);
+        var formQuerySet = new HashSet<Guid>(formQueryIds);
+
+        foreach (var target in auditTargets.Values)
+        {
+            switch (target.Kind)
+            {
+                case NodeKinds.Observation:
+                    obsSet.Add(target.Id);
+                    break;
+                case NodeKinds.ValidationFinding:
+                    findingSet.Add(target.Id);
+                    break;
+                case NodeKinds.Assertion:
+                    var aid = AssertionId.FromGuid(target.Id);
+                    if (assertionSet.Add(aid))
+                    {
+                        assertionIds.Add(aid);
+                    }
+
+                    break;
+                case NodeKinds.FormQuery:
+                    if (formQuerySet.Add(target.Id))
+                    {
+                        formQueryIds.Add(target.Id);
+                    }
+
+                    break;
+            }
+        }
+
+        obsIds = [.. obsSet];
+        findingIds = [.. findingSet];
+    }
+
+    private static void PropagateAuditEntryEvidence(
+        Dictionary<Guid, NodeRef> auditTargets,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolvedPaths,
+        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence)
+    {
+        foreach (var (auditId, target) in auditTargets)
+        {
+            if (resolvedEvidence.TryGetValue((target.Kind, target.Id), out var info))
+            {
+                resolvedPaths[(NodeKinds.AuditEntry, auditId)] = info.Scope;
+                resolvedEvidence[(NodeKinds.AuditEntry, auditId)] = info;
+            }
+        }
     }
 }

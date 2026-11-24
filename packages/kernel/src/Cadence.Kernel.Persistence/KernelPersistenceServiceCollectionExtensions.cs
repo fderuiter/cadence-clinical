@@ -4,7 +4,9 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.WorkQueues;
+using Cadence.Kernel.Audit;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Indicators;
@@ -22,6 +24,7 @@ using Cadence.Kernel.Persistence.Indicators;
 using Cadence.Kernel.Persistence.Intelligence;
 using Cadence.Kernel.Persistence.Knowledge;
 using Cadence.Kernel.Persistence.Lineage;
+using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Protocol;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -112,6 +115,8 @@ public static class KernelPersistenceServiceCollectionExtensions
         // IKernelLineage in a host that has not decided visibility fails instead of showing every object.
         services.TryAddSingleton<KernelLineageStore>();
         services.TryAddSingleton<IKernelLineage>(sp => sp.GetRequiredService<KernelLineageStore>());
+        services.TryAddSingleton<IKernelScopeGraph, KernelScopeGraph>();
+        services.TryAddSingleton<IKernelHistoryReader, KernelHistoryReader>();
         services.TryAddSingleton<IAmendmentImpact, KernelAmendmentImpact>();
         services.TryAddSingleton<ILineageOrphanSink, LoggingLineageOrphanSink>();
         services.TryAddSingleton<KernelLineageOrphanCheck>();

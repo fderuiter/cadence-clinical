@@ -444,6 +444,30 @@ export function createWebDemoHandlers(store = webDemoStore) {
         );
       }
     ),
+    http.get(
+      "*/api/v1/kernel/nodes/:nodeRef/history",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        return HttpResponse.json(
+          store.getNodeHistory(
+            decodeURIComponent(String(params.nodeRef)),
+            {
+              validAt: url.searchParams.get("valid_at"),
+              knownAt: url.searchParams.get("known_at"),
+            },
+            resolveDemoCaller(request)
+          )
+        );
+      }
+    ),
+    http.get("*/api/v1/kernel/audit-entries/:auditRef", ({ params, request }) =>
+      HttpResponse.json(
+        store.getAuditEntry(
+          decodeURIComponent(String(params.auditRef)),
+          resolveDemoCaller(request)
+        )
+      )
+    ),
     http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params, request }) =>
       HttpResponse.json(
         store.getNode(

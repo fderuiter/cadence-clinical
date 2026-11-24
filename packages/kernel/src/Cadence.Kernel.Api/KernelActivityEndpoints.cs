@@ -194,7 +194,10 @@ public sealed record KernelActivityEntryResponse(
     string? SubjectKind,
     string? Subject,
     string? Mask,
-    Guid CorrelationId)
+    Guid CorrelationId,
+    string? ReasonForChange = null,
+    string? AuditEntryRef = null,
+    string? AttestationRef = null)
 {
     internal static KernelActivityEntryResponse From(ActivityEntry entry) =>
         new(
@@ -207,5 +210,8 @@ public sealed record KernelActivityEntryResponse(
             entry.SubjectKind,
             entry.Subject?.ToString(),
             entry.Masked?.ToString(),
-            entry.CorrelationId);
+            entry.CorrelationId,
+            string.IsNullOrWhiteSpace(entry.ReasonForChange) ? null : entry.ReasonForChange,
+            entry.AuditEntryRef?.ToString(),
+            entry.AttestationRef?.ToString());
 }

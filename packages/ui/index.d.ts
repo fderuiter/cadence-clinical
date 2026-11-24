@@ -384,19 +384,74 @@ export const ClinicalDrawer: DefineSlotsComponent<
   }
 >;
 
+export interface NormalizedAuditFieldChange {
+  field: string;
+  old_val?: any;
+  new_val?: any;
+}
+
+export interface NormalizedAuditAttestation {
+  attestation_ref?: string | null;
+  actor_id?: string | null;
+  actor_ref?: string | null;
+  meaning?: string | null;
+  method?: string | null;
+  authenticated_at?: string | null;
+  recorded_at?: string | null;
+  target_content_hash?: string | null;
+  reason?: string | null;
+}
+
+export interface NormalizedAuditEntry {
+  id: string | number;
+  audit_entry_ref?: string | null;
+  timestamp?: string;
+  valid_at?: string | null;
+  user_id?: string | null;
+  raw_actor_id?: string | null;
+  raw_actor_ref?: string | null;
+  actor_ref?: string | null;
+  actor_label?: string | null;
+  actor_kind?: string | null;
+  action?: string;
+  action_category?: string;
+  what_label?: string | null;
+  command_type?: string | null;
+  outcome?: string | null;
+  entity_type?: string;
+  entity_id?: string;
+  target_ref?: string | null;
+  target_label?: string | null;
+  target_href?: string | null;
+  version?: string | number | null;
+  reason_for_change?: string | null;
+  summary?: string | null;
+  changes?: NormalizedAuditFieldChange[];
+  attestation?: NormalizedAuditAttestation | null;
+  sequence?: number | string | null;
+  hash?: string | null;
+  predecessor_hash?: string | null;
+  mask?: string | null;
+  masked_subject_label?: string | null;
+  [key: string]: any;
+}
+
 export const AuditLogViewer: DefineComponent<
   {
-    logs: Array<{
-      id: string | number;
-      timestamp?: string;
-      user_id?: string;
-      action?: string;
-      entity_type?: string;
-      entity_id?: string;
-      reason_for_change?: string;
-      changes?: Array<{ field: string; old_val?: any; new_val?: any }>;
-    }>;
+    logs?: NormalizedAuditEntry[];
+    entries?: NormalizedAuditEntry[] | null;
     title?: string;
+    headingTag?: string;
+    variant?: "timeline" | "activity" | string;
+    listId?: string | null;
+    hideHeader?: boolean;
+    compact?: boolean;
+    loading?: boolean;
+    emptyMessage?: string;
+    enablePeekDrawer?: boolean;
+    fetchAuditEntry?: ((auditRef: string) => Promise<any>) | null;
+    fullViewLabel?: string;
+    teleportDrawer?: boolean | string;
   },
   {},
   any
@@ -987,20 +1042,109 @@ export interface EntityLinkNodeRef {
   siteId?: string | null;
 }
 
+export interface EntityLinkResolution {
+  nodeRef?: string | null;
+  label?: string | null;
+  code?: string | null;
+  kindLabel?: string | null;
+  href?: string | null;
+  masked?: boolean;
+  maskReason?: string | null;
+  navigable?: boolean;
+}
+
+export interface EntityLinkResolver {
+  resolve?: (input: {
+    nodeRef?: string | null;
+    entityType?: string | null;
+    entityId?: string | null;
+    label?: string | null;
+    fallbackLabel?: string | null;
+  }) => EntityLinkResolution | null;
+  lookupLabel?: (nodeRef: string) => Promise<string | null>;
+  navigate?: (payload: Record<string, any>) => void | Promise<void>;
+  openFullView?: (payload: Record<string, any>) => void | Promise<void>;
+  fetchAuditEntry?: (auditRef: string) => Promise<any>;
+}
+
+export const ENTITY_LINK_RESOLVER_KEY: symbol;
+export function provideEntityLinkResolver(resolver: EntityLinkResolver): void;
+
 export const EntityLink: DefineComponent<
   {
-    nodeRef?: EntityLinkNodeRef | null;
-    entityType?: string;
-    entityId?: string;
-    label?: string;
+    nodeRef?: EntityLinkNodeRef | string | null;
+    entityType?: string | null;
+    entityId?: string | number | null;
+    label?: string | null;
+    kindLabel?: string | null;
     srContext?: string;
-    href?: string;
+    href?: string | null;
     preventNavigation?: boolean;
     tabular?: boolean;
+    disabled?: boolean;
+    masked?: boolean;
+    maskReason?: string | null;
+    mono?: boolean;
+    size?: "sm" | "md" | string;
   },
   {},
   any
 >;
+
+export interface SupportDetailsItem {
+  key?: string;
+  label: string;
+  value: string | number | null | undefined;
+  mono?: boolean;
+}
+
+export const SupportDetails: DefineComponent<
+  {
+    detail?: string | null;
+    code?: string | null;
+    reference?: string | null;
+    entries?: SupportDetailsItem[];
+    summaryLabel?: string;
+    detailId?: string;
+  },
+  {},
+  any
+>;
+
+export function normalizeAuditEntry(
+  raw: Record<string, any> | null | undefined,
+  index?: number
+): NormalizedAuditEntry;
+export function adaptKernelHistoryEntries(
+  entries: ReadonlyArray<Record<string, any>> | null | undefined
+): NormalizedAuditEntry[];
+export function adaptKernelAuditEntryDetail(
+  detail: Record<string, any> | null | undefined
+): NormalizedAuditEntry | null;
+export function adaptKernelActivityEntries(
+  entries: ReadonlyArray<Record<string, any>> | null | undefined,
+  options?: {
+    formatWhatLabel?: (type: string) => string;
+    formatMaskedSubjectLabel?: (entry: any) => string;
+    resolveSubjectHref?: (entry: any) => string | null;
+  }
+): NormalizedAuditEntry[];
+export function adaptObservationAuditEntries(
+  entries: ReadonlyArray<Record<string, any>> | null | undefined,
+  context?: { observationRef?: string; field?: string }
+): NormalizedAuditEntry[];
+export function adaptKnowledgeAuditLogs(
+  logs: ReadonlyArray<Record<string, any>> | null | undefined,
+  context?: { entityType?: string; entityId?: string }
+): NormalizedAuditEntry[];
+export function adaptTicketAuditLogs(
+  logs: ReadonlyArray<Record<string, any>> | null | undefined,
+  context?: {
+    id?: string;
+    relatedEntityType?: string;
+    relatedEntityId?: string;
+  }
+): NormalizedAuditEntry[];
 
 export const ClinicalIcon: DefineComponent<
   {

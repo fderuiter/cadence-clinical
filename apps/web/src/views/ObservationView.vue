@@ -190,7 +190,14 @@
                 <td>{{ revision.number }}</td>
                 <td>{{ formatObservationValue(revision.value) }}</td>
                 <td>{{ revision.reason_for_change }}</td>
-                <td>{{ revision.recorded_by }}</td>
+                <td>
+                  <EntityLink
+                    entity-type="person"
+                    :entity-id="revision.recorded_by"
+                    :label="revision.recorded_by"
+                    kind-label=""
+                  />
+                </td>
                 <td>{{ revision.recorded_at }}</td>
                 <td>{{ revision.recorded_until ?? "Current" }}</td>
               </tr>
@@ -206,28 +213,14 @@
           aria-label="Observation audit trail"
           tabindex="0"
         >
-          <table class="observation-audit" data-testid="observation-audit">
-            <thead>
-              <tr>
-                <th scope="col">Sequence</th>
-                <th scope="col">When</th>
-                <th scope="col">Who</th>
-                <th scope="col">Action</th>
-                <th scope="col">Version</th>
-                <th scope="col">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="entry in observation.audit" :key="entry.sequence">
-                <td>{{ entry.sequence }}</td>
-                <td>{{ entry.recorded_at }}</td>
-                <td>{{ entry.actor_id }}</td>
-                <td>{{ entry.action }} {{ entry.subject }}</td>
-                <td>{{ entry.version ?? "" }}</td>
-                <td>{{ entry.reason_for_change }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <AuditLogViewer
+            data-testid="observation-audit"
+            heading-tag="h4"
+            compact
+            :entries="adaptedObservationAudit"
+            :fetch-audit-entry="fetchObservationAuditEntry"
+            title="Observation Audit Trail"
+          />
         </div>
       </template>
     </div>
@@ -245,6 +238,8 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
+import { AuditLogViewer, EntityLink, adaptObservationAuditEntries } from "ui";
+import { useProvideCanvasEntityResolver } from "../canvas/entityLinkResolver";
 import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
   type CoveringScopeLockItem,
@@ -698,6 +693,19 @@ watch(
 
 onMounted(load);
 watch(() => props.observationRef, load);
+useProvideCanvasEntityResolver();
+
+const adaptedObservationAudit = computed(() =>
+  adaptObservationAuditEntries(observation.value?.audit ?? [], {
+    observationRef: observation.value?.ref ?? props.observationRef,
+    field: observation.value?.concept ?? "value",
+  })
+);
+
+async function fetchObservationAuditEntry(auditRef: string) {
+  if (typeof kernelApi.getAuditEntry !== "function") return null;
+  return await kernelApi.getAuditEntry(auditRef);
+}
 </script>
 
 <style scoped>

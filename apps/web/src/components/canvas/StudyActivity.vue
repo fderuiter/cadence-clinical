@@ -38,29 +38,14 @@
       {{ statusLine }}
     </p>
 
-    <ol v-if="entries.length" id="activity-list" class="activity-list">
-      <li
-        v-for="entry in entries"
-        :key="entry.event_id"
-        class="activity-entry"
-        :data-family="entry.family"
-      >
-        <time class="activity-time" :datetime="entry.recorded">{{
-          when(entry.recorded)
-        }}</time>
-        <span class="activity-what">{{ words(entry.type) }}</span>
-        <span v-if="isMasked(entry)" class="activity-subject masked">
-          {{ hiddenLabel(entry) }}
-        </span>
-        <NodeRefChip
-          v-else-if="entry.subject"
-          class="activity-subject"
-          :node-ref="entry.subject"
-          :to="subjectLink(entry)"
-        />
-        <span class="activity-actor">by {{ entry.actor_id }}</span>
-      </li>
-    </ol>
+    <AuditLogViewer
+      v-if="entries.length"
+      variant="activity"
+      list-id="activity-list"
+      hide-header
+      :entries="adaptedEntries"
+      :fetch-audit-entry="fetchActivityAuditEntry"
+    />
 
     <button
       v-if="next && !loading"
@@ -81,20 +66,21 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, ref } from "vue";
-import type { RouteLocationRaw } from "vue-router";
+import type { RouteLocationRaw, Router } from "vue-router";
+import { AuditLogViewer, adaptKernelActivityEntries } from "ui";
 import {
   isMasked,
   kernelApi,
   type KernelActivityEntry,
   type KernelEventFamily,
 } from "../../api/kernelApi";
-import { parseNodeRef } from "../../canvas/nodeRef";
+import { useProvideCanvasEntityResolver } from "../../canvas/entityLinkResolver";
+import { parseNodeRef, tryNodeRef } from "../../canvas/nodeRef";
 import {
   ensureNodesResolved,
   formatMaskedNode,
 } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
-import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
 
 /**
@@ -102,6 +88,8 @@ import SupportDetails from "./SupportDetails.vue";
  * study, newest first. Restricted entries keep their place as masked placeholders.
  */
 const props = defineProps<{ studyCode: string }>();
+
+useProvideCanvasEntityResolver();
 
 const instance = getCurrentInstance();
 const currentRoute = computed(
@@ -111,6 +99,14 @@ const currentRoute = computed(
         $route?: { query?: Record<string, unknown> };
       }
     )?.$route ?? null
+);
+const currentRouter = computed(
+  () =>
+    (
+      instance?.appContext.config.globalProperties as {
+        $router?: Router;
+      }
+    )?.$router ?? null
 );
 
 const FAMILIES: KernelEventFamily[] = [
@@ -141,9 +137,14 @@ async function fetchActivityPage(
   if (!isCurrent()) return;
   entries.value = before ? [...entries.value, ...page.entries] : page.entries;
   next.value = page.next;
-  ensureNodesResolved(
-    entries.value.filter((e) => !isMasked(e)).map((e) => e.subject)
-  );
+  const refsToResolve: Array<string | null | undefined> = [];
+  for (const e of entries.value) {
+    if (isMasked(e)) continue;
+    refsToResolve.push(e.subject, e.audit_entry_ref, e.attestation_ref);
+    const personRef = tryNodeRef("person", e.actor_id);
+    if (personRef) refsToResolve.push(`person:${personRef.id}`);
+  }
+  ensureNodesResolved(refsToResolve);
 }
 
 const {
@@ -176,7 +177,8 @@ const statusLine = computed(() => {
 
 /** `ParticipantScreened` or `protocol_version` in plain words: "Participant screened", "Protocol version". */
 function words(name: string): string {
-  const spaced = name
+  const tail = String(name).split(".").pop() || String(name);
+  const spaced = tail
     .replace(/_/g, " ")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .toLowerCase();
@@ -185,13 +187,6 @@ function words(name: string): string {
 
 function hiddenLabel(entry: KernelActivityEntry): string {
   return formatMaskedNode(entry.subject_kind ?? "object", entry.mask);
-}
-
-function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 function subjectLink(entry: KernelActivityEntry): RouteLocationRaw | null {
@@ -216,6 +211,29 @@ function subjectLink(entry: KernelActivityEntry): RouteLocationRaw | null {
       node: entry.subject,
     },
   };
+}
+
+function resolveSubjectHref(entry: KernelActivityEntry): string | null {
+  const loc = subjectLink(entry);
+  if (!loc || !currentRouter.value?.resolve) return null;
+  try {
+    return currentRouter.value.resolve(loc).href || null;
+  } catch {
+    return null;
+  }
+}
+
+const adaptedEntries = computed(() =>
+  adaptKernelActivityEntries(entries.value, {
+    formatWhatLabel: words,
+    formatMaskedSubjectLabel: hiddenLabel,
+    resolveSubjectHref,
+  })
+);
+
+async function fetchActivityAuditEntry(auditRef: string) {
+  if (typeof kernelApi.getAuditEntry !== "function") return null;
+  return await kernelApi.getAuditEntry(auditRef);
 }
 
 function reload() {
@@ -266,43 +284,6 @@ function loadOlder() {
 .activity-footnote {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--neutral-dark);
-}
-
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 0.9rem;
-}
-
-.activity-entry {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-  overflow-wrap: anywhere;
-}
-
-.activity-time {
-  color: var(--neutral-dark);
-  font-variant-numeric: tabular-nums;
-}
-
-.activity-what {
-  font-weight: 600;
-}
-
-.activity-subject.masked {
-  font-style: italic;
-  color: var(--neutral-dark);
-}
-
-.activity-actor {
   color: var(--neutral-dark);
 }
 </style>

@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Activity;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -45,6 +47,9 @@ internal sealed class ActivityEntryRecord
     public string[] Scope { get; init; } = [];
 
     public Guid CorrelationId { get; init; }
+    public string? ReasonForChange { get; init; }
+    public string? AuditEntryRef { get; init; }
+    public string? AttestationRef { get; init; }
 }
 
 /// <summary>EF Core mapping for <see cref="ActivityEntryRecord"/>; RLS and the insert-only guards come from the migration.</summary>
@@ -60,6 +65,9 @@ internal sealed class ActivityEntryConfiguration : IEntityTypeConfiguration<Acti
         builder.Property(x => x.SubjectKind).HasMaxLength(48);
         builder.Property(x => x.Subject).HasMaxLength(128);
         builder.Property(x => x.Scope).HasColumnType("text[]").IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(2000);
+        builder.Property(x => x.AuditEntryRef).HasMaxLength(128);
+        builder.Property(x => x.AttestationRef).HasMaxLength(128);
         builder.HasIndex(x => new { x.TenantId, x.Recorded, x.EventId }).IsDescending(false, true, true);
         builder.HasIndex(x => x.Scope).HasMethod("gin");
         builder.HasOne<Domain.Entities.Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
@@ -127,17 +135,133 @@ internal sealed class KernelActivityProjector(
         }
 
         var fullBatch = pending.Count == options.ActivityBatchSize;
+        var envelopes = pending
+            .Select(json => JsonSerializer.Deserialize<EventEnvelope>(json, KernelCommandPipelineJson.Options)
+                ?? throw new InvalidOperationException("An outbox row holds no event envelope."))
+            .ToList();
+
+        var activityIds = envelopes
+            .Where(e => e.ActivityId != Guid.Empty)
+            .Select(e => e.ActivityId)
+            .Distinct()
+            .ToList();
+
+        var provenanceReasons = activityIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.ProvenanceActivities.AsNoTracking()
+                .Where(p => p.TenantId == tenant && activityIds.Contains(p.Id))
+                .Select(p => new { p.Id, p.ReasonForChange })
+                .ToDictionaryAsync(p => p.Id, p => p.ReasonForChange, cancellationToken)
+                .ConfigureAwait(false);
+
+        var auditRows = activityIds.Count == 0
+            ? []
+            : await db.AuditEntries.AsNoTracking()
+                .Where(a => a.TenantId == tenant && a.ActivityId != Guid.Empty && activityIds.Contains(a.ActivityId))
+                .OrderBy(a => a.Sequence)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.ActivityId,
+                    a.AggregateType,
+                    a.AggregateId,
+                    a.ReasonForChange,
+                })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        var auditsByActivity = auditRows
+            .GroupBy(a => a.ActivityId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var assertionIds = envelopes
+            .Where(e => e.Subject?.Kind == NodeKinds.Assertion)
+            .Select(e => AssertionId.FromGuid(e.Subject!.Id))
+            .Distinct()
+            .ToList();
+        var assertionAttestations = assertionIds.Count == 0
+            ? new Dictionary<Guid, AttestationId>()
+            : (await db.Assertions.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && assertionIds.Contains(a.Id) && a.AttestationId != null)
+                    .Select(a => new { a.Id, AttestationId = a.AttestationId!.Value })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false))
+                .ToDictionary(a => a.Id.Value, a => a.AttestationId);
+
+        var protocolVersionIds = envelopes
+            .Where(e => e.Subject?.Kind == NodeKinds.ProtocolVersion && e.Type == "ProtocolVersionApproved")
+            .Select(e => ProtocolVersionId.FromGuid(e.Subject!.Id))
+            .Distinct()
+            .ToList();
+        var protocolAttestations = protocolVersionIds.Count == 0
+            ? new Dictionary<Guid, AttestationId>()
+            : (await db.ProtocolVersions.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && protocolVersionIds.Contains(p.Id) && p.ApprovalAttestationId != null)
+                    .Select(p => new { p.Id, AttestationId = p.ApprovalAttestationId!.Value })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false))
+                .ToDictionary(p => p.Id.Value, p => p.AttestationId);
+
         var paths = new Dictionary<NodeRef, string[]>();
-        var staged = new List<ActivityEntryRecord>(pending.Count);
-        foreach (var json in pending)
+        var staged = new List<ActivityEntryRecord>(envelopes.Count);
+        foreach (var envelope in envelopes)
         {
-            var envelope = JsonSerializer.Deserialize<EventEnvelope>(json, KernelCommandPipelineJson.Options)
-                ?? throw new InvalidOperationException("An outbox row holds no event envelope.");
             var subject = envelope.Subject;
             var unversioned = subject?.Unversioned();
             if (unversioned is not null && !paths.ContainsKey(unversioned))
             {
                 paths[unversioned] = await ScopeAsync(tenant, unversioned, cancellationToken).ConfigureAwait(false);
+            }
+
+            string? reasonForChange = null;
+            if (provenanceReasons.TryGetValue(envelope.ActivityId, out var provReason)
+                && !string.IsNullOrWhiteSpace(provReason))
+            {
+                reasonForChange = provReason;
+            }
+
+            string? auditEntryRef = null;
+            string? attestationRef = subject?.Kind == NodeKinds.Attestation
+                ? subject.Unversioned().ToString()
+                : null;
+
+            if (auditsByActivity.TryGetValue(envelope.ActivityId, out var activityAudits))
+            {
+                var subjectIdText = subject?.Id.ToString();
+                var matchingAudit = activityAudits.FirstOrDefault(a =>
+                        subject is not null
+                        && a.AggregateId == subjectIdText
+                        && KernelAggregateKinds.TryMapAggregateTypeToKind(a.AggregateType) == subject.Kind)
+                    ?? activityAudits.FirstOrDefault(a =>
+                        KernelAggregateKinds.TryMapAggregateTypeToKind(a.AggregateType) != NodeKinds.Attestation)
+                    ?? activityAudits[0];
+
+                auditEntryRef = NodeRef.For(AuditEntryId.FromGuid(matchingAudit.Id)).ToString();
+                if (reasonForChange is null && !string.IsNullOrWhiteSpace(matchingAudit.ReasonForChange))
+                {
+                    reasonForChange = matchingAudit.ReasonForChange;
+                }
+
+                if (attestationRef is null)
+                {
+                    var attAudit = activityAudits.FirstOrDefault(a =>
+                        KernelAggregateKinds.TryMapAggregateTypeToKind(a.AggregateType) == NodeKinds.Attestation
+                        && Guid.TryParse(a.AggregateId, out var g) && g != Guid.Empty);
+                    if (attAudit is not null && AttestationId.TryParse(attAudit.AggregateId, out var attId))
+                    {
+                        attestationRef = NodeRef.For(attId).ToString();
+                    }
+                }
+            }
+
+            if (attestationRef is null && subject?.Kind == NodeKinds.Assertion
+                && assertionAttestations.TryGetValue(subject.Id, out var assertionAttId))
+            {
+                attestationRef = NodeRef.For(assertionAttId).ToString();
+            }
+            else if (attestationRef is null && subject?.Kind == NodeKinds.ProtocolVersion
+                && protocolAttestations.TryGetValue(subject.Id, out var protocolAttId))
+            {
+                attestationRef = NodeRef.For(protocolAttId).ToString();
             }
 
             var record = new ActivityEntryRecord
@@ -153,6 +277,9 @@ internal sealed class KernelActivityProjector(
                 Subject = subject?.ToString(),
                 Scope = unversioned is null ? [NodeRef.For(tenant).ToString()] : paths[unversioned],
                 CorrelationId = envelope.CorrelationId,
+                ReasonForChange = reasonForChange,
+                AuditEntryRef = auditEntryRef,
+                AttestationRef = attestationRef,
             };
             staged.Add(record);
             entries.Add(record);
@@ -282,7 +409,10 @@ internal sealed class KernelActivityStore(KernelTenantDbContextFactory contexts)
             a.SubjectKind,
             a.Subject is null ? null : NodeRef.Parse(a.Subject),
             Masked: null,
-            a.CorrelationId))];
+            a.CorrelationId,
+            a.ReasonForChange,
+            a.AuditEntryRef is null ? null : NodeRef.Parse(a.AuditEntryRef),
+            a.AttestationRef is null ? null : NodeRef.Parse(a.AttestationRef)))];
     }
 }
 

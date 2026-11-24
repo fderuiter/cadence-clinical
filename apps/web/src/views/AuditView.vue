@@ -1231,6 +1231,7 @@
 
                     <!-- Cryptographic SHA-256 Signature Hash -->
                     <div
+                      v-if="getSha256Hash(log)"
                       class="sha256-hash"
                       style="
                         display: flex;
@@ -2124,14 +2125,8 @@ function getSha256Hash(log) {
   if (log.merkle_hash) return log.merkle_hash;
   if (log.cryptographic_seal) return log.cryptographic_seal;
   if (log.signature_hash) return log.signature_hash;
-  const key = `${log.id || ""}-${log.timestamp || ""}-${log.user_id || ""}-${log.action || ""}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash << 5) - hash + key.charCodeAt(i);
-    hash |= 0;
-  }
-  const hex = Math.abs(hash).toString(16).padStart(8, "0");
-  return `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b78${hex}`;
+  if (log.hash) return log.hash;
+  return null;
 }
 
 async function fetchAuditLogs() {

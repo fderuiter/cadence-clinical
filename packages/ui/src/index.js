@@ -20,8 +20,22 @@ import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import EntityLink from "./components/clinical/EntityLink.vue";
+import {
+  ENTITY_LINK_RESOLVER_KEY,
+  provideEntityLinkResolver,
+} from "./components/clinical/entityLinkContext.js";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
+import SupportDetails from "./components/clinical/SupportDetails.vue";
+import {
+  adaptKernelActivityEntries,
+  adaptKernelAuditEntryDetail,
+  adaptKernelHistoryEntries,
+  adaptKnowledgeAuditLogs,
+  adaptObservationAuditEntries,
+  adaptTicketAuditLogs,
+  normalizeAuditEntry,
+} from "./components/clinical/auditAdapters.js";
 import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
@@ -70,6 +84,7 @@ export {
   ClinicalTabs,
   ClinicalToastHost,
   ConfidenceBadge,
+  ENTITY_LINK_RESOLVER_KEY,
   EmptyState,
   EntityLink,
   FileUploadModal,
@@ -77,6 +92,13 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  SupportDetails,
+  adaptKernelActivityEntries,
+  adaptKernelAuditEntryDetail,
+  adaptKernelHistoryEntries,
+  adaptKnowledgeAuditLogs,
+  adaptObservationAuditEntries,
+  adaptTicketAuditLogs,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -84,6 +106,8 @@ export {
   handoffFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
+  normalizeAuditEntry,
+  provideEntityLinkResolver,
   registerDraftSource,
   resetDraftSourcesForTests,
   trapTabFocus,

@@ -4,9 +4,11 @@ The `AuditLogViewer` renders an interactive, chronological 21 CFR Part 11 audit 
 
 ## Features
 
-- **Immutable Audit Record Feed**: ARIA `feed` landmark structure with interactive focusable entries.
-- **Visual Value Diffing**: Displays previous vs new values for modified clinical observations.
-- **Action Type Filtering**: Filter by specific action tags (`SIGN`, `UPDATE`, etc.).
+- **Immutable Audit Record Feed**: ARIA `feed` landmark structure with interactive focusable entries and in-place masked placeholders (`Blinded` / `NotPermitted`) preserving sequence numbering.
+- **Visual Value Diffing**: Displays previous vs new values for modified clinical observations and lifecycle transitions.
+- **Action Type Filtering**: Filter by specific action tags (`SIGN`, `UPDATE`, etc.) and search text.
+- **Kernel & Domain Adapters (`auditAdapters.js`)**: `normalizeAuditEntry`, `adaptKernelHistoryEntries`, `adaptKernelAuditEntryDetail`, `adaptKernelActivityEntries`, `adaptObservationAuditEntries`, `adaptKnowledgeAuditLogs`, and `adaptTicketAuditLogs` normalise kernel node history, activity stream, and domain audit entries without leaking raw UUIDs, fake digests, or SQL table names into primary copy.
+- **Cross-App `<EntityLink>` Chips & `Audit Event` Peek Drawer**: Renders actor, target, attestation, and scope references as keyboard-operable `<EntityLink>` chips and opens a contextual `ClinicalDrawer` (`Audit Event`) with progressive `<SupportDetails>` SHA-256 hash disclosure.
 
 ## Usage Example
 

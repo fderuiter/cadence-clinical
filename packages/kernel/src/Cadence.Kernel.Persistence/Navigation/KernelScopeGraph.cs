@@ -15,6 +15,7 @@ using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol.Design;
@@ -327,6 +328,62 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.Concept:
                 return await ConceptAsync(db, tenant, tenantRef, node, cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.AuditEntry:
+                var auditEntryId = AuditEntryId.FromGuid(node.Id);
+                var auditEntry = await db.AuditEntries.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == node.Id)
+                    .Select(a => new { a.Sequence, a.Action, a.AggregateType, a.AggregateId, a.ActivityId })
+                    .FirstOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                if (auditEntry is null)
+                {
+                    return null;
+                }
+
+                var auditParent = tenantRef;
+                if (KernelAggregateKinds.TryResolveTarget(auditEntry.AggregateType, auditEntry.AggregateId, out var resolvedAuditTarget)
+                    && resolvedAuditTarget.Kind != NodeKinds.Tenant
+                    && resolvedAuditTarget.Kind != NodeKinds.AuditEntry)
+                {
+                    auditParent = resolvedAuditTarget;
+                }
+                else if (auditEntry.ActivityId is { } auditActivityId)
+                {
+                    var lineageTarget = await db.LineageNodes.AsNoTracking()
+                        .Where(l => l.TenantId == tenant && l.ActivityId == auditActivityId && l.Kind != NodeKinds.Tenant)
+                        .OrderBy(l => l.RecordedAt)
+                        .Select(l => new { l.Kind, l.NodeId })
+                        .FirstOrDefaultAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    if (lineageTarget is not null && NodeKinds.IsRegistered(lineageTarget.Kind))
+                    {
+                        auditParent = new NodeRef(lineageTarget.Kind, lineageTarget.NodeId);
+                    }
+                }
+
+                var auditOutcome = auditEntry.Action;
+                if (auditEntry.ActivityId is { } outcomeActivityId)
+                {
+                    var recordedOutcome = await db.ProvenanceActivities.AsNoTracking()
+                        .Where(p => p.TenantId == tenant && p.Id == outcomeActivityId)
+                        .Select(p => p.Outcome.ToString())
+                        .FirstOrDefaultAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!string.IsNullOrWhiteSpace(recordedOutcome))
+                    {
+                        auditOutcome = recordedOutcome;
+                    }
+                }
+
+                var kindLabel = KernelAggregateKinds.HumanizeKind(null, auditEntry.AggregateType);
+                return new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(auditEntryId),
+                        $"{auditEntry.Action} {kindLabel}",
+                        $"#{auditEntry.Sequence}",
+                        auditOutcome),
+                    auditParent);
 
             default:
                 return null;

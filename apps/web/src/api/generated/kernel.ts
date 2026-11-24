@@ -312,6 +312,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/nodes/{nodeRef}/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The audit, correction, supersession, verification, and attestation timeline of an object.
+     * @description Reads directly from kernel audit entries, provenance activities, revisions, assertions, and attestations with optional valid_at and known_at bitemporal filters. Entries the caller lacks scope or enrollment.unblind to see are returned as masked placeholders in place (K-AUTH-4, ADR-2471).
+     */
+    get: operations["KernelGetNodeHistory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/audit-entries/{auditRef}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * One tamper-evident kernel audit entry with its provenance, field changes, attestation, and chain hashes.
+     * @description Returns the audit entry detail or an in-place masked placeholder when the caller lacks scope or enrollment.unblind for the audited object (K-AUTH-4, ADR-2471).
+     */
+    get: operations["KernelGetAuditEntry"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/exports": {
     parameters: {
       query?: never;
@@ -1295,6 +1335,9 @@ export interface components {
       mask: null | string;
       /** Format: uuid */
       correlation_id: string;
+      reason_for_change?: null | string;
+      audit_entry_ref?: null | string;
+      attestation_ref?: null | string;
     };
     Kernel_KernelActivityPageResponse: {
       entries: components["schemas"]["Kernel_KernelActivityEntryResponse"][];
@@ -1360,6 +1403,37 @@ export interface components {
       /** Format: date-time */
       asserted_at: string;
       asserted_by: string;
+    };
+    Kernel_KernelAuditEntryDetailResponse: {
+      audit_entry_ref: null | string;
+      target_kind: string;
+      target_ref: null | string;
+      action: null | string;
+      command_type: null | string;
+      outcome: null | string;
+      /** Format: date-time */
+      recorded_at: string;
+      /** Format: date-time */
+      valid_at: null | string;
+      actor_id: null | string;
+      actor_kind: null | string;
+      actor_ref: null | string;
+      /** Format: int64 */
+      version: null | number | string;
+      reason_for_change: null | string;
+      summary: null | string;
+      field_changes: components["schemas"]["Kernel_KernelHistoryFieldChangeResponse"][];
+      attestation:
+        null | components["schemas"]["Kernel_KernelHistoryAttestationResponse"];
+      /** Format: uuid */
+      activity_id: null | string;
+      /** Format: uuid */
+      correlation_id: null | string;
+      /** Format: int64 */
+      sequence: null | number | string;
+      hash: null | string;
+      predecessor_hash: null | string;
+      mask: null | string;
     };
     Kernel_KernelCandidateSummaryResponse: {
       kind: string;
@@ -1589,6 +1663,53 @@ export interface components {
       variable: string;
       value: null | string;
     };
+    Kernel_KernelHistoryAttestationResponse: {
+      attestation_ref: string;
+      actor_id: string;
+      actor_ref: null | string;
+      meaning: string;
+      method: string;
+      /** Format: date-time */
+      authenticated_at: string;
+      /** Format: date-time */
+      recorded_at: string;
+      target_content_hash: string;
+      reason: null | string;
+    };
+    Kernel_KernelHistoryEntryResponse: {
+      entry_id: string;
+      audit_entry_ref: null | string;
+      event_kind: string;
+      action: string;
+      command_type: null | string;
+      outcome: null | string;
+      /** Format: date-time */
+      recorded_at: string;
+      /** Format: date-time */
+      valid_at: null | string;
+      actor_id: null | string;
+      actor_kind: null | string;
+      actor_ref: null | string;
+      target_kind: string;
+      target_ref: null | string;
+      /** Format: int64 */
+      version: null | number | string;
+      reason_for_change: null | string;
+      summary: null | string;
+      field_changes: components["schemas"]["Kernel_KernelHistoryFieldChangeResponse"][];
+      attestation:
+        null | components["schemas"]["Kernel_KernelHistoryAttestationResponse"];
+      /** Format: int64 */
+      sequence: null | number | string;
+      hash: null | string;
+      predecessor_hash: null | string;
+      mask: null | string;
+    };
+    Kernel_KernelHistoryFieldChangeResponse: {
+      field: string;
+      before: null | string;
+      after: null | string;
+    };
     Kernel_KernelImportedRulePackSummaryResponse: {
       ref: string;
       key: string;
@@ -1755,6 +1876,15 @@ export interface components {
       description: string;
       capability: null | string;
       target: null | string;
+    };
+    Kernel_KernelNodeHistoryResponse: {
+      node: string;
+      mask: null | string;
+      /** Format: date-time */
+      valid_at: null | string;
+      /** Format: date-time */
+      known_at: null | string;
+      entries: components["schemas"]["Kernel_KernelHistoryEntryResponse"][];
     };
     Kernel_KernelNodeResponse: {
       ref: null | string;
@@ -3285,6 +3415,126 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelActivityPageResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetNodeHistory: {
+    parameters: {
+      query?: {
+        valid_at?: string;
+        known_at?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path: {
+        nodeRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelNodeHistoryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetAuditEntry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        auditRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelAuditEntryDetailResponse"];
         };
       };
       /** @description Bad Request */

@@ -11286,6 +11286,178 @@
         }
       }
     },
+    "/api/v1/kernel/nodes/{nodeRef}/history": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "The audit, correction, supersession, verification, and attestation timeline of an object.",
+        "description": "Reads directly from kernel audit entries, provenance activities, revisions, assertions, and attestations with optional valid_at and known_at bitemporal filters. Entries the caller lacks scope or enrollment.unblind to see are returned as masked placeholders in place (K-AUTH-4, ADR-2471).",
+        "operationId": "KernelGetNodeHistory",
+        "parameters": [
+          {
+            "name": "nodeRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "valid_at",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "known_at",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelNodeHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/audit-entries/{auditRef}": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "One tamper-evident kernel audit entry with its provenance, field changes, attestation, and chain hashes.",
+        "description": "Returns the audit entry detail or an in-place masked placeholder when the caller lacks scope or enrollment.unblind for the audited object (K-AUTH-4, ADR-2471).",
+        "operationId": "KernelGetAuditEntry",
+        "parameters": [
+          {
+            "name": "auditRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelAuditEntryDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/exports": {
       "get": {
         "tags": [
@@ -33666,6 +33838,24 @@
           "correlation_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "audit_entry_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attestation_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -33935,6 +34125,175 @@
           },
           "asserted_by": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelAuditEntryDetailResponse": {
+        "required": [
+          "audit_entry_ref",
+          "target_kind",
+          "target_ref",
+          "action",
+          "command_type",
+          "outcome",
+          "recorded_at",
+          "valid_at",
+          "actor_id",
+          "actor_kind",
+          "actor_ref",
+          "version",
+          "reason_for_change",
+          "summary",
+          "field_changes",
+          "attestation",
+          "activity_id",
+          "correlation_id",
+          "sequence",
+          "hash",
+          "predecessor_hash",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "audit_entry_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target_kind": {
+            "type": "string"
+          },
+          "target_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "command_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "outcome": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actor_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actor_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actor_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "field_changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelHistoryFieldChangeResponse"
+            }
+          },
+          "attestation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelHistoryAttestationResponse"
+              }
+            ]
+          },
+          "activity_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "correlation_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "sequence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "predecessor_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -34931,6 +35290,240 @@
           }
         }
       },
+      "Kernel_KernelHistoryAttestationResponse": {
+        "required": [
+          "attestation_ref",
+          "actor_id",
+          "actor_ref",
+          "meaning",
+          "method",
+          "authenticated_at",
+          "recorded_at",
+          "target_content_hash",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "attestation_ref": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "actor_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "authenticated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "target_content_hash": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelHistoryEntryResponse": {
+        "required": [
+          "entry_id",
+          "audit_entry_ref",
+          "event_kind",
+          "action",
+          "command_type",
+          "outcome",
+          "recorded_at",
+          "valid_at",
+          "actor_id",
+          "actor_kind",
+          "actor_ref",
+          "target_kind",
+          "target_ref",
+          "version",
+          "reason_for_change",
+          "summary",
+          "field_changes",
+          "attestation",
+          "sequence",
+          "hash",
+          "predecessor_hash",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "entry_id": {
+            "type": "string"
+          },
+          "audit_entry_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "event_kind": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "command_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "outcome": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actor_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actor_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actor_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target_kind": {
+            "type": "string"
+          },
+          "target_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "field_changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelHistoryFieldChangeResponse"
+            }
+          },
+          "attestation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelHistoryAttestationResponse"
+              }
+            ]
+          },
+          "sequence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "predecessor_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelHistoryFieldChangeResponse": {
+        "required": [
+          "field",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "before": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "after": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_KernelImportedRulePackSummaryResponse": {
         "required": [
           "ref",
@@ -35658,6 +36251,47 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_KernelNodeHistoryResponse": {
+        "required": [
+          "node",
+          "mask",
+          "valid_at",
+          "known_at",
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "string"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valid_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelHistoryEntryResponse"
+            }
           }
         }
       },

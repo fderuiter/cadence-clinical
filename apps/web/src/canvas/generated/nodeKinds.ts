@@ -43,6 +43,7 @@ export const NODE_KINDS = [
   "subscription",
   "product_entitlement",
   "task_configuration",
+  "audit_entry",
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];

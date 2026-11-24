@@ -49,6 +49,7 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<ProposalId>().HaveConversion<ProposalIdValueConverter, EntityIdValueComparer<ProposalId>>();
         configurationBuilder.Properties<SubscriptionId>().HaveConversion<SubscriptionIdValueConverter, EntityIdValueComparer<SubscriptionId>>();
         configurationBuilder.Properties<ProductEntitlementId>().HaveConversion<ProductEntitlementIdValueConverter, EntityIdValueComparer<ProductEntitlementId>>();
+        configurationBuilder.Properties<AuditEntryId>().HaveConversion<AuditEntryIdValueConverter, EntityIdValueComparer<AuditEntryId>>();
 
         return configurationBuilder;
     }

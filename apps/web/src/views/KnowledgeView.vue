@@ -671,62 +671,13 @@
               <p>Fetching immutable audit trail...</p>
             </div>
 
-            <div v-else-if="auditLogList.length === 0" class="empty-box">
-              <p>No audit trail logs recorded yet.</p>
-            </div>
-
-            <div v-else class="audit-table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Event Type</th>
-                    <th>Actor</th>
-                    <th>Target Status</th>
-                    <th>Version</th>
-                    <th>Reason for Change</th>
-                    <th>SHA-256 Digest</th>
-                    <th>Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="log in auditLogList" :key="log.id">
-                    <td>
-                      <span class="badge badge-standard">{{
-                        log.event_type
-                      }}</span>
-                    </td>
-                    <td>
-                      <strong>{{ log.actor_user_id }}</strong>
-                    </td>
-                    <td>
-                      <span
-                        v-if="log.target_status"
-                        class="status-pill"
-                        :class="getStatusPillClass(log.target_status)"
-                      >
-                        {{ log.target_status }}
-                      </span>
-                      <span v-else>—</span>
-                    </td>
-                    <td>v{{ log.version_label || "1.0" }}</td>
-                    <td>
-                      {{ log.reason_for_change || "Document lifecycle update" }}
-                    </td>
-                    <td>
-                      <code class="hash-code" :title="log.sha256_hash">
-                        {{
-                          (log.sha256_hash || "sha256:e3b0c442").substring(
-                            0,
-                            12
-                          )
-                        }}...
-                      </code>
-                    </td>
-                    <td>{{ formatDate(log.created_at) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <AuditLogViewer
+              v-else
+              heading-tag="h4"
+              :entries="adaptedAuditLogs"
+              title="21 CFR Part 11 Electronic Audit Ledger"
+              empty-message="No audit trail logs recorded yet."
+            />
           </div>
         </div>
       </main>
@@ -1107,7 +1058,14 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  AuditLogViewer,
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+  adaptKnowledgeAuditLogs,
+} from "ui";
+import { useProvideCanvasEntityResolver } from "../canvas/entityLinkResolver";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
@@ -1126,11 +1084,13 @@ import { isDemoBuild } from "../utils/demoMode.js";
 export default {
   name: "KnowledgeView",
   components: {
+    AuditLogViewer,
     ClinicalIconButton,
     ClinicalModal,
     ClinicalTabs,
   },
   setup() {
+    useProvideCanvasEntityResolver();
     const authStore = useAuthStore();
     const scopeStore = useClinicalScopeStore();
     const toastStore = useToastStore();
@@ -1170,6 +1130,23 @@ export default {
     const versionsList = ref([]);
     const versionsLoading = ref(false);
     const auditLogList = ref([]);
+    const adaptedAuditLogs = computed(() =>
+      adaptKnowledgeAuditLogs(
+        auditLogList.value.map((log) => ({
+          ...log,
+          action: log.action || log.event_type || "UPDATE",
+          user_id: log.user_id || log.actor_user_id || "system",
+          timestamp: log.timestamp || log.created_at || "",
+          version: log.version ?? log.version_label ?? null,
+          reason_for_change:
+            log.reason_for_change || "Document lifecycle update",
+        })),
+        {
+          entityType: "tmf_document",
+          entityId: selectedArticle.value?.id || "",
+        }
+      )
+    );
     const auditLoading = ref(false);
 
     // Modals
@@ -1896,6 +1873,7 @@ export default {
       versionsList,
       versionsLoading,
       auditLogList,
+      adaptedAuditLogs,
       auditLoading,
       scopeStudyId,
       scopeSiteId,

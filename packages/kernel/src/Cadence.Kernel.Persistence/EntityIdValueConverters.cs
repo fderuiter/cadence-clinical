@@ -164,3 +164,8 @@ public class ProductEntitlementIdValueConverter() : ValueConverter<ProductEntitl
     id => id.Value,
     guid => new ProductEntitlementId(guid)
 );
+
+public class AuditEntryIdValueConverter() : ValueConverter<AuditEntryId, Guid>(
+    id => id.Value,
+    guid => new AuditEntryId(guid)
+);

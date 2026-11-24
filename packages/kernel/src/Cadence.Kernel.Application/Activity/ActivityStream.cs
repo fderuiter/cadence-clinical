@@ -48,15 +48,44 @@ public sealed class ActivityStream(IActivityStore store, INodeVisibility visibil
         var page = rows.Take(query.Limit).ToList();
         var next = rows.Count > query.Limit ? new ActivityCursor(page[^1].Recorded, page[^1].EventId) : null;
 
-        var subjects = page.Where(e => e.Subject is not null).Select(e => e.Subject!).Distinct().ToList();
-        var masks = subjects.Count == 0
+        var nodesToCheck = page
+            .SelectMany(e => new[] { e.Subject, e.AuditEntryRef, e.AttestationRef })
+            .Where(n => n is not null)
+            .Select(n => n!)
+            .Distinct()
+            .ToList();
+        var masks = nodesToCheck.Count == 0
             ? new Dictionary<NodeRef, MaskReason>()
-            : await visibility.MaskAsync(tenant, reader, subjects, cancellationToken).ConfigureAwait(false);
+            : await visibility.MaskAsync(tenant, reader, nodesToCheck, cancellationToken).ConfigureAwait(false);
 
         var entries = page
-            .Select(e => e.Subject is { } subject && masks.TryGetValue(subject, out var reason)
-                ? e with { Subject = null, Masked = reason }
-                : e)
+            .Select(e =>
+            {
+                MaskReason? reason = e.Masked;
+                if (reason is null && e.Subject is { } subject && masks.TryGetValue(subject, out var subjectMask))
+                {
+                    reason = subjectMask;
+                }
+                else if (reason is null && e.AuditEntryRef is { } auditRef && masks.TryGetValue(auditRef, out var auditMask))
+                {
+                    reason = auditMask;
+                }
+                else if (reason is null && e.AttestationRef is { } attestationRef && masks.TryGetValue(attestationRef, out var attestationMask))
+                {
+                    reason = attestationMask;
+                }
+
+                return reason is not null
+                    ? e with
+                    {
+                        Subject = null,
+                        Masked = reason,
+                        ReasonForChange = null,
+                        AuditEntryRef = null,
+                        AttestationRef = null,
+                    }
+                    : e;
+            })
             .ToList();
         return new ActivityPage(entries, next);
     }

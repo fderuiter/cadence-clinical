@@ -11,6 +11,24 @@
       <p v-if="reference" class="support-details-code">
         Reference: <code>{{ reference }}</code>
       </p>
+      <dl v-if="normalizedEntries.length" class="support-details-list">
+        <div
+          v-for="item in normalizedEntries"
+          :key="item.key || item.label"
+          class="support-details-row"
+        >
+          <dt class="support-details-term">{{ item.label }}</dt>
+          <dd class="support-details-value">
+            <code
+              v-if="item.mono !== false"
+              :class="{ 'hash-code': isHashEntry(item) }"
+              :title="isHashEntry(item) ? String(item.value) : undefined"
+              >{{ item.value }}</code
+            >
+            <span v-else>{{ item.value }}</span>
+          </dd>
+        </div>
+      </dl>
     </div>
   </details>
 </template>
@@ -18,11 +36,19 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+export interface SupportDetailEntry {
+  key?: string;
+  label: string;
+  value: string | number | null | undefined;
+  mono?: boolean;
+}
+
 const props = withDefaults(
   defineProps<{
     detail?: string | null;
     code?: string | null;
     reference?: string | null;
+    entries?: SupportDetailEntry[];
     summaryLabel?: string;
     detailId?: string;
   }>(),
@@ -30,13 +56,38 @@ const props = withDefaults(
     detail: null,
     code: null,
     reference: null,
+    entries: () => [],
     summaryLabel: "Support details",
     detailId: undefined,
   }
 );
 
+const normalizedEntries = computed(() =>
+  (props.entries ?? []).filter(
+    (entry) =>
+      entry &&
+      entry.value !== null &&
+      entry.value !== undefined &&
+      String(entry.value).trim() !== ""
+  )
+);
+
+function isHashEntry(item: SupportDetailEntry): boolean {
+  const key = String(item?.key ?? "").toLowerCase();
+  const label = String(item?.label ?? "").toLowerCase();
+  const val = String(item?.value ?? "");
+  return (
+    key.includes("hash") || label.includes("hash") || val.startsWith("sha256:")
+  );
+}
+
 const hasDetails = computed(() =>
-  Boolean(props.detail?.trim() || props.code?.trim() || props.reference?.trim())
+  Boolean(
+    props.detail?.trim() ||
+    props.code?.trim() ||
+    props.reference?.trim() ||
+    normalizedEntries.value.length > 0
+  )
 );
 </script>
 

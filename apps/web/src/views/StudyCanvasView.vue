@@ -1074,6 +1074,7 @@ import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { useProvideCanvasEntityResolver } from "../canvas/entityLinkResolver";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1147,6 +1148,7 @@ const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
+useProvideCanvasEntityResolver();
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
@@ -2862,6 +2864,13 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
+const AUTH_BYPASS_ROUTES = new Set([
+  "forbidden",
+  "/forbidden",
+  "login",
+  "/login",
+]);
+
 function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
   if (
     !authStore.isAuthenticated ||
@@ -2870,16 +2879,11 @@ function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
   ) {
     return true;
   }
-  if (
-    to &&
-    (to.name === "forbidden" ||
-      to.path === "/forbidden" ||
-      to.name === "login" ||
-      to.path === "/login")
-  ) {
-    return true;
-  }
-  return false;
+  if (!to) return false;
+  return (
+    AUTH_BYPASS_ROUTES.has(String(to.name || "")) ||
+    AUTH_BYPASS_ROUTES.has(to.path)
+  );
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
