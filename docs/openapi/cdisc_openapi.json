@@ -11292,7 +11292,7 @@
           "Kernel"
         ],
         "summary": "Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.",
-        "description": "Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).",
+        "description": "Projects canonical kernel observations at as_of(valid_at, known_at), filtering to the caller\u0027s visible scope, reporting omitted scopes as a collapsed indicator, and masking blinded treatment values in place (K-TRUTH-1, K-AUTH-4, ADR-2590).",
         "operationId": "KernelExportStudySnapshot",
         "parameters": [
           {
@@ -34993,6 +34993,24 @@
           }
         }
       },
+      "Kernel_KernelHiddenContentResponse": {
+        "required": [
+          "more_exist",
+          "reasons"
+        ],
+        "type": "object",
+        "properties": {
+          "more_exist": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "Kernel_KernelImportedRulePackSummaryResponse": {
         "required": [
           "ref",
@@ -35568,7 +35586,10 @@
             ]
           },
           "scope_kind": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "study_site_ref": {
             "type": [
@@ -35589,7 +35610,10 @@
             ]
           },
           "kind": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "attestation_ref": {
             "type": [
@@ -35623,7 +35647,10 @@
             ]
           },
           "released": {
-            "type": "boolean"
+            "type": [
+              "null",
+              "boolean"
+            ]
           },
           "release_ref": {
             "type": [
@@ -37776,7 +37803,8 @@
           "study_code",
           "valid_at",
           "known_at",
-          "locks"
+          "locks",
+          "hidden"
         ],
         "type": "object",
         "properties": {
@@ -37799,6 +37827,9 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelLockResponse"
             }
+          },
+          "hidden": {
+            "$ref": "#/components/schemas/Kernel_KernelHiddenContentResponse"
           }
         }
       },
