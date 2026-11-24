@@ -100,7 +100,7 @@ public static class ReceiptOcrEngine
         }
         else if (!string.IsNullOrWhiteSpace(imageBase64))
         {
-            if (!TryDecodeBase64Payload(imageBase64, out byte[] bytes) || bytes.Length == 0)
+            if (!TryDecodeReceiptPayload(imageBase64, out byte[] bytes) || bytes.Length == 0)
             {
                 return UnreadableResult("The uploaded receipt file could not be decoded as valid image data.");
             }
@@ -281,20 +281,42 @@ public static class ReceiptOcrEngine
             Warning: warning
         );
 
-    private static bool TryDecodeBase64Payload(string payload, out byte[] bytes)
+    internal static bool TryDecodeReceiptPayload(string? payload, out byte[] bytes)
     {
         bytes = [];
-        string trimmed = payload.Trim();
-        int commaIdx = trimmed.IndexOf(',', StringComparison.Ordinal);
-        if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase) && commaIdx >= 0)
+        if (string.IsNullOrWhiteSpace(payload))
         {
+            return false;
+        }
+
+        string trimmed = payload.Trim();
+        if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            int commaIdx = trimmed.IndexOf(',', StringComparison.Ordinal);
+            if (commaIdx < 0)
+            {
+                return false;
+            }
+
             string header = trimmed[..commaIdx];
             string dataPart = trimmed[(commaIdx + 1)..];
-            if (!header.Contains(";base64", StringComparison.OrdinalIgnoreCase))
+            string[] headerSegments = header[5..].Split(';');
+            string mediaType = headerSegments[0].Trim();
+            bool isBase64 = headerSegments
+                .Skip(1)
+                .Any(segment => segment.Trim().Equals("base64", StringComparison.OrdinalIgnoreCase));
+
+            if (!isBase64)
             {
+                if (!mediaType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
                 bytes = Encoding.UTF8.GetBytes(Uri.UnescapeDataString(dataPart));
-                return true;
+                return bytes.Length > 0;
             }
+
             trimmed = dataPart;
         }
 
@@ -304,7 +326,7 @@ public static class ReceiptOcrEngine
         try
         {
             bytes = Convert.FromBase64String(trimmed);
-            return true;
+            return bytes.Length > 0;
         }
         catch (FormatException)
         {
@@ -357,21 +379,13 @@ public static class ReceiptOcrEngine
                 : (pdfText, 0.96, null);
         }
 
-        // 6. SVG / XML / HTML or plain printable UTF-8 text
-        if (TryDecodePrintableUtf8(bytes, out string utf8Text))
+        // 6. SVG XML document
+        if (TryDecodePrintableUtf8(bytes, out string utf8Text) && IsSvgXmlDocument(utf8Text))
         {
-            string trimmed = utf8Text.TrimStart();
-            if (trimmed.StartsWith("<svg", StringComparison.OrdinalIgnoreCase)
-                || trimmed.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase)
-                || trimmed.Contains("<svg", StringComparison.OrdinalIgnoreCase))
-            {
-                string svgText = ExtractFromSvg(utf8Text);
-                return string.IsNullOrWhiteSpace(svgText)
-                    ? (string.Empty, 0.0, "Uploaded SVG image contains no readable receipt text.")
-                    : (svgText, 0.98, null);
-            }
-
-            return (NormalizeText(utf8Text), 1.0, null);
+            string svgText = ExtractFromSvg(utf8Text);
+            return string.IsNullOrWhiteSpace(svgText)
+                ? (string.Empty, 0.0, "Uploaded SVG image contains no readable receipt text.")
+                : (svgText, 0.98, null);
         }
 
         return (string.Empty, 0.0, "Uploaded image format could not be read as receipt text.");
@@ -918,6 +932,26 @@ public static class ReceiptOcrEngine
                 : bytes[cursor + i];
         }
         return true;
+    }
+
+    private static bool IsSvgXmlDocument(string utf8Text)
+    {
+        string trimmed = utf8Text.Trim('\uFEFF', '\0', ' ', '\t', '\r', '\n');
+        if (!trimmed.Contains("<svg", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            var doc = XDocument.Parse(trimmed, LoadOptions.PreserveWhitespace);
+            return doc.Root is not null
+                && doc.Root.Name.LocalName.Equals("svg", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (System.Xml.XmlException)
+        {
+            return false;
+        }
     }
 
     private static string ExtractFromSvg(string xmlText)

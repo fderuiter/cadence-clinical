@@ -96,20 +96,21 @@ public sealed class CollectionValidationService(
             return [];
         }
 
-        var enrollmentForms = await collections.ListRecordsForEnrollmentAsync(tenant, target.EnrollmentId, cancellationToken).ConfigureAwait(false);
-        var siblings = enrollmentForms.Count > 0 ? enrollmentForms : [target];
+        var targetInput = CollectionRuleInput.From(target);
+        var enrollmentForms = await collections.ListRuleInputsForEnrollmentAsync(tenant, target.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var siblings = enrollmentForms.Count > 0 ? enrollmentForms : [targetInput];
 
-        Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable = null;
+        Func<CollectionRuleInput, string, ObservationValue?, bool>? isBlindedVariable = null;
         IReadOnlyList<ProtocolDesign> designs = [];
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap = new Dictionary<ConceptId, BlindedConceptMetadata>();
         if (!unblinded)
         {
-            designs = await LoadDesignsAsync(tenant, target.StudyId, siblings, cancellationToken).ConfigureAwait(false);
-            conceptMap = await LoadConceptsAsync(tenant, siblings, designs, cancellationToken).ConfigureAwait(false);
-            isBlindedVariable = (form, itemId, raw) => IsBlindedFormVariable(form, itemId, raw, designs, conceptMap);
+            designs = await LoadDesignsAsync(tenant, target.StudyId, siblings.Select(s => s.ProtocolVersionId), cancellationToken).ConfigureAwait(false);
+            conceptMap = await LoadConceptsAsync(tenant, siblings.SelectMany(s => s.Items), designs, cancellationToken).ConfigureAwait(false);
+            isBlindedVariable = (form, itemId, raw) => IsBlindedRuleInputVariable(form, itemId, raw, designs, conceptMap);
         }
 
-        var record = BuildRuleRecord(target, siblings, draftValues, isBlindedVariable);
+        var record = BuildRuleRecord(targetInput, siblings, draftValues, isBlindedVariable);
         var context = new RuleEvaluationContext(ValidationStage.Collection, asOf);
         var warnings = new List<CollectionPreviewWarning>();
         foreach (var pack in packs)
@@ -197,8 +198,8 @@ public sealed class CollectionValidationService(
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap = new Dictionary<ConceptId, BlindedConceptMetadata>();
         if (caller is not null)
         {
-            designs = await LoadDesignsAsync(tenant, studyId, instances, cancellationToken).ConfigureAwait(false);
-            conceptMap = await LoadConceptsAsync(tenant, instances, designs, cancellationToken).ConfigureAwait(false);
+            designs = await LoadDesignsAsync(tenant, studyId, instances.Select(i => i.ProtocolVersionId), cancellationToken).ConfigureAwait(false);
+            conceptMap = await LoadConceptsAsync(tenant, instances.SelectMany(i => i.Items), designs, cancellationToken).ConfigureAwait(false);
         }
 
         var byEnrollment = instances
@@ -403,9 +404,57 @@ public sealed class CollectionValidationService(
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(enrollmentForms);
+        return BuildRuleRecordCore(
+            target,
+            enrollmentForms,
+            f => f.CollectionInstanceId,
+            f => f.CollectionSpecId,
+            f => f.OpenedAt,
+            f => f.Items,
+            f => f.Values.Select(v => (v.ItemId, v.Value)),
+            draftOverlay,
+            isBlindedVariable);
+    }
 
+    /// <summary>
+    /// Builds the <see cref="RuleRecord"/> for a narrow <paramref name="target"/> input, replacing any item matched by
+    /// <paramref name="isBlindedVariable"/> with <see cref="RuleValue.Null"/> (K-AUTH-4).
+    /// </summary>
+    public static RuleRecord BuildRuleRecord(
+        CollectionRuleInput target,
+        IReadOnlyList<CollectionRuleInput> enrollmentForms,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        Func<CollectionRuleInput, string, ObservationValue?, bool>? isBlindedVariable = null)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(enrollmentForms);
+        return BuildRuleRecordCore(
+            target,
+            enrollmentForms,
+            f => f.CollectionInstanceId,
+            f => f.CollectionSpecId,
+            f => f.OpenedAt,
+            f => f.Items,
+            f => f.Values.Select(v => (v.ItemId, v.Value)),
+            draftOverlay,
+            isBlindedVariable);
+    }
+
+    private static RuleRecord BuildRuleRecordCore<TForm>(
+        TForm target,
+        IReadOnlyList<TForm> enrollmentForms,
+        Func<TForm, CollectionInstanceId> getId,
+        Func<TForm, string> getSpecId,
+        Func<TForm, DateTimeOffset> getOpenedAt,
+        Func<TForm, IReadOnlyList<CollectionItem>> getItems,
+        Func<TForm, IEnumerable<(string ItemId, ObservationValue Value)>> getValues,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        Func<TForm, string, ObservationValue?, bool>? isBlindedVariable)
+    {
+        var targetId = getId(target);
+        var targetSpecId = getSpecId(target);
         var values = new Dictionary<string, RuleValue>(StringComparer.Ordinal);
-        var recordedByItem = target.Values.ToDictionary(
+        var recordedByItem = getValues(target).ToDictionary(
             v => v.ItemId,
             v => (ObservationValue?)v.Value,
             StringComparer.Ordinal);
@@ -417,7 +466,7 @@ public sealed class CollectionValidationService(
             }
         }
 
-        var allTargetItemIds = target.Items.Select(i => i.Id)
+        var allTargetItemIds = getItems(target).Select(i => i.Id)
             .Concat(recordedByItem.Keys)
             .Distinct(StringComparer.Ordinal);
         foreach (var itemId in allTargetItemIds)
@@ -427,7 +476,7 @@ public sealed class CollectionValidationService(
                 ? RuleValue.Null
                 : ToRuleValue(raw);
             values[itemId] = converted;
-            var qualified = $"{target.CollectionSpecId}.{itemId}";
+            var qualified = $"{targetSpecId}.{itemId}";
             if (qualified.Length <= FindingTarget.MaxNameLength)
             {
                 values[qualified] = converted;
@@ -436,18 +485,19 @@ public sealed class CollectionValidationService(
 
         // Bind latest sibling form values per CollectionSpecId on the same enrollment for cross-form edit checks.
         var latestBySpec = enrollmentForms
-            .Where(f => f.CollectionInstanceId != target.CollectionInstanceId
-                && !string.Equals(f.CollectionSpecId, target.CollectionSpecId, StringComparison.Ordinal))
-            .GroupBy(f => f.CollectionSpecId, StringComparer.Ordinal)
-            .Select(g => g.OrderBy(f => f.OpenedAt).ThenBy(f => f.CollectionInstanceId).Last());
+            .Where(f => getId(f) != targetId
+                && !string.Equals(getSpecId(f), targetSpecId, StringComparison.Ordinal))
+            .GroupBy(getSpecId, StringComparer.Ordinal)
+            .Select(g => g.OrderBy(getOpenedAt).ThenBy(getId).Last());
 
         foreach (var sibling in latestBySpec)
         {
-            var siblingRecorded = sibling.Values.ToDictionary(
+            var siblingSpecId = getSpecId(sibling);
+            var siblingRecorded = getValues(sibling).ToDictionary(
                 v => v.ItemId,
                 v => (ObservationValue?)v.Value,
                 StringComparer.Ordinal);
-            var siblingItemIds = sibling.Items.Select(i => i.Id)
+            var siblingItemIds = getItems(sibling).Select(i => i.Id)
                 .Concat(siblingRecorded.Keys)
                 .Distinct(StringComparer.Ordinal);
             foreach (var siblingItemId in siblingItemIds)
@@ -456,7 +506,7 @@ public sealed class CollectionValidationService(
                 var converted = isBlindedVariable is not null && isBlindedVariable(sibling, siblingItemId, raw)
                     ? RuleValue.Null
                     : ToRuleValue(raw);
-                var qualified = $"{sibling.CollectionSpecId}.{siblingItemId}";
+                var qualified = $"{siblingSpecId}.{siblingItemId}";
                 if (qualified.Length <= FindingTarget.MaxNameLength)
                 {
                     values[qualified] = converted;
@@ -469,7 +519,7 @@ public sealed class CollectionValidationService(
             }
         }
 
-        return new RuleRecord(target.CollectionSpecId, target.CollectionInstanceId.Value.ToString("D"), values);
+        return new RuleRecord(targetSpecId, targetId.Value.ToString("D"), values);
     }
 
     /// <summary>Converts a typed <see cref="ObservationValue"/> to the corresponding <see cref="RuleValue"/>.</summary>
@@ -575,24 +625,44 @@ public sealed class CollectionValidationService(
             }
         }
 
-        if (_blinding is BlindedTreatmentClassifier
+        if (ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
             && form.BlindedItemIds is not null
             && form.BlindedItemIds.Contains(itemId))
         {
             return true;
         }
 
-        var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+        return IsBlindedSpecVariable(form.CollectionSpecId, form.CollectionTitle, form.Items, itemId, rawValue, designs, conceptMap);
+    }
+
+    private bool IsBlindedRuleInputVariable(
+        CollectionRuleInput form,
+        string itemId,
+        ObservationValue? rawValue,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap) =>
+        IsBlindedSpecVariable(form.CollectionSpecId, form.CollectionTitle, form.Items, itemId, rawValue, designs, conceptMap);
+
+    private bool IsBlindedSpecVariable(
+        string collectionSpecId,
+        string? collectionTitle,
+        IReadOnlyList<CollectionItem> items,
+        string itemId,
+        ObservationValue? rawValue,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap)
+    {
+        var specItem = items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
         BlindedConceptMetadata? conceptMeta = specItem is not null && conceptMap.TryGetValue(specItem.Concept.ConceptId, out var meta)
             ? meta
             : null;
-        if (_blinding.IsBlindedCollectionItem(form.CollectionSpecId, form.CollectionTitle, specItem, rawValue, conceptMeta, designs))
+        if (_blinding.IsBlindedCollectionItem(collectionSpecId, collectionTitle, specItem, rawValue, conceptMeta, designs))
         {
             return true;
         }
 
         BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptMap.TryGetValue(id, out var m) ? m : null;
-        return _blinding.IsBlindedVariable(form.CollectionSpecId, itemId, designs, ResolveConcept);
+        return _blinding.IsBlindedVariable(collectionSpecId, itemId, designs, ResolveConcept);
     }
 
     private bool IsBlindedViolation(
@@ -612,7 +682,7 @@ public sealed class CollectionValidationService(
     private async Task<IReadOnlyList<ProtocolDesign>> LoadDesignsAsync(
         TenantId tenant,
         StudyId studyId,
-        IReadOnlyList<CollectionInstanceRecord> forms,
+        IEnumerable<ProtocolVersionId> versionIds,
         CancellationToken cancellationToken)
     {
         if (protocols is null)
@@ -620,11 +690,12 @@ public sealed class CollectionValidationService(
             return [];
         }
 
+        var distinctVersionIds = versionIds.Distinct().ToList();
         var studyDesigns = await protocols.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
         if (studyDesigns.Count > 0)
         {
             var formDesigns = new List<ProtocolDesign>();
-            foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
+            foreach (var versionId in distinctVersionIds)
             {
                 if (studyDesigns.TryGetValue(versionId, out var design))
                 {
@@ -636,7 +707,7 @@ public sealed class CollectionValidationService(
         }
 
         var fallbackDesigns = new List<ProtocolDesign>();
-        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Where(id => !id.IsEmpty).Distinct())
+        foreach (var versionId in distinctVersionIds.Where(id => !id.IsEmpty))
         {
             if (await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
             {
@@ -649,13 +720,13 @@ public sealed class CollectionValidationService(
 
     private Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
         TenantId tenant,
-        IReadOnlyList<CollectionInstanceRecord> forms,
+        IEnumerable<CollectionItem> items,
         IReadOnlyList<ProtocolDesign> designs,
         CancellationToken cancellationToken) =>
         BlindedConceptMetadata.ResolveManyAsync(
             concepts,
             tenant,
-            forms.SelectMany(f => f.Items).Select(i => i.Concept)
+            items.Select(i => i.Concept)
                 .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept)),
             cancellationToken);
 

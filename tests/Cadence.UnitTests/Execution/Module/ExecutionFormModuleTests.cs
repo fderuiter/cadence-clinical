@@ -86,6 +86,23 @@ public sealed class ExecutionFormModuleTests
         unasked.Complete.Should().BeFalse();
         unasked.MissingRequired.Should().Equal("dbp");
         unasked.Items.Single().Revision.Should().Be(1);
+
+        var optionalBlank = FormResponse.From(Record([Item("comment", required: false), Item("notes", required: false)]), null);
+        optionalBlank.MissingRequired.Should().BeEmpty();
+        optionalBlank.Complete.Should().BeFalse("a non-empty form with zero recorded values must not report Complete");
+
+        var optionalUnasked = FormResponse.From(
+            Record([Item("comment", required: false)], Value("comment", new MissingValue(NullFlavor.NotAsked))),
+            null);
+        optionalUnasked.Complete.Should().BeFalse("NotAsked does not count as a recorded value");
+
+        var optionalRecorded = FormResponse.From(
+            Record([Item("comment", required: false), Item("notes", required: false)], Value("comment", new TextValue("Patient rested 5 min"))),
+            null);
+        optionalRecorded.Complete.Should().BeTrue();
+
+        var zeroItems = FormResponse.From(Record([]), null);
+        zeroItems.Complete.Should().BeTrue();
     }
 
     /// <summary>
