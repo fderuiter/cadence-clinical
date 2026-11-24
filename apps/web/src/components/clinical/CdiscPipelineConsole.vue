@@ -151,7 +151,7 @@
         >
           <div class="domain-card-header">
             <span class="domain-tag">{{ domain.code }}</span>
-            <span class="record-badge"
+            <span class="record-badge tabular-nums"
               >{{ getSDTMCount(domain.code) }} records</span
             >
           </div>
@@ -184,7 +184,7 @@
         >
           <div class="domain-card-header">
             <span class="domain-tag adam-tag">{{ ds.code }}</span>
-            <span class="record-badge"
+            <span class="record-badge tabular-nums"
               >{{ getADaMCount(ds.code) }} records</span
             >
           </div>

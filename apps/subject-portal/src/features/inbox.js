@@ -298,9 +298,32 @@ export async function loadNotifications(userId) {
 
 // Retry button on the inbox failure state.
 export async function retryInbox() {
+  const startedInFailure =
+    typeof document !== "undefined" &&
+    Boolean(
+      document.getElementById("inbox-failure")?.contains(document.activeElement)
+    );
   state.notificationsLoading = true;
   state.notificationsError = null;
   renderInbox();
   await loadNotifications(state.session.userId);
   renderInbox();
+  if (startedInFailure) {
+    if (state.notificationsError) {
+      void handoffFocus([
+        "#btn-retry-inbox",
+        "#inbox-view-heading",
+        "#main-content",
+      ]);
+    } else {
+      void handoffFocus([
+        () =>
+          document.querySelector(
+            "#inbox-container button:not([disabled]), #inbox-container a[href], #inbox-container input:not([disabled])"
+          ),
+        "#inbox-view-heading",
+        "#main-content",
+      ]);
+    }
+  }
 }

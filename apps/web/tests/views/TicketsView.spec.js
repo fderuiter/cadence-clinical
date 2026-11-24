@@ -471,4 +471,218 @@ describe("TicketsView - Live API Mode (VITE_DEMO_MODE=false)", () => {
     );
     expect(wrapper.text()).toContain("Locked under 21 CFR Part 11");
   });
+
+  it("fails closed on INTERNAL_SPONSOR controls for standalone trial_coordinator while preserving multi-role founder sponsor visibility", async () => {
+    const { ticketsApi } = await import("../../src/api/ticketsApi");
+    const { useAuthStore } = await import("../../src/stores/auth");
+    const authStore = useAuthStore();
+    authStore.rawRoles = ["trial_coordinator"];
+    authStore.user = {
+      username: "trial.coord",
+      tenantId: "trial-a1b2c3d4e5f6",
+    };
+
+    vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([sampleLiveTicket]);
+    vi.spyOn(ticketsApi, "getTicket").mockResolvedValue(sampleLiveTicket);
+    vi.spyOn(ticketsApi, "listComments").mockResolvedValue([
+      {
+        id: "cmt-pub-1",
+        ticket_id: "tkt-live-01",
+        body: "Public site triage update.",
+        visibility: "PUBLIC",
+        created_at: "2026-11-20T10:30:00Z",
+        created_by: "trial.coord",
+        reason_for_change: "Initial triage note",
+        version_index: 1,
+      },
+      {
+        id: "cmt-int-1",
+        ticket_id: "tkt-live-01",
+        body: "Confidential sponsor escalation note.",
+        visibility: "INTERNAL_SPONSOR",
+        created_at: "2026-11-20T10:45:00Z",
+        created_by: "dm.lead",
+        reason_for_change: "Internal escalation",
+        version_index: 1,
+      },
+    ]);
+    vi.spyOn(ticketsApi, "getAuditTrail").mockResolvedValue([]);
+    const createCommentSpy = vi
+      .spyOn(ticketsApi, "createComment")
+      .mockResolvedValue({
+        id: "cmt-pub-2",
+        ticket_id: "tkt-live-01",
+        body: "Follow-up public note from trial coordinator.",
+        visibility: "PUBLIC",
+        created_at: "2026-11-20T11:00:00Z",
+        created_by: "trial.coord",
+        reason_for_change: "Coordinator update",
+        version_index: 1,
+      });
+
+    const wrapper = mount(TicketsView, {
+      global: {
+        mocks: {
+          $route: {
+            query: { ref: "TKT-2026-0042" },
+          },
+        },
+      },
+    });
+    await flushPromises();
+
+    const discussionTab = wrapper
+      .findAll(".drawer-tabs .tab-item")
+      .find((t) => t.text().includes("Discussion"));
+    await discussionTab.trigger("click");
+    await flushPromises();
+
+    // Standalone trial_coordinator in verified trial-* workspace sees PUBLIC only and cannot select INTERNAL_SPONSOR
+    expect(
+      wrapper.find("#btn-create-ticket").attributes("disabled")
+    ).toBeUndefined();
+    expect(wrapper.text()).toContain("Public site triage update.");
+    expect(wrapper.text()).not.toContain(
+      "Confidential sponsor escalation note."
+    );
+    expect(wrapper.text()).not.toContain("Internal Sponsor Only");
+    expect(wrapper.text()).not.toContain("Internal Sponsor Note");
+    expect(
+      wrapper.find("textarea[aria-label='Clinical discussion note']").exists()
+    ).toBe(true);
+
+    await wrapper
+      .find("textarea[aria-label='Clinical discussion note']")
+      .setValue("Follow-up public note from trial coordinator.");
+    await wrapper
+      .find("input[aria-label='Reason for adding note']")
+      .setValue("Coordinator update");
+    await wrapper.find("#btn-post-ticket-comment").trigger("click");
+    await flushPromises();
+
+    expect(createCommentSpy).toHaveBeenCalledWith(
+      "tkt-live-01",
+      {
+        body: "Follow-up public note from trial coordinator.",
+        visibility: "PUBLIC",
+      },
+      "Coordinator update"
+    );
+
+    // Non-trial enterprise tenant: standalone trial_coordinator loses mutation controls and still has no INTERNAL_SPONSOR access
+    authStore.user = {
+      username: "trial.coord",
+      tenantId: "tenant-enterprise-01",
+    };
+    await flushPromises();
+    expect(
+      wrapper.find("#btn-create-ticket").attributes("disabled")
+    ).toBeDefined();
+    expect(
+      wrapper.find("textarea[aria-label='Clinical discussion note']").exists()
+    ).toBe(false);
+    expect(wrapper.text()).not.toContain("Internal Sponsor Only");
+
+    // Multi-role founder holding Sponsor Admin + Trial Coordinator in verified trial-* workspace retains full sponsor visibility
+    authStore.rawRoles = ["Sponsor Admin", "Trial Coordinator"];
+    authStore.user = {
+      username: "trial.founder",
+      tenantId: "trial-a1b2c3d4e5f6",
+    };
+    await flushPromises();
+
+    expect(
+      wrapper.find("#btn-create-ticket").attributes("disabled")
+    ).toBeUndefined();
+    expect(wrapper.text()).toContain("Internal Sponsor Only");
+    expect(wrapper.text()).toContain("Internal Sponsor Note");
+    expect(wrapper.text()).toContain("Confidential sponsor escalation note.");
+  });
+});
+
+describe("TicketsView - Auditor Read-Only Guards & Clinical Scope Pre-Fill", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("disables #btn-create-ticket with a plain-language explanation for auditor roles and triggers zero HTTP 403 mutations", async () => {
+    const { ticketsApi } = await import("../../src/api/ticketsApi");
+    const { useAuthStore } = await import("../../src/stores/auth");
+    const authStore = useAuthStore();
+    authStore.currentPersona = "auditor";
+    authStore.rawRoles = ["Auditor"];
+
+    vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
+    const createSpy = vi.spyOn(ticketsApi, "createTicket");
+
+    const wrapper = mount(TicketsView);
+    await flushPromises();
+
+    const createBtn = wrapper.find("#btn-create-ticket");
+    expect(createBtn.exists()).toBe(true);
+    expect(createBtn.attributes("disabled")).toBeDefined();
+    expect(createBtn.attributes("aria-disabled")).toBe("true");
+    expect(createBtn.attributes("aria-describedby")).toBe(
+      "tickets-auditor-readonly-note"
+    );
+
+    const readonlyNote = wrapper.find("#tickets-auditor-readonly-note");
+    expect(readonlyNote.exists()).toBe(true);
+    expect(readonlyNote.text()).toContain("Read-only auditor access");
+
+    await createBtn.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".ticket-create-modal").exists()).toBe(false);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it("binds active studyId, siteId, and pseudonymous subjectId onto TicketCreateModal when opened from /tickets", async () => {
+    const { ticketsApi } = await import("../../src/api/ticketsApi");
+    const { useAuthStore } = await import("../../src/stores/auth");
+    const { useClinicalScopeStore } =
+      await import("../../src/stores/clinicalScope");
+    const authStore = useAuthStore();
+    authStore.currentPersona = "site_crc";
+    authStore.rawRoles = ["CRC"];
+
+    const scopeStore = useClinicalScopeStore();
+    scopeStore.$patch({
+      activeStudyId: "STUDY-ONC-202",
+      activeSiteId: "SITE-101",
+      activeSubjectId: "SUBJ-8812",
+    });
+
+    vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
+
+    const wrapper = mount(TicketsView, {
+      global: {
+        mocks: {
+          $route: {
+            query: {
+              studyId: "STUDY-ONC-202",
+              siteId: "SITE-101",
+              subjectId: "SUBJ-8812",
+            },
+          },
+        },
+      },
+    });
+    await flushPromises();
+
+    const createBtn = wrapper.find("#btn-create-ticket");
+    expect(createBtn.attributes("disabled")).toBeUndefined();
+    await createBtn.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#ticket-study").element.value).toBe("STUDY-ONC-202");
+    expect(wrapper.find("#ticket-site").element.value).toBe("SITE-101");
+    expect(wrapper.find("#ticket-subject").element.value).toBe("SUBJ-8812");
+  });
 });

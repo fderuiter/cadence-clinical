@@ -100,6 +100,9 @@
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
+                  :data-tabular-nums="
+                    item.value_kind !== 'text' ? 'true' : undefined
+                  "
                   :disabled="
                     formState.locked ||
                     formState.saving ||
@@ -222,7 +225,7 @@
                       <input
                         :id="`ecrf-sdv-select-${item.item_id}`"
                         type="checkbox"
-                        :checked="sdv.selectedSdvItems.includes(item.item_id)"
+                        :checked="sdv.isSdvSelected(item.item_id)"
                         :value="item.item_id"
                         :disabled="sdv.sdvBusy || formState.assertionsLocked"
                         :aria-label="`Select ${item.item_id} for source verification`"
@@ -383,6 +386,14 @@
                     <option value="high">High</option>
                     <option value="low">Low</option>
                   </select>
+                  <label for="ecrf-raise-assignee">Assignee (optional)</label>
+                  <input
+                    id="ecrf-raise-assignee"
+                    v-model="raiseAssignee"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Actor ID (optional)"
+                  />
                   <button
                     id="ecrf-raise-confirm"
                     class="btn btn-primary"
@@ -590,6 +601,7 @@ const raiseText = ref("");
 const raiseReason = ref("");
 const raiseOwnerRole = ref<FormQueryOwnerRole>("site");
 const raisePriority = ref<FormQueryPriority>("normal");
+const raiseAssignee = ref("");
 
 watch(
   () =>
@@ -639,6 +651,7 @@ function beginRaise(item: EcrfFormItem) {
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  raiseAssignee.value = "";
   void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
 }
 
@@ -647,6 +660,7 @@ function cancelRaise() {
   raising.value = null;
   raiseText.value = "";
   raiseReason.value = "";
+  raiseAssignee.value = "";
   void handoffFocus([
     itemId ? `#ecrf-raise-${itemId}` : null,
     itemId ? `#ecrf-item-${itemId}` : null,
@@ -659,6 +673,7 @@ async function confirmRaise() {
   const target = raising.value;
   const text = raiseText.value.trim();
   const changeReason = raiseReason.value.trim();
+  const assignee = raiseAssignee.value.trim();
   if (!props.formState.form || !target || !text || !changeReason) return;
   const wasUnasked = !target.observation_id;
   const options = {
@@ -668,6 +683,7 @@ async function confirmRaise() {
     ...(raisePriority.value !== "normal"
       ? { priority: raisePriority.value }
       : {}),
+    ...(assignee ? { assignee } : {}),
   };
   const raised = await props.queries.raise(
     {
@@ -826,24 +842,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
 }
-.ecrf-form-error {
-  color: var(--semantic-color-error);
-  font-size: 0.8rem;
-  margin: 2px 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.ecrf-form-outcome {
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
 .ecrf-locked-unsaved {
   flex-basis: 100%;
   margin-top: 4px;
@@ -851,17 +849,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 .ecrf-locked-unsaved ul {
   margin: 4px 0 0;
   padding-left: 18px;
-}
-.ecrf-form-outcome--saved {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-form-outcome--stale,
-.ecrf-form-outcome--invalid,
-.ecrf-form-outcome--locked,
-.ecrf-form-outcome--failed {
-  background-color: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
 }
 .ecrf-preview-warnings {
   margin: 4px 0 0;
@@ -879,3 +866,5 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   font-size: 0.85rem;
 }
 </style>
+
+<style scoped src="./ecrfFormBanners.css"></style>

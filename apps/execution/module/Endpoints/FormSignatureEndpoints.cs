@@ -99,6 +99,11 @@ internal static class FormSignatureEndpoints
             return TypedResults.Problem(title: "Not found", detail: $"Form {formId:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (record.Locks.Any(l => l.Kind == LockKind.Locked))
+        {
+            return KernelErrorEndpoints.Problem(AssertionErrors.Locked);
+        }
+
         var trimmedHash = request.ContentHash.Trim();
         if (contexts is not null
             && access is not null
@@ -174,9 +179,31 @@ internal static class FormSignatureEndpoints
         var signed = await forms.FindForReaderAsync(tenant, id, unblinded, cancellationToken).ConfigureAwait(false);
         var view = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
             ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
+
+        System.Collections.Generic.IReadOnlySet<string>? blindedItemIds = signed!.BlindedItemIds;
+        System.Collections.Generic.IReadOnlySet<ObservationId>? blindedObservationIds = signed.BlindedObservationIds;
+        if (access is not null)
+        {
+            var masks = await access.MaskAsync(tenant, FormEndpoints.CollectFormNodes(signed), cancellationToken).ConfigureAwait(false);
+            var (resolvedItems, resolvedObservations) = await FormEndpoints.ResolveBlindedFormTargetsAsync(
+                tenant,
+                signed,
+                masks,
+                unblinded,
+                context.RequestServices,
+                cancellationToken).ConfigureAwait(false);
+            if (signed.BlindedObservationIds is not null)
+            {
+                resolvedObservations.UnionWith(signed.BlindedObservationIds);
+            }
+
+            blindedItemIds = resolvedItems;
+            blindedObservationIds = resolvedObservations;
+        }
+
         return TypedResults.Created(
             $"{FormEndpoints.RoutePrefix}/{formId:D}",
-            FormSignatureResponse.From(view, signed.BlindedItemIds, signed.BlindedObservationIds));
+            FormSignatureResponse.From(view, blindedItemIds, blindedObservationIds));
     }
 
     private static string SignActionFor(HttpContext context) =>

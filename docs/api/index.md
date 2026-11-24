@@ -11,13 +11,13 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [econsent](econsent.md) | 6 |
 | [eisf](eisf.md) | 2 |
 | [etmf](etmf.md) | 17 |
-| [execution_forms](execution_forms.md) | 15 |
+| [execution_forms](execution_forms.md) | 16 |
 | [execution](execution.md) | 65 |
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 11 |
 | [intelligence](intelligence.md) | 12 |
 | [interop](interop.md) | 28 |
-| [kernel](kernel.md) | 71 |
+| [kernel](kernel.md) | 72 |
 | [knowledge](knowledge.md) | 15 |
 | [notifications](notifications.md) | 3 |
 | [org](org.md) | 2 |
