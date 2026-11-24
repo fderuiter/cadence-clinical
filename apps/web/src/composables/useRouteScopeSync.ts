@@ -17,25 +17,39 @@ export function normalizeSubjectCodeValue(value: unknown): string {
   if (!trimmed) return "";
 
   let participantId = "";
+  let enrollmentId = "";
   if (trimmed.startsWith("participant:")) {
     participantId =
       trimmed.slice("participant:".length).split("@")[0]?.trim() || "";
+  } else if (trimmed.startsWith("enrollment:")) {
+    enrollmentId =
+      trimmed.slice("enrollment:".length).split("@")[0]?.trim() || "";
   } else if (trimmed.includes(":")) {
     return "";
   } else if (UUID_PATTERN.test(trimmed)) {
     participantId = trimmed;
   }
 
-  if (participantId) {
+  if (enrollmentId || participantId) {
     const stateRoot = getActivePinia()?.state.value as
       | {
           studyCanvas?: {
             knownParticipants?: Record<string, { subject_id?: string }>;
+            knownParticipantsByEnrollmentId?: Record<
+              string,
+              { subject_id?: string }
+            >;
           };
         }
       | undefined;
-    const resolved =
-      stateRoot?.studyCanvas?.knownParticipants?.[participantId]?.subject_id;
+    const resolved = enrollmentId
+      ? (stateRoot?.studyCanvas?.knownParticipantsByEnrollmentId?.[enrollmentId]
+          ?.subject_id ??
+        stateRoot?.studyCanvas?.knownParticipants?.[enrollmentId]?.subject_id)
+      : (stateRoot?.studyCanvas?.knownParticipants?.[participantId]
+          ?.subject_id ??
+        stateRoot?.studyCanvas?.knownParticipantsByEnrollmentId?.[participantId]
+          ?.subject_id);
     return typeof resolved === "string" ? resolved.trim() : "";
   }
 
@@ -200,4 +214,28 @@ export async function replaceRouteQueryParams(
   } catch {
     return false;
   }
+}
+
+export function shouldSuppressUnsavedNavigationGuard(
+  authStore: {
+    isAuthenticated?: boolean;
+    sessionExpired?: boolean;
+    isLoggingOut?: boolean;
+  },
+  to?: { name?: unknown; path?: string } | null
+): boolean {
+  if (
+    !authStore.isAuthenticated ||
+    authStore.sessionExpired ||
+    authStore.isLoggingOut
+  ) {
+    return true;
+  }
+  return Boolean(
+    to &&
+    (to.name === "forbidden" ||
+      to.path === "/forbidden" ||
+      to.name === "login" ||
+      to.path === "/login")
+  );
 }

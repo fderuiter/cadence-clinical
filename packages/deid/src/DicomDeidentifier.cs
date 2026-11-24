@@ -400,6 +400,7 @@ public class DicomDeidentifier
         string operatorIdentity = "cadence.imaging.pipeline")
     {
         ArgumentNullException.ThrowIfNull(dicomBytes);
+        ValidateScopeIdentifiers(subjectId, siteId, studyId);
 
         string sourceSha256 = Convert.ToHexStringLower(SHA256.HashData(dicomBytes));
 
@@ -477,6 +478,7 @@ public class DicomDeidentifier
         List<PixelMaskBoundingBox>? customPixelMasks = null)
     {
         ArgumentNullException.ThrowIfNull(dicomStream);
+        ValidateScopeIdentifiers(subjectId, siteId, studyId);
 
         var (pooledInput, sourceSha256) = PooledBlockStream.CopyAndHash(dicomStream);
         try
@@ -513,6 +515,7 @@ public class DicomDeidentifier
     {
         ArgumentNullException.ThrowIfNull(preloadedStream);
         ArgumentNullException.ThrowIfNull(sourceSha256);
+        ValidateScopeIdentifiers(subjectId, siteId, studyId);
 
         preloadedStream.Position = 0;
         var dicomFile = DicomFile.Open(preloadedStream, FileReadOption.ReadLargeOnDemand, PooledBlockStream.DefaultBlockSize);
@@ -564,6 +567,16 @@ public class DicomDeidentifier
         }
     }
 
+    private static void ValidateScopeIdentifiers(string subjectId, string siteId, string studyId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(siteId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(studyId);
+    }
+
+    private static string BuildScopeSalt(string studyId, string siteId, string subjectId) =>
+        $"{studyId.Length}:{studyId}:{siteId.Length}:{siteId}:{subjectId.Length}:{subjectId}";
+
     private ScrubbedDatasetSummary ScrubHeadersAndExtractGeometry(
         DicomFile dicomFile,
         string subjectId,
@@ -571,6 +584,8 @@ public class DicomDeidentifier
         string studyId,
         int dateShiftDays)
     {
+        ValidateScopeIdentifiers(subjectId, siteId, studyId);
+
         var dataset = dicomFile.Dataset;
         var scrubbedTags = new HashSet<string>(StringComparer.Ordinal);
 
@@ -582,9 +597,10 @@ public class DicomDeidentifier
         string origStudyHash = HashOriginalUid(origStudyUid);
         string origSopHash = HashOriginalUid(origSopUid);
 
-        string newStudyUid = GenerateUid(origStudyUid, $"study:{studyId}");
-        string newSeriesUid = GenerateUid(origSeriesUid, $"series:{studyId}");
-        string newSopUid = GenerateUid(origSopUid, $"sop:{studyId}:{subjectId}");
+        string scopeSalt = BuildScopeSalt(studyId, siteId, subjectId);
+        string newStudyUid = GenerateUid(origStudyUid, $"study:{scopeSalt}");
+        string newSeriesUid = GenerateUid(origSeriesUid, $"series:{scopeSalt}");
+        string newSopUid = GenerateUid(origSopUid, $"sop:{scopeSalt}");
 
         dataset.AddOrUpdate(DicomTag.StudyInstanceUID, newStudyUid);
         dataset.AddOrUpdate(DicomTag.SeriesInstanceUID, newSeriesUid);
@@ -592,7 +608,7 @@ public class DicomDeidentifier
 
         if (!string.IsNullOrEmpty(origForUid))
         {
-            dataset.AddOrUpdate(DicomTag.FrameOfReferenceUID, GenerateUid(origForUid, $"for:{studyId}"));
+            dataset.AddOrUpdate(DicomTag.FrameOfReferenceUID, GenerateUid(origForUid, $"for:{scopeSalt}"));
         }
 
         if (dicomFile.FileMetaInfo != null)

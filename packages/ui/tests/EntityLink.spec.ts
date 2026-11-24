@@ -77,6 +77,11 @@ describe("EntityLink & EntityPeekDrawer (packages/ui)", () => {
       )
     ).toBe("");
     expect(
+      normalizeEntitySubjectCode(
+        "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e"
+      )
+    ).toBe("");
+    expect(
       normalizeEntitySubjectCode("0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e")
     ).toBe("");
     expect(normalizeEntitySubjectCode("SUBJ-104")).toBe("SUBJ-104");

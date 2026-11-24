@@ -565,7 +565,7 @@
             "type": "boolean",
             "default": false
           },
-          "site_id": {
+          "site_code": {
             "type": [
               "null",
               "string"

@@ -1393,6 +1393,7 @@ export const useEtmfStore = defineStore("etmf", {
     async triggerExport(payload) {
       const fullPayload = {
         study_id: this.currentStudyId || null,
+        site_code: this.currentSiteId || null,
         site_id: this.currentSiteId || null,
         ...payload,
       };

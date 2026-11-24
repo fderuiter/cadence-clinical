@@ -1169,4 +1169,36 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
 
     wrapper.unmount();
   });
+
+  it("resolves canonical enrollment:<uuid> NodeRefs via instantiated studyCanvas without leaking raw NodeRef tokens", () => {
+    const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-999999999999";
+    const enrollmentRef = `enrollment:${enrollmentId}`;
+    const canvasStore = useStudyCanvasStore();
+    canvasStore.studyCode = "CADENCE-101";
+    canvasStore.knownParticipantsByEnrollmentId = {
+      [enrollmentId]: {
+        id: PARTICIPANT_UUID,
+        subject_id: "SUBJ-ENR-42",
+        site_id: "SITE-102",
+        enrollment_ref: enrollmentRef,
+      } as never,
+    };
+
+    const resolved = resolveActiveWorkspaceScope({
+      params: { studyCode: "CADENCE-101" },
+      query: { participant: enrollmentRef },
+    });
+    expect(resolved.studyCode).toBe("CADENCE-101");
+    expect(resolved.siteId).toBe("SITE-102");
+    expect(resolved.subjectCode).toBe("SUBJ-ENR-42");
+    expect(resolved.participantRef).toBe(enrollmentRef);
+
+    const unresolved = resolveActiveWorkspaceScope({
+      params: { studyCode: "CADENCE-101" },
+      query: {
+        subjectId: "enrollment:0192f3c4-5e6a-7b8c-9d0e-000000000000",
+      },
+    });
+    expect(unresolved.subjectCode).toBe("");
+  });
 });

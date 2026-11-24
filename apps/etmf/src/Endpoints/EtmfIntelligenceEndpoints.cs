@@ -1151,9 +1151,13 @@ public static class EtmfIntelligenceEndpoints
             return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
 
-        string? normalizedRequestedSite = string.IsNullOrWhiteSpace(request.SiteCode)
+        string? candidateSite = !string.IsNullOrWhiteSpace(request.SiteCode)
+            ? request.SiteCode
+            : (httpContext.Request.Query["site_code"].FirstOrDefault()
+               ?? httpContext.Request.Query["site_id"].FirstOrDefault());
+        string? normalizedRequestedSite = string.IsNullOrWhiteSpace(candidateSite)
             ? null
-            : request.SiteCode.Trim();
+            : candidateSite.Trim();
         if (normalizedRequestedSite is not null && !ClinicalScopeGuard.CanAccessSite(httpContext, normalizedRequestedSite))
         {
             return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
@@ -1533,6 +1537,6 @@ public record ExportDocumentsRequest(
     [property: JsonPropertyName("section")] string? Section = null,
     [property: JsonPropertyName("artifact_code")] string? ArtifactCode = null,
     [property: JsonPropertyName("is_full_binder")] bool IsFullBinder = false,
-    [property: JsonPropertyName("site_id")] string? SiteCode = null
+    [property: JsonPropertyName("site_code")] string? SiteCode = null
 );
 

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Modules.Intelligence.Endpoints;
 
@@ -64,9 +65,11 @@ public static class BiometricEndpoints
     /// <summary>Processes video frame payloads for anti-spoofing in temporary memory and generates signed liveness tokens.</summary>
     public static async Task<IResult> VerifyLivenessAsync(
         VerifyLivenessRequest request,
+        IOptions<BiometricLivenessOptions> livenessOptions,
         IClock clock,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(livenessOptions);
         if (request is null || string.IsNullOrWhiteSpace(request.SubjectPseudonym))
         {
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>
@@ -99,14 +102,16 @@ public static class BiometricEndpoints
         DateTimeOffset expiresAt = now.AddMinutes(15);
 
         string mode = isFallback ? "coordinator_fallback" : "camera";
+        byte[] livenessSecret = livenessOptions.Value.DecodeKey();
 
         string token = BiometricLivenessTokenService.IssueToken(
             subjectPseudonym: subject,
             antiSpoofScore: score,
             isLive: isLive,
             mode: mode,
+            secret: livenessSecret,
             now: now,
-            lifetime: TimeSpan.FromMinutes(15));
+            lifetime: BiometricLivenessTokenService.MaxLifetime);
 
         var response = new VerifyLivenessResponse(
             LivenessToken: token,

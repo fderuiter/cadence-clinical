@@ -25,7 +25,10 @@ export interface SignatureVerificationPayload {
   semanticAction?: string;
 }
 
-export type ExportDocumentsPayload = EtmfSchemas["Etmf_ExportDocumentsRequest"];
+export type ExportDocumentsPayload =
+  EtmfSchemas["Etmf_ExportDocumentsRequest"] & {
+    site_id?: string | null;
+  };
 
 export interface ExportJobStatus {
   job_id: string;
@@ -254,9 +257,9 @@ function normalizeQcStagingItem<T>(raw: T): T {
 
 export const etmfService = {
   async exportDocuments(payload: Partial<ExportDocumentsPayload>) {
-    const body: ExportDocumentsPayload = {
+    const body: EtmfSchemas["Etmf_ExportDocumentsRequest"] = {
       study_id: payload.study_id ?? null,
-      site_id: payload.site_id ?? null,
+      site_code: payload.site_code ?? payload.site_id ?? null,
       document_ids: payload.document_ids ?? null,
       zone: payload.zone ?? null,
       section: payload.section ?? null,

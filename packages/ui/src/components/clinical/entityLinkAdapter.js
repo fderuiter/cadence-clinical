@@ -157,19 +157,20 @@ const STATUS_TONES = Object.freeze({
   ARCHIVED: "locked",
 });
 
-const RAW_PARTICIPANT_NODEREF_RE = /^participant:[0-9a-f-]{8,}(?:@\d+)?$/i;
+const RAW_SUBJECT_NODEREF_RE =
+  /^(?:participant|enrollment):[0-9a-f-]{8,}(?:@\d+)?$/i;
 const RAW_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RAW_DOC_ID_RE = /^(?:DOC|ETMF|LTR)-[A-Z0-9-]+$/i;
 
 /**
- * Normalizes a participant/subject identifier so raw `participant:<uuid>` NodeRefs
- * or bare UUIDs are never propagated as `subjectId` query values.
+ * Normalizes a participant/subject identifier so raw `participant:<uuid>` / `enrollment:<uuid>`
+ * NodeRefs or bare UUIDs are never propagated as `subjectId` query values.
  */
 export function normalizeEntitySubjectCode(raw) {
   const trimmed = typeof raw === "string" ? raw.trim() : "";
   if (!trimmed) return "";
-  if (RAW_PARTICIPANT_NODEREF_RE.test(trimmed)) return "";
+  if (RAW_SUBJECT_NODEREF_RE.test(trimmed) || trimmed.includes(":")) return "";
   if (RAW_UUID_RE.test(trimmed)) return "";
   return trimmed;
 }
