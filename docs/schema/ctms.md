@@ -28,6 +28,20 @@ Indexes:
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
+## ctms.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
+
 ## ctms.ctms_audit_logs
 
 Entity: `CtmsAuditLog`
@@ -164,13 +178,20 @@ Entity: `CtmsDelegationPeriod`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `Id` | `character varying(36)` | no |  | PK |
+| `BatchTransactionId` | `character varying(100)` | yes |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `DelegationId` | `character varying(36)` | no |  |  |
+| `Duties` | `character varying(1000)` | yes |  |  |
 | `EndDate` | `character varying(50)` | yes |  |  |
+| `EtmfArtifactDocId` | `character varying(100)` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
+| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `PiSignatureHash` | `character varying(255)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `SignedOff` | `boolean` | no |  |  |
 | `SiteCode` | `character varying(255)` | no |  |  |
+| `StaffName` | `character varying(255)` | yes |  |  |
+| `StaffRole` | `character varying(150)` | yes |  |  |
 | `StaffUserId` | `character varying(255)` | no |  |  |
 | `StartDate` | `character varying(50)` | no |  |  |
 | `StudyCode` | `character varying(255)` | no |  |  |
@@ -197,13 +218,20 @@ Entity: `CtmsDelegation`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `Id` | `character varying(36)` | no |  | PK |
+| `BatchTransactionId` | `character varying(100)` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
+| `Duties` | `character varying(1000)` | yes |  |  |
 | `EndDate` | `character varying(50)` | yes |  |  |
+| `EtmfArtifactDocId` | `character varying(100)` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
+| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `PiSignatureHash` | `character varying(255)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `SignedOff` | `boolean` | no |  |  |
 | `SiteId` | `character varying(255)` | no |  |  |
+| `StaffName` | `character varying(255)` | yes |  |  |
+| `StaffRole` | `character varying(150)` | yes |  |  |
 | `StaffUserId` | `character varying(255)` | no |  |  |
 | `StartDate` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
@@ -231,6 +259,7 @@ Entity: `CtmsGeneratedLetter`
 | `EtmfDocumentId` | `character varying(100)` | yes |  |  |
 | `IsSigned` | `boolean` | no |  |  |
 | `LetterType` | `character varying(50)` | no |  |  |
+| `PdfBytes` | `bytea` | yes |  |  |
 | `PdfObjectKey` | `character varying(1000)` | yes |  |  |
 | `PdfSha256Hash` | `character varying(64)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |

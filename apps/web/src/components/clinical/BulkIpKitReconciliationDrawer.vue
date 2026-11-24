@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="isOpen"
+    v-if="drawerOpen"
     class="drawer-backdrop"
     role="presentation"
     @click.self="closeDrawer"
@@ -37,7 +37,7 @@
           aria-label="Close Reconciliation Drawer"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="20" aria-hidden="true" />
         </button>
       </header>
 
@@ -53,18 +53,17 @@
         </div>
         <div class="context-item">
           <span class="context-label">Pharmacist:</span>
-          <span class="context-value">{{
-            pharmacistName || "Site Pharmacist"
-          }}</span>
+          <span class="context-value">{{ authenticatedSignerLabel }}</span>
         </div>
         <div class="context-actions">
           <button
             type="button"
-            class="btn btn-sm btn-secondary"
+            class="btn btn-sm btn-secondary btn-inline-icon"
             :disabled="isLoadingInventory"
             @click="loadInventory"
           >
-            🔄 Refresh Inventory
+            <RefreshCw :size="14" aria-hidden="true" />
+            <span>Refresh Inventory</span>
           </button>
         </div>
       </div>
@@ -74,12 +73,12 @@
         <div class="scanner-card">
           <div class="scanner-header">
             <label for="barcode-scanner-input" class="scanner-label">
-              <span class="scanner-icon">📷</span> Multi-Barcode Scanner Buffer
-              Input
+              <ScanBarcode :size="18" aria-hidden="true" />
+              <span>Multi-Barcode Scanner Buffer Input</span>
             </label>
-            <span class="focus-indicator badge badge-active"
-              >Auto-Focus Active</span
-            >
+            <span class="focus-indicator badge badge-active">
+              Auto-Focus Active
+            </span>
           </div>
           <div class="scanner-input-row">
             <input
@@ -113,7 +112,7 @@
           class="alert-banner alert-warning"
           role="alert"
         >
-          <span class="alert-icon">⚠️</span>
+          <AlertTriangle :size="16" aria-hidden="true" />
           <span class="alert-text">{{ warningMessage }}</span>
           <button
             type="button"
@@ -121,7 +120,7 @@
             aria-label="Dismiss warning"
             @click="warningMessage = ''"
           >
-            ✕
+            <X :size="16" aria-hidden="true" />
           </button>
         </div>
       </section>
@@ -189,7 +188,9 @@
       <!-- Main Drawer Body: Scanned Kits Buffer Table -->
       <div class="drawer-body">
         <div v-if="scannedItems.length === 0" class="empty-state-box">
-          <div class="empty-icon">📦</div>
+          <div class="empty-icon">
+            <Package :size="40" aria-hidden="true" />
+          </div>
           <h3>Scan Buffer Empty</h3>
           <p>
             Scan kit barcodes with an optical scanner or enter kit numbers
@@ -303,16 +304,23 @@
                   <span
                     v-if="item.hasLotMismatch"
                     class="status-flag flag-warning"
-                    >⚠️ Lot Mismatch</span
                   >
+                    <AlertTriangle :size="13" aria-hidden="true" />
+                    <span>Lot Mismatch</span>
+                  </span>
                   <span
                     v-else-if="
                       item.disposition === 'QUARANTINED_FOR_DESTRUCTION'
                     "
                     class="status-flag flag-quarantine"
-                    >🔒 Quarantined</span
                   >
-                  <span v-else class="status-flag flag-valid">✓ Valid</span>
+                    <Lock :size="13" aria-hidden="true" />
+                    <span>Quarantined</span>
+                  </span>
+                  <span v-else class="status-flag flag-valid">
+                    <Check :size="13" aria-hidden="true" />
+                    <span>Valid</span>
+                  </span>
                 </td>
                 <td class="col-action">
                   <ClinicalIconButton
@@ -321,7 +329,7 @@
                     title="Remove item"
                     @click="removeItem(index)"
                   >
-                    ✕
+                    <X :size="15" aria-hidden="true" />
                   </ClinicalIconButton>
                 </td>
               </tr>
@@ -333,26 +341,43 @@
         <section v-if="scannedItems.length > 0" class="esign-section">
           <div class="esign-card">
             <h4 class="esign-title">
-              ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Rationale
+              <FileSignature :size="16" aria-hidden="true" />
+              <span>
+                21 CFR Part 11 Electronic Signature &amp; Audit Rationale
+              </span>
             </h4>
             <div class="esign-form-grid">
               <div class="form-group">
-                <label for="pharmacist-signature-id" class="form-label"
-                  >Signer Identity / User ID: *</label
-                >
+                <label for="pharmacist-signature-id" class="form-label">
+                  Authenticated Signer Identity (OIDC Session):
+                </label>
                 <input
                   id="pharmacist-signature-id"
-                  v-model="signerUserId"
+                  :value="authenticatedSignerId"
                   type="text"
-                  class="input-text"
-                  placeholder="e.g. site_pharmacist_01"
+                  class="input-text mono"
+                  readonly
+                  aria-readonly="true"
                 />
               </div>
 
               <div class="form-group">
-                <label for="reason-for-change-input" class="form-label"
-                  >Audit Change Rationale (X-Change-Reason): *</label
-                >
+                <label for="reconcile-sig-password" class="form-label">
+                  Part 11 Step-Up Password Credential: *
+                </label>
+                <input
+                  id="reconcile-sig-password"
+                  v-model="signaturePassword"
+                  v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+                  class="input-text"
+                  placeholder="Enter password to mint single-use signature token"
+                />
+              </div>
+
+              <div class="form-group form-group-full">
+                <label for="reason-for-change-input" class="form-label">
+                  Audit Change Rationale (X-Change-Reason): *
+                </label>
                 <input
                   id="reason-for-change-input"
                   v-model="reasonForChange"
@@ -363,9 +388,9 @@
               </div>
 
               <div class="form-group form-group-full">
-                <label for="batch-notes-input" class="form-label"
-                  >Pharmacist Notes / Shipment Reference:</label
-                >
+                <label for="batch-notes-input" class="form-label">
+                  Pharmacist Notes / Shipment Reference:
+                </label>
                 <textarea
                   id="batch-notes-input"
                   v-model="batchNotes"
@@ -397,99 +422,102 @@
           </button>
           <button
             type="button"
-            class="btn btn-success btn-submit-batch"
+            class="btn btn-success btn-submit-batch btn-inline-icon"
+            data-testid="commit-reconcile-batch"
             :disabled="
               scannedItems.length === 0 ||
-              !signerUserId.trim() ||
               !reasonForChange.trim() ||
+              !signaturePassword.trim() ||
               isSubmitting
             "
             @click="submitBatchReconciliation"
           >
-            <span v-if="isSubmitting" class="spinner">⏳</span>
-            <span v-else
-              >🔒 Commit Batch Reconciliation ({{ scannedItems.length }})</span
-            >
+            <Loader2
+              v-if="isSubmitting"
+              :size="15"
+              class="spin-icon"
+              aria-hidden="true"
+            />
+            <Lock v-else :size="15" aria-hidden="true" />
+            <span v-if="isSubmitting">Verifying &amp; Signing...</span>
+            <span v-else>
+              Commit Batch Reconciliation ({{ scannedItems.length }})
+            </span>
           </button>
         </div>
       </footer>
 
       <!-- Certificate Modal View Upon Successful Commitment -->
-      <div
-        v-if="showCertificateModal && certificateData"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="showCertificateModal = false"
+      <ClinicalModal
+        v-model="showCertificateModal"
+        :teleport="false"
+        dialog-class="modal-card modal-lg cert-modal"
+        title="Digital IP Kit Reconciliation Certificate"
       >
         <div
-          ref="certificateModalRef"
-          class="modal-card modal-lg cert-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cert-modal-title"
-          tabindex="-1"
+          v-if="normalizedCertificate"
+          data-testid="reconciliation-certificate"
         >
-          <header class="cert-modal-header">
-            <div class="cert-badge">📜 21 CFR Part 11 Digital Certificate</div>
-            <h3 id="cert-modal-title" class="cert-modal-title">
-              Digital IP Kit Reconciliation Certificate
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close certificate dialog"
-              @click="showCertificateModal = false"
-            >
-              ✕
-            </button>
-          </header>
+          <div class="cert-badge">
+            <Award :size="15" aria-hidden="true" />
+            <span>21 CFR Part 11 Digital Certificate</span>
+          </div>
 
           <div class="cert-body">
             <div class="cert-header-grid">
               <div class="cert-meta-item">
                 <span class="lbl">Certificate ID:</span>
                 <span class="val mono fw-bold">{{
-                  certificateData.certificate_id
+                  normalizedCertificate.certificateId
+                }}</span>
+              </div>
+              <div
+                v-if="normalizedCertificate.batchNumber"
+                class="cert-meta-item"
+              >
+                <span class="lbl">Batch Number:</span>
+                <span class="val mono">{{
+                  normalizedCertificate.batchNumber
                 }}</span>
               </div>
               <div class="cert-meta-item">
-                <span class="lbl">Batch Number:</span>
-                <span class="val mono">{{ certificateData.batch_number }}</span>
-              </div>
-              <div class="cert-meta-item">
                 <span class="lbl">Study / Site:</span>
-                <span class="val"
-                  >{{ certificateData.study_id }} /
-                  {{ certificateData.site_id }}</span
-                >
+                <span class="val">
+                  {{ normalizedCertificate.studyId }} /
+                  {{ normalizedCertificate.siteId }}
+                </span>
               </div>
               <div class="cert-meta-item">
                 <span class="lbl">Issued Timestamp:</span>
                 <span class="val">{{
-                  formatDate(certificateData.issued_at)
+                  formatDate(normalizedCertificate.issuedAt)
                 }}</span>
               </div>
               <div class="cert-meta-item">
-                <span class="lbl">Issued By:</span>
-                <span class="val">{{ certificateData.issued_by }}</span>
+                <span class="lbl">Verified Signer:</span>
+                <span class="val">{{ normalizedCertificate.issuedBy }}</span>
               </div>
               <div class="cert-meta-item">
                 <span class="lbl">Total Reconciled Kits:</span>
                 <span class="val fw-bold">{{
-                  certificateData.kit_numbers?.length || 0
+                  normalizedCertificate.totalReconciled
                 }}</span>
               </div>
             </div>
 
-            <div class="cert-section">
+            <div
+              v-if="normalizedCertificate.kitNumbers.length > 0"
+              class="cert-section"
+            >
               <h4>Reconciled Kit Catalog</h4>
               <div class="cert-kit-tags">
                 <span
-                  v-for="kit in certificateData.kit_numbers"
+                  v-for="kit in normalizedCertificate.kitNumbers"
                   :key="kit"
                   class="cert-kit-chip mono"
                 >
-                  📦 {{ kit }}
+                  <Package :size="13" aria-hidden="true" />
+                  <span>{{ kit }}</span>
                 </span>
               </div>
             </div>
@@ -497,36 +525,64 @@
             <div class="cert-signature-box">
               <span class="sig-label">Cryptographic Seal (SHA-256):</span>
               <code class="sig-hash">{{
-                certificateData.digital_signature
+                normalizedCertificate.signatureHash
               }}</code>
             </div>
           </div>
-
-          <footer class="cert-modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="printCertificate"
-            >
-              🖨️ Print Certificate
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              @click="closeDrawerAndReset"
-            >
-              Done &amp; Close
-            </button>
-          </footer>
         </div>
-      </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary btn-inline-icon"
+            @click="printCertificate"
+          >
+            <Printer :size="15" aria-hidden="true" />
+            <span>Print Certificate</span>
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="closeDrawerAndReset"
+          >
+            Done &amp; Close
+          </button>
+        </template>
+      </ClinicalModal>
     </aside>
   </div>
 </template>
 
 <script setup lang="ts">
+import {
+  AlertTriangle,
+  Award,
+  Check,
+  FileSignature,
+  Loader2,
+  Lock,
+  Package,
+  Printer,
+  RefreshCw,
+  ScanBarcode,
+  X,
+} from "./ClinicalLucideIcons";
+import {
+  buildStepUpVerificationPayload,
+  ClinicalIconButton,
+  ClinicalModal,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  executionApi,
+  type IpKitBatchReconciliationRequest,
+  type SiteIpKitInventoryItem,
+} from "../../api/executionApi";
+import apiClient from "../../services/api";
+import { useAuthStore } from "../../stores/auth";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;
@@ -546,17 +602,10 @@ export interface ScannedKitBufferItem {
     | "OTHER";
 }
 
-export interface SiteInventoryItem {
-  kit_number: string;
-  study_id: string;
-  site_id: string;
-  lot_number: string;
-  expiration_date: string;
-  status: string;
-}
-
 const props = defineProps<{
-  isOpen: boolean;
+  isOpen?: boolean;
+  open?: boolean;
+  modelValue?: boolean;
   studyId?: string;
   siteId?: string;
   pharmacistName?: string;
@@ -564,11 +613,33 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "close"): void;
-  (e: "reconciled", batchResult: any): void;
+  (e: "update:modelValue", value: boolean): void;
+  (e: "reconciled", batchResult: unknown): void;
 }>();
 
+const authStore = useAuthStore();
+const drawerOpen = computed(() =>
+  Boolean(props.isOpen ?? props.open ?? props.modelValue)
+);
+
+const authenticatedSignerId = computed(
+  () =>
+    authStore.user?.username ||
+    authStore.userId ||
+    authStore.user?.id ||
+    props.pharmacistName ||
+    "site_pharmacist"
+);
+
+const authenticatedSignerLabel = computed(
+  () =>
+    authStore.user?.displayName ||
+    authStore.user?.name ||
+    props.pharmacistName ||
+    authenticatedSignerId.value
+);
+
 const drawerRef = ref<HTMLElement | null>(null);
-const certificateModalRef = ref<HTMLElement | null>(null);
 const barcodeInputRef = ref<HTMLInputElement | null>(null);
 const barcodeInputValue = ref("");
 const scannedItems = ref<ScannedKitBufferItem[]>([]);
@@ -576,16 +647,58 @@ const warningMessage = ref("");
 const isLoadingInventory = ref(false);
 const isSubmitting = ref(false);
 
-const siteInventory = ref<Map<string, SiteInventoryItem>>(new Map());
+const siteInventory = ref<Map<string, SiteIpKitInventoryItem>>(new Map());
 
-const signerUserId = ref(props.pharmacistName || "site_pharmacist_01");
+const signaturePassword = ref("");
 const reasonForChange = ref(
   "Shipment return carton batch reconciliation intake"
 );
 const batchNotes = ref("");
 
 const showCertificateModal = ref(false);
-const certificateData = ref<any>(null);
+const certificateData = ref<Record<string, any> | null>(null);
+
+const normalizedCertificate = computed(() => {
+  const cert = certificateData.value;
+  if (!cert) return null;
+  const rawItems = Array.isArray(cert.items) ? cert.items : [];
+  const kitNumbers: string[] = Array.isArray(cert.kit_numbers)
+    ? cert.kit_numbers
+    : rawItems
+        .map((item: Record<string, any>) =>
+          String(item.kit_number ?? item.kitNumber ?? "").trim()
+        )
+        .filter(Boolean);
+  return {
+    certificateId: String(cert.certificate_id ?? cert.certificateId ?? "—"),
+    batchNumber: String(cert.batch_number ?? cert.batchNumber ?? ""),
+    studyId: String(cert.study_id ?? cert.studyId ?? props.studyId ?? ""),
+    siteId: String(cert.site_id ?? cert.siteId ?? props.siteId ?? ""),
+    issuedAt: String(
+      cert.processed_at ?? cert.issued_at ?? cert.processedAt ?? ""
+    ),
+    issuedBy: String(
+      cert.processed_by ??
+        cert.issued_by ??
+        cert.processedBy ??
+        authenticatedSignerId.value
+    ),
+    totalReconciled: Number(
+      cert.total_kits_reconciled ??
+        cert.totalReconciled ??
+        kitNumbers.length ??
+        0
+    ),
+    kitNumbers,
+    signatureHash: String(
+      cert.payload_hash ??
+        cert.digital_signature ??
+        cert.signature_hash ??
+        cert.signatureHash ??
+        "—"
+    ),
+  };
+});
 
 const returnedCount = computed(
   () =>
@@ -608,10 +721,11 @@ const lotMismatchCount = computed(
 );
 
 watch(
-  () => props.isOpen,
-  (newVal) => {
-    if (newVal) {
-      loadInventory();
+  () => [drawerOpen.value, props.studyId, props.siteId],
+  ([openVal]) => {
+    if (openVal) {
+      signaturePassword.value = "";
+      void loadInventory();
       focusScannerInput();
     }
   }
@@ -630,12 +744,12 @@ async function loadInventory() {
   const currentSite = props.siteId || "SITE-01";
   isLoadingInventory.value = true;
   try {
-    const res = await fetch(
-      `/api/v1/execution/rtsm/kits/inventory/${currentStudy}/${currentSite}`
+    const data = await executionApi.getSiteIpKitInventory(
+      currentStudy,
+      currentSite
     );
-    if (res.ok) {
-      const data: SiteInventoryItem[] = await res.json();
-      const map = new Map<string, SiteInventoryItem>();
+    if (Array.isArray(data)) {
+      const map = new Map<string, SiteIpKitInventoryItem>();
       data.forEach((item) => map.set(item.kit_number, item));
       siteInventory.value = map;
     }
@@ -655,16 +769,14 @@ function handleBarcodeScan() {
 
   warningMessage.value = "";
 
-  // Parse barcode format: "KIT-NUMBER" or "KIT-NUMBER|LOT-NUMBER"
   let parsedKit = rawInput;
   let parsedLot = "";
   if (rawInput.includes("|")) {
     const parts = rawInput.split("|");
-    parsedKit = parts[0].trim();
-    parsedLot = parts[1].trim();
+    parsedKit = (parts[0] ?? "").trim();
+    parsedLot = (parts[1] ?? "").trim();
   }
 
-  // Duplicate Check in current batch session
   const isDuplicate = scannedItems.value.some(
     (item) => item.kitNumber.toUpperCase() === parsedKit.toUpperCase()
   );
@@ -676,7 +788,6 @@ function handleBarcodeScan() {
     return;
   }
 
-  // Validate against known inventory
   const inventoryMatch = siteInventory.value.get(parsedKit);
   const expectedLot = inventoryMatch
     ? inventoryMatch.lot_number
@@ -705,7 +816,7 @@ function handleBarcodeScan() {
     kitNumber: parsedKit,
     scannedLotNumber: scannedLot,
     expectedLotNumber: expectedLot,
-    hasLotMismatch: hasLotMismatch,
+    hasLotMismatch,
     residualVolumeMl: 100.0,
     residualVolumePercentage: 100,
     disposition: initialDisposition,
@@ -747,51 +858,64 @@ function bulkSetDisposition(
 
 async function submitBatchReconciliation() {
   if (scannedItems.value.length === 0) return;
-  if (!signerUserId.value.trim() || !reasonForChange.value.trim()) return;
+  const reason = reasonForChange.value.trim();
+  const password = signaturePassword.value;
+  if (!reason || !password.trim()) {
+    warningMessage.value =
+      "Step-up password verification and audit change rationale are required.";
+    return;
+  }
 
   isSubmitting.value = true;
   warningMessage.value = "";
 
-  const payload = {
-    study_id: props.studyId || "STUDY-101",
-    site_id: props.siteId || "SITE-01",
-    processed_by: signerUserId.value.trim(),
-    notes: batchNotes.value.trim() || undefined,
-    reason_for_change: reasonForChange.value.trim(),
-    items: scannedItems.value.map((i) => ({
-      kit_number: i.kitNumber,
-      lot_number: i.scannedLotNumber,
-      expected_lot_number: i.expectedLotNumber,
-      residual_volume_ml: i.residualVolumeMl,
-      residual_volume_percentage: i.residualVolumePercentage,
-      disposition: i.disposition,
-      disposition_reason: i.dispositionReason,
-    })),
-  };
-
   try {
-    const res = await fetch("/api/v1/execution/rtsm/kits/reconcile-batch", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Change-Reason": reasonForChange.value.trim(),
-      },
-      body: JSON.stringify(payload),
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: authenticatedSignerId.value,
+      password,
+      totp: null,
+      action: "/api/v1/execution/rtsm/kits/reconcile-batch",
+      semanticAction: SEMANTIC_ACTIONS.RTSM_KIT_RECONCILE_BATCH,
     });
-
-    if (!res.ok) {
-      const err = await res.json();
+    const verifyRes: any = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token ?? verifyRes?.data?.sig_token;
+    signaturePassword.value = "";
+    if (!sigToken) {
       throw new Error(
-        err.detail || "Server failed to process batch reconciliation."
+        "Signature verification did not return a single-use signature token."
       );
     }
 
-    const batchResult = await res.json();
-    certificateData.value = batchResult.certificate;
+    const payload: IpKitBatchReconciliationRequest = {
+      study_id: props.studyId || "STUDY-101",
+      site_id: props.siteId || "SITE-01",
+      notes: batchNotes.value.trim() || null,
+      reason_for_change: reason,
+      items: scannedItems.value.map((i) => ({
+        kit_number: i.kitNumber,
+        lot_number: i.scannedLotNumber,
+        expected_lot_number: i.expectedLotNumber,
+        residual_volume_ml: i.residualVolumeMl ?? null,
+        residual_volume_percentage: i.residualVolumePercentage ?? null,
+        disposition: i.disposition,
+        disposition_reason: i.dispositionReason,
+      })),
+    };
+
+    const batchResult: any = await executionApi.reconcileIpKitBatch(
+      payload,
+      sigToken
+    );
+    certificateData.value = batchResult?.certificate ?? batchResult;
     showCertificateModal.value = true;
     emit("reconciled", batchResult);
   } catch (err: any) {
-    warningMessage.value = `Batch submission error: ${err.message || err}`;
+    const detail =
+      err?.response?.data?.detail || err?.detail || err?.message || String(err);
+    warningMessage.value = `Batch submission error: ${detail}`;
   } finally {
     isSubmitting.value = false;
   }
@@ -804,34 +928,31 @@ function printCertificate() {
 function closeDrawerAndReset() {
   showCertificateModal.value = false;
   scannedItems.value = [];
+  signaturePassword.value = "";
+  emit("update:modelValue", false);
   emit("close");
 }
 
 function closeDrawer() {
+  signaturePassword.value = "";
+  emit("update:modelValue", false);
   emit("close");
 }
 
 useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
+  isOpen: () => drawerOpen.value,
   initialFocus: () => barcodeInputRef.value,
   onEscape: closeDrawer,
 });
 
-useFocusTrap(certificateModalRef, {
-  isOpen: () => Boolean(showCertificateModal.value && certificateData.value),
-  onEscape: () => {
-    showCertificateModal.value = false;
-  },
-});
-
 function formatDate(iso: string) {
-  if (!iso) return "";
+  if (!iso) return "—";
   return new Date(iso).toLocaleString();
 }
 
 onMounted(() => {
-  if (props.isOpen) {
-    loadInventory();
+  if (drawerOpen.value) {
+    void loadInventory();
     focusScannerInput();
   }
 });
@@ -858,13 +979,7 @@ onMounted(() => {
   flex-direction: column;
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
   overflow: hidden;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--font-sans, inherit);
 }
 
 .drawer-header {
@@ -933,15 +1048,23 @@ onMounted(() => {
   background: transparent;
   border: none;
   color: var(--semantic-color-text-secondary);
-  font-size: 1.5rem;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-close:hover {
   color: var(--semantic-color-text-inverse);
   background: var(--semantic-color-border-inverse);
+}
+
+.btn-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .context-bar {
@@ -967,7 +1090,7 @@ onMounted(() => {
   font-weight: 600;
 }
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, ui-monospace, monospace);
 }
 
 .context-actions {
@@ -1016,7 +1139,7 @@ onMounted(() => {
   padding: 10px 14px;
   color: var(--semantic-color-text-inverse);
   font-size: 1.05rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, ui-monospace, monospace);
 }
 
 .barcode-input:focus-visible {
@@ -1058,6 +1181,8 @@ onMounted(() => {
   border: none;
   color: inherit;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 
 .metrics-grid {
@@ -1142,7 +1267,9 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 3rem;
+  display: flex;
+  justify-content: center;
+  color: var(--semantic-color-text-secondary);
   margin-bottom: 12px;
 }
 .empty-state-box h3 {
@@ -1150,7 +1277,6 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
 }
 .empty-state-box p {
-  margin: 0;
   color: var(--semantic-color-text-secondary);
   max-width: 500px;
   margin: 0 auto;
@@ -1237,6 +1363,9 @@ onMounted(() => {
 }
 
 .status-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.78rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -1261,7 +1390,6 @@ onMounted(() => {
   border: none;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  font-size: 1rem;
   padding: 4px 8px;
   border-radius: 4px;
 }
@@ -1287,6 +1415,9 @@ onMounted(() => {
   font-size: 0.98rem;
   color: var(--semantic-color-primary);
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .esign-form-grid {
@@ -1319,6 +1450,11 @@ onMounted(() => {
   padding: 8px 12px;
   color: var(--semantic-color-text-inverse);
   font-size: 0.88rem;
+}
+
+.input-text[readonly] {
+  opacity: 0.85;
+  cursor: default;
 }
 
 .input-text:focus-visible,
@@ -1362,23 +1498,14 @@ onMounted(() => {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
 }
-.btn-primary:hover {
-  background: var(--semantic-color-interactive-primary);
-}
 .btn-success {
   background: var(--semantic-color-success);
   color: var(--semantic-color-surface);
-}
-.btn-success:hover {
-  background: var(--semantic-color-success);
 }
 .btn-secondary {
   background: var(--semantic-color-border-inverse);
   color: var(--semantic-color-text-inverse);
   border-color: var(--semantic-color-border-control);
-}
-.btn-secondary:hover {
-  background: var(--semantic-color-text-secondary);
 }
 
 .btn-outline-success {
@@ -1386,34 +1513,21 @@ onMounted(() => {
   border-color: var(--semantic-color-success);
   color: var(--semantic-color-success);
 }
-.btn-outline-success:hover {
-  background: rgba(16, 185, 129, 0.1);
-}
 .btn-outline-warning {
   background: transparent;
   border-color: var(--semantic-color-warning-border-strong);
   color: var(--semantic-color-warning);
-}
-.btn-outline-warning:hover {
-  background: rgba(245, 158, 11, 0.1);
 }
 .btn-outline-primary {
   background: transparent;
   border-color: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-interactive-primary);
 }
-.btn-outline-primary:hover {
-  background: rgba(59, 130, 246, 0.1);
-}
 
 .btn-ghost-danger {
   background: transparent;
   color: var(--semantic-color-error);
   border: 1px solid transparent;
-}
-.btn-ghost-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: var(--semantic-color-error);
 }
 
 .btn:disabled {
@@ -1436,7 +1550,17 @@ onMounted(() => {
   margin-bottom: 18px;
 }
 
+.cert-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .cert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--semantic-color-success);
@@ -1490,6 +1614,9 @@ onMounted(() => {
 }
 
 .cert-kit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-border-inverse);
   padding: 4px 8px;
@@ -1514,7 +1641,7 @@ onMounted(() => {
   text-transform: uppercase;
 }
 .sig-hash {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.78rem;
   word-break: break-all;
 }
@@ -1524,5 +1651,15 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

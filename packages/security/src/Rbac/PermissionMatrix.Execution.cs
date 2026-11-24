@@ -109,6 +109,9 @@ public static partial class PermissionMatrix
             Grant(role, "ip_kit_inventory", "seed");
         }
 
+        // CTMS startup greenlight evaluator inspects site IP kit inventory readiness over signed HTTP.
+        Grant(CtmsServiceRole, "rtsm_supply", "read");
+
         // Investigational device accountability.
         foreach (string role in new[]
         {
@@ -192,6 +195,7 @@ public static partial class PermissionMatrix
         // The eTMF completeness webhook is called service to service. Only the eTMF service's signed identity holds
         // the role, so no person can mark a site's TMF complete and unblock its activation.
         Grant(EtmfServiceRole, "site_compliance", "etmf_sync");
+        Grant(CtmsServiceRole, "site_compliance", "read");
     }
 
     /// <summary>Clinical endpoint adjudication (CEC).</summary>

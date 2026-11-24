@@ -290,12 +290,14 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/studies");
     });
 
-    it("routes all six clinical personas from / to live authorized workspaces without hitting /unavailable or /forbidden", async () => {
+    it("routes all clinical personas including Principal Investigator and Pharmacist from / to live authorized workspaces without hitting /unavailable or /forbidden", async () => {
       const cases = [
         { role: "Sponsor Admin", expectedBypassPath: "/studies" },
         { role: "Study Designer", expectedBypassPath: "/studies" },
         { role: "Data Manager", expectedBypassPath: "/studies" },
         { role: "CRC", expectedBypassPath: "/studies" },
+        { role: "Principal Investigator", expectedBypassPath: "/studies" },
+        { role: "Pharmacist", expectedBypassPath: "/studies" },
         { role: "CRA", expectedBypassPath: "/ctms" },
         { role: "Auditor", expectedBypassPath: "/studies" },
       ];
@@ -319,6 +321,16 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
         expect(router.currentRoute.value.path, `${role} bypass`).toBe(
           expectedBypassPath
         );
+      }
+
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      for (const role of ["Principal Investigator", "Pharmacist"]) {
+        authStore.rawRoles = [role];
+        await router.push("/ctms");
+        expect(router.currentRoute.value.path, `${role} /ctms`).toBe("/ctms");
+        await router.push("/ssu");
+        expect(router.currentRoute.value.path, `${role} /ssu`).toBe("/ssu");
       }
     });
   });

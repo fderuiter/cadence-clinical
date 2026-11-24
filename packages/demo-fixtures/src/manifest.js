@@ -390,7 +390,7 @@ export const DEMO_MANIFEST = Object.freeze({
       workspacePersona: "pharmacist",
       siteCode: "SITE-101",
       grantUuid: "1840e51a-1808-8ddc-b9e6-e3f9a0b89b9c",
-      realmRoles: Object.freeze(["pharmacist"]),
+      realmRoles: Object.freeze(["pharmacist", "Pharmacist"]),
     }),
   ]),
 });

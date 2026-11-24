@@ -346,6 +346,54 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "CreateCurriculum",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_CreateTrainingCurriculumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/training/curricula/{curriculum_id}": {
@@ -574,6 +622,82 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/assignments/{assignment_id}/complete": {
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "CompleteTrainingAssignment",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Knowledge_CompleteTrainingAssignmentRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
                 }
               }
             }
@@ -971,6 +1095,35 @@
           }
         }
       },
+      "Knowledge_CompleteTrainingAssignmentRequest": {
+        "type": "object",
+        "properties": {
+          "quiz_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "time_spent_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Knowledge_ContextualHelpMappingDto": {
         "required": [
           "id",
@@ -1068,6 +1221,50 @@
             "items": {
               "$ref": "#/components/schemas/Knowledge_KnowledgeArticleDto"
             }
+          }
+        }
+      },
+      "Knowledge_CreateTrainingCurriculumRequest": {
+        "required": [
+          "study_id",
+          "protocol_version",
+          "title",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "protocol_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_TrainingCurriculumModuleDto"
+            }
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1588,6 +1785,16 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "curriculum": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+              }
+            ]
           }
         }
       },
@@ -1627,6 +1834,47 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "modules": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_TrainingCurriculumModuleDto"
+            }
+          }
+        }
+      },
+      "Knowledge_TrainingCurriculumModuleDto": {
+        "required": [
+          "id",
+          "title",
+          "content_type",
+          "duration_minutes",
+          "body_markdown"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "body_markdown": {
+            "type": "string"
           }
         }
       }

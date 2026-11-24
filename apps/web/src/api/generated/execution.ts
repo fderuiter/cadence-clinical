@@ -1167,12 +1167,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Unauthorized */
+        401: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          };
         };
       };
     };

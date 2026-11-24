@@ -12,9 +12,7 @@
             :class="isGated ? 'badge-locked' : 'badge-unlocked'"
           >
             {{
-              isGated
-                ? "🔒 Qualification Pending"
-                : "🟢 Qualification Completed"
+              isGated ? " Qualification Pending" : " Qualification Completed"
             }}
           </span>
         </div>
@@ -29,12 +27,24 @@
 
       <div class="header-actions">
         <button
+          v-if="canCreateCurriculum"
+          id="btn-open-create-curriculum"
           type="button"
-          class="btn btn-secondary"
+          class="btn btn-primary btn-inline-icon"
+          :disabled="loading || !effectiveStudyId"
+          @click="openCreateCurriculumModal"
+        >
+          <Plus :size="15" aria-hidden="true" />
+          <span>New Curriculum</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary btn-inline-icon"
           :disabled="loading"
           @click="refreshData"
         >
-          <span class="btn-icon" aria-hidden="true">🔄</span> Refresh
+          <RefreshCw :size="15" aria-hidden="true" />
+          <span>Refresh</span>
         </button>
       </div>
     </div>
@@ -97,11 +107,7 @@
         <div class="summary-chip">
           <span class="chip-label">Quiz Score:</span>
           <span class="chip-value">
-            {{
-              activeAssignment?.quiz_score != null
-                ? Math.round(activeAssignment.quiz_score * 100) + "%"
-                : "Not Recorded"
-            }}
+            {{ formatQuizScore(activeAssignment?.quiz_score) }}
           </span>
         </div>
       </div>
@@ -131,7 +137,10 @@
         <div class="module-sidebar">
           <h4 class="sidebar-heading">Curriculum Sections</h4>
           <ul class="module-list">
-            <li v-for="(mod, idx) in activeCurriculum.modules" :key="mod.id">
+            <li
+              v-for="(mod, idx) in activeCurriculum.modules"
+              :key="mod.id || idx"
+            >
               <button
                 type="button"
                 class="module-item"
@@ -144,12 +153,9 @@
                   <span class="module-title">{{ mod.title }}</span>
                   <span
                     class="badge badge-sm"
-                    :class="
-                      'badge-mod-' +
-                      (mod.module_type || 'default').toLowerCase()
-                    "
+                    :class="'badge-mod-' + moduleTypeValue(mod).toLowerCase()"
                   >
-                    {{ formatClinicalEnum(mod.module_type) }}
+                    {{ formatClinicalEnum(moduleTypeValue(mod)) }}
                   </span>
                 </span>
               </button>
@@ -162,7 +168,7 @@
             <div class="reader-header">
               <div class="reader-title-group">
                 <span class="badge badge-delta">{{
-                  formatClinicalEnum(currentModule.module_type)
+                  formatClinicalEnum(moduleTypeValue(currentModule))
                 }}</span>
                 <h3 class="reader-title">
                   {{ currentModule.title }}
@@ -170,35 +176,65 @@
               </div>
               <div class="reader-timer">
                 Min Reading Guidance:
-                <strong
-                  >{{ currentModule.min_reading_time_seconds || 30 }}s</strong
-                >
+                <strong>{{ moduleGuidanceLabel(currentModule) }}</strong>
               </div>
             </div>
 
             <div class="markdown-body">
-              <pre class="content-text">{{ currentModule.content_text }}</pre>
+              <pre class="content-text">{{
+                moduleBodyText(currentModule)
+              }}</pre>
             </div>
 
             <div class="reader-footer">
               <button
-                class="btn btn-secondary"
+                type="button"
+                class="btn btn-secondary btn-inline-icon"
                 :disabled="selectedModuleIndex <= 0"
                 @click="selectModule(selectedModuleIndex - 1)"
               >
-                ⬅️ Previous Section
+                <ChevronLeft :size="15" aria-hidden="true" />
+                <span>Previous Section</span>
               </button>
-              <button
-                v-if="
-                  activeCurriculum.modules &&
-                  selectedModuleIndex < activeCurriculum.modules.length - 1
-                "
-                class="btn btn-primary"
-                @click="selectModule(selectedModuleIndex + 1)"
-              >
-                Next Section ➡️
-              </button>
+              <div class="reader-footer-actions">
+                <button
+                  v-if="
+                    activeCurriculum.modules &&
+                    selectedModuleIndex < activeCurriculum.modules.length - 1
+                  "
+                  type="button"
+                  class="btn btn-primary btn-inline-icon"
+                  @click="selectModule(selectedModuleIndex + 1)"
+                >
+                  <span>Next Section</span>
+                  <ChevronRight :size="15" aria-hidden="true" />
+                </button>
+                <button
+                  v-if="
+                    activeAssignment && activeAssignment.status !== 'COMPLETED'
+                  "
+                  id="btn-complete-training-assignment"
+                  type="button"
+                  class="btn btn-success btn-inline-icon"
+                  :disabled="completingAssignment"
+                  @click="handleCompleteAssignment"
+                >
+                  <CheckCircle2 :size="15" aria-hidden="true" />
+                  <span>{{
+                    completingAssignment
+                      ? "Completing..."
+                      : "Complete Qualification"
+                  }}</span>
+                </button>
+              </div>
             </div>
+            <p
+              v-if="completeAssignmentError"
+              class="badge badge-error"
+              role="alert"
+            >
+              {{ completeAssignmentError }}
+            </p>
           </div>
           <div v-else class="reader-content">
             <div class="reader-header">
@@ -216,6 +252,26 @@
                 activeCurriculum.description ||
                 "No procedural modules attached to this curriculum."
               }}</pre>
+            </div>
+            <div
+              v-if="activeAssignment && activeAssignment.status !== 'COMPLETED'"
+              class="reader-footer"
+            >
+              <span />
+              <button
+                id="btn-complete-training-assignment"
+                type="button"
+                class="btn btn-success btn-inline-icon"
+                :disabled="completingAssignment"
+                @click="handleCompleteAssignment"
+              >
+                <CheckCircle2 :size="15" aria-hidden="true" />
+                <span>{{
+                  completingAssignment
+                    ? "Completing..."
+                    : "Complete Qualification"
+                }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -306,11 +362,15 @@
                 }}
                 sites &times; {{ batchForm.selectedRoles.length }} roles)</span
               >
-              <span v-if="computedBatchCount > 200" class="badge badge-error"
-                >⚠️ Exceeds 200 Synchronous Limit</span
+              <span
+                v-if="computedBatchCount > 200"
+                class="badge badge-error btn-inline-icon"
+                ><AlertTriangle :size="13" aria-hidden="true" /> Exceeds 200
+                Synchronous Limit</span
               >
             </div>
             <button
+              type="button"
               class="btn btn-primary"
               :disabled="
                 !canAssignCurriculum ||
@@ -323,7 +383,7 @@
               "
               @click="showBatchModal = true"
             >
-              <span>Execute Batch Assignment 🚀</span>
+              <span>Execute Batch Assignment</span>
             </button>
           </div>
 
@@ -410,7 +470,7 @@
               </p>
             </div>
             <button class="btn btn-secondary btn-sm" @click="loadDelegations">
-              🔄 Refresh Log
+              Refresh Log
             </button>
           </div>
 
@@ -442,7 +502,7 @@
                       type="checkbox"
                       :value="del.id"
                       :aria-label="`Select delegation ${del.id}`"
-                      :disabled="del.status === 'COMPLETED'"
+                      :disabled="isDelegationSigned(del)"
                     />
                   </td>
                   <td>
@@ -466,7 +526,7 @@
                     <span
                       class="badge"
                       :class="
-                        del.status === 'COMPLETED'
+                        isDelegationSigned(del)
                           ? 'badge-success'
                           : 'badge-warning'
                       "
@@ -509,7 +569,8 @@
               <strong>{{ selectedDelegationIds.length }} records</strong></span
             >
             <button
-              class="btn btn-success"
+              type="button"
+              class="btn btn-success btn-inline-icon"
               :disabled="
                 !canSignDelegations || selectedDelegationIds.length === 0
               "
@@ -520,7 +581,8 @@
               "
               @click="showBulkSignModal = true"
             >
-              ✍️ Execute Part 11 Bulk Signature
+              <FileSignature :size="15" aria-hidden="true" />
+              <span>Execute Part 11 Bulk Signature</span>
             </button>
           </div>
 
@@ -530,7 +592,7 @@
             class="bulk-sign-result alert-banner success-banner"
           >
             <div class="banner-content">
-              <span class="banner-icon">✅</span>
+              <CheckCircle2 :size="20" aria-hidden="true" />
               <div>
                 <strong>Bulk Delegation Sign-Off Executed Successfully</strong
                 ><br />
@@ -595,7 +657,7 @@
           @click="handleExecuteBatchAssign"
         >
           <span v-if="submittingBatch">Deploying Batch...</span>
-          <span v-else>Confirm &amp; Deploy Batch 🚀</span>
+          <span v-else>Confirm &amp; Deploy Batch </span>
         </button>
       </template>
     </ClinicalModal>
@@ -645,7 +707,7 @@
         <input
           id="bulk-password"
           v-model="bulkSignForm.password"
-          type="password"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
           class="text-input"
           :disabled="submittingBulkSign"
           placeholder="Enter password to verify identity"
@@ -679,7 +741,148 @@
           @click="handleExecuteBulkSignOff"
         >
           <span v-if="submittingBulkSign">Executing Part 11 Signature...</span>
-          <span v-else>Confirm &amp; Execute Signature ✍️</span>
+          <span v-else>Confirm &amp; Execute Signature</span>
+        </button>
+      </template>
+    </ClinicalModal>
+
+    <!-- Create Curriculum Modal -->
+    <ClinicalModal
+      v-model="showCreateCurriculumModal"
+      :teleport="false"
+      :dismissible="!submittingCreateCurriculum"
+      dialog-class="modal-card"
+      title="Author Protocol Training Curriculum"
+    >
+      <p v-if="createCurriculumError" class="badge badge-error" role="alert">
+        {{ createCurriculumError }}
+      </p>
+      <div class="form-group">
+        <label for="create-curr-title">Curriculum Title:</label>
+        <input
+          id="create-curr-title"
+          v-model="createCurriculumForm.title"
+          type="text"
+          class="text-input"
+          placeholder="e.g. Protocol Amendment v3.0 Procedural Delta"
+        />
+      </div>
+      <div class="form-group">
+        <label for="create-curr-version">Protocol Version:</label>
+        <input
+          id="create-curr-version"
+          v-model="createCurriculumForm.protocolVersion"
+          type="text"
+          class="text-input"
+          placeholder="e.g. 3.0"
+        />
+      </div>
+      <div class="form-group">
+        <label for="create-curr-desc">Summary / Scope:</label>
+        <input
+          id="create-curr-desc"
+          v-model="createCurriculumForm.description"
+          type="text"
+          class="text-input"
+          placeholder="Key protocol changes and required clinical attestations"
+        />
+      </div>
+      <div
+        v-for="(mod, idx) in createCurriculumForm.modules"
+        :key="idx"
+        class="module-draft-box"
+      >
+        <div class="form-group">
+          <label :for="`create-mod-title-${idx}`"
+            >Module {{ idx + 1 }} Title:</label
+          >
+          <input
+            :id="`create-mod-title-${idx}`"
+            v-model="mod.title"
+            type="text"
+            class="text-input"
+            placeholder="Section title"
+          />
+        </div>
+        <div class="module-draft-meta">
+          <div class="form-group">
+            <label :for="`create-mod-type-${idx}`">Content Type:</label>
+            <select
+              :id="`create-mod-type-${idx}`"
+              v-model="mod.contentType"
+              class="text-input"
+            >
+              <option value="PROCEDURE_DELTA">Procedure Delta</option>
+              <option value="PROTOCOL_OVERVIEW">Protocol Overview</option>
+              <option value="SAFETY_REPORTING">Safety Reporting</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label :for="`create-mod-duration-${idx}`">Duration (min):</label>
+            <input
+              :id="`create-mod-duration-${idx}`"
+              v-model.number="mod.durationMinutes"
+              type="number"
+              min="1"
+              class="text-input"
+            />
+          </div>
+        </div>
+        <div class="form-group">
+          <label :for="`create-mod-body-${idx}`">Module Content:</label>
+          <textarea
+            :id="`create-mod-body-${idx}`"
+            v-model="mod.bodyMarkdown"
+            rows="3"
+            class="text-input"
+            placeholder="Procedural instructions and regulatory guidance..."
+          />
+        </div>
+      </div>
+      <div class="form-group">
+        <button
+          id="btn-add-curriculum-module"
+          type="button"
+          class="btn btn-secondary btn-sm btn-inline-icon"
+          @click="addCurriculumModuleDraft"
+        >
+          <Plus :size="14" aria-hidden="true" />
+          <span>Add Module</span>
+        </button>
+      </div>
+      <div class="form-group">
+        <label for="create-curr-reason">Reason for Change:</label>
+        <input
+          id="create-curr-reason"
+          v-model="createCurriculumForm.reasonForChange"
+          type="text"
+          class="text-input"
+          placeholder="e.g. Initial curriculum authoring for protocol amendment"
+        />
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="submittingCreateCurriculum"
+          @click="showCreateCurriculumModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          id="btn-submit-create-curriculum"
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            submittingCreateCurriculum ||
+            !createCurriculumForm.title.trim() ||
+            !createCurriculumForm.protocolVersion.trim() ||
+            !createCurriculumForm.reasonForChange.trim()
+          "
+          @click="handleCreateCurriculum"
+        >
+          <span v-if="submittingCreateCurriculum">Publishing...</span>
+          <span v-else>Publish Curriculum</span>
         </button>
       </template>
     </ClinicalModal>
@@ -687,7 +890,20 @@
 </template>
 
 <script setup>
-import { ClinicalModal, ClinicalTabs } from "ui";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileSignature,
+  Plus,
+  RefreshCw,
+} from "./ClinicalLucideIcons";
+import {
+  ClinicalModal,
+  ClinicalTabs,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
@@ -695,6 +911,7 @@ import {
   TRAINING_ASSIGN_ROLE_REASON,
   TRAINING_DELEGATION_SIGN_ROLE_REASON,
   canAssignTrainingCurriculum,
+  canCreateTrainingCurriculum,
   canSignTrainingDelegations,
 } from "../../canvas/authority";
 import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
@@ -726,10 +943,15 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["curriculum-created", "assignment-completed"]);
+
 const authStore = useAuthStore();
 const { activeStudyCode } = useActiveStudyScope();
 const effectiveStudyId = computed(
   () => (props.studyId || "").trim() || activeStudyCode.value
+);
+const canCreateCurriculum = computed(() =>
+  canCreateTrainingCurriculum(authStore)
 );
 const canAssignCurriculum = computed(() =>
   canAssignTrainingCurriculum(authStore)
@@ -771,12 +993,44 @@ function handleTrainingTabChange(tabId) {
   activeTab.value = tabId;
 }
 
+function moduleTypeValue(mod) {
+  return String(mod?.content_type || mod?.module_type || "PROCEDURE_DELTA");
+}
+
+function moduleGuidanceLabel(mod) {
+  if (mod?.duration_minutes != null) {
+    return `${mod.duration_minutes} min`;
+  }
+  return `${mod?.min_reading_time_seconds || 30}s`;
+}
+
+function moduleBodyText(mod) {
+  return mod?.body_markdown || mod?.content_text || "";
+}
+
+function formatQuizScore(score) {
+  if (score == null) return "Not Recorded";
+  const numeric = Number(score);
+  if (!Number.isFinite(numeric)) return "Not Recorded";
+  const pct = numeric > 0 && numeric <= 1 ? numeric * 100 : numeric;
+  return `${Math.round(pct)}%`;
+}
+
+function isDelegationSigned(del) {
+  return (
+    del?.status === "COMPLETED" ||
+    del?.status === "ACTIVE" ||
+    Boolean(del?.signed_off) ||
+    Boolean(del?.pi_signature_hash)
+  );
+}
+
 async function refreshData() {
   loading.value = true;
   try {
     // The signed-in identity is the only source of who is training (#5400): no invented user stands in for it.
-    const userId = authStore.identity?.sub || authStore.identity?.username;
-    bulkSignForm.value.signerName = authStore.identity?.username || "";
+    const userId = authStore.user?.id || authStore.user?.username;
+    bulkSignForm.value.signerName = authStore.user?.username || "";
     bulkSignForm.value.signerRole = formatRoleLabel(authStore.activeRole || "");
     if (!userId) {
       assignments.value = [];
@@ -793,23 +1047,28 @@ async function refreshData() {
     const asnList = await trainingApi.listAssignments(asnQuery);
     assignments.value = Array.isArray(asnList) ? asnList : [];
 
-    if (assignments.value.length > 0 && !selectedAssignmentId.value) {
-      selectedAssignmentId.value = assignments.value[0].id;
-    }
-
-    if (selectedAssignmentId.value) {
-      await loadAssignmentDetails(selectedAssignmentId.value);
-    } else if (effectiveStudyId.value) {
+    if (effectiveStudyId.value) {
       const curQuery = { study_id: effectiveStudyId.value };
       if (props.protocolVersion) {
         curQuery.protocol_version = props.protocolVersion;
       }
       const curList = await trainingApi.listCurricula(curQuery);
       curricula.value = Array.isArray(curList) ? curList : [];
-      if (curricula.value.length > 0) {
+    }
+
+    if (assignments.value.length > 0 && !selectedAssignmentId.value) {
+      selectedAssignmentId.value = assignments.value[0].id;
+    }
+
+    if (selectedAssignmentId.value) {
+      await loadAssignmentDetails(selectedAssignmentId.value);
+    }
+
+    if (!activeCurriculum.value && curricula.value.length > 0) {
+      if (!selectedCurriculumId.value) {
         selectedCurriculumId.value = curricula.value[0].id;
-        await loadCurriculumDetails(selectedCurriculumId.value);
       }
+      await loadCurriculumDetails(selectedCurriculumId.value);
     }
 
     await loadDelegations();
@@ -936,7 +1195,7 @@ const submittingBulkSign = ref(false);
 const bulkSignResult = ref(null);
 const bulkSignError = ref("");
 const bulkSignForm = ref({
-  signerName: authStore.identity?.username || "",
+  signerName: authStore.user?.username || "",
   signerRole: authStore.activeRole || "",
   password: "",
   reasonForChange:
@@ -944,18 +1203,134 @@ const bulkSignForm = ref({
 });
 
 const isAllDelegationsSelected = computed(() => {
-  const pending = delegations.value.filter((d) => d.status !== "COMPLETED");
+  const pending = delegations.value.filter((d) => !isDelegationSigned(d));
   return (
     pending.length > 0 && selectedDelegationIds.value.length === pending.length
   );
 });
 
 function toggleSelectAllDelegations() {
-  const pending = delegations.value.filter((d) => d.status !== "COMPLETED");
+  const pending = delegations.value.filter((d) => !isDelegationSigned(d));
   if (selectedDelegationIds.value.length === pending.length) {
     selectedDelegationIds.value = [];
   } else {
     selectedDelegationIds.value = pending.map((d) => d.id);
+  }
+}
+
+const showCreateCurriculumModal = ref(false);
+const submittingCreateCurriculum = ref(false);
+const createCurriculumError = ref("");
+const createCurriculumForm = ref({
+  title: "",
+  protocolVersion: props.protocolVersion || "1.0",
+  description: "",
+  passingScore: 0.8,
+  reasonForChange: "Author protocol training curriculum",
+  modules: [
+    {
+      title: "",
+      contentType: "PROCEDURE_DELTA",
+      durationMinutes: 15,
+      bodyMarkdown: "",
+    },
+  ],
+});
+
+function openCreateCurriculumModal() {
+  createCurriculumError.value = "";
+  createCurriculumForm.value = {
+    title: "",
+    protocolVersion: props.protocolVersion || "1.0",
+    description: "",
+    passingScore: 0.8,
+    reasonForChange: "Author protocol training curriculum",
+    modules: [
+      {
+        title: "",
+        contentType: "PROCEDURE_DELTA",
+        durationMinutes: 15,
+        bodyMarkdown: "",
+      },
+    ],
+  };
+  showCreateCurriculumModal.value = true;
+}
+
+function addCurriculumModuleDraft() {
+  createCurriculumForm.value.modules.push({
+    title: "",
+    contentType: "PROCEDURE_DELTA",
+    durationMinutes: 15,
+    bodyMarkdown: "",
+  });
+}
+
+async function handleCreateCurriculum() {
+  if (!effectiveStudyId.value) return;
+  submittingCreateCurriculum.value = true;
+  createCurriculumError.value = "";
+  try {
+    const modules = createCurriculumForm.value.modules
+      .filter((m) => m.title.trim())
+      .map((m, idx) => ({
+        id: `mod-${idx + 1}`,
+        title: m.title.trim(),
+        content_type: m.contentType,
+        duration_minutes: Number(m.durationMinutes) || 15,
+        body_markdown: m.bodyMarkdown.trim(),
+        sort_order: idx + 1,
+      }));
+    const created = await trainingApi.createCurriculum({
+      study_id: effectiveStudyId.value,
+      protocol_version: createCurriculumForm.value.protocolVersion.trim(),
+      title: createCurriculumForm.value.title.trim(),
+      description: createCurriculumForm.value.description.trim() || null,
+      passing_score: createCurriculumForm.value.passingScore,
+      modules,
+      reason_for_change: createCurriculumForm.value.reasonForChange.trim(),
+    });
+    showCreateCurriculumModal.value = false;
+    if (created?.id) {
+      selectedCurriculumId.value = created.id;
+      activeCurriculum.value = created;
+    }
+    await refreshData();
+    emit("curriculum-created", created);
+  } catch (err) {
+    createCurriculumError.value =
+      err?.message || "Failed to publish curriculum.";
+  } finally {
+    submittingCreateCurriculum.value = false;
+  }
+}
+
+const completingAssignment = ref(false);
+const completeAssignmentError = ref("");
+
+async function handleCompleteAssignment() {
+  if (!activeAssignment.value?.id) return;
+  completingAssignment.value = true;
+  completeAssignmentError.value = "";
+  try {
+    const completed = await trainingApi.completeAssignment(
+      activeAssignment.value.id,
+      {
+        reason_for_change:
+          "Completed required procedural curriculum modules and attested comprehension",
+      }
+    );
+    activeAssignment.value = completed;
+    isGated.value = completed?.status !== "COMPLETED";
+    assignments.value = assignments.value.map((a) =>
+      a.id === completed?.id ? { ...a, ...completed } : a
+    );
+    emit("assignment-completed", completed);
+  } catch (err) {
+    completeAssignmentError.value =
+      err?.message || "Failed to complete training assignment.";
+  } finally {
+    completingAssignment.value = false;
   }
 }
 
@@ -997,7 +1372,7 @@ async function handleExecuteBulkSignOff() {
   try {
     const delegationIds = [...selectedDelegationIds.value];
     const verification = await soaClient.verifySignature({
-      username: authStore.identity?.username || "",
+      username: authStore.user?.username || "",
       password: bulkSignForm.value.password,
       action: DELEGATION_SIGN_OFF_ACTION,
       semanticAction: DELEGATION_SIGN_OFF_SEMANTIC_ACTION,
@@ -1049,6 +1424,38 @@ async function handleExecuteBulkSignOff() {
   align-items: flex-start;
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--spacing-md, 16px);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reader-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.module-draft-box {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--semantic-color-surface-header);
+}
+
+.module-draft-meta {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 10px;
 }
 
 .btn-secondary {

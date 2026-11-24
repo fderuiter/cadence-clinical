@@ -390,6 +390,12 @@ public static partial class PermissionMatrix
 
         _rolePermissions[RoleNormalization.ROLE_PHARMACIST] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["visit_windowing"] = ["read"],
+            ["soa"] = ["read"],
+            ["study_design"] = ["read"],
+            ["training_log"] = ["create", "read", "sign"],
+            ["ctms_study"] = ["read"],
+            ["eisf_document"] = ["read"],
             ["rtsm_supply"] = ["read", "write"]
         };
 

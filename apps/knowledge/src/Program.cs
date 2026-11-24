@@ -17,7 +17,10 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddScoped<ICtmsDelegationClient, HttpCtmsDelegationClient>();
 builder.AddCadencePostgresDbContext<KnowledgeDbContext>(configureOptions: static (sp, options) =>
 {
     options.AddInterceptors(new GxPAuditInterceptor(

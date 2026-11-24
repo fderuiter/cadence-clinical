@@ -74,11 +74,16 @@
                 >
               </td>
               <td>
-                {{
-                  rec.task_codes
-                    .map((code) => formatClinicalEnum(code))
-                    .join(", ")
-                }}
+                <div>
+                  {{
+                    rec.task_codes
+                      .map((code) => formatClinicalEnum(code))
+                      .join(", ")
+                  }}
+                </div>
+                <div v-if="rec.duties" class="role-hint">
+                  {{ rec.duties }}
+                </div>
               </td>
               <td>{{ rec.start_date }}</td>
               <td>
@@ -88,10 +93,24 @@
                 >
                   {{ formatClinicalStatus(rec.status) }}
                 </span>
+                <div v-if="rec.etmf_document_id" class="role-hint">
+                  Filed in eTMF ({{ rec.etmf_document_id }})
+                </div>
+                <SupportDetails
+                  v-if="rec.pi_signature_hash || rec.etmf_document_id"
+                  summary-label="Seal &amp; filing details"
+                  :detail="formatDoaRecordDetail(rec)"
+                  :reference="
+                    rec.pi_signature_hash ||
+                    rec.etmf_document_id ||
+                    rec.record_id
+                  "
+                />
               </td>
               <td class="action-cell">
                 <button
                   v-if="canSignOff && rec.status === 'PENDING_PI_SIGNATURE'"
+                  :data-testid="`btn-doa-signoff-${rec.record_id}`"
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
@@ -146,11 +165,20 @@
             type="text"
             placeholder="I attest this staff member is qualified for the delegated tasks"
           />
+          <label for="doa-signoff-password">Password (Part 11)</label>
+          <input
+            id="doa-signoff-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <button
             id="btn-confirm-doa-signoff"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="
+              !signOffReason.trim() || !signOffPassword.trim() || saving
+            "
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Sign delegation" }}
@@ -158,7 +186,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffRecord = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -214,6 +242,20 @@
             type="text"
             placeholder="crc_staff_01"
           />
+          <label for="del-staff-name">Staff name</label>
+          <input
+            id="del-staff-name"
+            v-model="newStaffName"
+            type="text"
+            placeholder="Jordan Patel, RN"
+          />
+          <label for="del-staff-role">Staff role</label>
+          <select id="del-staff-role" v-model="newStaffRole">
+            <option value="">Select role (optional)</option>
+            <option value="crc">Clinical Research Coordinator</option>
+            <option value="site_investigator">Sub-Investigator</option>
+            <option value="pharmacist">Site Pharmacist</option>
+          </select>
           <label for="del-task-select">Primary duty</label>
           <select id="del-task-select" v-model="newTaskCode">
             <option value="SUBJECT_INFORMED_CONSENT">
@@ -224,6 +266,13 @@
             <option value="SAE_REPORTING">Safety Event Reporting</option>
             <option value="IP_DISPENSING">Investigational Supply</option>
           </select>
+          <label for="del-duties">Duties summary</label>
+          <input
+            id="del-duties"
+            v-model="newDuties"
+            type="text"
+            placeholder="Protocol-delegated clinical responsibilities"
+          />
           <label for="del-start-date">Start date</label>
           <input id="del-start-date" v-model="newStartDate" type="date" />
           <label for="del-change-reason">Reason for change</label>
@@ -255,16 +304,30 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import {
+  buildStepUpVerificationPayload,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import apiClient from "../../services/api";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
   formatRoleLabel,
 } from "../../utils/clinicalLabels";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
+
+function formatDoaRecordDetail(rec: DelegationRecord): string {
+  const parts = [`Record ID: ${rec.record_id}`];
+  if (rec.etmf_document_id) {
+    parts.push(`eTMF Zone 5: ${rec.etmf_document_id}`);
+  }
+  return parts.join(" · ");
+}
 
 const props = withDefaults(
   defineProps<{
@@ -291,6 +354,9 @@ const {
   syncActiveScope,
   recordLoadFailure,
 } = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => {
+    if (siteInput.value.trim()) void loadDoaLog();
+  },
   onSitePropChange: (val) => {
     if (val) void loadDoaLog();
   },
@@ -304,27 +370,38 @@ const exporting = ref(false);
 const doaLog = ref<DoaLog | null>(null);
 
 const newStaffUserId = ref("");
+const newStaffName = ref("");
+const newStaffRole = ref("");
 const newTaskCode = ref("CRF_DATA_ENTRY");
+const newDuties = ref("");
 const newStartDate = ref("");
 const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
 const signOffReason = ref("");
+const signOffPassword = ref("");
 
 const activeRevokeRecord = ref<DelegationRecord | null>(null);
 const revokeReason = ref("");
+
+const effectiveStudyCode = computed(
+  () => (props.studyCode || clinicalStore.activeStudyId || "").trim() || null
+);
 
 async function loadDoaLog() {
   const site = siteInput.value.trim();
   if (!site) return;
 
-  syncActiveScope(undefined, site);
+  syncActiveScope(effectiveStudyCode.value || undefined, site);
   loading.value = true;
   loadError.value = "";
   scopeGuidance.value = "";
 
   try {
-    doaLog.value = await ctmsApi.getSiteDoaLog(site);
+    doaLog.value = await ctmsApi.getSiteDoaLog(
+      site,
+      effectiveStudyCode.value || undefined
+    );
     loaded.value = true;
   } catch (err) {
     doaLog.value = null;
@@ -349,8 +426,12 @@ async function submitDelegation() {
   try {
     await ctmsApi.delegateSiteTasks(
       {
+        study_id: effectiveStudyCode.value,
         site_id: site,
         staff_user_id: staff,
+        staff_name: newStaffName.value.trim() || null,
+        role: newStaffRole.value.trim() || null,
+        duties: newDuties.value.trim() || null,
         task_codes: [newTaskCode.value],
         start_date: newStartDate.value,
         reason_for_change: reason,
@@ -358,6 +439,9 @@ async function submitDelegation() {
       reason
     );
     newStaffUserId.value = "";
+    newStaffName.value = "";
+    newStaffRole.value = "";
+    newDuties.value = "";
     newReason.value = "";
     toasts.push({
       tone: "success",
@@ -375,21 +459,50 @@ async function submitDelegation() {
 function prepareSignOff(rec: DelegationRecord) {
   activeSignOffRecord.value = rec;
   signOffReason.value = "";
+  signOffPassword.value = "";
+}
+
+function cancelSignOff() {
+  signOffPassword.value = "";
+  activeSignOffRecord.value = null;
 }
 
 async function confirmSignOff() {
   const rec = activeSignOffRecord.value;
   const reason = signOffReason.value.trim();
-  if (!rec || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!rec || !reason || !password.trim() || !canSignOff.value) return;
 
   saving.value = true;
   try {
+    const signerUsername = authStore.user?.username || authStore.userId || "";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: "/api/v1/ctms/doa/sign-off",
+      semanticAction: "ctms.doa.sign_off",
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     await ctmsApi.signOffDelegation(
       {
         record_id: rec.record_id,
+        study_id: rec.study_id ?? effectiveStudyCode.value,
         reason_for_change: reason,
       },
-      reason
+      reason,
+      sigToken
     );
     activeSignOffRecord.value = null;
     signOffReason.value = "";
@@ -421,6 +534,7 @@ async function confirmRevoke() {
     await ctmsApi.revokeSiteTasks(
       {
         record_id: rec.record_id,
+        study_id: rec.study_id ?? effectiveStudyCode.value,
         reason_for_change: reason,
       },
       reason
@@ -445,7 +559,10 @@ async function exportPdf() {
   if (!site) return;
   exporting.value = true;
   try {
-    const blob = await ctmsApi.exportSiteDoaPdf(site);
+    const blob = await ctmsApi.exportSiteDoaPdf(
+      site,
+      effectiveStudyCode.value || undefined
+    );
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

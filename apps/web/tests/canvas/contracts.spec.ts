@@ -20,6 +20,7 @@ import {
   canCertifyGreenlight,
   canCompleteMonitoringVisits,
   canCorrectObservations,
+  canCreateTrainingCurriculum,
   canExportEtmf,
   canGovernProtocols,
   canManageDoa,
@@ -409,7 +410,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
     }
   });
 
-  it("validates all 33 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
+  it("validates all 34 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
     const exportedCanNames = Object.keys(authority)
       .filter(
         (key) =>
@@ -539,6 +540,11 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
         permission: "etmf_document:export",
       },
       {
+        name: "canCreateTrainingCurriculum",
+        fn: canCreateTrainingCurriculum,
+        permission: "training_curriculum:create",
+      },
+      {
         name: "canAssignTrainingCurriculum",
         fn: canAssignTrainingCurriculum,
         permission: "training_curriculum:assign",
@@ -627,7 +633,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
       ...matrixBackedChecks.map((c) => c.name),
       ...serviceBackedChecks.map((c) => c.name),
     ].sort();
-    expect(exportedCanNames).toHaveLength(33);
+    expect(exportedCanNames).toHaveLength(34);
     expect(testedNames).toEqual(exportedCanNames);
 
     // Verify all 25 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role

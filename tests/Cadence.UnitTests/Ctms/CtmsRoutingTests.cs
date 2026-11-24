@@ -174,13 +174,32 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
         var compDoc = await compRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         compDoc.GetProperty("status").GetString().Should().Be("COMPLETED");
 
-        // 3. Sign-off
+        // 3. Sign-off without X-Sig-Token fails closed with 401 REAUTHENTICATION_REQUIRED
         using var monitorClient = CreateClient("monitor", "manager-1");
-        using var signReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off")
+        using var unsignedSignReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off")
+        {
+            Content = JsonContent.Create(new { })
+        };
+        unsignedSignReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        var unsignedSignRes = await monitorClient.SendAsync(unsignedSignReq, TestContext.Current.CancellationToken);
+        unsignedSignRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 4. Sign-off with single-use X-Sig-Token transitions status to SIGNED_OFF
+        var issuedAt = _host.Services.GetRequiredService<IClock>().UtcNow;
+        string signPath = MonitoringVisitEndpoints.SignOffAction(visitId);
+        using var signReq = new HttpRequestMessage(HttpMethod.Post, signPath)
         {
             Content = JsonContent.Create(new { })
         };
         signReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        signReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "manager-1",
+                signPath,
+                MonitoringVisitEndpoints.SignOffSemanticAction,
+                ["monitor"],
+                issuedAt: issuedAt));
         var signRes = await monitorClient.SendAsync(signReq, TestContext.Current.CancellationToken);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var signDoc = await signRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);

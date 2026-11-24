@@ -5,6 +5,8 @@ Generated from `docs/openapi/ctms_openapi.json` by `pnpm cadence generate-api-do
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `POST` | `/api/v1/ctms/doa/delegate` | DelegateSiteTasks | Assign site trial task delegation requiring Principal Investigator sign-off. |
+| `GET` | `/api/v1/ctms/doa/delegations` | ListCtmsDelegations | List canonical study/site-scoped Delegation of Authority records. |
+| `POST` | `/api/v1/ctms/doa/endorse-signed-batch` | EndorseSignedDoaBatch | Service-authenticated batch Principal Investigator endorsement and eTMF Zone 5 filing. |
 | `POST` | `/api/v1/ctms/doa/revoke` | RevokeSiteTasks | Revoke or end a delegated trial duty with reason for change. |
 | `POST` | `/api/v1/ctms/doa/sign-off` | SignOffDelegation | Endorse Delegation of Authority task assignment with Principal Investigator eSignature. |
 | `GET` | `/api/v1/ctms/doa/sites/{site_id}/export-pdf` | ExportSiteDoaPdf | Export 21 CFR Part 11 signed DOA PDF log. |

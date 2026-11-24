@@ -446,6 +446,80 @@ public sealed class ExecutionCallerScopeTests : IDisposable
         (await piClient.SendAsync(toxReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    [GxPRequirement("PRD-SCM-006")]
+    public async Task IpKitReconcileBatch_EnforcesSingleUseSigToken_AndDerivesProcessedByFromVerifiedPharmacistCaller()
+    {
+        var dmBeta = new GatewayIdentity(
+            UserId: "dm-beta-seed",
+            Roles: ["DATA_MANAGER"],
+            SiteIds: [],
+            TenantId: "tenant-beta",
+            StudyIds: [StudyBeta],
+            ChangeReason: Reason);
+        using (var dmClient = _factory.CreateSignedClient(dmBeta))
+        {
+            var seedResp = await dmClient.PostAsJsonAsync(
+                "/api/v1/execution/rtsm/kits/seed-inventory",
+                new SeedInventoryRequest(StudyBeta, Site02, [new IpKitSeedItem("KIT-SIG-01", "LOT-SIG-1", FakeClock.DefaultStart.AddYears(1), "ACTIVE_AT_SITE")]),
+                ExecutionApiFactory.JsonOptions,
+                Ct);
+            seedResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        var pharmBeta = PharmAlpha with { UserId = "pharmacist.site101", TenantId = "tenant-beta", StudyIds = [StudyBeta], SiteIds = [Site02] };
+        using var pharmClient = _factory.CreateSignedClient(pharmBeta);
+
+        var body = new IpKitBatchReconciliationRequest(
+            StudyBeta,
+            Site02,
+            [new IpKitItemReconcileRequest("KIT-SIG-01", "LOT-SIG-1", "LOT-SIG-1", 4.0, 20.0, "RETURNED_TO_SITE", "NORMAL_RETURN")],
+            ProcessedBy: "spoofed-client-signer",
+            Notes: "Step-up signed kit return",
+            ReasonForChange: Reason);
+
+        // 1. Missing X-Sig-Token fails closed with 401
+        var unsignedResp = await pharmClient.PostAsJsonAsync(
+            IpKitEndpoints.ReconcileBatchAction,
+            body,
+            ExecutionApiFactory.JsonOptions,
+            Ct);
+        unsignedResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 2. Valid X-Sig-Token succeeds and records verified caller ("pharmacist.site101") instead of spoofed ProcessedBy
+        var clock = _factory.Services.GetRequiredService<IClock>();
+        string sigToken = TestSecurityContext.CreateSigToken(
+            pharmBeta.UserId,
+            IpKitEndpoints.ReconcileBatchAction,
+            IpKitEndpoints.ReconcileBatchSemanticAction,
+            ["pharmacist"],
+            issuedAt: clock.UtcNow);
+
+        using (var signedReq = new HttpRequestMessage(HttpMethod.Post, IpKitEndpoints.ReconcileBatchAction)
+        {
+            Content = JsonContent.Create(body, options: ExecutionApiFactory.JsonOptions),
+        })
+        {
+            signedReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+            var signedResp = await pharmClient.SendAsync(signedReq, Ct);
+            signedResp.StatusCode.Should().Be(HttpStatusCode.OK, await signedResp.Content.ReadAsStringAsync(Ct));
+            var dto = await signedResp.Content.ReadFromJsonAsync<IpKitReconciliationBatchResponse>(ExecutionApiFactory.JsonOptions, Ct);
+            dto.Should().NotBeNull();
+            dto!.ProcessedBy.Should().Be("pharmacist.site101");
+            dto.Certificate.Should().NotBeNull();
+            dto.Certificate.IssuedBy.Should().Be("pharmacist.site101");
+        }
+
+        // 3. Replaying the consumed X-Sig-Token fails closed with 401
+        using var replayReq = new HttpRequestMessage(HttpMethod.Post, IpKitEndpoints.ReconcileBatchAction)
+        {
+            Content = JsonContent.Create(body, options: ExecutionApiFactory.JsonOptions),
+        };
+        replayReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+        var replayResp = await pharmClient.SendAsync(replayReq, Ct);
+        replayResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     private static MultipartFormDataContent BuildEnterpriseSynonymForm()
     {
         var form = new MultipartFormDataContent();

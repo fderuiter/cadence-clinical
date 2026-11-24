@@ -161,6 +161,16 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {
@@ -442,6 +452,16 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -799,8 +819,8 @@
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "400": {
+            "description": "Bad Request",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -809,8 +829,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not Found",
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -874,6 +894,16 @@
           },
           "400": {
             "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1000,6 +1030,99 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Ctms_BatchCertifyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/delegations": {
+      "get": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "List canonical study/site-scoped Delegation of Authority records.",
+        "operationId": "ListCtmsDelegations",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "valid_at",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "known_at",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+                  }
                 }
               }
             }
@@ -1224,6 +1347,16 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {
@@ -1246,6 +1379,67 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/endorse-signed-batch": {
+      "post": {
+        "tags": [
+          "DoaEndpoints"
+        ],
+        "summary": "Service-authenticated batch Principal Investigator endorsement and eTMF Zone 5 filing.",
+        "operationId": "EndorseSignedDoaBatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_BulkDoaEndorseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_BulkDoaEndorseResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1471,6 +1665,101 @@
           },
           "message": {
             "type": "string"
+          },
+          "total_certified": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
+      "Ctms_BulkDoaEndorseRequest": {
+        "required": [
+          "study_id",
+          "record_ids",
+          "signer_user_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signer_user_id": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "batch_transaction_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approved_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Ctms_BulkDoaEndorseResponseDto": {
+        "required": [
+          "batch_transaction_id",
+          "signature_hash",
+          "approved_at",
+          "approved_count",
+          "records"
+        ],
+        "type": "object",
+        "properties": {
+          "batch_transaction_id": {
+            "type": "string"
+          },
+          "signature_hash": {
+            "type": "string"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_DelegationResponseDto"
+            }
           }
         }
       },
@@ -1564,6 +1853,59 @@
               "string"
             ],
             "format": "int64"
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "duties": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "default": "PENDING_PI_SIGNATURE"
+          },
+          "pi_signature_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pi_approved_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "batch_transaction_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "etmf_document_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -1599,6 +1941,24 @@
             ]
           },
           "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "staff_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "duties": {
             "type": [
               "null",
               "string"
@@ -1762,6 +2122,57 @@
               "string"
             ],
             "format": "int64"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_signed": {
+            "type": "boolean",
+            "default": false
+          },
+          "pdf_sha256_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "etmf_document_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdf_access_url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_GreenlightFacetItemDto": {
+        "required": [
+          "facet_code",
+          "display_name",
+          "is_satisfied",
+          "evidence_summary"
+        ],
+        "type": "object",
+        "properties": {
+          "facet_code": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "is_satisfied": {
+            "type": "boolean"
+          },
+          "evidence_summary": {
+            "type": "string"
           }
         }
       },
@@ -1823,6 +2234,33 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Ctms_MonitoringVisitFindingDto": {
+        "required": [
+          "id",
+          "text",
+          "severity",
+          "resolution_status",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "resolution_status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
           }
         }
       },
@@ -1904,6 +2342,15 @@
               "null",
               "string"
             ]
+          },
+          "findings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Ctms_MonitoringVisitFindingDto"
+            }
           }
         }
       },
@@ -2078,6 +2525,40 @@
             "items": {
               "type": "string"
             }
+          },
+          "facets": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Ctms_GreenlightFacetItemDto"
+            }
+          },
+          "blocking_reasons": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_ready_for_certification": {
+            "type": "boolean",
+            "default": false
+          },
+          "certified_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certified_at": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -16,11 +16,16 @@ namespace Cadence.Security.Authentication;
 /// runs, so no write happens.
 /// @req:SRS-SYS-005
 /// </summary>
-public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding) : IEndpointFilter
+public sealed class ElectronicSignatureEndpointFilter(
+    Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding,
+    Func<EndpointFilterInvocationContext, bool>? shouldEnforce = null) : IEndpointFilter
 {
     /// <summary>A filter binding the token to <paramref name="semanticAction"/> on the action the request names.</summary>
-    public ElectronicSignatureEndpointFilter(string semanticAction, Func<HttpContext, string> resolveAction)
-        : this(context => new SigTokenBinding(resolveAction(context.HttpContext), semanticAction))
+    public ElectronicSignatureEndpointFilter(
+        string semanticAction,
+        Func<HttpContext, string> resolveAction,
+        Func<EndpointFilterInvocationContext, bool>? shouldEnforce = null)
+        : this(context => new SigTokenBinding(resolveAction(context.HttpContext), semanticAction), shouldEnforce)
     {
     }
 
@@ -31,6 +36,11 @@ public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocat
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
+
+        if (shouldEnforce is not null && !shouldEnforce(context))
+        {
+            return await next(context).ConfigureAwait(false);
+        }
 
         var httpContext = context.HttpContext;
         string? userId = httpContext.User.FindFirst(CadenceClaimTypes.Subject)?.Value;
@@ -105,6 +115,27 @@ public static class ElectronicSignatureEndpointExtensions
 
         return builder
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(semanticAction, resolveAction))
+            .WithMetadata(ElectronicSignatureRequired.Instance)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>
+    /// Gates the endpoint on an e-signature step-up token when <paramref name="shouldEnforce"/> returns true
+    /// (for example finalized GxP compilation vs unsigned draft preview on the same route).
+    /// </summary>
+    public static RouteHandlerBuilder RequireElectronicSignature(
+        this RouteHandlerBuilder builder,
+        string semanticAction,
+        Func<HttpContext, string> resolveAction,
+        Func<EndpointFilterInvocationContext, bool> shouldEnforce)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(semanticAction);
+        ArgumentNullException.ThrowIfNull(resolveAction);
+        ArgumentNullException.ThrowIfNull(shouldEnforce);
+
+        return builder
+            .AddEndpointFilter(new ElectronicSignatureEndpointFilter(semanticAction, resolveAction, shouldEnforce))
             .WithMetadata(ElectronicSignatureRequired.Instance)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
     }

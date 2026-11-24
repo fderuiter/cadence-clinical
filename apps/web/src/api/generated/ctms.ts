@@ -278,6 +278,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ctms/doa/delegations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List canonical study/site-scoped Delegation of Authority records. */
+    get: operations["ListCtmsDelegations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/ctms/doa/delegate": {
     parameters: {
       query?: never;
@@ -323,6 +340,23 @@ export interface paths {
     put?: never;
     /** Endorse Delegation of Authority task assignment with Principal Investigator eSignature. */
     post: operations["SignOffDelegation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ctms/doa/endorse-signed-batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Service-authenticated batch Principal Investigator endorsement and eTMF Zone 5 filing. */
+    post: operations["EndorseSignedDoaBatch"];
     delete?: never;
     options?: never;
     head?: never;
@@ -385,6 +419,30 @@ export interface components {
       country_code: string;
       certified_sites: components["schemas"]["Ctms_CertifiedSiteItemDto"][];
       message: string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      total_certified: number | string;
+    };
+    Ctms_BulkDoaEndorseRequest: {
+      study_id: null | string;
+      record_ids: string[];
+      signer_user_id: string;
+      reason_for_change?: null | string;
+      batch_transaction_id?: null | string;
+      signature_hash?: null | string;
+      /** Format: date-time */
+      approved_at?: null | string;
+    };
+    Ctms_BulkDoaEndorseResponseDto: {
+      batch_transaction_id: string;
+      signature_hash: string;
+      /** Format: date-time */
+      approved_at: string;
+      /** Format: int32 */
+      approved_count: number | string;
+      records: components["schemas"]["Ctms_DelegationResponseDto"][];
     };
     Ctms_CertifiedSiteItemDto: {
       site_id: string;
@@ -407,6 +465,17 @@ export interface components {
       created_by: string;
       /** Format: int64 */
       version_index: number | string;
+      study_id?: null | string;
+      staff_name?: null | string;
+      role?: null | string;
+      duties?: null | string;
+      /** @default PENDING_PI_SIGNATURE */
+      status: string;
+      pi_signature_hash?: null | string;
+      /** Format: date-time */
+      pi_approved_at?: null | string;
+      batch_transaction_id?: null | string;
+      etmf_document_id?: null | string;
     };
     Ctms_DelegationTaskRequest: {
       site_id: string;
@@ -415,6 +484,9 @@ export interface components {
       start_date: string;
       reason_for_change: null | string;
       study_id?: null | string;
+      staff_name?: null | string;
+      role?: null | string;
+      duties?: null | string;
     };
     Ctms_DoaAuditHistoryItemDto: {
       id: string;
@@ -453,6 +525,18 @@ export interface components {
       reason_for_change: string;
       /** Format: int64 */
       version_index: number | string;
+      status?: null | string;
+      /** @default false */
+      is_signed: boolean;
+      pdf_sha256_hash?: null | string;
+      etmf_document_id?: null | string;
+      pdf_access_url?: null | string;
+    };
+    Ctms_GreenlightFacetItemDto: {
+      facet_code: string;
+      display_name: string;
+      is_satisfied: boolean;
+      evidence_summary: string;
     };
     Ctms_MonitoringVisitCompleteDto: {
       /** Format: date-time */
@@ -468,6 +552,13 @@ export interface components {
       /** Format: date-time */
       scheduled_date: string;
       reason_for_change?: null | string;
+    };
+    Ctms_MonitoringVisitFindingDto: {
+      id: string;
+      text: string;
+      severity: string;
+      resolution_status: string;
+      created_at: string;
     };
     Ctms_MonitoringVisitResponseDto: {
       id: string;
@@ -486,6 +577,8 @@ export interface components {
       signature_manifestation?: null | string;
       signer?: null | string;
       signing_timestamp?: null | string;
+      findings?:
+        null | components["schemas"]["Ctms_MonitoringVisitFindingDto"][];
     };
     Ctms_ProblemDetails: {
       type?: null | string;
@@ -523,6 +616,12 @@ export interface components {
       greenlight_certified_at: null | string;
       is_overridden: boolean;
       unfulfilled_reasons: null | string[];
+      facets?: null | components["schemas"]["Ctms_GreenlightFacetItemDto"][];
+      blocking_reasons?: null | string[];
+      /** @default false */
+      is_ready_for_certification: boolean;
+      certified_by?: null | string;
+      certified_at?: null | string;
     };
     Ctms_SiteMilestoneCreateDto: {
       site_id: string;
@@ -714,6 +813,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -930,6 +1038,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -1188,8 +1305,8 @@ export interface operations {
           "application/json": components["schemas"]["Ctms_SiteGreenlightGateResponseDto"];
         };
       };
-      /** @description Forbidden */
-      403: {
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -1197,8 +1314,8 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
-      /** @description Not Found */
-      404: {
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1235,6 +1352,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -1325,6 +1451,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Ctms_BatchCertifyResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListCtmsDelegations: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        site_id?: string;
+        status?: string;
+        valid_at?: string;
+        known_at?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ctms_DelegationResponseDto"][];
         };
       };
       /** @description Bad Request */
@@ -1495,6 +1674,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -1515,6 +1703,57 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+    };
+  };
+  EndorseSignedDoaBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_BulkDoaEndorseRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ctms_BulkDoaEndorseResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

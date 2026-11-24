@@ -92,6 +92,7 @@
               <td>{{ visit.findings?.length ?? 0 }}</td>
               <td class="action-cell">
                 <button
+                  :data-testid="`btn-view-letters-${visit.id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="viewLetters(visit)"
@@ -201,9 +202,35 @@
         </p>
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
-            <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
-            {{ letter.subject }}
-            <pre class="letter-body">{{ letter.body_markdown }}</pre>
+            <div class="card-subheader">
+              <div>
+                <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
+                <span>{{
+                  formatClinicalStatus(
+                    letter.status || (letter.is_signed ? "FINALIZED" : "DRAFT")
+                  )
+                }}</span>
+                <span v-if="letter.etmf_document_id">
+                  · Filed in eTMF ({{ letter.etmf_document_id }})</span
+                >
+                <SupportDetails
+                  v-if="letter.pdf_sha256_hash || letter.etmf_document_id"
+                  summary-label="Filing &amp; seal details"
+                  :detail="`Letter ID: ${letter.id}${letter.etmf_document_id ? ` · eTMF Document: ${letter.etmf_document_id}` : ''}`"
+                  :reference="letter.pdf_sha256_hash || letter.id"
+                />
+              </div>
+              <button
+                v-if="letter.pdf_access_url || letter.is_signed"
+                :data-testid="`btn-download-generated-letter-${letter.id}`"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="downloadGeneratedLetter(letter)"
+              >
+                Download PDF
+              </button>
+            </div>
+            <pre class="letter-body">{{ letter.rendered_content }}</pre>
           </li>
         </ul>
       </div>
@@ -381,11 +408,20 @@
             type="text"
             placeholder="Supervisory review endorsement"
           />
+          <label for="signoff-visit-password">Password (Part 11)</label>
+          <input
+            id="signoff-visit-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <button
             id="btn-confirm-signoff-visit"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="
+              !signOffReason.trim() || !signOffPassword.trim() || saving
+            "
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Confirm sign-off" }}
@@ -393,7 +429,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffVisit = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -570,6 +606,7 @@ const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
 const activeSignOffVisit = ref<MonitoringVisit | null>(null);
 const signOffReason = ref("");
+const signOffPassword = ref("");
 
 const selectedLettersVisit = ref<MonitoringVisit | null>(null);
 const letters = ref<GeneratedVisitLetter[]>([]);
@@ -738,10 +775,7 @@ async function confirmCompileLetter() {
   try {
     let sigToken: string | undefined;
     const signerUsername =
-      authStore.identity?.username ||
-      authStore.user?.username ||
-      authStore.userId ||
-      visit.cra_id;
+      authStore.user?.username || authStore.userId || visit.cra_id;
 
     if (compileFinalize.value) {
       const verificationPayload = buildStepUpVerificationPayload({
@@ -827,19 +861,62 @@ async function downloadCompiledLetter(letter: VisitLetterCompilationResult) {
   }
 }
 
+async function downloadGeneratedLetter(letter: GeneratedVisitLetter) {
+  try {
+    const blob = await ctmsApi.downloadVisitLetterPdf(letter.id);
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `${letter.letter_type}_${letter.id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    toasts.apiError("Visit letter PDF could not be downloaded", err);
+  }
+}
+
 function prepareSignOff(visit: MonitoringVisit) {
   activeSignOffVisit.value = visit;
   signOffReason.value = "";
+  signOffPassword.value = "";
+}
+
+function cancelSignOff() {
+  signOffPassword.value = "";
+  activeSignOffVisit.value = null;
 }
 
 async function confirmSignOff() {
   const visit = activeSignOffVisit.value;
   const reason = signOffReason.value.trim();
-  if (!visit || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!visit || !reason || !password.trim() || !canSignOff.value) return;
 
   saving.value = true;
   try {
-    await ctmsApi.signOffMonitoringVisit(visit.id, reason);
+    const signerUsername = authStore.user?.username || authStore.userId || "";
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: `/api/v1/ctms/monitoring-visits/${encodeURIComponent(visit.id)}/sign-off`,
+      semanticAction: "ctms.monitoring_visit.sign_off",
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
+    await ctmsApi.signOffMonitoringVisit(visit.id, reason, sigToken);
     activeSignOffVisit.value = null;
     signOffReason.value = "";
     toasts.push({

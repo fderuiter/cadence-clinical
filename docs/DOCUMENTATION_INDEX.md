@@ -612,6 +612,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
 | [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](adr/2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) | Current | - Status: Accepted |
+| [ADR-2649: Consolidate CTMS Delegation of Authority Ownership and Signed Cross-Service GxP Contracts](adr/2026-11-23-consolidate-ctms-doa-and-signed-service-contracts.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

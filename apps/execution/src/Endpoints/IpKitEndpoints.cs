@@ -5,7 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Supply;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +17,9 @@ namespace Cadence.Apps.Execution.Endpoints;
 
 public static class IpKitEndpoints
 {
+    public const string ReconcileBatchSemanticAction = "execution.ip_kit.reconcile_batch";
+    public const string ReconcileBatchAction = "/api/v1/execution/rtsm/kits/reconcile-batch";
+
     public static IEndpointRouteBuilder MapIpKitEndpoints(this IEndpointRouteBuilder routes)
     {
         // Route permissions (ADR-2516): kit scans, reconciliation and inventory are blinded supply data, so only the
@@ -50,9 +55,13 @@ public static class IpKitEndpoints
                 return denied;
             }
 
+            string verifiedSigner = CallerScope.UserId(httpContext)
+                ?? throw new InvalidOperationException("Signed IP kit reconciliation requires a verified caller.");
+            var verifiedRequest = request with { ProcessedBy = verifiedSigner };
+
             try
             {
-                var result = await service.ProcessBatchReconciliationAsync(request, ct);
+                var result = await service.ProcessBatchReconciliationAsync(verifiedRequest, ct);
                 return Results.Ok(result);
             }
             catch (ArgumentException ex)
@@ -60,7 +69,10 @@ public static class IpKitEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("rtsm_supply:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("rtsm_supply:write")
+        .RequireCallerStudyAndSiteScope()
+        .AddEndpointFilter(PreCheckReconcileBatchScopeFilter)
+        .RequireElectronicSignature(ReconcileBatchSemanticAction, _ => ReconcileBatchAction);
 
         group.MapGet("/certificates/{certificateId}", async (
             string certificateId,
@@ -126,6 +138,24 @@ public static class IpKitEndpoints
         .RequirePermission("ip_kit_inventory:seed").RequireCallerStudyAndSiteScope();
 
         return routes;
+    }
+
+    private static async ValueTask<object?> PreCheckReconcileBatchScopeFilter(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        var request = context.Arguments.OfType<IpKitBatchReconciliationRequest>().FirstOrDefault();
+        if (request is not null)
+        {
+            var service = context.HttpContext.RequestServices.GetRequiredService<IIpKitApplicationService>();
+            var kitNumbers = (request.Items ?? []).Select(i => i.KitNumber);
+            if (await GuardKitSitesAsync(context.HttpContext, service, request.StudyId, kitNumbers, request.SiteId, context.HttpContext.RequestAborted).ConfigureAwait(false) is { } denied)
+            {
+                return denied;
+            }
+        }
+
+        return await next(context).ConfigureAwait(false);
     }
 
     private static async Task<IResult?> GuardKitSitesAsync(

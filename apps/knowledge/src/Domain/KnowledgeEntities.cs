@@ -115,6 +115,7 @@ public class TrainingCurriculum
     public string ProtocolVersion { get; set; } = "1.0";
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? ModulesJson { get; set; }
     public bool IsActive { get; set; } = true;
     public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;

@@ -1,80 +1,68 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { executionApi } from "../../src/api/executionApi";
 import BulkIpKitReconciliationDrawer from "../../src/components/clinical/BulkIpKitReconciliationDrawer.vue";
+import apiClient from "../../src/services/api";
+import { useAuthStore } from "../../src/stores/auth";
+import { signInAs } from "../helpers/signIn.js";
 
 describe("BulkIpKitReconciliationDrawer.vue", () => {
+  let pinia: ReturnType<typeof createPinia>;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock global fetch for inventory and batch reconciliation endpoints
-    global.fetch = vi.fn((url: string | URL | Request) => {
-      const urlStr = url.toString();
-      if (urlStr.includes("/api/v1/execution/rtsm/kits/inventory/")) {
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve([
-              {
-                id: "item-1001",
-                study_id: "STUDY-101",
-                site_id: "SITE-01",
-                kit_number: "KIT-1001",
-                lot_number: "LOT-A100",
-                expiration_date: "2027-12-31T00:00:00Z",
-                status: "RETURNED_BY_PATIENT",
-                residual_volume_ml: 100,
-                residual_volume_percentage: 100,
-                reconciliation_count: 0,
-              },
-              {
-                id: "item-1002",
-                study_id: "STUDY-101",
-                site_id: "SITE-01",
-                kit_number: "KIT-1002",
-                lot_number: "LOT-A100",
-                expiration_date: "2027-12-31T00:00:00Z",
-                status: "RETURNED_BY_PATIENT",
-                residual_volume_ml: 50,
-                residual_volume_percentage: 50,
-                reconciliation_count: 0,
-              },
-            ]),
-        } as Response);
-      }
-
-      if (urlStr.includes("/api/v1/execution/rtsm/kits/reconcile-batch")) {
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              batch_id: "batch-789",
-              study_id: "STUDY-101",
-              site_id: "SITE-01",
-              reconciled_at: "2026-10-12T12:00:00Z",
-              processed_by: "pharm_user",
-              total_kits_reconciled: 1,
-              quarantined_count: 0,
-              returned_to_site_count: 1,
-              returned_to_depot_count: 0,
-              certificate: {
-                certificate_id: "cert-999",
-                batch_number: "batch-789",
-                study_id: "STUDY-101",
-                site_id: "SITE-01",
-                issued_at: "2026-10-12T12:00:00Z",
-                issued_by: "pharm_user",
-                digital_signature: "abcd1234efgh5678ijkl",
-                verified_by_system: true,
-                kit_numbers: ["KIT-1001"],
-              },
-            }),
-        } as Response);
-      }
-
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response);
+    pinia = createPinia();
+    setActivePinia(pinia);
+    signInAs(useAuthStore(), ["Pharmacist"], {
+      username: "pharmacist.site101",
+      displayName: "Dr. Alex Vance, RPh",
     });
+
+    vi.spyOn(executionApi, "getSiteIpKitInventory").mockResolvedValue([
+      {
+        id: "item-1001",
+        study_id: "STUDY-101",
+        site_id: "SITE-01",
+        kit_number: "KIT-1001",
+        lot_number: "LOT-A100",
+        expiration_date: "2027-12-31T00:00:00Z",
+        status: "RETURNED_BY_PATIENT",
+        residual_volume_ml: 100,
+        residual_volume_percentage: 100,
+      },
+      {
+        id: "item-1002",
+        study_id: "STUDY-101",
+        site_id: "SITE-01",
+        kit_number: "KIT-1002",
+        lot_number: "LOT-A100",
+        expiration_date: "2027-12-31T00:00:00Z",
+        status: "RETURNED_BY_PATIENT",
+        residual_volume_ml: 50,
+        residual_volume_percentage: 50,
+      },
+    ]);
+
+    vi.spyOn(apiClient, "post").mockResolvedValue({
+      sig_token: "sig-token-rtsm-1",
+    });
+
+    vi.spyOn(executionApi, "reconcileIpKitBatch").mockResolvedValue({
+      certificate: {
+        certificate_id: "cert-999",
+        study_id: "STUDY-101",
+        site_id: "SITE-01",
+        processed_at: "2026-10-12T12:00:00Z",
+        processed_by: "pharmacist.site101",
+        total_kits_reconciled: 1,
+        payload_hash: "abcd1234efgh5678ijkl", // pragma: allowlist secret
+        items: [{ kit_number: "KIT-1001" }],
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   const mountDrawer = (props = {}) =>
@@ -87,6 +75,7 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
         ...props,
       },
       global: {
+        plugins: [pinia],
         stubs: {
           Teleport: true,
         },
@@ -95,7 +84,7 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
 
   it("renders drawer header, badges, and context bar when open", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     expect(wrapper.text()).toContain(
       "Bulk IP Kit Reconciliation & Batch Disposition Drawer"
@@ -109,7 +98,7 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
 
   it("adds scanned barcode to reconciliation buffer", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const input = wrapper.find("#barcode-scanner-input");
     await input.setValue("KIT-1001");
@@ -123,14 +112,13 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
 
   it("prevents duplicate scan entries and displays warning banner", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const input = wrapper.find("#barcode-scanner-input");
     await input.setValue("KIT-1001");
     await input.trigger("keydown.enter");
     await wrapper.vm.$nextTick();
 
-    // Scan second time
     await input.setValue("KIT-1001");
     await input.trigger("keydown.enter");
     await wrapper.vm.$nextTick();
@@ -141,9 +129,8 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
 
   it("detects lot mismatch and flags warning badge with QUARANTINED disposition", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
-    // KIT-1001 expected lot in inventory is LOT-A100, scan with LOT-MISMATCH-99
     const input = wrapper.find("#barcode-scanner-input");
     await input.setValue("KIT-1001|LOT-MISMATCH-99");
     await input.trigger("keydown.enter");
@@ -157,7 +144,7 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
 
   it("allows bulk disposition assignment across scanned items", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const input = wrapper.find("#barcode-scanner-input");
     await input.setValue("KIT-1001");
@@ -184,9 +171,9 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
     );
   });
 
-  it("enforces Part 11 e-signature requirements before batch submission", async () => {
+  it("enforces Part 11 step-up e-signature token verification and read-only authenticated signer identity before batch submission", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const input = wrapper.find("#barcode-scanner-input");
     await input.setValue("KIT-1001");
@@ -194,57 +181,66 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
     await wrapper.vm.$nextTick();
 
     const userIdInput = wrapper.find("#pharmacist-signature-id");
+    const passwordInput = wrapper.find("#reconcile-sig-password");
     const reasonInput = wrapper.find("#reason-for-change-input");
     const submitBtn = wrapper.find(".btn-submit-batch");
 
-    // Clear user ID to verify button is disabled when empty
-    await userIdInput.setValue("");
-    await wrapper.vm.$nextTick();
+    expect(userIdInput.attributes("readonly")).toBeDefined();
+    expect((userIdInput.element as HTMLInputElement).value).toBe(
+      "pharmacist.site101"
+    );
     expect((submitBtn.element as HTMLButtonElement).disabled).toBe(true);
 
-    await userIdInput.setValue("pharm_user");
+    await passwordInput.setValue("Password123!");
     await reasonInput.setValue("End of trial site return reconciliation");
     await wrapper.vm.$nextTick();
 
     expect((submitBtn.element as HTMLButtonElement).disabled).toBe(false);
 
     await submitBtn.trigger("click");
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/v1/execution/rtsm/kits/reconcile-batch",
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/api/v1/auth/signature-verification",
       expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          "X-Change-Reason": "End of trial site return reconciliation",
-        }),
+        username: "pharmacist.site101",
+        action: "/api/v1/execution/rtsm/kits/reconcile-batch",
+        semantic_action: "execution.ip_kit.reconcile_batch",
       })
+    );
+    expect(executionApi.reconcileIpKitBatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "STUDY-101",
+        site_id: "SITE-01",
+        reason_for_change: "End of trial site return reconciliation",
+      }),
+      "sig-token-rtsm-1"
     );
   });
 
   it("renders digital certificate modal upon successful batch commitment", async () => {
     const wrapper = mountDrawer();
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const input = wrapper.find("#barcode-scanner-input");
     await input.setValue("KIT-1001");
     await input.trigger("keydown.enter");
     await wrapper.vm.$nextTick();
 
-    await wrapper.find("#pharmacist-signature-id").setValue("pharm_user");
+    await wrapper.find("#reconcile-sig-password").setValue("Password123!");
     await wrapper
       .find("#reason-for-change-input")
       .setValue("Routine site return");
     await wrapper.vm.$nextTick();
 
     await wrapper.find(".btn-submit-batch").trigger("click");
-    await wrapper.vm.$nextTick();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await flushPromises();
 
     expect(wrapper.text()).toContain(
       "Digital IP Kit Reconciliation Certificate"
     );
     expect(wrapper.text()).toContain("cert-999");
+    expect(wrapper.text()).toContain("pharmacist.site101");
     expect(wrapper.text()).toContain("abcd1234efgh5678ijkl");
   });
 });

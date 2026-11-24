@@ -115,6 +115,7 @@ Entity: `TrainingCurriculum`
 | `CreatedBy` | `text` | no |  |  |
 | `Description` | `text` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
+| `ModulesJson` | `text` | yes |  |  |
 | `ProtocolVersion` | `text` | no |  |  |
 | `ReasonForChange` | `text` | no |  |  |
 | `StudyId` | `text` | no |  |  |

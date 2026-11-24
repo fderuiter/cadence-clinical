@@ -581,10 +581,25 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         investigatorSignOffResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // 3. Authorized Principal Investigator CAN reach sign-off endpoint (returns 404 for non-existent record rather than 403 Forbidden)
+        // 3. Authorized Principal Investigator requires X-Sig-Token (401 without it) and reaches sign-off endpoint with X-Sig-Token (returns 404 for non-existent record rather than 403 Forbidden)
         using var piClient = CreateClient(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-1");
-        var piSignOffResponse = await piClient.PostAsJsonAsync(
-            "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
+        var unsignedPiSignOffResponse = await piClient.PostAsJsonAsync(
+            DoaEndpoints.SignOffAction, signOffPayload, TestContext.Current.CancellationToken);
+        unsignedPiSignOffResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        using var signedPiReq = new HttpRequestMessage(HttpMethod.Post, DoaEndpoints.SignOffAction)
+        {
+            Content = JsonContent.Create(signOffPayload),
+        };
+        signedPiReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-1",
+                DoaEndpoints.SignOffAction,
+                DoaEndpoints.SignOffSemanticAction,
+                [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR],
+                issuedAt: _clock.UtcNow));
+        var piSignOffResponse = await piClient.SendAsync(signedPiReq, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // 4. Investigator assigned only to SITE-999 is blocked at route scope middleware on GET /sites/{site_id}/log,
@@ -720,13 +735,22 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             reason_for_change = "Endorsing delegation",
         });
 
-        static HttpRequestMessage BuildSignOffRequest(string bodyJson)
+        HttpRequestMessage BuildSignOffRequest(string bodyJson, string userId, string role)
         {
             var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
             {
                 Content = new StringContent(bodyJson, Encoding.UTF8, "application/json"),
             };
             req.Headers.Add("X-Change-Reason", "Endorsing delegation");
+            var factoryClock = factory.Services.GetRequiredService<IClock>();
+            req.Headers.Add(
+                "X-Sig-Token",
+                TestSecurityContext.CreateSigToken(
+                    userId,
+                    "/api/v1/ctms/doa/sign-off",
+                    "ctms.doa.sign_off",
+                    [role],
+                    issuedAt: factoryClock.UtcNow));
             return req;
         }
 
@@ -734,7 +758,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         using var subInvDefaultClient = SignedClientExtensions.CreateSignedClient(
             factory,
             TestSecurityContext.Identity("sub-inv-1", "sub_investigator"));
-        using (var req = BuildSignOffRequest(requestJson))
+        using (var req = BuildSignOffRequest(requestJson, "sub-inv-1", "sub_investigator"))
         {
             using var res = await subInvDefaultClient.SendAsync(req, ct);
             res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -747,7 +771,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 StudyIds = [StudyId],
                 SiteIds = [SiteId],
             });
-        using (var req = BuildSignOffRequest(requestJson))
+        using (var req = BuildSignOffRequest(requestJson, "sub-inv-1", "sub_investigator"))
         {
             using var res = await subInvSiteClient.SendAsync(req, ct);
             res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -760,7 +784,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 StudyIds = [StudyId],
                 SiteIds = [SiteId],
             });
-        using (var req = BuildSignOffRequest(requestJson))
+        using (var req = BuildSignOffRequest(requestJson, "inv-1", "investigator"))
         {
             using var res = await baseInvClient.SendAsync(req, ct);
             res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -783,7 +807,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 StudyIds = [StudyId],
                 SiteIds = [SiteId],
             });
-        using (var req = BuildSignOffRequest(requestJson))
+        using (var req = BuildSignOffRequest(requestJson, "pi-1", "principal_investigator"))
         {
             using var res = await piClient.SendAsync(req, ct);
             res.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -804,6 +828,93 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 .AsNoTracking()
                 .SingleOrDefaultAsync(a => a.Action == "DOA_PI_SIGN_OFF" && a.UserId == "pi-1", ct);
             audit.Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    public async Task FreshSiteDoa_ReturnsExplicitStatuses_AndFilesEtmf050204OnSignOffAndServiceBatchEndorse()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var filedArtifacts = new List<Cadence.Apps.Ctms.Services.CtmsEtmfFilingRequest>();
+        var fakeEtmf = new CapturingCtmsEtmfFilingClient(filedArtifacts);
+
+        // 1. Fresh unseeded site log returns empty entries (200 OK) when explicit study_id is within caller scope
+        var crcCaller = Caller("Clinical Research Coordinator", "crc-fresh", [StudyId], ["SITE-FRESH-01"]);
+        var freshLogRes = await DoaEndpoints.GetSiteDoaLogAsync(
+            "SITE-FRESH-01", _db, crcCaller, ct, studyId: StudyId);
+        var freshLog = freshLogRes.Should().BeOfType<Ok<DoaLogResponseDto>>().Subject.Value!;
+        freshLog.Site.Should().Be("SITE-FRESH-01");
+        freshLog.DelegatedStaff.Should().BeEmpty();
+
+        // 2. Delegate on fresh site creates PENDING_PI_SIGNATURE record without 404
+        var delReq = new DelegationTaskRequest(
+            Site: "SITE-FRESH-01",
+            StaffUserId: "crc-fresh",
+            TaskCodes: ["INFORMED_CONSENT"],
+            StartDate: "2026-11-20",
+            ReasonForChange: "Fresh site startup delegation",
+            Study: StudyId,
+            StaffName: "Casey Coordinator",
+            Role: "Clinical Research Coordinator");
+        var createdRes = await DoaEndpoints.DelegateTasksAsync(delReq, _db, crcCaller, _clock, ct);
+        var created = createdRes.Should().BeOfType<Created<DelegationResponseDto>>().Subject.Value!;
+        created.Status.Should().Be("PENDING_PI_SIGNATURE");
+        created.Study.Should().Be(StudyId);
+
+        // 3. PI sign-off transitions status to ACTIVE and files 05.02.04 to eTMF
+        var piCaller = Caller(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi.site101", [StudyId], ["SITE-FRESH-01"]);
+        var signedRes = await DoaEndpoints.SignOffDelegationAsync(
+            new DoaSignOffRequest(created.RecordId, "PI step-up endorsement", StudyId),
+            _db,
+            piCaller,
+            _clock,
+            ct,
+            etmfFilingClient: fakeEtmf);
+        var signed = signedRes.Should().BeOfType<Ok<DelegationResponseDto>>().Subject.Value!;
+        signed.Status.Should().Be("ACTIVE");
+        signed.EtmfArtifactId.Should().Be("DOC-050204-1");
+        filedArtifacts.Should().ContainSingle(f => f.ArtifactCode == "05.02.04" && f.SiteCode == "SITE-FRESH-01");
+
+        // 4. Service batch endorsement endorses pending records and files 05.02.04
+        var secondRes = await DoaEndpoints.DelegateTasksAsync(
+            delReq with { StaffUserId = "subinv-fresh", TaskCodes = ["PHYSICAL_EXAM"] },
+            _db,
+            crcCaller,
+            _clock,
+            ct);
+        var second = secondRes.Should().BeOfType<Created<DelegationResponseDto>>().Subject.Value!;
+        var svcCaller = Caller(PermissionMatrix.KnowledgeServiceRole, "svc:knowledge", [StudyId], []);
+        var batchRes = await DoaEndpoints.EndorseSignedBatchAsync(
+            new BulkDoaEndorseRequest(StudyId, [second.RecordId], "pi.site101", "Knowledge batch sign-off"),
+            _db,
+            svcCaller,
+            _clock,
+            ct,
+            etmfFilingClient: fakeEtmf);
+        var batchDto = batchRes.Should().BeOfType<Ok<BulkDoaEndorseResponseDto>>().Subject.Value!;
+        batchDto.ApprovedCount.Should().Be(1);
+        batchDto.Records.Should().ContainSingle().Which.EtmfArtifactId.Should().Be("DOC-050204-2");
+
+        // 5. Revoking transitions status to REVOKED
+        var revokedRes = await DoaEndpoints.RevokeDelegationAsync(
+            new RevokeDelegationRequest(created.RecordId, "Staff rotated off study", StudyId),
+            _db,
+            piCaller,
+            _clock,
+            ct);
+        var revoked = revokedRes.Should().BeOfType<Ok<DelegationResponseDto>>().Subject.Value!;
+        revoked.Status.Should().Be("REVOKED");
+    }
+
+    private sealed class CapturingCtmsEtmfFilingClient(List<Cadence.Apps.Ctms.Services.CtmsEtmfFilingRequest> captured)
+        : Cadence.Apps.Ctms.Services.ICtmsEtmfFilingClient
+    {
+        public Task<string?> FileSignedArtifactAsync(
+            Cadence.Apps.Ctms.Services.CtmsEtmfFilingRequest filing,
+            System.Threading.CancellationToken ct)
+        {
+            captured.Add(filing);
+            return Task.FromResult<string?>($"DOC-050204-{captured.Count}");
         }
     }
 }

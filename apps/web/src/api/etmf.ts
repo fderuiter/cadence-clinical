@@ -407,6 +407,9 @@ export const etmfService = {
       taxonomyVersion:
         ((raw.taxonomyVersion ?? raw.taxonomy_version) as string | null) ??
         "v3.2.0-complete",
+      autoApproveSigned: Boolean(
+        raw.autoApproveSigned ?? raw.auto_approve_signed ?? false
+      ),
       reasonForChange: (raw.reasonForChange ??
         raw.reason_for_change ??
         null) as string | null,

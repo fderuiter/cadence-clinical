@@ -104,11 +104,18 @@ public sealed class CtmsDelegationConfiguration : IEntityTypeConfiguration<CtmsD
         builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffName).HasMaxLength(255);
+        builder.Property(x => x.StaffRole).HasMaxLength(150);
+        builder.Property(x => x.Duties).HasMaxLength(1000);
         builder.Property(x => x.TaskCodes).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.StartDate).HasMaxLength(50).IsRequired();
         builder.Property(x => x.EndDate).HasMaxLength(50);
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.SignedOff).IsRequired();
+        builder.Property(x => x.PiSignatureHash).HasMaxLength(255);
+        builder.Property(x => x.PiApprovedAt);
+        builder.Property(x => x.BatchTransactionId).HasMaxLength(100);
+        builder.Property(x => x.EtmfArtifactDocId).HasMaxLength(100);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
@@ -131,11 +138,18 @@ public sealed class CtmsDelegationPeriodConfiguration(DbContext dbContext) : IEn
         builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
         builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
         builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffName).HasMaxLength(255);
+        builder.Property(x => x.StaffRole).HasMaxLength(150);
+        builder.Property(x => x.Duties).HasMaxLength(1000);
         builder.Property(x => x.TaskCodes).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.StartDate).HasMaxLength(50).IsRequired();
         builder.Property(x => x.EndDate).HasMaxLength(50);
         builder.Property(x => x.IsActive).IsRequired();
         builder.Property(x => x.SignedOff).IsRequired();
+        builder.Property(x => x.PiSignatureHash).HasMaxLength(255);
+        builder.Property(x => x.PiApprovedAt);
+        builder.Property(x => x.BatchTransactionId).HasMaxLength(100);
+        builder.Property(x => x.EtmfArtifactDocId).HasMaxLength(100);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
 
@@ -162,6 +176,7 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.VisitId).HasMaxLength(36).IsRequired();
         builder.Property(x => x.LetterType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.RenderedContent).HasMaxLength(100000).IsRequired();
+        builder.Property(x => x.PdfBytes);
         builder.Property(x => x.PdfObjectKey).HasMaxLength(1000);
         builder.Property(x => x.PdfSha256Hash).HasMaxLength(64);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();

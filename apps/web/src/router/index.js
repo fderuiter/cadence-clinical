@@ -28,9 +28,14 @@ export function hasRequiredRole(userRoles, requiredRoles) {
 // The screen each role lands on when opening "/".
 function landingRouteFor(roles) {
   if (roles.includes("sponsor_designer")) return "mdr";
-  if (roles.includes("site_investigator") || roles.includes("crc")) {
+  if (
+    roles.includes("principal_investigator") ||
+    roles.includes("site_investigator") ||
+    roles.includes("crc")
+  ) {
     return isDemoBuild() ? "ecrf" : "study";
   }
+  if (roles.includes("pharmacist")) return "study";
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
   if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
@@ -357,7 +362,14 @@ const routes = [
     component: () => import("../views/CtmsView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["cra", "monitor", "data_manager", "sponsor_admin"],
+      requiresRole: [
+        "cra",
+        "monitor",
+        "data_manager",
+        "sponsor_admin",
+        "principal_investigator",
+        "pharmacist",
+      ],
     },
   },
   {
@@ -371,6 +383,8 @@ const routes = [
         "monitor",
         "data_manager",
         "sponsor_admin",
+        "principal_investigator",
+        "pharmacist",
         "site_investigator",
         "crc",
       ],

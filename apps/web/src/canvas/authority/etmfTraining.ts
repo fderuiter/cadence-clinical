@@ -10,6 +10,8 @@ export const ETMF_QC_REVIEW_ROLE_REASON =
   "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:transition_clinical_qc).";
 export const ETMF_EXPORT_ROLE_REASON =
   "Requires Sponsor Data Manager, CRA, Monitor, or Auditor role (etmf_document:export).";
+export const TRAINING_CREATE_ROLE_REASON =
+  "Requires Sponsor Data Manager or System Administrator role (training_curriculum:create).";
 export const TRAINING_ASSIGN_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (training_curriculum:assign).";
 export const TRAINING_DELEGATION_SIGN_ROLE_REASON =
@@ -38,6 +40,11 @@ export function canReviewEtmfQc(auth: AuthorityAuth): boolean {
 /** Export study binder documents or archives (etmf_document:export). */
 export function canExportEtmf(auth: AuthorityAuth): boolean {
   return holdsBackendPermission(auth, "etmf_document:export");
+}
+
+/** Create study protocol training curricula and procedural modules (training_curriculum:create). */
+export function canCreateTrainingCurriculum(auth: AuthorityAuth): boolean {
+  return holdsBackendPermission(auth, "training_curriculum:create");
 }
 
 /** Assign protocol training curricula to personnel (training_curriculum:assign). */

@@ -1,7 +1,9 @@
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
+using Cadence.Apps.Ctms.Services;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -16,8 +18,13 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
+builder.Services.AddCadenceDurableSigTokenStore<CtmsDbContext>();
+builder.Services.AddScoped<ICtmsEtmfFilingClient, HttpCtmsEtmfFilingClient>();
+builder.Services.AddScoped<ICtmsGreenlightReadinessEvaluator, CtmsGreenlightReadinessEvaluator>();
 builder.Services.AddFluidTemplating();
 
 builder.Services.AddMassTransit(x =>

@@ -89,15 +89,23 @@
         </li>
       </ul>
 
-      <p v-if="singleGate.certified_at" class="certified-meta">
-        Certified by {{ singleGate.certified_by }} on
-        {{ formatUtcDate(singleGate.certified_at) }}
+      <p
+        v-if="singleGate.certified_at || singleGate.greenlight_certified_at"
+        class="certified-meta"
+      >
+        Certified by
+        {{ singleGate.certified_by || singleGate.greenlight_certified_by }} on
+        {{
+          formatUtcDate(
+            singleGate.certified_at || singleGate.greenlight_certified_at
+          )
+        }}
       </p>
 
       <div
         v-if="
           singleGate.is_ready_for_certification &&
-          singleGate.overall_status !== 'CERTIFIED' &&
+          !isGateCertified(singleGate.overall_status) &&
           canCertify
         "
         class="certify-box"
@@ -111,11 +119,20 @@
           type="text"
           placeholder="State clinical justification for certifying site greenlight"
         />
+        <label for="greenlight-certify-password">Password (Part 11)</label>
+        <input
+          id="greenlight-certify-password"
+          v-model="certifyPassword"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+          placeholder="Re-enter password to sign"
+        />
         <button
           id="btn-certify-site-greenlight"
           type="button"
           class="btn btn-primary"
-          :disabled="!certifyReason.trim() || certifying"
+          :disabled="
+            !certifyReason.trim() || !certifyPassword.trim() || certifying
+          "
           @click="certifySingleSite"
         >
           {{ certifying ? "Certifying..." : `Certify ${singleGate.site_id}` }}
@@ -124,7 +141,7 @@
       <p
         v-else-if="
           singleGate.is_ready_for_certification &&
-          singleGate.overall_status !== 'CERTIFIED' &&
+          !isGateCertified(singleGate.overall_status) &&
           !canCertify
         "
         id="greenlight-readonly-note"
@@ -167,7 +184,7 @@
                     :value="row.site_id"
                     :disabled="
                       !row.is_ready_for_certification ||
-                      row.overall_status === 'CERTIFIED'
+                      isGateCertified(row.overall_status)
                     "
                     :aria-label="`Select ${row.site_id} for batch certification`"
                   />
@@ -184,18 +201,19 @@
                   </span>
                 </td>
                 <td>
-                  {{ row.facets.filter((f) => f.is_satisfied).length }} /
-                  {{ row.facets.length }}
+                  {{ (row.facets ?? []).filter((f) => f.is_satisfied).length }}
+                  /
+                  {{ (row.facets ?? []).length }}
                 </td>
                 <td>
-                  <span v-if="row.blocking_reasons.length">
-                    {{ row.blocking_reasons.join("; ") }}
+                  <span v-if="(row.blocking_reasons ?? []).length">
+                    {{ (row.blocking_reasons ?? []).join("; ") }}
                   </span>
                   <span v-else class="text-ok">None</span>
                 </td>
                 <td>
-                  <span v-if="row.certified_by">
-                    {{ row.certified_by }}
+                  <span v-if="row.certified_by || row.greenlight_certified_by">
+                    {{ row.certified_by || row.greenlight_certified_by }}
                   </span>
                   <span v-else class="muted-inline">—</span>
                 </td>
@@ -220,11 +238,20 @@
             type="text"
             placeholder="Part 11 justification for batch country certification"
           />
+          <label for="batch-certify-password">Password (Part 11)</label>
+          <input
+            id="batch-certify-password"
+            v-model="batchPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <button
             id="btn-batch-certify-greenlight"
             type="button"
             class="btn btn-primary"
-            :disabled="!batchReason.trim() || certifying"
+            :disabled="
+              !batchReason.trim() || !batchPassword.trim() || certifying
+            "
             @click="certifyBatch"
           >
             {{
@@ -241,9 +268,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import {
+  buildStepUpVerificationPayload,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import apiClient from "../../services/api";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
@@ -276,6 +308,11 @@ const {
   onStudyPropChange: () => {
     void loadReadiness();
   },
+  onSitePropChange: () => {
+    if (studyInput.value.trim()) {
+      void loadReadiness();
+    }
+  },
   fallbackErrorTitle: "Startup readiness could not be loaded",
   fallbackErrorMessage: "Startup readiness could not be loaded.",
 });
@@ -286,8 +323,23 @@ const singleGate = ref<SiteGreenlightGate | null>(null);
 const countryMatrix = ref<SiteGreenlightGate[]>([]);
 const selectedMatrixSites = ref<string[]>([]);
 const certifyReason = ref("");
+const certifyPassword = ref("");
 const batchReason = ref("");
+const batchPassword = ref("");
 const certifying = ref(false);
+
+function isGateCertified(status?: string | null): boolean {
+  const normalized = String(status || "").toUpperCase();
+  return (
+    normalized === "CERTIFIED" ||
+    normalized === "APPROVED" ||
+    normalized === "OVERRIDDEN"
+  );
+}
+
+function resolveSignerUsername(): string {
+  return authStore.user?.username || authStore.userId || "";
+}
 
 function formatUtcDate(iso?: string | null): string {
   if (!iso) return "";
@@ -329,16 +381,43 @@ async function loadReadiness() {
 }
 
 async function certifySingleSite() {
-  if (!singleGate.value || !certifyReason.value.trim() || !canCertify.value) {
+  const password = certifyPassword.value;
+  certifyPassword.value = "";
+  if (
+    !singleGate.value ||
+    !certifyReason.value.trim() ||
+    !password.trim() ||
+    !canCertify.value
+  ) {
     return;
   }
   certifying.value = true;
   try {
+    const siteId = singleGate.value.site_id;
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: resolveSignerUsername(),
+      password,
+      totp: null,
+      action: `/api/v1/ctms/startup/sites/${encodeURIComponent(siteId)}/greenlight/certify`,
+      semanticAction: "ctms.greenlight.certify",
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     const updated = await ctmsApi.certifySiteGreenlight(
-      singleGate.value.site_id,
+      siteId,
       singleGate.value.study_id,
       certifyReason.value.trim(),
-      singleGate.value.country_code
+      singleGate.value.country_code,
+      sigToken
     );
     singleGate.value = updated;
     certifyReason.value = "";
@@ -357,29 +436,53 @@ async function certifySingleSite() {
 
 async function certifyBatch() {
   const study = studyInput.value.trim();
+  const password = batchPassword.value;
+  batchPassword.value = "";
   if (
     !study ||
     !selectedMatrixSites.value.length ||
     !batchReason.value.trim() ||
+    !password.trim() ||
     !canCertify.value
   ) {
     return;
   }
   certifying.value = true;
   try {
+    const verificationPayload = buildStepUpVerificationPayload({
+      username: resolveSignerUsername(),
+      password,
+      totp: null,
+      action: "/api/v1/ctms/startup/matrix/batch-certify",
+      semanticAction: "ctms.greenlight.batch_certify",
+    });
+    const verifyRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      verificationPayload
+    );
+    const sigToken = verifyRes?.sig_token;
+    if (!sigToken) {
+      throw new Error(
+        "Signature verification did not return a signature token."
+      );
+    }
+
     const res = await ctmsApi.batchCertifyCountrySites(
       {
         study_id: study,
         country_code: countryCode.value,
         site_ids: selectedMatrixSites.value,
+        meaning: batchReason.value.trim(),
       },
-      batchReason.value.trim()
+      batchReason.value.trim(),
+      sigToken
     );
     batchReason.value = "";
     selectedMatrixSites.value = [];
+    const count = res.total_certified ?? res.certified_count;
     toasts.push({
       tone: "success",
-      title: `Certified ${res.total_certified} site(s)`,
+      title: `Certified ${count} site(s)`,
       message: `Country ${res.country_code} startup greenlight updated.`,
     });
     await loadReadiness();
@@ -427,6 +530,8 @@ onMounted(() => {
 }
 
 .gate-certified,
+.gate-approved,
+.gate-overridden,
 .gate-ready {
   background: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);

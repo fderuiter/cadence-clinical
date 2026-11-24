@@ -429,4 +429,46 @@ public sealed class MonitoringVisitEndpointsTests
         problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         problem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);
     }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-001")]
+    public async Task CompleteAndListMonitoringVisits_PersistsAndReturnsStructuredFindings()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var craCaller = Caller("CRA", "cra-findings-1");
+        craCaller.Request.Headers["X-Change-Reason"] = "Schedule IMV for findings verification";
+
+        var schedRes = await MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync(
+            new MonitoringVisitCreateDto(StudyId, SiteId, CraId, "IMV", _clock.UtcNow),
+            _db,
+            craCaller,
+            _clock,
+            ct);
+        var scheduled = schedRes.Should().BeOfType<Created<MonitoringVisitResponseDto>>().Subject.Value!;
+
+        var completeCaller = Caller("CRA", "cra-findings-1");
+        completeCaller.Request.Headers["X-Change-Reason"] = "Complete IMV with two structured findings";
+        var compRes = await MonitoringVisitEndpoints.CompleteMonitoringVisitAsync(
+            scheduled.Id,
+            new MonitoringVisitCompleteDto(
+                _clock.UtcNow.AddHours(4),
+                [
+                    new FindingCreateDto("Missing PI wet signature date on ICF v2", "MAJOR", "OPEN"),
+                    new FindingCreateDto("Refrigerator min/max log initialed late", "MINOR", "RESOLVED"),
+                ]),
+            _db,
+            completeCaller,
+            _clock,
+            ct);
+        var completed = compRes.Should().BeOfType<Ok<MonitoringVisitResponseDto>>().Subject.Value!;
+        completed.Findings.Should().HaveCount(2);
+
+        var listRes = await MonitoringVisitEndpoints.GetMonitoringVisitsAsync(
+            StudyId, SiteId, null, null, _db, craCaller, ct);
+        var listed = listRes.Should().BeOfType<Ok<List<MonitoringVisitResponseDto>>>().Subject.Value!;
+        var item = listed.Should().ContainSingle(v => v.Id == scheduled.Id).Subject;
+        item.Findings.Should().HaveCount(2);
+        item.Findings.Select(f => f.Text).Should().Contain("Missing PI wet signature date on ICF v2");
+        item.Findings.Select(f => f.Severity).Should().Equal("MAJOR", "MINOR");
+    }
 }

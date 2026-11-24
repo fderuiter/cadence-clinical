@@ -59,6 +59,11 @@ Signature-gated endpoints today:
 
 | Host        | Endpoint                                                                                            | `semantic_action`                      | `action`                                                                            |
 | ----------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ctms`      | `POST /doa/sign-off`                                                                                | `ctms.doa.sign_off`                    | `/api/v1/ctms/doa/sign-off`                                                         |
+| `ctms`      | `POST /letters/compile`                                                                             | `ctms.letter.compile`                  | `/letters/compile`                                                                  |
+| `ctms`      | `POST /monitoring-visits/{visit_id}/sign-off`                                                       | `ctms.monitoring_visit.sign_off`       | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                |
+| `ctms`      | `POST /startup/matrix/batch-certify`                                                                | `ctms.greenlight.batch_certify`        | `/api/v1/ctms/startup/matrix/batch-certify`                                         |
+| `ctms`      | `POST /startup/sites/{siteId}/greenlight/certify`                                                   | `ctms.greenlight.certify`              | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                            |
 | `econsent`  | `POST /api/v1/econsent/templates/{template_id}/capture-consent`                                     | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/capture-consent`                          |
 | `econsent`  | `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`            | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` |
 | `execution` | `POST /api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                                         | `execution.cec.chair_adjudicate`       | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                              |
@@ -108,6 +113,7 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(toke
 
 | Host        | DbContext                          | Table                                 | Registration                               |
 | ----------- | ---------------------------------- | ------------------------------------- | ------------------------------------------ |
+| `ctms`      | `CtmsDbContext`                    | `ctms.consumed_signature_tokens`      | `apps/ctms/src/Program.cs`                 |
 | `econsent`  | `EconsentDbContext`                | `econsent.consumed_signature_tokens`  | `apps/econsent/src/Program.cs`             |
 | `execution` | `ExecutionDbContext`               | `edc.consumed_signature_tokens`       | `apps/execution/src/Program.cs`            |
 | `kernel`    | `ExecutionSignatureTokenDbContext` | `execution.consumed_signature_tokens` | `apps/execution/module/ExecutionModule.cs` |

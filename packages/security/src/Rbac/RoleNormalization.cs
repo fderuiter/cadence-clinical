@@ -61,6 +61,9 @@ public static class RoleNormalization
         ["idmc"] = ROLE_IDMC,
         ["dsmb"] = ROLE_IDMC,
         ["pharmacist"] = ROLE_PHARMACIST,
+        ["site pharmacist"] = ROLE_PHARMACIST,
+        ["site_pharmacist"] = ROLE_PHARMACIST,
+        ["site-pharmacist"] = ROLE_PHARMACIST,
         ["unblinded pharmacist"] = ROLE_PHARMACIST,
         ["unblinded_pharmacist"] = ROLE_PHARMACIST,
         ["emergency unblinder"] = ROLE_EMERGENCY_UNBLINDER,
@@ -190,11 +193,10 @@ public static class RoleNormalization
     /// </summary>
     public static IReadOnlyList<string> GetNormalizedRoles(IEnumerable<string>? roles)
     {
-        if (roles == null) return Array.Empty<string>();
-        return roles
+        if (roles == null) return [];
+        return [.. roles
             .Where(r => !string.IsNullOrWhiteSpace(r))
             .Select(NormalizeRole)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 }
