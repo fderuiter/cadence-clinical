@@ -52,4 +52,4 @@ ADR-2622 moved clinical case report form collection onto kernel `CollectionInsta
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `apps/web` (`EcrfView.vue`, `EcrfFormPanel.vue`, `FormQueryList.vue`, `AppShell.vue`, `CommandPaletteOverlay.vue`, `palette.ts`, `CrcFormRenderer.vue`, `useSchemaIngestion.js`, `useVerification.js`), `apps/web/README.md`, `docs/web/API_MIGRATION.md`.
-- **Verification Plan:** Verified via `pnpm -r test`, `pnpm -r lint`, `pnpm --filter web typecheck`, `pnpm build`, `pnpm --filter web build:demo`, and `pnpm cadence check`.
+- **Verification Plan:** Verified via `pnpm -r test`, `pnpm -r lint`, `pnpm -r typecheck`, `pnpm build`, `pnpm --filter web build:demo`, and `pnpm cadence check`.

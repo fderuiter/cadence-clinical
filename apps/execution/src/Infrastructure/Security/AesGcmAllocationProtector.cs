@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Security.FieldProtection;
 
@@ -35,6 +37,9 @@ public sealed class AesGcmAllocationProtector(IOptions<AllocationProtectionOptio
 
     /// <inheritdoc />
     public string Protect(string arm, string purpose) => _encryptor.Encrypt(arm, purpose);
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> ProtectBatch(IReadOnlyList<(string Arm, string Purpose)> items) => _encryptor.EncryptBatch(items);
 
     /// <inheritdoc />
     public string Reveal(string ciphertext, string purpose) => _encryptor.Decrypt(ciphertext, purpose);

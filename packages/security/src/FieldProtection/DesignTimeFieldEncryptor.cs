@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Cadence.Security.FieldProtection;
 
@@ -22,6 +23,9 @@ public sealed class DesignTimeFieldEncryptor : IFieldEncryptor
 
     /// <inheritdoc />
     public string Encrypt(string plaintext, string purpose) => throw NotAvailable();
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> EncryptBatch(IReadOnlyList<(string Plaintext, string Purpose)> items) => throw NotAvailable();
 
     /// <inheritdoc />
     public string Decrypt(string protectedValue, string purpose) => throw NotAvailable();

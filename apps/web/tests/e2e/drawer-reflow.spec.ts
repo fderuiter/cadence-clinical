@@ -219,7 +219,7 @@ async function verifyDrawerAcrossTargetViewports(
   }
 }
 
-test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verification (ADR-2657)", () => {
+test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verification (ADR-2658)", () => {
   test("Verifies visible .clinical-drawer-body height, 320px zero horizontal overflow, 16px touch inputs, and reachable footer controls across all 13 web drawers and 5 target viewports", async ({
     page,
   }) => {
@@ -230,6 +230,10 @@ test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verifica
     // 1 & 2. ContextualHelpDrawer & OnboardingChecklistDrawer (/overview)
     await page.setViewportSize({ width: 1024, height: 768 });
     await gotoHashRoute(page, "/overview");
+    const headerActionsToggle = page.locator("#btn-header-actions-menu");
+    if (await headerActionsToggle.isVisible()) {
+      await headerActionsToggle.click();
+    }
     await expect(page.locator("#btn-contextual-help-trigger")).toBeVisible();
 
     await page.locator("#btn-contextual-help-trigger").click();
@@ -242,6 +246,12 @@ test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verifica
     await expect(page.locator("#contextual-help-drawer")).toBeHidden();
 
     await page.setViewportSize({ width: 1024, height: 768 });
+    if (await headerActionsToggle.isVisible()) {
+      await headerActionsToggle.click();
+    }
+    await expect(
+      page.locator("#btn-onboarding-checklist-trigger")
+    ).toBeVisible();
     await page.locator("#btn-onboarding-checklist-trigger").click();
     await verifyDrawerAcrossTargetViewports(
       page,

@@ -34,12 +34,13 @@ On viewports with `max-height: 480px` (such as `320x256` WCAG 2.1 SC 1.4.10 refl
 | `id` / `overlayId`                          | `String`                    | `undefined`               | Optional DOM IDs applied to `.clinical-drawer-panel` and `.clinical-drawer-backdrop`.       |
 | `overlayClass` / `panelClass` / `bodyClass` | `String \| Array \| Object` | `''`                      | Optional CSS classes appended to backdrop, panel, or `.clinical-drawer-body`.               |
 | `size`                                      | `String`                    | `'md'`                    | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens.                    |
-| `position`                                  | `String`                    | `'right'`                 | Slide-in edge (`right` or `left`).                                                          |
+| `position`                                  | `String`                    | `'right'`                 | Slide-in edge (`right`, `left`, or `bottom`).                                               |
+| `mobileBottomSheet`                         | `Boolean`                   | `false`                   | Adds mobile bottom-sheet drag handle styling on narrow viewports (ADR-2657).                |
 | `showHeader` / `closeLabel`                 | `Boolean` / `String`        | `true` / `'Close drawer'` | Toggles header chrome or customizes the `44x44px` Lucide `X` close button `aria-label`.     |
 | `dismissible` / `closeOnBackdrop`           | `Boolean`                   | `true`                    | Locks `Escape`, close button, and backdrop dismissal during Part 11 / GxP submissions.      |
 | `teleport`                                  | `Boolean \| String`         | `true`                    | Teleports the drawer overlay to `document.body` (or inline via `MaybeTeleport` if `false`). |
 
-`ClinicalDrawer` bounds persistent chrome to a single `#header` slot and one optional `#footer` slot (plus `#after-panel` for nested `ClinicalModal` overlays), sizes panels with `100dvh` (`100vh` fallback) and `min-height: 0` on `.clinical-drawer-body`, presents as a `90dvh` bottom sheet with `env(safe-area-inset-bottom)` at `<= 480px` width, and switches to panel-level vertical scrolling with compact `<= 52px` headers on `@media (max-height: 540px)` short viewports (ADR-2657).
+`ClinicalDrawer` bounds persistent chrome to a single `#header` slot and one optional `#footer` slot (plus `#after-panel` for nested `ClinicalModal` overlays), sizes panels with `100dvh` (`100vh` fallback) and `min-height: 0` on `.clinical-drawer-body`, presents as a `90dvh` bottom sheet with `env(safe-area-inset-bottom)` at `<= 480px` width, and switches to panel-level vertical scrolling with compact `<= 52px` headers on `@media (max-height: 540px)` short viewports (ADR-2658).
 
 ## Overlay & Inline Focus Composables (`useFocusTrap`, `hasActiveModalFocusTrap`, `trapTabFocus`, `handoffFocus`, `useInlineFocusHandoff` & `useEscapeClose`)
 
