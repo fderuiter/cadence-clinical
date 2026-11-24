@@ -1,5 +1,10 @@
 <template>
-  <ul ref="tablistRef" class="nav-tabs" role="tablist">
+  <ul
+    v-show="visibleTabs.length > 0"
+    ref="tablistRef"
+    class="nav-tabs"
+    :role="visibleTabs.length > 0 ? 'tablist' : undefined"
+  >
     <li
       v-for="tab in visibleTabs"
       :id="tab.itemId"

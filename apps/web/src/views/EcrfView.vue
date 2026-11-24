@@ -45,6 +45,10 @@ import {
 } from "../composables/useRouteScopeSync";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
@@ -80,6 +84,7 @@ function routeQuery(name, targetRoute = route) {
 }
 
 const initialRouteScope = readRouteScopeQuery(route);
+const hydratedScope = resolveHydratedWorkspaceScope(route);
 if (route && route.query) {
   const hasExplicitRouteScope = Boolean(
     initialRouteScope.studyId ||
@@ -89,15 +94,29 @@ if (route && route.query) {
   if (initialRouteScope.studyId) {
     setActiveStudyCode(initialRouteScope.studyId);
     scopeStore.activeStudyId = initialRouteScope.studyId;
-  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-    scopeStore.activeStudyId = activeStudyCode.value;
+  } else if (
+    !scopeStore.activeStudyId &&
+    (hydratedScope.studyId || activeStudyCode.value)
+  ) {
+    scopeStore.activeStudyId = hydratedScope.studyId || activeStudyCode.value;
   }
   if (hasExplicitRouteScope) {
     scopeStore.activeSiteId = initialRouteScope.siteId;
     scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  } else if (hydratedScope.siteId && !scopeStore.activeSiteId) {
+    scopeStore.activeSiteId = hydratedScope.siteId;
   }
-} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-  scopeStore.activeStudyId = activeStudyCode.value;
+} else if (
+  !scopeStore.activeStudyId &&
+  (hydratedScope.studyId || activeStudyCode.value)
+) {
+  scopeStore.activeStudyId = hydratedScope.studyId || activeStudyCode.value;
+}
+if (scopeStore.activeStudyId || scopeStore.activeSiteId) {
+  syncWorkspaceScope({
+    ...(scopeStore.activeStudyId ? { studyId: scopeStore.activeStudyId } : {}),
+    ...(scopeStore.activeSiteId ? { siteId: scopeStore.activeSiteId } : {}),
+  });
 }
 
 watch(
