@@ -402,6 +402,8 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore version-update:semver-major for dotnet-ef");
         NugetOpenTelemetryNet11IgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore OpenTelemetry >= 1.21.0 while targeting net10.0 (#5944, ADR-2527)");
+        NugetSonarAnalyzerIgnoreRule().Matches(dependabot).Count.Should().Be(1,
+            "dependabot.yml must ignore SonarAnalyzer.CSharp >= 10.7.0 exactly once without duplicate ignore rules (#6030)");
         ScePythonIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
@@ -431,6 +433,58 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "docker"
+                directory: "/docker/sce/r"
+                ignore:
+                  - dependency-name: "r-base"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                        "version-update:semver-minor",
+                      ]
+                  - dependency-name: "r-base"
+                    update-types: ["version-update:semver-major"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "npm"
+                directory: "/"
+                ignore:
+                  - dependency-name: "vite"
+                  - dependency-name: "vite"
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "npm"
+                directory: "/"
+              - package-ecosystem: "npm"
+                directory: "/"
+            """);
+        AssertMalformedManifestFails(".github/dependabot.yml", "version: 2\nupdates:\n\t- package-ecosystem: \"npm\"\n");
 
         foreach (string testPackage in new[]
         {
@@ -470,6 +524,29 @@ public sealed partial class ContainerImagePinTests
                 """);
             DependencyValidatorService.ValidateDependencies(cleanDevDepsDir).Should().Be(0,
                 "test frameworks and assertion libraries are valid inside devDependencies");
+
+            string dependabotFixture = Path.Combine(cleanDevDepsDir, ".github/dependabot.yml");
+            Directory.CreateDirectory(Path.GetDirectoryName(dependabotFixture)!);
+            File.WriteAllText(
+                dependabotFixture,
+                """
+                version: 2
+                updates:
+                  - package-ecosystem: "nuget"
+                    directory: "/"
+                    ignore:
+                      - dependency-name: "SonarAnalyzer.CSharp"
+                        versions: [">= 10.7.0"]
+                      - dependency-name: "SonarAnalyzer.CSharp"
+                        update-types: ["version-update:semver-major"]
+                  - package-ecosystem: "docker"
+                    directory: "/docker"
+                    ignore:
+                      - dependency-name: "SonarAnalyzer.CSharp"
+                        versions: [">= 10.7.0"]
+                """);
+            DependencyValidatorService.ValidateDependencies(cleanDevDepsDir).Should().Be(0,
+                "distinct versions vs update-types ignores and distinct ecosystem directories are valid in dependabot.yml");
         }
         finally
         {
@@ -677,6 +754,9 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""OpenTelemetry\*""\s*\r?\n\s*versions:\s*\[""\>= 1\.21\.0""\]")]
     private static partial Regex NugetOpenTelemetryNet11IgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""SonarAnalyzer\.CSharp""\s*\r?\n\s*versions:\s*\[""\>= 10\.7\.0""\]")]
+    private static partial Regex NugetSonarAnalyzerIgnoreRule();
 
     [GeneratedRegex(@"dependency-name:\s*""python""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major"",\s*""version-update:semver-minor""\]")]
     private static partial Regex ScePythonIgnoreRule();
