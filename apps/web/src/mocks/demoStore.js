@@ -27,7 +27,11 @@ import {
 } from "../catalog/productCatalog.js";
 import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
 import { registerDemoStoreReset } from "../utils/demoReset.js";
-import { isCallerBlinded, isSitePermitted } from "./demoPolicy.js";
+import {
+  hasStudyWideScope,
+  isCallerBlinded,
+  isSitePermitted,
+} from "./demoPolicy.js";
 
 const DEMO_TENANT_UUID =
   MANIFEST_DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000010"; // deid-ignore
@@ -909,6 +913,7 @@ export function createWebDemoStore() {
         },
       ],
     ]);
+    state.queryDigests = [];
 
     state.proposals = new Map([
       [
@@ -4498,18 +4503,29 @@ export function createWebDemoStore() {
       return { conflict: false, data: cloneJson(signature) };
     },
 
-    listFormQueries(formId) {
-      return cloneJson(
-        [...state.queries.values()].filter((q) => q.form_id === formId)
+    listFormQueries(formId, caller = null) {
+      let results = [...state.queries.values()].filter(
+        (q) => q.form_id === formId
       );
+      if (caller) {
+        results = results.filter(
+          (q) => !q.site_code || isSitePermitted(caller, q.site_code)
+        );
+      }
+      return cloneJson(results);
     },
 
-    listEnrollmentQueries(enrollmentIdOrOptions) {
+    listEnrollmentQueries(enrollmentIdOrOptions, caller = null) {
       const opts =
         enrollmentIdOrOptions && typeof enrollmentIdOrOptions === "object"
           ? enrollmentIdOrOptions
           : { enrollmentId: enrollmentIdOrOptions };
       let results = [...state.queries.values()];
+      if (caller) {
+        results = results.filter(
+          (q) => !q.site_code || isSitePermitted(caller, q.site_code)
+        );
+      }
       if (opts.enrollmentId) {
         const matches = results.filter(
           (q) => q.enrollment_id === opts.enrollmentId
@@ -4836,11 +4852,18 @@ export function createWebDemoStore() {
       return { data: cloneJson(existing) };
     },
 
-    listQueryDigests({ studyId, site, recipientRole } = {}) {
+    listQueryDigests({ studyId, site, recipientRole } = {}, caller = null) {
       if (state.queryDigests.length === 0) {
         this.escalateStudyQueries(studyId || STUDY_UUID, "Initial SLA digest");
       }
       let results = [...state.queryDigests];
+      if (caller) {
+        results = results.filter((d) =>
+          d.study_site_id || d.site_code
+            ? isSitePermitted(caller, d.site_code)
+            : hasStudyWideScope(caller)
+        );
+      }
       if (studyId) {
         results = results.filter((d) => !d.study_id || d.study_id === studyId);
       }
@@ -4861,7 +4884,7 @@ export function createWebDemoStore() {
       return cloneJson(results);
     },
 
-    escalateStudyQueries(studyId, reason = "14-day SLA check") {
+    escalateStudyQueries(studyId, reason = "14-day SLA check", caller = null) {
       const now = new Date();
       const nowIso = now.toISOString();
       const digestDate = nowIso.slice(0, 10);
@@ -4950,9 +4973,16 @@ export function createWebDemoStore() {
         });
       }
       state.queryDigests = digests;
+      const visibleDigests = caller
+        ? digests.filter((d) =>
+            d.study_site_id || d.site_code
+              ? isSitePermitted(caller, d.site_code)
+              : hasStudyWideScope(caller)
+          )
+        : digests;
       return cloneJson({
         escalated_queries: escalatedQueries,
-        digests,
+        digests: visibleDigests,
       });
     },
 

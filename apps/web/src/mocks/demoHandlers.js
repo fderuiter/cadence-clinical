@@ -1122,11 +1122,14 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.get("*/api/v1/execution/forms/queries/digests", ({ request }) => {
       const url = new URL(request.url);
       return HttpResponse.json(
-        store.listQueryDigests({
-          studyId: url.searchParams.get("study_id"),
-          site: url.searchParams.get("site"),
-          recipientRole: url.searchParams.get("recipient_role"),
-        })
+        store.listQueryDigests(
+          {
+            studyId: url.searchParams.get("study_id"),
+            site: url.searchParams.get("site"),
+            recipientRole: url.searchParams.get("recipient_role"),
+          },
+          resolveDemoCaller(request)
+        )
       );
     }),
     http.post("*/api/v1/execution/forms/queries/escalate", ({ request }) => {
@@ -1144,31 +1147,43 @@ export function createWebDemoHandlers(store = webDemoStore) {
         );
       }
       return HttpResponse.json(
-        store.escalateStudyQueries(url.searchParams.get("study_id"), reason)
+        store.escalateStudyQueries(
+          url.searchParams.get("study_id"),
+          reason,
+          resolveDemoCaller(request)
+        )
       );
     }),
     http.get("*/api/v1/execution/forms/queries", ({ request }) => {
       const url = new URL(request.url);
       return HttpResponse.json(
-        store.listEnrollmentQueries({
-          enrollmentId: url.searchParams.get("enrollment_id"),
-          studyId: url.searchParams.get("study_id"),
-          status: url.searchParams.get("status"),
-          owner: url.searchParams.get("owner"),
-          origin: url.searchParams.get("origin"),
-          priority: url.searchParams.get("priority"),
-          escalated: url.searchParams.get("escalated"),
-          assignee: url.searchParams.get("assignee"),
-          site: url.searchParams.get("site"),
-          participant: url.searchParams.get("participant"),
-          valueChanged: url.searchParams.get("value_changed"),
-        })
+        store.listEnrollmentQueries(
+          {
+            enrollmentId: url.searchParams.get("enrollment_id"),
+            studyId: url.searchParams.get("study_id"),
+            status: url.searchParams.get("status"),
+            owner: url.searchParams.get("owner"),
+            origin: url.searchParams.get("origin"),
+            priority: url.searchParams.get("priority"),
+            escalated: url.searchParams.get("escalated"),
+            assignee: url.searchParams.get("assignee"),
+            site: url.searchParams.get("site"),
+            participant: url.searchParams.get("participant"),
+            valueChanged: url.searchParams.get("value_changed"),
+          },
+          resolveDemoCaller(request)
+        )
       );
     }),
-    http.get("*/api/v1/execution/forms/:formId/queries", ({ params }) =>
-      HttpResponse.json(
-        store.listFormQueries(decodeURIComponent(String(params.formId)))
-      )
+    http.get(
+      "*/api/v1/execution/forms/:formId/queries",
+      ({ params, request }) =>
+        HttpResponse.json(
+          store.listFormQueries(
+            decodeURIComponent(String(params.formId)),
+            resolveDemoCaller(request)
+          )
+        )
     ),
     http.post(
       "*/api/v1/execution/forms/:formId/queries",
