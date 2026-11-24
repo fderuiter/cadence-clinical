@@ -209,4 +209,209 @@ describe("ClinicalTabs WAI-ARIA Tabs primitive", () => {
     await nextTick();
     expect(activeTab.value).toBe("kanban");
   });
+
+  it("applies underline, pills, and segmented variants plus scroll and wrap overflow classes while passing axe-core", async () => {
+    const variants = ["underline", "pills", "segmented"];
+    for (const variant of variants) {
+      const overflow = variant === "pills" ? "wrap" : "scroll";
+      const activeTab = ref("alpha");
+      const tabs = [
+        { id: "alpha", label: "Alpha Section", badge: 4 },
+        { id: "beta", label: "Beta Section", badge: 0 },
+      ];
+
+      const host = mountHost(
+        () => () =>
+          h(
+            ClinicalTabs,
+            {
+              modelValue: activeTab.value,
+              "onUpdate:modelValue": (val) => {
+                activeTab.value = val;
+              },
+              tabs,
+              variant,
+              overflow,
+              ariaLabel: `${variant} tabs`,
+              idPrefix: `tabs-${variant}`,
+            },
+            {
+              "panel-alpha": () => h("p", "Alpha body"),
+              "panel-beta": () => h("p", "Beta body"),
+            }
+          )
+      );
+
+      await nextTick();
+
+      const tablist = host.querySelector('[role="tablist"]');
+      expect(tablist.classList.contains("clinical-tabs-list")).toBe(true);
+      expect(tablist.classList.contains(`variant-${variant}`)).toBe(true);
+      expect(tablist.classList.contains(`overflow-${overflow}`)).toBe(true);
+
+      const triggers = Array.from(host.querySelectorAll('[role="tab"]'));
+      expect(triggers).toHaveLength(2);
+      expect(triggers[0].classList.contains("clinical-tabs-trigger")).toBe(
+        true
+      );
+      expect(triggers[0].getAttribute("aria-selected")).toBe("true");
+      expect(triggers[1].getAttribute("aria-selected")).toBe("false");
+      expect(
+        triggers[0].querySelector(".clinical-tabs-badge")?.textContent?.trim()
+      ).toBe("4");
+      expect(
+        triggers[1].querySelector(".clinical-tabs-badge")?.textContent?.trim()
+      ).toBe("0");
+
+      const a11y = await toBeAccessible({ element: host });
+      expect(a11y.pass, a11y.message()).toBe(true);
+    }
+  });
+
+  it("scrolls off-screen tabs into view on focusTabAtIndex and modelValue changes, updates edge fade cues, and uses instant scroll under prefers-reduced-motion", async () => {
+    const originalMatchMedia = window.matchMedia;
+    let reducedMotion = false;
+    window.matchMedia = (query) => ({
+      matches: query.includes("prefers-reduced-motion") ? reducedMotion : false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    });
+
+    try {
+      const activeTab = ref("details");
+      const tabs = [
+        { id: "details", label: "Details & Triage" },
+        { id: "audit", label: "Audit Trail" },
+        { id: "comments", label: "Comments" },
+        { id: "attachments", label: "Attachments" },
+      ];
+
+      const host = mountHost(
+        () => () =>
+          h(ClinicalTabs, {
+            modelValue: activeTab.value,
+            "onUpdate:modelValue": (val) => {
+              activeTab.value = val;
+            },
+            tabs,
+            variant: "underline",
+            overflow: "scroll",
+            ariaLabel: "Ticket detail sections",
+            idPrefix: "drawer",
+          })
+      );
+
+      await nextTick();
+
+      const tablist = host.querySelector('[role="tablist"]');
+      const triggers = Array.from(host.querySelectorAll('[role="tab"]'));
+
+      let currentScrollLeft = 0;
+      const scrollCalls = [];
+
+      Object.defineProperty(tablist, "clientWidth", {
+        configurable: true,
+        get: () => 260,
+      });
+      Object.defineProperty(tablist, "scrollWidth", {
+        configurable: true,
+        get: () => 560,
+      });
+      Object.defineProperty(tablist, "scrollLeft", {
+        configurable: true,
+        get: () => currentScrollLeft,
+        set: (val) => {
+          currentScrollLeft = val;
+        },
+      });
+      tablist.getBoundingClientRect = () => ({
+        left: 0,
+        right: 260,
+        top: 0,
+        bottom: 56,
+        width: 260,
+        height: 56,
+      });
+      tablist.scrollTo = (opts) => {
+        scrollCalls.push(opts);
+        if (typeof opts?.left === "number") {
+          currentScrollLeft = opts.left;
+        }
+      };
+
+      const tabPositions = [
+        { start: 6, width: 130 },
+        { start: 142, width: 120 },
+        { start: 268, width: 130 },
+        { start: 404, width: 150 },
+      ];
+      triggers.forEach((btn, idx) => {
+        btn.getBoundingClientRect = () => {
+          const left = tabPositions[idx].start - currentScrollLeft;
+          return {
+            left,
+            right: left + tabPositions[idx].width,
+            top: 6,
+            bottom: 50,
+            width: tabPositions[idx].width,
+            height: 44,
+          };
+        };
+      });
+
+      // Trigger initial scroll cue evaluation
+      tablist.dispatchEvent(new Event("scroll"));
+      await nextTick();
+      expect(tablist.classList.contains("can-scroll-start")).toBe(false);
+      expect(tablist.classList.contains("can-scroll-end")).toBe(true);
+
+      // End jumps to off-screen "attachments" tab with smooth scroll when reducedMotion=false
+      triggers[0].focus();
+      triggers[0].dispatchEvent(
+        new KeyboardEvent("keydown", { key: "End", bubbles: true })
+      );
+      await nextTick();
+
+      expect(activeTab.value).toBe("attachments");
+      expect(scrollCalls.length).toBeGreaterThanOrEqual(1);
+      expect(scrollCalls[scrollCalls.length - 1]).toEqual({
+        left: 300,
+        behavior: "smooth",
+      });
+      expect(tablist.classList.contains("can-scroll-start")).toBe(true);
+      expect(tablist.classList.contains("can-scroll-end")).toBe(false);
+
+      // Enable prefers-reduced-motion: reduce -> programmatic modelValue change to middle clipped tab uses behavior: "instant"
+      reducedMotion = true;
+      activeTab.value = "details";
+      await nextTick();
+      await nextTick();
+
+      expect(scrollCalls[scrollCalls.length - 1]).toEqual({
+        left: 0,
+        behavior: "instant",
+      });
+      expect(currentScrollLeft).toBe(0);
+      expect(tablist.classList.contains("can-scroll-start")).toBe(false);
+      expect(tablist.classList.contains("can-scroll-end")).toBe(true);
+
+      // ArrowRight to partially clipped second tab scrolls it fully into visible bounds with instant behavior
+      triggers[0].dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })
+      );
+      await nextTick();
+      expect(activeTab.value).toBe("audit");
+      expect(scrollCalls[scrollCalls.length - 1].behavior).toBe("instant");
+      const secondTabRect = triggers[1].getBoundingClientRect();
+      expect(secondTabRect.left).toBeGreaterThanOrEqual(0);
+      expect(secondTabRect.right).toBeLessThanOrEqual(260);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
 });

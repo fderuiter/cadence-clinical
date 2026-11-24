@@ -305,6 +305,7 @@
       <ClinicalTabs
         v-model="viewMode"
         :tabs="viewModeTabs"
+        variant="segmented"
         aria-label="Tickets workspace view mode"
         id-prefix="tickets-view"
         list-class="view-mode-toggle"
@@ -1922,30 +1923,6 @@ const exportAuditTrail = (format) => {
 .scope-filter-input {
   width: 132px;
   font-family: var(--font-mono);
-}
-
-.view-mode-toggle {
-  display: flex;
-  background: var(--semantic-color-surface-header);
-  border-radius: 6px;
-  padding: 2px;
-}
-
-.view-toggle-btn {
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.view-toggle-btn.active {
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* KANBAN BOARD VIEW */
