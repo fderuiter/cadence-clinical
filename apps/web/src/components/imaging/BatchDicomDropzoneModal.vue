@@ -149,7 +149,7 @@
             <div v-if="selectedFiles.length > 0" class="file-summary-card">
               <div class="summary-header">
                 <span class="summary-title">Selected Items Summary</span>
-                <span class="badge badge-info"
+                <span class="badge badge-info tabular-nums"
                   >{{ selectedFiles.length }} Total Files</span
                 >
               </div>

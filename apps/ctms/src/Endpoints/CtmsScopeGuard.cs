@@ -81,11 +81,8 @@ public static class CtmsScopeGuard
         string? siteId,
         out HashSet<string>? siteFilter)
     {
-        if (ClinicalScopeGuard.ResolveSiteFilter(httpContext, siteId, out var allowedSites, out _))
+        if (ClinicalScopeGuard.ResolveSiteFilter(httpContext, siteId, out siteFilter, out _))
         {
-            siteFilter = allowedSites is null
-                ? null
-                : new HashSet<string>(allowedSites, StringComparer.OrdinalIgnoreCase);
             return null;
         }
 
@@ -308,17 +305,9 @@ public static class CtmsScopeGuard
         Func<T, string?> studySelector,
         HashSet<string>? siteFilter,
         Func<T, string?> siteSelector) =>
-        [.. ClinicalScopeGuard.ApplyFilters(
-                items,
-                studyFilter,
-                siteFilter,
-                item => studySelector(item)?.Trim(),
-                item => siteSelector(item) is { } site && !string.IsNullOrWhiteSpace(site) ? site.Trim() : null)];
+        ClinicalScopeGuard.ApplyFilters(items, studyFilter, siteFilter, studySelector, siteSelector)
+            .ToList();
 
     public static ProblemHttpResult Forbidden(string detail, string title = "Forbidden") =>
-        TypedResults.Problem(
-            detail: detail,
-            statusCode: StatusCodes.Status403Forbidden,
-            title: title,
-            extensions: new Dictionary<string, object?> { ["code"] = ForbiddenCode });
+        ClinicalScopeGuard.Forbidden(detail, title, ForbiddenCode);
 }

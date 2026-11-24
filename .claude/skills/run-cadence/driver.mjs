@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import process from "node:process";
 import readline from "node:readline";
 
 const require = createRequire(path.resolve("apps/web/package.json"));

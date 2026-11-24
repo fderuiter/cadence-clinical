@@ -117,7 +117,7 @@ public static class StartupGreenlightEndpoints
         {
             if (!CtmsScopeGuard.CanAccessStudy(context.HttpContext, req.StudyId))
             {
-                return ValueTask.FromResult<object?>(OutsideStudy());
+                return ValueTask.FromResult<object?>(ClinicalScopeGuard.OutsideStudy(code: ClinicalScopeGuard.ForbiddenCode));
             }
 
             if (req.SiteIds is { Count: > 0 })
@@ -136,17 +136,11 @@ public static class StartupGreenlightEndpoints
         return next(context);
     }
 
-    private static string Signer(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted greenlight request has no signed caller.");
-
     // Greenlight tokens are sealed with the gateway secret; there is no fallback secret (ADR-2256).
     private static string TokenSecret(IConfiguration config) =>
         config["GATEWAY_SECRET"] is { Length: > 0 } secret
             ? secret
             : throw new InvalidOperationException("GATEWAY_SECRET is not configured; greenlight tokens cannot be sealed.");
-
-    private static ProblemHttpResult OutsideStudy() =>
-        CtmsScopeGuard.Forbidden("You are not assigned to this study.", "Outside your studies");
 
     private static ProblemHttpResult StudyRequired() =>
         TypedResults.Problem(
@@ -309,7 +303,7 @@ public static class StartupGreenlightEndpoints
             });
         }
 
-        string signer = Signer(httpContext);
+        string signer = CallerScope.RequiredUserId(httpContext, "An admitted greenlight request has no signed caller.");
         string secret = TokenSecret(config);
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
@@ -355,7 +349,7 @@ public static class StartupGreenlightEndpoints
         countryCode = (countryCode ?? "US").ToUpperInvariant();
         if (!CtmsScopeGuard.CanAccessStudy(httpContext, trimmedStudy))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy(code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         if (CtmsScopeGuard.ResolveSiteFilter(httpContext, siteId: null, out var siteFilter) is { } siteDenied)
@@ -423,7 +417,7 @@ public static class StartupGreenlightEndpoints
         var siteIds = request.SiteIds.Distinct(StringComparer.Ordinal).ToList();
         if (!CtmsScopeGuard.CanAccessStudy(httpContext, studyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy(code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         var principal = CtmsScopeGuard.ResolvePrincipal(httpContext);
@@ -465,7 +459,7 @@ public static class StartupGreenlightEndpoints
         }
 
         // The signer is the signed caller, never a name or title in the request body (ADR-2516).
-        string signer = Signer(httpContext);
+        string signer = CallerScope.RequiredUserId(httpContext, "An admitted greenlight request has no signed caller.");
         string role = CallerScope.Roles(httpContext);
         string secret = TokenSecret(config);
         DateTimeOffset now = clock.UtcNow;

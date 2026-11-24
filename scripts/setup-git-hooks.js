@@ -44,7 +44,7 @@ function setupGitHooks() {
     }
 
     console.log("✔ Git hooks configured (.githooks)");
-  } catch (error) {
+  } catch {
     console.log(
       "Skipping Git hooks setup: Git command failed or Git is not installed."
     );
