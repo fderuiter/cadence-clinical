@@ -845,41 +845,42 @@ import { ref, reactive, computed, watch } from "vue";
 import { ClinicalTabs, EmptyState, useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
-import { useAuthStore, normalizeRole } from "../../stores/auth";
+import { useAuthStore } from "../../stores/auth";
+import { normalizeBackendRole } from "../../canvas/authority/roles";
 import { isDemoBuild } from "../../utils/demoMode.js";
 
+const VERIFIED_TRIAL_TENANT_RE = /^trial-[0-9a-f]{12}$/;
 const SITE_PERSONAS = new Set(["site_crc", "site_investigator"]);
-const SPONSOR_ROLES = new Set([
-  "sponsor_admin",
+const SPONSOR_COMMENT_CAPABLE_ROLES = new Set([
+  "sysadmin",
   "sponsor_designer",
-  "data_manager",
+  "sponsor_dm",
+  "sponsor_mm",
+  "sponsor_statistician",
   "cra",
   "monitor",
-  "safety_reviewer",
-  "safety_officer",
-  "sponsor_mm",
+  "external_monitor",
+  "protocol_reviewer",
+  "finance_officer",
   "auditor",
-  "tmf_auditor",
-]);
-const SITE_ONLY_ROLES = new Set([
-  "crc",
-  "site_investigator",
-  "principal_investigator",
-  "investigator",
+  "unblinded_statistician",
+  "idmc",
+  "emergency_unblinder",
 ]);
 const OPERATIONAL_MUTATION_ROLES = new Set([
-  "sponsor_admin",
+  "sysadmin",
   "sponsor_designer",
-  "data_manager",
+  "sponsor_dm",
+  "sponsor_mm",
   "cra",
   "monitor",
-  "safety_reviewer",
-  "safety_officer",
-  "sponsor_mm",
+  "external_monitor",
   "crc",
-  "site_investigator",
-  "principal_investigator",
   "investigator",
+  "principal_investigator",
+  "authorized_er_physician",
+  "lead_investigator",
+  "pharmacist",
 ]);
 
 const props = defineProps({
@@ -936,22 +937,20 @@ const resolveForm = reactive({
 });
 
 const normalizedCallerRoles = computed(() =>
-  (authStore.rawRoles || []).map(normalizeRole).filter(Boolean)
+  (authStore.rawRoles || []).map(normalizeBackendRole).filter(Boolean)
+);
+
+const isVerifiedTrialTenant = computed(() =>
+  VERIFIED_TRIAL_TENANT_RE.test(authStore.user?.tenantId || "")
 );
 
 const canViewInternalSponsorNotes = computed(() => {
   if (authStore.currentPersona && SITE_PERSONAS.has(authStore.currentPersona)) {
     return false;
   }
-  const roles = normalizedCallerRoles.value;
-  if (
-    roles.length > 0 &&
-    !roles.some((r) => SPONSOR_ROLES.has(r)) &&
-    roles.some((r) => SITE_ONLY_ROLES.has(r))
-  ) {
-    return false;
-  }
-  return true;
+  return normalizedCallerRoles.value.some((r) =>
+    SPONSOR_COMMENT_CAPABLE_ROLES.has(r)
+  );
 });
 
 const canMutateTicket = computed(() => {
@@ -959,13 +958,14 @@ const canMutateTicket = computed(() => {
     return false;
   }
   const roles = normalizedCallerRoles.value;
-  if (
-    roles.length > 0 &&
-    !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r))
-  ) {
-    return false;
+  if (roles.length === 0) {
+    return demoBuild;
   }
-  return true;
+  return roles.some(
+    (r) =>
+      OPERATIONAL_MUTATION_ROLES.has(r) ||
+      (r === "trial_coordinator" && isVerifiedTrialTenant.value)
+  );
 });
 
 const isSigned = computed(() => Boolean(props.ticket?.signature_token));

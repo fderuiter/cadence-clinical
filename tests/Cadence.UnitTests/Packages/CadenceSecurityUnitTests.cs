@@ -132,6 +132,58 @@ public class CadenceSecurityUnitTests
             AssignedSites = Array.Empty<string>()
         };
         SiteAccessEvaluator.CanAccessSite(sponsorUser, "SITE-101").Should().BeTrue();
+
+        // Verified trial-* tenant: standalone trial_coordinator is unscoped when AssignedSites is empty
+        ClinicalScopeGuard.IsVerifiedTrialTenant("trial-a1b2c3d4e5f6").Should().BeTrue();
+        ClinicalScopeGuard.IsVerifiedTrialTenant("trial-A1B2C3D4E5F6").Should().BeFalse();
+        ClinicalScopeGuard.IsVerifiedTrialTenant("tenant-enterprise-01").Should().BeFalse();
+
+        var verifiedTrialCoord = new Principal
+        {
+            UserId = "tc-trial",
+            TenantId = "trial-a1b2c3d4e5f6",
+            Roles = new[] { "trial_coordinator" },
+            AssignedSites = Array.Empty<string>()
+        };
+        ClinicalScopeGuard.IsSiteBound(verifiedTrialCoord).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(verifiedTrialCoord, "SITE-101").Should().BeTrue();
+
+        // Non-trial tenant: standalone trial_coordinator is site-bound and fails closed without AssignedSites
+        var enterpriseTrialCoordWithoutSites = new Principal
+        {
+            UserId = "tc-ent-unassigned",
+            TenantId = "tenant-enterprise-01",
+            Roles = new[] { "trial_coordinator" },
+            AssignedSites = Array.Empty<string>()
+        };
+        ClinicalScopeGuard.IsSiteBound(enterpriseTrialCoordWithoutSites).Should().BeTrue();
+        ClinicalScopeGuard.HasValidSiteScopeIfRequired(enterpriseTrialCoordWithoutSites).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(enterpriseTrialCoordWithoutSites, "SITE-101").Should().BeFalse();
+
+        // Non-trial tenant with explicit site assignment: restricted strictly to assigned sites
+        var enterpriseTrialCoordWithSite = new Principal
+        {
+            UserId = "tc-ent-site",
+            TenantId = "tenant-enterprise-01",
+            Roles = new[] { "trial_coordinator" },
+            AssignedSites = new[] { "SITE-101" }
+        };
+        ClinicalScopeGuard.IsSiteBound(enterpriseTrialCoordWithSite).Should().BeTrue();
+        ClinicalScopeGuard.HasValidSiteScopeIfRequired(enterpriseTrialCoordWithSite).Should().BeTrue();
+        SiteAccessEvaluator.CanAccessSite(enterpriseTrialCoordWithSite, "SITE-101").Should().BeTrue();
+        SiteAccessEvaluator.CanAccessSite(enterpriseTrialCoordWithSite, "SITE-202").Should().BeFalse();
+
+        // Multi-role union: enterprise caller holding Sponsor Admin + Trial Coordinator remains unscoped
+        var enterpriseSponsorPlusTrialCoord = new Principal
+        {
+            UserId = "tc-ent-sponsor",
+            TenantId = "tenant-enterprise-01",
+            Roles = new[] { "sponsor_dm", "trial_coordinator" },
+            RawRoles = new[] { "Sponsor Admin", "Trial Coordinator" },
+            AssignedSites = Array.Empty<string>()
+        };
+        ClinicalScopeGuard.IsSiteBound(enterpriseSponsorPlusTrialCoord).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(enterpriseSponsorPlusTrialCoord, "SITE-101").Should().BeTrue();
     }
 
     [Fact]
