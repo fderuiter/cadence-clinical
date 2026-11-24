@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.Protocol.Import;
 
 namespace Cadence.Ddf;
 
@@ -98,14 +99,16 @@ public static class UsdmDesignImporter
         IConceptRegistry registry,
         TenantId tenant,
         UsdmImportOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         return StageAsync(
             usdmJson,
             async (code, ct) => (await registry.FindBiomedicalConceptAsync(tenant, code, ct).ConfigureAwait(false))?.Concept,
             options,
-            cancellationToken);
+            cancellationToken,
+            resolveTerminology);
     }
 
     /// <summary>Stages <paramref name="usdmJson"/>, resolving Biomedical Concepts with <paramref name="resolve"/>.</summary>
@@ -113,7 +116,8 @@ public static class UsdmDesignImporter
         string usdmJson,
         BiomedicalConceptResolver resolve,
         UsdmImportOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
         ArgumentNullException.ThrowIfNull(usdmJson);
         ArgumentNullException.ThrowIfNull(resolve);
@@ -130,7 +134,7 @@ public static class UsdmDesignImporter
         using (document)
         {
             var reader = new UsdmDesignReader(options ?? new UsdmImportOptions());
-            return await reader.ReadAsync(document.RootElement, resolve, cancellationToken).ConfigureAwait(false);
+            return await reader.ReadAsync(document.RootElement, resolve, cancellationToken, resolveTerminology).ConfigureAwait(false);
         }
     }
 
@@ -140,9 +144,10 @@ public static class UsdmDesignImporter
         IConceptRegistry registry,
         TenantId tenant,
         UsdmImportOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
-        return await StageAsync(usdmJson, registry, tenant, options, cancellationToken).ConfigureAwait(false);
+        return await StageAsync(usdmJson, registry, tenant, options, cancellationToken, resolveTerminology).ConfigureAwait(false);
     }
 
     /// <summary>Imports <paramref name="usdmJson"/>, resolving Biomedical Concepts with <paramref name="resolve"/>.</summary>
@@ -150,8 +155,9 @@ public static class UsdmDesignImporter
         string usdmJson,
         BiomedicalConceptResolver resolve,
         UsdmImportOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
-        return await StageAsync(usdmJson, resolve, options, cancellationToken).ConfigureAwait(false);
+        return await StageAsync(usdmJson, resolve, options, cancellationToken, resolveTerminology).ConfigureAwait(false);
     }
 }
