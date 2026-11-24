@@ -676,7 +676,7 @@ public static class CiPlan
             },
         ])
         {
-            Needs = ["native-aot-build", "unit-tests", "dotnet-tests"],
+            Needs = ["native-aot-build", "unit-tests", "dotnet-tests", E2eJob],
             NeedsStep = new Dictionary<string, string>
             {
                 ["unit-tests"] = "unit-tests/Run frontend unit tests",

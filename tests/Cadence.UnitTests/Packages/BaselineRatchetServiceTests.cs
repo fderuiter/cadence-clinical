@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -501,6 +502,102 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         Write(Baseline, Header + "K-XS-1|App|B\n");
         Commit("refactor: eliminate remaining temporary entry D");
         Check().Should().Be(0, "intermediate branch baseline additions completely removed before HEAD are remediated");
+    }
+
+    [Fact]
+    public void ZeroShaVersionTagPush_And_ProtectedWorkflowDispatch_ExitZeroForCommittedHistoryWhenOriginMainDiverges_AndRejectDirtyHeadGrowth()
+    {
+        // Tag v1.0.1 on a historical release commit, then shrink baselines on origin/main so HEAD has MORE entries than origin/main!
+        Git("checkout", "-q", "main");
+        Git("tag", "v1.0.1");
+
+        Write(Baseline, Header);
+        Write(".deid-baseline.txt", "# deid\n");
+        Commit("refactor: burn down all baseline entries on main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "v1.0.1");
+
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/tags/v1.0.1").Should().Be(0);
+
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            eventName: "workflow_dispatch",
+            gitRef: "refs/tags/v1.0.1").Should().Be(0);
+
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            eventName: "workflow_dispatch",
+            gitRef: "refs/heads/release/1.0").Should().Be(0);
+
+        // Unprotected workflow_dispatch fails closed.
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            eventName: "workflow_dispatch",
+            gitRef: "refs/heads/feature").Should().Be(1);
+
+        // Uncommitted working-tree growth at HEAD still fails on tag push and workflow_dispatch.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|Dirty\n");
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/tags/v1.0.1").Should().Be(1);
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            eventName: "workflow_dispatch",
+            gitRef: "refs/tags/v1.0.1").Should().Be(1);
+    }
+
+    [Fact]
+    public void ZeroShaNewReleaseBranchPush_EvaluatesMergeBaseToHead_RequiringBaselineGrowthTrailer()
+    {
+        Git("checkout", "-q", "-b", "release/1.2", "main");
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|ReleaseGrowth\n");
+        Commit("feat: grow baseline on new release/1.2 branch without trailer");
+
+        // Advance origin/main independently (burning down entries on main) to verify merge-base(origin/main, HEAD)..HEAD is used.
+        Git("checkout", "-q", "main");
+        Write(".deid-baseline.txt", "# deid\n");
+        Commit("refactor: shrink deid baseline on main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "release/1.2");
+
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/heads/release/1.2").Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            $"feat: grow baseline on new release/1.2 branch\n\nBaseline-Growth: {Baseline} +1 - release hotfix baseline");
+
+        BaselineRatchetService.Check(
+            _dir,
+            preCommit: false,
+            environment: NoEnvironment,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/heads/release/1.2").Should().Be(0);
     }
 
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);

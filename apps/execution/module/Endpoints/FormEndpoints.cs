@@ -348,20 +348,26 @@ internal static class FormEndpoints
             return NotFound(formId);
         }
 
-        var result = await sender.SendAsync(
-            new RecordCollectedValues(
-                tenant,
-                id,
-                header.EnrollmentId,
-                [.. values.Select(v => new CollectedValue(
-                    v.ItemId,
-                    v.Value!,
-                    v.ExpectedRevision,
-                    v.ObservationId is { } observation ? ObservationId.FromGuid(observation) : null,
-                    v.ObservedAt))],
-                IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        ProtocolDesign? governingDesign = null;
+        CommandResult<CollectedValuesState> result;
+        using (ProtocolDesignDocument.OnRead(design => governingDesign ??= design))
+        {
+            result = await sender.SendAsync(
+                new RecordCollectedValues(
+                    tenant,
+                    id,
+                    header.EnrollmentId,
+                    [.. values.Select(v => new CollectedValue(
+                        v.ItemId,
+                        v.Value!,
+                        v.ExpectedRevision,
+                        v.ObservationId is { } observation ? ObservationId.FromGuid(observation) : null,
+                        v.ObservedAt))],
+                    IdempotencyKey(context),
+                    changeReason.Read(context) ?? string.Empty),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
         if (result.Value is not { } state)
         {
             return KernelErrorEndpoints.Problem(result.Error!);
@@ -373,10 +379,16 @@ internal static class FormEndpoints
         var canUnblindSave = false;
         var evaluatedSaveUnblind = false;
         var updatedRecord = access is null
-            ? await forms.FindForReaderAsync(tenant, id, unblinded: false, cancellationToken).ConfigureAwait(false)
+            ? await forms.FindForReaderAsync(
+                tenant,
+                id,
+                governingDesign,
+                (_, _) => ValueTask.FromResult(false),
+                cancellationToken).ConfigureAwait(false)
             : await forms.FindForReaderAsync(
                 tenant,
                 id,
+                governingDesign,
                 async (enrollmentId, ct) =>
                 {
                     canUnblindSave = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
@@ -414,19 +426,39 @@ internal static class FormEndpoints
                     cancellationToken).ConfigureAwait(false);
             if (access is not null)
             {
-                var masks = await access.MaskAsync(tenant, CollectFormNodes(updated), cancellationToken).ConfigureAwait(false);
                 if (!evaluatedSaveUnblind)
                 {
                     canUnblindSave = await access.CanUnblindAsync(tenant, updated.EnrollmentId, cancellationToken).ConfigureAwait(false);
                 }
 
-                (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
-                    tenant,
-                    updated,
-                    masks,
-                    canUnblindSave,
-                    context.RequestServices,
-                    cancellationToken).ConfigureAwait(false);
+                var classifier = context.RequestServices?.GetService<IBlindedTreatmentClassifier>()
+                    ?? BlindedTreatmentClassifier.Instance;
+                if (ReferenceEquals(classifier, BlindedTreatmentClassifier.Instance)
+                    && updated.BlindedItemIds is not null
+                    && updated.BlindedObservationIds is not null)
+                {
+                    if (canUnblindSave)
+                    {
+                        blindedItemIds = [];
+                        blindedObservationIds = [];
+                    }
+                    else
+                    {
+                        blindedItemIds = new HashSet<string>(updated.BlindedItemIds, StringComparer.Ordinal);
+                        blindedObservationIds = new HashSet<ObservationId>(updated.BlindedObservationIds);
+                    }
+                }
+                else
+                {
+                    var masks = await access.MaskAsync(tenant, CollectFormNodes(updated), cancellationToken).ConfigureAwait(false);
+                    (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
+                        tenant,
+                        updated,
+                        masks,
+                        canUnblindSave,
+                        context.RequestServices,
+                        cancellationToken).ConfigureAwait(false);
+                }
             }
             else if (updated.BlindedItemIds is { Count: > 0 })
             {

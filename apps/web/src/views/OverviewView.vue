@@ -475,6 +475,9 @@ function resolveAuthorizedRoute(routeSpec) {
         "monitor",
         "data_manager",
         "sponsor_admin",
+        "unblinded_statistician",
+        "pharmacist",
+        "trial_coordinator",
       ])
       ? buildScopedWorkflowPath("/ctms", { studyCode, siteId, subjectCode })
       : null;
@@ -488,6 +491,9 @@ function resolveAuthorizedRoute(routeSpec) {
         "sponsor_admin",
         "site_investigator",
         "crc",
+        "trial_coordinator",
+        "unblinded_statistician",
+        "pharmacist",
       ])
       ? buildScopedWorkflowPath("/ssu", { studyCode, siteId, subjectCode })
       : null;

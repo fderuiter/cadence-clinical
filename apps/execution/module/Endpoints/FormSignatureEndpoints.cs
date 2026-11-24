@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -9,6 +10,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 using Cadence.Modules.Execution.Domain;
@@ -22,6 +24,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
@@ -93,29 +96,21 @@ internal static class FormSignatureEndpoints
         var tenant = KernelRequestTenant.Get(context);
         var id = CollectionInstanceId.FromGuid(formId);
 
-        // The signature is authorized against the form's enrollment, which the client does not send.
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        // Read narrow scope state (header + covering locks, zero protocol parses) to check 404 and hard locks (#6173).
+        if (await forms.FindScopeStateAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } scopeState)
         {
             return TypedResults.Problem(title: "Not found", detail: $"Form {formId:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (record.Locks.Any(l => l.Kind == LockKind.Locked))
+        if (scopeState.Locks.Any(l => l.Kind == LockKind.Locked))
         {
             return KernelErrorEndpoints.Problem(AssertionErrors.Locked);
         }
 
         var trimmedHash = request.ContentHash.Trim();
-        if (contexts is not null
-            && access is not null
-            && record.ContentHash is not null
-            && string.Equals(record.ContentHash, trimmedHash, StringComparison.Ordinal)
-            && await access.CanExerciseAsync(
-                tenant,
-                new Capability("collection.sign", VerbClass.Execute),
-                NodeRef.For(record.EnrollmentId),
-                cancellationToken).ConfigureAwait(false))
+        if (contexts is not null && access is not null)
         {
-            System.Collections.Generic.List<(Guid KernelQueryId, FormQueryStatus Status)> execQueries;
+            List<(Guid KernelQueryId, FormQueryStatus Status)> execQueries;
             await using (var db = contexts.Create(tenant))
             {
                 var rawQueries = await db.FormQueries.AsNoTracking()
@@ -126,84 +121,105 @@ internal static class FormSignatureEndpoints
                 execQueries = [.. rawQueries.Select(q => (q.KernelQueryId.Value, q.Status))];
             }
 
-            var (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(record.Assertions, execQueries);
-            if (openQueryCount + answeredQueryCount > 0)
+            if (execQueries.Any(q => q.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
+                && await access.CanExerciseAsync(
+                    tenant,
+                    new Capability("collection.sign", VerbClass.Execute),
+                    NodeRef.For(scopeState.EnrollmentId),
+                    cancellationToken).ConfigureAwait(false)
+                && await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } record
+                && record.ContentHash is not null
+                && string.Equals(record.ContentHash, trimmedHash, StringComparison.Ordinal))
             {
-                var missing = record.MissingRequired ?? [];
-                var blockers = CollectionReadiness.BuildBlockers(
-                    missing,
-                    missing.Count,
-                    openQueryCount,
-                    answeredQueryCount,
-                    record.OpenErrorFindingCount);
-                var errors = new System.Collections.Generic.Dictionary<string, string[]>(StringComparer.Ordinal)
+                var (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(record.Assertions, execQueries);
+                if (openQueryCount + answeredQueryCount > 0)
                 {
-                    ["active_queries"] = [$"open={openQueryCount}, answered={answeredQueryCount}"],
-                };
-                if (missing.Count > 0)
-                {
-                    errors["missing_required"] = [.. missing];
-                }
+                    var missing = record.MissingRequired ?? [];
+                    var blockers = CollectionReadiness.BuildBlockers(
+                        missing,
+                        missing.Count,
+                        openQueryCount,
+                        answeredQueryCount,
+                        record.OpenErrorFindingCount);
+                    var errors = new Dictionary<string, string[]>(StringComparer.Ordinal)
+                    {
+                        ["active_queries"] = [$"open={openQueryCount}, answered={answeredQueryCount}"],
+                    };
+                    if (missing.Count > 0)
+                    {
+                        errors["missing_required"] = [.. missing];
+                    }
 
-                if (record.OpenErrorFindingCount > 0)
-                {
-                    errors["error_findings"] = [$"count={record.OpenErrorFindingCount}"];
-                }
+                    if (record.OpenErrorFindingCount > 0)
+                    {
+                        errors["error_findings"] = [$"count={record.OpenErrorFindingCount}"];
+                    }
 
-                return KernelErrorEndpoints.Problem(
-                    CollectionErrors.NotReadyToSign.WithMessage(string.Join(" ", blockers)) with { Errors = errors });
+                    return KernelErrorEndpoints.Problem(
+                        CollectionErrors.NotReadyToSign.WithMessage(string.Join(" ", blockers)) with { Errors = errors });
+                }
             }
         }
 
         var signature = request.SignatureId is { } chosen && chosen != Guid.Empty ? AttestationId.FromGuid(chosen) : AttestationId.New();
-        var result = await sender.SendAsync(
-            new SignCollectionInstance(
-                tenant,
-                signature,
-                id,
-                record.EnrollmentId,
-                meaning,
-                trimmedHash,
-                new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
-                StepUpMethod,
-                FormEndpoints.IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        ProtocolDesign? governingDesign = null;
+        CommandResult<AttestationId> result;
+        using (ProtocolDesignDocument.OnRead(design => governingDesign ??= design))
+        {
+            result = await sender.SendAsync(
+                new SignCollectionInstance(
+                    tenant,
+                    signature,
+                    id,
+                    scopeState.EnrollmentId,
+                    meaning,
+                    trimmedHash,
+                    new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
+                    StepUpMethod,
+                    FormEndpoints.IdempotencyKey(context),
+                    changeReason.Read(context) ?? string.Empty),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
         if (result.Error is { } error)
         {
             return KernelErrorEndpoints.Problem(error);
         }
 
         var unblinded = access is not null
-            && await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
-        var signed = await forms.FindForReaderAsync(tenant, id, unblinded, cancellationToken).ConfigureAwait(false);
-        var view = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
-            ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
-
-        System.Collections.Generic.IReadOnlySet<string>? blindedItemIds = signed!.BlindedItemIds;
-        System.Collections.Generic.IReadOnlySet<ObservationId>? blindedObservationIds = signed.BlindedObservationIds;
-        if (access is not null)
+            && await access.CanUnblindAsync(tenant, scopeState.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var customClassifier = context.RequestServices?.GetService<IBlindedTreatmentClassifier>();
+        if (!unblinded
+            && access is not null
+            && customClassifier is not null
+            && !ReferenceEquals(customClassifier, BlindedTreatmentClassifier.Instance))
         {
-            var masks = await access.MaskAsync(tenant, FormEndpoints.CollectFormNodes(signed), cancellationToken).ConfigureAwait(false);
+            var signed = await forms.FindForReaderAsync(tenant, id, governingDesign, (_, _) => ValueTask.FromResult(false), cancellationToken).ConfigureAwait(false);
+            var fallbackView = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
+                ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
+            var masks = await access.MaskAsync(tenant, FormEndpoints.CollectFormNodes(signed!), cancellationToken).ConfigureAwait(false);
             var (resolvedItems, resolvedObservations) = await FormEndpoints.ResolveBlindedFormTargetsAsync(
                 tenant,
-                signed,
+                signed!,
                 masks,
-                unblinded,
+                canUnblind: false,
                 context.RequestServices,
                 cancellationToken).ConfigureAwait(false);
-            if (signed.BlindedObservationIds is not null)
+            if (signed!.BlindedObservationIds is not null)
             {
                 resolvedObservations.UnionWith(signed.BlindedObservationIds);
             }
 
-            blindedItemIds = resolvedItems;
-            blindedObservationIds = resolvedObservations;
+            return TypedResults.Created(
+                $"{FormEndpoints.RoutePrefix}/{formId:D}",
+                FormSignatureResponse.From(fallbackView, resolvedItems, resolvedObservations));
         }
 
+        var view = await forms.FindAttestationForReaderAsync(tenant, id, result.Value, unblinded, governingDesign, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
         return TypedResults.Created(
             $"{FormEndpoints.RoutePrefix}/{formId:D}",
-            FormSignatureResponse.From(view, blindedItemIds, blindedObservationIds));
+            FormSignatureResponse.From(view));
     }
 
     private static string SignActionFor(HttpContext context) =>

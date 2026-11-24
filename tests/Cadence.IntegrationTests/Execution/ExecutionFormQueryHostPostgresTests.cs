@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -39,12 +41,14 @@ using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using Xunit;
 
@@ -70,6 +74,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, AllowOutOfOrderMetadataProperties = true };
 
     private readonly KernelCollectionScenario _scenario = new(fixture);
+    private readonly SqlCommandCollector _sql = new();
     private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
     private WebApplicationFactory<Cadence.Kernel.Host.Program>? _sharedClockHost;
 
@@ -77,6 +82,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         _host?.Dispose();
         _sharedClockHost?.Dispose();
+        _sql.Dispose();
     }
 
     /// <summary>
@@ -1043,6 +1049,201 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }
     }
 
+    /// <summary>
+    /// Regression checks for batch form-record projections and slim query endpoints:
+    /// <list type="number">
+    /// <item><c>ListQueriesAsync</c> (<c>study_id</c>) executes the exact same constant SQL query count across 4 forms and 20 forms,
+    /// loads headers and observation revisions in two batch SQL queries, and invokes <see cref="ProtocolDesignDocument.Read"/> zero times.</item>
+    /// <item><c>site</c> and <c>participant</c> filters narrow visible enrollments before touching <c>execution.form_queries</c> or <c>kernel.collection_instances</c>.</item>
+    /// <item><c>ListQueriesAsync</c> (<c>enrollment_id</c>) and <c>ListForFormAsync</c> batch headers/revisions and deduplicate site/enrollment resolution with zero protocol parses.</item>
+    /// <item><c>StepAsync</c> (<c>answer</c>, <c>reopen</c>, <c>close</c>) invokes <see cref="ProtocolDesignDocument.Read"/> zero times, and blank-item <c>RaiseAsync</c> parses protocol JSON once.</item>
+    /// </list>
+    /// </summary>
+    [Fact(DisplayName = "HostQuery_BatchProjectionsAndSlimSteps_KeepSqlConstantAndSkipProtocolParses")]
+    public async Task HostQueryBatchProjectionsAndSlimStepsKeepSqlConstantAndSkipProtocolParses()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var code = $"T-BATCH-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(tenant, code, "Batch query projection tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
+        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct);
+
+        StudySiteId siteA;
+        StudySiteId siteB;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
+            var sA = new Site(SiteId.New(), tenant, sponsor, "SITE-BA", "Batch Alpha", "US", KernelPostgresFixture.ActorId, "Seeded");
+            var sB = new Site(SiteId.New(), tenant, sponsor, "SITE-BB", "Batch Beta", "US", KernelPostgresFixture.ActorId, "Seeded");
+            var linkA = new StudySite(StudySiteId.New(), tenant, study, sA.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded");
+            var linkB = new StudySite(StudySiteId.New(), tenant, study, sB.Id, "Selected", KernelPostgresFixture.ActorId, "Seeded");
+            await fixture.SeedAsync(sA, sB, linkA, linkB);
+            siteA = linkA.Id;
+            siteB = linkB.Id;
+        }
+
+        var partA = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var partB = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        SubjectCode.TryFrom("SUBJ-BA1", out var codeA);
+        SubjectCode.TryFrom("SUBJ-BB1", out var codeB);
+        var enrA = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partA, siteA, codeA, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"), ct)).EnrollmentId;
+        var enrB = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partB, siteB, codeB, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"), ct)).EnrollmentId;
+
+        foreach (var capability in new[] { "collection.record", "execution.query.answer" })
+        {
+            await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Study CRC"), ct);
+        }
+
+        foreach (var capability in new[] { "collection.record_unasked", "execution.query.raise", "execution.query.manage" })
+        {
+            await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.Person(Monitor), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Study monitor"), ct);
+        }
+
+        foreach (var capability in new[] { "observation.query", "observation.query.answer", "assertion.retract" })
+        {
+            await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.ServiceAccount("execution-queries"), capability, null, AuthorityScope.Tenant(), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Query mirror"), ct);
+        }
+
+        using var monitor = Client(code, Monitor);
+        using var crc = Client(code, Crc);
+
+        var subjA = new KernelObservationScenario.Subject(tenant, study, siteA, enrA);
+        var subjB = new KernelObservationScenario.Subject(tenant, study, siteB, enrB);
+
+        async Task<(CollectionInstanceId FormId, FormQueryResponse Query)> OpenSavedAndQueriedFormAsync(KernelObservationScenario.Subject subject, int index)
+        {
+            var formId = (await _scenario.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), _scenario.Tick()), ct)).CollectionInstanceId;
+            var saved = await _scenario.Protocol.OkAsync(Save(new Form(subject, version, formId), Value(Systolic, Mmhg(120 + (index % 20)))), ct);
+            var obsId = saved.Values.Single().ObservationId.Value;
+            var query = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{formId.Value:D}/queries", "SDV batch check", new
+            {
+                observation_id = obsId,
+                revision = 1,
+                text = $"Confirm systolic reading #{index}",
+            }, HttpStatusCode.Created, ct);
+            return (formId, query);
+        }
+
+        // Seed initial 4 forms (2 per enrollment).
+        var firstFormA = await OpenSavedAndQueriedFormAsync(subjA, 1);
+        await OpenSavedAndQueriedFormAsync(subjA, 2);
+        await OpenSavedAndQueriedFormAsync(subjB, 3);
+        await OpenSavedAndQueriedFormAsync(subjB, 4);
+
+        // Warm up host caches/JIT once before recording exact SQL counts.
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}", null, null, HttpStatusCode.OK, ct))
+            .Should().HaveCount(4);
+
+        IReadOnlyList<string> sql4Forms;
+        using (var reads4 = ProtocolDesignDocument.MeasureReads())
+        {
+            _sql.Reset();
+            var list4 = await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}", null, null, HttpStatusCode.OK, ct);
+            sql4Forms = _sql.Snapshot();
+            list4.Should().HaveCount(4);
+            reads4.Count.Should().Be(0);
+        }
+
+        sql4Forms.Count(s => s.Contains("FROM kernel.collection_instances", StringComparison.Ordinal) || s.Contains("FROM \"kernel\".\"collection_instances\"", StringComparison.Ordinal)).Should().Be(1);
+        sql4Forms.Count(s => s.Contains("FROM kernel.observations", StringComparison.Ordinal) || s.Contains("FROM \"kernel\".\"observations\"", StringComparison.Ordinal)).Should().Be(1);
+        sql4Forms.Count(s => !s.StartsWith("SELECT DISTINCT ON (o.id)", StringComparison.Ordinal) && s.Contains("FROM kernel.protocol_versions", StringComparison.Ordinal)).Should().Be(0);
+        sql4Forms.Count(s => s.Contains("attestations", StringComparison.Ordinal)).Should().Be(0);
+
+        // Add 16 more forms (total 20 forms: 10 on enrA, 10 on enrB) and verify SQL count stays strictly constant!
+        for (var i = 5; i <= 12; i++)
+        {
+            await OpenSavedAndQueriedFormAsync(subjA, i);
+        }
+
+        for (var i = 13; i <= 20; i++)
+        {
+            await OpenSavedAndQueriedFormAsync(subjB, i);
+        }
+
+        IReadOnlyList<string> sql20Forms;
+        using (var reads20 = ProtocolDesignDocument.MeasureReads())
+        {
+            _sql.Reset();
+            var list20 = await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}", null, null, HttpStatusCode.OK, ct);
+            sql20Forms = _sql.Snapshot();
+            list20.Should().HaveCount(20);
+            reads20.Count.Should().Be(0);
+        }
+
+        sql20Forms.Count.Should().Be(sql4Forms.Count, "study worklist SQL count is O(1) with respect to form count");
+        sql20Forms.Count(s => s.Contains("FROM kernel.collection_instances", StringComparison.Ordinal) || s.Contains("FROM \"kernel\".\"collection_instances\"", StringComparison.Ordinal)).Should().Be(1);
+        sql20Forms.Count(s => s.Contains("FROM kernel.observations", StringComparison.Ordinal) || s.Contains("FROM \"kernel\".\"observations\"", StringComparison.Ordinal)).Should().Be(1);
+        sql20Forms.Count(s => !s.StartsWith("SELECT DISTINCT ON (o.id)", StringComparison.Ordinal) && s.Contains("FROM kernel.protocol_versions", StringComparison.Ordinal)).Should().Be(0);
+
+        // Pre-filtering visible enrollments by site or participant short-circuits before touching form_queries or collection_instances.
+        foreach (var emptyFilter in new[] { "site=SITE-MISSING", "participant=SUBJ-MISSING" })
+        {
+            using var filterReads = ProtocolDesignDocument.MeasureReads();
+            _sql.Reset();
+            var emptyResult = await SendAsync<FormQueryResponse[]>(
+                monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&{emptyFilter}", null, null, HttpStatusCode.OK, ct);
+            var filterSql = _sql.Snapshot();
+            emptyResult.Should().BeEmpty();
+            filterReads.Count.Should().Be(0);
+            filterSql.Count(s => s.Contains("form_queries", StringComparison.Ordinal)).Should().Be(0);
+            filterSql.Count(s => s.Contains("collection_instances", StringComparison.Ordinal)).Should().Be(0);
+        }
+
+        // Enrollment query list across 10 forms batches headers, revisions, and site/enrollment navigation with 0 protocol parses.
+        using (var enrReads = ProtocolDesignDocument.MeasureReads())
+        {
+            _sql.Reset();
+            var enrList = await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?enrollment_id={enrA.Value:D}", null, null, HttpStatusCode.OK, ct);
+            var enrSql = _sql.Snapshot();
+            enrList.Should().HaveCount(10);
+            enrList.Should().OnlyContain(q => q.SiteCode == "SITE-BA" && q.SubjectCode == "SUBJ-BA1" && q.CollectionSpecId == SpecId);
+            enrReads.Count.Should().Be(0);
+            enrSql.Count(s => s.Contains("FROM kernel.collection_instances", StringComparison.Ordinal) || s.Contains("FROM \"kernel\".\"collection_instances\"", StringComparison.Ordinal)).Should().Be(1);
+            enrSql.Count(s => s.Contains("FROM kernel.observations", StringComparison.Ordinal) || s.Contains("FROM \"kernel\".\"observations\"", StringComparison.Ordinal)).Should().Be(1);
+            enrSql.Count(s => !s.StartsWith("SELECT DISTINCT ON (o.id)", StringComparison.Ordinal) && s.Contains("FROM kernel.protocol_versions", StringComparison.Ordinal)).Should().Be(0);
+        }
+
+        // StepAsync (answer, reopen, close) parses ProtocolDesignDocument zero times per request.
+        using (var stepReads = ProtocolDesignDocument.MeasureReads())
+        {
+            _sql.Reset();
+            var answered = await SendAsync<FormQueryResponse>(
+                crc, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/answer", "Confirmed on chart", new { text = "Matches source" }, HttpStatusCode.OK, ct);
+            answered.Status.Should().Be("answered");
+
+            var reopened = await SendAsync<FormQueryResponse>(
+                monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/reopen", "Re-check", new { text = "Please double-check cuff log" }, HttpStatusCode.OK, ct);
+            reopened.Status.Should().Be("open");
+
+            await SendAsync<FormQueryResponse>(
+                crc, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/answer", "Re-confirmed", new { text = "Verified cuff log" }, HttpStatusCode.OK, ct);
+
+            var closed = await SendAsync<FormQueryResponse>(
+                monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/close", "Accepted", new { text = "Closed after SDV" }, HttpStatusCode.OK, ct);
+            closed.Status.Should().Be("closed");
+
+            var stepSql = _sql.Snapshot();
+            stepReads.Count.Should().Be(0, "StepAsync never parses ProtocolDesignDocument");
+            stepSql.Count(s => !s.StartsWith("SELECT DISTINCT ON (o.id)", StringComparison.Ordinal) && s.Contains("FROM kernel.protocol_versions", StringComparison.Ordinal)).Should().Be(0);
+            stepSql.Count(s => s.Contains("attestations", StringComparison.Ordinal)).Should().Be(0);
+        }
+
+        // Blank-item RaiseAsync parses governing protocol content at most once per request.
+        using var blankReads = ProtocolDesignDocument.MeasureReads();
+        _sql.Reset();
+        var blankRaised = await SendAsync<FormQueryResponse>(
+            monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries", "Missing diastolic", new
+            {
+                item_id = Diastolic,
+                text = "Please enter diastolic BP or reason not done.",
+            }, HttpStatusCode.Created, ct);
+        blankRaised.ItemId.Should().Be(Diastolic);
+        blankReads.Count.Should().Be(1, "blank-item RaiseAsync parses ProtocolDesignDocument only inside RecordUnaskedCollectionItemHandler");
+    }
+
     private static async Task ExpectDeniedAsync(HttpClient client, HttpMethod method, string path, object? body, CancellationToken ct)
     {
         using var denied = await client.SendAsync(Request(method, path, "Attempted step", body), ct);
@@ -1092,6 +1293,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             .UseTestGatewaySecret()
             .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
+            .ConfigureLogging(logging => logging.AddProvider(_sql))
 
             // Every error a query endpoint returns must be one its command declares (ADR-2600 §4.5).
             .ConfigureTestServices(services =>
@@ -1104,6 +1306,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
                     ActivityInterval = TimeSpan.FromHours(1),
                 });
             }));
+        _host.Server.PreserveExecutionContext = true;
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 
@@ -1154,8 +1357,8 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         {
             ("execution-forms", new[] { "execution.form.open" }),
             ("execution-queries", new[] { "observation.query", "observation.query.answer", "assertion.retract" }),
-            (AlertMonitorOnVerifiedObservationCorrected.Name, new[] { "execution.query.manage" }),
             (EvaluateEditChecksOnCollectionChanged.Name, new[] { "validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage" }),
+            (AlertMonitorOnVerifiedObservationCorrected.Name, new[] { "execution.query.manage" }),
             (FormQueryEscalationHostedService.ServiceAccountName, new[] { "execution.query.manage" }),
         })
         {
@@ -1392,5 +1595,72 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }
 
         return new BlindedMultiSiteWorld(code, tenant, study, siteA, siteB, openedA.CollectionInstanceId.Value, sbpObs, armObs, blindedItem);
+    }
+
+    private sealed class SqlCommandCollector : ILoggerProvider
+    {
+        private readonly AsyncLocal<ConcurrentQueue<string>?> _activeCommands = new();
+
+        public void Reset() => _activeCommands.Value = new ConcurrentQueue<string>();
+
+        public IReadOnlyList<string> Snapshot() => _activeCommands.Value is { } active ? [.. active] : [];
+
+        public ILogger CreateLogger(string categoryName) =>
+            string.Equals(categoryName, DbLoggerCategory.Database.Command.Name, StringComparison.Ordinal)
+                ? new CommandLogger(_activeCommands)
+                : NullLogger.Instance;
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class CommandLogger(AsyncLocal<ConcurrentQueue<string>?> activeCommands) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (activeCommands.Value is not { } commands
+                    || eventId.Id != 20101
+                    || state is not IReadOnlyList<KeyValuePair<string, object?>> fields)
+                {
+                    return;
+                }
+
+                foreach (var (key, value) in fields)
+                {
+                    if (string.Equals(key, "commandText", StringComparison.Ordinal) && value is string sql)
+                    {
+                        commands.Enqueue(sql);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private sealed class NullLogger : ILogger
+        {
+            public static readonly NullLogger Instance = new();
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => false;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+            }
+        }
     }
 }

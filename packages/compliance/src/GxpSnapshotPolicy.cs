@@ -14,6 +14,18 @@ public static class GxpSnapshotPolicy
     /// <summary>Set to <c>1</c> while taking and committing a snapshot; the snapshot guard then admits the documents.</summary>
     public const string SnapshotEnvironmentVariable = "CADENCE_GXP_SNAPSHOT";
 
+    /// <summary>Git commit trailer key required on snapshot commits so CI can verify authorized snapshot provenance.</summary>
+    public const string SnapshotTrailerKey = "Gxp-Snapshot";
+
+    /// <summary>Git commit trailer value written by <c>cadence gxp snapshot --commit</c>.</summary>
+    public const string SnapshotTrailerValue = "refreshed";
+
+    /// <summary>Canonical Git commit trailer required for CI snapshot authorization.</summary>
+    public const string SnapshotTrailer = "Gxp-Snapshot: refreshed";
+
+    /// <summary>Default commit subject written by <c>cadence gxp snapshot --commit</c>.</summary>
+    public const string SnapshotCommitSubject = "docs(rtm): take the GxP snapshot from the integrated candidate";
+
     /// <summary>The generated documents, relative to the repository root.</summary>
     public static readonly IReadOnlyList<string> Documents =
     [
