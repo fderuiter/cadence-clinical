@@ -62,7 +62,7 @@ public static partial class DeidComplianceService
     private static readonly HashSet<string> ExcludedFileNames = new(StringComparer.Ordinal)
     {
         "package.json", "pyproject.toml", "pnpm-workspace.yaml", "pnpm-lock.yaml", "uv.lock", ".secrets.baseline",
-        ".deid-baseline.txt", "eslint.config.mjs",
+        ".deid-baseline.txt", ".duplication-baseline.txt", "eslint.config.mjs",
     };
 
     private static readonly string[] ApprovedSyntheticEmailDomains =

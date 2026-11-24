@@ -51,16 +51,18 @@ const showBanner = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 16px;
+  gap: 4px 16px;
   background-color: var(--semantic-color-warning-bg);
   color: var(--semantic-color-warning);
   border-bottom: 1px solid var(--semantic-color-warning);
-  padding: 6px 16px;
+  padding: 4px 16px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.35;
 }
 
 .demo-mode-banner-copy {
+  flex: 1 1 360px;
   margin: 0;
   text-align: left;
 }

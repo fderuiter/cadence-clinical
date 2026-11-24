@@ -79,7 +79,7 @@ onMounted(() => {
     >
       <button
         type="button"
-        class="blog-tag-pill"
+        class="blog-tag-pill tabular-nums"
         :class="{ active: selectedTag === 'all' }"
         :aria-pressed="selectedTag === 'all'"
         @click="selectTag('all')"

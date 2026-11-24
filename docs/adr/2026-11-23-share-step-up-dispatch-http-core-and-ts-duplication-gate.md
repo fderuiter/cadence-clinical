@@ -1,4 +1,4 @@
-# ADR-2661: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement
+# ADR-2671: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -23,7 +23,7 @@ Following the extraction of `buildStepUpVerificationPayload` and `SEMANTIC_ACTIO
 
 ### Option 1: Centralize Step-Up Dispatch in `ui`, Unify Web HTTP Retry/`ApiError` Plumbing, and Enforce Hand-Written `.ts` Duplication Checks (Selected)
 
-- **Overview:** Add `STEP_UP_VERIFICATION_PATH`, `resolveDefaultSemanticAction`, and `requestStepUpSignature` to `packages/ui/signing.js` (re-exported from `packages/ui/index.js` and `index.d.ts`); add thin app adapters in `apps/web/src/api/signatureVerification.ts` and `apps/subject-portal/src/api/signatureVerification.js` and route all 8 live callers through them; delete unused `econsentService.verifySignature` and `apps/web/src/services/api.js`; decouple `SignatureCaptureModal.vue` and `ProtocolTrainingConsole.vue` from `etmfService` and `soaClient` and reuse `sha256` from `"ui"` in `signatureBinding.ts`; unify `ApiError` in `apps/web/src/utils/apiErrors.js` and `fetchWithSingleFlightRetry` in `apps/web/src/api/authorization.js`; deduplicate existing TypeScript clones in `clinicalUsdm.ts`/`demoHandlers.js` and `palette.ts`/`onboarding.js`; and extend `DuplicationDetectorService` and `QualityGates` to scan and enforce hand-written `.ts` files.
+- **Overview:** Add `STEP_UP_VERIFICATION_PATH`, `resolveDefaultSemanticAction`, and `requestStepUpSignature` to `packages/ui/signing.js` (re-exported from `packages/ui/index.js` and `index.d.ts`); add thin app adapters in `apps/web/src/api/signatureVerification.ts` and `apps/subject-portal/src/api/signatureVerification.js` and route all 8 live callers through them; delete unused `econsentService.verifySignature` and `apps/web/src/services/api.js`; decouple `SignatureCaptureModal.vue` and `ProtocolTrainingConsole.vue` from `etmfService` and `soaClient` and reuse `sha256` from `"ui"` in `signatureBinding.ts`; unify `ApiError` in `apps/web/src/utils/apiErrors.js` and `fetchWithSingleFlightRetry` in `apps/web/src/api/authorization.js` (consumed across `client.ts`, `apiClient.js`, `kernel/shared.ts`, `kernel/protocolImport.ts`, `ingestionClient.ts`, and `ctmsApi.ts`); deduplicate existing TypeScript clones across `palette.ts` and `onboardingSummary.js`/`onboarding.js`; and extend `DuplicationDetectorService` and `QualityGates` to scan and enforce hand-written `.ts` files.
 - **Pros:**
   - ✅ Routes every clinician and participant step-up verification call through one shared primitive without changing public domain client signatures or ticket pass-through behavior.
   - ✅ Consolidates `ApiError` (`instanceof` parity), gateway base-URL resolution, and single-flight `401` token refresh across OpenAPI, legacy JSON, streaming download, and `FormData` upload paths.

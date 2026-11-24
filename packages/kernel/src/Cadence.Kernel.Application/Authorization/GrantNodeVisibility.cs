@@ -256,6 +256,74 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
         return distinct.Where(node => !masked.ContainsKey(node)).ToHashSet();
     }
 
+    /// <inheritdoc />
+    public async ValueTask<bool> CoversScopeAsync(
+        TenantId tenant,
+        Actor reader,
+        NodeRef scope,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        var agent = reader.Kind == ActorKind.AutomationAgent;
+        if ((agent && reader.RequestedBy is null) || (!agent && reader.RequestedBy is not null))
+        {
+            return false;
+        }
+
+        var now = clock.UtcNow;
+        var readerHeld = await store.GrantsHeldAsync(tenant, reader.AsIdentity(), cancellationToken).ConfigureAwait(false);
+        var readerCandidates = readerHeld.Where(g => g.IsInEffect(now, now)).ToList();
+        if (readerCandidates.Count == 0)
+        {
+            return false;
+        }
+
+        List<Grant>? requesterCandidates = null;
+        if (agent && reader.RequestedBy is { } person)
+        {
+            var requesterHeld = await store.GrantsHeldAsync(tenant, person, cancellationToken).ConfigureAwait(false);
+            requesterCandidates = requesterHeld.Where(g => g.IsInEffect(now, now)).ToList();
+            if (requesterCandidates.Count == 0)
+            {
+                return false;
+            }
+        }
+
+        IReadOnlyList<Grant> chainCandidates = requesterCandidates is null
+            ? readerCandidates
+            : [.. readerCandidates, .. requesterCandidates];
+        var inEffect = await GrantChain.FilterInEffectAsync(store, tenant, chainCandidates, now, now, cancellationToken).ConfigureAwait(false);
+        var readerInEffect = readerCandidates.Where(g => inEffect.Contains(g.Id)).ToList();
+        if (readerInEffect.Count == 0)
+        {
+            return false;
+        }
+
+        var requesterInEffect = requesterCandidates?.Where(g => inEffect.Contains(g.Id)).ToList();
+        if (requesterInEffect is { Count: 0 })
+        {
+            return false;
+        }
+
+        var target = scope.Unversioned();
+        if (target.Kind == NodeKinds.Tenant)
+        {
+            return target.Id == tenant.Value
+                && readerInEffect.Exists(g => g.Scope.Level == ScopeLevel.Tenant)
+                && (requesterInEffect is null || requesterInEffect.Exists(g => g.Scope.Level == ScopeLevel.Tenant));
+        }
+
+        var path = await store.PathOfAsync(tenant, target, cancellationToken).ConfigureAwait(false);
+        if (path == ScopePath.TenantWide)
+        {
+            return false;
+        }
+
+        var readerCovers = readerInEffect.Exists(g => g.Scope.Covers(path));
+        var requesterCovers = requesterInEffect is null || requesterInEffect.Exists(g => g.Scope.Covers(path));
+        return readerCovers && requesterCovers;
+    }
+
     /// <summary>True when <paramref name="path"/> is on the way from the tenant down to <paramref name="below"/>, or is it.</summary>
     public static bool IsAtOrAbove(ScopePath path, ScopePath below)
     {

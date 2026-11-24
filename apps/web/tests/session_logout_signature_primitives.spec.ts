@@ -8,8 +8,10 @@ import {
   createOpenApiClient,
   unwrapResponse,
 } from "../src/api/client";
+import { ctmsApi } from "../src/api/ctmsApi";
 import { ecrfFormsApi, type EcrfForm } from "../src/api/ecrfFormsApi";
 import { ingestionClient } from "../src/api/ingestionClient";
+import { executeProtocolDraftImport } from "../src/api/kernel/protocolImport";
 import { streamKernelDownload } from "../src/api/kernel/shared";
 import { kernelApi } from "../src/api/kernelApi";
 import { ApiError, ensureOk } from "../src/utils/apiErrors";
@@ -230,6 +232,21 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
             { status: 200, headers: { "Content-Type": "application/json" } }
           );
         }
+        if (url.includes("/protocol-imports")) {
+          return new Response(
+            JSON.stringify({
+              version_ref: "pv-401-recovered",
+              status: "DRAFT",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        if (url.includes("/api/v1/ctms/letters/")) {
+          return new Response("%PDF-1.4 mock", {
+            status: 200,
+            headers: { "Content-Type": "application/pdf" },
+          });
+        }
         return new Response("col1,col2\n1,2\n", {
           status: 200,
           headers: {
@@ -247,6 +264,13 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
       "fallback.csv"
     );
     const uploadPromise = ingestionClient.uploadProtocol(file);
+    const protocolImportPromise = executeProtocolDraftImport({
+      studyRef: "CAD-101",
+      file,
+      reason: "Import draft protocol",
+      idempotencyKey: "idem-proto-import-401",
+    });
+    const letterPdfPromise = ctmsApi.downloadVisitLetterPdf("letter-101");
 
     await vi.waitFor(() => {
       expect(refreshResolver).toBeTypeOf("function");
@@ -258,9 +282,11 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
     expect(forcedRefreshCalls).toHaveLength(1);
 
     refreshResolver!();
-    const [downloaded, uploaded] = await Promise.all([
+    const [downloaded, uploaded, importedDraft, letterPdf] = await Promise.all([
       downloadPromise,
       uploadPromise,
+      protocolImportPromise,
+      letterPdfPromise,
     ]);
 
     expect(downloaded.filename).toBe("export.csv");
@@ -268,6 +294,11 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
       id: "cand-401-recovered",
       status: "PENDING_REVIEW",
     });
+    expect(importedDraft).toEqual({
+      version_ref: "pv-401-recovered",
+      status: "DRAFT",
+    });
+    expect(letterPdf.size).toBeGreaterThan(0);
 
     // Verify all gateway failure paths throw instances of the single shared ApiError class
     fetchSpy.mockImplementation(
@@ -294,6 +325,14 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
       () => unwrapResponse(typedClient.GET("/api/v1/kernel/studies")),
       () => streamKernelDownload("/api/v1/kernel/export", "export.csv"),
       () => ingestionClient.uploadProtocol(file),
+      () =>
+        executeProtocolDraftImport({
+          studyRef: "CAD-101",
+          file,
+          reason: "Import draft protocol",
+          idempotencyKey: "idem-proto-import-403",
+        }),
+      () => ctmsApi.downloadVisitLetterPdf("letter-101"),
       () =>
         ensureOk(
           new Response(JSON.stringify({ detail: "Bad request" }), {

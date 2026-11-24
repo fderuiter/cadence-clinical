@@ -15,20 +15,14 @@ function eagerDemoWorkspacesForVitest() {
       const cleanId = id.split("?", 1)[0].replaceAll("\\", "/");
       if (
         !cleanId.endsWith("/src/views/EcrfView.vue") &&
-        !cleanId.endsWith("/src/views/CtmsView.vue") &&
-        !cleanId.endsWith("/src/components/AppShell.vue")
+        !cleanId.endsWith("/src/views/CtmsView.vue")
       ) {
         return null;
       }
-      const next = code
-        .replace(
-          /const\s+(EcrfDemoWorkspace|CtmsDemoWorkspace)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["']\.\/demo\/(?:Ecrf|Ctms)DemoWorkspace\.vue["'])\)\s*,?\s*\);?/g,
-          "import $1 from $2;"
-        )
-        .replace(
-          /const\s+(OnboardingTour)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["']\.\/OnboardingTour\.vue["'])\)\s*,?\s*\);?/g,
-          "import $1 from $2;"
-        );
+      const next = code.replace(
+        /const\s+(EcrfDemoWorkspace|CtmsDemoWorkspace)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["']\.\/demo\/(?:Ecrf|Ctms)DemoWorkspace\.vue["'])\)\s*,?\s*\);?/g,
+        "import $1 from $2;"
+      );
       return next === code ? null : { code: next, map: null };
     },
   };

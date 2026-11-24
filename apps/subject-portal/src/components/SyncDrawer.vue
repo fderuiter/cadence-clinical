@@ -48,7 +48,7 @@
             sync.syncRetryInfo.remainingSeconds > 0
           "
           id="sync-drawer-retry-countdown"
-          class="retry-countdown-banner"
+          class="retry-countdown-banner tabular-nums"
           aria-live="polite"
         >
           Next automatic retry in
