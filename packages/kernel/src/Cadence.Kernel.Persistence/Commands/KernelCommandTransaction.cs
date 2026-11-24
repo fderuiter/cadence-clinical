@@ -15,11 +15,13 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
@@ -88,6 +90,7 @@ internal sealed class KernelCommandTransaction(
     private CollectionInstanceId? _collection;
     private long? _lockKey;
     private bool _scopeLocked;
+    private NodeRef? _lockedScope;
     private readonly List<long> _sharedKeys = [];
     private bool _connectionHeld;
     private AuthorizationDecision? _permit;
@@ -186,6 +189,7 @@ internal sealed class KernelCommandTransaction(
     {
         await LockExclusiveAsync(ScopeLockKey(Command.TenantId, scope), cancellationToken).ConfigureAwait(false);
         _scopeLocked = true;
+        _lockedScope = scope;
     }
 
     private async Task LockExclusiveAsync(long key, CancellationToken cancellationToken)
@@ -390,6 +394,31 @@ internal sealed class KernelCommandTransaction(
             }
 
             Fault(CommitStage.ModuleWritten);
+
+            if (IsStudyLockedProtocolImport(out _))
+            {
+                foreach (var reopened in db.ChangeTracker.Entries<ProtocolVersion>()
+                    .Where(e => e.State == EntityState.Modified
+                        && (ProtocolVersionStatus)e.Property(nameof(ProtocolVersion.Status)).OriginalValue! == ProtocolVersionStatus.InReview
+                        && e.Entity.Status == ProtocolVersionStatus.Draft))
+                {
+                    var schema = SqlIdentifier.Quote(db.Model.FindEntityType(typeof(ProtocolVersion))?.GetSchema() ?? "kernel");
+                    var reopenSql = string.Concat(
+                        "UPDATE ",
+                        schema,
+                        ".protocol_versions SET status = 'Draft', content_hash = NULL WHERE tenant_id = {0} AND id = {1} AND version_index = {2} AND status = 'InReview'");
+                    var originalVersionIndex = (long)reopened.Property(nameof(AggregateRootBase.VersionIndex)).OriginalValue!;
+                    var stepped = await db.Database.ExecuteSqlRawAsync(
+                        reopenSql,
+                        [Command.TenantId.Value, reopened.Entity.Id.Value, originalVersionIndex],
+                        cancellationToken).ConfigureAwait(false);
+                    if (stepped != 1)
+                    {
+                        await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+                        return CommitOutcome.ConcurrencyConflict;
+                    }
+                }
+            }
 
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             Fault(CommitStage.Saved);
@@ -652,6 +681,23 @@ internal sealed class KernelCommandTransaction(
             return;
         }
 
+        if (IsStudyLockedProtocolImport(out var importDraft))
+        {
+            var isTargetVersion = type == typeof(ProtocolVersion)
+                && key == KeyText(importDraft.TargetVersionId)
+                && !_claimed.Any(c => c.Type == typeof(ProtocolVersion) && c.Key != key);
+            var isStagedConcept = type == typeof(Concept)
+                && importDraft.StagedConcepts.Any(c => KeyText(c.ConceptId) == key);
+            if (!isTargetVersion && !isStagedConcept)
+            {
+                throw new InvalidOperationException(
+                    $"K-TX-1: {execution.CommandType} under study scope lock {_lockedScope} may change only protocol version {importDraft.TargetVersionId} and its staged concepts, not {type.Name} {key}.");
+            }
+
+            _claimed.Add((type, key));
+            return;
+        }
+
         if (type == typeof(FormVersionSnapshot)
             && _claimed.All(c => c.Type == typeof(ProtocolVersion) || c.Type == typeof(FormVersionSnapshot))
             && _claimed.Count(c => c.Type == typeof(ProtocolVersion)) == 1)
@@ -682,7 +728,11 @@ internal sealed class KernelCommandTransaction(
             .Concat(_modules.SelectMany(m => m.Context.ChangeTracker.Entries<AggregateRootBase>().Select(e => (Entry: e, Module: (string?)m.Store.Module))))
             .Where(e => e.Entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
             .ToList();
-        if (changed.Count > 1)
+        if (IsStudyLockedProtocolImport(out var importDraft))
+        {
+            changed = OrderProtocolDraftImport(changed, importDraft);
+        }
+        else if (changed.Count > 1)
         {
             if (_scopeLocked)
             {
@@ -699,6 +749,58 @@ internal sealed class KernelCommandTransaction(
         }
 
         return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
+    }
+
+    private bool IsStudyLockedProtocolImport(out ImportProtocolDraft importDraft)
+    {
+        if (Command is ImportProtocolDraft cmd
+            && _scopeLocked
+            && _lockedScope is { Kind: NodeKinds.Study } scope
+            && scope.Id == cmd.StudyId.Value)
+        {
+            importDraft = cmd;
+            return true;
+        }
+
+        importDraft = null!;
+        return false;
+    }
+
+    /// <summary>
+    /// Orders the aggregates of an atomic protocol draft import under a study scope lock: the target
+    /// <see cref="ProtocolVersion"/> first, followed by newly added <see cref="Concept"/> records by id.
+    /// </summary>
+    private List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderProtocolDraftImport(
+        List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed,
+        ImportProtocolDraft importDraft)
+    {
+        if (changed.Count == 0)
+        {
+            return changed;
+        }
+
+        var protocolEntries = changed
+            .Where(c => c.Module is null
+                && c.Entry.State is EntityState.Added or EntityState.Modified
+                && c.Entry.Entity is ProtocolVersion pv
+                && pv.Id == importDraft.TargetVersionId
+                && pv.StudyId == importDraft.StudyId)
+            .ToList();
+        var allowedConcepts = importDraft.StagedConcepts.Select(c => c.ConceptId).ToHashSet();
+        var conceptEntries = changed
+            .Where(c => c.Module is null
+                && c.Entry.State == EntityState.Added
+                && c.Entry.Entity is Concept concept
+                && allowedConcepts.Contains(concept.Id))
+            .OrderBy(c => ((Concept)c.Entry.Entity).Id.Value)
+            .ToList();
+        if (protocolEntries.Count != 1 || conceptEntries.Count != changed.Count - 1)
+        {
+            throw new InvalidOperationException(
+                $"K-TX-1: {execution.CommandType} under a study scope lock may write only one target ProtocolVersion and its newly added Concept records.");
+        }
+
+        return [protocolEntries[0], .. conceptEntries];
     }
 
     /// <summary>

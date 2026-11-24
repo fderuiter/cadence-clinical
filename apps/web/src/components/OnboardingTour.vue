@@ -111,11 +111,13 @@ import {
   useFocusTrap,
   useInlineFocusHandoff,
 } from "ui";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
@@ -145,6 +147,7 @@ const emit = defineEmits(["update:activeTab"]);
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const canvasStore = useStudyCanvasStore();
 let router;
 let route;
 
@@ -437,9 +440,40 @@ async function syncStepRoute() {
         return;
       }
       if (route.name !== targetRouteName) {
+        const scope = resolveActiveWorkspaceScope(route, canvasStore);
         const query = config.query
           ? { ...route.query, ...config.query }
           : { ...route.query };
+        if (targetRouteName === "study") {
+          delete query.studyId;
+          delete query.siteId;
+          if (scope.siteId && !query.site) {
+            query.site = scope.siteId;
+          }
+          if (scope.studyCode) {
+            await router.push({
+              name: targetRouteName,
+              params: { studyCode: scope.studyCode },
+              query,
+            });
+            return;
+          }
+        } else if (
+          targetRouteName === "ecrf" ||
+          targetRouteName === "ctms" ||
+          targetRouteName === "ssu" ||
+          targetRouteName === "training" ||
+          targetRouteName === "tickets" ||
+          targetRouteName === "etmf"
+        ) {
+          delete query.site;
+          if (scope.studyCode && !query.studyId) {
+            query.studyId = scope.studyCode;
+          }
+          if (scope.siteId && !query.siteId) {
+            query.siteId = scope.siteId;
+          }
+        }
         await router.push({ name: targetRouteName, query });
         return;
       }
