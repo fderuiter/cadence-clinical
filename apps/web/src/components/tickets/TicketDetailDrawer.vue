@@ -843,28 +843,27 @@ import {
 } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
-import { useAuthStore, normalizeRole } from "../../stores/auth";
+import { useAuthStore } from "../../stores/auth";
+import { normalizeBackendRole } from "../../canvas/authority/roles";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { useTicketMutationPermission } from "../../utils/ticketPermissions";
 
 const SITE_PERSONAS = new Set(["site_crc", "site_investigator"]);
-const SPONSOR_ROLES = new Set([
-  "sponsor_admin",
+const SPONSOR_COMMENT_CAPABLE_ROLES = new Set([
+  "sysadmin",
   "sponsor_designer",
-  "data_manager",
+  "sponsor_dm",
+  "sponsor_mm",
+  "sponsor_statistician",
   "cra",
   "monitor",
-  "safety_reviewer",
-  "safety_officer",
-  "sponsor_mm",
+  "external_monitor",
+  "protocol_reviewer",
+  "finance_officer",
   "auditor",
-  "tmf_auditor",
-]);
-const SITE_ONLY_ROLES = new Set([
-  "crc",
-  "site_investigator",
-  "principal_investigator",
-  "investigator",
+  "unblinded_statistician",
+  "idmc",
+  "emergency_unblinder",
 ]);
 
 const props = defineProps({
@@ -919,22 +918,16 @@ const resolveForm = reactive({
 });
 
 const normalizedCallerRoles = computed(() =>
-  (authStore.rawRoles || []).map(normalizeRole).filter(Boolean)
+  (authStore.rawRoles || []).map(normalizeBackendRole).filter(Boolean)
 );
 
 const canViewInternalSponsorNotes = computed(() => {
   if (authStore.currentPersona && SITE_PERSONAS.has(authStore.currentPersona)) {
     return false;
   }
-  const roles = normalizedCallerRoles.value;
-  if (
-    roles.length > 0 &&
-    !roles.some((r) => SPONSOR_ROLES.has(r)) &&
-    roles.some((r) => SITE_ONLY_ROLES.has(r))
-  ) {
-    return false;
-  }
-  return true;
+  return normalizedCallerRoles.value.some((r) =>
+    SPONSOR_COMMENT_CAPABLE_ROLES.has(r)
+  );
 });
 
 const { canMutateTicket } = useTicketMutationPermission(authStore);

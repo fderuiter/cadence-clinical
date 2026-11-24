@@ -165,8 +165,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { getActivePinia } from "pinia";
+import { computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Rocket, X } from "lucide-vue-next";
 import { ClinicalDrawer } from "ui";
@@ -179,15 +178,40 @@ import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
+import { resolveStorePinia } from "../stores/onboardingSummary.js";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { getLoadedStudyCanvasStore } from "../stores/studyScopeBridge";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
+const props = defineProps({
+  openOnMount: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["mounted-open"]);
+
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
-const activeCanvasStore = computed(() =>
-  getLoadedStudyCanvasStore(getActivePinia())
+const activeCanvasStore = computed(() => {
+  const pinia = resolveStorePinia(authStore);
+  const rawState = pinia?.state?.value?.studyCanvas;
+  return getLoadedStudyCanvasStore(pinia) || rawState || null;
+});
+
+watch(
+  () => props.openOnMount,
+  (shouldOpen) => {
+    if (shouldOpen) {
+      if (!onboardingStore.isDrawerOpen) {
+        onboardingStore.openDrawer();
+      }
+      emit("mounted-open");
+    }
+  },
+  { immediate: true }
 );
 const router = useRouter();
 let activeRoute = null;

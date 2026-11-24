@@ -182,19 +182,15 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (normalizedId.includes("vite/preload-helper")) {
+                return "preload-helper";
+              }
               if (
-                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:(?:sharedProps|OptionalTeleport)\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                /\/packages\/ui\/(?:session|callerScope)\.js(?:$|\?)/.test(
                   normalizedId
                 )
               ) {
                 return "ui-shell";
-              }
-              if (
-                /\/apps\/web\/src\/(?:stores\/(?:auth|onboarding|studyScopeBridge|toasts|clinicalScope)|canvas\/(?:palette|nodeRef|lifecycle|stages\/[^/]+|generated\/(?:nodeKinds|participantContracts))|utils\/(?:demoMode|apiErrors|unbackedActions)|router\/availability|catalog\/productCatalog)\.(?:js|ts)(?:$|\?)/.test(
-                  normalizedId
-                )
-              ) {
-                return "app-shell-core";
               }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
@@ -224,13 +220,6 @@ export default defineConfig({
                 pkgPath.startsWith("sortablejs/")
               ) {
                 return "vendor-vuedraggable";
-              }
-              if (
-                pkgPath.startsWith("vue-i18n/") ||
-                pkgPath.startsWith("@intlify/") ||
-                pkgPath.startsWith("openapi-fetch/")
-              ) {
-                return "vendor";
               }
               return undefined;
             },

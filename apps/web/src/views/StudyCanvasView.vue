@@ -1083,6 +1083,7 @@ import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { shouldSuppressUnsavedNavigationGuard } from "../composables/useRouteScopeSync";
 import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   enrollmentIdFromParticipant,
@@ -2935,23 +2936,7 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
 }
 
 function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
-  if (
-    !authStore.isAuthenticated ||
-    authStore.sessionExpired ||
-    authStore.isLoggingOut
-  ) {
-    return true;
-  }
-  if (
-    to &&
-    (to.name === "forbidden" ||
-      to.path === "/forbidden" ||
-      to.name === "login" ||
-      to.path === "/login")
-  ) {
-    return true;
-  }
-  return false;
+  return shouldSuppressUnsavedNavigationGuard(authStore, to);
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {

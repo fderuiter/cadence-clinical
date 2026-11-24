@@ -12,10 +12,12 @@ namespace Cadence.Kernel.Api;
 /// <param name="Meaning">Attestation meaning (defaults to <c>Approved</c>).</param>
 /// <param name="ExpectedContentHash">Optional frozen protocol content hash expected by the signer (21 CFR 11.70).</param>
 /// <param name="AttestationId">Optional caller-assigned attestation UUID; derived deterministically when omitted.</param>
+/// <param name="ReviewAttestationRef">Optional attestation NodeRef (<c>attestation:&lt;uuid&gt;</c>) or UUID of the <c>Reviewed</c> attestation over the matching <c>SimulationReport</c> artifact (K-SIM-5).</param>
 public sealed record KernelApproveProtocolVersionRequest(
     string? Meaning = null,
     string? ExpectedContentHash = null,
-    Guid? AttestationId = null);
+    Guid? AttestationId = null,
+    string? ReviewAttestationRef = null);
 
 /// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/artifacts</c>.</summary>
 /// <param name="Kind">Artifact kind, such as <c>EthicsApproval</c>, <c>RegulatoryApproval</c>, or <c>CtaAcknowledgement</c>.</param>
