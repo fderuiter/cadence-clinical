@@ -142,6 +142,285 @@ public sealed class DicomIngestionServiceTests
         certInDb!.ScrubbedTagsCount.Should().BeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task IngestInstanceAndBatch_IsolateCrossSiteAndCrossSubjectEnvelopes_WhileSharingSameScopeEnvelope()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingScopeIsolationTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        const string sharedRawStudyUid = "1.2.840.113619.2.55.9001"; // deid-ignore: synthetic test DICOM UID
+        byte[] site1Ct = CreateSampleDicomBytesWithStudyAndModality(
+            sharedRawStudyUid,
+            "1.2.840.113619.2.55.9001.1", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9001.1.1", // deid-ignore: synthetic test DICOM UID
+            "CT");
+        byte[] site2Mr = CreateSampleDicomBytesWithStudyAndModality(
+            sharedRawStudyUid,
+            "1.2.840.113619.2.55.9001.1", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9001.1.1", // deid-ignore: synthetic test DICOM UID
+            "MR");
+        byte[] site2Ct = CreateSampleDicomBytesWithStudyAndModality(
+            sharedRawStudyUid,
+            "1.2.840.113619.2.55.9001.2", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9001.2.1", // deid-ignore: synthetic test DICOM UID
+            "CT");
+
+        var site1Single = await service.IngestInstanceAsync(
+            site1Ct,
+            subjectId: "SUBJ-CANARY-01",
+            siteId: "SITE-CANARY-01",
+            studyId: "STUDY-CANARY-01",
+            operatorIdentity: "crc1@site1.org",
+            cancellationToken: ct);
+
+        var site2Batch = await service.IngestBatchAsync(
+            new BatchIngestionRequest(
+                Files: [new BatchFileItem("mr_001.dcm", site2Mr)],
+                SubjectId: "SUBJ-CANARY-02",
+                SiteId: "SITE-CANARY-02",
+                StudyId: "STUDY-CANARY-01",
+                OperatorIdentity: "crc2@site2.org"),
+            ct);
+
+        var site2Single = await service.IngestInstanceAsync(
+            site2Ct,
+            subjectId: "SUBJ-CANARY-02",
+            siteId: "SITE-CANARY-02",
+            studyId: "STUDY-CANARY-01",
+            operatorIdentity: "crc2@site2.org",
+            cancellationToken: ct);
+
+        var site1OtherSubject = await service.IngestInstanceAsync(
+            site1Ct,
+            subjectId: "SUBJ-CANARY-03",
+            siteId: "SITE-CANARY-01",
+            studyId: "STUDY-CANARY-01",
+            operatorIdentity: "crc1@site1.org",
+            cancellationToken: ct);
+
+        site2Batch.AnonymizedStudyUid.Should().NotBe(site1Single.AnonymizedStudyUid);
+        site2Batch.StudyEnvelopeId.Should().NotBe(site1Single.StudyEnvelopeId);
+        site2Single.AnonymizedStudyUid.Should().Be(site2Batch.AnonymizedStudyUid);
+        site2Single.StudyEnvelopeId.Should().Be(site2Batch.StudyEnvelopeId);
+        site1OtherSubject.AnonymizedStudyUid.Should().NotBe(site1Single.AnonymizedStudyUid);
+        site1OtherSubject.StudyEnvelopeId.Should().NotBe(site1Single.StudyEnvelopeId);
+
+        var site1Envelope = await dbContext.ImagingStudyEnvelopes.SingleAsync(s => s.Id == site1Single.StudyEnvelopeId, ct);
+        site1Envelope.InstanceCount.Should().Be(1);
+        site1Envelope.SeriesCount.Should().Be(1);
+        site1Envelope.ModalitiesJson.Should().Be("[\"CT\"]");
+
+        var site2Envelope = await dbContext.ImagingStudyEnvelopes.SingleAsync(s => s.Id == site2Batch.StudyEnvelopeId, ct);
+        site2Envelope.InstanceCount.Should().Be(2);
+        site2Envelope.SeriesCount.Should().Be(2);
+        site2Envelope.ModalitiesJson.Should().Contain("MR").And.Contain("CT");
+    }
+
+    [Theory]
+    [InlineData(null, "SITE-01", "STUDY-01")]
+    [InlineData("", "SITE-01", "STUDY-01")]
+    [InlineData("   ", "SITE-01", "STUDY-01")]
+    [InlineData("SUBJ-01", null, "STUDY-01")]
+    [InlineData("SUBJ-01", "", "STUDY-01")]
+    [InlineData("SUBJ-01", "   ", "STUDY-01")]
+    [InlineData("SUBJ-01", "SITE-01", null)]
+    [InlineData("SUBJ-01", "SITE-01", "")]
+    [InlineData("SUBJ-01", "SITE-01", "   ")]
+    public async Task IngestInstanceAndBatch_ThrowArgumentException_WhenScopeParametersAreBlank(
+        string? subjectId,
+        string? siteId,
+        string? studyId)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingBlankScopeTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        byte[] dicomBytes = CreateSampleDicomBytesWithPhi("90101");
+
+        var singleAct = async () => await service.IngestInstanceAsync(
+            dicomBytes,
+            subjectId: subjectId!,
+            siteId: siteId!,
+            studyId: studyId!,
+            operatorIdentity: "crc@site.org",
+            cancellationToken: ct);
+
+        var batchAct = async () => await service.IngestBatchAsync(
+            new BatchIngestionRequest(
+                Files: [new BatchFileItem("slice.dcm", dicomBytes)],
+                SubjectId: subjectId!,
+                SiteId: siteId!,
+                StudyId: studyId!,
+                OperatorIdentity: "crc@site.org"),
+            ct);
+
+        await singleAct.Should().ThrowAsync<ArgumentException>();
+        await batchAct.Should().ThrowAsync<ArgumentException>();
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("STUDY-OTHER", "SITE-LEG-01", "SUBJ-LEG-01")]
+    [InlineData("STUDY-LEG-01", "SITE-OTHER", "SUBJ-LEG-01")]
+    [InlineData("STUDY-LEG-01", "SITE-LEG-01", "SUBJ-OTHER")]
+    public async Task IngestInstanceAndBatch_RejectPreExistingStudyEnvelopeWithMismatchedOwnership(
+        string existingStudyId,
+        string existingSiteId,
+        string existingSubjectId)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock();
+        var deidentifier = TestDeidentifier();
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingLegacyOwnershipTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        byte[] sample = CreateSampleDicomBytesWithStudyAndModality(
+            "1.2.840.113619.2.55.9100", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9100.1", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9100.1.1", // deid-ignore: synthetic test DICOM UID
+            "CT");
+
+        var expectedDeid = deidentifier.Deidentify(
+            sample,
+            subjectId: "SUBJ-LEG-01",
+            siteId: "SITE-LEG-01",
+            studyId: "STUDY-LEG-01",
+            deidentifiedAt: clock.UtcNow,
+            applyPixelMask: false);
+
+        dbContext.ImagingStudyEnvelopes.Add(new Cadence.Apps.Imaging.Domain.ImagingStudyEnvelope
+        {
+            StudyInstanceUid = expectedDeid.AnonymizedStudyUid,
+            StudyId = existingStudyId,
+            SiteId = existingSiteId,
+            SubjectId = existingSubjectId,
+            ModalitiesJson = "[\"MR\"]",
+            SeriesCount = 1,
+            InstanceCount = 4,
+            CreatedAt = clock.UtcNow,
+            CreatedBy = "legacy.uploader",
+            UpdatedAt = clock.UtcNow
+        });
+        await dbContext.SaveChangesAsync(ct);
+
+        var service = new DicomIngestionService(dbContext, deidentifier, clock);
+
+        var singleAct = async () => await service.IngestInstanceAsync(
+            sample,
+            subjectId: "SUBJ-LEG-01",
+            siteId: "SITE-LEG-01",
+            studyId: "STUDY-LEG-01",
+            operatorIdentity: "crc@site.org",
+            cancellationToken: ct);
+
+        var batchAct = async () => await service.IngestBatchAsync(
+            new BatchIngestionRequest(
+                Files: [new BatchFileItem("slice.dcm", sample)],
+                SubjectId: "SUBJ-LEG-01",
+                SiteId: "SITE-LEG-01",
+                StudyId: "STUDY-LEG-01",
+                OperatorIdentity: "crc@site.org"),
+            ct);
+
+        await singleAct.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*ownership does not match*");
+        await batchAct.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*ownership does not match*");
+
+        var storedEnvelope = await dbContext.ImagingStudyEnvelopes.SingleAsync(ct);
+        storedEnvelope.InstanceCount.Should().Be(4);
+        storedEnvelope.ModalitiesJson.Should().Be("[\"MR\"]");
+        (await dbContext.DeidentificationCertificates.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_GroupsMultiStudyBatchIntoSeparateStudyEnvelopes()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingMultiStudyBatchTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        byte[] studyA = CreateSampleDicomBytesWithStudyAndModality(
+            "1.2.840.113619.2.55.9201", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9201.1", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9201.1.1", // deid-ignore: synthetic test DICOM UID
+            "CT");
+        byte[] studyB = CreateSampleDicomBytesWithStudyAndModality(
+            "1.2.840.113619.2.55.9202", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9202.1", // deid-ignore: synthetic test DICOM UID
+            "1.2.840.113619.2.55.9202.1.1", // deid-ignore: synthetic test DICOM UID
+            "MR");
+
+        var result = await service.IngestBatchAsync(
+            new BatchIngestionRequest(
+                Files:
+                [
+                    new BatchFileItem("studyA_001.dcm", studyA),
+                    new BatchFileItem("studyB_001.dcm", studyB)
+                ],
+                SubjectId: "SUBJ-MULTI-01",
+                SiteId: "SITE-MULTI-01",
+                StudyId: "STUDY-MULTI-01",
+                OperatorIdentity: "crc@site.org"),
+            ct);
+
+        result.IngestedSliceCount.Should().Be(2);
+
+        var envelopes = await dbContext.ImagingStudyEnvelopes.OrderBy(e => e.ModalitiesJson).ToListAsync(ct);
+        envelopes.Should().HaveCount(2);
+        envelopes.Select(e => e.StudyInstanceUid).Distinct().Should().HaveCount(2);
+        envelopes.Should().OnlyContain(e =>
+            e.StudyId == "STUDY-MULTI-01"
+            && e.SiteId == "SITE-MULTI-01"
+            && e.SubjectId == "SUBJ-MULTI-01"
+            && e.InstanceCount == 1);
+    }
+
+    internal static byte[] CreateSampleDicomBytesWithStudyAndModality(
+        string studyInstanceUid,
+        string seriesInstanceUid,
+        string sopInstanceUid,
+        string modality)
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.CTImageStorage },
+            { DicomTag.SOPInstanceUID, sopInstanceUid },
+            { DicomTag.StudyInstanceUID, studyInstanceUid },
+            { DicomTag.SeriesInstanceUID, seriesInstanceUid },
+            { DicomTag.PatientID, "PHI-PATIENT-12345" },
+            { DicomTag.PatientName, "DOE^JOHN^A" },
+            { DicomTag.PatientBirthDate, "19750515" },
+            { DicomTag.Modality, modality },
+            { DicomTag.Rows, (ushort)64 },
+            { DicomTag.Columns, (ushort)64 },
+            { DicomTag.BitsAllocated, (ushort)16 }
+        };
+
+        byte[] pixels = new byte[64 * 64 * 2];
+        dataset.Add(new DicomOtherByte(DicomTag.PixelData, pixels));
+
+        var file = new DicomFile(dataset);
+        using var ms = new MemoryStream();
+        file.Save(ms);
+        return ms.ToArray();
+    }
+
     [Fact(DisplayName = "IngestBatchAsync_ProcessesZipArchiveWithMixedContents")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S6966:Use async method", Justification = "Synchronous ZipArchive stream writing in test setup")]
     public async Task IngestBatchAsync_ProcessesZipArchiveWithMixedContents()

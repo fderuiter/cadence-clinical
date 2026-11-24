@@ -1679,13 +1679,13 @@
       },
       "Ctms_BulkDoaEndorseRequest": {
         "required": [
-          "study_id",
+          "study_code",
           "record_ids",
           "signer_user_id"
         ],
         "type": "object",
         "properties": {
-          "study_id": {
+          "study_code": {
             "type": [
               "null",
               "string"

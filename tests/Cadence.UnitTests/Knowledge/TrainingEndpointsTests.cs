@@ -257,8 +257,8 @@ public class TrainingEndpointsTests
         [
             new Cadence.Apps.Knowledge.Application.CtmsDelegationItemDto(
                 RecordId: "ctms-del-1",
-                Study: Study,
-                Site: "SITE-101",
+                StudyCode: Study,
+                SiteCode: "SITE-101",
                 StaffUserId: "crc.site101",
                 StaffName: "Casey Coordinator",
                 Role: "Clinical Research Coordinator",

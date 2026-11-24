@@ -22,24 +22,24 @@ using Microsoft.Extensions.Options;
 namespace Cadence.Apps.Knowledge.Application;
 
 public sealed record CtmsDelegationItemDto(
-    [property: JsonPropertyName("record_id")] string RecordId,
-    [property: JsonPropertyName("study_id")] string? Study,
-    [property: JsonPropertyName("site_id")] string Site,
-    [property: JsonPropertyName("staff_user_id")] string StaffUserId,
-    [property: JsonPropertyName("staff_name")] string? StaffName,
-    [property: JsonPropertyName("role")] string? Role,
-    [property: JsonPropertyName("task_codes")] List<string>? TaskCodes,
-    [property: JsonPropertyName("duties")] string? Duties,
-    [property: JsonPropertyName("status")] string? Status,
-    [property: JsonPropertyName("is_active")] bool IsActive,
-    [property: JsonPropertyName("signed_off")] bool SignedOff,
-    [property: JsonPropertyName("pi_signature_hash")] string? PiSignatureHash,
-    [property: JsonPropertyName("pi_approved_at")] DateTimeOffset? PiApprovedAt,
-    [property: JsonPropertyName("batch_transaction_id")] string? BatchTransactionId,
-    [property: JsonPropertyName("etmf_document_id")] string? EtmfDocumentId);
+    string RecordId,
+    string? StudyCode,
+    string SiteCode,
+    string StaffUserId,
+    string? StaffName,
+    string? Role,
+    List<string>? TaskCodes,
+    string? Duties,
+    string? Status,
+    bool IsActive,
+    bool SignedOff,
+    string? PiSignatureHash,
+    DateTimeOffset? PiApprovedAt,
+    string? BatchTransactionId,
+    string? EtmfDocumentId);
 
 public sealed record CtmsEndorseBatchRequestDto(
-    [property: JsonPropertyName("study_id")] string? Study,
+    [property: JsonPropertyName("study_code")] string? StudyCode,
     [property: JsonPropertyName("record_ids")] List<string> RecordIds,
     [property: JsonPropertyName("signer_user_id")] string SignerUserId,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
@@ -48,11 +48,11 @@ public sealed record CtmsEndorseBatchRequestDto(
     [property: JsonPropertyName("approved_at")] DateTimeOffset ApprovedAt);
 
 public sealed record CtmsEndorseBatchResponseDto(
-    [property: JsonPropertyName("batch_transaction_id")] string BatchTransactionId,
-    [property: JsonPropertyName("signature_hash")] string SignatureHash,
-    [property: JsonPropertyName("approved_at")] DateTimeOffset ApprovedAt,
-    [property: JsonPropertyName("approved_count")] int ApprovedCount,
-    [property: JsonPropertyName("records")] List<CtmsDelegationItemDto> Records);
+    string BatchTransactionId,
+    string SignatureHash,
+    DateTimeOffset ApprovedAt,
+    int ApprovedCount,
+    List<CtmsDelegationItemDto> Records);
 
 public sealed record CtmsEndorseOutcome(
     bool Succeeded,
@@ -147,8 +147,9 @@ public sealed class HttpCtmsDelegationClient(
             return [];
         }
 
-        var rows = await response.Content.ReadFromJsonAsync<List<CtmsDelegationItemDto>>(cancellationToken: ct);
-        return rows ?? [];
+        using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        return ParseDelegationList(doc.RootElement);
     }
 
     public async Task<CtmsEndorseOutcome> EndorseSignedBatchAsync(
@@ -172,7 +173,9 @@ public sealed class HttpCtmsDelegationClient(
         using HttpResponseMessage response = await client.SendAsync(req, ct);
         if (response.IsSuccessStatusCode)
         {
-            var payload = await response.Content.ReadFromJsonAsync<CtmsEndorseBatchResponseDto>(cancellationToken: ct);
+            using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var payload = ParseEndorseBatchResponse(doc.RootElement);
             return new CtmsEndorseOutcome(true, (int)response.StatusCode, null, payload);
         }
 
@@ -237,4 +240,94 @@ public sealed class HttpCtmsDelegationClient(
             request.Headers.TryAddWithoutValidation(header, value);
         }
     }
+
+    private static List<CtmsDelegationItemDto> ParseDelegationList(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var items = new List<CtmsDelegationItemDto>();
+        foreach (JsonElement row in element.EnumerateArray())
+        {
+            if (row.ValueKind == JsonValueKind.Object)
+            {
+                items.Add(ParseDelegationItem(row));
+            }
+        }
+
+        return items;
+    }
+
+    private static CtmsEndorseBatchResponseDto? ParseEndorseBatchResponse(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        string batchTransactionId = GetString(element, "batch_transaction_id") ?? string.Empty;
+        string signatureHash = GetString(element, "signature_hash") ?? string.Empty;
+        DateTimeOffset approvedAt = GetDateTimeOffset(element, "approved_at") ?? DateTimeOffset.MinValue;
+        int approvedCount = element.TryGetProperty("approved_count", out var countProp) && countProp.TryGetInt32(out int parsedCount)
+            ? parsedCount
+            : 0;
+        List<CtmsDelegationItemDto> records = element.TryGetProperty("records", out var recordsProp)
+            ? ParseDelegationList(recordsProp)
+            : [];
+
+        return new CtmsEndorseBatchResponseDto(
+            batchTransactionId,
+            signatureHash,
+            approvedAt,
+            approvedCount,
+            records);
+    }
+
+    private static CtmsDelegationItemDto ParseDelegationItem(JsonElement row)
+    {
+        List<string>? taskCodes = null;
+        if (row.TryGetProperty("task_codes", out var tasksProp) && tasksProp.ValueKind == JsonValueKind.Array)
+        {
+            taskCodes = [];
+            foreach (JsonElement item in tasksProp.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String && item.GetString() is string code)
+                {
+                    taskCodes.Add(code);
+                }
+            }
+        }
+
+        return new CtmsDelegationItemDto(
+            RecordId: GetString(row, "record_id") ?? string.Empty,
+            StudyCode: GetString(row, "study_id"),
+            SiteCode: GetString(row, "site_id") ?? string.Empty,
+            StaffUserId: GetString(row, "staff_user_id") ?? string.Empty,
+            StaffName: GetString(row, "staff_name"),
+            Role: GetString(row, "role"),
+            TaskCodes: taskCodes,
+            Duties: GetString(row, "duties"),
+            Status: GetString(row, "status"),
+            IsActive: GetBool(row, "is_active"),
+            SignedOff: GetBool(row, "signed_off"),
+            PiSignatureHash: GetString(row, "pi_signature_hash"),
+            PiApprovedAt: GetDateTimeOffset(row, "pi_approved_at"),
+            BatchTransactionId: GetString(row, "batch_transaction_id"),
+            EtmfDocumentId: GetString(row, "etmf_document_id"));
+    }
+
+    private static string? GetString(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String
+            ? prop.GetString()
+            : null;
+
+    private static bool GetBool(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var prop) && prop.ValueKind is JsonValueKind.True or JsonValueKind.False && prop.GetBoolean();
+
+    private static DateTimeOffset? GetDateTimeOffset(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String && prop.TryGetDateTimeOffset(out var dto)
+            ? dto
+            : null;
 }

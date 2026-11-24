@@ -694,7 +694,7 @@ public static class DoaEndpoints
             return missingScope;
         }
 
-        string? trimmedStudy = string.IsNullOrWhiteSpace(request.Study) ? null : request.Study.Trim();
+        string? trimmedStudy = string.IsNullOrWhiteSpace(request.StudyCode) ? null : request.StudyCode.Trim();
         if (trimmedStudy is not null && CtmsScopeGuard.RequireStudy(httpContext, trimmedStudy) is { } studyDenied)
         {
             return studyDenied;
@@ -1380,7 +1380,7 @@ public record DoaSignOffRequest(
 );
 
 public record BulkDoaEndorseRequest(
-    [property: JsonPropertyName("study_id")] string? Study,
+    [property: JsonPropertyName("study_code")] string? StudyCode,
     [property: JsonPropertyName("record_ids")] List<string> RecordIds,
     [property: JsonPropertyName("signer_user_id")] string SignerUserId,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange = null,

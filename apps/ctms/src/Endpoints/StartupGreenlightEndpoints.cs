@@ -189,6 +189,7 @@ public static class StartupGreenlightEndpoints
             ? await evaluator.EvaluateSiteAsync(db, gate, trimmedStudy, trimmedSite, ct)
             : await EvaluateLocalReadinessAsync(db, gate, trimmedStudy, trimmedSite, ct);
 
+        bool shouldPersist = false;
         if (gate is null)
         {
             var now = (clock ?? SystemClock.Instance).UtcNow;
@@ -215,7 +216,7 @@ public static class StartupGreenlightEndpoints
                 live.BlockingReasons.Count > 0 ? string.Join("; ", live.BlockingReasons) : null);
 
             db.CtmsSiteGreenlightGates.Add(gate);
-            await db.SaveChangesAsync(ct);
+            shouldPersist = true;
         }
         else if (gate.OverallStatus == CtmsGreenlightStatus.Pending && gate.GreenlightCertifiedAt is null)
         {
@@ -238,8 +239,13 @@ public static class StartupGreenlightEndpoints
                     live.FacetIpRelease,
                     live.ReadinessPercentage,
                     live.BlockingReasons.Count > 0 ? string.Join("; ", live.BlockingReasons) : null);
-                await db.SaveChangesAsync(ct);
+                shouldPersist = true;
             }
+        }
+
+        if (shouldPersist)
+        {
+            await db.SaveChangesAsync(ct);
         }
 
         return TypedResults.Ok(ToResponseDto(gate, live));

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
@@ -26,6 +27,7 @@ namespace Cadence.Modules.Execution.Application;
 /// <param name="OwnerRole">Role initially responsible for acting on the query (defaults to <see cref="FormQueryOwnerRole.Site"/>).</param>
 /// <param name="Priority">Initial query priority (defaults to <see cref="FormQueryPriority.Normal"/>).</param>
 /// <param name="Assignee">Optional specific assignee identifier.</param>
+/// <param name="ResolvedHeader">Optional pre-resolved form header passed from the HTTP endpoint to avoid re-reading it.</param>
 [KernelCapability("execution.query.raise", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(FormErrors), nameof(FormErrors.CollectionInstanceUnknown))]
@@ -44,7 +46,8 @@ public sealed record RaiseFormQuery(
     FormQueryOrigin Origin = FormQueryOrigin.Manual,
     FormQueryOwnerRole OwnerRole = FormQueryOwnerRole.Site,
     FormQueryPriority Priority = FormQueryPriority.Normal,
-    string? Assignee = null) : ICommand<FormQueryState>;
+    string? Assignee = null,
+    [property: JsonIgnore] CollectionInstanceHeader? ResolvedHeader = null) : ICommand<FormQueryState>;
 
 /// <summary>The site answers an open query (#5461). Refused when the query is not open or a Locked lock covers its value.</summary>
 /// <param name="TenantId">The tenant.</param>
@@ -202,6 +205,14 @@ public sealed record FormQueryAgingDigestState(
     int EscalatedCount,
     IReadOnlyList<FormQueryAgingDigestEntry> Entries);
 
+/// <summary>Transient form scope metadata resolved during command execution so HTTP endpoints avoid re-reading the form.</summary>
+public sealed record FormQueryScopeContext(
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    int? CurrentRevision);
+
 /// <summary>A query after a command (or reconstructed as of a bitemporal coordinate).</summary>
 public sealed record FormQueryState(
     FormQueryId QueryId,
@@ -221,10 +232,11 @@ public sealed record FormQueryState(
     DateTimeOffset? EscalatedAt,
     string? LastAnsweredBy,
     IReadOnlyList<FormQueryMessage> Messages,
-    long Version)
+    long Version,
+    [property: JsonIgnore] FormQueryScopeContext? Scope = null)
 {
     /// <summary>The current state of <paramref name="query"/> at <paramref name="version"/>.</summary>
-    public static FormQueryState Of(FormQuery query, long version)
+    public static FormQueryState Of(FormQuery query, long version, FormQueryScopeContext? scope = null)
     {
         ArgumentNullException.ThrowIfNull(query);
         return new(
@@ -245,7 +257,8 @@ public sealed record FormQueryState(
             query.EscalatedAt,
             query.LastAnsweredBy,
             [.. query.Messages],
-            version);
+            version,
+            scope);
     }
 
     /// <summary>Projects a point-in-time bitemporal snapshot of <paramref name="query"/>.</summary>

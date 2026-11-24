@@ -426,7 +426,7 @@ export interface components {
       total_certified: number | string;
     };
     Ctms_BulkDoaEndorseRequest: {
-      study_id: null | string;
+      study_code: null | string;
       record_ids: string[];
       signer_user_id: string;
       reason_for_change?: null | string;

@@ -61,9 +61,6 @@ up() {
   fi
   echo "keycloak  ok  (http://localhost:8080, admin/admin)"
 
-  # The web app's vite.config aliases "ui" to packages/ui/dist, which pnpm install does not build.
-  [ -f "$REPO/packages/ui/dist/index.js" ] || (cd "$REPO" && pnpm --filter ui build >/dev/null)
-
   # Secrets persist across restarts so execution can still decrypt the demographics it wrote.
   if [ ! -f "$STATE/secrets.env" ]; then
     {

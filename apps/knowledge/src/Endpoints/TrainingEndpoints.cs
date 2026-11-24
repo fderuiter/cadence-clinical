@@ -505,7 +505,7 @@ public static class TrainingEndpoints
                 .Select(d => (
                     Id: d.RecordId, d.StaffUserId,
                     StaffName: string.IsNullOrWhiteSpace(d.StaffName) ? d.StaffUserId : d.StaffName,
-                    SiteCode: d.Site,
+                    SiteCode: d.SiteCode,
                     Role: string.IsNullOrWhiteSpace(d.Role) ? "Site Staff" : d.Role))];
         }
         else
@@ -805,8 +805,8 @@ public static class TrainingEndpoints
 
         return new DelegationSummaryDto(
             d.RecordId,
-            d.Study ?? fallbackStudy ?? string.Empty,
-            d.Site,
+            d.StudyCode ?? fallbackStudy ?? string.Empty,
+            d.SiteCode,
             d.StaffUserId,
             string.IsNullOrWhiteSpace(d.StaffName) ? d.StaffUserId : d.StaffName,
             string.IsNullOrWhiteSpace(d.Role) ? "Site Staff" : d.Role,
@@ -847,8 +847,8 @@ public static class TrainingEndpoints
                 cancellationToken);
 
             var ctmsDtos = ctmsRows
-                .Where(d => studies == null || (d.Study != null && studies.Contains(d.Study)))
-                .Where(d => ClinicalScopeGuard.CanAccessSite(httpContext, d.Site))
+                .Where(d => studies == null || (d.StudyCode != null && studies.Contains(d.StudyCode)))
+                .Where(d => ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteCode))
                 .Select(d => MapCtmsDelegationToSummary(d, study_id))
                 .ToList();
 
@@ -945,6 +945,9 @@ public static class TrainingEndpoints
         string seal = HmacSigner.ComputeSignature(sealInput, secret);
         string reasonForChange = request.SignaturePayload?.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off";
 
+        var signedList = new List<DelegationSummaryDto>();
+        string etmfArtifactId = "05.02.04";
+
         var ctmsClient = httpContext.RequestServices?.GetService<ICtmsDelegationClient>();
         if (ctmsClient is { IsConfigured: true })
         {
@@ -969,12 +972,12 @@ public static class TrainingEndpoints
                         : StatusCodes.Status502BadGateway);
             }
 
-            var ctmsSignedList = endorseOutcome.Payload.Records
+            signedList = endorseOutcome.Payload.Records
                 .OrderBy(r => r.RecordId, StringComparer.Ordinal)
                 .Select(r => MapCtmsDelegationToSummary(r, request.StudyId))
                 .ToList();
 
-            string etmfArtifactId = endorseOutcome.Payload.Records
+            etmfArtifactId = endorseOutcome.Payload.Records
                 .Select(r => r.EtmfDocumentId)
                 .FirstOrDefault(docId => !string.IsNullOrWhiteSpace(docId))
                 ?? "05.02.04";
@@ -987,90 +990,115 @@ public static class TrainingEndpoints
                 ActorRole = signerRole,
                 Action = "training.delegation.bulk_signoff",
                 BatchTransactionId = batchTxId,
-                Details = $"Executed Part 11 bulk delegation sign-off for {ctmsSignedList.Count} canonical CTMS delegation log records. Routed to eTMF Zone 5 ({etmfArtifactId}). Seal HMAC-SHA256: {seal}",
+                Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} canonical CTMS delegation log records. Routed to eTMF Zone 5 ({etmfArtifactId}). Seal HMAC-SHA256: {seal}",
                 ReasonForChange = reasonForChange
             });
-
-            if (ctmsSignedList.Count > 0)
+        }
+        else
+        {
+            var records = await dbContext.DelegationRecords
+                .Where(d => ids.Contains(d.Id))
+                .ToListAsync(cancellationToken);
+            var missing = ids.Except(records.Select(r => r.Id), StringComparer.Ordinal).ToList();
+            if (missing.Count > 0)
             {
-                dbContext.TrainingCertificates.Add(new TrainingCertificate
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    AssignmentId = ctmsSignedList[0].Id,
-                    BatchTransactionId = batchTxId,
-                    SignerName = signer.UserId,
-                    SignerRole = signerRole,
-                    Meaning = request.SignaturePayload?.Meaning ?? string.Empty,
-                    Sha256Seal = seal,
-                    EtmfArtifactId = etmfArtifactId,
-                    CreatedAt = now
-                });
+                return TypedResults.Problem(
+                    $"No delegation record exists for: {string.Join(", ", missing)}. Nothing was signed.",
+                    statusCode: StatusCodes.Status404NotFound);
             }
 
-            await dbContext.SaveChangesAsync(cancellationToken);
-
-            return TypedResults.Ok(new BulkDelegationSignOffResponse(
-                batchTxId,
-                ids.Count,
-                ctmsSignedList.Count,
-                0,
-                ctmsSignedList,
-                [],
-                seal,
-                etmfArtifactId,
-                now));
-        }
-
-        var records = await dbContext.DelegationRecords
-            .Where(d => ids.Contains(d.Id))
-            .ToListAsync(cancellationToken);
-        var missing = ids.Except(records.Select(r => r.Id), StringComparer.Ordinal).ToList();
-        if (missing.Count > 0)
-        {
-            return TypedResults.Problem(
-                $"No delegation record exists for: {string.Join(", ", missing)}. Nothing was signed.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId) || !SiteAccessEvaluator.CanAccessSite(signer, r.SiteId)))
-        {
-            return OutsideStudy();
-        }
-
-        var existingPeriods = await dbContext.DelegationRecordPeriods
-            .Where(p => ids.Contains(p.DelegationRecordId))
-            .ToListAsync(cancellationToken);
-
-        var signedList = new List<DelegationSummaryDto>();
-        foreach (var record in records.OrderBy(r => r.Id, StringComparer.Ordinal))
-        {
-            string priorStatus = record.Status;
-            bool priorSignedOff = record.SignedOff;
-            string? priorHash = record.PiSignatureHash;
-            DateTimeOffset? priorApprovedAt = record.PiApprovedAt;
-            string? priorBatchTxId = record.BatchTransactionId;
-
-            var recordPeriods = existingPeriods
-                .Where(p => p.DelegationRecordId == record.Id)
-                .ToList();
-            var activeOpen = recordPeriods
-                .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
-                .ToList();
-
-            DateTimeOffset recordedCutover = now;
-            foreach (var open in activeOpen)
+            if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId) || !SiteAccessEvaluator.CanAccessSite(signer, r.SiteId)))
             {
-                var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(open.RecordedPeriod, now);
-                open.RecordedPeriod = closed;
-                if (closed.UpperBound > recordedCutover)
+                return OutsideStudy();
+            }
+
+            var existingPeriods = await dbContext.DelegationRecordPeriods
+                .Where(p => ids.Contains(p.DelegationRecordId))
+                .ToListAsync(cancellationToken);
+
+            foreach (var record in records.OrderBy(r => r.Id, StringComparer.Ordinal))
+            {
+                string priorStatus = record.Status;
+                bool priorSignedOff = record.SignedOff;
+                string? priorHash = record.PiSignatureHash;
+                DateTimeOffset? priorApprovedAt = record.PiApprovedAt;
+                string? priorBatchTxId = record.BatchTransactionId;
+
+                var recordPeriods = existingPeriods
+                    .Where(p => p.DelegationRecordId == record.Id)
+                    .ToList();
+                var activeOpen = recordPeriods
+                    .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
+                    .ToList();
+
+                DateTimeOffset recordedCutover = now;
+                foreach (var open in activeOpen)
                 {
-                    recordedCutover = closed.UpperBound;
+                    var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(open.RecordedPeriod, now);
+                    open.RecordedPeriod = closed;
+                    if (closed.UpperBound > recordedCutover)
+                    {
+                        recordedCutover = closed.UpperBound;
+                    }
                 }
-            }
 
-            var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
-            if (activeOpen.Count == 0 && record.CreatedAt < recordedCutover)
-            {
+                var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+                if (activeOpen.Count == 0 && record.CreatedAt < recordedCutover)
+                {
+                    dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+                    {
+                        DelegationRecordId = record.Id,
+                        StudyCode = record.StudyId,
+                        SiteCode = record.SiteId,
+                        StaffUserId = record.StaffUserId,
+                        StaffName = record.StaffName,
+                        Role = record.Role,
+                        TaskCode = record.TaskCode,
+                        Duties = record.Duties,
+                        Status = priorStatus,
+                        SignedOff = priorSignedOff,
+                        PiSignatureHash = priorHash,
+                        PiApprovedAt = priorApprovedAt,
+                        BatchTransactionId = priorBatchTxId,
+                        CreatedBy = string.IsNullOrWhiteSpace(record.CreatedBy) ? signer.UserId : record.CreatedBy,
+                        ReasonForChange = "Initial delegation period",
+                        ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(record.CreatedAt, recordedCutover),
+                        RecordedPeriod = openRecorded,
+                    });
+                }
+                else
+                {
+                    foreach (var prior in activeOpen.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+                    {
+                        dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+                        {
+                            DelegationRecordId = prior.DelegationRecordId,
+                            StudyCode = prior.StudyCode,
+                            SiteCode = prior.SiteCode,
+                            StaffUserId = prior.StaffUserId,
+                            StaffName = prior.StaffName,
+                            Role = prior.Role,
+                            TaskCode = prior.TaskCode,
+                            Duties = prior.Duties,
+                            Status = prior.Status,
+                            SignedOff = prior.SignedOff,
+                            PiSignatureHash = prior.PiSignatureHash,
+                            PiApprovedAt = prior.PiApprovedAt,
+                            BatchTransactionId = prior.BatchTransactionId,
+                            CreatedBy = prior.CreatedBy,
+                            ReasonForChange = prior.ReasonForChange,
+                            ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                            RecordedPeriod = openRecorded,
+                        });
+                    }
+                }
+
+                record.Status = "COMPLETED";
+                record.SignedOff = true;
+                record.PiSignatureHash = seal;
+                record.PiApprovedAt = now;
+                record.BatchTransactionId = batchTxId;
+
                 dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
                 {
                     DelegationRecordId = record.Id,
@@ -1081,101 +1109,51 @@ public static class TrainingEndpoints
                     Role = record.Role,
                     TaskCode = record.TaskCode,
                     Duties = record.Duties,
-                    Status = priorStatus,
-                    SignedOff = priorSignedOff,
-                    PiSignatureHash = priorHash,
-                    PiApprovedAt = priorApprovedAt,
-                    BatchTransactionId = priorBatchTxId,
-                    CreatedBy = string.IsNullOrWhiteSpace(record.CreatedBy) ? signer.UserId : record.CreatedBy,
-                    ReasonForChange = "Initial delegation period",
-                    ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(record.CreatedAt, recordedCutover),
+                    Status = record.Status,
+                    SignedOff = record.SignedOff,
+                    PiSignatureHash = record.PiSignatureHash,
+                    PiApprovedAt = record.PiApprovedAt,
+                    BatchTransactionId = record.BatchTransactionId,
+                    CreatedBy = signer.UserId,
+                    ReasonForChange = reasonForChange,
+                    ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
                     RecordedPeriod = openRecorded,
                 });
-            }
-            else
-            {
-                foreach (var prior in activeOpen.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
-                {
-                    dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
-                    {
-                        DelegationRecordId = prior.DelegationRecordId,
-                        StudyCode = prior.StudyCode,
-                        SiteCode = prior.SiteCode,
-                        StaffUserId = prior.StaffUserId,
-                        StaffName = prior.StaffName,
-                        Role = prior.Role,
-                        TaskCode = prior.TaskCode,
-                        Duties = prior.Duties,
-                        Status = prior.Status,
-                        SignedOff = prior.SignedOff,
-                        PiSignatureHash = prior.PiSignatureHash,
-                        PiApprovedAt = prior.PiApprovedAt,
-                        BatchTransactionId = prior.BatchTransactionId,
-                        CreatedBy = prior.CreatedBy,
-                        ReasonForChange = prior.ReasonForChange,
-                        ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
-                        RecordedPeriod = openRecorded,
-                    });
-                }
+
+                signedList.Add(new DelegationSummaryDto(
+                    record.Id, record.StudyId, record.SiteId, record.StaffUserId, record.StaffName,
+                    record.Role, record.TaskCode, record.Duties, record.Status, record.SignedOff,
+                    record.PiSignatureHash, record.PiApprovedAt, record.BatchTransactionId));
             }
 
-            record.Status = "COMPLETED";
-            record.SignedOff = true;
-            record.PiSignatureHash = seal;
-            record.PiApprovedAt = now;
-            record.BatchTransactionId = batchTxId;
-
-            dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+            dbContext.OrgAuditLogs.Add(new OrgAuditLog
             {
-                DelegationRecordId = record.Id,
-                StudyCode = record.StudyId,
-                SiteCode = record.SiteId,
-                StaffUserId = record.StaffUserId,
-                StaffName = record.StaffName,
-                Role = record.Role,
-                TaskCode = record.TaskCode,
-                Duties = record.Duties,
-                Status = record.Status,
-                SignedOff = record.SignedOff,
-                PiSignatureHash = record.PiSignatureHash,
-                PiApprovedAt = record.PiApprovedAt,
-                BatchTransactionId = record.BatchTransactionId,
-                CreatedBy = signer.UserId,
-                ReasonForChange = reasonForChange,
-                ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
-                RecordedPeriod = openRecorded,
+                Id = Guid.NewGuid().ToString(),
+                Timestamp = now,
+                ActorId = signer.UserId,
+                ActorRole = signerRole,
+                Action = "training.delegation.bulk_signoff",
+                BatchTransactionId = batchTxId,
+                Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} delegation log records. Routed to eTMF Zone 5 (Artifact 05.02.04). Seal HMAC-SHA256: {seal}",
+                ReasonForChange = reasonForChange
             });
-
-            signedList.Add(new DelegationSummaryDto(
-                record.Id, record.StudyId, record.SiteId, record.StaffUserId, record.StaffName,
-                record.Role, record.TaskCode, record.Duties, record.Status, record.SignedOff,
-                record.PiSignatureHash, record.PiApprovedAt, record.BatchTransactionId));
         }
 
-        dbContext.OrgAuditLogs.Add(new OrgAuditLog
+        if (signedList.Count > 0)
         {
-            Id = Guid.NewGuid().ToString(),
-            Timestamp = now,
-            ActorId = signer.UserId,
-            ActorRole = signerRole,
-            Action = "training.delegation.bulk_signoff",
-            BatchTransactionId = batchTxId,
-            Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} delegation log records. Routed to eTMF Zone 5 (Artifact 05.02.04). Seal HMAC-SHA256: {seal}",
-            ReasonForChange = request.SignaturePayload?.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off"
-        });
-
-        dbContext.TrainingCertificates.Add(new TrainingCertificate
-        {
-            Id = Guid.NewGuid().ToString(),
-            AssignmentId = signedList[0].Id,
-            BatchTransactionId = batchTxId,
-            SignerName = signer.UserId,
-            SignerRole = signerRole,
-            Meaning = request.SignaturePayload?.Meaning ?? string.Empty,
-            Sha256Seal = seal,
-            EtmfArtifactId = "05.02.04",
-            CreatedAt = now
-        });
+            dbContext.TrainingCertificates.Add(new TrainingCertificate
+            {
+                Id = Guid.NewGuid().ToString(),
+                AssignmentId = signedList[0].Id,
+                BatchTransactionId = batchTxId,
+                SignerName = signer.UserId,
+                SignerRole = signerRole,
+                Meaning = request.SignaturePayload?.Meaning ?? string.Empty,
+                Sha256Seal = seal,
+                EtmfArtifactId = etmfArtifactId,
+                CreatedAt = now
+            });
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -1187,7 +1165,7 @@ public static class TrainingEndpoints
             signedList,
             [],
             seal,
-            "05.02.04",
+            etmfArtifactId,
             now));
     }
 }

@@ -23,7 +23,7 @@ hero:
 
 features:
   - title: "Staff Workbench Demo"
-    details: "Walk through USDM study design, protocol digitization, eCRF data capture, query management, CTMS, safety, eTMF, and audit trails in synthetic study DEMO-01."
+    details: "Walk through USDM study design, protocol digitization, eCRF data capture, query management, CTMS, safety, eTMF, and audit trails in synthetic study CADENCE-101."
     link: "/demo/"
     linkText: "Open Staff Demo"
     target: "_self"
@@ -56,7 +56,7 @@ Cadence Clinical separates **public browser evaluation** from **authenticated fu
 
 | Mode                                 | Where It Runs                                                                                     | Identity & API Layer                                                                                           | When to Use                                                                                          |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Hosted Staff & Participant Demos** | Co-hosted on GitHub Pages under `/cadence-clinical/demo/` and `/cadence-clinical/subject-portal/` | Offline synthetic evaluator persona + stateful in-browser Mock Service Worker (zero external API or IdP calls) | Instant product walkthroughs, UX evaluation, and feature previews with synthetic `DEMO-01` data      |
+| **Hosted Staff & Participant Demos** | Co-hosted on GitHub Pages under `/cadence-clinical/demo/` and `/cadence-clinical/subject-portal/` | Offline synthetic evaluator persona + stateful in-browser Mock Service Worker (zero external API or IdP calls) | Instant product walkthroughs, UX evaluation, and feature previews with synthetic `CADENCE-101` data  |
 | **Local Full-Stack Development**     | Local workstation via `.NET Aspire` AppHost or `docker compose`                                   | Real Keycloak OIDC + PKCE, YARP API Gateway (`:8000`), `.NET 10` services, and PostgreSQL 18                   | Backend/frontend engineering, database migrations, OIDC authorization testing, and GxP qualification |
 
 - Setting up a local stack? Follow the [Local Development Environment guide](LOCAL_DEV_ENVIRONMENT.md).

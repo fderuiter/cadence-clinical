@@ -191,7 +191,7 @@ export const ROLE_ALIASES = {
   pharmacist: ["pharmacist"],
   cra: ["cra", "monitor"],
   monitor: ["cra", "monitor"],
-  safety_reviewer: ["safety_reviewer"],
+  safety_reviewer: ["safety_reviewer", "safety_officer"],
   auditor: ["auditor", "tmf_auditor"],
   tmf_auditor: ["auditor", "tmf_auditor"],
   designer: ["sponsor_designer"],
