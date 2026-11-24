@@ -3,4 +3,6 @@
 # Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.StudyId
+K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SubjectId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationResult.StudyId
+K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationResult.SubjectId
