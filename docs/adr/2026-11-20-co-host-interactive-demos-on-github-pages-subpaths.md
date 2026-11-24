@@ -59,7 +59,7 @@ As a result:
 
 - **Positive Impact:**
   - Evaluators can launch both staff and participant experiences in one click from the portal home page and top navigation bar.
-  - Deep links such as `/cadence-clinical/demo/#/studies/DEMO-01` and `/cadence-clinical/subject-portal/#/wallet` reload cleanly on GitHub Pages without server rewrite rules.
+  - Deep links such as `/cadence-clinical/demo/#/studies/CADENCE-101` and `/cadence-clinical/subject-portal/#/wallet` reload cleanly on GitHub Pages without server rewrite rules.
   - Both staged demo directories are cryptographically hashed in `SHA256SUMS` and attested by `actions/attest-build-provenance`.
 - **Negative Impact & Mitigations:**
   - VitePress links targeting `/demo/` and `/subject-portal/` must declare `target: "_self"` so VitePress's client-side router performs a full browser navigation into the mounted SPA rather than rendering VitePress's 404 component, and `assertThemeLinksExist` explicitly whitelists those two co-hosted subpaths while enforcing page existence for all documentation routes.
