@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Persistence.Bitemporal;
 using Cadence.Kernel.Persistence.Execution;
@@ -477,6 +478,58 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
         var stored = await db.Attestations.AsNoTracking().ToListAsync(ct);
         stored.Should().ContainSingle().Which.Id.Should().Be(signed);
         stored[0].Meaning.Should().Be(AttestationMeaning.Withdrawn, "the reused id did not overwrite the first signature");
+    }
+
+    /// <summary>
+    /// Covering <see cref="LockKind.Frozen"/> and <see cref="LockKind.Locked"/> locks reject
+    /// <see cref="ScreenParticipant"/>, <see cref="ChangeEnrollmentStatus"/>, <see cref="WithdrawParticipant"/>, and
+    /// <see cref="LinkSiteToStudy"/> with <see cref="ObservationErrors.Locked"/>.
+    /// </summary>
+    [Fact(DisplayName = "EnrollmentsAndSiteLinking_RejectMutationsUnderCoveringFrozenOrLockedLock")]
+    public async Task EnrollmentsAndSiteLinkingRejectMutationsUnderCoveringFrozenOrLockedLock()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, studySite) = await NewStudySiteAsync(ct);
+        var (_, enrollment) = await ScreenAsync(tenant, studySite, "SUBJ-001", Tick(), ct);
+        var enrolled = await ChangeAsync(tenant, enrollment, EnrollmentStatus.Enrolled, Tick(), ct);
+        var withdrawalSig = await AttestAsync(tenant, AttestationMeaning.Withdrawn, enrolled, ct);
+        var extraParticipant = await RegisterAsync(tenant, ct);
+
+        SiteId unlinkedSite;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
+            var site = new Site(SiteId.New(), tenant, sponsor, $"SITE-UNL-{Guid.NewGuid():N}"[..16], "Unlinked Clinic", "US", KernelPostgresFixture.ActorId, "Seeded");
+            await fixture.SeedAsync(site);
+            unlinkedSite = site.Id;
+        }
+
+        var observations = new KernelObservationScenario(fixture);
+        foreach (var lockKind in new[] { LockKind.Frozen, LockKind.Locked })
+        {
+            var scope = NodeRef.For(study);
+            var applied = await _scenario.OkAsync(
+                await observations.LockAsync(tenant, study, scope, ct, lockKind),
+                ct);
+
+            (await SendScreenAsync(tenant, extraParticipant, studySite, $"SUBJ-{lockKind}", Tick(), ct)).Error.Should().Be(ObservationErrors.Locked);
+            (await SendChangeAsync(tenant, enrollment, EnrollmentStatus.Randomized, Tick(), ct)).Error.Should().Be(ObservationErrors.Locked);
+            (await SendWithdrawAsync(tenant, enrollment, withdrawalSig, ct)).Error.Should().Be(ObservationErrors.Locked);
+            (await fixture.Sender.SendAsync(
+                new LinkSiteToStudy(tenant, StudySiteId.New(), study, unlinkedSite, KernelProtocolScenario.Key(), "Attempt link while locked"),
+                cancellationToken: ct)).Error.Should().Be(ObservationErrors.Locked);
+
+            await _scenario.OkAsync(
+                await observations.ReleaseAsync(tenant, study, applied.LockId, ct),
+                ct);
+        }
+
+        // Once unlocked, all operations proceed normally.
+        (await fixture.Sender.SendAsync(
+            new LinkSiteToStudy(tenant, StudySiteId.New(), study, unlinkedSite, KernelProtocolScenario.Key(), "Link after unlock"),
+            cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        (await SendWithdrawAsync(tenant, enrollment, withdrawalSig, ct)).IsSuccess.Should().BeTrue();
     }
 
     private static AttestationTarget EnrollmentTarget(EnrollmentId enrollment, string contentHash) =>
