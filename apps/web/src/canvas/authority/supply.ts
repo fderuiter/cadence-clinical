@@ -10,6 +10,11 @@ export function canSeedIpKits(auth: AuthorityAuth): boolean {
   return holdsBackendPermission(auth, "ip_kit_inventory:seed");
 }
 
+/** Read cell and gene therapy chain-of-custody traces, certificates, and reconciliations (cgt_chain_of_custody:read). */
+export function canReadChainOfCustody(auth: AuthorityAuth): boolean {
+  return holdsBackendPermission(auth, "cgt_chain_of_custody:read");
+}
+
 /** Record cell and gene therapy chain-of-custody handovers (cgt_chain_of_custody:write). */
 export function canRecordChainOfCustody(auth: AuthorityAuth): boolean {
   return holdsBackendPermission(auth, "cgt_chain_of_custody:write");
