@@ -273,8 +273,12 @@ public static class QualityGates
             PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
         },
         new("dependencies", ["validate-dependencies"],
-            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, unique `.github/dependabot.yml` update targets and `ignore` rules, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
-            ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0),
+            "Valid JSON/XML/YAML across workspace `package.json`, `pnpm-workspace.yaml`, `.config/dotnet-tools.json`, `Directory.Build.props`, and `Directory.Packages.props` manifests, lockstep NuGet/pnpm/CLI cohorts, unique `.github/dependabot.yml` update targets and group/ignore rules, synchronized `PostgresTestImage` `@sha256` digests across Compose, CI, and AppHost, and no forbidden client-side crypto (`node-forge`, `elliptic`, `jose`) or runtime test-harness (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) packages",
+            ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates staged dependency manifests, `.github/dependabot.yml`, Compose, CI workflow, and AppHost blobs",
+        },
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("demo-manifest", ["validate-demo-manifest"],
