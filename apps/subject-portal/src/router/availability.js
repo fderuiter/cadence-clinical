@@ -62,3 +62,16 @@ export function isScreenAvailable(routeName, env = import.meta.env) {
   }
   return AVAILABLE_SCREENS.has(routeName);
 }
+
+export function defaultPortalRouteName(env = import.meta.env) {
+  if (isScreenAvailable("tasks", env)) return "tasks";
+  if (isScreenAvailable("wallet", env)) return "wallet";
+  return "unavailable";
+}
+
+export function defaultPortalViewId(env = import.meta.env) {
+  const routeName = defaultPortalRouteName(env);
+  if (routeName === "tasks") return "view-tasks";
+  if (routeName === "wallet") return "view-wallet";
+  return "view-unavailable";
+}

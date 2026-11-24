@@ -1,4 +1,4 @@
-# ADR-2661: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist
+# ADR-2662: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

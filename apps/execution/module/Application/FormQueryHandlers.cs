@@ -102,7 +102,7 @@ internal sealed class AnswerFormQueryHandler(ICollectionInstanceRecords records)
             command.EnrollmentId,
             (query, record) =>
             {
-                var step = query.Answer(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
+                var step = query.Answer(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange, command.Assignee);
                 if (step is null)
                 {
                     return FormQueryScopes.DeniedTransition(query.Status);
@@ -163,7 +163,7 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
             command.EnrollmentId,
             (query, record) =>
             {
-                var step = query.Reopen(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
+                var step = query.Reopen(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange, command.Assignee);
                 if (step is null)
                 {
                     return FormQueryScopes.DeniedTransition(query.Status);
@@ -171,6 +171,28 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
 
                 int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
+            },
+            cancellationToken);
+}
+
+/// <summary>Handles <see cref="ReassignFormQuery"/>.</summary>
+internal sealed class ReassignFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<ReassignFormQuery, FormQueryState>
+{
+    public Task<CommandResult<FormQueryState>> HandleAsync(ReassignFormQuery command, ICommandContext context, CancellationToken cancellationToken) =>
+        FormQueryScopes.StepAsync(
+            records,
+            context,
+            command.QueryId,
+            command.EnrollmentId,
+            (query, record) =>
+            {
+                if (!query.Reassign(command.Assignee, command.OwnerRole, context.Actor.Id, context.RecordedAt, command.ReasonForChange, command.Text))
+                {
+                    return FormQueryScopes.DeniedTransition(query.Status);
+                }
+
+                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                return FormQueryScopes.StepAllowed([], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
 }
@@ -301,6 +323,18 @@ internal sealed class GenerateFormQueryAgingDigestHandler : ICommandHandler<Gene
             command.SiteCode,
             command.Entries);
         context.Work.Add(digest);
+        context.Work.Raise(new FormQueryAgingDigestGenerated(
+            context.TenantId,
+            digest.Id,
+            digest.StudyId,
+            digest.StudySiteId,
+            digest.ScopeKey,
+            digest.RecipientRole,
+            digest.DigestDate,
+            digest.GeneratedAt,
+            digest.StudyCode,
+            digest.SiteCode,
+            digest.EscalatedCount));
         return CommandResult<FormQueryAgingDigestState>.Success(new FormQueryAgingDigestState(
             digest.Id,
             digest.StudyId,
@@ -482,6 +516,8 @@ internal sealed class AnswerFormQueryValidator : AbstractValidator<AnswerFormQue
     {
         RuleFor(c => c.QueryId).Must(id => !id.IsEmpty).WithMessage("Name the query.");
         RuleFor(c => c.Text).Must(FormQuery.IsText).WithMessage($"Write the answer, at most {AssertionText.MaxLength} characters.");
+        RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
+            .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
     }
 }
 
@@ -505,6 +541,26 @@ internal sealed class ReopenFormQueryValidator : AbstractValidator<ReopenFormQue
     {
         RuleFor(c => c.QueryId).Must(id => !id.IsEmpty).WithMessage("Name the query.");
         RuleFor(c => c.Text).Must(FormQuery.IsText).WithMessage($"Say why the query is reopened, at most {AssertionText.MaxLength} characters.");
+        RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
+            .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
+    }
+}
+
+/// <summary>Checks the shape of <see cref="ReassignFormQuery"/>.</summary>
+internal sealed class ReassignFormQueryValidator : AbstractValidator<ReassignFormQuery>
+{
+    public ReassignFormQueryValidator()
+    {
+        RuleFor(c => c.QueryId).Must(id => !id.IsEmpty).WithMessage("Name the query.");
+        RuleFor(c => c.EnrollmentId).Must(id => !id.IsEmpty).WithMessage("Name the enrollment.");
+        RuleFor(c => c.ReasonForChange).Must(FormQuery.IsText)
+            .WithMessage($"Say why the query is reassigned, at most {AssertionText.MaxLength} characters.");
+        RuleFor(c => c.Assignee).Must(a => a is null || a.Trim().Length <= FormQuery.AssigneeMaxLength)
+            .WithMessage($"Assignee may be at most {FormQuery.AssigneeMaxLength} characters.");
+        RuleFor(c => c.OwnerRole).Must(r => r is null || Enum.IsDefined(r.Value))
+            .WithMessage("Choose a valid owner role.");
+        RuleFor(c => c.Text).Must(t => t is null || FormQuery.IsText(t))
+            .WithMessage($"Reassignment note may be at most {AssertionText.MaxLength} characters.");
     }
 }
 

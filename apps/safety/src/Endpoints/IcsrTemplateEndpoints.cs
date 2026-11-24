@@ -60,10 +60,7 @@ public static class IcsrTemplateEndpoints
             && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
             && !ClinicalScopeGuard.CanAccessStudy(httpContext, sponsorStudy))
         {
-            return TypedResults.Problem(
-                detail: ClinicalScopeGuard.StudyAccessDeniedDetail,
-                statusCode: StatusCodes.Status403Forbidden,
-                title: "Outside your studies");
+            return ClinicalScopeGuard.OutsideStudy(ClinicalScopeGuard.StudyAccessDeniedDetail);
         }
 
         var errors = IcsrConformance.Check(request, clock.UtcNow);

@@ -100,6 +100,9 @@
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
+                  :data-tabular-nums="
+                    item.value_kind !== 'text' ? 'true' : undefined
+                  "
                   :disabled="
                     formState.locked ||
                     formState.saving ||
@@ -383,6 +386,14 @@
                     <option value="high">High</option>
                     <option value="low">Low</option>
                   </select>
+                  <label for="ecrf-raise-assignee">Assignee (optional)</label>
+                  <input
+                    id="ecrf-raise-assignee"
+                    v-model="raiseAssignee"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Actor ID (optional)"
+                  />
                   <button
                     id="ecrf-raise-confirm"
                     class="btn btn-primary"
@@ -590,6 +601,7 @@ const raiseText = ref("");
 const raiseReason = ref("");
 const raiseOwnerRole = ref<FormQueryOwnerRole>("site");
 const raisePriority = ref<FormQueryPriority>("normal");
+const raiseAssignee = ref("");
 
 watch(
   () =>
@@ -639,6 +651,7 @@ function beginRaise(item: EcrfFormItem) {
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  raiseAssignee.value = "";
   void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
 }
 
@@ -647,6 +660,7 @@ function cancelRaise() {
   raising.value = null;
   raiseText.value = "";
   raiseReason.value = "";
+  raiseAssignee.value = "";
   void handoffFocus([
     itemId ? `#ecrf-raise-${itemId}` : null,
     itemId ? `#ecrf-item-${itemId}` : null,
@@ -659,6 +673,7 @@ async function confirmRaise() {
   const target = raising.value;
   const text = raiseText.value.trim();
   const changeReason = raiseReason.value.trim();
+  const assignee = raiseAssignee.value.trim();
   if (!props.formState.form || !target || !text || !changeReason) return;
   const wasUnasked = !target.observation_id;
   const options = {
@@ -668,6 +683,7 @@ async function confirmRaise() {
     ...(raisePriority.value !== "normal"
       ? { priority: raisePriority.value }
       : {}),
+    ...(assignee ? { assignee } : {}),
   };
   const raised = await props.queries.raise(
     {
