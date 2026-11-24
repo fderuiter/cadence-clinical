@@ -923,7 +923,7 @@ const canSave = computed(
     !sameObservationValue(parsed.value.value, observation.value?.value)
 );
 
-const isDirty = computed(() => {
+const hasChangedText = computed(() => {
   const current = observation.value?.value;
   if (!current || locked.value || !canCorrect.value) return false;
   if (newValue.value.trim().length === 0) return false;
@@ -931,6 +931,25 @@ const isDirty = computed(() => {
     return !sameObservationValue(parsed.value.value, current);
   }
   return true;
+});
+
+const isDirty = computed(
+  () =>
+    Boolean(observation.value?.value) &&
+    !locked.value &&
+    canCorrect.value &&
+    (hasChangedText.value || reasonOpen.value)
+);
+
+function discardCorrection() {
+  reasonOpen.value = false;
+  newValue.value = "";
+}
+
+watch(locked, (isLocked) => {
+  if (isLocked) {
+    reasonOpen.value = false;
+  }
 });
 
 watch(isDirty, (dirty) => {
@@ -954,15 +973,19 @@ useUnsavedNavigationGuard({
     confirmLabel: "Leave Without Saving",
     cancelLabel: "Stay on Observation",
   },
-  shouldPromptOnUpdate: (to, from) =>
-    String(to.params.observationRef ?? "") !==
-    String(from.params.observationRef ?? ""),
+  shouldPromptOnUpdate: (to, from) => {
+    const nextRaw = String(to.params.observationRef ?? "");
+    const prevRaw = String(from.params.observationRef ?? "");
+    const nextRef = observationNodeRef(nextRaw) ?? nextRaw;
+    const prevRef = observationNodeRef(prevRaw) ?? prevRaw;
+    return nextRef !== prevRef;
+  },
   onConfirmedDiscard: () => {
-    newValue.value = "";
+    discardCorrection();
   },
 });
 
-defineExpose({ dirty: isDirty });
+defineExpose({ dirty: isDirty, discardCorrection });
 
 function askReason() {
   if (canSave.value && !saving.value) reasonOpen.value = true;
@@ -1111,6 +1134,7 @@ watch(
     emit("loaded", obs);
     if (
       props.embedded ||
+      isDirty.value ||
       !activeRouter ||
       activeRouter.currentRoute.value.name !== "observation" ||
       typeof kernelApi.getZoomPath !== "function"
@@ -1218,6 +1242,12 @@ watch(
       const sectionVal = queryString("section");
       const isDataWorklist =
         sectionVal === "queries" || sectionVal === "validation";
+      if (
+        isDirty.value ||
+        activeRouter.currentRoute.value.name !== "observation"
+      ) {
+        return;
+      }
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
@@ -1240,8 +1270,7 @@ watch(
 );
 
 function handleDemoReset() {
-  newValue.value = "";
-  reasonOpen.value = false;
+  discardCorrection();
   outcome.value = null;
   void load();
 }
@@ -1261,7 +1290,7 @@ onUnmounted(() => {
 watch(
   () => props.observationRef,
   () => {
-    newValue.value = "";
+    discardCorrection();
     void load();
   }
 );

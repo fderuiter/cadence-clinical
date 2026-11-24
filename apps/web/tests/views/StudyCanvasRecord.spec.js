@@ -1101,6 +1101,7 @@ describe("Clinical Canvas: a participant's data", () => {
 
     it("guards dirty embedded observations across back, zoom, and stage transitions while allowing inspector toggles and zero browser storage", async () => {
       const OBS_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000b001";
+      const SECOND_OBS_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000b009";
       vi.mocked(kernelApi.getObservation).mockResolvedValue({
         ref: `observation:${OBS_ID}@1`,
         enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
@@ -1125,7 +1126,7 @@ describe("Clinical Canvas: a participant's data", () => {
       const confirmStore = useConfirmStore();
 
       await mountAt(
-        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}&observation=observation:${OBS_ID}`
+        `/studies/CAD-101?stage=conduct&site=017&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}&item=SYSBP&observation=observation:${OBS_ID}`
       );
       await flushPromises();
 
@@ -1143,12 +1144,13 @@ describe("Clinical Canvas: a participant's data", () => {
       window.dispatchEvent(unloadEvent);
       expect(unloadEvent.defaultPrevented).toBe(true);
 
-      // Inspector query changes (?ask= / ?node=) on the same open observation do not prompt.
+      // Inspector query changes (?ask= / ?node=) and @version-suffixed same-observation updates do not prompt.
       await router.push({
         name: "study",
         params: { studyCode: "CAD-101" },
         query: {
           ...router.currentRoute.value.query,
+          observation: `observation:${OBS_ID}@1`,
           ask: "Check systolic trend",
           node: "concept:systolic@1",
         },
@@ -1168,9 +1170,42 @@ describe("Clinical Canvas: a participant's data", () => {
       confirmStore.cancelConfirm();
       await flushPromises();
       expect(router.currentRoute.value.query.observation).toBe(
-        `observation:${OBS_ID}`
+        `observation:${OBS_ID}@1`
       );
       expect(wrapper.find("#observation-new-value").element.value).toBe("138");
+
+      // Clicking #zoom-participant, #nav-participants, or switching to another observation also prompts and cancels when rejected.
+      await wrapper.find("#zoom-participant").trigger("click");
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Changes"
+      );
+      confirmStore.cancelConfirm();
+      await flushPromises();
+
+      await wrapper.find("#nav-participants").trigger("click");
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Changes"
+      );
+      confirmStore.cancelConfirm();
+      await flushPromises();
+
+      const switchObsPromise = router.push({
+        name: "study",
+        params: { studyCode: "CAD-101" },
+        query: {
+          ...router.currentRoute.value.query,
+          observation: `observation:${SECOND_OBS_ID}`,
+        },
+      });
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Changes"
+      );
+      confirmStore.cancelConfirm();
+      await switchObsPromise.catch(() => {});
+      await flushPromises();
 
       // Switching lifecycle stage (#stage-design) also prompts and cancels when rejected.
       await wrapper.find("#stage-design").trigger("click");
@@ -1181,7 +1216,7 @@ describe("Clinical Canvas: a participant's data", () => {
       confirmStore.cancelConfirm();
       await flushPromises();
       expect(router.currentRoute.value.query.observation).toBe(
-        `observation:${OBS_ID}`
+        `observation:${OBS_ID}@1`
       );
 
       // Cancelling a cross-study palette jump restores clinicalScope and keeps studyCanvas on CAD-101.
@@ -1207,7 +1242,9 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(scopeStore.activeSiteId).toBe("SITE-17");
       expect(scopeStore.activeSubjectId).toBe("017-0001");
 
-      // Confirming discard clears observationWorkspaceDirty and returns to the form without a second prompt.
+      // Confirming discard clears observationWorkspaceDirty, closes ReasonForChangeModal if open, and returns to the form preserving stage/site/participant/form/item scope.
+      await wrapper.find("form.observation-correction").trigger("submit");
+      await flushPromises();
       await wrapper.find("#observation-back").trigger("click");
       await flushPromises();
       expect(confirmStore.activeRequest?.title).toBe(
@@ -1215,10 +1252,13 @@ describe("Clinical Canvas: a participant's data", () => {
       );
       confirmStore.resolveConfirm();
       await flushPromises();
-      expect(router.currentRoute.value.query.observation).toBeUndefined();
-      expect(router.currentRoute.value.query.form).toBe(
-        `collection_instance:${FORM_ID}`
-      );
+      expect(router.currentRoute.value.query).toEqual({
+        stage: "conduct",
+        site: "017",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+      });
 
       const cleanUnload = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(cleanUnload);
