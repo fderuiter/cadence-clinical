@@ -254,8 +254,7 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         await scenario.Protocol.OkAsync(new CloseFormQuery(tenant, id, enrollment, Key(), "Confirmed against source"), ct);
         await scenario.Protocol.OkAsync(new CancelFormQuery(tenant, secondId, enrollment, Key(), "Duplicate closed"), ct);
         await RelayAsync(ct);
-
-        await scenario.Observations.MakeScopeReadyForLockAsync(tenant, study, NodeRef.For(form.Instance), ct);
+        await scenario.VerifyAndSignAsync(form, ct);
 
         // An Execution query raised just before a Locked assertion commits (before outbox relay) remains Open and cannot be answered under Locked (#5586),
         // while RaiseFormQuery and ReopenFormQuery on closed queries are also refused with K.Assertion.Locked.

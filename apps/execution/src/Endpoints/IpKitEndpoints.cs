@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Supply;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -42,12 +44,19 @@ public static class IpKitEndpoints
             IpKitBatchReconciliationRequest request,
             HttpContext httpContext,
             IIpKitApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             var kitNumbers = (request.Items ?? []).Select(i => i.KitNumber).ToList();
-            if (await GuardKitMutationAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
+            var (denied, existingSites) = await GuardAndLoadKitSitesAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct).ConfigureAwait(false);
+            if (denied is not null)
             {
                 return denied;
+            }
+
+            if (await EnsureKitSitesUnlockedAsync(lockGuard, request.StudyId, request.SiteId, existingSites, ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -112,12 +121,19 @@ public static class IpKitEndpoints
             SeedInventoryRequest request,
             HttpContext httpContext,
             IIpKitApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             var kitNumbers = (request.Kits ?? []).Select(k => k.KitNumber).ToList();
-            if (await GuardKitMutationAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct) is { } denied)
+            var (denied, existingSites) = await GuardAndLoadKitSitesAsync(httpContext, service, request.StudyId, kitNumbers, request.SiteId, ct).ConfigureAwait(false);
+            if (denied is not null)
             {
                 return denied;
+            }
+
+            if (await EnsureKitSitesUnlockedAsync(lockGuard, request.StudyId, request.SiteId, existingSites, ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits ?? [], ct);
@@ -136,46 +152,53 @@ public static class IpKitEndpoints
         string siteId,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } requestDenied)
-        {
-            return requestDenied;
-        }
-
-        foreach (string existingSite in await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false))
-        {
-            if (ExecutionScopeGuard.RequireSite(httpContext, existingSite) is { } existingDenied)
-            {
-                return existingDenied;
-            }
-        }
-
-        return null;
+        var (denied, _) = await GuardAndLoadKitSitesAsync(httpContext, service, studyId, kitNumbers, siteId, ct).ConfigureAwait(false);
+        return denied;
     }
 
-    private static async Task<IResult?> GuardKitMutationAsync(
+    private static async Task<(IResult? Denied, IReadOnlyCollection<string> ExistingSites)> GuardAndLoadKitSitesAsync(
         HttpContext httpContext,
         IIpKitApplicationService service,
         string studyId,
-        IReadOnlyCollection<string> kitNumbers,
+        IEnumerable<string> kitNumbers,
         string siteId,
         CancellationToken ct)
     {
-        if (await GuardKitSitesAsync(httpContext, service, studyId, kitNumbers, siteId, ct).ConfigureAwait(false) is { } scopeDenied)
+        if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is { } requestDenied)
         {
-            return scopeDenied;
+            return (requestDenied, []);
         }
 
-        if (await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, siteId, cancellationToken: ct).ConfigureAwait(false) is { } requestLockDenied)
+        var existingSites = await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false);
+        foreach (string existingSite in existingSites)
         {
-            return requestLockDenied;
-        }
-
-        foreach (string existingSite in await service.GetExistingKitSitesAsync(studyId, kitNumbers, ct).ConfigureAwait(false))
-        {
-            if (!string.Equals(existingSite, siteId, StringComparison.OrdinalIgnoreCase)
-                && await ExecutionScopeGuard.RequireUnlockedAsync(httpContext, studyId, existingSite, cancellationToken: ct).ConfigureAwait(false) is { } existingLockDenied)
+            if (ExecutionScopeGuard.RequireSite(httpContext, existingSite) is { } existingDenied)
             {
-                return existingLockDenied;
+                return (existingDenied, []);
+            }
+        }
+
+        return (null, existingSites);
+    }
+
+    private static async Task<IResult?> EnsureKitSitesUnlockedAsync(
+        IKernelLockGuard? lockGuard,
+        string studyId,
+        string siteId,
+        IEnumerable<string> existingSites,
+        CancellationToken ct)
+    {
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, studyId, siteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
+        }
+
+        foreach (string existingSite in existingSites)
+        {
+            if (!string.Equals(existingSite, siteId, StringComparison.Ordinal)
+                && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, studyId, existingSite, cancellationToken: ct).ConfigureAwait(false) is { } existingLocked)
+            {
+                return existingLocked;
             }
         }
 

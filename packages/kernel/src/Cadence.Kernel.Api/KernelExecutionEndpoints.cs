@@ -96,15 +96,20 @@ public static class KernelExecutionEndpoints
             return KernelErrorEndpoints.Problem(denied.Error!);
         }
 
-        if (await locks.CheckCoveringLocksAsync(tenant, request.StudyCode.Trim(), request.SiteCode.Trim(), subjectCode.Value, cancellationToken).ConfigureAwait(false) is not null)
-        {
-            return KernelErrorEndpoints.Problem(ObservationErrors.Locked);
-        }
-
         if (await enrollments.ResolveParticipantAsync(tenant, studyId, subjectCode, cancellationToken).ConfigureAwait(false) is { } existing
             && existing.StudySiteId == studySiteId)
         {
             return TypedResults.Ok(KernelEnrollmentStateResponse.From(existing));
+        }
+
+        var lockCheck = await locks.CheckScopeWriteLockAsync(
+            tenant,
+            request.StudyCode.Trim(),
+            request.SiteCode.Trim(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (lockCheck.Locked)
+        {
+            return KernelErrorEndpoints.Problem(ObservationErrors.Locked);
         }
 
         string participantKey = string.IsNullOrEmpty(key) ? string.Empty : $"{key}:participant";

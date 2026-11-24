@@ -16,10 +16,10 @@ eCRF queries no longer live here either. A query is raised on a form value (or o
   Times the service stamps (a toxicity review's decision) are `DateTimeOffset` values taken from `Cadence.Kernel.Time.IClock`. The project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784).
 - `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
 - `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
-- `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
-- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer` (synchronizing newly registered subjects with kernel `RegisterParticipant` and `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen`) and `HttpKernelLockGuard` (`IKernelLockGuard`, checking live kernel `Study`, `StudySite`, and `Enrollment` `Frozen`/`Locked` assertions via `GET /api/v1/kernel/locks/check`) over gateway-signed HTTP (`KERNEL_SERVICE_URL`).
+- `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit), checking covering Clinical Kernel locks as its declared `ServiceAccount` before persisting consent updates.
+- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer`, synchronizing newly registered subjects with kernel `RegisterParticipant` and `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen`, and `HttpKernelLockGuard` (`IKernelLockGuard`), querying `GET /api/v1/kernel/locks/in-force` over gateway-signed HTTP (`KERNEL_SERVICE_URL`) with per-request scope memoization to fail closed with `423 K.Observation.Locked` when a covering `Frozen` or `Locked` assertion is active (#5376, #5466).
 - `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM normalization service, demographics normalization and AES-GCM encryption.
-- `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site scope enforcement plus fail-closed `RequireUnlockedAsync` kernel lock guards across mutating routes), and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
+- `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site scope enforcement), `ExecutionLockGuard` (synchronous kernel lock guard across all mutating endpoints while keeping stateless parse/convert/evaluate/dry-run/validate endpoints available), and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
 
 ## HTTP surface
 

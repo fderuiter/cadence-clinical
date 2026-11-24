@@ -526,7 +526,7 @@ public sealed class CgtApplicationService(
         return coc is null ? null : (coc.StudyId, coc.SiteId);
     }
 
-    public async Task<string?> GetChainOfCustodySubjectAsync(
+    public async Task<(string StudyCode, string SiteCode, string SubjectCode)?> GetChainOfCustodyLockScopeAsync(
         Guid chainOfCustodyId,
         CancellationToken cancellationToken = default)
     {
@@ -534,7 +534,7 @@ public sealed class CgtApplicationService(
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == chainOfCustodyId, cancellationToken);
 
-        return coc?.SubjectId;
+        return coc is null ? null : (coc.StudyId, coc.SiteId, coc.SubjectId);
     }
 
     public async Task<(string StudyId, string SiteId)?> GetSubjectChainOfCustodyScopeAsync(

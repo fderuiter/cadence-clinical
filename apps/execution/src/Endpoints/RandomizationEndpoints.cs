@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -98,7 +99,11 @@ public static class RandomizationEndpoints
 
     /// <summary><c>POST /api/v1/execution/randomization/schemes</c>.</summary>
     public static async Task<IResult> DraftSchemeAsync(
-        RandomizationSchemeDraftRequest request, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
+        RandomizationSchemeDraftRequest request,
+        HttpContext http,
+        IRandomizationApplicationService svc,
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -107,9 +112,9 @@ public static class RandomizationEndpoints
             return scopeDenied;
         }
 
-        if (await ExecutionScopeGuard.RequireUnlockedAsync(http, request.StudyId.Value, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, request.StudyId.Value, cancellationToken: ct).ConfigureAwait(false) is { } locked)
         {
-            return lockDenied;
+            return locked;
         }
 
         var result = await svc.DraftSchemeAsync(request, ct).ConfigureAwait(false);
@@ -120,7 +125,11 @@ public static class RandomizationEndpoints
 
     /// <summary><c>POST /api/v1/execution/randomization/schemes/{schemeId}/approve</c>.</summary>
     public static async Task<IResult> ApproveSchemeAsync(
-        Guid schemeId, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
+        Guid schemeId,
+        HttpContext http,
+        IRandomizationApplicationService svc,
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -136,10 +145,10 @@ public static class RandomizationEndpoints
             return scopeDenied;
         }
 
-        if (schemeStudy is { } unlockedStudy
-            && await ExecutionScopeGuard.RequireUnlockedAsync(http, unlockedStudy.Value, cancellationToken: ct).ConfigureAwait(false) is { } lockDenied)
+        if (schemeStudy is { } resolvedStudy
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, resolvedStudy.Value, cancellationToken: ct).ConfigureAwait(false) is { } locked)
         {
-            return lockDenied;
+            return locked;
         }
 
         var result = await svc.ApproveSchemeAsync(schemeId, changeReason, ct).ConfigureAwait(false);
@@ -170,7 +179,12 @@ public static class RandomizationEndpoints
     /// on the loaded participant record.
     /// </summary>
     public static async Task<IResult> RandomizeSubjectAsync(
-        string subjectId, RandomizeSubjectRequest request, HttpContext http, IRandomizationApplicationService svc, CancellationToken ct)
+        string subjectId,
+        RandomizeSubjectRequest request,
+        HttpContext http,
+        IRandomizationApplicationService svc,
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -182,6 +196,7 @@ public static class RandomizationEndpoints
         }
 
         var subjectScope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
+        var subjectLockScope = await svc.GetSubjectLockScopeAsync(subjectId, ct).ConfigureAwait(false);
         IResult? scopeDenied = subjectScope is { } s
             ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
                 http,
@@ -195,15 +210,16 @@ public static class RandomizationEndpoints
             return scopeDenied;
         }
 
-        if (subjectScope is { } unlockedSubject
-            && await ExecutionScopeGuard.RequireUnlockedAsync(
-                http,
-                unlockedSubject.StudyId.Value,
-                unlockedSubject.SiteId?.Value,
-                subjectId,
-                ct).ConfigureAwait(false) is { } lockDenied)
+        string? resolvedStudyCode = subjectLockScope?.StudyCode.Value ?? subjectScope?.StudyId.Value;
+        if (resolvedStudyCode is not null
+            && await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                resolvedStudyCode,
+                subjectLockScope?.SiteCode?.Value ?? subjectScope?.SiteId?.Value,
+                subjectLockScope?.SubjectCode.Value ?? subjectId,
+                ct).ConfigureAwait(false) is { } locked)
         {
-            return lockDenied;
+            return locked;
         }
 
         var result = await svc.RandomizeAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);

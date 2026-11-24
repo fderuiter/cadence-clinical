@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Ports;
@@ -12,6 +13,7 @@ using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -63,7 +65,8 @@ public static class CecEndpoints
         ICecApplicationService cecService,
         ICecRepository repository,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         var existing = await repository.GetDossierByIdAsync(id, cancellationToken).ConfigureAwait(false);
         if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing?.StudyId ?? "STUDY-001", existing?.SiteId) is { } scopeDenied)
@@ -72,14 +75,14 @@ public static class CecEndpoints
         }
 
         if (existing is not null
-            && await ExecutionScopeGuard.RequireUnlockedAsync(
-                httpContext,
+            && await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
                 existing.StudyId,
                 existing.SiteId,
                 existing.SubjectId,
-                cancellationToken).ConfigureAwait(false) is { } lockDenied)
+                cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return lockDenied;
+            return locked;
         }
 
         var caller = httpContext.User.ToAuthenticatedCaller();

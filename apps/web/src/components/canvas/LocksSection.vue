@@ -318,18 +318,19 @@
                 class="readiness-counts"
                 data-testid="study-locks-readiness-counts"
               >
-                {{ openQueryCount }} open
-                {{ openQueryCount === 1 ? "query" : "queries" }} ·
-                {{ missingRequiredItemCount }} missing required
-                {{ missingRequiredItemCount === 1 ? "item" : "items"
-                }}<template v-if="openErrorFindingCount > 0">
-                  · {{ openErrorFindingCount }} error
-                  {{ openErrorFindingCount === 1 ? "finding" : "findings" }}
-                </template>
-                · {{ unverifiedRevisionCount }} unverified
-                {{ unverifiedRevisionCount === 1 ? "revision" : "revisions" }} ·
-                {{ missingSignatureCount }} missing
-                {{ missingSignatureCount === 1 ? "signature" : "signatures" }}
+                <span
+                  v-for="(gate, gIdx) in readinessGates"
+                  :key="gate.key"
+                  :data-testid="`readiness-gate-${gate.key}`"
+                  :class="[
+                    'readiness-gate-chip',
+                    gate.count > 0
+                      ? 'readiness-gate-chip--active'
+                      : 'readiness-gate-chip--clear',
+                  ]"
+                >
+                  <template v-if="gIdx > 0"> · </template>{{ gate.label }}
+                </span>
               </span>
             </div>
 
@@ -340,13 +341,31 @@
             >
               <li
                 v-for="(blocker, bIdx) in readiness.blockers"
-                :key="`${blocker.kind}-${blocker.target_ref ?? bIdx}-${blocker.item_id ?? ''}`"
+                :key="`${blocker.kind}-${blocker.target_ref ?? blocker.finding_ref ?? blocker.query_ref ?? bIdx}`"
                 class="readiness-blocker-item"
+                :data-blocker-kind="normalizeLockBlockerKind(blocker.kind)"
               >
+                <span
+                  class="clinical-badge blocker-kind-badge"
+                  :data-testid="`blocker-kind-${normalizeLockBlockerKind(blocker.kind)}`"
+                >
+                  {{
+                    formatLockBlockerKindLabel(
+                      blocker.kind,
+                      Boolean(blocker.signature_superseded)
+                    )
+                  }}
+                </span>
                 <template v-if="blocker.masked">
                   <span class="masked-pill">
                     Masked ({{ blocker.mask ?? "Restricted" }})
                   </span>
+                  <strong
+                    v-if="formatMaskedBlockerOwner(blocker)"
+                    class="blocker-owner"
+                  >
+                    {{ formatMaskedBlockerOwner(blocker) }}:
+                  </strong>
                   <span v-if="blocker.next_action" class="blocker-action">
                     {{ blocker.next_action }}
                   </span>
@@ -358,6 +377,24 @@
                   <NodeRefChip
                     v-if="blocker.target_ref"
                     :node-ref="blocker.target_ref"
+                    :fallback-title="formatLockBlockerFallbackTitle(blocker)"
+                    include-kind
+                  />
+                  <NodeRefChip
+                    v-if="
+                      blocker.query_ref &&
+                      blocker.query_ref !== blocker.target_ref
+                    "
+                    :node-ref="blocker.query_ref"
+                    include-kind
+                  />
+                  <NodeRefChip
+                    v-if="
+                      blocker.finding_ref &&
+                      blocker.finding_ref !== blocker.target_ref
+                    "
+                    :node-ref="blocker.finding_ref"
+                    :fallback-title="blocker.rule_id ?? undefined"
                     include-kind
                   />
                   <span
@@ -387,7 +424,7 @@
           <button
             type="button"
             class="btn btn-secondary btn-mini-freeze"
-            :disabled="busy || !applyScopeRef.trim()"
+            :disabled="busy || !applyScopeRef.trim() || !canFreezeByReadiness"
             @click="openQuickApplyDialog('Frozen')"
           >
             Quick Freeze…
@@ -396,9 +433,7 @@
             type="button"
             class="btn btn-secondary btn-mini-lock"
             :disabled="
-              busy ||
-              !applyScopeRef.trim() ||
-              (readiness !== null && !readiness.ready_for_lock)
+              busy || !applyScopeRef.trim() || isLockBlockedByReadiness
             "
             @click="openQuickApplyDialog('Locked')"
           >
@@ -650,7 +685,6 @@
 import { computed, ref, watch } from "vue";
 import { ClinicalModal } from "ui";
 import {
-  formatLockBlockerDetail,
   kernelApi,
   type KernelChild,
   type KernelLock,
@@ -664,7 +698,14 @@ import {
   seedNodeSummary,
 } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
-import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import {
+  formatLockBlockerDetail,
+  formatLockBlockerFallbackTitle,
+  formatLockBlockerKindLabel,
+  formatMaskedBlockerOwner,
+  normalizeLockBlockerKind,
+  useSignedKernelLock,
+} from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
@@ -784,6 +825,8 @@ const {
   canRelease,
   readiness,
   readinessLoading,
+  readinessGates,
+  canFreezeByReadiness,
   isLockBlockedByReadiness,
   busy,
   outcome,
@@ -981,29 +1024,12 @@ const applyScopeRef = computed(() => {
   }
 });
 
-function numericCount(value: number | string | null | undefined): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-const openQueryCount = computed(() =>
-  numericCount(readiness.value?.open_query_count)
-);
-const missingRequiredItemCount = computed(() =>
-  numericCount(readiness.value?.missing_required_item_count)
-);
-const openErrorFindingCount = computed(() =>
-  numericCount(readiness.value?.open_error_finding_count)
-);
-const unverifiedRevisionCount = computed(() =>
-  numericCount(readiness.value?.unverified_revision_count)
-);
-const missingSignatureCount = computed(() =>
-  numericCount(readiness.value?.missing_signature_count)
-);
-
 const isLockedBlockedByReadiness = computed(
   () => applyKind.value === "Locked" && isLockBlockedByReadiness.value
+);
+
+const isFreezeBlockedByReadiness = computed(
+  () => applyKind.value === "Frozen" && !canFreezeByReadiness.value
 );
 
 const isApplyDisabled = computed(
@@ -1011,7 +1037,8 @@ const isApplyDisabled = computed(
     busy.value ||
     !applyScopeRef.value.trim() ||
     !applyReason.value.trim() ||
-    isLockedBlockedByReadiness.value
+    isLockedBlockedByReadiness.value ||
+    isFreezeBlockedByReadiness.value
 );
 
 watch([studyRef, applyScopeRef, canApply], () => {
@@ -1370,8 +1397,39 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 }
 
 .readiness-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
   color: var(--semantic-color-text-body);
   font-variant-numeric: tabular-nums;
+}
+
+.readiness-gate-chip--active {
+  font-weight: 600;
+  color: var(--semantic-color-error-dark);
+}
+
+.blocker-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
+  .field-group input,
+  .field-group select,
+  .release-reason-bar input,
+  .study-locks-filters input[type="text"],
+  .quick-dialog-textarea {
+    font-size: 1rem;
+  }
 }
 
 .readiness-blockers {
@@ -1391,11 +1449,6 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .blocker-owner {
   color: var(--semantic-color-text-dark);
-}
-
-.blocker-detail {
-  color: var(--semantic-color-text-dark);
-  font-weight: 500;
 }
 
 .blocker-action {

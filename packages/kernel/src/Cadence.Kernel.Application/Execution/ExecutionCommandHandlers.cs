@@ -35,9 +35,8 @@ internal sealed class RegisterParticipantHandler : ICommandHandler<RegisterParti
 }
 
 /// <summary>
-/// Handles <see cref="ScreenParticipant"/>. Under the study's lock and shared covering scope locks it refuses locked
-/// studies or sites, checks that the subject code is unused in the study, and verifies that the participant has no
-/// active enrollment at the study site overlapping the new one in valid time.
+/// Handles <see cref="ScreenParticipant"/>. Under the study's lock it checks that the subject code is unused in the
+/// study and that the participant has no active enrollment at the study site overlapping the new one in valid time.
 /// </summary>
 internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipant, EnrollmentState>
 {
@@ -67,7 +66,7 @@ internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipa
         await context.Work.LockAsync<Study>(studyId, cancellationToken).ConfigureAwait(false);
         if (await LocksInForce.AnyAsync(
                 context.Work,
-                [NodeRef.For(studyId), NodeRef.For(command.StudySiteId)],
+                LockScopes.Covering(studyId, command.StudySiteId),
                 LocksInForce.DenyingWrites,
                 cancellationToken).ConfigureAwait(false))
         {
@@ -109,7 +108,7 @@ internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipa
 
 /// <summary>
 /// Handles <see cref="ChangeEnrollmentStatus"/>. Entering Enrolled takes the study's lock and assigns the next number
-/// in the study, so numbers are gap-free (spec §7.4, K-TX-4). Refused when a lock covers the enrollment.
+/// in the study, so numbers are gap-free (spec §7.4, K-TX-4).
 /// </summary>
 internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directory) : ICommandHandler<ChangeEnrollmentStatus, EnrollmentState>
 {
@@ -170,8 +169,8 @@ internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directo
 
 /// <summary>
 /// Handles <see cref="WithdrawParticipant"/>: the acting person must have signed <c>Withdrawn</c> over the
-/// enrollment's current content hash, and no covering lock may hold on the study, site or enrollment. From then on new
-/// capture for the enrollment is refused (<see cref="Evidence.CaptureConditions"/>).
+/// enrollment's current content hash. From then on new capture for the enrollment is refused
+/// (<see cref="Evidence.CaptureConditions"/>).
 /// </summary>
 internal sealed class WithdrawParticipantHandler(IAttestationVerifier verifier) : ICommandHandler<WithdrawParticipant, EnrollmentState>
 {
@@ -185,11 +184,11 @@ internal sealed class WithdrawParticipantHandler(IAttestationVerifier verifier) 
             return KernelErrors.NotFound;
         }
 
-        var heldLocks = await LocksInForce.ReadAsync(
+        var activeLocks = await LocksInForce.ReadAsync(
             context.Work,
             LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id),
             cancellationToken).ConfigureAwait(false);
-        if (heldLocks.Any(l => LocksInForce.DenyingWrites.Contains(l.Kind)))
+        if (activeLocks.Any(l => LocksInForce.DenyingWrites.Contains(l.Kind)))
         {
             return ObservationErrors.Locked;
         }

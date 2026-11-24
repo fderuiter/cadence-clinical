@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Execution.Endpoints;
 
@@ -250,37 +245,6 @@ public static class ExecutionScopeGuard
         }
 
         return query.ToList();
-    }
-
-    public static async Task<IResult?> RequireUnlockedAsync(
-        HttpContext? httpContext,
-        string? studyId,
-        string? siteId = null,
-        string? subjectId = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (httpContext?.RequestServices?.GetService<IKernelLockGuard>() is not { } lockGuard)
-        {
-            return null;
-        }
-
-        try
-        {
-            var error = await lockGuard.CheckWriteAllowedAsync(studyId, siteId, subjectId, cancellationToken).ConfigureAwait(false);
-            return error?.ToProblemResult();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return Results.Problem(
-                detail: "Failed to verify Clinical Kernel lock state before writing.",
-                statusCode: StatusCodes.Status409Conflict,
-                title: "Conflict",
-                extensions: new Dictionary<string, object?> { ["code"] = "KERNEL_LOCK_CHECK_FAILED" });
-        }
     }
 
     public static IResult Forbidden(string detail) =>

@@ -93,30 +93,6 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
         form.Complete.Should().BeTrue();
         form.Items.Should().ContainSingle().Which.Value.Should().Be(new QuantityValue(128m, "mm[Hg]"));
 
-        // Investigator signs the form instance over the live form signature route (#5463, spec §9.5, ADR-2622).
-        using (var signReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormsRoute}/{opened.FormId:D}/signatures", UriKind.Relative)))
-        {
-            signReq.Headers.Add(KernelObservationEndpoints.IdempotencyKeyHeader, $"journey-form-sign-{Guid.NewGuid():N}");
-            signReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Investigator reviewed and approved vital signs"));
-            signReq.Headers.Add(
-                GatewayHeaders.SigToken,
-                TestSecurityContext.CreateSigToken(
-                    JourneyStudy.Investigator,
-                    $"{FormsRoute}/{opened.FormId:D}/signatures",
-                    "execution.form.sign"));
-            signReq.Content = System.Net.Http.Json.JsonContent.Create(new
-            {
-                meaning = "approved",
-                content_hash = form.ContentHash,
-            });
-            using var signRes = await investigator.SendAsync(signReq, ct);
-            var signBody = await signRes.Content.ReadAsStringAsync(ct);
-            signRes.StatusCode.Should().Be(HttpStatusCode.Created, signBody);
-            using var signJson = JsonDocument.Parse(signBody);
-            var sigAttestationId = signJson.RootElement.GetProperty("attestation_id").GetGuid();
-            written.Add((sigAttestationId.ToString(), JourneyStudy.Investigator));
-        }
-
         // Query raised, answered and closed. TODO(2026-10-20): replace the relay with the query routes (#5461).
         var query = await fixture.OkThroughHostAsync(cra, "Source shows a different reading", w => new RaiseQuery(
             w.Tenant, AssertionId.New(), enrollment.EnrollmentId, observation, "Please confirm the systolic pressure against the source.",
@@ -133,6 +109,30 @@ public sealed class CrossModuleJourneyTests(KernelHostJourneyFixture fixture) : 
             w.Tenant, AssertionId.New(), enrollment.EnrollmentId, observation, 1, w.IdempotencyKey, w.ReasonForChange), ct);
         verified.Revision.Should().Be(1);
         written.Add((verified.AssertionId.ToString(), JourneyStudy.Monitor));
+
+        // Investigator signs the completed form over the Execution module's signature route (#5463).
+        using (var signReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormsRoute}/{opened.FormId:D}/signatures", UriKind.Relative)))
+        {
+            signReq.Headers.Add(FormEndpoints.IdempotencyKeyHeader, $"journey-sign-{Guid.NewGuid():N}");
+            signReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Investigator reviewed and approved vital signs"));
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(
+                    JourneyStudy.Investigator,
+                    FormSignatureEndpoints.SignAction(opened.FormId),
+                    FormSignatureEndpoints.SignSemanticAction));
+            signReq.Content = System.Net.Http.Json.JsonContent.Create(new
+            {
+                meaning = "approved",
+                content_hash = form.ContentHash,
+            });
+
+            using var signRes = await investigator.SendAsync(signReq, ct);
+            var signBody = await signRes.Content.ReadAsStringAsync(ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, signBody);
+            var signedForm = JsonSerializer.Deserialize<FormSignatureResponse>(signBody, KernelHostJourneyFixture.Json)!;
+            written.Add((AttestationId.FromGuid(signedForm.AttestationId).ToString(), JourneyStudy.Investigator));
+        }
 
         // Database lock, signed by the data manager over the live HTTP lock route (#5466).
         var studyScope = NodeRef.For(study.Study);

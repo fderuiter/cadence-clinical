@@ -68,6 +68,11 @@ public sealed class KernelReadAccess(
         NodeRef resource,
         CancellationToken cancellationToken)
     {
+        if (actor.Actor is null)
+        {
+            return false;
+        }
+
         if (probe is null)
         {
             return !Capability.IsUnblinding(capability.Token);

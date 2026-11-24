@@ -97,12 +97,5 @@ internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
         return result.Value!;
     }
 
-    public async Task<KernelError> FailAsync<TResult>(ICommand<TResult> command, CancellationToken ct)
-    {
-        var result = await fixture.Sender.SendAsync(command, cancellationToken: ct);
-        result.IsSuccess.Should().BeFalse();
-        return result.Error!;
-    }
-
     private static string Suffix() => Guid.NewGuid().ToString("N")[..10];
 }

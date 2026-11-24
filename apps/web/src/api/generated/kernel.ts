@@ -782,15 +782,15 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/kernel/locks/check": {
+  "/api/v1/kernel/locks/in-force": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Checks whether any active Frozen or Locked assertion covers a study, study site, or subject enrollment. */
-    get: operations["KernelCheckActiveLock"];
+    /** Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. */
+    get: operations["KernelGetScopeWriteLock"];
     put?: never;
     post?: never;
     delete?: never;
@@ -823,7 +823,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries, missing required items, unresolved Error validation findings, unverified revisions, and missing signatures) for a study or child lock scope. */
+    /** Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -1228,6 +1228,8 @@ export interface components {
       retracted_by: null | components["schemas"]["Kernel_AssertionId"];
       /** Format: date-time */
       retracted_at: null | string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_AttestationId: unknown;
     Kernel_CodelistOptionView: {
@@ -1669,12 +1671,16 @@ export interface components {
       finding_ref?: null | string;
       rule_id?: null | string;
       detail?: null | string;
-    };
-    Kernel_KernelLockCheckResponse: {
-      locked: boolean;
-      study_code: string;
-      kind: null | string;
-      scope_kind: null | string;
+      /** Format: int32 */
+      current_revision?: null | number | string;
+      /** @default false */
+      signature_superseded: boolean;
+      planned_activity_id?: null | string;
+      planned_activity_name?: null | string;
+      /** Format: date */
+      planned_date?: null | string;
+      /** Format: date */
+      window_end?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1690,13 +1696,24 @@ export interface components {
       /** Format: int32 */
       open_error_finding_count: number | string;
       /** Format: int32 */
-      unverified_revision_count: number | string;
-      /** Format: int32 */
-      missing_signature_count: number | string;
-      /** Format: int32 */
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
       explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unverified_value_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unsigned_form_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unopened_visit_count: number | string;
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
@@ -2020,6 +2037,12 @@ export interface components {
       columns: components["schemas"]["Kernel_KernelSoaColumnResponse"][];
       rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
       footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
+    };
+    Kernel_KernelScopeWriteLockResponse: {
+      study_exists: boolean;
+      locked: boolean;
+      lock_kind: null | string;
+      scope_kind: null | string;
     };
     Kernel_KernelScreenEnrollmentRequest: {
       /** Format: uuid */
@@ -2356,6 +2379,8 @@ export interface components {
       locked_at: string;
       locked_by: string;
       reason_for_change: string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
@@ -5485,12 +5510,13 @@ export interface operations {
       };
     };
   };
-  KernelCheckActiveLock: {
+  KernelGetScopeWriteLock: {
     parameters: {
       query?: {
         study_code?: string;
         site_code?: string;
         subject_code?: string;
+        enrollment_id?: string;
       };
       header?: never;
       path?: never;
@@ -5504,20 +5530,11 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_KernelLockCheckResponse"];
+          "application/json": components["schemas"]["Kernel_KernelScopeWriteLockResponse"];
         };
       };
       /** @description Bad Request */
       400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Locked */
-      423: {
         headers: {
           [name: string]: unknown;
         };

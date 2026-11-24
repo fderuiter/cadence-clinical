@@ -6,17 +6,30 @@ using Cadence.Core.Domain;
 namespace Cadence.Apps.Execution.Application.Abstractions;
 
 /// <summary>
-/// Verifies against the Clinical Kernel that no active <c>Frozen</c> or <c>Locked</c> data lock
-/// covers the target study, site, or subject scope before standalone Execution writes proceed.
+/// Synchronous Clinical Kernel write-lock guard for standalone execution mutations. Queries live <c>Frozen</c> and
+/// <c>Locked</c> assertions over HTTP without referencing internal kernel assemblies (<c>K-XS-2</c>).
 /// </summary>
 public interface IKernelLockGuard
 {
     /// <summary>
-    /// Checks whether writes are permitted for the given clinical scope. Returns <see langword="null"/> when
-    /// unlocked, or a <see cref="DomainError"/> describing why the write must be rejected (HTTP 423 when locked,
-    /// or fail-closed conflict/forbidden when the kernel lock check cannot succeed).
+    /// Verifies that no active write-denying lock (<c>Frozen</c> or <c>Locked</c>) covers <paramref name="studyCode"/>,
+    /// optional <paramref name="siteCode"/>, or optional <paramref name="subjectCode"/> for the ambient HTTP caller's
+    /// tenant.
     /// </summary>
-    Task<DomainError?> CheckWriteAllowedAsync(
+    Task<Result<bool>> EnsureUnlockedAsync(
+        string? studyCode,
+        string? siteCode = null,
+        string? subjectCode = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verifies that no active write-denying lock (<c>Frozen</c> or <c>Locked</c>) covers <paramref name="studyCode"/>,
+    /// optional <paramref name="siteCode"/>, or optional <paramref name="subjectCode"/> when executing as
+    /// <paramref name="serviceAccount"/> within <paramref name="tenantCode"/>.
+    /// </summary>
+    Task<Result<bool>> EnsureUnlockedForServiceAsync(
+        ServiceAccount serviceAccount,
+        string? tenantCode,
         string? studyCode,
         string? siteCode = null,
         string? subjectCode = null,

@@ -64,23 +64,18 @@
           : 'scope-lock-readiness--blocked',
       ]"
     >
-      <span :data-testid="`${prefix}-readiness-summary`">
+      <span
+        class="scope-lock-readiness-summary"
+        :data-testid="`${prefix}-readiness-summary`"
+      >
         <template v-if="readiness.ready_for_lock">
-          Ready for Locked (0 open queries · 0 missing required items · 0
-          unverified revisions · 0 missing signatures).
+          Ready for Locked ({{
+            readinessGates.map((gate) => gate.label).join(" · ")
+          }}).
         </template>
         <template v-else>
-          Locked blocked: {{ openQueryCount }} open
-          {{ openQueryCount === 1 ? "query" : "queries" }},
-          {{ missingRequiredItemCount }} missing required
-          {{ missingRequiredItemCount === 1 ? "item" : "items"
-          }}<template v-if="openErrorFindingCount > 0"
-            >, {{ openErrorFindingCount }} error
-            {{ openErrorFindingCount === 1 ? "finding" : "findings" }}</template
-          >, {{ unverifiedRevisionCount }} unverified
-          {{ unverifiedRevisionCount === 1 ? "revision" : "revisions" }},
-          {{ missingSignatureCount }} missing
-          {{ missingSignatureCount === 1 ? "signature" : "signatures" }}
+          Locked blocked:
+          {{ readinessGates.map((gate) => gate.label).join(", ") }}
           (Freeze {{ scopeLabel }} remains available).
         </template>
       </span>
@@ -91,10 +86,23 @@
       >
         <li
           v-for="(blocker, idx) in readiness.blockers"
-          :key="`${blocker.kind}-${blocker.target_ref ?? idx}-${blocker.item_id ?? ''}`"
+          :key="`${blocker.kind}-${blocker.target_ref ?? blocker.finding_ref ?? blocker.query_ref ?? idx}`"
+          class="scope-lock-blocker-item"
+          :data-blocker-kind="normalizeLockBlockerKind(blocker.kind)"
         >
+          <span class="scope-lock-blocker-kind">
+            {{
+              formatLockBlockerKindLabel(
+                blocker.kind,
+                Boolean(blocker.signature_superseded)
+              )
+            }}
+          </span>
           <template v-if="blocker.masked">
-            Masked ({{ blocker.mask ?? "Restricted" }})
+            <span>Masked ({{ blocker.mask ?? "Restricted" }})</span>
+            <strong v-if="formatMaskedBlockerOwner(blocker)"
+              >{{ formatMaskedBlockerOwner(blocker) }}:</strong
+            >
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
           <template v-else>
@@ -102,11 +110,28 @@
             <NodeRefChip
               v-if="blocker.target_ref"
               :node-ref="blocker.target_ref"
+              :fallback-title="formatLockBlockerFallbackTitle(blocker)"
               include-kind
             />
-            <span v-if="formatLockBlockerDetail(blocker)">
-              {{ formatLockBlockerDetail(blocker) }}
-            </span>
+            <NodeRefChip
+              v-if="
+                blocker.query_ref && blocker.query_ref !== blocker.target_ref
+              "
+              :node-ref="blocker.query_ref"
+              include-kind
+            />
+            <NodeRefChip
+              v-if="
+                blocker.finding_ref &&
+                blocker.finding_ref !== blocker.target_ref
+              "
+              :node-ref="blocker.finding_ref"
+              :fallback-title="blocker.rule_id ?? undefined"
+              include-kind
+            />
+            <span v-if="formatLockBlockerDetail(blocker)">{{
+              formatLockBlockerDetail(blocker)
+            }}</span>
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
         </li>
@@ -139,16 +164,19 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import {
-  formatLockBlockerDetail,
-  type KernelLock,
-  type KernelLockKind,
-} from "../../api/kernelApi";
+import { type KernelLock, type KernelLockKind } from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,
   DirectScopeLockItem,
 } from "../../canvas/kernelLocks";
-import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import {
+  formatLockBlockerDetail,
+  formatLockBlockerFallbackTitle,
+  formatLockBlockerKindLabel,
+  formatMaskedBlockerOwner,
+  normalizeLockBlockerKind,
+  useSignedKernelLock,
+} from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 
@@ -189,6 +217,7 @@ const {
   canApply,
   canRelease,
   readiness,
+  readinessGates,
   isLockBlockedByReadiness,
   busy,
   outcome,
@@ -207,27 +236,6 @@ const {
 
 const hasDirectLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Locked")
-);
-
-function numericCount(value: number | string | null | undefined): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-const openQueryCount = computed(() =>
-  numericCount(readiness.value?.open_query_count)
-);
-const missingRequiredItemCount = computed(() =>
-  numericCount(readiness.value?.missing_required_item_count)
-);
-const openErrorFindingCount = computed(() =>
-  numericCount(readiness.value?.open_error_finding_count)
-);
-const unverifiedRevisionCount = computed(() =>
-  numericCount(readiness.value?.unverified_revision_count)
-);
-const missingSignatureCount = computed(() =>
-  numericCount(readiness.value?.missing_signature_count)
 );
 const hasDirectFrozenOrLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
@@ -329,7 +337,6 @@ function openRelease(lockRef: string, lockKind: string) {
   border-radius: 4px;
   font-size: 0.82rem;
   overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
 }
 
 .scope-lock-readiness--ready {
@@ -348,6 +355,35 @@ function openRelease(lockRef: string, lockKind: string) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.scope-lock-readiness-summary {
+  font-variant-numeric: tabular-nums;
+}
+
+.scope-lock-blocker-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.scope-lock-blocker-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
+  .scope-lock-input {
+    font-size: 1rem;
+  }
 }
 
 .scope-lock-outcome {

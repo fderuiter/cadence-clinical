@@ -314,8 +314,9 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }, HttpStatusCode.OK, ct);
         await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Resolved missing diastolic", null, HttpStatusCode.OK, ct);
         await RelayHostOutboxAsync();
+        await _scenario.VerifyAndSignAsync(new Form(subject, formRecord.ProtocolVersionId, CollectionInstanceId.FromGuid(form)), ct);
+        await _scenario.VerifyAndSignAsync(new Form(subject, formRecord.ProtocolVersionId, openedSecond.CollectionInstanceId), ct);
 
-        await _scenario.Observations.MakeScopeReadyForLockAsync(tenant, study, NodeRef.For(enrollment), ct);
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 
         using (var lockedReopen = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/reopen", "Attempted reopen under lock", new

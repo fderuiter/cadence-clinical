@@ -438,26 +438,21 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
 
-        // 1. The save is mid-commit when a Freeze arrives (and a racing Locked refuses the newly unverified/unsigned revision).
+        // 1. The save is mid-commit when the lock arrives (Frozen commits after it; Locked rejects unverified revision 2 / superseded signature with ScopeNotReady).
         var form = await _forms.NewFormAsync(ct);
         var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
         var systolicObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
-        await _forms.Observations.MakeScopeReadyForLockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct);
-        var racingHardLock = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct, LockKind.Locked);
         var lockCommand = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct, LockKind.Frozen);
         using (var paused = new KernelCommitPause(fixture))
         {
             var save = paused.HoldAsync(() => fixture.Sender.SendAsync(Save(form, Value(Systolic, Mmhg(128), 1)), cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
-            var hardLocking = fixture.Sender.SendAsync(racingHardLock, cancellationToken: ct);
             var locking = fixture.Sender.SendAsync(lockCommand, cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
-            hardLocking.IsCompleted.Should().BeFalse("Locked waits for the save's shared scope lock");
             locking.IsCompleted.Should().BeFalse("the lock waits for the save's shared scope lock");
             paused.Release();
 
             (await save).IsSuccess.Should().BeTrue();
-            (await hardLocking).Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
             (await locking).IsSuccess.Should().BeTrue();
         }
 
@@ -468,11 +463,30 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         (await fixture.CollectionInstanceRecords.FindAsync(form.Subject.Tenant, form.Instance, ct))!.Locks
             .Should().ContainSingle().Which.LockId.Should().Be(lockCommand.AssertionId);
 
-        // 2. The Locked assertion is mid-commit when the save arrives.
+        // 1b. A Locked assertion arriving while a save is mid-commit waits on the shared lock and then fails with 409 ScopeNotReady.
         form = await _forms.NewFormAsync(ct);
         saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
+        await _forms.VerifyAndSignAsync(form, ct);
         systolicObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
-        await _forms.Observations.MakeScopeReadyForLockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct);
+        var hardLockRace = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct, LockKind.Locked);
+        using (var paused = new KernelCommitPause(fixture))
+        {
+            var save = paused.HoldAsync(() => fixture.Sender.SendAsync(Save(form, Value(Systolic, Mmhg(128), 1)), cancellationToken: ct));
+            await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
+            var locking = fixture.Sender.SendAsync(hardLockRace, cancellationToken: ct);
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+            locking.IsCompleted.Should().BeFalse("the hard lock waits for the save's shared scope lock");
+            paused.Release();
+
+            (await save).IsSuccess.Should().BeTrue();
+            (await locking).Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
+        }
+
+        // 2. The lock is mid-commit when the save arrives.
+        form = await _forms.NewFormAsync(ct);
+        saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
+        await _forms.VerifyAndSignAsync(form, ct);
+        systolicObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
         lockCommand = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct);
         using (var paused = new KernelCommitPause(fixture))
         {
@@ -500,8 +514,8 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         var ct = TestContext.Current.CancellationToken;
         var form = await _forms.NewFormAsync(ct);
         var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
+        await _forms.VerifyAndSignAsync(form, ct);
         var observation = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
-        await _forms.Observations.MakeScopeReadyForLockAsync(form.Subject.Tenant, form.Subject.Study, NodeRef.For(form.Instance), ct);
         await _forms.Protocol.OkAsync(await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, NodeRef.For(form.Instance), ct), ct);
 
         var correction = await fixture.Sender.SendAsync(

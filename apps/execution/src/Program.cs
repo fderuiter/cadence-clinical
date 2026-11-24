@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
@@ -192,10 +193,13 @@ if (builder.Configuration[HttpKernelEnrollmentSynchronizer.ConfigurationKey] is 
     {
         client.BaseAddress = kernelBaseUri;
     });
-    builder.Services.AddHttpClient<IKernelLockGuard, HttpKernelLockGuard>(client =>
-    {
-        client.BaseAddress = kernelBaseUri;
-    });
+    builder.Services.AddScoped<IKernelLockGuard>(sp => ActivatorUtilities.CreateInstance<HttpKernelLockGuard>(
+        sp,
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(IKernelEnrollmentSynchronizer))));
+}
+else
+{
+    builder.Services.AddSingleton<IKernelLockGuard>(NoOpKernelLockGuard.Instance);
 }
 
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
