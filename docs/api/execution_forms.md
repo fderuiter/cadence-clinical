@@ -2,7 +2,7 @@
 
 Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
-The service exposes 15 operations.
+The service exposes 16 operations.
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
@@ -18,6 +18,7 @@ The service exposes 15 operations.
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/answer` | ExecutionAnswerFormQuery | Answers an open query (execution.query.answer). |
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/cancel` | ExecutionCancelFormQuery | Cancels an open or answered query raised in error (execution.query.manage). |
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/close` | ExecutionCloseFormQuery | Closes an answered manual query (separation of duties) or system query (execution.query.manage). |
+| `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/reassign` | ExecutionReassignFormQuery | Reassigns an open or answered query's assignee or responsible role with audited bitemporal history (execution.query.manage). |
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/reopen` | ExecutionReopenFormQuery | Reopens an answered or closed query with why it is not settled (execution.query.manage). |
 | `POST` | `/api/v1/execution/forms/{formId}/signatures` | ExecutionSignForm | Signs the form's current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read. |
 | `PUT` | `/api/v1/execution/forms/{formId}/values` | ExecutionSaveFormValues | Saves a page of values: all of them or, on one stale revision or invalid value, none (collection.record). |

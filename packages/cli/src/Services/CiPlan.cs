@@ -383,6 +383,7 @@ public static partial class CiPlan
                         CiText: $"dotnet publish {Cli} -c Release -r linux-x64 -o ./bin"),
                 ],
             },
+            ["lint-and-static/Run frontend style and lint"] = new() { EnvironmentIfPassed = NativeAotCacheHit },
             ["lint-and-static/Run Hadolint on Dockerfiles"] = new()
             {
                 RequiredTool = "hadolint",
@@ -595,6 +596,7 @@ public static partial class CiPlan
 
         foreach (var workflowJob in parsedJobs)
         {
+            bool jobNeedsNativeAot = workflowJob.Needs.Contains("native-aot-build", StringComparer.Ordinal);
             var steps = new List<CiStep>();
             foreach (var workflowStep in workflowJob.Steps)
             {
@@ -605,7 +607,7 @@ public static partial class CiPlan
                     continue;
                 }
 
-                steps.Add(BuildStep(workflowJob.Key, workflowStep, stepOverride));
+                steps.Add(BuildStep(workflowJob.Key, jobNeedsNativeAot, workflowStep, stepOverride));
             }
 
             string? onRequestOnly = workflowJob.If is { } jobIf && RulesetService.RequiresPushEvent(jobIf)
@@ -659,7 +661,7 @@ public static partial class CiPlan
         return ordered;
     }
 
-    private static CiStep BuildStep(string jobKey, WorkflowStep workflowStep, CiStepOverride? stepOverride)
+    private static CiStep BuildStep(string jobKey, bool jobNeedsNativeAot, WorkflowStep workflowStep, CiStepOverride? stepOverride)
     {
         bool always = workflowStep.If?.Contains("always()", StringComparison.Ordinal) is true;
         var mergedEnv = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -698,6 +700,14 @@ public static partial class CiPlan
             commands = ParseCommandsFromRun(rawRun, stepOverride?.InProcessCiText);
         }
 
+        IReadOnlyList<CiEnvironmentIfPassed> envIfPassed = stepOverride?.EnvironmentIfPassed ?? [];
+        if (envIfPassed.Count == 0
+            && jobNeedsNativeAot
+            && commands.Any(c => c.FileName == "node" && c.Arguments.FirstOrDefault() == "scripts/run-cli.js"))
+        {
+            envIfPassed = NativeAotCacheHit;
+        }
+
         return new CiStep(jobKey, workflowStep.Name)
         {
             Commands = commands,
@@ -717,7 +727,7 @@ public static partial class CiPlan
             NoFilesMessage = stepOverride?.NoFilesMessage,
             CleanDirectories = stepOverride?.CleanDirectories ?? [],
             Environment = mergedEnv,
-            EnvironmentIfPassed = stepOverride?.EnvironmentIfPassed ?? [],
+            EnvironmentIfPassed = envIfPassed,
             RestoreFiles = stepOverride?.RestoreFiles ?? [],
         };
     }

@@ -28,4 +28,5 @@
 .metric-sub {
   font-size: 11px;
   color: var(--semantic-color-text-secondary);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }

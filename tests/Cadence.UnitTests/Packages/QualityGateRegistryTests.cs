@@ -93,6 +93,11 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("Dockerfile", "FROM ubuntu:24.04\nWORKDIR relative/path\nEXPOSE 99999\n");
             return Context();
         },
+        ["shellcheck"] = () =>
+        {
+            Write("scripts/broken.sh", "#!/bin/sh\nUNUSED_VAR=1\necho $1\n");
+            return Context();
+        },
         ["yaml"] = () =>
         {
             Write(".github/workflows/broken.yml", "name: \"unclosed\njobs:\n\tbad: true\n");
@@ -377,7 +382,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(45);
+        QualityGates.All.Should().HaveCount(46);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -391,6 +396,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         Write("scratch/notes.txt", "forbidden directory\n");
         Write(".github/workflows/broken.yml", "name: \"unclosed\n");
         Write("Dockerfile", "FROM ubuntu:latest\nWORKDIR relative/path\n");
+        Write("scripts/broken.sh", "#!/bin/sh\nUNUSED_VAR=1\necho $1\n");
         Write("config/service.pem", $"{PrivateKeyHeader}\nMIIB\n");
         Write("apps/alpha/src/Seed.cs", $"class Seed {{ string Ssn = \"000-12-3456\"; bool Check(bool f) => f {BooleanComparison}; }}\n");
         Directory.CreateDirectory(Path.Combine(_root, "docs", "openapi"));
@@ -555,6 +561,75 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
+    public void DuplicationGate_EnforcesFrontendExtensions_HonorsShrinkOnlyBaseline_AndPrunesStaleEntries()
+    {
+        var gate = QualityGates.Find("duplication")!;
+
+        string dtsLines = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"  readonly field{i}: string;"));
+        Write("apps/web/src/types/a.d.ts", $"export interface AlphaDto {{\n{dtsLines}\n}}\n");
+        Write("apps/web/src/types/b.d.ts", $"export interface BetaDto {{\n{dtsLines}\n}}\n");
+        gate.Run(Context(files: ["apps/web/src/types/a.d.ts", "apps/web/src/types/b.d.ts"]))
+            .Should().BeTrue("ambient .d.ts type declarations are excluded from duplication enforcement");
+
+        string tsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const step{i} = seed + {i};"));
+        Write("apps/web/src/utils/calcA.ts", $"export function calcA(seed: number): number {{\n{tsLines}\n  return step18;\n}}\n");
+        Write("apps/web/src/utils/calcB.ts", $"export function calcB(seed: number): number {{\n{tsLines}\n  return step18;\n}}\n");
+        gate.Run(Context(files: ["apps/web/src/utils/calcA.ts", "apps/web/src/utils/calcB.ts"]))
+            .Should().BeFalse("unbaselined TypeScript duplicates over 15 lines must fail");
+
+        string cssRules = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  --panel-space-{i}: {i * 4}px;"));
+        Write("apps/web/src/panelA.css", $".panel {{\n{cssRules}\n}}\n");
+        Write("apps/web/src/panelB.css", $".panel {{\n{cssRules}\n}}\n");
+        gate.Run(Context(files: ["apps/web/src/panelA.css", "apps/web/src/panelB.css"]))
+            .Should().BeFalse("non-exempt CSS duplicates over 15 lines must fail");
+
+        string vueLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const row{i} = props.offset + {i};"));
+        string vueA = $"<script setup lang=\"ts\">\nfunction renderRows(props: {{ offset: number }}) {{\n{vueLines}\n  return row18;\n}}\n</script>\n";
+        string vueB = $"<script setup lang=\"ts\">\nfunction renderRows(props: {{ offset: number }}) {{\n{vueLines}\n  return row18;\n}}\n</script>\n";
+        Write("apps/web/src/views/ViewA.vue", vueA);
+        Write("apps/web/src/views/ViewB.vue", vueB);
+
+        var vueScope = Context(files: ["apps/web/src/views/ViewA.vue", "apps/web/src/views/ViewB.vue"]);
+        gate.Run(vueScope).Should().BeFalse("unbaselined Vue duplicates over 15 lines must fail");
+
+        var summary = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(_root, "duplication_summary.json")))!;
+        string[] vueKeys = summary["duplicates"]!.AsArray()
+            .Select(n => n!["key"]!.GetValue<string>())
+            .Where(k => k.Contains("ViewA.vue", StringComparison.Ordinal))
+            .ToArray();
+        vueKeys.Should().NotBeEmpty();
+
+        Cadence.ToolingCore.Services.DuplicationDetectorService.WriteBaseline(_root, vueKeys);
+        gate.Run(vueScope).Should().BeTrue("baselined Vue clone windows pass");
+
+        // Shifting lines in ViewA.vue without changing the duplicated block body keeps the content-hash key valid.
+        Write("apps/web/src/views/ViewA.vue", "<!-- header banner -->\n\n" + vueA);
+        gate.Run(vueScope).Should().BeTrue("content-hashed baseline keys survive line-number shifts");
+
+        // Refactoring ViewB.vue removes the clone, turning the baseline entries stale until pruned.
+        Write("apps/web/src/views/ViewB.vue", "<script setup lang=\"ts\">\nconst simplified = true;\n</script>\n");
+        gate.Run(vueScope).Should().BeFalse("stale duplication baseline entries must fail closed until pruned");
+
+        string? previousUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+
+            // Unbaselined TypeScript duplicates must still fail even when CADENCE_UPDATE_BASELINE=1 is set.
+            gate.Run(Context(files: ["apps/web/src/utils/calcA.ts", "apps/web/src/utils/calcB.ts"]))
+                .Should().BeFalse("CADENCE_UPDATE_BASELINE=1 may only prune stale entries and must never baseline new duplicates");
+
+            gate.Run(vueScope).Should().BeTrue("CADENCE_UPDATE_BASELINE=1 prunes resolved baseline entries");
+            File.Exists(Path.Combine(_root, Cadence.ToolingCore.Services.DuplicationDetectorService.BaselineFileName))
+                .Should().BeFalse("emptied .duplication-baseline.txt is deleted automatically");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", previousUpdate);
+        }
+    }
+
+    [Fact]
     public void DemoManifestGate_InPreCommitMode_SkipsUnrelatedFiles_AndRunsWhenSeedOrFixtureFilesStaged()
     {
         var gate = QualityGates.Find("demo-manifest")!;
@@ -674,6 +749,28 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(Context()).Should().BeTrue("a non-conflicting branch over origin/main passes merge-readiness");
         gate.Run(Context(pushBefore: "0000000000000000000000000000000000000000"))
             .Should().BeTrue("push-scoped CI runs skip merge-readiness cleanly");
+    }
+
+    [Fact]
+    public void DotnetFormatGate_UnscopedFolderMode_SkipsExcludedDirectoriesWithoutSolutionAndFailsOnBadSource()
+    {
+        var gate = QualityGates.Find("dotnet-format")!;
+        Write(".editorconfig", "root = true\n[*.cs]\nindent_style = space\nindent_size = 4\n");
+        Write("apps/tickets/src/Clean.cs", "namespace Tickets;\n\npublic static class Clean\n{\n    public static int Value => 1;\n}\n");
+
+        const string malformed = "namespace Ignored;\n\npublic static class Bad\n{\n        public static int Value => 1;\n}\n";
+        Write("apps/tickets/src/obj/Debug/net10.0/Generated.g.cs", malformed);
+        Write("apps/tickets/src/bin/Debug/net10.0/Generated.cs", malformed);
+        Write(".cadence/cli-artifacts/Generated.cs", malformed);
+        Write("apps/web/node_modules/pkg/Generated.cs", malformed);
+
+        File.Exists(Path.Combine(_root, "Cadence.sln")).Should().BeFalse();
+        gate.Run(Context()).Should().BeTrue(
+            "unscoped dotnet-format must run in folder mode without Cadence.sln and ignore excluded build/tool directories");
+
+        Write("apps/tickets/src/Malformed.cs", malformed);
+        gate.Run(Context()).Should().BeFalse(
+            "unscoped folder-mode dotnet-format must fail when a non-excluded C# source file violates .editorconfig whitespace");
     }
 
     [Fact]

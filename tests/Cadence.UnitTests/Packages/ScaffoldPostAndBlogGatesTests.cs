@@ -113,4 +113,34 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
             files: ["docs/blog/StrayWidget.vue"],
             repoRoot: _tempDir).Should().Be(1);
     }
+
+    [Fact]
+    public void PathPatternValidator_UnscopedScan_EnforcesRecursiveShellAndVueBoundaries()
+    {
+        string validScript = Path.Combine(_tempDir, "scripts", "check_env.sh");
+        Directory.CreateDirectory(Path.GetDirectoryName(validScript)!);
+        File.WriteAllText(validScript, "#!/bin/sh\necho ok\n");
+
+        string validVue = Path.Combine(_tempDir, "apps", "web", "src", "Widget.vue");
+        Directory.CreateDirectory(Path.GetDirectoryName(validVue)!);
+        File.WriteAllText(validVue, "<template><div /></template>\n");
+
+        PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir).Should().Be(0);
+
+        string nestedStrayScript = Path.Combine(_tempDir, "tests", "stray_check.sh");
+        Directory.CreateDirectory(Path.GetDirectoryName(nestedStrayScript)!);
+        File.WriteAllText(nestedStrayScript, "#!/bin/sh\necho stray\n");
+
+        PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir)
+            .Should().Be(1, "unscoped path-patterns scan must reject nested .sh files outside scripts/");
+
+        File.Delete(nestedStrayScript);
+
+        string nestedStrayVue = Path.Combine(_tempDir, "docs", "guide", "InlineDemo.vue");
+        Directory.CreateDirectory(Path.GetDirectoryName(nestedStrayVue)!);
+        File.WriteAllText(nestedStrayVue, "<template><div /></template>\n");
+
+        PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir)
+            .Should().Be(1, "unscoped path-patterns scan must reject nested .vue files outside apps/, packages/, and docs/.vitepress/");
+    }
 }

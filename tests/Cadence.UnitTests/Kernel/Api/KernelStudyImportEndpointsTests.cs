@@ -14,9 +14,11 @@ using Cadence.Kernel;
 using Cadence.Kernel.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Intelligence;
 using Cadence.Kernel.Knowledge;
@@ -28,6 +30,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
+using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -450,6 +453,347 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task LifecycleVersionResolution_HandlesWithdrawnInReviewAndSupersededVersionsWithoutDeadlock()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _world.GrantRole(
+            Actor.Person(DesignerIdentity.UserId),
+            "REVIEW_APPROVER",
+            ["protocol.return_to_draft"],
+            AuthorityScope.Tenant());
+
+        using var designerClient = CreateClient(DesignerIdentity);
+        var templates = await designerClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/protocol-templates", ct);
+        var dmTemplateId = templates.EnumerateArray().First(t => t.GetProperty("file_name").GetString() == "DM_XML.xml").GetProperty("id").GetString()!;
+        var aeTemplateId = templates.EnumerateArray().First(t => t.GetProperty("file_name").GetString() == "AE_XML.xml").GetProperty("id").GetString()!;
+
+        // 1. Study with Withdrawn v1 -> creates recovery Draft v2 (201 Created).
+        var withdrawnV1 = ProtocolVersionId.New();
+        var initialDesign = ProtocolDesignDocument.Write(new ProtocolDesign
+        {
+            Title = "CADENCE-101",
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "F.OLD",
+                    "Old Form",
+                    [new CollectionItem("IT.OLD", new ConceptRef(ConceptId.New(), 1), Required: true, ValueKind: ObservationValueKind.Text, Prompt: "Old")]),
+            ],
+        });
+        _world.Versions.Add(new StoredVersion(
+            new ProtocolVersionSummary(withdrawnV1, _world.DemoStudyId, 1, null, ProtocolVersionStatus.Withdrawn, "sha256:v1", null, null, "Withdrawn before activation"),
+            initialDesign));
+
+        using (var req = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", SampleOdmXml, "vitals.xml", "rec-v2", "Create recovery draft after withdrawn v1"))
+        {
+            using var res = await designerClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Created);
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
+            doc.RootElement.GetProperty("version").GetProperty("number").GetInt32().Should().Be(2);
+            doc.RootElement.GetProperty("version").GetProperty("status").GetString().Should().Be("Draft");
+        }
+
+        // 2. Mark v2 InReview -> importing reopens v2 to Draft (200 OK) and clears content_hash.
+        var v2Id = _world.Versions.Single(v => v.Summary.Number == 2).Summary.Id;
+        _world.SetVersionStatus(v2Id, ProtocolVersionStatus.InReview, "sha256:inreview");
+
+        using (var req = JsonPost(
+            "/api/v1/kernel/studies/CADENCE-101/protocol-imports",
+            new { template_ids = new[] { dmTemplateId }, replace_forms = false },
+            "reopen-v2",
+            "Return in-review v2 to draft and merge DM"))
+        {
+            using var res = await designerClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
+            doc.RootElement.GetProperty("version").GetProperty("number").GetInt32().Should().Be(2);
+            doc.RootElement.GetProperty("version").GetProperty("status").GetString().Should().Be("Draft");
+            doc.RootElement.GetProperty("version").GetProperty("content_hash").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        // 3. Mark v2 Superseded and add Approved v3 -> importing forks Approved v3 into Draft v4.
+        _world.SetVersionStatus(v2Id, ProtocolVersionStatus.Superseded, "sha256:v2");
+        var v2Content = _world.Versions.Single(v => v.Summary.Id == v2Id).Content;
+        var approvedV3 = ProtocolVersionId.New();
+        _world.Versions.Add(new StoredVersion(
+            new ProtocolVersionSummary(approvedV3, _world.DemoStudyId, 3, v2Id, ProtocolVersionStatus.Approved, "sha256:v3", "Amendment 1", null, null),
+            v2Content));
+
+        using (var req = JsonPost(
+            "/api/v1/kernel/studies/CADENCE-101/protocol-imports",
+            new { template_ids = new[] { aeTemplateId }, replace_forms = false },
+            "fork-v4",
+            "Fork approved v3 across superseded history"))
+        {
+            using var res = await designerClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Created);
+            using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
+            doc.RootElement.GetProperty("version").GetProperty("number").GetInt32().Should().Be(4);
+            doc.RootElement.GetProperty("version").GetProperty("parent_version").GetString().Should().StartWith($"protocol_version:{approvedV3}");
+        }
+    }
+
+    [Fact]
+    public async Task MissingReviseDraftOrConceptDefineCapability_Returns403BeforeAnyForkOrConceptCommit()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var approvedV1 = ProtocolVersionId.New();
+        var baseContent = ProtocolDesignDocument.Write(new ProtocolDesign
+        {
+            Title = "CADENCE-101",
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "F.BASE",
+                    "Baseline",
+                    [new CollectionItem("IT.BASE", new ConceptRef(ConceptId.New(), 1), Required: true, ValueKind: ObservationValueKind.Text, Prompt: "Baseline")]),
+            ],
+        });
+        _world.Versions.Add(new StoredVersion(
+            new ProtocolVersionSummary(approvedV1, _world.DemoStudyId, 1, null, ProtocolVersionStatus.Approved, "sha256:v1", null, null, null),
+            baseContent));
+
+        // Actor missing protocol.revise_draft (only has protocol.amend + concept.define) -> 403 before fork or concepts.
+        var amendOnlyIdentity = TestSecurityContext.Identity("amend.only", "Amend Only");
+        _world.GrantRole(
+            Actor.Person(amendOnlyIdentity.UserId),
+            "AMEND_ONLY",
+            ["protocol.amend", "concept.define"],
+            AuthorityScope.Tenant());
+        using var amendOnlyClient = CreateClient(amendOnlyIdentity);
+        using (var req = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", SampleOdmXml, "vitals.xml", "no-revise", "Attempt fork without revise_draft"))
+        {
+            using var res = await amendOnlyClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        _world.Versions.Should().HaveCount(1);
+        _world.Concepts.Should().BeEmpty();
+
+        // Actor missing concept.define (has protocol.amend + protocol.revise_draft) -> 403 before fork or concepts.
+        var noConceptIdentity = TestSecurityContext.Identity("noconcept.user", "No Concept Define");
+        _world.GrantRole(
+            Actor.Person(noConceptIdentity.UserId),
+            "NO_CONCEPT_DEFINE",
+            ["protocol.amend", "protocol.revise_draft"],
+            AuthorityScope.Tenant());
+        using var noConceptClient = CreateClient(noConceptIdentity);
+        using (var req = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", SampleOdmXml, "vitals.xml", "no-concept", "Attempt fork without concept.define"))
+        {
+            using var res = await noConceptClient.SendAsync(req, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        _world.Versions.Should().HaveCount(1);
+        _world.Concepts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task InvalidImport_CommitsZeroConcepts_AndBiomedicalConceptC25298DeduplicatesAcrossOdmAndUsdm()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        // 1. Invalid ODM referencing an undefined ItemGroupOID alongside an ItemDef with C25298 and a CodeList -> 422 with zero Concept or CodeSystem rows committed.
+        const string invalidOdmWithConcept = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.BAD" FileType="Snapshot" ODMVersion="1.3.2">
+              <Study OID="S.BAD">
+                <GlobalVariables>
+                  <StudyName>Invalid ODM</StudyName>
+                  <StudyDescription>Invalid</StudyDescription>
+                  <ProtocolName>BAD-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.BAD" Name="v1">
+                  <FormDef OID="F.OK" Name="Valid First Form" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.OK" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <FormDef OID="F.BAD" Name="Broken Form" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.MISSING" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.OK" Name="Valid Group" Repeating="No">
+                    <ItemRef ItemOID="IT.SYS" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.POS" OrderNumber="2" Mandatory="No"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.SYS" Name="SYSBP" DataType="integer">
+                    <Alias Context="CDASH" Name="extCodeID: C25298"/>
+                  </ItemDef>
+                  <ItemDef OID="IT.POS" Name="VSPOS" DataType="text">
+                    <Question><TranslatedText>Position</TranslatedText></Question>
+                    <CodeListRef CodeListOID="CL.POS"/>
+                  </ItemDef>
+                  <CodeList OID="CL.POS" Name="Position" DataType="text">
+                    <CodeListItem CodedValue="SITTING"><Decode><TranslatedText>Sitting</TranslatedText></Decode></CodeListItem>
+                  </CodeList>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        using (var badReq = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", invalidOdmWithConcept, "broken-odm.xml", "bad-odm-c25298", "Attempt broken ODM"))
+        {
+            using var badRes = await designerClient.SendAsync(badReq, ct);
+            badRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        }
+
+        _world.Concepts.Should().BeEmpty();
+        _world.CodeSystems.Should().BeEmpty();
+        _world.CodeSystemVersions.Should().BeEmpty();
+        _world.Versions.Should().BeEmpty();
+
+        // 2. Valid ODM with C25298 defines one CdiscBiomedicalConcept with ExternalCode == "C25298".
+        using (var odmReq = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", SampleOdmXml, "vitals.xml", "valid-odm-c25298", "Import ODM with C25298"))
+        {
+            using var odmRes = await designerClient.SendAsync(odmReq, ct);
+            odmRes.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        var c25298 = _world.Concepts.Should().ContainSingle(c => c.ExternalCode == "C25298").Subject;
+        c25298.Origin.Should().Be(ConceptOrigin.CdiscBiomedicalConcept);
+
+        // 3. Subsequent USDM v4 JSON referencing C25298 reuses the exact same CdiscBiomedicalConcept ConceptRef.
+        const string usdmWithC25298 = """
+            {
+              "usdmVersion": "4.0.0",
+              "study": {
+                "id": "Study_CADENCE_101",
+                "name": "CADENCE-101",
+                "versions": [
+                  {
+                    "id": "SV_1",
+                    "titles": [
+                      { "id": "T_1", "text": "CADENCE-101", "type": { "code": "C207616", "decode": "Official Study Title" } }
+                    ],
+                    "biomedicalConcepts": [
+                      {
+                        "id": "BC_HOME_SBP",
+                        "name": "Systolic Blood Pressure",
+                        "label": "Home Systolic BP",
+                        "code": { "id": "AC_1", "standardCode": { "code": "C25298", "decode": "Systolic Blood Pressure" } }
+                      }
+                    ],
+                    "studyDesigns": [
+                      {
+                        "id": "SD_1",
+                        "activities": [
+                          {
+                            "id": "F.HOME_BP",
+                            "name": "Home Blood Pressure",
+                            "biomedicalConceptIds": [ "BC_HOME_SBP" ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            """;
+
+        using (var usdmReq = JsonPost(
+            "/api/v1/kernel/studies/CADENCE-101/protocol-imports",
+            new { format = "usdm_json", file_name = "home-bp.json", content = usdmWithC25298, replace_forms = false },
+            "valid-usdm-c25298",
+            "Merge USDM referencing C25298"))
+        {
+            using var usdmRes = await designerClient.SendAsync(usdmReq, ct);
+            usdmRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var doc = JsonDocument.Parse(await usdmRes.Content.ReadAsStringAsync(ct));
+            var forms = doc.RootElement.GetProperty("forms");
+            var odmConcept = forms[0].GetProperty("items")[0].GetProperty("concept").GetString();
+            var usdmConcept = forms[1].GetProperty("items")[0].GetProperty("concept").GetString();
+            usdmConcept.Should().Be(odmConcept).And.Be(c25298.Concept.ToString());
+        }
+
+        _world.Concepts.Count(c => c.ExternalCode == "C25298").Should().Be(1);
+    }
+
+    [Fact]
+    [KernelRule("K-PROT-2")]
+    public async Task ForkAndDraftRevision_SetImpactedElementsFromStructuralDiff_AndPersistClassificationAndTransitionPolicy()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var designerClient = CreateClient(DesignerIdentity);
+        var templates = await designerClient.GetFromJsonAsync<JsonElement>("/api/v1/kernel/protocol-templates", ct);
+        var aeTemplateId = templates.EnumerateArray().First(t => t.GetProperty("file_name").GetString() == "AE_XML.xml").GetProperty("id").GetString()!;
+
+        var approvedV1 = ProtocolVersionId.New();
+        var v1Content = ProtocolDesignDocument.Write(new ProtocolDesign
+        {
+            Title = "CADENCE-101",
+            Objectives = [new Objective("obj.primary", ObjectiveLevel.Primary, "Primary SBP objective")],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.baseline",
+                    "Baseline Assessment",
+                    [new CollectionItem("it.base", new ConceptRef(ConceptId.New(), 1), Required: true, ValueKind: ObservationValueKind.Text, Prompt: "Baseline note")]),
+            ],
+        });
+        _world.Versions.Add(new StoredVersion(
+            new ProtocolVersionSummary(approvedV1, _world.DemoStudyId, 1, null, ProtocolVersionStatus.Approved, "sha256:v1", null, null, null),
+            v1Content));
+
+        // 1. Fork Approved v1 -> Draft v2 with Substantial + RequiresReconsent.
+        using (var forkReq = JsonPost(
+            "/api/v1/kernel/studies/CADENCE-101/protocol-imports",
+            new
+            {
+                format = "odm_xml",
+                file_name = "vitals.xml",
+                content = SampleOdmXml,
+                replace_forms = false,
+                amendment_classification = "Substantial",
+                transition_policy = "RequiresReconsent",
+            },
+            "fork-amend-1",
+            "Add Vital Signs form in substantial amendment"))
+        {
+            using var forkRes = await designerClient.SendAsync(forkReq, ct);
+            forkRes.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        var v2 = _world.Versions.Single(v => v.Summary.Number == 2);
+        var expectedForkDiff = ProtocolStructuralDiff.Compare(v1Content, v2.Content).Value!
+            .Select(c => c.ElementId)
+            .Where(id => id != ProtocolStructuralDiff.RootId)
+            .ToList();
+        v2.Amendment.Should().NotBeNull();
+        v2.Amendment!.Classification.Should().Be(AmendmentClassification.Substantial);
+        v2.Amendment.TransitionPolicy.Should().Be(TransitionPolicy.RequiresReconsent);
+        v2.Amendment.ImpactedElements.Should().Equal(expectedForkDiff);
+
+        // 2. Revise Draft v2 by merging bundled AE_XML template with UrgentSafetyMeasure + ByCohort.
+        using (var revReq = JsonPost(
+            "/api/v1/kernel/studies/CADENCE-101/protocol-imports",
+            new
+            {
+                template_ids = new[] { aeTemplateId },
+                replace_forms = false,
+                amendment_classification = "UrgentSafetyMeasure",
+                transition_policy = "ByCohort",
+            },
+            "revise-amend-2",
+            "Add Adverse Events form under urgent safety measure"))
+        {
+            using var revRes = await designerClient.SendAsync(revReq, ct);
+            revRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var doc = JsonDocument.Parse(await revRes.Content.ReadAsStringAsync(ct));
+            doc.RootElement.GetProperty("amendment").GetProperty("classification").GetString().Should().Be("UrgentSafetyMeasure");
+            doc.RootElement.GetProperty("amendment").GetProperty("transition_policy").GetString().Should().Be("ByCohort");
+        }
+
+        var v2Revised = _world.Versions.Single(v => v.Summary.Number == 2);
+        var expectedRevDiff = ProtocolStructuralDiff.Compare(v1Content, v2Revised.Content).Value!
+            .Select(c => c.ElementId)
+            .Where(id => id != ProtocolStructuralDiff.RootId)
+            .ToList();
+        v2Revised.Amendment!.Classification.Should().Be(AmendmentClassification.UrgentSafetyMeasure);
+        v2Revised.Amendment.TransitionPolicy.Should().Be(TransitionPolicy.ByCohort);
+        v2Revised.Amendment.ImpactedElements.Should().Equal(expectedRevDiff);
+    }
+
+    [Fact]
     public async Task ImportProtocolDraft_RegistersCodeSystemVersionsIdempotently_ForOdmAndUsdmCodelists()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -650,13 +994,16 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             Grants.Add(grant);
         }
 
-        public void MarkVersionApproved(ProtocolVersionId versionId)
+        public void MarkVersionApproved(ProtocolVersionId versionId) =>
+            SetVersionStatus(versionId, ProtocolVersionStatus.Approved, "sha256:approved");
+
+        public void SetVersionStatus(ProtocolVersionId versionId, ProtocolVersionStatus status, string? contentHash)
         {
             var idx = Versions.FindIndex(v => v.Summary.Id == versionId);
             if (idx >= 0)
             {
                 var current = Versions[idx];
-                Versions[idx] = new StoredVersion(current.Summary with { Status = ProtocolVersionStatus.Approved, ContentHash = "sha256:approved" }, current.Content);
+                Versions[idx] = new StoredVersion(current.Summary with { Status = status, ContentHash = contentHash }, current.Content, current.Amendment);
             }
         }
 
@@ -797,6 +1144,12 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             return Task.FromResult(parsed.IsValid ? parsed.Design : null);
         }
 
+        public Task<string?> GetContentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult(Versions.FirstOrDefault(v => v.Summary.Id == version)?.Content);
+
+        public Task<ProtocolAmendment?> GetAmendmentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult(Versions.FirstOrDefault(v => v.Summary.Id == version)?.Amendment);
+
         public Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default) =>
             Task.FromResult(Concepts.FirstOrDefault(c => c.Concept == concept));
 
@@ -880,6 +1233,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 CreateProtocolDraft createDraft => ExecuteCreateDraft(createDraft),
                 ReviseProtocolDraft reviseDraft => ExecuteReviseDraft(reviseDraft),
                 ForkProtocolVersion forkVersion => ExecuteForkVersion(forkVersion),
+                ImportProtocolDraft importDraft => ExecuteImportProtocolDraft(importDraft),
                 _ => throw new NotSupportedException($"Unhandled command {command.GetType().Name}."),
             };
 
@@ -1102,10 +1456,175 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
             int nextNum = world.Versions.Where(v => v.Summary.StudyId == parent.Summary.StudyId).Max(v => v.Summary.Number) + 1;
             var summary = new ProtocolVersionSummary(cmd.ProtocolVersionId, parent.Summary.StudyId, nextNum, parent.Summary.Id, ProtocolVersionStatus.Draft, null, cmd.Amendment.Intent, null, null);
-            world.Versions.Add(new StoredVersion(summary, parent.Content));
+            world.Versions.Add(new StoredVersion(summary, parent.Content, cmd.Amendment));
             return new ProtocolVersionState(summary.Id, summary.StudyId, summary.Number, ProtocolVersionStatus.Draft, null);
+        }
+
+        private object ExecuteImportProtocolDraft(ImportProtocolDraft cmd)
+        {
+            if (!world.Studies.Any(s => s.StudyId == cmd.StudyId))
+            {
+                return ProtocolErrors.StudyUnknown;
+            }
+
+            if (!ProtocolDesignDocument.Read(cmd.Content).IsValid)
+            {
+                return ProtocolErrors.ContentInvalid;
+            }
+
+            StoredVersion? targetStored;
+            int targetIdx = -1;
+            switch (cmd.Mode)
+            {
+                case ProtocolDraftImportMode.CreateDraft:
+                    {
+                        var studyVersions = world.Versions.Where(v => v.Summary.StudyId == cmd.StudyId).ToList();
+                        if (studyVersions.Any(v => v.Summary.Status is not (ProtocolVersionStatus.Withdrawn or ProtocolVersionStatus.Superseded)))
+                        {
+                            return ProtocolErrors.FirstVersionExists;
+                        }
+
+                        if (cmd.Amendment is not null)
+                        {
+                            return ProtocolErrors.AmendmentNotAllowed;
+                        }
+
+                        int nextNum = studyVersions.Count == 0 ? 1 : studyVersions.Max(v => v.Summary.Number) + 1;
+                        var summary = new ProtocolVersionSummary(cmd.TargetVersionId, cmd.StudyId, nextNum, null, ProtocolVersionStatus.Draft, null, null, null, null);
+                        targetStored = new StoredVersion(summary, cmd.Content, null);
+                        break;
+                    }
+
+                case ProtocolDraftImportMode.UpdateExisting:
+                case ProtocolDraftImportMode.ReopenInReview:
+                    {
+                        targetIdx = world.Versions.FindIndex(v => v.Summary.Id == cmd.TargetVersionId && v.Summary.StudyId == cmd.StudyId);
+                        if (targetIdx < 0)
+                        {
+                            return KernelErrors.NotFound;
+                        }
+
+                        var existing = world.Versions[targetIdx];
+                        if (cmd.Mode == ProtocolDraftImportMode.ReopenInReview)
+                        {
+                            if (existing.Summary.Status is not (ProtocolVersionStatus.InReview or ProtocolVersionStatus.Draft))
+                            {
+                                return ProtocolErrors.InvalidTransition;
+                            }
+                        }
+                        else if (existing.Summary.Status != ProtocolVersionStatus.Draft)
+                        {
+                            return ProtocolErrors.InvalidTransition;
+                        }
+
+                        if (existing.Summary.ParentVersionId is null && cmd.Amendment is not null)
+                        {
+                            return ProtocolErrors.AmendmentNotAllowed;
+                        }
+
+                        var mergedAmendment = cmd.Amendment ?? existing.Amendment;
+                        var updatedSummary = existing.Summary with
+                        {
+                            Status = ProtocolVersionStatus.Draft,
+                            ContentHash = null,
+                            AmendmentIntent = mergedAmendment?.Intent ?? existing.Summary.AmendmentIntent,
+                        };
+                        targetStored = new StoredVersion(updatedSummary, cmd.Content, mergedAmendment);
+                        break;
+                    }
+
+                case ProtocolDraftImportMode.ForkApproved:
+                    {
+                        if (cmd.ParentVersionId is not { } parentId)
+                        {
+                            return ProtocolErrors.AmendmentInvalid;
+                        }
+
+                        var parent = world.Versions.FirstOrDefault(v => v.Summary.Id == parentId && v.Summary.StudyId == cmd.StudyId);
+                        if (parent is null)
+                        {
+                            return KernelErrors.NotFound;
+                        }
+
+                        if (parent.Summary.Status != ProtocolVersionStatus.Approved)
+                        {
+                            return ProtocolErrors.InvalidTransition;
+                        }
+
+                        if (cmd.Amendment is null
+                            || string.IsNullOrWhiteSpace(cmd.Amendment.Intent)
+                            || string.IsNullOrWhiteSpace(cmd.Amendment.Rationale)
+                            || string.IsNullOrWhiteSpace(cmd.Amendment.SummaryOfChanges)
+                            || cmd.Amendment.ImpactedElements is not { Count: > 0 }
+                            || !Enum.IsDefined(cmd.Amendment.Classification)
+                            || !Enum.IsDefined(cmd.Amendment.TransitionPolicy))
+                        {
+                            return ProtocolErrors.AmendmentInvalid;
+                        }
+
+                        int nextNum = world.Versions.Where(v => v.Summary.StudyId == cmd.StudyId).Max(v => v.Summary.Number) + 1;
+                        var forkedSummary = new ProtocolVersionSummary(
+                            cmd.TargetVersionId,
+                            cmd.StudyId,
+                            nextNum,
+                            parentId,
+                            ProtocolVersionStatus.Draft,
+                            null,
+                            cmd.Amendment.Intent,
+                            null,
+                            null);
+                        targetStored = new StoredVersion(forkedSummary, cmd.Content, cmd.Amendment);
+                        break;
+                    }
+
+                default:
+                    return ProtocolErrors.InvalidTransition;
+            }
+
+            foreach (var staged in cmd.StagedConcepts)
+            {
+                if (world.Concepts.Any(c => c.Concept.ConceptId == staged.ConceptId))
+                {
+                    continue;
+                }
+
+                if (staged.Origin == ConceptOrigin.CdiscBiomedicalConcept
+                    && !string.IsNullOrWhiteSpace(staged.ExternalCode)
+                    && world.Concepts.Any(c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode == staged.ExternalCode))
+                {
+                    continue;
+                }
+
+                world.Concepts.Add(new ConceptVersionView(
+                    new ConceptRef(staged.ConceptId, 1),
+                    staged.Origin,
+                    staged.ExternalCode,
+                    staged.Kind,
+                    staged.PreferredLabel,
+                    staged.Definition,
+                    ConceptStatus.Active,
+                    1,
+                    ConceptMappingState.Unmapped,
+                    Epoch));
+            }
+
+            if (targetIdx >= 0)
+            {
+                world.Versions[targetIdx] = targetStored;
+            }
+            else
+            {
+                world.Versions.Add(targetStored);
+            }
+
+            return new ProtocolVersionState(
+                targetStored.Summary.Id,
+                targetStored.Summary.StudyId,
+                targetStored.Summary.Number,
+                targetStored.Summary.Status,
+                targetStored.Summary.ContentHash);
         }
     }
 
-    private sealed record StoredVersion(ProtocolVersionSummary Summary, string Content);
+    private sealed record StoredVersion(ProtocolVersionSummary Summary, string Content, ProtocolAmendment? Amendment = null);
 }

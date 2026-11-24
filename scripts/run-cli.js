@@ -268,7 +268,7 @@ function getLatestSourceMtime(dir) {
         if (stat.mtimeMs > maxMtime) maxMtime = stat.mtimeMs;
       }
     }
-  } catch (err) {
+  } catch {
     // If directory reading fails, ignore and return current maxMtime
   }
   return maxMtime;

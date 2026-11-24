@@ -9,16 +9,17 @@ Generated from `packages/cli/src/Services/QualityGates.cs` by `pnpm cadence gene
 | `dotnet-format` | Whitespace formatting against `.editorconfig` (`dotnet format whitespace`) |
 | `dotnet-format-style` | Roslyn code-style rules (`dotnet format style`) |
 | `prettier` | Prettier formatting across JS, TS, Vue, CSS, JSON, Markdown and YAML files |
-| `eslint` | ESLint and duplicate store identifier checks across JS, TS and Vue files |
+| `eslint` | Frontend ESLint and duplicate store identifier checks across tracked JS, TS, Vue, and CSS files via root eslint.config.mjs |
 | `typecheck` | Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`) |
 | `actionlint` | GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing) |
-| `hadolint` | Dockerfile best-practice and syntax linting (`hadolint --failure-threshold error`) from `.cadence/bin` or `PATH` (fails closed when missing) |
+| `hadolint` | Dockerfile best-practice and syntax linting (`hadolint --failure-threshold warning`) from `.cadence/bin` or `PATH` (fails closed when missing) |
+| `shellcheck` | POSIX and Bash script static analysis (`shellcheck -x`) across `*.sh` and `.githooks/*` from `.cadence/bin` or `PATH` (fails closed when missing) |
 | `yaml` | YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys |
 | `trailing-whitespace` | No trailing spaces or tabs at the end of lines in text files |
 | `end-of-file` | Non-empty UTF-8 text files end with a newline character |
 | `clean-secrets` | Verifies `baselines/secrets/config.json` and `baselines/secrets/*.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them |
 | `detect-secrets` | Scans changed or tracked files against merged `baselines/secrets/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing) |
-| `duplication` | Duplicated code blocks over 15 normalized lines across C#, JavaScript, TypeScript, Vue and CSS files |
+| `duplication` | Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.ts`, `.tsx`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt` |
 | `cli-docs` | `docs/cli-gates.md`, `docs/cli-commands.md`, `docs/cli.md` and synthesized doc regions match `QualityGates.cs`, `Program.cs`, `PortCheckerService` and code metadata |
 | `adrs` | ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes |
 | `arch-drift` | Fail-closed parity of `docker/docker-compose.yml`, `ServiceTopology`, Vite ports, `core` hosts, EF Core module schemas, `RequireElectronicSignature` endpoints, durable signature token stores, and `GxPAuditInterceptor` hosts across `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md` |
@@ -40,12 +41,12 @@ Generated from `packages/cli/src/Services/QualityGates.cs` by `pnpm cadence gene
 | `path-patterns` | No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/` |
 | `query-linter` | No interpolated SQL string passed to `FromSqlRaw` or `ExecuteSqlRaw`, and no comparison with a boolean literal |
 | `vulnerabilities` | NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners) |
-| `dependencies` | Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies` |
+| `dependencies` | Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, unique `.github/dependabot.yml` update targets and `ignore` rules, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies` |
 | `doc-index` | Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md` |
 | `demo-manifest` | `packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json` |
 | `rtm` | Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts |
 | `gxp-snapshot` | The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532) |
-| `baseline-ratchet` | No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it |
+| `baseline-ratchet` | No ratchet baseline gate (`*.baseline.txt`, `*-baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it |
 | `merge-readiness` | Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts |
 | `public-bundle` | Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, CSP meta headers, `axe-core`/`keycloak-js` demo contamination, forbidden modulepreloads, and staged demo byte budgets (skipped in unscoped `cadence check` only when all three `dist/` folders are absent; fails closed on partial `dist/` or direct `check public-bundle`) |
 | `branch-freshness` | Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy |
@@ -63,6 +64,7 @@ Generated from `packages/cli/src/Services/QualityGates.cs` by `pnpm cadence gene
 | `typecheck` | `validate-typecheck` | yes | Quick: runs `pnpm -r typecheck` when staged JS, TS, Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing |
 | `actionlint` | `validate-workflows` | yes | Quick: validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing |
 | `hadolint` | `hadolint-docker`, `validate-dockerfiles` | yes | Quick: lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing |
+| `shellcheck` | `lint-shell`, `validate-shell` | yes | Quick: lints staged `*.sh` and `.githooks/*` blobs with `-x`; fails closed when `shellcheck` is missing |
 | `yaml` | `check-yaml`, `validate-yaml` | yes | Runs on the staged files |
 | `trailing-whitespace` | `check-trailing-whitespace` | yes | Runs on the staged files |
 | `end-of-file` | `end-of-file-fixer`, `eof-newline` | yes | Runs on the staged files |

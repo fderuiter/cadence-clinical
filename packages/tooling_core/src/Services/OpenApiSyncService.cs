@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
@@ -13,6 +14,8 @@ namespace Cadence.ToolingCore.Services;
 /// </summary>
 public static class OpenApiSyncService
 {
+    public const int DefaultMaxParallelism = 4;
+
     private const string ExporterProject = "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj";
 
     public static int SyncOpenApiSpec(bool validate = false, string? repoRoot = null, IEnumerable<string>? targetServices = null)
@@ -106,6 +109,55 @@ public static class OpenApiSyncService
         return drift;
     }
 
+    public static bool TryParseMaxParallelism(string[] args, out int maxParallelism, out string? error)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+
+        maxParallelism = DefaultMaxParallelism;
+        error = null;
+
+        bool expectValueNext = false;
+        for (int i = 0; i < args.Length; i++)
+        {
+            string arg = args[i];
+            string? rawValue;
+            if (expectValueNext)
+            {
+                rawValue = arg;
+                expectValueNext = false;
+            }
+            else if (string.Equals(arg, "--max-parallelism", StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 >= args.Length)
+                {
+                    error = "Option '--max-parallelism' requires a positive integer value.";
+                    return false;
+                }
+
+                expectValueNext = true;
+                continue;
+            }
+            else if (arg.StartsWith("--max-parallelism=", StringComparison.OrdinalIgnoreCase))
+            {
+                rawValue = arg["--max-parallelism=".Length..];
+            }
+            else
+            {
+                continue;
+            }
+
+            if (!int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) || parsed < 1)
+            {
+                error = $"Invalid '--max-parallelism' value '{rawValue}'. Expected an integer >= 1.";
+                return false;
+            }
+
+            maxParallelism = parsed;
+        }
+
+        return true;
+    }
+
     private static IEnumerable<string> StaleSpecs(string exportedDir, string committedDir)
     {
         if (!Directory.Exists(committedDir))
@@ -142,7 +194,7 @@ public static class OpenApiSyncService
             exporterArgs.Add(string.Join(",", targetServices));
         }
 
-        return ExporterBuildFreshness.RunDotnetExporter(repoRoot, ExporterProject, exporterArgs, "OpenAPI exporter");
+        return ExporterBinaryResolver.RunExporter(repoRoot, ExporterProject, exporterArgs, "OpenAPI exporter");
     }
 
     private static string FindRepoRoot()
