@@ -18,6 +18,7 @@ using Cadence.Apps.Tickets.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Database.Concurrency;
 using Cadence.Database.Tenancy;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -156,6 +157,7 @@ public sealed class StandaloneConcurrencyAndWalletLocksPostgresTests(ThrowawayPo
                 VisitCode = "DIARY",
                 VisitName = "Daily ePRO Diary",
                 Amount = 25.00m,
+                RequiresVerification = false,
                 AntiCoercionCap = 500.00m,
                 IsActive = true,
                 CreatedAt = now,
@@ -272,6 +274,15 @@ public sealed class StandaloneConcurrencyAndWalletLocksPostgresTests(ThrowawayPo
                 StudyIds: ["STUDY-PAY-01"],
                 ProductFamilies: TestSecurityContext.AllProductFamilies));
 
+            string syncVerificationToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+                callerUserId: "SUBJ-RACE-NEW",
+                studyCode: "STUDY-PAY-01",
+                diaryId: "vas-race-01",
+                assignmentId: null,
+                sequenceNumber: 7,
+                issuedAt: SystemClock.Instance.UtcNow,
+                gatewaySecret: TestSecurityContext.GatewaySecret);
+
             async Task<SelfServiceDiaryStipendResponseDto> PostDiaryAsync(string distinctKey)
             {
                 using var resp = await participantClient.PostAsJsonAsync(
@@ -283,6 +294,7 @@ public sealed class StandaloneConcurrencyAndWalletLocksPostgresTests(ThrowawayPo
                         diaryId = "vas-race-01",
                         sequenceNumber = 7,
                         idempotencyKey = distinctKey,
+                        syncVerificationToken,
                     },
                     Ct);
                 resp.StatusCode.Should().Be(HttpStatusCode.OK);
