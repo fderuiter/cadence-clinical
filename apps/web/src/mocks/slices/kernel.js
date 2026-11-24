@@ -1,4 +1,5 @@
 import {
+  DEMO_PARTICIPANTS,
   DEMO_SITES,
   DEMO_SPONSOR,
   DEMO_STUDY,
@@ -64,7 +65,9 @@ function createInitialObservations() {
   const obs2Ref = `observation:${OBS_2_UUID}`;
   const obs3Ref = `observation:${OBS_3_UUID}`;
   const obs4Ref = `observation:${OBS_4_UUID}`;
-  const enrollmentRef = `enrollment:${ENROLLMENT_1001_UUID}`;
+  const canonicalEnrollmentUuid =
+    DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
+  const enrollmentRef = `enrollment:${canonicalEnrollmentUuid}`;
 
   const makeObs = (ref, concept, value, recordedAt, reasonText) => ({
     ref,
@@ -2055,15 +2058,17 @@ export function createKernelSliceStore(ctx) {
       };
     },
 
-    getObservation(observationRef) {
+    getObservation(observationRef, scopeHint = {}) {
       const normalized = String(observationRef).startsWith("observation:")
         ? String(observationRef)
         : `observation:${observationRef}`;
+      const canonicalEnrollmentUuid =
+        DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
       let obs = state.observations.get(normalized);
       if (!obs) {
         obs = {
           ref: normalized,
-          enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+          enrollment_ref: `enrollment:${canonicalEnrollmentUuid}`,
           concept: "SYSBP",
           value: {
             type: "quantity",
@@ -2104,7 +2109,35 @@ export function createKernelSliceStore(ctx) {
         };
         state.observations.set(normalized, obs);
       }
-      return cloneJson(obs);
+      const result = cloneJson(obs);
+      const hintStudy = String(scopeHint?.studyCode || "").trim();
+      const hintSite = String(scopeHint?.siteCode || "").trim();
+      const hintSubject = String(scopeHint?.subjectCode || "").trim();
+      if (hintStudy || hintSite || hintSubject) {
+        const matchedSubject = (state.subjects || []).find((subj) => {
+          if (
+            hintStudy &&
+            String(subj.study_id || "").toUpperCase() !==
+              hintStudy.toUpperCase()
+          ) {
+            return false;
+          }
+          if (
+            hintSite &&
+            String(subj.site_id || "").toUpperCase() !== hintSite.toUpperCase()
+          ) {
+            return false;
+          }
+          if (hintSubject && subj.subject_id !== hintSubject) {
+            return false;
+          }
+          return true;
+        });
+        if (matchedSubject) {
+          result.enrollment_ref = `enrollment:${matchedSubject.id}`;
+        }
+      }
+      return result;
     },
 
     correctObservation(observationRef, body, reasonForChange) {
@@ -3488,10 +3521,30 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
       });
     }),
 
-    http.get("*/api/v1/kernel/observations/:observationRef", ({ params }) =>
-      HttpResponse.json(
-        store.getObservation(decodeURIComponent(String(params.observationRef)))
-      )
+    http.get(
+      "*/api/v1/kernel/observations/:observationRef",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        return HttpResponse.json(
+          store.getObservation(
+            decodeURIComponent(String(params.observationRef)),
+            {
+              studyCode:
+                url.searchParams.get("studyId") ||
+                url.searchParams.get("study_code") ||
+                "",
+              siteCode:
+                url.searchParams.get("siteId") ||
+                url.searchParams.get("site_code") ||
+                "",
+              subjectCode:
+                url.searchParams.get("subjectId") ||
+                url.searchParams.get("subject_code") ||
+                "",
+            }
+          )
+        );
+      }
     ),
     http.post(
       "*/api/v1/kernel/observations/:observationRef/corrections",
