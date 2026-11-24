@@ -59,21 +59,43 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { ArrowLeft, ExternalLink, PanelRight } from "lucide-vue-next";
 import { ClinicalDrawer } from "ui";
 import { resolveEntityPeek } from "../../canvas/entityPeekResolver";
+import { resolveWorkspaceNavigationScope } from "../../canvas/palette";
+import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
 import { useEntityPeekDrawer } from "../../composables/useEntityPeekDrawer";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 const route = useRoute();
 const router = useRouter();
+const { activeStudyCode } = useActiveStudyScope();
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
 const { state, closePeek, stepBack, toggleDocked } = useEntityPeekDrawer();
+
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    route,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 const resolved = computed(() =>
   state.current?.nodeRef
     ? resolveEntityPeek(
         state.current.nodeRef,
-        (route?.query || {}) as Record<string, unknown>
+        (route?.query || {}) as Record<string, unknown>,
+        {
+          studyCode: workspaceScope.value.studyCode,
+          workspaceScope: workspaceScope.value,
+        }
       )
     : null
 );
@@ -82,10 +104,13 @@ const drawerTitle = computed(
 );
 const preservedScopeLabel = computed(() => {
   const q = (route?.query || {}) as Record<string, unknown>;
+  const scope = workspaceScope.value;
   return [
-    q.studyId || q.study_id || q.study,
-    q.siteId || q.site_id || q.site,
-    q.subjectId ||
+    scope.studyCode || q.studyId || q.study_id || q.study,
+    scope.siteId || q.siteId || q.site_id || q.site,
+    scope.subjectCode ||
+      scope.participantRef ||
+      q.subjectId ||
       q.subject_id ||
       q.subject ||
       q.participant ||
@@ -123,7 +148,7 @@ function openFullView() {
   min-height: 2.75rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.375rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-control, var(--color-border));
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;

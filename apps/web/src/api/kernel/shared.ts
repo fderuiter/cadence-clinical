@@ -40,11 +40,17 @@ export interface KernelLineageWindow {
   knownAt?: string;
 }
 
+export interface KernelHiddenScopesHeader {
+  moreExist: boolean;
+  reasons: string[];
+}
+
 export interface KernelStreamedArtifact {
   blob: Blob;
   filename: string;
   contentType: string;
   contentSha256: string | null;
+  hiddenScopes?: KernelHiddenScopesHeader | null;
 }
 
 /** Extracts the kernel error code (`K.Assertion.Locked`, …) from a failed call, or null. */
@@ -192,6 +198,26 @@ function parseDispositionFilename(
   return match?.[1]?.trim() || fallback;
 }
 
+function parseHiddenScopesHeader(
+  raw: string | null
+): KernelHiddenScopesHeader | null {
+  if (!raw) return null;
+  let moreExist = false;
+  let reasons: string[] = [];
+  for (const part of raw.split(";")) {
+    const [key, val] = part.split("=").map((s) => s.trim());
+    if (key === "more_exist") {
+      moreExist = val === "true";
+    } else if (key === "reasons" && val) {
+      reasons = val
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+    }
+  }
+  return { moreExist, reasons };
+}
+
 export async function streamKernelDownload(
   pathAndQuery: string,
   fallbackFilename: string
@@ -234,7 +260,10 @@ export async function streamKernelDownload(
     fallbackFilename
   );
   const contentSha256 = response.headers.get("x-content-sha256");
-  return { blob, filename, contentType, contentSha256 };
+  const hiddenScopes = parseHiddenScopesHeader(
+    response.headers.get("x-cadence-hidden-scopes")
+  );
+  return { blob, filename, contentType, contentSha256, hiddenScopes };
 }
 
 /** Triggers a browser file download from an in-memory streamed Blob. */
@@ -256,19 +285,21 @@ export function triggerBrowserDownload(blob: Blob, filename: string): void {
 }
 
 export function formatProblemExplanationSummary(
-  problem: Record<string, any> | null | undefined
+  problem: Record<string, unknown> | null | undefined
 ): string {
-  const exp = problem?.explanation;
-  if (!exp || typeof exp !== "object") {
+  const rawExp = problem?.explanation;
+  if (!rawExp || typeof rawExp !== "object") {
     return "";
   }
+  const exp = rawExp as Record<string, unknown>;
   const claim = typeof exp.claim === "string" ? exp.claim.trim() : "";
   const conditions = Array.isArray(exp.conditions) ? exp.conditions : [];
   const unmet = conditions
     .filter(
-      (c: any) => c && c.met === false && typeof c.description === "string"
+      (c): c is Record<string, unknown> => Boolean(c) && typeof c === "object"
     )
-    .map((c: any) => c.description.trim())
+    .filter((c) => c.met === false && typeof c.description === "string")
+    .map((c) => (c.description as string).trim())
     .filter(Boolean);
   if (claim && unmet.length > 0 && !unmet.includes(claim)) {
     return `${claim} (${unmet.join("; ")})`;
@@ -277,9 +308,13 @@ export function formatProblemExplanationSummary(
 }
 
 export function extractExplanationTargets(
-  problem: Record<string, any> | null | undefined
+  problem: Record<string, unknown> | null | undefined
 ): Array<{ description: string; target: string }> {
-  const exp = problem?.explanation;
+  const rawExp = problem?.explanation;
+  const exp =
+    rawExp && typeof rawExp === "object"
+      ? (rawExp as Record<string, unknown>)
+      : null;
   const actions = Array.isArray(exp?.next_actions)
     ? exp.next_actions
     : Array.isArray(exp?.nextActions)
@@ -287,11 +322,12 @@ export function extractExplanationTargets(
       : [];
   return actions
     .filter(
-      (a: any) => a && typeof a.target === "string" && a.target.length > 0
+      (a): a is Record<string, unknown> => Boolean(a) && typeof a === "object"
     )
-    .map((a: any) => ({
+    .filter((a) => typeof a.target === "string" && a.target.length > 0)
+    .map((a) => ({
       description:
         typeof a.description === "string" ? a.description : "Inspect blocker",
-      target: a.target,
+      target: a.target as string,
     }));
 }

@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import { ClinicalExplanation, ClinicalGatedAction, EntityLink } from "ui";
 import ToastHost from "../src/components/ToastHost.vue";
+import EntityPeekDrawerHost from "../src/components/canvas/EntityPeekDrawerHost.vue";
+import { resolveEntityPeek } from "../src/canvas/entityPeekResolver";
 import { useEntityPeekDrawer } from "../src/composables/useEntityPeekDrawer";
 import { useToastStore } from "../src/stores/toasts.js";
 import {
@@ -150,5 +153,78 @@ describe("Inline explanation primitives, peek drawer state, and 403/422/423 Prob
     );
     expect(toasts.toasts).toHaveLength(0);
     wrapper.unmount();
+  });
+
+  it("preserves Clinical Canvas studyCode, site, and participant scope via centralized scoped study location helpers when opening full view", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push({
+      name: "study",
+      params: { studyCode: "CADENCE-101" },
+      query: {
+        stage: "conduct",
+        section: "participants",
+        site: "SITE-101",
+        participant: "SUBJ-101-001",
+      },
+    });
+    await router.isReady();
+
+    const { openPeek, state } = useEntityPeekDrawer();
+    openPeek({
+      nodeRef: "assertion:99999999-8888-7777-6666-555555555555@1",
+      label: "Active Site Lock",
+    });
+
+    const directResolved = resolveEntityPeek(
+      "assertion:99999999-8888-7777-6666-555555555555@1",
+      router.currentRoute.value.query as Record<string, unknown>,
+      { studyCode: "CADENCE-101" }
+    );
+    expect(directResolved.fullViewLocation).toEqual({
+      name: "study",
+      params: { studyCode: "CADENCE-101" },
+      query: {
+        stage: "conduct",
+        section: "participants",
+        site: "SITE-101",
+        participant: "SUBJ-101-001",
+        node: "assertion:99999999-8888-7777-6666-555555555555@1",
+      },
+    });
+
+    const host = mount(EntityPeekDrawerHost, {
+      global: { plugins: [pinia, router], stubs: { teleport: true } },
+    });
+    await flushPromises();
+
+    expect(host.text()).toContain("CADENCE-101 | SITE-101 | SUBJ-101-001");
+    const fullViewBtn = host
+      .findAll("button")
+      .find((b) => b.text().includes("Open full view"));
+    expect(fullViewBtn).toBeDefined();
+    await fullViewBtn!.trigger("click");
+    await flushPromises();
+
+    expect(state.open).toBe(false);
+    expect(router.currentRoute.value.params.studyCode).toBe("CADENCE-101");
+    expect(router.currentRoute.value.query).toMatchObject({
+      stage: "conduct",
+      section: "participants",
+      site: "SITE-101",
+      participant: "SUBJ-101-001",
+      node: "assertion:99999999-8888-7777-6666-555555555555@1",
+    });
+    host.unmount();
   });
 });
