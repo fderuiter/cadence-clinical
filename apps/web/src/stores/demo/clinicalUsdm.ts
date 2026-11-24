@@ -19,7 +19,9 @@ export type UsdmSchemas = Pick<
   | "EncounterSchema"
   | "StudyArmSchema"
   | "StudyEpochSchema"
+  | "USDMV3StudySchema"
   | "USDMStudySchema"
+  | "WrapperSchema"
   | "validateUsdmGraph"
 >;
 
@@ -355,6 +357,10 @@ export function createClinicalUsdmActions() {
         schema = schemas.ActivitySchema;
       } else if (lower === "concept" || lower === "code") {
         schema = schemas.CodeSchema;
+      } else if (lower === "wrapper" || lower === "usdmwrapper") {
+        schema = schemas.WrapperSchema;
+      } else if (lower === "usdmv3" || lower === "studyv3") {
+        schema = schemas.USDMV3StudySchema;
       } else if (
         lower === "study" ||
         lower === "usdm" ||
