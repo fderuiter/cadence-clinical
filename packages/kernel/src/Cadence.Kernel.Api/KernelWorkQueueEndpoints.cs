@@ -38,7 +38,7 @@ public static class KernelWorkQueueEndpoints
         group.MapGet(string.Empty, ReadAsync)
             .WithName("KernelReadWorkQueues")
             .WithSummary("Reads the caller's capability-keyed work queues in the current tenant or within a scope.")
-            .WithDescription("within is an optional NodeRef (for example study:<uuid> or study_site:<uuid>); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.")
+            .WithDescription("within is an optional NodeRef or study code (for example study:<uuid>, study_site:<uuid>, or CADENCE-101); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -65,30 +65,33 @@ public static class KernelWorkQueueEndpoints
         IWorkItemTargetResolver targetResolver,
         CancellationToken cancellationToken)
     {
+        var tenant = KernelRequestTenant.Get(context);
         NodeRef? withinRef = null;
         if (!string.IsNullOrWhiteSpace(within))
         {
-            if (!NodeRef.TryParse(within, out var parsed))
+            var resolvedScope = await KernelStudyLookup.ResolveScopeOrStudyCodeAsync(
+                tenant,
+                within,
+                context,
+                navigator,
+                cancellationToken).ConfigureAwait(false);
+            if (resolvedScope.Problem is { } scopeProblem)
             {
-                return KernelProblems.InvalidNodeRef(within);
+                return scopeProblem;
             }
 
-            withinRef = parsed;
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (withinRef is not null)
-        {
-            if (await navigator.ResolveAsync(tenant, withinRef, cancellationToken).ConfigureAwait(false) is not { } resolved)
-            {
-                return KernelProblems.NotFound(withinRef);
-            }
-
+            withinRef = resolvedScope.Scope.ScopeRef;
             if (withinRef.Kind != NodeKinds.Tenant)
             {
-                var masks = await KernelReadMasking.MaskAsync(visibility, currentActor, tenant, [resolved.Ref], cancellationToken)
+                var unversionedWithin = withinRef.Unversioned();
+                var masks = await KernelReadMasking.MaskAsync(
+                        visibility,
+                        currentActor,
+                        tenant,
+                        [resolvedScope.Scope.PinnedRef, unversionedWithin],
+                        cancellationToken)
                     .ConfigureAwait(false);
-                if (masks.For(resolved.Ref) is { } mask)
+                if ((masks.For(resolvedScope.Scope.PinnedRef) ?? masks.For(unversionedWithin)) is { } mask)
                 {
                     return KernelProblems.NotVisible($"You may not see {withinRef} ({mask}), so work queues within it are not shown.");
                 }

@@ -18,6 +18,8 @@ export type KernelValidationFindingPage =
   KernelSchemas["Kernel_KernelValidationFindingPageResponse"];
 export type KernelValidationFindingDetail =
   KernelSchemas["Kernel_KernelValidationFindingDetailResponse"];
+export type KernelStudyAttention =
+  KernelSchemas["Kernel_KernelStudyAttentionResponse"];
 export type KernelFindingClassification =
   "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 
@@ -48,7 +50,7 @@ export interface KernelDeclareStudyRulePacksInput {
 
 export interface KernelStudyValidationFindingsQuery {
   stage?: string;
-  status?: string;
+  status?: string | string[];
   severity?: string;
   dataset?: string;
   packKey?: string;
@@ -142,6 +144,15 @@ export const kernelValidationApi = {
   ): Promise<KernelValidationFindingPage> {
     const { executeListStudyValidationFindings } = await loadRouteTransport();
     return executeListStudyValidationFindings(studyRef, query);
+  },
+
+  /** Unified study attention summary: open proposals alongside Open and Investigating validation findings. */
+  async getStudyAttention(
+    studyRef: string,
+    query: { limit?: number } = {}
+  ): Promise<KernelStudyAttention> {
+    const { executeGetStudyAttention } = await loadRouteTransport();
+    return executeGetStudyAttention(studyRef, query);
   },
 
   /** Reads a validation finding together with its structured explanation. */
