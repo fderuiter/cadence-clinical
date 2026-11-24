@@ -61,6 +61,19 @@ describe("GitHub Pages co-hosted subpath portal configuration (ADR-2550)", () =>
     expect(landingContent).toContain('link: "/DOCUMENTATION_INDEX"');
     expect(landingContent).toContain('link: "/README"');
     expect(landingContent).toContain('target: "_self"');
+    expect(landingContent).toContain("CADENCE-101");
+    expect(landingContent).not.toContain("DEMO-01");
+
+    const adr2550 = fs.readFileSync(
+      path.join(
+        docsDir,
+        "adr",
+        "2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md"
+      ),
+      "utf8"
+    );
+    expect(adr2550).toContain("/studies/CADENCE-101");
+    expect(adr2550).not.toContain("DEMO-01");
   });
 
   it("stages subpath demos in deploy-docs.yml before SHA256 checksums and SLSA provenance", () => {

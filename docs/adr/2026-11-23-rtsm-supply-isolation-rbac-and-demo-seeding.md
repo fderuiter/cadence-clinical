@@ -1,4 +1,4 @@
-# ADR-2832: Isolate RTSM Supply Loads, Align Unblinded Statistician and Trial Coordinator RBAC, and Seed Demo Randomization
+# ADR-2833: Isolate RTSM Supply Loads, Align Unblinded Statistician and Trial Coordinator RBAC, and Seed Demo Randomization
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
