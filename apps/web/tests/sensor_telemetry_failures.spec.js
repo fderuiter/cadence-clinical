@@ -24,84 +24,72 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
   async function mountConsole() {
     // Default mock implementation returning fulfilled promises with sample data
     vi.spyOn(interopService, "listSensorDevices").mockResolvedValue({
-      data: {
-        devices: [
-          {
-            device_id: "DEV-1",
-            study_id: "STUDY-901",
-            site_id: "SITE-101",
-            subject_id: "SUBJ-101",
-            device_type: "CGM",
-            vendor: "Dexcom",
-            model_name: "G7",
-            udi_di: "UDI-001",
-            mac_address_masked: "00:1A:7D:**:**:13",
-            device_token: "TOK-123",
-            calibration_status: "Calibrated",
-          },
-        ],
-      },
-      response: new Response("{}"),
+      devices: [
+        {
+          device_id: "DEV-1",
+          study_id: "STUDY-901",
+          site_id: "SITE-101",
+          subject_id: "SUBJ-101",
+          device_type: "CGM",
+          vendor: "Dexcom",
+          model_name: "G7",
+          udi_di: "UDI-001",
+          mac_address_masked: "00:1A:7D:**:**:13",
+          device_token: "TOK-123",
+          calibration_status: "Calibrated",
+        },
+      ],
     });
 
     vi.spyOn(interopService, "listDailySummaries").mockResolvedValue({
-      data: {
-        summaries: [
-          {
-            summary_id: "SUM-1",
-            study_id: "STUDY-901",
-            site_id: "SITE-101",
-            subject_id: "SUBJ-101",
-            summary_date: "2026-08-23",
-            device_type: "CGM",
-            device_token: "TOK-123",
-            cgm: {
-              tir_percentage: 80,
-              mean_glucose_mg_dl: 120,
-              glucose_sd: 15,
-              glucose_cv_percent: 25,
-              readings_count: 288,
-            },
+      summaries: [
+        {
+          summary_id: "SUM-1",
+          study_id: "STUDY-901",
+          site_id: "SITE-101",
+          subject_id: "SUBJ-101",
+          summary_date: "2026-08-23",
+          device_type: "CGM",
+          device_token: "TOK-123",
+          cgm: {
+            tir_percentage: 80,
+            mean_glucose_mg_dl: 120,
+            glucose_sd: 15,
+            glucose_cv_percent: 25,
+            readings_count: 288,
           },
-        ],
-      },
-      response: new Response("{}"),
+        },
+      ],
     });
 
     vi.spyOn(interopService, "listSafetyAlerts").mockResolvedValue({
-      data: {
-        alerts: [
-          {
-            alert_id: "ALT-101",
-            study_id: "STUDY-901",
-            subject_id: "SUBJ-101",
-            device_type: "CGM",
-            severity: "CRITICAL",
-            parameter_name: "Glucose",
-            observed_value: 45,
-            threshold_value: 54,
-            unit: "mg/dL",
-            triggered_at: "2026-08-23T10:00:00Z",
-            is_acknowledged: false,
-          },
-        ],
-      },
-      response: new Response("{}"),
+      alerts: [
+        {
+          alert_id: "ALT-101",
+          study_id: "STUDY-901",
+          subject_id: "SUBJ-101",
+          device_type: "CGM",
+          severity: "CRITICAL",
+          parameter_name: "Glucose",
+          observed_value: 45,
+          threshold_value: 54,
+          unit: "mg/dL",
+          triggered_at: "2026-08-23T10:00:00Z",
+          is_acknowledged: false,
+        },
+      ],
     });
 
     vi.spyOn(interopService, "getSensorMetrics").mockResolvedValue({
-      data: {
-        metrics: {
-          total_streams_ingested: 14,
-          total_readings_ingested: 4032,
-          active_devices_count: 6,
-          mean_time_in_range_percent: 78.4,
-          mean_daily_steps: 8420,
-          mean_resting_hr_bpm: 64.2,
-          mean_fev1_liters: 3.45,
-        },
+      metrics: {
+        total_streams_ingested: 14,
+        total_readings_ingested: 4032,
+        active_devices_count: 6,
+        mean_time_in_range_percent: 78.4,
+        mean_daily_steps: 8420,
+        mean_resting_hr_bpm: 64.2,
+        mean_fev1_liters: 3.45,
       },
-      response: new Response("{}"),
     });
 
     const wrapper = mount(SensorTelemetryConsole, {
@@ -165,16 +153,13 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
 
   it("displays warning banner above Safety Alerts section when safety alert API rejects", async () => {
     vi.spyOn(interopService, "listSensorDevices").mockResolvedValue({
-      data: { devices: [] },
-      response: new Response("{}"),
+      devices: [],
     });
     vi.spyOn(interopService, "listDailySummaries").mockResolvedValue({
-      data: { summaries: [] },
-      response: new Response("{}"),
+      summaries: [],
     });
     vi.spyOn(interopService, "getSensorMetrics").mockResolvedValue({
-      data: { metrics: {} },
-      response: new Response("{}"),
+      metrics: {},
     });
     vi.spyOn(interopService, "listSafetyAlerts").mockRejectedValue(
       new ApiError("Failed to fetch safety alerts from cluster", 500)
@@ -249,8 +234,7 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
     wrapper.vm.ackNotes = "Subject contacted and verified ok.";
 
     vi.spyOn(interopService, "acknowledgeSafetyAlert").mockResolvedValue({
-      data: { status: "acknowledged" },
-      response: new Response("{}"),
+      status: "acknowledged",
     });
 
     await wrapper.vm.submitAcknowledgment();

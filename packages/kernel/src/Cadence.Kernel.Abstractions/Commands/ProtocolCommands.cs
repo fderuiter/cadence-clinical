@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 
 namespace Cadence.Kernel.Commands;
@@ -95,6 +98,66 @@ public sealed record ForkProtocolVersion(
     ProtocolAmendment Amendment,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ProtocolVersionState>;
+
+/// <summary>Mutation mode executed by <see cref="ImportProtocolDraft"/>.</summary>
+public enum ProtocolDraftImportMode
+{
+    /// <summary>Creates version 1 for an empty study, or a recovery draft numbered after terminal versions.</summary>
+    CreateDraft,
+
+    /// <summary>Revises an existing draft (or reopens an in-review version to draft and revises it).</summary>
+    UpdateExisting,
+
+    /// <summary>Explicitly reopens an in-review version to draft and revises its content.</summary>
+    ReopenInReview,
+
+    /// <summary>Forks an approved parent version and writes the imported draft content and amendment.</summary>
+    ForkApproved,
+}
+
+/// <summary>A new tenant concept staged in memory during protocol design import for atomic persistence.</summary>
+public sealed record StagedProtocolConcept(
+    ConceptId ConceptId,
+    ConceptOrigin Origin,
+    string? ExternalCode,
+    ConceptKind Kind,
+    string PreferredLabel,
+    string Definition);
+
+/// <summary>
+/// Atomically commits newly staged <see cref="StagedProtocolConcept"/> records and creates, forks, or revises a
+/// study's draft <c>ProtocolVersion</c> under the study's scope lock after structural import validation completes.
+/// </summary>
+[KernelCapability("protocol.import_draft", VerbClass.Propose, Resource = nameof(ImportProtocolDraft.StudyId), InCatalogue = false)]
+[RaisesKernelErrors(
+    typeof(KernelErrors),
+    nameof(KernelErrors.AlreadyExists),
+    nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.StudyUnknown),
+    nameof(ProtocolErrors.FirstVersionExists),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.ContentRequired),
+    nameof(ProtocolErrors.ContentInvalid),
+    nameof(ProtocolErrors.AmendmentInvalid),
+    nameof(ProtocolErrors.AmendmentNotAllowed))]
+[RaisesKernelErrors(
+    typeof(KnowledgeErrors),
+    nameof(KnowledgeErrors.ConceptLabelRequired),
+    nameof(KnowledgeErrors.ExternalCodeMismatch))]
+public sealed record ImportProtocolDraft(
+    TenantId TenantId,
+    StudyId StudyId,
+    ProtocolDraftImportMode Mode,
+    ProtocolVersionId TargetVersionId,
+    ProtocolVersionId? ParentVersionId,
+    string Content,
+    ProtocolAmendment? Amendment,
+    IReadOnlyList<StagedProtocolConcept> StagedConcepts,
+    string IdempotencyKey,
+    string ReasonForChange,
+    string? RequestFingerprint = null) : ICommand<ProtocolVersionState>;
 
 /// <summary>A protocol version's identity and lifecycle position after a command.</summary>
 /// <remarks>

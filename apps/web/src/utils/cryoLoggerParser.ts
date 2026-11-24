@@ -81,8 +81,8 @@ function parseTimestampValue(rawVal: any): string | null {
       if (dateSub.length === 3) {
         // Assume MM/DD/YYYY if slash or hyphen
         let year = parseInt(dateSub[2], 10);
-        let month = parseInt(dateSub[0], 10) - 1;
-        let day = parseInt(dateSub[1], 10);
+        const month = parseInt(dateSub[0], 10) - 1;
+        const day = parseInt(dateSub[1], 10);
         if (year < 100) year += 2000;
         const timeSub = timePart.split(":");
         if (timeSub.length >= 2) {

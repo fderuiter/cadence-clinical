@@ -108,6 +108,30 @@
             <option value="odm_xml">CDISC ODM v1.3.2 XML casebook</option>
             <option value="json">Structured JSON casebook</option>
           </select>
+          <label for="participant-casebook-valid-at" class="casebook-label">
+            Valid at
+          </label>
+          <input
+            id="participant-casebook-valid-at"
+            v-model="casebookValidAt"
+            type="text"
+            class="casebook-input"
+            autocomplete="off"
+            placeholder="ISO UTC (optional)"
+            :disabled="casebookBusy"
+          />
+          <label for="participant-casebook-known-at" class="casebook-label">
+            Known at
+          </label>
+          <input
+            id="participant-casebook-known-at"
+            v-model="casebookKnownAt"
+            type="text"
+            class="casebook-input"
+            autocomplete="off"
+            placeholder="ISO UTC (optional)"
+            :disabled="casebookBusy"
+          />
           <button
             id="btn-export-casebook"
             type="button"
@@ -130,12 +154,22 @@
             aria-live="polite"
           >
             <span>{{ casebookOutcome.message }}</span>
+            <span
+              v-if="casebookOutcome.generatedAt"
+              class="casebook-generated-at"
+              data-testid="participant-casebook-generated-at"
+            >
+              Generated at {{ casebookOutcome.generatedAt }}
+            </span>
             <details
               v-if="casebookOutcome.sha256"
               class="casebook-digest-disclosure"
             >
               <summary>Verification digest</summary>
-              <code data-testid="participant-casebook-sha256">
+              <code
+                class="casebook-digest-code"
+                data-testid="participant-casebook-sha256"
+              >
                 SHA-256: {{ casebookOutcome.sha256 }}
               </code>
             </details>
@@ -178,6 +212,7 @@ import {
   kernelApi,
   triggerBrowserDownload,
   type CasebookExportFormat,
+  type KernelCasebookExportQuery,
   type KernelLock,
 } from "../../api/kernelApi";
 import {
@@ -239,11 +274,14 @@ function onFormsLoaded(summaries: EcrfFormSummary[]) {
 const zoomStudySiteRef = ref<string | null>(null);
 const activeStudyLocks = ref<KernelLock[]>([]);
 const casebookFormat = ref<CasebookExportFormat>("html");
+const casebookValidAt = ref("");
+const casebookKnownAt = ref("");
 const casebookBusy = ref(false);
 const casebookOutcome = ref<{
   kind: "ok" | "error";
   message: string;
   sha256?: string | null;
+  generatedAt?: string | null;
 } | null>(null);
 
 let zoomSeq = 0;
@@ -435,15 +473,23 @@ async function exportCasebook() {
   casebookBusy.value = true;
   casebookOutcome.value = null;
   try {
-    const artifact = await kernelApi.streamEnrollmentCasebook({
+    const query: KernelCasebookExportQuery = {
       enrollmentRef: `enrollment:${record.value.enrollmentId}`,
       format: casebookFormat.value,
-    });
+    };
+    if (casebookValidAt.value.trim()) {
+      query.validAt = casebookValidAt.value.trim();
+    }
+    if (casebookKnownAt.value.trim()) {
+      query.knownAt = casebookKnownAt.value.trim();
+    }
+    const artifact = await kernelApi.streamEnrollmentCasebook(query);
     triggerBrowserDownload(artifact.blob, artifact.filename);
     casebookOutcome.value = {
       kind: "ok",
       message: `Downloaded ${artifact.filename}.`,
       sha256: artifact.contentSha256,
+      generatedAt: artifact.generatedAt ?? null,
     };
   } catch (err) {
     casebookOutcome.value = {
@@ -534,7 +580,8 @@ async function exportCasebook() {
   color: var(--semantic-color-text-dark);
 }
 
-.casebook-select {
+.casebook-select,
+.casebook-input {
   max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -544,6 +591,28 @@ async function exportCasebook() {
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+}
+
+.casebook-input {
+  width: 11rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse) {
+  .casebook-select,
+  .casebook-input {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+}
+
+.casebook-generated-at {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.casebook-digest-code {
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
 }
 
 .casebook-outcome {
