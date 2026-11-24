@@ -35,6 +35,9 @@ export async function loadConsentDetails() {
   const contentEl = document.getElementById("consent-content-wrapper");
   const errorMsgEl = document.getElementById("consent-error-msg");
   const langSelector = document.getElementById("consent-lang-selector");
+  const startedInFailure =
+    typeof document !== "undefined" &&
+    Boolean(failureEl && failureEl.contains(document.activeElement));
 
   if (loadingEl) loadingEl.style.display = "block";
   if (failureEl) failureEl.style.display = "none";
@@ -88,11 +91,36 @@ export async function loadConsentDetails() {
     }
 
     renderConsentUI();
+    if (startedInFailure) {
+      if (state.consentSigned) {
+        void handoffFocus([
+          "#consent-signed-heading",
+          "#consent-view-heading",
+          "#main-content",
+        ]);
+      } else {
+        void handoffFocus([
+          () =>
+            contentEl?.querySelector(
+              "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]"
+            ) || null,
+          "#consent-view-heading",
+          "#main-content",
+        ]);
+      }
+    }
   } catch (err) {
     if (loadingEl) loadingEl.style.display = "none";
     if (failureEl) {
       failureEl.style.display = "block";
       if (errorMsgEl) errorMsgEl.textContent = err.message || err;
+    }
+    if (startedInFailure) {
+      void handoffFocus([
+        "#btn-retry-consent",
+        "#consent-view-heading",
+        "#main-content",
+      ]);
     }
   }
 }

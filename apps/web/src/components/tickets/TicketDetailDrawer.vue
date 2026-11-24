@@ -42,7 +42,7 @@
           </span>
         </div>
 
-        <h2 id="drawer-ticket-title" class="drawer-title">
+        <h2 id="drawer-ticket-title" class="drawer-title" tabindex="-1">
           {{ ticket.title }}
         </h2>
 
@@ -223,7 +223,7 @@
           <button
             type="button"
             class="btn btn-sm btn-secondary"
-            @click="isResolveModalOpen = false"
+            @click="closeResolveModal"
           >
             Cancel
           </button>
@@ -842,7 +842,13 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { ClinicalTabs, EmptyState, useFocusTrap } from "ui";
+import {
+  ClinicalTabs,
+  EmptyState,
+  handoffFocus,
+  useFocusTrap,
+  useInlineFocusHandoff,
+} from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore, normalizeRole } from "../../stores/auth";
@@ -1142,9 +1148,19 @@ watch(
 watch(
   () => props.ticket?.id,
   () => {
+    pendingStatusHandoff = false;
     isResolveModalOpen.value = false;
     if (!demoBuild && activeTab.value === "attachments") {
       activeTab.value = "overview";
+    }
+  }
+);
+
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (!open) {
+      pendingStatusHandoff = false;
     }
   }
 );
@@ -1182,7 +1198,61 @@ const filteredComments = computed(() => {
   );
 });
 
+const resolvePanelHandoff = useInlineFocusHandoff({
+  container: drawerRef,
+  includeDefaultFallbacks: false,
+  openTarget: "#resolve-rca-category",
+  closeFallback: [
+    "#btn-open-resolve",
+    "#drawer-ticket-title",
+    "#ticket-drawer-close-btn",
+  ],
+});
+
+let pendingStatusHandoff = false;
+
+const handoffAfterDrawerStatusChange = () => {
+  if (!props.isOpen) return;
+  void handoffFocus(
+    [
+      () =>
+        drawerRef.value?.querySelector(
+          ".action-btn-group button:not([disabled])"
+        ) || null,
+      "#btn-open-part11-sign",
+      "#drawer-ticket-title",
+      "#ticket-drawer-close-btn",
+    ],
+    {
+      container: drawerRef,
+      includeDefaultFallbacks: false,
+      fallback: ["#drawer-ticket-title", "#ticket-drawer-close-btn"],
+    }
+  );
+};
+
+watch(
+  () => [props.ticket?.status, props.ticket?.signature_token],
+  () => {
+    if (!props.isOpen) return;
+    const focusEscapedDrawer =
+      typeof document !== "undefined" &&
+      !isSignModalOpen.value &&
+      !isCitationViewerOpen.value &&
+      Boolean(
+        drawerRef.value &&
+        (!document.activeElement ||
+          !drawerRef.value.contains(document.activeElement))
+      );
+    if (pendingStatusHandoff || focusEscapedDrawer) {
+      pendingStatusHandoff = false;
+      handoffAfterDrawerStatusChange();
+    }
+  }
+);
+
 const transitionTicket = (newStatus) => {
+  pendingStatusHandoff = true;
   const reason =
     transitionReason.value.trim() || `Status transition to ${newStatus}`;
   emit("transition", {
@@ -1194,6 +1264,7 @@ const transitionTicket = (newStatus) => {
 
 const openResolveModal = () => {
   if (demoBuild) {
+    pendingStatusHandoff = true;
     emit("transition", {
       ticketId: props.ticket.id,
       newStatus: "RESOLVED",
@@ -1206,7 +1277,18 @@ const openResolveModal = () => {
     });
     return;
   }
+  resolvePanelHandoff.rememberTrigger("#btn-open-resolve");
   isResolveModalOpen.value = true;
+  void resolvePanelHandoff.handoff("#resolve-rca-category");
+};
+
+const closeResolveModal = () => {
+  isResolveModalOpen.value = false;
+  void resolvePanelHandoff.restoreTrigger([
+    "#btn-open-resolve",
+    "#drawer-ticket-title",
+    "#ticket-drawer-close-btn",
+  ]);
 };
 
 const submitResolution = () => {
@@ -1216,6 +1298,7 @@ const submitResolution = () => {
   ) {
     return;
   }
+  pendingStatusHandoff = true;
   emit("transition", {
     ticketId: props.ticket.id,
     newStatus: "RESOLVED",
@@ -1226,6 +1309,7 @@ const submitResolution = () => {
     reason_for_change: resolveForm.reason_for_change.trim(),
   });
   isResolveModalOpen.value = false;
+  handoffAfterDrawerStatusChange();
 };
 
 const submitComment = () => {

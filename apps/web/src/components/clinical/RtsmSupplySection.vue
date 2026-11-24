@@ -247,7 +247,7 @@
           id="btn-toggle-draft-scheme"
           type="button"
           class="btn btn-secondary btn-sm"
-          @click="draftSchemeFormOpen = !draftSchemeFormOpen"
+          @click="toggleDraftSchemeForm"
         >
           {{ draftSchemeFormOpen ? "Close draft form" : "Draft scheme" }}
         </button>
@@ -410,6 +410,7 @@
     <SignatureCaptureModal
       v-if="canManageSchemes"
       :is-open="Boolean(approvingScheme)"
+      fallback-focus="#btn-toggle-draft-scheme"
       :username="authStore.user?.username || ''"
       :signer-name="
         authStore.user?.displayName || authStore.user?.username || ''
@@ -430,6 +431,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { handoffFocus, useInlineFocusHandoff } from "ui";
 import { ApiError } from "../../api/client";
 import {
   executionApi,
@@ -533,6 +535,28 @@ const schemePreferredProbability = ref(0.8);
 const schemeRequiresKit = ref(true);
 const schemeDraftReason = ref("");
 const approvingScheme = ref<RandomizationScheme | null>(null);
+
+const draftSchemeHandoff = useInlineFocusHandoff({
+  openTarget: "#scheme-method",
+  closeFallback: ["#btn-toggle-draft-scheme", "#rtsm-supply-title"],
+  scrollIfOffscreen: true,
+});
+
+function toggleDraftSchemeForm() {
+  if (draftSchemeFormOpen.value) {
+    draftSchemeFormOpen.value = false;
+    void draftSchemeHandoff.restoreTrigger([
+      "#btn-toggle-draft-scheme",
+      "#rtsm-supply-title",
+    ]);
+  } else {
+    draftSchemeHandoff.rememberTrigger("#btn-toggle-draft-scheme");
+    draftSchemeFormOpen.value = true;
+    void draftSchemeHandoff.handoff("#scheme-method", {
+      scrollIfOffscreen: true,
+    });
+  }
+}
 
 function parseSchemeArms(raw: string): Record<string, number> | null {
   const arms: Record<string, number> = {};
@@ -803,6 +827,12 @@ async function submitDraftScheme() {
         "A second unblinded statistician can now approve it for go-live.",
     });
     await loadSupplyOverview();
+    saving.value = false;
+    void draftSchemeHandoff.handoff([
+      created?.id ? `[id="btn-approve-scheme-${created.id}"]` : null,
+      "#btn-toggle-draft-scheme",
+      "#rtsm-supply-title",
+    ]);
   } catch (err) {
     toasts.apiError("Randomization scheme draft failed", err);
   } finally {
@@ -831,6 +861,8 @@ async function handleApproveSchemeSigned(
       message: `Scheme v${approved.version} is now live for ${approved.study_id}.`,
     });
     await loadSupplyOverview();
+    saving.value = false;
+    void handoffFocus(["#btn-toggle-draft-scheme", "#rtsm-supply-title"]);
     return { kind: "signed" };
   } catch (err) {
     toasts.apiError("Randomization scheme approval failed", err);
