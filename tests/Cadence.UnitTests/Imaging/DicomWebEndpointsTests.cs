@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Endpoints;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Services;
@@ -351,6 +352,264 @@ public sealed class DicomWebEndpointsTests
         await mockIngestionService.DidNotReceiveWithAnyArgs().IngestBatchAsync(
             default!,
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task StoreInstancesAsync_Returns400BadRequest_WhenHeaderOnlyDicomHasMaxUshortDimensions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"StoreInstancesOverflowDims_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+
+        byte[] headerOnlyDicom = DicomIngestionServiceTests.CreateHeaderOnlyDicomBytes(
+            rows: ushort.MaxValue,
+            columns: ushort.MaxValue);
+
+        var httpContext = CreateAuthorizedHttpContext("STUDY-DIMS-EP", "SITE-01");
+        httpContext.Request.Method = "POST";
+        httpContext.Request.QueryString = new QueryString("?studyId=STUDY-DIMS-EP&siteId=SITE-01&subjectId=SUBJ-DIMS-EP");
+        httpContext.Request.ContentType = "application/dicom";
+        httpContext.Request.Body = new MemoryStream(headerOnlyDicom, writable: false);
+
+        var result = await DicomWebEndpoints.StoreInstancesAsync(httpContext.Request, service, ct);
+
+        result.Should().BeAssignableTo<IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+
+        string json = JsonSerializer.Serialize(((IValueHttpResult)result).Value);
+        json.Should().Contain("\"DICOM_INGESTION_FAILED\"");
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task StoreInstancesAsync_Returns413PayloadTooLarge_WhenStreamExceedsSingleInstanceLimitWithoutContentLength()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var httpContext = CreateAuthorizedHttpContext("STUDY-SINGLE-413", "SITE-01");
+        httpContext.Request.Method = "POST";
+        httpContext.Request.QueryString = new QueryString("?studyId=STUDY-SINGLE-413&siteId=SITE-01&subjectId=SUBJ-SINGLE-413");
+        httpContext.Request.ContentType = "application/dicom";
+        await using var oversizedStream = new SyntheticZeroReadStream(DicomWebEndpoints.MaxSingleInstanceSizeBytes + 65_536L);
+        httpContext.Request.Body = oversizedStream;
+
+        var mockIngestionService = Substitute.For<IDicomIngestionService>();
+
+        var result = await DicomWebEndpoints.StoreInstancesAsync(httpContext.Request, mockIngestionService, ct);
+
+        result.Should().BeAssignableTo<IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status413PayloadTooLarge);
+
+        await mockIngestionService.DidNotReceiveWithAnyArgs().IngestInstanceAsync(
+            default!,
+            default!,
+            default!,
+            default!,
+            default!,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(65_535, 65_535)]
+    [InlineData(8_192, 4_097)]
+    [InlineData(0, 512)]
+    [InlineData(512, 0)]
+    [InlineData(-1, 512)]
+    public async Task GetInstanceFramesAsync_Returns422UnprocessableEntity_WhenDimensionsOverflowOrExceed64Megabytes(
+        int rows,
+        int columns)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"FrameEndpointInvalidDims_{rows}_{columns}_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+
+        string instanceUid = await SeedStudySeriesAndInstanceAsync(dbContext, "STUDY-FRAME-422", "SITE-01", rows, columns, ct);
+        var caller = CreateAuthorizedHttpContext("STUDY-FRAME-422", "SITE-01");
+
+        var result = await DicomWebEndpoints.GetInstanceFramesAsync(
+            studyUid: "study-uid-1",
+            seriesUid: "series-uid-1",
+            instanceUid: instanceUid,
+            frameList: "1",
+            dbContext: dbContext,
+            httpContext: caller,
+            cancellationToken: ct);
+
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+        problem.ProblemDetails.Title.Should().Be("Invalid DICOM frame dimensions");
+    }
+
+    [Fact]
+    public async Task GetInstanceFramesAsync_Returns200OctetStream_WhenDimensionsAreWithinBounds()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"FrameEndpointValidDims_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+
+        string instanceUid = await SeedStudySeriesAndInstanceAsync(dbContext, "STUDY-FRAME-200", "SITE-01", rows: 64, columns: 64, ct);
+        var caller = CreateAuthorizedHttpContext("STUDY-FRAME-200", "SITE-01");
+
+        var result = await DicomWebEndpoints.GetInstanceFramesAsync(
+            studyUid: "study-uid-1",
+            seriesUid: "series-uid-1",
+            instanceUid: instanceUid,
+            frameList: "1",
+            dbContext: dbContext,
+            httpContext: caller,
+            cancellationToken: ct);
+
+        var fileResult = result.Should().BeOfType<FileContentHttpResult>().Subject;
+        fileResult.ContentType.Should().Be("application/octet-stream");
+        fileResult.FileContents.Length.Should().Be(64 * 64 * 2);
+    }
+
+    [Fact]
+    public async Task StoreBatchInstancesAsync_Returns413PayloadTooLarge_WhenHighRatioZeroFilledZipUploadedAsRawBody()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"BatchZipBombRawEndpoint_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+
+        byte[] highRatioZip = DicomIngestionServiceTests.CreateZeroFilledZipBytes(entryCount: 8, bytesPerEntry: 16 * 1024 * 1024);
+        var spoolBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*").ToHashSet(StringComparer.Ordinal);
+
+        await using var innerMs = new MemoryStream(highRatioZip, writable: false);
+        await using var nonSeekable = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
+
+        var httpContext = CreateAuthorizedHttpContext("STUDY-BOMB-EP", "SITE-01");
+        httpContext.Request.Method = "POST";
+        httpContext.Request.QueryString = new QueryString("?studyId=STUDY-BOMB-EP&siteId=SITE-01&subjectId=SUBJ-BOMB-EP");
+        httpContext.Request.ContentType = "application/zip";
+        httpContext.Request.Body = nonSeekable;
+
+        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, service, ct);
+
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status413PayloadTooLarge);
+        problem.ProblemDetails.Detail.Should().Contain("decompression ratio limit");
+
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+
+        var leakedTempFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*")
+            .Where(path => !spoolBefore.Contains(path))
+            .ToArray();
+        leakedTempFiles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task StoreBatchInstancesAsync_Returns413PayloadTooLarge_WhenHighRatioZeroFilledZipUploadedViaMultipart()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"BatchZipBombMultipartEndpoint_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+
+        byte[] highRatioZip = DicomIngestionServiceTests.CreateZeroFilledZipBytes(entryCount: 8, bytesPerEntry: 16 * 1024 * 1024);
+        string boundary = "----CadenceZipBombBoundary" + Guid.NewGuid().ToString("N");
+        byte[] multipartBytes = BuildMultipartPayload(
+            boundary,
+            leadingFields:
+            [
+                ("studyId", "STUDY-BOMB-MP"),
+                ("siteId", "SITE-01"),
+                ("subjectId", "SUBJ-BOMB-MP")
+            ],
+            files:
+            [
+                ("bomb_8x16mb.zip", "application/zip", highRatioZip)
+            ],
+            trailingFields: []);
+
+        await using var innerMs = new MemoryStream(multipartBytes, writable: false);
+        await using var bodyStream = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
+
+        var httpContext = CreateAuthorizedHttpContext("STUDY-BOMB-MP", "SITE-01");
+        httpContext.Request.Method = "POST";
+        httpContext.Request.ContentType = $"multipart/form-data; boundary={boundary}";
+        httpContext.Request.Body = bodyStream;
+
+        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, service, ct);
+
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status413PayloadTooLarge);
+        problem.ProblemDetails.Detail.Should().Contain("decompression ratio limit");
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    private static async Task<string> SeedStudySeriesAndInstanceAsync(
+        ImagingDbContext dbContext,
+        string studyId,
+        string siteId,
+        int rows,
+        int columns,
+        CancellationToken ct)
+    {
+        string studyEnvelopeId = Guid.NewGuid().ToString("N");
+        string seriesEnvelopeId = Guid.NewGuid().ToString("N");
+        string sopInstanceUid = $"1.2.826.0.1.3680043.10.99.{Guid.NewGuid():N}";
+
+        dbContext.ImagingStudyEnvelopes.Add(new ImagingStudyEnvelope
+        {
+            Id = studyEnvelopeId,
+            StudyInstanceUid = $"1.2.826.0.1.3680043.10.99.100.{Guid.NewGuid():N}",
+            StudyId = studyId,
+            SiteId = siteId,
+            SubjectId = "SUBJ-FRAME-01",
+            ModalitiesJson = "[\"CT\"]",
+            StudyDate = "20260301",
+            StudyDescription = "Frame Bounds Test",
+            SeriesCount = 1,
+            InstanceCount = 1,
+            Status = "STORED",
+            AdjudicationStatus = "UNASSIGNED",
+            CreatedAt = DateTimeOffset.UnixEpoch,
+            CreatedBy = "tester",
+            UpdatedAt = DateTimeOffset.UnixEpoch,
+            VersionIndex = 1
+        });
+
+        dbContext.ImagingSeriesEnvelopes.Add(new ImagingSeriesEnvelope
+        {
+            Id = seriesEnvelopeId,
+            StudyEnvelopeId = studyEnvelopeId,
+            SeriesInstanceUid = $"1.2.826.0.1.3680043.10.99.200.{Guid.NewGuid():N}",
+            SeriesNumber = 1,
+            Modality = "CT",
+            SeriesDescription = "CT Series",
+            InstanceCount = 1
+        });
+
+        dbContext.ImagingInstanceEnvelopes.Add(new ImagingInstanceEnvelope
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            SeriesEnvelopeId = seriesEnvelopeId,
+            SopInstanceUid = sopInstanceUid,
+            SopClassUid = "1.2.840.10008.5.1.4.1.1.2",
+            InstanceNumber = 1,
+            Rows = rows,
+            Columns = columns,
+            BitsAllocated = 16,
+            PixelSpacingJson = "[0.5,0.5]",
+            ObjectKey = $"dicom/{studyEnvelopeId}/{seriesEnvelopeId}/{sopInstanceUid}.dcm",
+            ChecksumSha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            SizeBytes = 1_024,
+            BurnedInPhiMasked = true
+        });
+
+        await dbContext.SaveChangesAsync(ct);
+        return sopInstanceUid;
     }
 
     private static DefaultHttpContext CreateAuthorizedHttpContext(string studyScope, string siteScope)
