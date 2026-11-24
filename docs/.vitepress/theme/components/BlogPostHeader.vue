@@ -6,6 +6,8 @@ import {
   normalizeIsoDate,
   normalizeRelatedLinks,
   resolveBaseHref,
+  resolveBlogLinkRel,
+  resolveBlogLinkTarget,
 } from "../../blogShared.mjs";
 
 const route = useRoute();
@@ -53,6 +55,9 @@ const related = computed(() =>
 function resolveHref(link) {
   return resolveBaseHref(link);
 }
+
+const resolveLinkTarget = resolveBlogLinkTarget;
+const resolveLinkRel = resolveBlogLinkRel;
 </script>
 
 <template>
@@ -97,6 +102,8 @@ function resolveHref(link) {
         :key="item.link"
         class="blog-related-link"
         :href="resolveHref(item.link)"
+        :target="resolveLinkTarget(item.link)"
+        :rel="resolveLinkRel(item.link)"
       >
         {{ item.text }}
       </a>
