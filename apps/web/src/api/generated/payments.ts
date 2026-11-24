@@ -716,6 +716,7 @@ export interface components {
       /** Format: int32 */
       sequenceNumber?: null | number | string;
       idempotencyKey?: null | string;
+      syncVerificationToken?: null | string;
       studyId?: null | string;
       siteId?: null | string;
       subjectId?: null | string;

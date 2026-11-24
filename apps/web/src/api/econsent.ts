@@ -1,5 +1,8 @@
-import { openApiClient, unwrapResponse } from "./client";
+import { createOpenApiClient, openApiClient, unwrapResponse } from "./client";
+import type { paths as EconsentPaths } from "./generated/econsent";
 import type { paths } from "./types";
+
+const econsentClient = createOpenApiClient<EconsentPaths>();
 
 export type TemplateCreateBody =
   paths["/api/v1/econsent/templates"]["post"]["requestBody"]["content"]["application/json"];
@@ -85,7 +88,7 @@ export const econsentService = {
 
   publishTemplate(templateId: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
-      openApiClient.POST("/api/v1/econsent/templates/{template_id}/publish", {
+      econsentClient.POST("/api/v1/econsent/templates/{template_id}/publish", {
         params: { path: { template_id: templateId } },
         ...options,
       })
