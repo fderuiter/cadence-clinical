@@ -1,4 +1,4 @@
-# ADR-2659: Unified Theme Controller, Pre-Paint Bootstrap, and Full-Parity WCAG 2.2 AA Dark Tokens
+# ADR-2670: Unified Theme Controller, Pre-Paint Bootstrap, and Full-Parity WCAG 2.2 AA Dark Tokens
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

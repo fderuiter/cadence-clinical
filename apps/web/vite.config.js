@@ -191,7 +191,7 @@ export default defineConfig({
               }
               if (
                 normalizedId.startsWith("\0virtual:demo-fixtures-") ||
-                /\/apps\/web\/src\/(?:auth\/(?:keycloak|sessionCoordinator)\.js|router\/availability\.js|utils\/(?:demoMode|apiErrors|unbackedActions|userScopedStorage)\.js|api\/(?:authorization\.js|(?:client|changeReason|executionApi|kernelApi)\.ts|kernel\/[^/]+\.ts)|stores\/(?:(?:auth|notifications|onboarding|toasts)\.js|(?:clinicalScope|studyScopeBridge)\.ts)|canvas\/(?:(?:palette|lifecycle|nodeRef)\.ts|stages\/[^/]+\.ts|generated\/(?:nodeKinds|participantContracts)\.ts))(?:$|\?)/.test(
+                /\/apps\/web\/src\/(?:auth\/(?:keycloak|sessionCoordinator)\.js|router\/availability\.js|utils\/(?:demoMode|apiErrors|unbackedActions|userScopedStorage)\.js|api\/kernel\/[^/]+\.ts|stores\/(?:(?:auth|notifications|onboarding|toasts)\.js|(?:clinicalScope|studyScopeBridge)\.ts)|canvas\/(?:(?:palette|lifecycle|nodeRef)\.ts|stages\/[^/]+\.ts|generated\/(?:nodeKinds|participantContracts)\.ts))(?:$|\?)/.test(
                   normalizedId
                 )
               ) {

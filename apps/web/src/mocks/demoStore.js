@@ -726,13 +726,14 @@ export function createWebDemoStore() {
     ]);
 
     const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
-      id: participant.enrollmentUuid,
+      id: participant.participantUuid || participant.enrollmentUuid,
       subject_id: participant.subjectCode,
       study_id: canonicalStudyCode,
       site_id: participant.siteCode,
       status: idx === 2 ? "ENROLLED" : "ACTIVE",
       active_protocol_version: idx === 1 ? "1.0" : "2.0",
       enrollment_index: idx + 1,
+      enrollment_ref: participant.enrollmentRef,
       treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
     }));
 
@@ -746,6 +747,7 @@ export function createWebDemoStore() {
         status: "ENROLLED",
         active_protocol_version: "2.0",
         enrollment_index: 1,
+        enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
         treatment_group: "ARM-A",
       },
       {
@@ -756,6 +758,7 @@ export function createWebDemoStore() {
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: 2,
+        enrollment_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
         treatment_group: null,
       },
     ];
@@ -1490,14 +1493,27 @@ export function createWebDemoStore() {
     }
   }
 
+  function subjectEnrollmentRef(subject) {
+    const raw = String(subject?.enrollment_ref || "").split("@")[0];
+    return raw.startsWith("enrollment:") ? raw : `enrollment:${subject.id}`;
+  }
+
+  function subjectEnrollmentUuid(subject) {
+    return subjectEnrollmentRef(subject).replace(/^enrollment:/, "");
+  }
+
   function resolveEnrollmentByIdOrCode(rawId) {
     const cleanId = String(rawId || "")
-      .replace(/^(enrollment|allocation|randomization|treatment_arm|arm):/, "")
+      .replace(
+        /^(enrollment|participant|allocation|randomization|treatment_arm|arm):/,
+        ""
+      )
       .split("@")[0];
     return (
       state.subjects.find(
         (s) =>
           s.id === cleanId ||
+          subjectEnrollmentUuid(s) === cleanId ||
           String(s.subject_id || "").toUpperCase() === cleanId.toUpperCase()
       ) || null
     );
@@ -1641,7 +1657,7 @@ export function createWebDemoStore() {
 
       for (const subj of state.subjects) {
         candidates.push({
-          ref: `enrollment:${subj.id}`,
+          ref: subjectEnrollmentRef(subj),
           kind: "enrollment",
           title: `Participant ${subj.subject_id}`,
           code: subj.subject_id,
@@ -1771,7 +1787,7 @@ export function createWebDemoStore() {
             effectiveSiteCode === "SITE-102"
               ? "US Regional Trial Unit 2"
               : `US Academic Clinical Research Center (${effectiveSiteCode})`,
-          enrollment_ref: `enrollment:${matched.id}@1`,
+          enrollment_ref: `${subjectEnrollmentRef(matched)}@1`,
           subject_code: matched.subject_id,
           status: matched.status || "SCREENED",
         },
@@ -1890,10 +1906,7 @@ export function createWebDemoStore() {
         );
       }
       if (String(nodeRef).startsWith("enrollment:")) {
-        const rawId = String(nodeRef)
-          .replace(/^enrollment:/, "")
-          .split("@")[0];
-        const subj = state.subjects.find((s) => s.id === rawId);
+        const subj = resolveEnrollmentByIdOrCode(nodeRef);
         if (subj) {
           return applyNodeVisibilityMask(
             {
@@ -1946,7 +1959,7 @@ export function createWebDemoStore() {
       const refStr = String(nodeRef || "");
       if (refStr.startsWith("enrollment:")) {
         const rawId = refStr.replace(/^enrollment:/, "").split("@")[0];
-        const subj = state.subjects.find((s) => s.id === rawId);
+        const subj = resolveEnrollmentByIdOrCode(refStr);
         const study = subj
           ? getStudyByRefOrCode(subj.study_id)
           : state.studies.get("DEMO-01");
@@ -2095,7 +2108,7 @@ export function createWebDemoStore() {
           ...effectiveSubjects.map((s) => ({
             node: applyNodeVisibilityMask(
               {
-                ref: `enrollment:${s.id}`,
+                ref: subjectEnrollmentRef(s),
                 kind: "enrollment",
                 title: `Participant ${s.subject_id}`,
                 code: s.subject_id,
@@ -2124,7 +2137,7 @@ export function createWebDemoStore() {
         return siteSubjects.map((s) => ({
           node: applyNodeVisibilityMask(
             {
-              ref: `enrollment:${s.id}`,
+              ref: subjectEnrollmentRef(s),
               kind: "enrollment",
               title: `Participant ${s.subject_id}`,
               code: s.subject_id,
@@ -2142,10 +2155,17 @@ export function createWebDemoStore() {
         const enrollmentId = String(nodeRef)
           .replace(/^enrollment:/, "")
           .split("@")[0];
-        const subj = state.subjects.find((s) => s.id === enrollmentId) || null;
+        const subj = resolveEnrollmentByIdOrCode(nodeRef);
+        const canonicalEnrollmentUuid = subj
+          ? subjectEnrollmentUuid(subj)
+          : enrollmentId;
         const siteCode = subj?.site_id || null;
         let forms = [...state.forms.values()].filter(
-          (f) => f.enrollment_id === enrollmentId
+          (f) =>
+            f.enrollment_id === enrollmentId ||
+            (subj &&
+              (f.enrollment_id === subj.id ||
+                f.enrollment_id === canonicalEnrollmentUuid))
         );
         if (forms.length === 0) {
           const fallback = state.forms.get(DEFAULT_FORM_UUID);
@@ -2171,7 +2191,7 @@ export function createWebDemoStore() {
           formChildren.push({
             node: applyNodeVisibilityMask(
               {
-                ref: `allocation:${enrollmentId}`,
+                ref: `allocation:${canonicalEnrollmentUuid}`,
                 kind: "allocation",
                 title: `Treatment Allocation · ${subj.treatment_group}`,
                 code: subj.treatment_group,
@@ -3240,7 +3260,7 @@ export function createWebDemoStore() {
             return {
               handle: `dep-${index}`,
               kind: "enrollment",
-              ref: `enrollment:${subj.id}`,
+              ref: subjectEnrollmentRef(subj),
               mask: sitePermitted ? null : "NotPermitted",
               distance: 1,
             };
@@ -3264,7 +3284,7 @@ export function createWebDemoStore() {
             return {
               handle: `alloc-${index}`,
               kind: "allocation",
-              ref: `allocation:${subj.id}`,
+              ref: `allocation:${subjectEnrollmentUuid(subj)}`,
               mask: !sitePermitted
                 ? "NotPermitted"
                 : blinded
@@ -3437,7 +3457,7 @@ export function createWebDemoStore() {
           return true;
         });
         if (matchedSubject) {
-          result.enrollment_ref = `enrollment:${matchedSubject.id}`;
+          result.enrollment_ref = subjectEnrollmentRef(matchedSubject);
         }
       }
       return result;
@@ -3728,6 +3748,7 @@ export function createWebDemoStore() {
             status: s.status,
             active_protocol_version: s.active_protocol_version || "2.0",
             enrollment_index: s.enrollment_index,
+            enrollment_ref: s.enrollment_ref || `enrollment:${s.id}`,
           }))
         ),
         total: filtered.length,
@@ -3785,19 +3806,23 @@ export function createWebDemoStore() {
           status: existing.status,
           active_protocol_version: existing.active_protocol_version,
           encrypted_demographics: null,
+          enrollment_ref:
+            existing.enrollment_ref || `enrollment:${existing.id}`,
         };
       }
 
       ensureStudyByCode(studyCode);
       const idx = nextCounter();
+      const createdId = makeUuidFromIndex("00001000", idx);
       const created = {
-        id: makeUuidFromIndex("00001000", idx),
+        id: createdId,
         subject_id: subjectCode,
         study_id: studyCode,
         site_id: siteCode,
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: state.subjects.length + 1,
+        enrollment_ref: `enrollment:${createdId}`,
         treatment_group: null,
       };
       state.subjects.push(created);
@@ -3805,7 +3830,7 @@ export function createWebDemoStore() {
         "execution.subject.registered",
         "execution",
         "enrollment",
-        `enrollment:${created.id}`,
+        created.enrollment_ref,
         "usr-crc-01"
       );
 
@@ -3817,15 +3842,21 @@ export function createWebDemoStore() {
         status: created.status,
         active_protocol_version: created.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: created.enrollment_ref,
       };
     },
 
     getSubjectDetail(subjectId, caller = null) {
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       const found =
         state.subjects.find(
           (s) =>
-            s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-            s.id === subjectId
+            s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+            s.id === normalizedKey ||
+            s.enrollment_ref === `enrollment:${normalizedKey}`
         ) || state.subjects[0];
       const shouldBlind =
         Boolean(caller) &&
@@ -3848,6 +3879,7 @@ export function createWebDemoStore() {
             ? "BLINDED"
             : null
           : (found.investigational_product_id ?? null),
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -3855,10 +3887,15 @@ export function createWebDemoStore() {
       const nextStatus = String(
         body?.status || body?.state || body?.target || "ENROLLED"
       ).toUpperCase();
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       let found = state.subjects.find(
         (s) =>
-          s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-          s.id === subjectId
+          s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+          s.id === normalizedKey ||
+          s.enrollment_ref === `enrollment:${normalizedKey}`
       );
       if (!found) {
         const created = this.createSubject({
@@ -3879,7 +3916,7 @@ export function createWebDemoStore() {
         "execution.subject.state_changed",
         "execution",
         "enrollment",
-        `enrollment:${found.id}`,
+        found.enrollment_ref || `enrollment:${found.id}`,
         "usr-crc-01"
       );
       return {
@@ -3890,6 +3927,7 @@ export function createWebDemoStore() {
         status: found.status,
         active_protocol_version: found.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -4050,14 +4088,14 @@ export function createWebDemoStore() {
         },
       ];
 
-      const subjMatch = state.subjects.find((s) => s.id === enrollmentId);
+      const subjMatch = resolveEnrollmentByIdOrCode(enrollmentId);
       const siteUuid = resolveSiteUuid(subjMatch?.site_id || "SITE-101");
       const collectionTitle = resolveCollectionTitle(collectionSpecId);
 
       const created = {
         form_id: formId,
         enrollment_id: enrollmentId,
-        participant_id: makeUuidFromIndex("00005000", idx),
+        participant_id: subjMatch?.id || makeUuidFromIndex("00005000", idx),
         study_id: STUDY_UUID,
         study_site_id: siteUuid,
         protocol_version_id: VERSION_V2_UUID,
@@ -4575,9 +4613,7 @@ export function createWebDemoStore() {
         body?.text || "Verify recorded value against source."
       );
       const rev = Number(body?.revision ?? item?.revision ?? 1);
-      const subjectMatch = state.subjects.find(
-        (s) => s.id === form.enrollment_id
-      );
+      const subjectMatch = resolveEnrollmentByIdOrCode(form.enrollment_id);
 
       const created = {
         query_id: queryId,
@@ -5018,7 +5054,7 @@ export function createWebDemoStore() {
       if (scopeKind !== "observation") {
         for (const f of state.forms.values()) {
           if (!matchesScope(f)) continue;
-          const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+          const subj = resolveEnrollmentByIdOrCode(f.enrollment_id);
           const missingIds = Array.isArray(f.missing_required)
             ? f.missing_required
             : [];
