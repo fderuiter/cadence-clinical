@@ -1154,6 +1154,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         {
             ("execution-forms", new[] { "execution.form.open" }),
             ("execution-queries", new[] { "observation.query", "observation.query.answer", "assertion.retract" }),
+            (AlertMonitorOnVerifiedObservationCorrected.Name, new[] { "execution.query.manage" }),
             (EvaluateEditChecksOnCollectionChanged.Name, new[] { "validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage" }),
             (FormQueryEscalationHostedService.ServiceAccountName, new[] { "execution.query.manage" }),
         })
