@@ -29,7 +29,7 @@
       <template v-if="hasSelection">
         <header class="inspector-header">
           <span class="inspector-kind">{{ headerKind }}</span>
-          <h2 id="canvas-inspector-title" class="inspector-title">
+          <h2 id="canvas-inspector-title" class="inspector-title" tabindex="-1">
             {{ headerTitle }}
           </h2>
           <details v-if="activeNodeRef" class="inspector-ref-details">
@@ -149,7 +149,7 @@
           class="sdv"
           aria-labelledby="kernel-simulate-title"
         >
-          <h3 id="kernel-simulate-title">Schedule gap check</h3>
+          <h3 id="kernel-simulate-title" tabindex="-1">Schedule gap check</h3>
           <p v-if="simulationLoading" class="inspector-empty">
             Checking schedule matrix and visit windows…
           </p>
@@ -663,14 +663,14 @@
       </template>
 
       <template v-else-if="protocolVersionError">
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2 id="canvas-inspector-title" class="inspector-title" tabindex="-1">
           Protocol version
         </h2>
         <CanvasErrorAlert
           id="inspector-version-error"
           message="This protocol version couldn't be loaded. Check that it exists and is visible to your account."
           :detail="protocolVersionError"
-          @retry="emit('retry-protocol-version')"
+          @retry="() => props.onRetryProtocolVersion?.()"
           @explain="openProtocolVersionExplain"
         />
         <section
@@ -819,11 +819,11 @@ const props = defineProps<{
   canUnblindParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
   assistPrompt?: string;
+  onRetryProtocolVersion?: () => unknown | Promise<unknown>;
 }>();
 
 const emit = defineEmits<{
   (e: "update:collapsed", collapsed: boolean): void;
-  (e: "retry-protocol-version"): void;
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();

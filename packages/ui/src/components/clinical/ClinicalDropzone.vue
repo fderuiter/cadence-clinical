@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, useId, watch } from "vue";
+import { handoffFocus } from "../../composables/useInlineFocusHandoff.js";
 
 const props = defineProps({
   inputId: {
@@ -82,6 +83,7 @@ const emit = defineEmits([
 const fallbackUid = useId();
 const dropzoneRef = ref(null);
 const fileInputRef = ref(null);
+const browseButtonRef = ref(null);
 const isDragging = ref(false);
 
 const resolvedInputId = computed(
@@ -175,12 +177,24 @@ const onRemove = () => {
   if (props.disabled) return;
   resetInput();
   emit("remove");
+  void handoffFocus(
+    [
+      browseButtonRef,
+      ".clinical-dropzone-browse-btn",
+      "button:not([disabled])",
+    ],
+    {
+      container: dropzoneRef,
+      includeDefaultFallbacks: false,
+    }
+  );
 };
 
 defineExpose({
   openFilePicker,
   resetInput,
   fileInputRef,
+  browseButtonRef,
 });
 </script>
 
@@ -237,6 +251,7 @@ defineExpose({
 
       <div class="clinical-dropzone-actions">
         <button
+          ref="browseButtonRef"
           type="button"
           :class="buttonClass || 'clinical-dropzone-browse-btn'"
           :disabled="disabled"

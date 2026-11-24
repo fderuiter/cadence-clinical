@@ -21,6 +21,10 @@ import {
   resetSyncRetryInfo,
 } from "../src/index.js";
 import { retryInbox } from "../src/features/inbox.js";
+import {
+  renderCompliance,
+  retryCompliance,
+} from "../src/features/compliance.js";
 import { loadConsentDetails } from "../src/features/consent.js";
 import { retryTasks } from "../src/features/tasks.js";
 import {
@@ -704,5 +708,82 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
     expect(document.activeElement?.classList.contains("btn-start-task")).toBe(
       true
     );
+  });
+
+  it("hands off focus from #btn-retry-compliance to #btn-retry-compliance on repeated failure, .btn-peek-compliance on row recovery, or #compliance-view-heading on empty recovery", async () => {
+    const session = useSessionStore();
+    session.session.isDemoMode = false;
+    session.session.token = "tok_live_compliance";
+    session.session.userId = "subj_live_01";
+
+    showView("view-compliance");
+    state.complianceLoading = false;
+    state.complianceError = "Compliance service unavailable";
+    state.compliance = null;
+    renderCompliance();
+    await settle();
+
+    const retryBtn = document.getElementById("btn-retry-compliance");
+    expect(retryBtn).not.toBeNull();
+
+    // 1. Repeated failure keeps focus on #btn-retry-compliance
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("Gateway timeout"));
+    retryBtn.focus();
+    await retryCompliance();
+    await settle();
+    expect(document.activeElement?.id).toBe("btn-retry-compliance");
+    expect(document.activeElement).not.toBe(document.body);
+
+    // 2. Recovery with history rows focuses the first .btn-peek-compliance button
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          compliance_rate: 100,
+          completed_count: 1,
+          pending_count: 0,
+          overdue_count: 0,
+          assignments: [
+            {
+              id: "comp_1",
+              instrument_id: "inst_diary",
+              instrument_name: "Evening Diary",
+              due_at: "2026-12-01T18:00:00Z",
+              submitted_at: "2026-12-01T18:05:00Z",
+              status: "COMPLETED",
+            },
+          ],
+        }),
+    });
+    retryBtn.focus();
+    await retryCompliance();
+    await settle();
+    expect(
+      document.activeElement?.classList.contains("btn-peek-compliance")
+    ).toBe(true);
+
+    // 3. Recovery with empty history focuses #compliance-view-heading
+    state.complianceError = "Temporary failure";
+    state.compliance = null;
+    renderCompliance();
+    await settle();
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          compliance_rate: 0,
+          completed_count: 0,
+          pending_count: 0,
+          overdue_count: 0,
+          assignments: [],
+        }),
+    });
+    retryBtn.focus();
+    await retryCompliance();
+    await settle();
+    expect(document.activeElement?.id).toBe("compliance-view-heading");
   });
 });

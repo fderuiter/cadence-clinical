@@ -256,7 +256,11 @@ const showArrow = computed(() =>
 );
 
 const tourHandoff = useInlineFocusHandoff({
-  closeFallback: [".btn-start-tour", "#btn-onboarding-checklist-trigger"],
+  closeFallback: [
+    ".btn-start-tour",
+    "#btn-onboarding-checklist-trigger",
+    "#btn-header-actions-menu",
+  ],
 });
 let launchedFromChecklistDrawer = false;
 let pendingAnchoredFocus = false;
@@ -298,8 +302,16 @@ watch(
     } else if (!open && prevOpen) {
       pendingAnchoredFocus = false;
       const fallbackOrder = launchedFromChecklistDrawer
-        ? ["#btn-onboarding-checklist-trigger", ".btn-start-tour"]
-        : [".btn-start-tour", "#btn-onboarding-checklist-trigger"];
+        ? [
+            "#btn-onboarding-checklist-trigger",
+            ".btn-start-tour",
+            "#btn-header-actions-menu",
+          ]
+        : [
+            ".btn-start-tour",
+            "#btn-onboarding-checklist-trigger",
+            "#btn-header-actions-menu",
+          ];
       launchedFromChecklistDrawer = false;
       void tourHandoff.restoreTrigger(fallbackOrder);
     }

@@ -39,7 +39,9 @@ import {
 } from "./composables/useFocusTrap.js";
 import {
   handoffFocus,
+  handoffRetryFocus,
   useInlineFocusHandoff,
+  useRetryFocusHandoff,
 } from "./composables/useInlineFocusHandoff.js";
 import {
   flushRegisteredDraftSources,
@@ -86,6 +88,7 @@ export {
   getFocusableElements,
   getTopActiveModalContainer,
   handoffFocus,
+  handoffRetryFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
@@ -95,6 +98,7 @@ export {
   useEscapeClose,
   useFocusTrap,
   useInlineFocusHandoff,
+  useRetryFocusHandoff,
   useSignOutGuard,
 };
 
