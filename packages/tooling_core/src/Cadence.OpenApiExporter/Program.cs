@@ -240,6 +240,7 @@ public static class Program
             .UseSetting("RANDOMIZATION_ALLOCATION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_ENCRYPTION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_LOOKUP_HASH_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("CADENCE_BIOMETRIC_LIVENESS_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("CADENCE_SCE_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("CADENCE_IMAGING_DEID_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))

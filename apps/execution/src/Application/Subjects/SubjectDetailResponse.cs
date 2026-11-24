@@ -21,4 +21,5 @@ public sealed record SubjectDetailResponse(
     int EnrollmentIndex,
     string? TreatmentGroup,
     string? RandomizationSeed,
-    string? InvestigationalProductId);
+    string? InvestigationalProductId,
+    string? EnrollmentRef = null);

@@ -52,9 +52,12 @@ export function buildCanvasLocationFromEcrfQuery(
     const parsedParticipant =
       parseNodeRef(rawParticipant.toLowerCase()) ??
       tryNodeRef("participant", rawParticipant.toLowerCase());
-    if (parsedParticipant?.kind === "participant") {
+    if (
+      parsedParticipant?.kind === "enrollment" ||
+      parsedParticipant?.kind === "participant"
+    ) {
       canvasQuery.participant = formatNodeRef({
-        kind: "participant",
+        kind: parsedParticipant.kind,
         id: parsedParticipant.id,
       });
     } else {

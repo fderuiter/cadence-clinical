@@ -54,7 +54,7 @@ public static class Program
         AddCommand(root, "dev", "Starts the .NET Aspire AppHost with all local services and datastores", DevCommand.Execute);
         AddCommand(root, "fix", "Executes self-healing formatting, index sync, schema and OpenAPI pipeline", ToolCommands.ConfigureFix);
 
-        AddCommand(root, "detect-duplication", "Finds duplicated C# and TypeScript code blocks", () => DuplicationDetectorService.DetectDuplication());
+        AddCommand(root, "detect-duplication", "Finds duplicated C#, JavaScript, TypeScript, Vue and CSS code blocks", () => DuplicationDetectorService.DetectDuplication());
         AddCommand(root, "validate-imports", "Checks cross-service import boundaries", () => ImportValidatorService.ValidateImports());
         AddCommand(root, "validate-dependencies", "Checks project and package dependency rules", () => DependencyValidatorService.ValidateDependencies());
         AddCommand(root, "validate-path-patterns", "Checks file path and directory conventions", () => PathPatternValidatorService.ValidatePathPatterns());

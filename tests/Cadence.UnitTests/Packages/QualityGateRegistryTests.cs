@@ -507,7 +507,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
-    public void DuplicationGate_InPreCommitMode_IgnoresNonCSharpDuplicates()
+    public void DuplicationGate_InPreCommitMode_RejectsFrontendAndStylesheetDuplicates()
     {
         string cssAliases = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"  --alias-{i}: var(--semantic-token-{i});"));
         Write("apps/web/src/style.css", $":root {{\n{cssAliases}\n}}\n");
@@ -516,7 +516,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         var gate = QualityGates.Find("duplication")!;
         var context = Context(files: ["apps/web/src/style.css", "apps/subject-portal/src/style.css"], preCommit: true);
 
-        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# or JavaScript file, even when pre-commit passes staged files");
+        gate.Run(context).Should().BeFalse("duplication gate rejects staged CSS duplicates over 15 normalized lines without style.css exemptions");
 
         string jsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const val{i} = input + {i};"));
         Write("apps/web/src/dup.js", $"export function compute(input) {{\n{jsLines}\n  return val18;\n}}\n");
@@ -524,6 +524,20 @@ public sealed class QualityGateRegistryTests : IDisposable
 
         var jsContext = Context(files: ["apps/web/src/dup.js", "apps/subject-portal/src/dup.js"], preCommit: true);
         gate.Run(jsContext).Should().BeFalse("duplication gate rejects staged JavaScript duplicates over 15 normalized lines");
+
+        string tsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const typedVal{i}: number = seed + {i};"));
+        Write("apps/web/src/composables/dup.ts", $"export function computeTyped(seed: number): number {{\n{tsLines}\n  return typedVal18;\n}}\n");
+        Write("apps/subject-portal/src/composables/dup.ts", $"export function computeTyped(seed: number): number {{\n{tsLines}\n  return typedVal18;\n}}\n");
+
+        var tsContext = Context(files: ["apps/web/src/composables/dup.ts", "apps/subject-portal/src/composables/dup.ts"], preCommit: true);
+        gate.Run(tsContext).Should().BeFalse("duplication gate rejects staged TypeScript duplicates over 15 normalized lines");
+
+        string vueLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  <p class=\"row-{i}\">{{{{ item.label{i} }}}}</p>"));
+        Write("apps/web/src/views/DupA.vue", $"<template>\n{vueLines}\n</template>\n");
+        Write("apps/web/src/views/DupB.vue", $"<template>\n{vueLines}\n</template>\n");
+
+        var vueContext = Context(files: ["apps/web/src/views/DupA.vue", "apps/web/src/views/DupB.vue"], preCommit: true);
+        gate.Run(vueContext).Should().BeFalse("duplication gate rejects staged Vue component duplicates over 15 normalized lines");
     }
 
     [Fact]
