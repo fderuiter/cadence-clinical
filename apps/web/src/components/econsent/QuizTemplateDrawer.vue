@@ -141,16 +141,12 @@
           </button>
         </div>
 
-        <div v-else class="templates-list">
+        <div v-else ref="templatesListRef" class="templates-list">
           <div
             v-for="tmpl in filteredTemplates"
             :key="tmpl.id"
+            :data-template-id="tmpl.id"
             :class="['template-card card', { selected: isSelected(tmpl.id) }]"
-            role="button"
-            tabindex="0"
-            @click="toggleSelect(tmpl.id)"
-            @keydown.enter="toggleSelect(tmpl.id)"
-            @keydown.space.prevent="toggleSelect(tmpl.id)"
           >
             <div class="template-card-header">
               <label class="checkbox-wrapper">
@@ -160,6 +156,7 @@
                   :checked="isSelected(tmpl.id)"
                   @click.stop
                   @change="toggleSelect(tmpl.id)"
+                  @keydown.enter.prevent="toggleSelect(tmpl.id)"
                 />
                 <span class="sr-only">Select question: {{ tmpl.text }}</span>
               </label>
@@ -225,7 +222,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { ClinicalIconButton, useFocusTrap } from "ui";
 import {
   REGULATORY_DOMAINS,
@@ -242,6 +239,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "import"]);
 
 const drawerRef = ref(null);
+const templatesListRef = ref(null);
 const domains = REGULATORY_DOMAINS;
 const catalog = QUIZ_TEMPLATE_CATALOG;
 
@@ -342,6 +340,37 @@ watch(
 useFocusTrap(drawerRef, {
   isOpen: () => props.isOpen,
   onEscape: () => emit("close"),
+});
+
+function onTemplatesListClick(event) {
+  if (!(event?.target instanceof Element)) return;
+  if (event.target.closest("input, label, button, a, select, textarea")) {
+    return;
+  }
+  const card = event.target.closest("[data-template-id]");
+  const templateId = card?.getAttribute("data-template-id");
+  if (templateId) {
+    toggleSelect(templateId);
+  }
+}
+
+watch(
+  templatesListRef,
+  (nextEl, prevEl) => {
+    if (prevEl) {
+      prevEl.removeEventListener("click", onTemplatesListClick);
+    }
+    if (nextEl) {
+      nextEl.addEventListener("click", onTemplatesListClick);
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
+
+onBeforeUnmount(() => {
+  if (templatesListRef.value) {
+    templatesListRef.value.removeEventListener("click", onTemplatesListClick);
+  }
 });
 
 defineExpose({

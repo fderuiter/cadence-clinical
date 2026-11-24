@@ -39,6 +39,8 @@
     <!-- SVG Container -->
     <div style="width: 100%; overflow-x: auto">
       <svg
+        :role="hasInteractiveVisits ? 'group' : 'img'"
+        aria-label="Interactive Arm-Aware Gantt Pathway Visualizer"
         :width="timelineWidth"
         :height="svgHeight"
         :viewBox="`0 0 ${timelineWidth} ${svgHeight}`"
@@ -49,6 +51,7 @@
           display: block;
         "
       >
+        <title>Interactive Arm-Aware Gantt Pathway Visualizer</title>
         <defs>
           <!-- Arrow marker for crossover vectors -->
           <marker
@@ -216,91 +219,98 @@
                     stroke-dasharray="2,2"
                   />
 
-                  <!-- Visit Node Circle -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <circle
-                    :cx="
-                      getVisitX(
-                        getEpochForLane(arm.arm_id, seq).epoch_id,
-                        visitIdx,
-                        seq
-                      )
-                    "
-                    :cy="getLaneYCenter(armIdx) + 8"
-                    r="13"
-                    fill="var(--semantic-color-interactive-primary)"
-                    stroke="var(--semantic-color-surface)"
-                    stroke-width="2.5"
-                    style="
-                      cursor: pointer;
-                      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-                    "
+                  <!-- Visit Interactive Node Button -->
+                  <g
+                    class="gantt-visit-node"
+                    role="button"
+                    tabindex="0"
+                    :aria-label="getVisitAriaLabel(visit)"
                     @click="openEditModal(visit)"
-                  />
-
-                  <!-- Sequence Number Inside Circle -->
-                  <text
-                    :x="
-                      getVisitX(
-                        getEpochForLane(arm.arm_id, seq).epoch_id,
-                        visitIdx,
-                        seq
-                      )
-                    "
-                    :y="getLaneYCenter(armIdx) + 11"
-                    text-anchor="middle"
-                    font-size="9px"
-                    font-weight="bold"
-                    fill="var(--semantic-color-surface)"
-                    style="pointer-events: none"
+                    @keydown.enter.prevent="openEditModal(visit)"
+                    @keydown.space.prevent="openEditModal(visit)"
                   >
-                    {{ visitIdx + 1 }}
-                  </text>
+                    <circle
+                      :cx="
+                        getVisitX(
+                          getEpochForLane(arm.arm_id, seq).epoch_id,
+                          visitIdx,
+                          seq
+                        )
+                      "
+                      :cy="getLaneYCenter(armIdx) + 8"
+                      r="13"
+                      fill="var(--semantic-color-interactive-primary)"
+                      stroke="var(--semantic-color-surface)"
+                      stroke-width="2.5"
+                      style="
+                        cursor: pointer;
+                        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+                      "
+                    />
 
-                  <!-- Visit name label above the circle -->
-                  <text
-                    :x="
-                      getVisitX(
-                        getEpochForLane(arm.arm_id, seq).epoch_id,
-                        visitIdx,
-                        seq
-                      )
-                    "
-                    :y="getLaneYCenter(armIdx) - 3"
-                    text-anchor="middle"
-                    font-size="10px"
-                    font-weight="bold"
-                    fill="var(--semantic-color-text-dark)"
-                    style="pointer-events: none"
-                  >
-                    {{ truncate(visit.encounter_name, 14) }}
-                  </text>
-
-                  <!-- Timing parameters text label below the circle -->
-                  <text
-                    :x="
-                      getVisitX(
-                        getEpochForLane(arm.arm_id, seq).epoch_id,
-                        visitIdx,
-                        seq
-                      )
-                    "
-                    :y="getLaneYCenter(armIdx) + 31"
-                    text-anchor="middle"
-                    font-size="8.5px"
-                    font-weight="600"
-                    fill="var(--semantic-color-text-secondary)"
-                    style="pointer-events: none"
-                  >
-                    Day {{ getPlannedDay(visit) }}
-                    <tspan
-                      fill="var(--semantic-color-text-secondary)"
-                      font-weight="normal"
+                    <!-- Sequence Number Inside Circle -->
+                    <text
+                      :x="
+                        getVisitX(
+                          getEpochForLane(arm.arm_id, seq).epoch_id,
+                          visitIdx,
+                          seq
+                        )
+                      "
+                      :y="getLaneYCenter(armIdx) + 11"
+                      text-anchor="middle"
+                      font-size="9px"
+                      font-weight="bold"
+                      fill="var(--semantic-color-surface)"
+                      style="pointer-events: none"
                     >
-                      ({{ getOffsetString(visit) }})
-                    </tspan>
-                  </text>
+                      {{ visitIdx + 1 }}
+                    </text>
+
+                    <!-- Visit name label above the circle -->
+                    <text
+                      :x="
+                        getVisitX(
+                          getEpochForLane(arm.arm_id, seq).epoch_id,
+                          visitIdx,
+                          seq
+                        )
+                      "
+                      :y="getLaneYCenter(armIdx) - 3"
+                      text-anchor="middle"
+                      font-size="10px"
+                      font-weight="bold"
+                      fill="var(--semantic-color-text-dark)"
+                      style="pointer-events: none"
+                    >
+                      {{ truncate(visit.encounter_name, 14) }}
+                    </text>
+
+                    <!-- Timing parameters text label below the circle -->
+                    <text
+                      :x="
+                        getVisitX(
+                          getEpochForLane(arm.arm_id, seq).epoch_id,
+                          visitIdx,
+                          seq
+                        )
+                      "
+                      :y="getLaneYCenter(armIdx) + 31"
+                      text-anchor="middle"
+                      font-size="8.5px"
+                      font-weight="600"
+                      fill="var(--semantic-color-text-secondary)"
+                      style="pointer-events: none"
+                    >
+                      Day {{ getPlannedDay(visit) }}
+                      <tspan
+                        fill="var(--semantic-color-text-secondary)"
+                        font-weight="normal"
+                      >
+                        ({{ getOffsetString(visit) }})
+                      </tspan>
+                    </text>
+                  </g>
                 </g>
               </g>
             </g>
@@ -398,8 +408,8 @@
       <div style="display: flex; flex-direction: column; gap: 14px">
         <!-- Target / Planned Day -->
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="gantt-planned-day"
             style="
               font-weight: 600;
               display: block;
@@ -410,8 +420,8 @@
           >
             Target Day Offset
           </label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="gantt-planned-day"
             v-model.number="form.planned_day"
             type="number"
             min="0"
@@ -429,8 +439,8 @@
         <!-- Min/Max Offsets -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
+              for="gantt-min-offset"
               style="
                 font-weight: 600;
                 display: block;
@@ -441,8 +451,8 @@
             >
               Min Offset (Days)
             </label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="gantt-min-offset"
               v-model.number="form.min_offset"
               type="number"
               min="0"
@@ -457,8 +467,8 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
+              for="gantt-max-offset"
               style="
                 font-weight: 600;
                 display: block;
@@ -469,8 +479,8 @@
             >
               Max Offset (Days)
             </label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="gantt-max-offset"
               v-model.number="form.max_offset"
               type="number"
               min="0"
@@ -488,8 +498,8 @@
 
         <!-- Anchor Reference -->
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="gantt-anchor-reference"
             style="
               font-weight: 600;
               display: block;
@@ -500,8 +510,8 @@
           >
             Anchor Reference Milestone
           </label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="gantt-anchor-reference"
             v-model="form.anchor_reference"
             type="text"
             style="
@@ -524,8 +534,8 @@
             margin-top: 4px;
           "
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="gantt-change-justification"
             style="
               font-weight: bold;
               display: block;
@@ -536,10 +546,10 @@
           >
             Compliance Change Justification *
           </label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <textarea
+            id="gantt-change-justification"
             v-model="form.justification"
-            rows="2.5"
+            rows="3"
             style="
               width: 100%;
               padding: 8px;
@@ -808,6 +818,15 @@ function calculateCrossoverTextPos(cross) {
   return { x, y };
 }
 
+const hasInteractiveVisits = computed(() => {
+  return Object.keys(nodePositions.value).length > 0;
+});
+
+function getVisitAriaLabel(visit) {
+  const name = visit?.encounter_name || "Encounter";
+  return `${name}, Day ${getPlannedDay(visit)} (${getOffsetString(visit)})`;
+}
+
 // Timing Getters
 function getPlannedDay(visit) {
   if (visit.planned_day !== undefined) return visit.planned_day;
@@ -967,6 +986,15 @@ function truncate(str, len) {
 </script>
 
 <style scoped>
+.gantt-visit-node {
+  cursor: pointer;
+}
+
+.gantt-visit-node:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 4px;
+}
+
 .gantt-modal-backdrop {
   position: fixed;
   top: 0;

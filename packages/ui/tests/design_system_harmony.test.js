@@ -38,6 +38,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ModalErrorAlert",
   "PersonaSwitcher",
   "SignOutConfirmModal",
+  "ViewportPanPad",
 ];
 
 const EXPECTED_KEYBOARD_HELPERS = [
@@ -199,7 +200,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 28 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 29 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -209,17 +210,18 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(28);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(29);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 5 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+    it("exposes all 5 keyboard interaction helpers, createSrOnlyActionButton, useAccessibleViewport, and useAsyncRetry from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
+        "useAccessibleViewport",
         "useAsyncRetry",
       ]) {
         expect(
@@ -229,7 +231,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 28 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 29 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -239,6 +241,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
+        "useAccessibleViewport",
         "useAsyncRetry",
       ]) {
         expect(dts).toMatch(

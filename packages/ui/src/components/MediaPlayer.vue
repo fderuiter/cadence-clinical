@@ -1,5 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import ViewportPanPad from "./clinical/ViewportPanPad.vue";
+import { useAccessibleViewport } from "../composables/useAccessibleViewport.js";
 
 const props = defineProps({
   src: {
@@ -61,6 +63,18 @@ const panOffset = ref({ x: 0, y: 0 });
 const isDragging = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
 const imageViewportRef = ref(null);
+const playerRootRef = ref(null);
+
+const {
+  panBy,
+  resetPan,
+  handlePanKeydown,
+  liveAnnouncement: panLiveAnnouncement,
+} = useAccessibleViewport({
+  panOffset,
+  panStep: 24,
+  shiftPanStep: 64,
+});
 
 const zoomIn = () => {
   zoomLevel.value = Math.min(zoomLevel.value + 0.25, 4.0);
@@ -79,7 +93,7 @@ const rotateClockwise = () => {
 const resetTransform = () => {
   zoomLevel.value = 1;
   rotation.value = 0;
-  panOffset.value = { x: 0, y: 0 };
+  resetPan();
   emit("zoom-change", 1);
 };
 
@@ -104,21 +118,39 @@ const handleMouseUp = () => {
   isDragging.value = false;
 };
 
-const panBy = (dx, dy) => {
-  panOffset.value = {
-    x: panOffset.value.x + dx,
-    y: panOffset.value.y + dy,
-  };
+const onDirectionalPan = ({ dx, dy }) => {
+  panBy(dx, dy);
+};
+
+const onMediaKeydown = (event) => {
+  if (mediaCategory.value !== "image") return;
+  handlePanKeydown(event);
+};
+
+watch(playerRootRef, (el, prevEl) => {
+  if (prevEl && typeof prevEl.removeEventListener === "function") {
+    prevEl.removeEventListener("keydown", onMediaKeydown);
+  }
+  if (el && typeof el.addEventListener === "function") {
+    el.addEventListener("keydown", onMediaKeydown);
+  }
+});
+
+const onViewportKeydown = (event) => {
+  event.stopPropagation();
+  onMediaKeydown(event);
 };
 
 watch(imageViewportRef, (el, prevEl) => {
   if (prevEl && typeof prevEl.removeEventListener === "function") {
     prevEl.removeEventListener("mousedown", handleMouseDown);
     prevEl.removeEventListener("mousemove", handleMouseMove);
+    prevEl.removeEventListener("keydown", onViewportKeydown);
   }
   if (el && typeof el.addEventListener === "function") {
     el.addEventListener("mousedown", handleMouseDown);
     el.addEventListener("mousemove", handleMouseMove);
+    el.addEventListener("keydown", onViewportKeydown);
   }
 });
 
@@ -233,11 +265,15 @@ onUnmounted(() => {
 
 <template>
   <div
+    ref="playerRootRef"
     class="clinical-media-player"
     role="region"
     :aria-label="title"
     tabindex="0"
   >
+    <div class="sr-only" role="status" aria-live="polite">
+      {{ panLiveAnnouncement }}
+    </div>
     <!-- Header Bar -->
     <div class="player-header">
       <div class="media-title-wrapper">
@@ -278,26 +314,13 @@ onUnmounted(() => {
           >
             🔄
           </button>
-          <button
+          <ViewportPanPad
             v-if="mediaCategory === 'image'"
-            type="button"
-            class="control-btn"
-            aria-label="Pan image left"
-            title="Pan Left"
-            @click="panBy(-24, 0)"
-          >
-            <span aria-hidden="true">&larr;</span>
-          </button>
-          <button
-            v-if="mediaCategory === 'image'"
-            type="button"
-            class="control-btn"
-            aria-label="Pan image right"
-            title="Pan Right"
-            @click="panBy(24, 0)"
-          >
-            <span aria-hidden="true">&rarr;</span>
-          </button>
+            label-prefix="Pan image"
+            group-label="Pan image controls"
+            :step="24"
+            @pan="onDirectionalPan"
+          />
           <button
             class="control-btn"
             aria-label="Reset View"
@@ -375,6 +398,9 @@ onUnmounted(() => {
         v-else-if="mediaCategory === 'image'"
         ref="imageViewportRef"
         class="image-viewer-container"
+        role="application"
+        :aria-label="`${title} interactive image viewport`"
+        tabindex="0"
         data-testid="image-viewer"
       >
         <img

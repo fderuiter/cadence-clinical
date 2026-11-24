@@ -122,52 +122,6 @@ export {
   interpretComprehensionResult,
 } from "./econsent.js";
 
-import {
-  AiActionButton,
-  AiSuggestionDrawer,
-  AuditLogViewer,
-  ClinicalContextBar,
-  ClinicalDataTable,
-  ClinicalDrawer,
-  ClinicalDropzone,
-  ClinicalFieldLayout,
-  ClinicalFormField,
-  ClinicalIconButton,
-  ClinicalIcon,
-  ClinicalBreadcrumbs,
-  EntityLink,
-  ClinicalInput,
-  ClinicalRadioGroup,
-  ClinicalTabs,
-  ClinicalLookupInput,
-  ClinicalModal,
-  ClinicalQueryFlag,
-  ClinicalQueryPanel,
-  ClinicalToastHost,
-  ConfidenceBadge,
-  EmptyState,
-  FileUploadModal,
-  MediaPlayer,
-  ModalErrorAlert,
-  PersonaSwitcher,
-  SignOutConfirmModal,
-  useAsyncRetry,
-  useFocusTrap,
-  getFocusableElements,
-  getTopActiveModalContainer,
-  hasActiveModalFocusTrap,
-  trapTabFocus,
-  handoffFocus,
-  useInlineFocusHandoff,
-  useEscapeClose,
-  registerDraftSource,
-  flushRegisteredDraftSources,
-  flushRegisteredDraftSourcesSync,
-  hasRegisteredUnsavedDrafts,
-  resetDraftSourcesForTests,
-  useSignOutGuard,
-} from "./src/index.js";
-
 export {
   AiActionButton,
   AiSuggestionDrawer,
@@ -197,6 +151,8 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  ViewportPanPad,
+  useAccessibleViewport,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
@@ -212,8 +168,7 @@ export {
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
   useSignOutGuard,
-};
-
+} from "./src/index.js";
 // Dynamic Hover Pointer Capability Detection
 export function initHoverDetection() {
   if (typeof window !== "undefined" && typeof document !== "undefined") {

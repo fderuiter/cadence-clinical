@@ -1,16 +1,11 @@
 <template>
   <div
-    v-keyboard-click="selectField"
-    tabindex="0"
-    role="button"
+    ref="widgetRootRef"
     class="canvas-field-widget"
     :class="{
       'is-selected': isSelected,
       'has-warning': hasWarning,
     }"
-    @click="selectField"
-    @keydown.enter.prevent="selectField"
-    @keydown.space.prevent="selectField"
   >
     <!-- Field Header / Metadata -->
     <div class="field-widget-top">
@@ -19,13 +14,14 @@
         <span
           class="field-drag-handle"
           title="Drag to reorder field"
-          @click.stop
+          aria-hidden="true"
         >
           ⋮⋮
         </span>
         <!-- Field Reorder Controls -->
-        <div class="field-reorder-controls" @click.stop>
+        <div class="field-reorder-controls">
           <button
+            type="button"
             class="btn-move-up btn-field-move-up"
             :disabled="isFirst"
             title="Move field up"
@@ -35,6 +31,7 @@
             ▲
           </button>
           <button
+            type="button"
             class="btn-move-down btn-field-move-down"
             :disabled="isLast"
             title="Move field down"
@@ -44,10 +41,22 @@
             ▼
           </button>
         </div>
-        <span class="field-label-text">
-          {{ field.label || "Untitled Field" }}
-          <span v-if="field.required" class="field-required-star">*</span>
-        </span>
+        <button
+          type="button"
+          class="field-select-btn"
+          :aria-pressed="isSelected"
+          @click.stop="selectField"
+        >
+          <span class="field-label-text">
+            {{ field.label || "Untitled Field" }}
+            <span
+              v-if="field.required"
+              class="field-required-star"
+              aria-hidden="true"
+              >*</span
+            >
+          </span>
+        </button>
       </div>
 
       <!-- SDTM Tag Badge -->
@@ -59,10 +68,10 @@
     <!-- Interactive Field Preview -->
     <div class="field-preview-container">
       <template v-if="field.type === 'text'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="text"
           disabled
+          :aria-label="previewAriaLabel"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -72,10 +81,10 @@
       </template>
 
       <template v-else-if="field.type === 'numeric'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="number"
           disabled
+          :aria-label="previewAriaLabel"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -85,10 +94,10 @@
       </template>
 
       <template v-else-if="field.type === 'date'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="date"
           disabled
+          :aria-label="previewAriaLabel"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -97,9 +106,9 @@
       </template>
 
       <template v-else-if="field.type === 'select'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <select
           disabled
+          :aria-label="previewAriaLabel"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -264,6 +273,7 @@
       "
     >
       <button
+        type="button"
         style="
           background: none;
           border: none;
@@ -282,6 +292,7 @@
         >|</span
       >
       <button
+        type="button"
         style="
           background: none;
           border: none;
@@ -300,6 +311,7 @@
         >|</span
       >
       <button
+        type="button"
         style="
           background: none;
           border: none;
@@ -344,11 +356,11 @@
  * Represents an individual interactive field widget on the eCRF designer canvas.
  * Handles selection, duplication, deletion, property inspection, and live responsive width alerts.
  */
-import { computed } from "vue";
+import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { useDesignerStore } from "../../stores/designer.js";
-import { vKeyboardClick } from "../../directives/keyboardClick.js";
 
 const designerStore = useDesignerStore();
+const widgetRootRef = ref(null);
 
 const props = defineProps({
   field: {
@@ -397,9 +409,42 @@ const isSelected = computed(() => {
   return props.selectedFieldId === props.field.id;
 });
 
+const previewAriaLabel = computed(() => {
+  return `${props.field.label || "Untitled Field"} preview`;
+});
+
 function selectField() {
   emit("select-field", props.field.id);
 }
+
+function onCardPointerClick(event) {
+  if (
+    event?.target instanceof Element &&
+    event.target.closest("button, input, select, textarea, a, label")
+  ) {
+    return;
+  }
+  selectField();
+}
+
+watch(
+  widgetRootRef,
+  (nextEl, prevEl) => {
+    if (prevEl) {
+      prevEl.removeEventListener("click", onCardPointerClick);
+    }
+    if (nextEl) {
+      nextEl.addEventListener("click", onCardPointerClick);
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
+
+onBeforeUnmount(() => {
+  if (widgetRootRef.value) {
+    widgetRootRef.value.removeEventListener("click", onCardPointerClick);
+  }
+});
 </script>
 
 <style scoped>
@@ -443,6 +488,24 @@ function selectField() {
   font-size: 1.1rem;
   touch-action: none;
   user-select: none;
+}
+
+.field-select-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.field-select-btn:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
 }
 
 .field-label-text {

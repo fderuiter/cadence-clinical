@@ -519,6 +519,119 @@ export const ClinicalToastHost: DefineComponent<
   any
 >;
 
+export const ViewportPanPad: DefineComponent<
+  {
+    step?: number;
+    labelPrefix?: string;
+    groupLabel?: string;
+    showReset?: boolean;
+    resetLabel?: string;
+    disabled?: boolean;
+    compact?: boolean;
+    onPan?: (payload: {
+      direction: "up" | "down" | "left" | "right";
+      dx: number;
+      dy: number;
+    }) => void;
+    onReset?: () => void;
+  },
+  {},
+  any
+>;
+
+export interface AccessibleViewportPoint {
+  x: number;
+  y: number;
+}
+
+export interface UseAccessibleViewportOptions {
+  minX?: number | import("vue").Ref<number> | (() => number);
+  maxX?: number | import("vue").Ref<number> | (() => number);
+  minY?: number | import("vue").Ref<number> | (() => number);
+  maxY?: number | import("vue").Ref<number> | (() => number);
+  initialX?: number;
+  initialY?: number;
+  initialActive?: boolean;
+  initialPanX?: number;
+  initialPanY?: number;
+  panOffset?: import("vue").Ref<AccessibleViewportPoint>;
+  viewportRef?: import("vue").Ref<HTMLElement | null | undefined>;
+  fallbackWidth?: number | import("vue").Ref<number> | (() => number);
+  fallbackHeight?: number | import("vue").Ref<number> | (() => number);
+  step?: number | import("vue").Ref<number> | (() => number);
+  shiftStep?: number | import("vue").Ref<number> | (() => number);
+  fineStep?: number | import("vue").Ref<number> | (() => number);
+  panStep?: number | import("vue").Ref<number> | (() => number);
+  shiftPanStep?: number | import("vue").Ref<number> | (() => number);
+  mode?: "point" | "segment" | import("vue").Ref<string> | (() => string);
+  minDistance?: number | import("vue").Ref<number> | (() => number);
+  throttleMs?: number;
+  unit?: string;
+  formatCoordinates?: (point: AccessibleViewportPoint) => string;
+  onReticleMove?: (point: AccessibleViewportPoint) => void;
+  onPan?: (
+    offset: AccessibleViewportPoint,
+    delta: { dx: number; dy: number }
+  ) => void;
+  onConfirmPoint?: (
+    payload: AccessibleViewportPoint & { source: string }
+  ) => void;
+  onAnchorSet?: (payload: AccessibleViewportPoint & { source: string }) => void;
+  onCompleteSegment?: (payload: {
+    start: AccessibleViewportPoint;
+    end: AccessibleViewportPoint;
+    dx: number;
+    dy: number;
+    distance: number;
+    source: string;
+  }) => void;
+  onCancelPlacement?: () => void;
+}
+
+export interface AccessibleViewportControls {
+  reticleX: import("vue").Ref<number>;
+  reticleY: import("vue").Ref<number>;
+  isReticleActive: import("vue").Ref<boolean>;
+  pendingAnchor: import("vue").Ref<AccessibleViewportPoint | null>;
+  panOffset: import("vue").Ref<AccessibleViewportPoint>;
+  liveAnnouncement: import("vue").Ref<string>;
+  clampPoint: (rawX: number, rawY: number) => AccessibleViewportPoint;
+  setReticle: (
+    x: number,
+    y: number,
+    opts?: { announceChange?: boolean }
+  ) => AccessibleViewportPoint;
+  stepReticle: (
+    dx: number,
+    dy: number,
+    opts?: { announceChange?: boolean }
+  ) => AccessibleViewportPoint;
+  clientToViewport: (
+    event: MouseEvent | PointerEvent | TouchEvent | Record<string, any>,
+    elementOverride?: HTMLElement | null
+  ) => AccessibleViewportPoint & { validPointer: boolean };
+  panBy: (
+    dx: number,
+    dy: number,
+    opts?: { announceChange?: boolean }
+  ) => AccessibleViewportPoint;
+  setPan: (x: number, y: number) => AccessibleViewportPoint;
+  resetPan: (opts?: { announceChange?: boolean }) => AccessibleViewportPoint;
+  placePoint: (
+    rawPoint: AccessibleViewportPoint,
+    source?: string
+  ) => Record<string, any>;
+  confirmReticlePoint: () => Record<string, any>;
+  cancelPlacement: (opts?: { announceChange?: boolean }) => boolean;
+  handleReticleKeydown: (event: KeyboardEvent) => boolean;
+  handlePanKeydown: (event: KeyboardEvent) => boolean;
+  announce: (message: string, opts?: { immediate?: boolean }) => void;
+  flushAnnouncement: () => void;
+}
+
+export function useAccessibleViewport(
+  options?: UseAccessibleViewportOptions
+): AccessibleViewportControls;
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;

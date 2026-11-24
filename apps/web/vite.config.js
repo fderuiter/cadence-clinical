@@ -182,6 +182,9 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (normalizedId.includes("vite/preload-helper")) {
+                return "ui-shell";
+              }
               if (
                 /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
                   normalizedId

@@ -89,6 +89,7 @@
                 :is-last="index === sections.length - 1"
                 @select-field="onSelectField"
                 @update-section="onUpdateSection"
+                @sections-changed="onSectionsChanged"
                 @move-section-up="moveSectionUp(index)"
                 @move-section-down="moveSectionDown(index)"
               />
@@ -139,74 +140,27 @@
             <span>✅</span> No layout warnings for this viewport.
           </div>
 
-          <div
-            v-else
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 8px;
-              max-height: 200px;
-              overflow-y: auto;
-            "
-          >
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
+          <div v-else class="warnings-list">
+            <button
               v-for="warning in layoutWarnings"
               :key="warning.fieldId"
+              type="button"
               class="warning-item"
-              style="
-                border: 1px solid var(--semantic-color-warning-border);
-                background-color: var(--semantic-color-warning-bg-light);
-                border-radius: 6px;
-                padding: 8px;
-                cursor: pointer;
-              "
               @click="onSelectField(warning.fieldId)"
             >
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  font-weight: 700;
-                  font-size: 0.75rem;
-                  color: var(--semantic-color-warning-text);
-                  margin-bottom: 2px;
-                "
-              >
+              <span class="warning-item-header">
                 <span>{{ warning.label }}</span>
-                <span
-                  style="
-                    font-family: monospace;
-                    font-size: 0.7rem;
-                    background: var(--semantic-color-warning-bg-badge);
-                    padding: 1px 4px;
-                    border-radius: 4px;
-                  "
+                <span class="warning-span-badge"
                   >Span: {{ warning.gridSpan }}</span
                 >
-              </div>
-              <p
-                style="
-                  font-size: 0.72rem;
-                  color: var(--semantic-color-warning-action-border);
-                  margin: 0;
-                  line-height: 1.3;
-                "
-              >
+              </span>
+              <span class="warning-item-message">
                 {{ warning.message }}
-              </p>
-              <div
-                style="
-                  font-size: 0.68rem;
-                  color: var(--semantic-color-text-subtle);
-                  margin-top: 4px;
-                  font-style: italic;
-                "
-              >
+              </span>
+              <span class="warning-item-section">
                 In: {{ warning.sectionName }}
-              </div>
-            </div>
+              </span>
+            </button>
           </div>
         </div>
 
@@ -279,8 +233,7 @@
             </div>
 
             <div class="inspector-field-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Field Label</label>
+              <label for="inspect-field-label">Field Label</label>
               <input
                 id="inspect-field-label"
                 v-model="selectedFieldLabel"
@@ -289,9 +242,21 @@
               />
             </div>
 
+            <div v-if="sections.length > 0" class="inspector-field-group">
+              <label for="inspect-field-section">Section</label>
+              <select
+                id="inspect-field-section"
+                v-model="selectedFieldSectionId"
+                class="inspector-select"
+              >
+                <option v-for="sec in sections" :key="sec.id" :value="sec.id">
+                  {{ sec.name || sec.id }}
+                </option>
+              </select>
+            </div>
+
             <div class="inspector-field-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Grid Span (1-12 Columns)</label>
+              <label for="inspect-field-span">Grid Span (1-12 Columns)</label>
               <select
                 id="inspect-field-span"
                 v-model="selectedFieldGridSpan"
@@ -311,10 +276,12 @@
             </div>
 
             <div class="inspector-field-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Field Type</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="selectedFieldType" class="inspector-select">
+              <label for="inspect-field-type">Field Type</label>
+              <select
+                id="inspect-field-type"
+                v-model="selectedFieldType"
+                class="inspector-select"
+              >
                 <option value="text">Text Input</option>
                 <option value="numeric">Numeric Input</option>
                 <option value="date">Date Picker</option>
@@ -636,6 +603,55 @@ const selectedFieldRequired = computed({
   set: (val) => updateSelectedFieldProp("required", val),
 });
 
+const selectedFieldSectionId = computed({
+  get: () => selectedField.value?.sectionId || "",
+  set: (targetSectionId) => {
+    if (
+      !props.selectedFieldId ||
+      !targetSectionId ||
+      targetSectionId === selectedField.value?.sectionId
+    ) {
+      return;
+    }
+    const fieldId = props.selectedFieldId;
+    if (designerStore.activeForm) {
+      designerStore.activeForm.sections = JSON.parse(
+        JSON.stringify(sections.value)
+      );
+      const moved = designerStore.moveFieldToSection(fieldId, targetSectionId);
+      if (moved) {
+        emit("update-schema", {
+          ...props.formSchema,
+          sections: JSON.parse(
+            JSON.stringify(designerStore.activeForm.sections)
+          ),
+        });
+        compilationStatus.value = null;
+      }
+      return;
+    }
+
+    const updatedSections = JSON.parse(JSON.stringify(sections.value));
+    const dst = updatedSections.find((s) => s.id === targetSectionId);
+    if (!dst) return;
+    for (const src of updatedSections) {
+      const idx = (src.items || []).findIndex((item) => item.id === fieldId);
+      if (idx !== -1) {
+        const [movedField] = src.items.splice(idx, 1);
+        if (!dst.items) dst.items = [];
+        dst.items.push(movedField);
+        dst.isCollapsed = false;
+        emit("update-schema", {
+          ...props.formSchema,
+          sections: updatedSections,
+        });
+        compilationStatus.value = null;
+        break;
+      }
+    }
+  },
+});
+
 const dismissedWarnings = computed({
   get: () => designerStore.dismissedWarnings,
   set: (val) => {
@@ -722,6 +738,13 @@ function onUpdateSection(updatedSection) {
     sections.value = currentSections;
     compilationStatus.value = null;
   }
+}
+
+function onSectionsChanged(updatedSections) {
+  const nextSections =
+    updatedSections || designerStore.activeForm?.sections || sections.value;
+  emit("update-schema", { ...props.formSchema, sections: [...nextSections] });
+  compilationStatus.value = null;
 }
 
 // ----------------------------------------------------------------------------
@@ -1120,6 +1143,64 @@ function onResetSimulation() {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.warnings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.warning-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  border: 1px solid var(--semantic-color-warning-border);
+  background-color: var(--semantic-color-warning-bg-light);
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.warning-item:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
+}
+
+.warning-item-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--semantic-color-warning-text);
+  margin-bottom: 2px;
+}
+
+.warning-span-badge {
+  font-family: monospace;
+  font-size: 0.7rem;
+  background: var(--semantic-color-warning-bg-badge);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.warning-item-message {
+  font-size: 0.72rem;
+  color: var(--semantic-color-warning-action-border);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.warning-item-section {
+  font-size: 0.68rem;
+  color: var(--semantic-color-text-subtle);
+  margin-top: 4px;
+  font-style: italic;
 }
 
 .inspector-field-group {

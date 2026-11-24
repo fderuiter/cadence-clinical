@@ -13,9 +13,10 @@
           type="button"
           class="tool-select-btn"
           :class="{ active: currentTool === 'POINTER' }"
+          :aria-pressed="currentTool === 'POINTER'"
           @click="selectTool('POINTER')"
         >
-          <span class="tool-icon">🔍</span>
+          <span class="tool-icon" aria-hidden="true">🔍</span>
           <span class="tool-name">Navigate / Pan</span>
         </button>
 
@@ -23,9 +24,10 @@
           type="button"
           class="tool-select-btn"
           :class="{ active: currentTool === 'CALIPER_1D' }"
+          :aria-pressed="currentTool === 'CALIPER_1D'"
           @click="selectTool('CALIPER_1D')"
         >
-          <span class="tool-icon">📏</span>
+          <span class="tool-icon" aria-hidden="true">📏</span>
           <span class="tool-name">1D RECIST Caliper</span>
         </button>
 
@@ -33,9 +35,10 @@
           type="button"
           class="tool-select-btn"
           :class="{ active: currentTool === 'CALIPER_2D' }"
+          :aria-pressed="currentTool === 'CALIPER_2D'"
           @click="selectTool('CALIPER_2D')"
         >
-          <span class="tool-icon">➕</span>
+          <span class="tool-icon" aria-hidden="true">➕</span>
           <span class="tool-name">2D Lugano Cross</span>
         </button>
 
@@ -43,16 +46,21 @@
           type="button"
           class="tool-select-btn"
           :class="{ active: currentTool === 'CALIPER_3D' }"
+          :aria-pressed="currentTool === 'CALIPER_3D'"
           @click="selectTool('CALIPER_3D')"
         >
-          <span class="tool-icon">🧊</span>
+          <span class="tool-icon" aria-hidden="true">🧊</span>
           <span class="tool-name">3D Ellipsoid Vol</span>
         </button>
       </div>
     </div>
 
-    <!-- Lesion Classification & Metadata Input -->
-    <div class="lesion-config-section">
+    <!-- Lesion Classification & Keyboard Measurement Form -->
+    <form
+      class="lesion-config-section"
+      aria-label="Lesion tagging and manual caliper entry"
+      @submit.prevent="submitManualCaliper"
+    >
       <div class="section-subtitle">Lesion Tagging &amp; Anatomical Site</div>
       <div class="form-row">
         <div class="form-group">
@@ -120,7 +128,37 @@
           </select>
         </div>
       </div>
-    </div>
+
+      <div class="form-row manual-entry-row">
+        <div class="form-group">
+          <label for="manual-diameter-input" class="field-label"
+            >Diameter (mm):</label
+          >
+          <input
+            id="manual-diameter-input"
+            v-model.number="newLesionForm.manualDiameterMm"
+            type="number"
+            min="2.1"
+            step="0.1"
+            class="field-input"
+            placeholder="e.g. 18.5"
+          />
+        </div>
+        <div class="form-group manual-submit-group">
+          <button
+            type="submit"
+            class="btn-add-manual-caliper"
+            :disabled="
+              !newLesionForm.manualDiameterMm ||
+              newLesionForm.manualDiameterMm <= 2
+            "
+            @click.prevent="submitManualCaliper"
+          >
+            Add Caliper
+          </button>
+        </div>
+      </div>
+    </form>
 
     <!-- Active Annotations List -->
     <div class="annotations-list-section">
@@ -139,7 +177,8 @@
       </div>
 
       <div v-if="annotations.length === 0" class="empty-state">
-        Draw calipers directly on the MPR viewer canvas to measure lesions.
+        Click two points, use arrow keys and Enter on the MPR viewer canvas, or
+        enter a diameter above to measure lesions.
       </div>
 
       <div v-else class="annotations-table-wrapper">
@@ -331,8 +370,9 @@
       class="modal-overlay"
       role="dialog"
       aria-modal="true"
+      aria-label="Electronic Signature - Tumor Assessment Sign-off"
     >
-      <div class="modal-card">
+      <form class="modal-card" @submit.prevent="submitSignedAssessment">
         <div class="modal-header">
           <h4 class="modal-title">
             Electronic Signature - Tumor Assessment Sign-off
@@ -385,15 +425,15 @@
             Cancel
           </button>
           <button
-            type="button"
+            type="submit"
             class="btn-confirm-sign"
             :disabled="!signoffReason || !signaturePin"
-            @click="submitSignedAssessment"
+            @click.prevent="submitSignedAssessment"
           >
             Confirm &amp; Lock Assessment
           </button>
         </div>
-      </div>
+      </form>
     </div>
   </div>
 </template>
@@ -431,6 +471,7 @@ const emit = defineEmits([
   "clearAllAnnotations",
   "assessmentSigned",
   "annotationUpdated",
+  "caliperCreated",
 ]);
 
 const currentTool = ref("CALIPER_1D");
@@ -453,7 +494,31 @@ const newLesionForm = ref({
   lesionType: "TARGET",
   organSite: "LIVER",
   deauvilleScore: null,
+  manualDiameterMm: null,
 });
+
+function submitManualCaliper() {
+  const diameter = Number(newLesionForm.value.manualDiameterMm);
+  if (!Number.isFinite(diameter) || diameter <= 2) return;
+  const pixelSpan = Number((diameter / 0.75).toFixed(2));
+  emit("caliperCreated", {
+    plane: "AXIAL",
+    tool: currentTool.value.startsWith("CALIPER_")
+      ? currentTool.value
+      : "CALIPER_1D",
+    lengthMm: Number(diameter.toFixed(2)),
+    longestDiameterMm: Number(diameter.toFixed(2)),
+    lesion_id: newLesionForm.value.lesionId || undefined,
+    lesion_type: newLesionForm.value.lesionType,
+    organ_site: newLesionForm.value.organSite,
+    deauville_score: newLesionForm.value.deauvilleScore,
+    points: [
+      { x: 190, y: 170 },
+      { x: Math.min(370, 190 + pixelSpan), y: 170 },
+    ],
+  });
+  newLesionForm.value.manualDiameterMm = null;
+}
 
 function selectTool(toolKey) {
   currentTool.value = toolKey;
@@ -481,6 +546,7 @@ function updateLongestDiameter(annotation, val) {
 }
 
 function submitSignedAssessment() {
+  if (!signoffReason.value || !signaturePin.value) return;
   const aiCount = props.annotations.filter(
     (a) => a.measurement_type === "AI_AUTO_CONTOUR" || a.is_ai_assisted
   ).length;
@@ -639,6 +705,37 @@ function getTimepointClass(tp) {
   padding: 6px 8px;
   font-size: 0.8rem;
   box-sizing: border-box;
+}
+
+.manual-entry-row {
+  align-items: end;
+}
+
+.manual-submit-group {
+  justify-content: flex-end;
+}
+
+.btn-add-manual-caliper {
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--semantic-color-accent-inverse);
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-add-manual-caliper:hover {
+  background-color: var(--semantic-color-primary-dark);
+}
+
+.btn-add-manual-caliper:focus-visible,
+.tool-select-btn:focus-visible {
+  outline: 2px solid var(--semantic-color-accent-inverse);
+  outline-offset: 2px;
 }
 
 .section-header-row {
