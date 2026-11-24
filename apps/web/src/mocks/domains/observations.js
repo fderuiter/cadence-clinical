@@ -206,6 +206,8 @@ export function createObservationsDomain(ctx) {
     return result;
   }
 
+  ctx.getObservation = getObservation;
+
   const methods = {
     getObservation,
 
@@ -335,6 +337,38 @@ export function createObservationsDomain(ctx) {
           },
         };
       }
+      const rawObsUuid = normalized.replace(/^observation:/, "");
+      const hasOpenQuery = (target.assertions || []).some(
+        (a) => String(a.kind).toLowerCase() === "queried" && !a.retracted_at
+      );
+      if (hasOpenQuery) {
+        return {
+          conflict: true,
+          problem: {
+            title: "Observation has an open query",
+            status: 409,
+            code: "K.Assertion.QueryOpen",
+            detail: `Observation ${normalized} has an open query that must be closed before verification.`,
+          },
+        };
+      }
+      const alreadyVerified = (target.assertions || []).some(
+        (a) =>
+          String(a.kind).toLowerCase() === "verified" &&
+          !a.retracted_at &&
+          Number(a.revision) === Number(requestedRev)
+      );
+      if (alreadyVerified) {
+        return {
+          conflict: true,
+          problem: {
+            title: "Observation revision is already verified",
+            status: 409,
+            code: "K.Assertion.AlreadyVerified",
+            detail: `Observation ${normalized} revision ${requestedRev} already has an active verification.`,
+          },
+        };
+      }
       const idx = nextCounter();
       const assertionUuid =
         body?.assertion_id || makeUuidFromIndex("00008000", idx);
@@ -342,6 +376,7 @@ export function createObservationsDomain(ctx) {
       const now = new Date().toISOString();
       const assertionEntry = {
         assertion_id: assertionUuid,
+        ref: assertionRef,
         kind: "Verified",
         target: normalized,
         revision: requestedRev,
@@ -349,19 +384,19 @@ export function createObservationsDomain(ctx) {
         asserted_by: "usr-cra-01",
         asserted_at: now,
         reason,
+        reason_for_change: reason,
         retracted_at: null,
       };
-      target.assertions.push({
-        ref: assertionRef,
-        kind: "Verified",
-        target: normalized,
-        revision: requestedRev,
-        retracts: null,
-        asserted_at: now,
-        asserted_by: "usr-cra-01",
-        retracted_at: null,
+      target.assertions.push(cloneJson(assertionEntry));
+      target.audit.push({
+        sequence: nextCounter(),
+        recorded_at: now,
+        actor_id: "usr-cra-01",
+        action: "assertion.verified",
+        subject: assertionRef,
+        version: 1,
+        reason_for_change: reason,
       });
-      const rawObsUuid = normalized.replace(/^observation:/, "");
       for (const form of state.forms.values()) {
         if (form.items.some((it) => it.observation_id === rawObsUuid)) {
           form.assertions.push(cloneJson(assertionEntry));

@@ -477,6 +477,111 @@ namespace Cadence.Modules.Execution.Infrastructure.Migrations
                     b.ToTable("form_query_periods", "execution");
                 });
 
+            modelBuilder.Entity("Cadence.Modules.Execution.Domain.FormSdvAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("EnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("enrollment_id");
+
+                    b.Property<Guid?>("FormId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("form_id");
+
+                    b.Property<string>("ItemId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("item_id");
+
+                    b.Property<DateTimeOffset>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<string>("ModifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("modified_by");
+
+                    b.Property<string>("ModifiedReason")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("modified_reason");
+
+                    b.Property<int>("NewRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("new_revision");
+
+                    b.Property<Guid>("ObservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("observation_id");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<Guid?>("StudySiteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_site_id");
+
+                    b.Property<int>("SupersededRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("superseded_revision");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("verified_at");
+
+                    b.Property<string>("VerifiedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("verified_by");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EnrollmentId", "ModifiedAt")
+                        .HasDatabaseName("ix_form_sdv_alerts_tenant_enrollment_modified");
+
+                    b.HasIndex("TenantId", "ObservationId", "NewRevision")
+                        .IsUnique()
+                        .HasDatabaseName("ux_form_sdv_alerts_tenant_observation_revision");
+
+                    b.HasIndex("TenantId", "StudyId", "ModifiedAt")
+                        .HasDatabaseName("ix_form_sdv_alerts_tenant_study_modified");
+
+                    b.ToTable("form_sdv_alerts", "execution");
+                });
+
             modelBuilder.Entity("Cadence.Modules.Execution.Domain.FormQueryAgingDigest", b =>
                 {
                     b.OwnsMany("Cadence.Modules.Execution.Domain.FormQueryAgingDigestEntry", "Entries", b1 =>

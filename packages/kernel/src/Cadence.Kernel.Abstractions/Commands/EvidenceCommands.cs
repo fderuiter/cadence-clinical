@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Simulation;
 
 namespace Cadence.Kernel.Commands;
 
@@ -96,6 +97,31 @@ public sealed record ExportEnrollmentCasebook(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ArtifactState>;
 
+/// <summary>
+/// Persists a verified <see cref="SimulationResult"/> as an immutable <see cref="ArtifactKind.SimulationReport"/>
+/// artifact whose content hash and canonical <see cref="SimulationArtifactBinding"/> can be attested with
+/// <c>AttestationMeaning.Reviewed</c> before approving a forked amendment (K-SIM-5, K-PROT-2).
+/// </summary>
+[KernelCapability("simulation.save_report", VerbClass.Execute, Resource = nameof(StudyId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(EvidenceErrors),
+    nameof(EvidenceErrors.StudyUnknown),
+    nameof(EvidenceErrors.TitleInvalid),
+    nameof(EvidenceErrors.KindInvalid),
+    nameof(EvidenceErrors.ContentInvalid),
+    nameof(EvidenceErrors.SimulationReportInvalid))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+public sealed record SaveSimulationReport(
+    TenantId TenantId,
+    StudyId StudyId,
+    ArtifactId ArtifactId,
+    ArtifactVersionId ArtifactVersionId,
+    string Title,
+    SimulationResult Result,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<ArtifactState>;
+
 /// <summary>An artifact and its latest version after a command.</summary>
 public sealed record ArtifactState(
     ArtifactId ArtifactId,
@@ -126,4 +152,7 @@ public static class EvidenceErrors
 
     public static readonly KernelError ContentUnchanged =
         new("K.Evidence.ContentUnchanged", 409, "The artifact already has a version with this content.");
+
+    public static readonly KernelError SimulationReportInvalid =
+        new("K.Evidence.SimulationReportInvalid", 422, "The simulation report is masked, belongs to another study, or its result hash does not match its canonical content.");
 }

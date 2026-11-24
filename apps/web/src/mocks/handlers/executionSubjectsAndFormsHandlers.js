@@ -135,6 +135,18 @@ export function createExecutionSubjectsAndFormsHandlers(store) {
         )
       );
     }),
+    http.get("*/api/v1/execution/forms/sdv-alerts", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listSdvAlerts(
+          {
+            studyId: url.searchParams.get("study_id"),
+            enrollmentId: url.searchParams.get("enrollment_id"),
+          },
+          resolveDemoCaller(request)
+        )
+      );
+    }),
     http.get(
       "*/api/v1/execution/forms/:formId/queries",
       ({ params, request }) =>
