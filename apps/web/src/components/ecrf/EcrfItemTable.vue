@@ -60,7 +60,7 @@
                     !!formState.entries[item.item_id]?.missing
                   "
                   :aria-invalid="!!formState.itemErrors[item.item_id]"
-                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  :aria-describedby="itemDescribedBy(item)"
                   @change="
                     emit(
                       'entry-text',
@@ -106,7 +106,7 @@
                     !!formState.entries[item.item_id]?.missing
                   "
                   :aria-invalid="!!formState.itemErrors[item.item_id]"
-                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  :aria-describedby="itemDescribedBy(item)"
                   @input="
                     emit(
                       'entry-text',
@@ -118,6 +118,40 @@
                 <span v-if="item.unit" class="ecrf-item-unit">{{
                   item.unit
                 }}</span>
+                <div
+                  v-if="formState.isEdited(item)"
+                  :id="`ecrf-item-${item.item_id}-draft`"
+                  :data-testid="`ecrf-item-draft-${item.item_id}`"
+                  class="ecrf-item-draft"
+                >
+                  <span
+                    :id="`ecrf-item-${item.item_id}-draft-summary`"
+                    class="ecrf-item-draft-summary"
+                  >
+                    <span
+                      class="clinical-badge clinical-badge--warning ecrf-draft-badge"
+                      :data-testid="`ecrf-unsaved-badge-${item.item_id}`"
+                    >
+                      Unsaved draft
+                    </span>
+                    <span
+                      class="ecrf-saved-baseline"
+                      :data-testid="`ecrf-saved-baseline-${item.item_id}`"
+                    >
+                      {{ formatSavedBaseline(item) }}
+                    </span>
+                  </span>
+                  <button
+                    :id="`ecrf-revert-${item.item_id}`"
+                    :data-testid="`ecrf-revert-${item.item_id}`"
+                    class="btn btn-secondary ecrf-revert-btn"
+                    type="button"
+                    :disabled="formState.locked || formState.saving"
+                    @click="revertRow(item.item_id)"
+                  >
+                    Revert<span class="sr-only"> {{ item.item_id }}</span>
+                  </button>
+                </div>
                 <p
                   :id="`ecrf-item-${item.item_id}-error`"
                   class="ecrf-form-error"
@@ -186,13 +220,22 @@
               </td>
               <td>
                 <div class="ecrf-item-sdv">
-                  <span
-                    v-if="sdv.activeVerification(item)"
-                    class="clinical-badge clinical-badge--verified ecrf-sdv-badge ecrf-sdv-badge--verified"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Verified (rev {{ item.revision }})
-                  </span>
+                  <template v-if="sdv.activeVerification(item)">
+                    <span
+                      class="clinical-badge clinical-badge--verified ecrf-sdv-badge ecrf-sdv-badge--verified"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Verified (rev {{ item.revision }})
+                    </span>
+                    <span
+                      v-if="formState.isEdited(item)"
+                      class="ecrf-sdv-draft-note"
+                      :data-testid="`ecrf-sdv-draft-note-${item.item_id}`"
+                    >
+                      Verification applies only to saved revision
+                      {{ item.revision }}; unsaved draft is not verified.
+                    </span>
+                  </template>
                   <span
                     v-else-if="sdv.needsReverification(item)"
                     class="clinical-badge clinical-badge--warning ecrf-sdv-badge ecrf-sdv-badge--reverify"
@@ -532,7 +575,6 @@ import {
   formatObservationValue,
   isUnrecordedValue,
   MISSING_REASONS,
-  type KernelObservationValue,
 } from "../../api/observationValue";
 import type { EcrfFormItem } from "../../api/ecrfFormsApi";
 import type {
@@ -540,9 +582,9 @@ import type {
   FormQueryPriority,
   FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
-import type {
-  EcrfUnsavedItem,
-  useEcrfForm,
+import {
+  formatUnsavedDraftEntry,
+  type useEcrfForm,
 } from "../../composables/useEcrfForm";
 import {
   hasRecordedValue,
@@ -702,19 +744,30 @@ const allPreviewWarnings = computed(() =>
   Object.values(props.formState.previewWarnings).flat()
 );
 
-function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
-  if (entry.missing) {
-    return formatObservationValue({
-      type: "missing",
-      reason: entry.missing as Extract<
-        KernelObservationValue,
-        { type?: "missing" }
-      >["reason"],
-    });
-  }
-  const typed = entry.text.trim();
-  return entry.unit ? `${typed} ${entry.unit}` : typed;
+function itemDescribedBy(item: EcrfFormItem): string {
+  return props.formState.isEdited(item)
+    ? `ecrf-item-${item.item_id}-draft-summary ecrf-item-${item.item_id}-error`
+    : `ecrf-item-${item.item_id}-error`;
 }
+
+function formatSavedBaseline(item: EcrfFormItem): string {
+  if (!item.value || isUnrecordedValue(item.value)) {
+    return "Saved value: No value";
+  }
+  return `Saved value: ${formatObservationValue(item.value)} (rev ${item.revision})`;
+}
+
+function revertRow(itemId: string) {
+  props.formState.revertItem(itemId);
+  void handoffFocus([
+    `#ecrf-item-${itemId}`,
+    `select[aria-label="Why ${itemId} is missing"]`,
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+const formatUnsavedEntry = formatUnsavedDraftEntry;
 </script>
 
 <style scoped>
@@ -806,6 +859,29 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-item-edited {
   background-color: var(--semantic-color-warning-bg-soft);
+}
+.ecrf-item-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ecrf-item-draft-summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ecrf-saved-baseline {
+  color: var(--semantic-color-text);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.ecrf-sdv-draft-note {
+  color: var(--semantic-color-text);
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 .ecrf-item-highlighted {
   background-color: var(--semantic-color-info-bg);

@@ -46,12 +46,46 @@ export const ECRF_FORM_DRAFT_NAMESPACE = "ecrf_form_draft";
 const DRAFT_DEBOUNCE_MS = 500;
 const PREVIEW_DEBOUNCE_MS = 250;
 
-/** One unsaved item edit preserved when a 423 lock rejects a save. */
+/** One unsaved item edit preserved when a 423 lock rejects a save or when browser drafts are dropped. */
 export interface EcrfUnsavedItem {
   item_id: string;
   text: string;
   missing: string;
   unit: string | null;
+}
+
+/** Reason saved or in-memory draft values were dropped on form load or reload. */
+export type EcrfDraftDiscardReason = "locked" | "stale" | null;
+
+/** Reactive summary of browser draft items restored or dropped during form load or reload. */
+export interface EcrfDraftNotice {
+  restoredItems: string[];
+  discardedItems: EcrfUnsavedItem[];
+  discardedReason: EcrfDraftDiscardReason;
+}
+
+/** Formats one unsaved or dropped item edit in plain clinical text with its unit or null-flavor label. */
+export function formatUnsavedDraftEntry(entry: EcrfUnsavedItem): string {
+  if (entry.missing) {
+    return formatObservationValue({
+      type: "missing",
+      reason: entry.missing as Extract<
+        KernelObservationValue,
+        { type?: "missing" }
+      >["reason"],
+    });
+  }
+  const typed = entry.text.trim();
+  if (!typed) return "No value";
+  return entry.unit ? `${typed} ${entry.unit}` : typed;
+}
+
+function emptyDraftNotice(): EcrfDraftNotice {
+  return {
+    restoredItems: [],
+    discardedItems: [],
+    discardedReason: null,
+  };
 }
 
 /** Metadata recorded when `saveValues` returns an inline hydrated `FormResponse` in 1 RTT. */
@@ -146,6 +180,7 @@ export function useEcrfForm(
   const saving = ref(false);
   const outcome = ref<EcrfSaveOutcome | null>(null);
   const lastHydratedSave = ref<EcrfHydratedSave | null>(null);
+  const draftNotice = ref<EcrfDraftNotice>(emptyDraftNotice());
   const entries = reactive<Record<string, EcrfEntry>>({});
   const itemErrors = reactive<Record<string, string[]>>({});
   const previewWarnings = reactive<Record<string, EcrfFormPreviewWarning[]>>(
@@ -231,22 +266,26 @@ export function useEcrfForm(
     for (const key of Object.keys(record)) delete record[key];
   }
 
+  function baselineEntryFor(item: EcrfFormItem): EcrfEntry {
+    const unrecorded = isUnrecordedValue(item.value);
+    return {
+      text:
+        !unrecorded && item.value && item.value.type !== "missing"
+          ? formatEntryText(item.value)
+          : "",
+      missing:
+        !unrecorded && item.value?.type === "missing"
+          ? String(item.value.reason)
+          : "",
+    };
+  }
+
   function resetEntries() {
     clearRecord(entries);
     clearRecord(itemErrors);
     clearRecord(previewWarnings);
     for (const item of items.value) {
-      const unrecorded = isUnrecordedValue(item.value);
-      entries[item.item_id] = {
-        text:
-          !unrecorded && item.value && item.value.type !== "missing"
-            ? formatEntryText(item.value)
-            : "",
-        missing:
-          !unrecorded && item.value?.type === "missing"
-            ? String(item.value.reason)
-            : "",
-      };
+      entries[item.item_id] = baselineEntryFor(item);
     }
   }
 
@@ -324,7 +363,7 @@ export function useEcrfForm(
     }
   }
 
-  /** Restores saved draft items whose revision matches the loaded form, discarding locked or stale items. */
+  /** Restores saved draft items whose revision matches the loaded form, recording restored and dropped locked or stale items. */
   function restoreDraft(loaded: EcrfForm) {
     draftSaved = false;
     const key = getDraftStorageKey(loaded.form_id);
@@ -339,11 +378,6 @@ export function useEcrfForm(
       return;
     }
     if (!raw) return;
-
-    if ((loaded.locks?.length ?? 0) > 0) {
-      removeDraftKey(key);
-      return;
-    }
 
     let parsed: Partial<EcrfFormDraft> | null;
     try {
@@ -362,23 +396,56 @@ export function useEcrfForm(
       return;
     }
 
-    let discardedAny = false;
     const byId = new Map(loaded.items.map((item) => [item.item_id, item]));
+    if ((loaded.locks?.length ?? 0) > 0) {
+      const lockedDiscarded: EcrfUnsavedItem[] = [];
+      for (const [itemId, saved] of Object.entries(parsed.items)) {
+        if (!saved || typeof saved !== "object") continue;
+        const item = byId.get(itemId);
+        lockedDiscarded.push({
+          item_id: itemId,
+          text: typeof saved.text === "string" ? saved.text : "",
+          missing: typeof saved.missing === "string" ? saved.missing : "",
+          unit: item?.unit ?? null,
+        });
+      }
+      removeDraftKey(key);
+      if (lockedDiscarded.length > 0) {
+        draftNotice.value = {
+          restoredItems: [],
+          discardedItems: lockedDiscarded,
+          discardedReason: "locked",
+        };
+      }
+      return;
+    }
+
+    let discardedStorageNeedsSync = false;
+    const restoredItems: string[] = [];
+    const discardedItems: EcrfUnsavedItem[] = [];
     for (const [itemId, saved] of Object.entries(parsed.items)) {
+      if (!saved || typeof saved !== "object") {
+        discardedStorageNeedsSync = true;
+        continue;
+      }
       const item = byId.get(itemId);
-      if (
-        !item ||
-        !saved ||
-        typeof saved !== "object" ||
-        Number(saved.revision) !== Number(item.revision)
-      ) {
-        discardedAny = true;
+      if (!item || Number(saved.revision) !== Number(item.revision)) {
+        discardedStorageNeedsSync = true;
+        discardedItems.push({
+          item_id: itemId,
+          text: typeof saved.text === "string" ? saved.text : "",
+          missing: typeof saved.missing === "string" ? saved.missing : "",
+          unit: item?.unit ?? null,
+        });
         continue;
       }
       entries[itemId] = {
         text: typeof saved.text === "string" ? saved.text : "",
         missing: typeof saved.missing === "string" ? saved.missing : "",
       };
+      if (isEdited(item)) {
+        restoredItems.push(itemId);
+      }
     }
 
     if (!dirty.value) {
@@ -386,10 +453,61 @@ export function useEcrfForm(
       draftSaved = false;
     } else {
       draftSaved = true;
-      if (discardedAny) {
+      if (discardedStorageNeedsSync) {
         persistDraft(loaded.form_id, key);
       }
     }
+
+    if (restoredItems.length > 0 || discardedItems.length > 0) {
+      draftNotice.value = {
+        restoredItems,
+        discardedItems,
+        discardedReason: discardedItems.length > 0 ? "stale" : null,
+      };
+    }
+  }
+
+  /** Clears restored browser draft values and restores committed server values. */
+  function discardRestoredDraft() {
+    clearDraft(form.value?.form_id);
+    cancelPreview();
+    resetEntries();
+    draftNotice.value = {
+      ...draftNotice.value,
+      restoredItems: [],
+    };
+  }
+
+  /** Reverts a single edited item back to its committed server baseline and updates stored drafts. */
+  function revertItem(itemId: string) {
+    const current = form.value;
+    const item = items.value.find((candidate) => candidate.item_id === itemId);
+    if (!current || !item) return;
+    entries[itemId] = baselineEntryFor(item);
+    delete itemErrors[itemId];
+    delete previewWarnings[itemId];
+    if (draftNotice.value.restoredItems.includes(itemId)) {
+      draftNotice.value = {
+        ...draftNotice.value,
+        restoredItems: draftNotice.value.restoredItems.filter(
+          (id) => id !== itemId
+        ),
+      };
+    }
+    if (!dirty.value) {
+      clearDraft(current.form_id);
+    } else if (!locked.value) {
+      cancelDraftSave();
+      const key = getDraftStorageKey(current.form_id);
+      if (key) {
+        persistDraft(current.form_id, key);
+      }
+    }
+  }
+
+  /** Dismisses any active restored-draft or dropped-draft banner notice. */
+  function dismissDraftNotice() {
+    draftNotice.value = emptyDraftNotice();
   }
 
   function applyScheduledDraft(scheduledFormId: string, scheduledKey: string) {
@@ -542,6 +660,12 @@ export function useEcrfForm(
     entries,
     () => {
       draftCleared = false;
+      if (!dirty.value && draftNotice.value.restoredItems.length > 0) {
+        draftNotice.value = {
+          ...draftNotice.value,
+          restoredItems: [],
+        };
+      }
       scheduleDraftSave();
       schedulePreview();
     },
@@ -603,6 +727,9 @@ export function useEcrfForm(
       loadedScopeKey = scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE);
       draftCleared = false;
       lastHydratedSave.value = null;
+      if (restoreFromStorage) {
+        draftNotice.value = emptyDraftNotice();
+      }
       form.value = loaded;
       resetEntries();
       if (restoreFromStorage) {
@@ -612,6 +739,7 @@ export function useEcrfForm(
       if (request !== loadRequest) return;
       loadedScopeKey = null;
       form.value = null;
+      draftNotice.value = emptyDraftNotice();
       clearRecord(entries);
       clearRecord(itemErrors);
       loadError.value = messageOf(error);
@@ -635,7 +763,7 @@ export function useEcrfForm(
     await load(lastRequestedFormId);
   }
 
-  /** Reloads the form from the kernel, keeping non-stale edits whose revision did not change and resetting conflicts. */
+  /** Reloads the form from the kernel, keeping non-stale edits whose revision did not change and surfacing dropped conflicts. */
   async function reload(): Promise<void> {
     if (!form.value) return;
     const currentId = form.value.form_id;
@@ -643,19 +771,22 @@ export function useEcrfForm(
       outcome.value?.kind === "stale"
         ? new Set(Object.keys(itemErrors))
         : new Set<string>();
-    const retained: Array<{
+    const editedBeforeReload: Array<{
       itemId: string;
       entry: EcrfEntry;
       revision: number;
+      unit: string | null;
+      markedStale: boolean;
     }> = [];
     for (const item of editedItems.value) {
-      if (staleFields.has(item.item_id)) continue;
       const entry = entries[item.item_id];
       if (!entry) continue;
-      retained.push({
+      editedBeforeReload.push({
         itemId: item.item_id,
         entry: { text: entry.text, missing: entry.missing },
         revision: Number(item.revision),
+        unit: item.unit ?? null,
+        markedStale: staleFields.has(item.item_id),
       });
     }
 
@@ -666,18 +797,56 @@ export function useEcrfForm(
     await loadInternal(currentId, false);
 
     if (!form.value) return;
+    const byId = new Map(items.value.map((item) => [item.item_id, item]));
     if (locked.value) {
+      if (editedBeforeReload.length > 0) {
+        draftNotice.value = {
+          restoredItems: [],
+          discardedItems: editedBeforeReload.map((saved) => ({
+            item_id: saved.itemId,
+            text: saved.entry.text,
+            missing: saved.entry.missing,
+            unit: byId.get(saved.itemId)?.unit ?? saved.unit,
+          })),
+          discardedReason: "locked",
+        };
+      } else {
+        draftNotice.value = emptyDraftNotice();
+      }
       clearDraft(currentId);
       return;
     }
 
-    const byId = new Map(items.value.map((item) => [item.item_id, item]));
-    for (const saved of retained) {
+    const discardedItems: EcrfUnsavedItem[] = [];
+    for (const saved of editedBeforeReload) {
       const nextItem = byId.get(saved.itemId);
-      if (nextItem && Number(nextItem.revision) === saved.revision) {
+      if (
+        !saved.markedStale &&
+        nextItem &&
+        Number(nextItem.revision) === saved.revision
+      ) {
         entries[saved.itemId] = { ...saved.entry };
+      } else {
+        discardedItems.push({
+          item_id: saved.itemId,
+          text: saved.entry.text,
+          missing: saved.entry.missing,
+          unit: nextItem?.unit ?? saved.unit,
+        });
       }
     }
+
+    const remainingRestored = draftNotice.value.restoredItems.filter(
+      (itemId) => {
+        const nextItem = byId.get(itemId);
+        return Boolean(nextItem && isEdited(nextItem));
+      }
+    );
+    draftNotice.value = {
+      restoredItems: remainingRestored,
+      discardedItems,
+      discardedReason: discardedItems.length > 0 ? "stale" : null,
+    };
 
     const key = getDraftStorageKey(currentId);
     if (key) {
@@ -780,6 +949,7 @@ export function useEcrfForm(
       });
       pendingSave = null;
       clearDraft(current.form_id);
+      draftNotice.value = emptyDraftNotice();
       const hydratedForm = (saved as EcrfFormSaved & { form?: EcrfForm | null })
         .form;
       if (
@@ -937,6 +1107,7 @@ export function useEcrfForm(
     loadRequest++;
     loadedScopeKey = null;
     lastHydratedSave.value = null;
+    draftNotice.value = emptyDraftNotice();
     form.value = null;
     loading.value = false;
     loadError.value = null;
@@ -987,6 +1158,10 @@ export function useEcrfForm(
     dirty,
     editedItems,
     isEdited,
+    draftNotice,
+    discardRestoredDraft,
+    revertItem,
+    dismissDraftNotice,
     getDraftStorageKey,
     flushDraft,
     clearDraft,

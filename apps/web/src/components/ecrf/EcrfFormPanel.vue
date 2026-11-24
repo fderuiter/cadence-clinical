@@ -26,6 +26,76 @@
     />
 
     <template v-else>
+      <div
+        v-if="formState.draftNotice.restoredItems.length > 0"
+        id="ecrf-restored-draft-banner"
+        data-testid="ecrf-restored-draft-banner"
+        class="ecrf-draft-banner ecrf-draft-banner--restored"
+        role="status"
+      >
+        <div class="ecrf-draft-banner__content">
+          <p class="ecrf-draft-banner__text">
+            Restored unsaved browser draft for
+            {{ formState.draftNotice.restoredItems.length }}
+            {{
+              formState.draftNotice.restoredItems.length === 1
+                ? "item"
+                : "items"
+            }}. Save page to commit these values or discard the draft.
+          </p>
+        </div>
+        <div class="ecrf-draft-banner__actions">
+          <button
+            id="ecrf-discard-restored-draft"
+            data-testid="ecrf-discard-restored-draft"
+            class="btn btn-secondary"
+            type="button"
+            :disabled="formState.saving"
+            @click="onDiscardRestoredDraft"
+          >
+            Discard draft
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="formState.draftNotice.discardedItems.length > 0"
+        id="ecrf-discarded-draft-banner"
+        data-testid="ecrf-discarded-draft-banner"
+        class="ecrf-draft-banner ecrf-draft-banner--discarded"
+        role="alert"
+      >
+        <div class="ecrf-draft-banner__content">
+          <p class="ecrf-draft-banner__text">
+            {{
+              formState.draftNotice.discardedReason === "locked"
+                ? "Form is locked. Unsaved browser draft values could not be restored and were cleared:"
+                : "Form was updated on the server since your draft was saved. Stale browser draft values were cleared:"
+            }}
+          </p>
+          <ul class="ecrf-draft-banner__list">
+            <li
+              v-for="entry in formState.draftNotice.discardedItems"
+              :key="entry.item_id"
+            >
+              <strong>{{ entry.item_id }}:</strong>
+              {{ formatUnsavedDraftEntry(entry) }}
+            </li>
+          </ul>
+        </div>
+        <div class="ecrf-draft-banner__actions">
+          <button
+            id="ecrf-dismiss-draft-notice"
+            data-testid="ecrf-dismiss-draft-notice"
+            class="btn btn-secondary"
+            type="button"
+            @click="onDismissDraftNotice"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+
       <EcrfSdvToolbar
         :form="form"
         :locked="formState.locked"
@@ -113,7 +183,10 @@ import {
   observationNodeRef,
 } from "../../canvas/nodeRef";
 import { confirmDialog } from "../../composables/useConfirmDialog.js";
-import { useEcrfForm } from "../../composables/useEcrfForm";
+import {
+  formatUnsavedDraftEntry,
+  useEcrfForm,
+} from "../../composables/useEcrfForm";
 import { useEcrfSdv } from "../../composables/useEcrfSdv";
 import { useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
@@ -204,6 +277,16 @@ async function onLoadForm(id: string) {
 
 async function onOpenForm(payload: Parameters<typeof formState.open>[0]) {
   await formState.open(payload);
+  handoffAfterFormOpen();
+}
+
+function onDiscardRestoredDraft() {
+  formState.discardRestoredDraft();
+  handoffAfterFormOpen();
+}
+
+function onDismissDraftNotice() {
+  formState.dismissDraftNotice();
   handoffAfterFormOpen();
 }
 
@@ -407,5 +490,41 @@ onUnmounted(() => {
 .ecrf-form-panel :deep(button:not(.sr-only):not(.visually-hidden)) {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
+}
+.ecrf-draft-banner {
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.ecrf-draft-banner--restored {
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
+  color: var(--semantic-color-text);
+}
+.ecrf-draft-banner--discarded {
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error);
+  color: var(--semantic-color-error-text-dark);
+}
+.ecrf-draft-banner__content {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+.ecrf-draft-banner__text {
+  margin: 0;
+}
+.ecrf-draft-banner__list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.ecrf-draft-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

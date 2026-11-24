@@ -3165,4 +3165,299 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       vi.useRealTimers();
     }
   });
+
+  it("renders a role='status' banner when matching drafts restore and clears storage when Discard draft is clicked", async () => {
+    signInUser("crc-1", "tenant-1");
+    const storageKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        form_id: FORM_ID,
+        items: {
+          SYSBP: { text: "138", missing: "", revision: 3 },
+          DIABP: { text: "86", missing: "", revision: 0 },
+        },
+      })
+    );
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const banner = wrapper.find('[data-testid="ecrf-restored-draft-banner"]');
+    expect(banner.exists()).toBe(true);
+    expect(banner.attributes("role")).toBe("status");
+    expect(banner.text()).toContain("2 items");
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("138");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("86");
+
+    await wrapper.find("#ecrf-discard-restored-draft").trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="ecrf-restored-draft-banner"]').exists()
+    ).toBe(false);
+    expect(localStorage.getItem(storageKey)).toBeNull();
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("120");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("");
+    expect(wrapper.find("#ecrf-form-save").text()).toBe("Save page (0)");
+  });
+
+  it("renders a role='alert' banner listing dropped locked or stale draft items on open and reload before clearing stale storage keys", async () => {
+    signInUser("crc-1", "tenant-1");
+    const storageKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+
+    // 1. Locked form drops stored drafts and announces each item ID and formatted value.
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        form_id: FORM_ID,
+        items: {
+          SYSBP: { text: "144", missing: "", revision: 3 },
+          DIABP: { text: "", missing: "NotDone", revision: 0 },
+        },
+      })
+    );
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        locks: [
+          {
+            lock_id: "lock-1",
+            kind: "Locked",
+            scope: `collection_instance:${FORM_ID}`,
+            attestation_id: "att-1",
+            locked_at: "2027-03-14T11:00:00Z",
+            locked_by: "dm1",
+            reason_for_change: "Database lock",
+            masked: false,
+          },
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const lockedAlert = wrapper.find(
+      '[data-testid="ecrf-discarded-draft-banner"]'
+    );
+    expect(lockedAlert.exists()).toBe(true);
+    expect(lockedAlert.attributes("role")).toBe("alert");
+    expect(lockedAlert.text()).toContain("Form is locked");
+    expect(lockedAlert.text()).toContain("SYSBP:");
+    expect(lockedAlert.text()).toContain("144 mm[Hg]");
+    expect(lockedAlert.text()).toContain("DIABP:");
+    expect(lockedAlert.text()).toContain("Not done");
+    expect(localStorage.getItem(storageKey)).toBeNull();
+
+    await wrapper.find("#ecrf-dismiss-draft-notice").trigger("click");
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="ecrf-discarded-draft-banner"]').exists()
+    ).toBe(false);
+    wrapper.unmount();
+
+    // 2. Stale revision on reopen drops stale item (SYSBP) while restoring matching item (DIABP), updating storage.
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        form_id: FORM_ID,
+        items: {
+          SYSBP: { text: "150", missing: "", revision: 2 },
+          DIABP: { text: "88", missing: "", revision: 0 },
+        },
+      })
+    );
+    vi.mocked(ecrfFormsApi.getForm)
+      .mockResolvedValueOnce(form() as never)
+      .mockResolvedValueOnce(
+        form({
+          version: 3,
+          items: [
+            form().items[0],
+            item({
+              item_id: "DIABP",
+              unit: "mm[Hg]",
+              value_kind: "Quantity",
+              required: true,
+              value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+              observation_id: "obs-diabp",
+              revision: 1,
+              recorded_by: "crc2",
+              recorded_at: "2027-03-14T09:10:00Z",
+            }),
+            form().items[2],
+          ],
+        }) as never
+      );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const staleAlert = wrapper.find(
+      '[data-testid="ecrf-discarded-draft-banner"]'
+    );
+    expect(staleAlert.exists()).toBe(true);
+    expect(staleAlert.attributes("role")).toBe("alert");
+    expect(staleAlert.text()).toContain("SYSBP:");
+    expect(staleAlert.text()).toContain("150 mm[Hg]");
+    expect(
+      wrapper.find('[data-testid="ecrf-restored-draft-banner"]').text()
+    ).toContain("1 item");
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("120");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("88");
+    expect(JSON.parse(localStorage.getItem(storageKey)!)).toEqual({
+      form_id: FORM_ID,
+      items: {
+        DIABP: { text: "88", missing: "", revision: 0 },
+      },
+    });
+
+    // 3. Reloading after a 409 stale save surfaces dropped conflicting edits (DIABP) in role="alert" and clears stale storage.
+    vi.mocked(ecrfFormsApi.saveValues).mockRejectedValueOnce(
+      new ApiError("Stale", 409, "Conflict", {
+        code: "M.Execution.Form.RevisionStale",
+      })
+    );
+    await wrapper.find("#ecrf-save-reason").setValue("Update vitals");
+    await wrapper.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+    await wrapper.find("#ecrf-form-reload").trigger("click");
+    await flushPromises();
+
+    const reloadAlert = wrapper.find(
+      '[data-testid="ecrf-discarded-draft-banner"]'
+    );
+    expect(reloadAlert.exists()).toBe(true);
+    expect(reloadAlert.attributes("role")).toBe("alert");
+    expect(reloadAlert.text()).toContain("DIABP:");
+    expect(reloadAlert.text()).toContain("88 mm[Hg]");
+    expect(localStorage.getItem(storageKey)).toBeNull();
+  });
+
+  it("renders row-level Unsaved draft badge, Saved value baseline, Revert button, and Verified revision disambiguation while remaining accessible", async () => {
+    vi.useFakeTimers();
+    signInUser("crc-1", "tenant-1");
+    const storageKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        assertions: [
+          {
+            assertion_id: "ver-sysbp",
+            kind: "verified",
+            target: `observation:${OBS_ID}`,
+            revision: 3,
+            asserted_by: "cra1",
+            asserted_at: "2027-03-14T10:00:00Z",
+            reason_for_change: "Source chart verified",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID, canVerifySource: true },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="ecrf-item-draft-SYSBP"]').exists()).toBe(
+      false
+    );
+    expect(
+      wrapper.find('[data-testid="ecrf-sdv-draft-note-SYSBP"]').exists()
+    ).toBe(false);
+
+    // Edit recorded & verified SYSBP and unrecorded DIABP.
+    await wrapper.find("#ecrf-item-SYSBP").setValue("134");
+    await wrapper.find("#ecrf-item-DIABP").setValue("84");
+    await nextTick();
+    vi.advanceTimersByTime(550);
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="ecrf-unsaved-badge-SYSBP"]').text()
+    ).toBe("Unsaved draft");
+    expect(
+      wrapper.find('[data-testid="ecrf-saved-baseline-SYSBP"]').text()
+    ).toBe("Saved value: 120 mm[Hg] (rev 3)");
+    expect(
+      wrapper.find('[data-testid="ecrf-unsaved-badge-DIABP"]').text()
+    ).toBe("Unsaved draft");
+    expect(
+      wrapper.find('[data-testid="ecrf-saved-baseline-DIABP"]').text()
+    ).toBe("Saved value: No value");
+
+    // Verified (rev 3) shows disambiguation clarifying verification applies only to saved revision 3.
+    expect(wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]').text()).toBe(
+      "Verified (rev 3)"
+    );
+    expect(
+      wrapper.find('[data-testid="ecrf-sdv-draft-note-SYSBP"]').text()
+    ).toContain("Verification applies only to saved revision 3");
+
+    vi.useRealTimers();
+    await expect(wrapper.element).toBeAccessible();
+
+    // Reverting SYSBP restores its committed baseline, hides its draft note, and keeps DIABP in storage.
+    await wrapper.find("#ecrf-revert-SYSBP").trigger("click");
+    await flushPromises();
+
+    expect(
+      (wrapper.find("#ecrf-item-SYSBP").element as HTMLInputElement).value
+    ).toBe("120");
+    expect(wrapper.find('[data-testid="ecrf-item-draft-SYSBP"]').exists()).toBe(
+      false
+    );
+    expect(
+      wrapper.find('[data-testid="ecrf-sdv-draft-note-SYSBP"]').exists()
+    ).toBe(false);
+    expect(JSON.parse(localStorage.getItem(storageKey)!)).toEqual({
+      form_id: FORM_ID,
+      items: {
+        DIABP: { text: "84", missing: "", revision: 0 },
+      },
+    });
+
+    // Reverting the remaining item clears browser draft storage completely.
+    await wrapper.find("#ecrf-revert-DIABP").trigger("click");
+    await flushPromises();
+    expect(localStorage.getItem(storageKey)).toBeNull();
+  });
 });

@@ -244,8 +244,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
-import type { RouteLocationRaw, Router } from "vue-router";
+import {
+  computed,
+  getCurrentInstance,
+  inject,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from "vue";
+import {
+  matchedRouteKey,
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  type RouteLocationNormalized,
+  type RouteLocationRaw,
+  type Router,
+} from "vue-router";
+import { registerDraftSource } from "ui";
 import ScopeLockControls, {
   type CoveringScopeLockItem,
   type DirectScopeLockItem,
@@ -253,7 +269,9 @@ import ScopeLockControls, {
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
 import SupportDetails from "../components/canvas/SupportDetails.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
+import { shouldSuppressUnsavedNavigationGuard } from "../composables/useRouteScopeSync";
 import { kernelApi, type KernelObservation } from "../api/kernelApi";
 import {
   correctionUnit,
@@ -299,6 +317,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "loaded", observation: KernelObservation): void;
+  (e: "dirty-change", dirty: boolean): void;
 }>();
 
 const authStore = useAuthStore();
@@ -510,6 +529,41 @@ const canSave = computed(
     !sameObservationValue(parsed.value.value, observation.value?.value)
 );
 
+const hasChangedText = computed(() => {
+  if (!observation.value || locked.value || !canCorrect.value) return false;
+  const trimmed = newValue.value.trim();
+  if (trimmed.length === 0) return false;
+  if (parsed.value?.ok) {
+    return !sameObservationValue(parsed.value.value, observation.value.value);
+  }
+  return true;
+});
+
+const dirty = computed(
+  () =>
+    Boolean(observation.value && !locked.value && canCorrect.value) &&
+    (hasChangedText.value || reasonOpen.value)
+);
+
+function discardCorrection() {
+  reasonOpen.value = false;
+  newValue.value = "";
+}
+
+watch(locked, (isLocked) => {
+  if (isLocked) discardCorrection();
+});
+
+watch(dirty, (value) => {
+  emit("dirty-change", value);
+});
+
+const unregisterDraftSource = registerDraftSource({
+  hasDrafts: () => dirty.value,
+});
+
+defineExpose({ dirty, discardCorrection });
+
 function askReason() {
   if (canSave.value && !saving.value) reasonOpen.value = true;
 }
@@ -572,6 +626,76 @@ function resolveCanonicalParticipantParam(
   return candidate;
 }
 
+const UNSAVED_OBSERVATION_CONFIRM_MESSAGE =
+  "You have an unsaved observation correction. Discard your typed correction and leave?";
+
+async function confirmDiscardUnsavedObservation(): Promise<boolean> {
+  return Boolean(
+    await confirmDialog({
+      title: "Unsaved Observation Correction",
+      message: UNSAVED_OBSERVATION_CONFIRM_MESSAGE,
+      confirmLabel: "Discard & Leave",
+      cancelLabel: "Stay on Observation",
+      variant: "warning",
+    })
+  );
+}
+
+function leavesStandaloneObservation(to: RouteLocationNormalized): boolean {
+  const rawNext = Array.isArray(to.params.observationRef)
+    ? to.params.observationRef[0]
+    : to.params.observationRef;
+  const nextRef = observationNodeRef(rawNext) ?? String(rawNext ?? "").trim();
+  const currentRef =
+    observationNodeRef(cleanObservationRef.value) ?? cleanObservationRef.value;
+  return Boolean(currentRef && nextRef !== currentRef);
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (
+    !props.embedded &&
+    dirty.value &&
+    !shouldSuppressUnsavedNavigationGuard(authStore)
+  ) {
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
+  }
+}
+
+const hasActiveRouteRecord = Boolean(
+  !matchedRouteKey || inject(matchedRouteKey, null)?.value
+);
+if (!props.embedded && hasActiveRouteRecord) {
+  if (typeof onBeforeRouteLeave === "function") {
+    onBeforeRouteLeave((to) => {
+      if (dirty.value && !shouldSuppressUnsavedNavigationGuard(authStore, to)) {
+        return confirmDiscardUnsavedObservation().then((confirmed) => {
+          if (!confirmed) return false;
+          discardCorrection();
+          return undefined;
+        });
+      }
+    });
+  }
+
+  if (typeof onBeforeRouteUpdate === "function") {
+    onBeforeRouteUpdate((to) => {
+      if (
+        dirty.value &&
+        !shouldSuppressUnsavedNavigationGuard(authStore, to) &&
+        leavesStandaloneObservation(to)
+      ) {
+        return confirmDiscardUnsavedObservation().then((confirmed) => {
+          if (!confirmed) return false;
+          discardCorrection();
+          return undefined;
+        });
+      }
+    });
+  }
+}
+
 watch(
   observation,
   async (obs) => {
@@ -579,6 +703,7 @@ watch(
     emit("loaded", obs);
     if (
       props.embedded ||
+      dirty.value ||
       !activeRouter ||
       activeRouter.currentRoute.value.name !== "observation" ||
       typeof kernelApi.getZoomPath !== "function"
@@ -685,6 +810,7 @@ watch(
       const isDataWorklist =
         sectionVal === "queries" || sectionVal === "validation";
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
+      if (dirty.value) return;
       await activeRouter.replace({
         name: "study",
         params: { studyCode: resolvedStudyCode },
@@ -705,8 +831,28 @@ watch(
   { immediate: true }
 );
 
-onMounted(load);
-watch(() => props.observationRef, load);
+onMounted(() => {
+  if (!props.embedded && typeof window !== "undefined") {
+    window.addEventListener("beforeunload", handleBeforeUnload);
+  }
+  void load();
+});
+
+onUnmounted(() => {
+  if (!props.embedded && typeof window !== "undefined") {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+  }
+  unregisterDraftSource();
+  if (dirty.value) emit("dirty-change", false);
+});
+
+watch(
+  () => props.observationRef,
+  () => {
+    discardCorrection();
+    void load();
+  }
+);
 </script>
 
 <style scoped>

@@ -1095,6 +1095,160 @@ describe("Clinical Canvas: a participant's data", () => {
         )
       ).toBeNull();
     });
+
+    it("guards embedded ObservationView edits across back, zoom-path, and navigator transitions while preserving URL scope and zero storage writes", async () => {
+      const SECOND_OBSERVATION_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a002";
+      vi.mocked(kernelApi.getObservation).mockImplementation(async (obsRef) => {
+        const cleanRef = String(obsRef).split("@")[0];
+        return {
+          ref: `${cleanRef}@1`,
+          enrollment_ref: `enrollment:${ENROLLMENT_ID}`,
+          concept: "concept:systolic@1",
+          value: {
+            type: "quantity",
+            value: 182,
+            unit: "mm[Hg]",
+            comparator: null,
+          },
+          observed_at: "2027-03-14T09:05:00Z",
+          version: 1,
+          locks: [],
+          revisions: [
+            {
+              number: 1,
+              value: {
+                type: "quantity",
+                value: 182,
+                unit: "mm[Hg]",
+                comparator: null,
+              },
+              reason_for_change: "Initial entry",
+              recorded_by: "crc1",
+              recorded_at: "2027-03-14T09:05:00Z",
+              recorded_until: null,
+            },
+          ],
+          assertions: [],
+          audit: [],
+        };
+      });
+
+      await mountAt(
+        `/studies/CAD-101?stage=conduct&site=017&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}&item=SYSBP&observation=observation:${OBSERVATION_ID}`
+      );
+
+      expect(wrapper.find("#observation-new-value").exists()).toBe(true);
+      await wrapper.find("#observation-new-value").setValue("126");
+      await flushPromises();
+
+      // ADR-2620: observation edits write zero keys to localStorage.
+      expect(localStorage.length).toBe(0);
+
+      // beforeunload prevents accidental tab reload/close while dirty.
+      const unloadEvent = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(unloadEvent);
+      expect(unloadEvent.defaultPrevented).toBe(true);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const confirmStore = useConfirmStore();
+
+      // Inspector query updates on the same active observation do not prompt.
+      await router.push({
+        name: "study",
+        params: { studyCode: "CAD-101" },
+        query: {
+          ...router.currentRoute.value.query,
+          ask: "Confirm BP cuff size",
+        },
+      });
+      await flushPromises();
+      expect(confirmStore.activeRequest).toBeNull();
+      expect(router.currentRoute.value.query.ask).toBe("Confirm BP cuff size");
+
+      // Zoom-path breadcrumb transition prompts Unsaved Observation Correction; Stay on Observation preserves input and scope.
+      await wrapper.find("#zoom-participant").trigger("click");
+      await flushPromises();
+      expect(confirmStore.activeRequest).toMatchObject({
+        title: "Unsaved Observation Correction",
+        confirmLabel: "Discard & Leave",
+        cancelLabel: "Stay on Observation",
+        variant: "warning",
+      });
+      confirmStore.cancelConfirm();
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(router.currentRoute.value.query.observation).toBe(
+        `observation:${OBSERVATION_ID}`
+      );
+      expect(wrapper.find("#observation-new-value").element.value).toBe("126");
+
+      // Navigator link transition (#nav-participants) also prompts and cancels cleanly.
+      await wrapper.find("#nav-participants").trigger("click");
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Correction"
+      );
+      confirmStore.cancelConfirm();
+      await flushPromises();
+      expect(router.currentRoute.value.query.observation).toBe(
+        `observation:${OBSERVATION_ID}`
+      );
+
+      // Switching to another observation also prompts and cancels cleanly.
+      const switchObs = router.push({
+        name: "study",
+        params: { studyCode: "CAD-101" },
+        query: {
+          ...router.currentRoute.value.query,
+          observation: `observation:${SECOND_OBSERVATION_ID}`,
+        },
+      });
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Correction"
+      );
+      confirmStore.cancelConfirm();
+      await switchObs.catch(() => {});
+      await flushPromises();
+      expect(router.currentRoute.value.query.observation).toBe(
+        `observation:${OBSERVATION_ID}`
+      );
+
+      // Leaving the study route altogether prompts and cancels cleanly.
+      const leaveRoute = router.push("/ecrf");
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Correction"
+      );
+      confirmStore.cancelConfirm();
+      await leaveRoute.catch(() => {});
+      await flushPromises();
+      expect(router.currentRoute.value.name).toBe("study");
+
+      // Confirming Discard & Leave on #observation-back resets newValue, clears dirty state, and preserves Study/Site/Participant/Form/Item scope.
+      await wrapper.find("#observation-back").trigger("click");
+      await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe(
+        "Unsaved Observation Correction"
+      );
+      confirmStore.resolveConfirm();
+      await flushPromises();
+
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "conduct",
+        site: "017",
+        participant: `participant:${PARTICIPANT_ID}`,
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+      });
+      expect(router.currentRoute.value.query.observation).toBeUndefined();
+
+      const cleanUnload = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(cleanUnload);
+      expect(cleanUnload.defaultPrevented).toBe(false);
+    });
   });
 
   it("resolves a cold deep-linked participant UUID in O(1) via getSubjectDetail without paging listSubjects, and rejects cross-study participants", async () => {

@@ -241,6 +241,7 @@
 
           <ObservationView
             v-else-if="openObservationRef"
+            ref="observationViewRef"
             :key="openObservationRef"
             embedded
             :study-code="studyCode"
@@ -248,6 +249,7 @@
             :return-to="observationReturnLocation"
             :return-label="observationReturnLabel"
             @loaded="onObservationLoaded"
+            @dirty-change="observationWorkspaceDirty = $event"
           />
 
           <template v-else-if="hasOpenForm">
@@ -1663,6 +1665,8 @@ const queryChangedFilter = computed(() => {
 
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
+const observationWorkspaceDirty = ref(false);
+const observationViewRef = ref<{ discardCorrection?: () => void } | null>(null);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
@@ -2138,14 +2142,11 @@ function formLocationById(formId: string, itemId?: string | null) {
   return studyLocation({
     stage: preserveDataSection ? "data" : "conduct",
     section: preserveDataSection ? section.value!.id : undefined,
-    site: preserveDataSection
-      ? siteFilter.value ||
-        (!activeParticipantNodeText.value
-          ? zoomSite.value || undefined
-          : undefined)
-      : !activeParticipantNodeText.value
+    site:
+      siteFilter.value ||
+      (!activeParticipantNodeText.value
         ? zoomSite.value || undefined
-        : undefined,
+        : undefined),
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
     item: itemId || undefined,
@@ -2179,14 +2180,11 @@ function observationLocationFromForm(
   return studyLocation({
     stage: preserveDataSection ? "data" : "conduct",
     section: preserveDataSection ? section.value!.id : undefined,
-    site: preserveDataSection
-      ? siteFilter.value ||
-        (!activeParticipantNodeText.value
-          ? zoomSite.value || undefined
-          : undefined)
-      : !activeParticipantNodeText.value
+    site:
+      siteFilter.value ||
+      (!activeParticipantNodeText.value
         ? zoomSite.value || undefined
-        : undefined,
+        : undefined),
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
     item: itemId || highlightItemQuery.value || undefined,
@@ -2278,7 +2276,15 @@ const observationReturnLocation = computed(() => {
     });
   }
   if (activeFormParticipant.value) {
-    return recordLocationFor(activeFormParticipant.value);
+    const base = recordLocationFor(activeFormParticipant.value);
+    if (siteFilter.value) {
+      return studyLocation({
+        stage: "conduct",
+        site: siteFilter.value,
+        participant: base.query.participant as string | undefined,
+      });
+    }
+    return base;
   }
   if (zoomSite.value) {
     return studyLocation({
@@ -2611,6 +2617,7 @@ watch(
       return;
     }
     formWorkspaceDirty.value = false;
+    observationWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
@@ -2765,6 +2772,7 @@ watch(openObservationRef, (refText) => {
   resolvedParticipantId.value = "";
   lineageRequest++;
   if (!refText) {
+    observationWorkspaceDirty.value = false;
     loadedObservation.value = null;
   }
 });
@@ -2879,6 +2887,8 @@ watch(
 
 const UNSAVED_FORM_CONFIRM_MESSAGE =
   "You have unsaved eCRF draft changes. Are you sure you want to leave?";
+const UNSAVED_OBSERVATION_CONFIRM_MESSAGE =
+  "You have an unsaved observation correction. Discard your typed correction and leave?";
 
 function leavesActiveForm(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
@@ -2905,6 +2915,18 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
+function leavesActiveObservation(to: RouteLocationNormalized): boolean {
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+
+  const nextObservationRef = observationNodeRef(single(to.query.observation));
+  if (!nextObservationRef) return true;
+  return Boolean(
+    openObservationRef.value && nextObservationRef !== openObservationRef.value
+  );
+}
+
 function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
   if (
     !authStore.isAuthenticated ||
@@ -2926,7 +2948,10 @@ function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  if (
+    (formWorkspaceDirty.value || observationWorkspaceDirty.value) &&
+    !shouldSuppressUnsavedGuard()
+  ) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -2945,9 +2970,34 @@ async function confirmDiscardUnsavedForm(): Promise<boolean> {
   );
 }
 
+async function confirmDiscardUnsavedObservation(): Promise<boolean> {
+  return Boolean(
+    await confirmDialog({
+      title: "Unsaved Observation Correction",
+      message: UNSAVED_OBSERVATION_CONFIRM_MESSAGE,
+      confirmLabel: "Discard & Leave",
+      cancelLabel: "Stay on Observation",
+      variant: "warning",
+    })
+  );
+}
+
+function discardEmbeddedObservationCorrection() {
+  observationViewRef.value?.discardCorrection?.();
+  observationWorkspaceDirty.value = false;
+}
+
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave((to) => {
-    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
+    if (shouldSuppressUnsavedGuard(to)) return;
+    if (observationWorkspaceDirty.value) {
+      return confirmDiscardUnsavedObservation().then((confirmed) => {
+        if (!confirmed) return false;
+        discardEmbeddedObservationCorrection();
+        return undefined;
+      });
+    }
+    if (formWorkspaceDirty.value) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
         confirmed ? undefined : false
       );
@@ -2957,11 +3007,15 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to) => {
-    if (
-      formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard(to) &&
-      leavesActiveForm(to)
-    ) {
+    if (shouldSuppressUnsavedGuard(to)) return;
+    if (observationWorkspaceDirty.value && leavesActiveObservation(to)) {
+      return confirmDiscardUnsavedObservation().then((confirmed) => {
+        if (!confirmed) return false;
+        discardEmbeddedObservationCorrection();
+        return undefined;
+      });
+    }
+    if (formWorkspaceDirty.value && leavesActiveForm(to)) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
         confirmed ? undefined : false
       );
@@ -3347,6 +3401,7 @@ watch(
 
 function handleDemoReset() {
   formWorkspaceDirty.value = false;
+  observationWorkspaceDirty.value = false;
   loadedForm.value = null;
   loadedObservation.value = null;
   resolvedLineage.value = null;

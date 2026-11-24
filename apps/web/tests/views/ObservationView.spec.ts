@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
+import { createPinia, getActivePinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
+import { hasRegisteredUnsavedDrafts, useSignOutGuard } from "ui";
 import ObservationView from "@/views/ObservationView.vue";
+import ConfirmationDialogHost from "@/components/ConfirmationDialogHost.vue";
 import { ApiError } from "@/api/client";
 import { kernelApi } from "@/api/kernelApi";
+import { useAuthStore } from "@/stores/auth";
+import { useConfirmStore } from "@/stores/confirm";
 
 const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
@@ -658,5 +662,188 @@ describe("ObservationView (ADR-2620)", () => {
     expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
     expect(backLink.attributes("href")).toBe(returnUrl);
     standaloneWrapper.unmount();
+  });
+
+  it("tracks dirty state without writing browser storage and prompts on sign-out via registerDraftSource", async () => {
+    localStorage.clear();
+    useAuthStore().setAuth({
+      authenticated: true,
+      token: "token-crc",
+      tokenParsed: {
+        sub: "crc-1",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["CRC"] },
+      },
+    });
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+
+    const wrapper = await mountView();
+    const onConfirmSignOut = vi.fn();
+    const signOutGuard = useSignOutGuard({ onConfirmSignOut });
+
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    // Blank or numerically unchanged values do not mark the observation dirty.
+    await wrapper.find("#observation-new-value").setValue("182");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+    await wrapper.find("#observation-new-value").setValue("182.0");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+    await wrapper.find("#observation-new-value").setValue("   ");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    // Any non-empty changed text marks dirty, emits @dirty-change, and writes nothing to localStorage (ADR-2620).
+    await wrapper.find("#observation-new-value").setValue("not-a-number");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([true]);
+    expect(localStorage.length).toBe(0);
+
+    await wrapper.find("#observation-new-value").setValue("128");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+    expect(localStorage.length).toBe(0);
+
+    // Sign-out guard intercepts and opens confirmation instead of signing out immediately.
+    await signOutGuard.requestSignOut();
+    expect(signOutGuard.isConfirmOpen.value).toBe(true);
+    expect(onConfirmSignOut).not.toHaveBeenCalled();
+    signOutGuard.cancelSignOut();
+
+    // Opening ReasonForChangeModal keeps dirty true until closed and cleared.
+    await wrapper.find("form.observation-correction").trigger("submit");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+
+    wrapper.unmount();
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+    expect(localStorage.length).toBe(0);
+  });
+
+  it("guards standalone beforeunload, route leave, and route update with ConfirmationDialogHost", async () => {
+    const SECOND_OBSERVATION =
+      "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d99";
+    useAuthStore().setAuth({
+      authenticated: true,
+      token: "token-crc",
+      tokenParsed: {
+        sub: "crc-1",
+        tenant_id: "tenant-1",
+        realm_access: { roles: ["CRC"] },
+      },
+    });
+    vi.spyOn(kernelApi, "getObservation").mockImplementation(async (ref) =>
+      observation({
+        ref: `${String(ref).split("@")[0]}@1`,
+      })
+    );
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='ecrf-stub'>eCRF</div>" },
+        },
+        {
+          path: "/signin",
+          name: "signin",
+          component: { template: "<div id='signin-stub'>Sign in</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: { returnTo: "/ecrf?formId=f-1&itemId=SYSBP" },
+    });
+    await router.isReady();
+
+    const wrapper = mount(
+      {
+        components: { ConfirmationDialogHost },
+        template: "<div><router-view /><ConfirmationDialogHost /></div>",
+      },
+      {
+        global: { plugins: [getActivePinia()!, router] },
+        attachTo: document.body,
+      }
+    );
+    await flushPromises();
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const confirmStore = useConfirmStore();
+
+    // Clean beforeunload is not blocked.
+    const cleanUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(cleanUnload);
+    expect(cleanUnload.defaultPrevented).toBe(false);
+
+    await wrapper.find("#observation-new-value").setValue("134");
+    await flushPromises();
+
+    // Dirty beforeunload is blocked.
+    const dirtyUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(dirtyUnload);
+    expect(dirtyUnload.defaultPrevented).toBe(true);
+
+    // Switching to another observation triggers Unsaved Observation Correction; Stay on Observation preserves value.
+    const updateNav = router.push({
+      name: "observation",
+      params: { observationRef: SECOND_OBSERVATION },
+      query: { returnTo: "/ecrf?formId=f-1&itemId=SYSBP" },
+    });
+    await flushPromises();
+    expect(confirmStore.activeRequest).toMatchObject({
+      title: "Unsaved Observation Correction",
+      confirmLabel: "Discard & Leave",
+      cancelLabel: "Stay on Observation",
+      variant: "warning",
+    });
+    const cancelBtn =
+      document.body.querySelector<HTMLButtonElement>(".btn-cancel");
+    const confirmBtn =
+      document.body.querySelector<HTMLButtonElement>(".btn-confirm");
+    expect(cancelBtn?.textContent?.trim()).toBe("Stay on Observation");
+    expect(confirmBtn?.textContent?.trim()).toBe("Discard & Leave");
+    cancelBtn?.click();
+    await updateNav.catch(() => {});
+    await flushPromises();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.params.observationRef).toBe(OBSERVATION);
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("134");
+
+    // Clicking #observation-back triggers Unsaved Observation Correction; Discard & Leave clears dirty and navigates.
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+    expect(confirmStore.activeRequest).toMatchObject({
+      title: "Unsaved Observation Correction",
+    });
+    document.body.querySelector<HTMLButtonElement>(".btn-confirm")?.click();
+    await flushPromises();
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(router.currentRoute.value.name).toBe("ecrf");
+    expect(router.currentRoute.value.query).toEqual({
+      formId: "f-1",
+      itemId: "SYSBP",
+    });
+
+    const afterDiscardUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(afterDiscardUnload);
+    expect(afterDiscardUnload.defaultPrevented).toBe(false);
+    wrapper.unmount();
   });
 });
