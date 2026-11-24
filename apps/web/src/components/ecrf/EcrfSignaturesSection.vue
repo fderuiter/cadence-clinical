@@ -329,21 +329,6 @@ const {
   background-color: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-text);
 }
-.ecrf-form-outcome {
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ecrf-form-outcome--saved {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-form-outcome--failed {
-  background-color: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
-}
 </style>
+
+<style scoped src="./ecrfFormBanners.css"></style>

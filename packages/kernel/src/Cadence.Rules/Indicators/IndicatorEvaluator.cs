@@ -61,10 +61,9 @@ public sealed class IndicatorEvaluator(IRuleEvaluator rules)
         foreach (var name in indicators.Select(i => i.Population).Distinct(StringComparer.Ordinal))
         {
             var records = Sorted(name, populations[name]);
-            var counted = rules.Evaluate(pack, evaluation, records.Select(r => new RuleRecord(name, r.Key, r.Record.Values)))
-                .GroupBy(v => v.RuleId, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.Select(v => v.RecordKey).ToList(), StringComparer.Ordinal);
-            read.Add(name, new Population(records, counted));
+            var sink = new IndicatorCountSink();
+            rules.Evaluate(pack, evaluation, new IndicatorPopulationCursor(name, records), sink);
+            read.Add(name, new Population(records, sink.Counts));
         }
 
         return [.. indicators.Select(indicator => Result(set, indicator, context, read[indicator.Population]))];
@@ -73,10 +72,9 @@ public sealed class IndicatorEvaluator(IRuleEvaluator rules)
     private static IndicatorResult Result(LoadedIndicatorSet set, Indicator indicator, IndicatorContext context, Population population)
     {
         var reference = new IndicatorVersionRef(set.Id, set.Key, set.Version, set.ContentHash, indicator.Id, indicator.Version);
-        var byKey = population.Records.ToDictionary(r => r.Key, r => r.Record.Node, StringComparer.Ordinal);
-        var countedKeys = population.Counted.GetValueOrDefault(indicator.Id) ?? [];
+        var hits = population.Counted.GetValueOrDefault(indicator.Id);
         var total = population.Records.Count;
-        var counted = countedKeys.Count;
+        var counted = hits?.Count ?? 0;
         decimal? value = indicator.Measure switch
         {
             IndicatorMeasure.Count => counted,
@@ -84,7 +82,9 @@ public sealed class IndicatorEvaluator(IRuleEvaluator rules)
             _ => Math.Round(counted * 100m / total, 2, MidpointRounding.ToEven),
         };
         var breached = indicator.Threshold?.IsBreachedBy(value) ?? false;
-        IReadOnlyList<NodeRef> contributors = [.. countedKeys.Take(MaxContributors).Select(k => byKey[k])];
+        IReadOnlyList<NodeRef> contributors = hits is null || hits.ContributorKeys.Count == 0
+            ? []
+            : ResolveContributors(population.Records, hits.ContributorKeys);
 
         var inputHash = ContentHash.Compute(InputDocument(reference, indicator, context, population).ToJsonString());
         var resultHash = ContentHash.Compute(new JsonObject
@@ -217,5 +217,102 @@ public sealed class IndicatorEvaluator(IRuleEvaluator rules)
 
     private static string Format(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
-    private sealed record Population(List<(string Key, IndicatorRecord Record)> Records, Dictionary<string, List<string>> Counted);
+    private static IReadOnlyList<NodeRef> ResolveContributors(
+        List<(string Key, IndicatorRecord Record)> sortedRecords,
+        List<string> contributorKeys)
+    {
+        var count = Math.Min(contributorKeys.Count, MaxContributors);
+        var result = new NodeRef[count];
+        for (var i = 0; i < count; i++)
+        {
+            result[i] = FindNodeByKey(sortedRecords, contributorKeys[i]);
+        }
+
+        return result;
+    }
+
+    private static NodeRef FindNodeByKey(List<(string Key, IndicatorRecord Record)> sortedRecords, string key)
+    {
+        var lo = 0;
+        var hi = sortedRecords.Count - 1;
+        while (lo <= hi)
+        {
+            var mid = lo + ((hi - lo) >> 1);
+            var comparison = string.CompareOrdinal(sortedRecords[mid].Key, key);
+            if (comparison == 0)
+            {
+                return sortedRecords[mid].Record.Node;
+            }
+
+            if (comparison < 0)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
+        }
+
+        throw new KeyNotFoundException($"Record key '{key}' was not found in the evaluated population.");
+    }
+
+    private sealed record Population(List<(string Key, IndicatorRecord Record)> Records, Dictionary<string, IndicatorHits> Counted);
+
+    private sealed class IndicatorHits
+    {
+        public int Count { get; set; }
+
+        public List<string> ContributorKeys { get; } = [];
+    }
+
+    private sealed class IndicatorPopulationCursor(
+        string dataset,
+        List<(string Key, IndicatorRecord Record)> records) : IRuleRecordCursor
+    {
+        private int _index = -1;
+        private (string Key, IndicatorRecord Record) _current;
+
+        public string Dataset => dataset;
+
+        public string Key => _current.Key;
+
+        public RuleValue this[string name] =>
+            _current.Record.Values.TryGetValue(name, out var value) ? value : RuleValue.Null;
+
+        public bool MoveNext()
+        {
+            if (++_index < records.Count)
+            {
+                _current = records[_index];
+                return true;
+            }
+
+            _current = default;
+            return false;
+        }
+
+        public RuleRecord MaterializeRecord(ReadOnlySpan<string> referencedVariables) =>
+            new(dataset, _current.Key, _current.Record.Values);
+    }
+
+    private sealed class IndicatorCountSink : IRuleViolationSink
+    {
+        public Dictionary<string, IndicatorHits> Counts { get; } = new(StringComparer.Ordinal);
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            if (!Counts.TryGetValue(violation.RuleId, out var hits))
+            {
+                hits = new IndicatorHits();
+                Counts.Add(violation.RuleId, hits);
+            }
+
+            hits.Count++;
+            if (hits.ContributorKeys.Count < MaxContributors)
+            {
+                hits.ContributorKeys.Add(violation.RecordKey);
+            }
+        }
+    }
 }

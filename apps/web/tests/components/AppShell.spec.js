@@ -645,4 +645,40 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       wrapper.unmount();
     }
   });
+
+  it("renders #staff-demo-banner with Documentation Portal and Participant Demo links only in demo builds", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const stdWrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    expect(stdWrapper.find("#staff-demo-banner").exists()).toBe(false);
+    stdWrapper.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const demoWrapper = mount(AppShell, {
+        global: { plugins: [router] },
+      });
+      const banner = demoWrapper.find("#staff-demo-banner");
+      expect(banner.exists()).toBe(true);
+      expect(demoWrapper.find("#staff-demo-link-docs").attributes("href")).toBe(
+        "/cadence-clinical/"
+      );
+      expect(
+        demoWrapper.find("#staff-demo-link-participant").attributes("href")
+      ).toBe("/cadence-clinical/subject-portal/");
+
+      const focusable = demoWrapper.element.querySelectorAll(
+        "a, button, input, select, textarea, [tabindex]"
+      );
+      expect(focusable[0].classList.contains("skip-link")).toBe(true);
+      await expect(demoWrapper).toBeAccessible();
+      demoWrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

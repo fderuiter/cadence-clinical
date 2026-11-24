@@ -473,36 +473,6 @@ function selectField() {
   gap: 2px;
 }
 
-.btn-move-up,
-.btn-move-down {
-  background-color: var(--semantic-color-surface-header);
-  border: 1px solid var(--semantic-color-border-control);
-  color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: var(--font-size-2xs);
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  transition: all 0.15s ease;
-}
-
-.btn-move-up:hover:not(:disabled),
-.btn-move-down:hover:not(:disabled) {
-  background-color: var(--semantic-color-border);
-  color: var(--semantic-color-text);
-  border-color: var(--semantic-color-border-control);
-}
-
-.btn-move-up:disabled,
-.btn-move-down:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .field-preview-container {
   margin-top: 6px;
   pointer-events: none;
@@ -521,3 +491,5 @@ function selectField() {
   pointer-events: none;
 }
 </style>
+
+<style scoped src="./crfReorderControls.css"></style>

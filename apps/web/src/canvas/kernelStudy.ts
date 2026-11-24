@@ -1,20 +1,12 @@
 import { getActivePinia, type Pinia } from "pinia";
 import { kernelApi } from "../api/kernelApi";
 import {
+  getPiniaCallerScopeKey,
+  registerKernelStudySessionBridge,
   registerLogoutCleanup,
   registerSessionCacheClearHandler,
 } from "../auth/sessionCoordinator.js";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
-
-interface AuthLikeState {
-  isAuthenticated?: boolean;
-  currentPersona?: string | null;
-  user?: {
-    id?: string | null;
-    username?: string | null;
-    tenantId?: string | null;
-  } | null;
-}
 
 interface SessionCacheBucket {
   epoch: number;
@@ -85,16 +77,7 @@ function clearBucket(bucket: SessionCacheBucket): void {
  * study, site, enrollment, and schedule lookups never cross tenant, account, or persona boundaries.
  */
 export function getKernelStudyCallerScopeKey(): string {
-  const pinia = getActivePinia();
-  const auth = (pinia?.state.value as { auth?: AuthLikeState } | undefined)
-    ?.auth;
-  if (!auth || !auth.isAuthenticated) {
-    return "anonymous::";
-  }
-  const tenant = String(auth.user?.tenantId ?? "").trim();
-  const actor = String(auth.user?.id || auth.user?.username || "").trim();
-  const persona = String(auth.currentPersona ?? "").trim();
-  return `${encodeURIComponent(tenant)}:${encodeURIComponent(actor)}:${encodeURIComponent(persona)}`;
+  return getPiniaCallerScopeKey();
 }
 
 function normalizeStudyCode(code: string): string {
@@ -167,6 +150,12 @@ export function resetKernelStudySession(studyCode = ""): void {
     getBucket().activeSessionKey = nextSessionKey;
   }
 }
+
+registerKernelStudySessionBridge({
+  clearCache: clearKernelStudyCache,
+  resetSession: resetKernelStudySession,
+  getActiveSessionKey: getActiveKernelStudySessionKey,
+});
 
 function ensureActiveStudySession(
   bucket: SessionCacheBucket,
@@ -836,4 +825,38 @@ export function findStudyScheduleOptions(
   })();
   bucket.scheduleOptionsInFlight.set(key, lookup);
   return lookup;
+}
+
+export interface CallerSiteScopeAuthStore {
+  refresh: (minValidity: number) => Promise<unknown>;
+  siteIds?: string[];
+  assignedSites?: string[];
+}
+
+export async function syncCallerSiteScope(
+  authStore: CallerSiteScopeAuthStore,
+  siteCode?: string | null
+): Promise<void> {
+  if (!siteCode) return;
+  try {
+    await authStore.refresh(-1);
+  } catch {
+    // Non-OIDC test sessions continue with the existing in-memory session.
+  }
+  if (
+    Array.isArray(authStore.siteIds) &&
+    !authStore.siteIds.some(
+      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
+    )
+  ) {
+    authStore.siteIds = [...authStore.siteIds, siteCode];
+  }
+  if (
+    Array.isArray(authStore.assignedSites) &&
+    !authStore.assignedSites.some(
+      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
+    )
+  ) {
+    authStore.assignedSites = [...authStore.assignedSites, siteCode];
+  }
 }

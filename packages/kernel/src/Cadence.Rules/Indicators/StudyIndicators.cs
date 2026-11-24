@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -111,5 +112,40 @@ public sealed class StudyIndicators(
 
     private static IndicatorRecord ToIndicatorRecord(PopulationRecord record) => new(
         record.Node,
-        record.Values.ToDictionary(v => v.Key, v => RuleValue.FromText(v.Value), StringComparer.Ordinal));
+        new PopulationRuleValues(record.Values));
+
+    private sealed class PopulationRuleValues(IReadOnlyDictionary<string, string?> source) : IReadOnlyDictionary<string, RuleValue>
+    {
+        public int Count => source.Count;
+
+        public IEnumerable<string> Keys => source.Keys;
+
+        public IEnumerable<RuleValue> Values => source.Values.Select(RuleValue.FromText);
+
+        public RuleValue this[string key] => RuleValue.FromText(source[key]);
+
+        public bool ContainsKey(string key) => source.ContainsKey(key);
+
+        public bool TryGetValue(string key, out RuleValue value)
+        {
+            if (source.TryGetValue(key, out var raw))
+            {
+                value = RuleValue.FromText(raw);
+                return true;
+            }
+
+            value = RuleValue.Null;
+            return false;
+        }
+
+        public IEnumerator<KeyValuePair<string, RuleValue>> GetEnumerator()
+        {
+            foreach (var entry in source)
+            {
+                yield return new KeyValuePair<string, RuleValue>(entry.Key, RuleValue.FromText(entry.Value));
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }

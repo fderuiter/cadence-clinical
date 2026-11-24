@@ -359,7 +359,10 @@ import {
   type KernelSiteSummary,
   type KernelStudySiteSummary,
 } from "../../api/kernelApi";
-import { invalidateStudySitesCache } from "../../canvas/kernelStudy";
+import {
+  invalidateStudySitesCache,
+  syncCallerSiteScope,
+} from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
@@ -380,31 +383,6 @@ const emit = defineEmits<{
 
 const loading = ref(false);
 const authStore = useAuthStore();
-
-async function syncCallerSiteScope(siteCode?: string | null) {
-  if (!siteCode) return;
-  try {
-    await authStore.refresh(-1);
-  } catch {
-    // Non-OIDC test sessions continue with the existing in-memory session.
-  }
-  if (
-    Array.isArray(authStore.siteIds) &&
-    !authStore.siteIds.some(
-      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
-    )
-  ) {
-    authStore.siteIds = [...authStore.siteIds, siteCode];
-  }
-  if (
-    Array.isArray(authStore.assignedSites) &&
-    !authStore.assignedSites.some(
-      (code: string) => code.toUpperCase() === siteCode.toUpperCase()
-    )
-  ) {
-    authStore.assignedSites = [...authStore.assignedSites, siteCode];
-  }
-}
 const loadError = ref("");
 const feedbackBanner = ref("");
 
@@ -595,7 +573,7 @@ async function submitLinkExisting() {
       reason: linkReason.value.trim(),
       idempotencyKey: linkExistingIdempotencyKey.value,
     });
-    await syncCallerSiteScope(linked.site_code);
+    await syncCallerSiteScope(authStore, linked.site_code);
     invalidateStudySitesCache(props.studyCode);
     feedbackBanner.value = `Site ${linked.site_code || ""} linked to ${props.studyCode}.`;
     linkReason.value = "";
@@ -666,11 +644,11 @@ async function submitRegisterSite() {
         reason: registerReason.value.trim(),
         idempotencyKey: linkCreatedSiteIdempotencyKey.value,
       });
-      await syncCallerSiteScope(created.code);
+      await syncCallerSiteScope(authStore, created.code);
       invalidateStudySitesCache(props.studyCode);
       feedbackBanner.value = `Site ${created.code} (${created.name}) registered and linked to ${props.studyCode}.`;
     } else {
-      await syncCallerSiteScope(created.code);
+      await syncCallerSiteScope(authStore, created.code);
       feedbackBanner.value = `Site ${created.code} (${created.name}) registered in your workspace.`;
     }
 

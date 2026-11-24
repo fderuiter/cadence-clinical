@@ -1,3 +1,4 @@
+import { getActivePinia } from "pinia";
 import {
   clearAuthReturnUrl,
   consumeAuthReturnUrl,
@@ -96,6 +97,56 @@ export function registerAuthSessionBridge(bridge) {
 
 export function registerClinicalSessionBridge(bridge) {
   clinicalSessionBridge = bridge || null;
+}
+
+let kernelStudySessionBridge = null;
+let loadedKernelStudyModule = null;
+let pendingKernelStudySessionCode = null;
+
+export function registerLoadedKernelStudyModule(mod) {
+  loadedKernelStudyModule = mod || null;
+}
+
+export function getLoadedKernelStudyModule() {
+  return loadedKernelStudyModule;
+}
+
+export function getPiniaCallerScopeKey() {
+  const pinia = getActivePinia();
+  const auth = pinia?.state?.value?.auth;
+  if (!auth || !auth.isAuthenticated) {
+    return "anonymous::";
+  }
+  const tenant = String(auth.user?.tenantId ?? "").trim();
+  const actor = String(auth.user?.id || auth.user?.username || "").trim();
+  const persona = String(auth.currentPersona ?? "").trim();
+  return `${encodeURIComponent(tenant)}:${encodeURIComponent(actor)}:${encodeURIComponent(persona)}`;
+}
+
+export function registerKernelStudySessionBridge(bridge) {
+  kernelStudySessionBridge = bridge || null;
+  if (kernelStudySessionBridge && pendingKernelStudySessionCode !== null) {
+    const code = pendingKernelStudySessionCode;
+    pendingKernelStudySessionCode = null;
+    kernelStudySessionBridge.resetSession?.(code);
+  }
+}
+
+export function getLoadedActiveKernelStudySessionKey() {
+  return kernelStudySessionBridge?.getActiveSessionKey?.() ?? "";
+}
+
+export function clearLoadedKernelStudyCache() {
+  pendingKernelStudySessionCode = null;
+  kernelStudySessionBridge?.clearCache?.();
+}
+
+export function resetLoadedKernelStudySession(studyCode = "") {
+  if (kernelStudySessionBridge) {
+    kernelStudySessionBridge.resetSession?.(studyCode);
+  } else {
+    pendingKernelStudySessionCode = studyCode;
+  }
 }
 
 export function rehydrateClinicalPersona(personaKey, pinia) {
