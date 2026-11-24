@@ -358,6 +358,7 @@ public sealed class KernelCommandPipeline(
             or WithdrawProtocolVersion
             or ForkProtocolVersion
             or ImportProtocolDraft
+            or SaveSimulationReport
             or RegisterCodeSystem
             or ImportCodeSystemVersion
             or DefineConcept

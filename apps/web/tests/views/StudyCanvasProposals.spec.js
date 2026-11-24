@@ -3,6 +3,7 @@ import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
+import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
 import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import { useAuthStore } from "../../src/stores/auth";
@@ -16,6 +17,12 @@ vi.mock("../../src/api/executionApi", () => ({
     getSubjectCounts: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
+  },
+}));
+
+vi.mock("../../src/api/ecrfQueriesApi", () => ({
+  ecrfQueriesApi: {
+    listSdvAlerts: vi.fn(async () => []),
   },
 }));
 
@@ -117,6 +124,8 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       total: 1,
       counts: { ACTIVE: 1 },
     });
+    vi.mocked(ecrfQueriesApi.listSdvAlerts).mockReset();
+    vi.mocked(ecrfQueriesApi.listSdvAlerts).mockResolvedValue([]);
     for (const method of Object.values(kernelApi))
       vi.mocked(method).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([
@@ -172,7 +181,7 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
     it("lists the study's open proposals from the kernel, an agent's with the AI label", async () => {
       await open();
 
-      expect(kernelApi.listProposals).toHaveBeenCalledWith(STUDY, {
+      expect(kernelApi.listProposals).toHaveBeenCalledWith("CAD-101", {
         status: "Open",
         limit: 20,
       });
@@ -211,6 +220,57 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#needs-attention-status").text()).toBe(
         "Nothing is waiting on a decision."
       );
+      await expect(wrapper.find("#needs-attention").element).toBeAccessible();
+    });
+
+    it("surfaces active CRA SDV modification alerts (PRD-QRY-006) linking to the embedded observation, and is accessible", async () => {
+      const formUuid = "0192f3c4-5e6a-7b8c-9d0e-00000000f101";
+      const obsUuid = "0192f3c4-5e6a-7b8c-9d0e-00000000b101";
+      vi.mocked(kernelApi.listProposals).mockResolvedValue([]);
+      vi.mocked(ecrfQueriesApi.listSdvAlerts).mockResolvedValue([
+        {
+          alert_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a901",
+          study_id: "0192f3c4-5e6a-7b8c-9d0e-0000000000a1",
+          enrollment_id: "0192f3c4-5e6a-7b8c-9d0e-00000000e101",
+          form_id: formUuid,
+          observation_id: obsUuid,
+          item_id: "SYSBP",
+          collection_spec_id: "VS",
+          planned_activity_id: "WEEK2",
+          site_code: "017",
+          subject_code: "017-0001",
+          superseded_revision: 1,
+          current_revision: 2,
+          verified_by: "cra@sponsor.test",
+          verified_at: "2026-10-20T08:00:00Z",
+          modified_by: "crc@site.test",
+          modified_at: "2026-10-20T09:30:00Z",
+          message:
+            "Previously verified field modified on Subject 017-0001, Visit WEEK2, Field SYSBP",
+        },
+      ]);
+
+      await open();
+
+      expect(ecrfQueriesApi.listSdvAlerts).toHaveBeenCalledWith({
+        studyId: "0192f3c4-5e6a-7b8c-9d0e-0000000000a1",
+      });
+      const alertItem = wrapper.find(
+        '[data-testid="needs-attention-sdv-alert"]'
+      );
+      expect(alertItem.exists()).toBe(true);
+      expect(alertItem.text()).toContain("SDV re-verification required");
+      expect(alertItem.text()).toContain(
+        "Rev 1 verified by cra@sponsor.test · edited to rev 2 by crc@site.test"
+      );
+      const link = wrapper.find("#needs-attention-sdv-alert-0");
+      expect(link.text()).toBe(
+        "Previously verified field modified on Subject 017-0001, Visit WEEK2, Field SYSBP"
+      );
+      expect(decodeURIComponent(link.attributes("href"))).toBe(
+        `/studies/CAD-101?stage=conduct&site=017&form=collection_instance:${formUuid}&item=SYSBP&observation=observation:${obsUuid}`
+      );
+      expect(wrapper.find("#needs-attention-status").exists()).toBe(false);
       await expect(wrapper.find("#needs-attention").element).toBeAccessible();
     });
   });

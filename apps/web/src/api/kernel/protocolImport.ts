@@ -67,6 +67,7 @@ import type {
   KernelExplainValidationFindingInput,
   KernelRulePack,
   KernelRulePackPreview,
+  KernelStudyAttention,
   KernelStudyRulePacks,
   KernelStudyValidationFindingsQuery,
   KernelValidationFinding,
@@ -234,6 +235,11 @@ export function executeSimulate(request: {
   candidateContent?: string;
   validAt?: string;
   knownAt?: string;
+  kind?: "ProtocolVersion" | "MappingSpecification" | "RulePack";
+  studyRef?: string;
+  libraryItemRef?: string;
+  baseLibraryItemRef?: string;
+  standardVersionRef?: string;
 }): Promise<KernelSimulationResult> {
   return unwrapResponse(
     kernelClient.POST("/api/v1/kernel/simulation/simulate", {
@@ -243,6 +249,17 @@ export function executeSimulate(request: {
         candidate_content: request.candidateContent ?? null,
         valid_at: request.validAt ?? null,
         known_at: request.knownAt ?? null,
+        ...(request.kind ? { kind: request.kind } : {}),
+        ...(request.studyRef ? { study_ref: request.studyRef } : {}),
+        ...(request.libraryItemRef
+          ? { library_item_ref: request.libraryItemRef }
+          : {}),
+        ...(request.baseLibraryItemRef
+          ? { base_library_item_ref: request.baseLibraryItemRef }
+          : {}),
+        ...(request.standardVersionRef
+          ? { standard_version_ref: request.standardVersionRef }
+          : {}),
       },
     })
   );
@@ -521,18 +538,37 @@ export function executeListStudyValidationFindings(
   studyRef: string,
   query: KernelStudyValidationFindingsQuery = {}
 ): Promise<KernelValidationFindingPage> {
+  const statuses = Array.isArray(query.status)
+    ? query.status.filter(Boolean)
+    : query.status
+      ? [query.status]
+      : undefined;
   return unwrapResponse(
     kernelClient.GET("/api/v1/kernel/studies/{studyRef}/validation/findings", {
       params: {
         path: { studyRef },
         query: {
           stage: query.stage || undefined,
-          status: query.status || undefined,
+          status: statuses && statuses.length > 0 ? statuses : undefined,
           severity: query.severity || undefined,
           dataset: query.dataset || undefined,
           pack_key: query.packKey || undefined,
           limit: query.limit,
         },
+      },
+    })
+  );
+}
+
+export function executeGetStudyAttention(
+  studyRef: string,
+  query: { limit?: number } = {}
+): Promise<KernelStudyAttention> {
+  return unwrapResponse(
+    kernelClient.GET("/api/v1/kernel/studies/{studyRef}/attention", {
+      params: {
+        path: { studyRef },
+        query: { limit: query.limit },
       },
     })
   );
@@ -1022,6 +1058,7 @@ export function executeActivity({
   from,
   before,
   limit,
+  includeNodes,
 }: KernelActivityQuery = {}): Promise<KernelActivityPage> {
   return unwrapResponse(
     kernelClient.GET("/api/v1/kernel/activity", {
@@ -1033,6 +1070,7 @@ export function executeActivity({
           from,
           before,
           limit,
+          include_nodes: includeNodes ? true : undefined,
         },
       },
     })

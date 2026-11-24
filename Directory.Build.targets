@@ -26,7 +26,8 @@
   </Target>
 
   <!-- Fail compilation whenever a net10.0 project resolves a .NET 11+ framework package/assembly, splits IdentityModel
-       versions, or drifts from $(IdentityModelVersion) or $(AspireHostingVersion) (ADR-2527). -->
+       versions, drifts from $(IdentityModelVersion) or $(AspireHostingVersion), or pulls legacy xUnit v2 / split test
+       cohorts into the xUnit v3 graph (ADR-2527, ADR-2528). -->
   <Target Name="ValidateDependencyAlignment"
           AfterTargets="ResolvePackageAssets;ResolveAssemblyReferences"
           BeforeTargets="CoreCompile"
@@ -83,6 +84,18 @@
       <_DistinctAspireVersions Include="@(_AspireVersions->Distinct())" />
       <_MismatchedAspirePackages Include="@(_ResolvedAspirePackages)"
                                  Condition="'$(AspireHostingVersion)' != '' and '%(_ResolvedAspirePackages.PackageVersion)' != '$(AspireHostingVersion)'" />
+
+      <_LegacyXunitPackages Include="@(_ResolvedNuGetPackages->Distinct())"
+                            Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageName)', '^(?i)(?:xunit(?:$|\.(?!v3(?:$|\.)|analyzers(?:$|\.)|runner\.visualstudio$))|TngTech\.ArchUnitNET\.xUnit$)'))" />
+      <_ResolvedXunitV3Packages Include="@(_ResolvedNuGetPackages->Distinct())"
+                                Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageName)', '^(?i)xunit\.v3(?:$|\.)'))" />
+      <_XunitV3Versions Include="@(_ResolvedXunitV3Packages->'%(PackageVersion)')" />
+      <_DistinctXunitV3Versions Include="@(_XunitV3Versions->Distinct())" />
+
+      <_ResolvedArchUnitPackages Include="@(_ResolvedNuGetPackages->Distinct())"
+                                 Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(_ResolvedNuGetPackages.PackageName)', '^(?i)TngTech\.ArchUnitNET(?:$|\.)'))" />
+      <_ArchUnitVersions Include="@(_ResolvedArchUnitPackages->'%(PackageVersion)')" />
+      <_DistinctArchUnitVersions Include="@(_ArchUnitVersions->Distinct())" />
     </ItemGroup>
 
     <Error Code="CADDEP001"
@@ -96,5 +109,9 @@
     <Error Code="CADDEP003"
            Condition="@(_DistinctAspireVersions->Count()) &gt; 1 or '@(_MismatchedAspirePackages)' != '' or ('$(AspireHostingSDKVersion)' != '' and '$(AspireHostingVersion)' != '' and '$(AspireHostingSDKVersion)' != '$(AspireHostingVersion)')"
            Text="Project '$(MSBuildProjectName)' resolved split or misaligned Aspire versions (SDK='$(AspireHostingSDKVersion)', packages=[@(_ResolvedAspirePackages, ', ')]); expected lockstep %24(AspireHostingVersion)=$(AspireHostingVersion)." />
+
+    <Error Code="CADDEP004"
+           Condition="'@(_LegacyXunitPackages)' != '' or @(_DistinctXunitV3Versions->Count()) &gt; 1 or @(_DistinctArchUnitVersions->Count()) &gt; 1"
+           Text="Project '$(MSBuildProjectName)' resolved legacy xUnit v2 packages or split test cohorts: legacy=[@(_LegacyXunitPackages, ', ')], xunit.v3=[@(_ResolvedXunitV3Packages, ', ')], ArchUnitNET=[@(_ResolvedArchUnitPackages, ', ')]. Migrate to xunit.v3 and TngTech.ArchUnitNET.xUnitV3 with aligned versions in Directory.Packages.props." />
   </Target>
 </Project>

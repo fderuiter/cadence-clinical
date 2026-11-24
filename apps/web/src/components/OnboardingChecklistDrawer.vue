@@ -283,9 +283,35 @@ function openOrientationHub() {
   }
 }
 
-function startGuidedTour() {
+async function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
+  const initialRouteName = onboardingStore.currentStepConfig?.routeName;
+  if (
+    initialRouteName &&
+    router &&
+    activeRoute?.name !== initialRouteName &&
+    (activeRoute?.name === "forbidden" ||
+      activeRoute?.path === "/forbidden" ||
+      activeRoute?.name === "unavailable" ||
+      activeRoute?.path === "/unavailable")
+  ) {
+    const resolved =
+      typeof router.resolve === "function"
+        ? router.resolve({ name: initialRouteName })
+        : null;
+    const basePath = resolved?.path || resolved?.fullPath;
+    const targetPath = basePath
+      ? buildScopedWorkflowPath(basePath, {
+          studyCode: workspaceScope.value.studyCode,
+          siteId: workspaceScope.value.siteId,
+          subjectCode: workspaceScope.value.subjectCode,
+        })
+      : null;
+    if (targetPath && canPushResolvedPath(targetPath)) {
+      await router.push(targetPath);
+    }
+  }
 }
 </script>
 

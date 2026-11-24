@@ -30,13 +30,25 @@ namespace Cadence.Kernel.Protocol;
 /// removed or collected more or less often, and eligibility criteria changed, with the elements and concepts each one
 /// touches. Null when the amended content is not a typed protocol design.
 /// </param>
+/// <param name="ActiveSiteCount">Visible study sites with an effective protocol version (or active status before effectivities) as of the query instant.</param>
+/// <param name="PendingSiteCount">Visible study sites pending activation as of the query instant.</param>
+/// <param name="TotalParticipantCount">Visible study enrollments existing as of the query instant.</param>
+/// <param name="AffectedParticipantCount">Visible study enrollments impacted by schedule shifts or re-consent under the amendment.</param>
+/// <param name="ReconsentParticipantCount">Visible study enrollments requiring re-consent under the amendment.</param>
+/// <param name="Hidden">Whether additional restricted sites, enrollments, or dependents exist beyond the reader's visible scope (ADR-2590).</param>
 public sealed record AmendmentImpact(
     ProtocolVersionId Amended,
     ProtocolVersionId Parent,
     IReadOnlyList<string> ImpactedElements,
     DependentsReport Dependents,
     IReadOnlyList<ElementChange> ChangedElements,
-    SoaAmendmentDiff? Schedule);
+    SoaAmendmentDiff? Schedule,
+    int ActiveSiteCount = 0,
+    int PendingSiteCount = 0,
+    int TotalParticipantCount = 0,
+    int AffectedParticipantCount = 0,
+    int ReconsentParticipantCount = 0,
+    HiddenObjects? Hidden = null);
 
 /// <summary>
 /// Computes amendment impact (spec §6.2, K-PROT-2) as a caller of <see cref="IKernelLineage.DependentsAsync"/>, so the

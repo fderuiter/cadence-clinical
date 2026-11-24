@@ -278,4 +278,105 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         files.Should().ContainSingle(f => f.RelativePath == "LOCAL_DEV_ENVIRONMENT.md");
     }
+
+    [Fact]
+    public void ExtractDocMetadata_SupportsYamlFoldedAndLiteralBlockScalars_AndFrontmatterTitlePrecedence()
+    {
+        string foldedFile = Path.Combine(_tempDir, "2026-11-20-folded.md");
+        File.WriteAllText(
+            foldedFile,
+            """
+            ---
+            title: >-
+              Folded Frontmatter
+              Post Title
+            summary: >
+              First folded sentence
+              across two lines.
+            draft: false
+            ---
+
+            # Different Body Heading
+            """);
+
+        var (foldedTitle, foldedDesc) = DocIndexSyncService.ExtractDocMetadata(foldedFile, "blog/2026-11-20-folded.md");
+        foldedTitle.Should().Be("Folded Frontmatter Post Title");
+        foldedDesc.Should().Be("First folded sentence across two lines.");
+
+        string literalFile = Path.Combine(_tempDir, "2026-11-20-literal.md");
+        File.WriteAllText(
+            literalFile,
+            """
+            ---
+            title: |
+              Literal Post Title
+            summary: |-
+              Line one of literal summary.
+              Line two of literal summary.
+            draft: false
+            ---
+
+            # Body Heading
+            """);
+
+        var (literalTitle, literalDesc) = DocIndexSyncService.ExtractDocMetadata(literalFile, "blog/2026-11-20-literal.md");
+        literalTitle.Should().Be("Literal Post Title");
+        literalDesc.Should().Be("Line one of literal summary. Line two of literal summary.");
+    }
+
+    [Fact]
+    public void SyncDocIndex_RefreshesEngineeringBlogRowsOnMetadataChanges_AndRemovesRevertedDrafts()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        string blogDir = Path.Combine(docsDir, "blog");
+        Directory.CreateDirectory(blogDir);
+
+        File.WriteAllText(
+            Path.Combine(blogDir, "index.md"),
+            "---\ntitle: \"Cadence Engineering Blog\"\nsummary: \"Overview of posts.\"\n---\n\n# Cadence Engineering Blog\n");
+
+        string postPath = Path.Combine(blogDir, "2026-11-19-milestone.md");
+        File.WriteAllText(
+            postPath,
+            "---\ntitle: \"Initial Milestone Title\"\ndate: \"2026-11-19\"\nsummary: \"Initial summary text.\"\ndraft: false\n---\n\n# Initial Milestone Title\n");
+
+        File.WriteAllText(
+            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
+            "# Documentation Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Cadence Engineering Blog](blog/index.md) | Current | Overview of posts. |\n");
+
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string initialIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
+        initialIndex.Should().Contain("[Initial Milestone Title](blog/2026-11-19-milestone.md)");
+        initialIndex.Should().Contain("2026-11-19 — Initial summary text.");
+
+        // Update title, summary, and date on the existing post: check mode must detect stale metadata
+        File.WriteAllText(
+            postPath,
+            "---\ntitle: \"Revised Milestone Title\"\ndate: \"2026-11-20T12:00:00Z\"\nsummary: \"Revised summary text.\"\ndraft: false\n---\n\n# Initial Milestone Title\n");
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string refreshedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
+        refreshedIndex.Should().Contain("[Revised Milestone Title](blog/2026-11-19-milestone.md)");
+        refreshedIndex.Should().Contain("2026-11-20 — Revised summary text.");
+        refreshedIndex.Should().NotContain("Initial Milestone Title");
+
+        // Revert post back to draft: true — check mode must fail until the row is removed
+        File.WriteAllText(
+            postPath,
+            "---\ntitle: \"Revised Milestone Title\"\ndate: \"2026-11-20\"\nsummary: \"Revised summary text.\"\ndraft: true\n---\n\n# Initial Milestone Title\n");
+
+        DocIndexSyncService.ScanMarkdownFiles(docsDir).Should().NotContain(f => f.RelativePath == "blog/2026-11-19-milestone.md");
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string afterRevertIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
+        afterRevertIndex.Should().NotContain("blog/2026-11-19-milestone.md");
+        afterRevertIndex.Should().Contain("blog/index.md");
+    }
 }

@@ -32,6 +32,15 @@ public sealed record KernelNodeResponse(string? Ref, string Kind, string? Title,
 }
 
 /// <summary>
+/// Batch resolution envelope returned by <c>GET /api/v1/kernel/nodes</c> (ADR-2481, ADR-2471). Each entry is keyed by
+/// the caller-requested <c>NodeRef</c> string when the object exists in the caller's tenant; absent objects are omitted,
+/// and hidden objects retain their place with <see cref="KernelNodeResponse.Ref"/> set to null and
+/// <see cref="KernelNodeResponse.Mask"/> populated.
+/// </summary>
+/// <param name="Nodes">Resolved or masked node summaries keyed by requested <c>NodeRef</c> string.</param>
+public sealed record KernelBatchNodesResponse(IReadOnlyDictionary<string, KernelNodeResponse> Nodes);
+
+/// <summary>
 /// One level of a zoom path, from the tenant down to the object. A masked level keeps its place and kind; a grouping
 /// level is masked with the object below it.
 /// </summary>
