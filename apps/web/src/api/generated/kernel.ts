@@ -782,6 +782,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/locks/in-force": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. */
+    get: operations["KernelGetScopeWriteLock"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/locks": {
     parameters: {
       query?: never;
@@ -806,7 +823,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. */
+    /** Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -1211,16 +1228,10 @@ export interface components {
       retracted_by: null | components["schemas"]["Kernel_AssertionId"];
       /** Format: date-time */
       retracted_at: null | string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_AttestationId: unknown;
-    Kernel_CandidateKind: number;
-    Kernel_CandidateSummary: {
-      kind: components["schemas"]["Kernel_CandidateKind"];
-      version: null | components["schemas"]["Kernel_NodeRef"];
-      base_version: null | components["schemas"]["Kernel_NodeRef"];
-      content_hash: null | string;
-      base_content_hash: null | string;
-    };
     Kernel_CodelistOptionView: {
       code: string;
       display: string;
@@ -1230,36 +1241,6 @@ export interface components {
     /** @enum {unknown} */
     Kernel_DateTimePrecision:
       "Year" | "Month" | "Day" | "Minute" | "Second" | null;
-    Kernel_DependentGroup: {
-      kind: string;
-      /** Format: int32 */
-      count: number | string;
-      objects: components["schemas"]["Kernel_LineageNode"][];
-    };
-    Kernel_DependentsReport: {
-      start: string;
-      /** Format: int32 */
-      depth: number | string;
-      /** Format: date-time */
-      valid_at: string;
-      /** Format: date-time */
-      known_at: string;
-      groups: components["schemas"]["Kernel_DependentGroup"][];
-      /** Format: int32 */
-      total: number | string;
-      truncated: boolean;
-    };
-    Kernel_ElementChange: {
-      element_id: string;
-      instance_type: null | string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      properties: string[];
-    };
-    Kernel_ElementChangeKind: number;
-    Kernel_EngineVersion: {
-      name: string;
-      version: string;
-    };
     Kernel_EvaluatedCondition: {
       code: string;
       description: string;
@@ -1379,6 +1360,13 @@ export interface components {
       /** Format: date-time */
       asserted_at: string;
       asserted_by: string;
+    };
+    Kernel_KernelCandidateSummaryResponse: {
+      kind: string;
+      version: null | string;
+      base_version: null | string;
+      content_hash: null | string;
+      base_content_hash: null | string;
     };
     Kernel_KernelChangeEffectivityStatusRequest: {
       status: null | string;
@@ -1512,6 +1500,10 @@ export interface components {
       instance_type: null | string;
       change: string;
       properties: string[];
+    };
+    Kernel_KernelEngineVersionResponse: {
+      name: string;
+      version: string;
     };
     Kernel_KernelEnrollmentLookupResponse: {
       study_ref: string;
@@ -1653,6 +1645,7 @@ export interface components {
       site_name?: null | string;
       country?: null | string;
       institution_ref?: null | string;
+      institution_code?: null | string;
       /** Format: uuid */
       site_id?: null | string;
       /** Format: uuid */
@@ -1678,6 +1671,16 @@ export interface components {
       finding_ref?: null | string;
       rule_id?: null | string;
       detail?: null | string;
+      /** Format: int32 */
+      current_revision?: null | number | string;
+      /** @default false */
+      signature_superseded: boolean;
+      planned_activity_id?: null | string;
+      planned_activity_name?: null | string;
+      /** Format: date */
+      planned_date?: null | string;
+      /** Format: date */
+      window_end?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1696,6 +1699,21 @@ export interface components {
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
       explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unverified_value_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unsigned_form_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unopened_visit_count: number | string;
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
@@ -1720,6 +1738,18 @@ export interface components {
       release_reason: null | string;
       masked: boolean;
       mask: null | string;
+    };
+    Kernel_KernelMaskedPartResponse: {
+      part: string;
+      reason: string;
+    };
+    Kernel_KernelMatrixGapFindingResponse: {
+      element_id: string;
+      kind: string;
+      severity: string;
+      json_pointer_path: string;
+      description: string;
+      recommendation: null | string;
     };
     Kernel_KernelNextActionResponse: {
       description: string;
@@ -1771,6 +1801,19 @@ export interface components {
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelPlannedVisitResponse: {
+      activity_id: string;
+      name: string;
+      epoch_id: string;
+      /** Format: int32 */
+      epoch_order: number | string;
+      /** Format: int32 */
+      study_day: number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
     };
     Kernel_KernelPostureScopingResponse: {
       study_phase: string;
@@ -1979,6 +2022,12 @@ export interface components {
       remediation_guidance: null | string;
       condition?: null | string;
     };
+    Kernel_KernelScheduleChangeResponse: {
+      activity_id: string;
+      change: string;
+      before: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+      after: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+    };
     Kernel_KernelScheduleOfActivitiesResponse: {
       version: string;
       content_hash: null | string;
@@ -1988,6 +2037,12 @@ export interface components {
       columns: components["schemas"]["Kernel_KernelSoaColumnResponse"][];
       rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
       footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
+    };
+    Kernel_KernelScopeWriteLockResponse: {
+      study_exists: boolean;
+      locked: boolean;
+      lock_kind: null | string;
+      scope_kind: null | string;
     };
     Kernel_KernelScreenEnrollmentRequest: {
       /** Format: uuid */
@@ -2010,6 +2065,27 @@ export interface components {
       /** Format: double */
       rank: number | string;
     };
+    Kernel_KernelSimulationAsOfResponse: {
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+    };
+    Kernel_KernelSimulationResponse: {
+      scope: string;
+      as_of: components["schemas"]["Kernel_KernelSimulationAsOfResponse"];
+      candidate: components["schemas"]["Kernel_KernelCandidateSummaryResponse"];
+      engine_versions: components["schemas"]["Kernel_KernelEngineVersionResponse"][];
+      input_hash: string;
+      result_hash: string;
+      structural_diff: components["schemas"]["Kernel_KernelElementChangeResponse"][];
+      schedule_changes: components["schemas"]["Kernel_KernelScheduleChangeResponse"][];
+      masked: components["schemas"]["Kernel_KernelMaskedPartResponse"][];
+      dependents:
+        null | components["schemas"]["Kernel_KernelDependentsResponse"];
+      matrix_gaps: components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
+      is_empty: boolean;
+    };
     Kernel_KernelSiteSummaryResponse: {
       ref: string;
       code: string;
@@ -2018,6 +2094,13 @@ export interface components {
       institution_ref: string;
       institution_code: string;
       institution_name: string;
+      /** @default true */
+      is_active: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      linked_study_count: number | string;
     };
     Kernel_KernelSoaAmendmentDiffResponse: {
       directives: components["schemas"]["Kernel_KernelSoaDirectiveResponse"][];
@@ -2132,6 +2215,10 @@ export interface components {
       institution_name: string;
       status: string;
       effective_versions: components["schemas"]["Kernel_KernelEffectiveVersionResponse"][];
+      /** @default  */
+      study_code: string;
+      /** @default true */
+      is_active: boolean;
     };
     Kernel_KernelStudySummaryResponse: {
       ref: string;
@@ -2281,15 +2368,6 @@ export interface components {
       ref: null | string;
       mask: null | string;
     };
-    Kernel_LineageNode: {
-      handle: string;
-      kind: string;
-      ref: null | components["schemas"]["Kernel_NodeRef"];
-      mask: null | components["schemas"]["Kernel_MaskReason"];
-      /** Format: int32 */
-      distance: number | string;
-      is_masked?: boolean;
-    };
     /** @enum {unknown} */
     Kernel_LockKind: "Frozen" | "Locked";
     Kernel_LockView: {
@@ -2301,25 +2379,12 @@ export interface components {
       locked_at: string;
       locked_by: string;
       reason_for_change: string;
+      /** @default false */
+      masked: boolean;
     };
-    Kernel_MaskedPart: {
-      part: string;
-      reason: components["schemas"]["Kernel_MaskReason"];
-    };
-    Kernel_MaskReason: number;
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
     };
-    Kernel_MatrixGapFinding: {
-      element_id: string;
-      kind: components["schemas"]["Kernel_MatrixGapKind"];
-      severity: components["schemas"]["Kernel_MatrixGapSeverity"];
-      json_pointer_path: string;
-      description: string;
-      recommendation?: null | string;
-    };
-    Kernel_MatrixGapKind: number;
-    Kernel_MatrixGapSeverity: number;
     Kernel_NextAction: {
       description: string;
       capability?: null | string;
@@ -2400,19 +2465,6 @@ export interface components {
       type?: "text";
       value: string;
     };
-    Kernel_PlannedVisit: {
-      activity_id: string;
-      name: string;
-      epoch_id: string;
-      /** Format: int32 */
-      epoch_order: number | string;
-      /** Format: int32 */
-      study_day: number | string;
-      /** Format: int32 */
-      window_before: number | string;
-      /** Format: int32 */
-      window_after: number | string;
-    };
     Kernel_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -2423,12 +2475,6 @@ export interface components {
     };
     /** @enum {unknown} */
     Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
-    Kernel_ScheduleChange: {
-      activity_id: string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      before: null | components["schemas"]["Kernel_PlannedVisit"];
-      after: null | components["schemas"]["Kernel_PlannedVisit"];
-    };
     Kernel_SimulateProtocolRequest: {
       base_version_ref: null | string;
       stored_version_ref: null | string;
@@ -2437,26 +2483,6 @@ export interface components {
       valid_at?: null | string;
       /** Format: date-time */
       known_at?: null | string;
-    };
-    Kernel_SimulationAsOf: {
-      /** Format: date-time */
-      valid_at: string;
-      /** Format: date-time */
-      known_at: string;
-    };
-    Kernel_SimulationResult: {
-      scope: components["schemas"]["Kernel_NodeRef"];
-      as_of: components["schemas"]["Kernel_SimulationAsOf"];
-      candidate: components["schemas"]["Kernel_CandidateSummary"];
-      engine_versions: components["schemas"]["Kernel_EngineVersion"][];
-      input_hash: string;
-      result_hash: string;
-      structural_diff: components["schemas"]["Kernel_ElementChange"][];
-      schedule_changes: components["schemas"]["Kernel_ScheduleChange"][];
-      masked: components["schemas"]["Kernel_MaskedPart"][];
-      dependents?: null | components["schemas"]["Kernel_DependentsReport"];
-      matrix_gaps?: null | components["schemas"]["Kernel_MatrixGapFinding"][];
-      is_empty?: boolean;
     };
   };
   responses: never;
@@ -3423,7 +3449,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_SimulationResult"];
+          "application/json": components["schemas"]["Kernel_KernelSimulationResponse"];
         };
       };
       /** @description Bad Request */
@@ -3462,6 +3488,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Conflict. Kernel errors: `K.Simulation.VersionStale`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
       /** @description Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`. */
       422: {
         headers: {
@@ -3492,7 +3527,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_MatrixGapFinding"][];
+          "application/json": components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
         };
       };
       /** @description Bad Request */
@@ -3736,7 +3771,10 @@ export interface operations {
   };
   KernelListSites: {
     parameters: {
-      query?: never;
+      query?: {
+        institutionRef?: string;
+        country?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -3750,6 +3788,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelSiteSummaryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
       /** @description Forbidden */
@@ -5293,6 +5340,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Observation.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
     };
   };
   KernelApplyLock: {
@@ -5445,6 +5501,40 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetScopeWriteLock: {
+    parameters: {
+      query?: {
+        study_code?: string;
+        site_code?: string;
+        subject_code?: string;
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelScopeWriteLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -6575,9 +6665,10 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody: {
+    requestBody?: {
       content: {
-        "application/json": components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
+        "application/json":
+          null | components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
       };
     };
     responses: {

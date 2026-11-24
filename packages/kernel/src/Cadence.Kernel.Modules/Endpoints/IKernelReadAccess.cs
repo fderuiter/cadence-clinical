@@ -85,13 +85,14 @@ public interface IKernelReadAccess
 
     /// <summary>
     /// True when the current caller holds a grant permitting <paramref name="capability"/> on <paramref name="resource"/>
-    /// in <paramref name="tenant"/> (ADR-2482).
+    /// in <paramref name="tenant"/> (ADR-2482). Unblinding capabilities fail closed when no capability probe is configured.
     /// </summary>
     ValueTask<bool> CanExerciseAsync(
         TenantId tenant,
         Capability capability,
         NodeRef resource,
-        CancellationToken cancellationToken) => ValueTask.FromResult(true);
+        CancellationToken cancellationToken) =>
+        ValueTask.FromResult(!Capability.IsUnblinding(capability.Token));
 
     /// <summary>
     /// True when the current caller holds <c>enrollment.unblind</c> covering <paramref name="enrollment"/> in

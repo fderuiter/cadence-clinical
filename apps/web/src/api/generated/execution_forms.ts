@@ -1928,6 +1928,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
     };
   };
 }

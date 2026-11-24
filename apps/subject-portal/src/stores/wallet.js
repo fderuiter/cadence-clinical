@@ -54,6 +54,8 @@ export const useWalletStore = defineStore("wallet", {
         warning: null,
         data: null,
         previewUrl: null,
+        ocrToken: null,
+        imageBase64: null,
       },
       expenseForm: {
         subjectId: null,

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,6 +49,7 @@ public static class KernelSimulationEndpoints
                 KernelErrors.ActorUnresolved,
                 KernelErrors.AuthorizationDenied,
                 SimulationErrors.VersionUnknown,
+                SimulationErrors.VersionStale,
                 SimulationErrors.BaseNotFrozen,
                 SimulationErrors.ContentInvalid,
                 SimulationErrors.ElementIdDuplicated);
@@ -60,7 +62,7 @@ public static class KernelSimulationEndpoints
         return kernel;
     }
 
-    internal static async Task<Results<Ok<SimulationResult>, ProblemHttpResult>> SimulateAsync(
+    internal static async Task<Results<Ok<KernelSimulationResponse>, ProblemHttpResult>> SimulateAsync(
         SimulateProtocolRequest request,
         HttpContext context,
         ISimulationEngine simulationEngine,
@@ -83,7 +85,7 @@ public static class KernelSimulationEndpoints
             {
                 return KernelProblems.InvalidNodeRef(request.StoredVersionRef);
             }
-            candidate = SimulationCandidate.StoredProtocolVersion(ProtocolVersionId.FromGuid(storedNode.Id));
+            candidate = SimulationCandidate.StoredProtocolVersion(ProtocolVersionId.FromGuid(storedNode.Id), storedNode.Version);
             versionNode = storedNode;
         }
         else if (!string.IsNullOrWhiteSpace(request.BaseVersionRef) && request.CandidateContent is not null)
@@ -92,7 +94,10 @@ public static class KernelSimulationEndpoints
             {
                 return KernelProblems.InvalidNodeRef(request.BaseVersionRef);
             }
-            candidate = SimulationCandidate.UnsavedProtocolVersion(ProtocolVersionId.FromGuid(baseNode.Id), request.CandidateContent);
+            candidate = SimulationCandidate.UnsavedProtocolVersion(
+                ProtocolVersionId.FromGuid(baseNode.Id),
+                request.CandidateContent,
+                baseNode.Version);
             versionNode = baseNode;
         }
         else
@@ -101,8 +106,13 @@ public static class KernelSimulationEndpoints
         }
 
         // The simulation reads the stored version, so the caller must be able to see it (ADR-2457, ADR-2516).
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
-        if (masks.For(versionNode) is { } mask)
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            [.. new[] { versionNode, versionNode.Unversioned() }.Distinct()],
+            cancellationToken).ConfigureAwait(false);
+        if ((masks.For(versionNode) ?? masks.For(versionNode.Unversioned())) is { } mask)
         {
             return KernelProblems.NotVisible($"You can't see this protocol version ({mask}), so it can't be simulated.");
         }
@@ -115,10 +125,10 @@ public static class KernelSimulationEndpoints
             return KernelErrorEndpoints.Problem(result.Error!);
         }
 
-        return TypedResults.Ok(result.Value!);
+        return TypedResults.Ok(KernelSimulationResponse.From(result.Value!));
     }
 
-    internal static Results<Ok<IReadOnlyList<MatrixGapFinding>>, ProblemHttpResult> CheckMatrixGapsAsync(MatrixGapCheckRequest request)
+    internal static Results<Ok<IReadOnlyList<KernelMatrixGapFindingResponse>>, ProblemHttpResult> CheckMatrixGapsAsync(MatrixGapCheckRequest request)
     {
         if (string.IsNullOrWhiteSpace(request?.ProtocolContent))
         {
@@ -132,6 +142,7 @@ public static class KernelSimulationEndpoints
         }
 
         var findings = MatrixGapAnalyzer.Analyze(read.Design!);
-        return TypedResults.Ok(findings);
+        return TypedResults.Ok<IReadOnlyList<KernelMatrixGapFindingResponse>>(
+            [.. findings.Select(KernelMatrixGapFindingResponse.From)]);
     }
 }

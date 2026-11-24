@@ -22,6 +22,13 @@ export type KernelLockReadiness =
   KernelSchemas["Kernel_KernelLockReadinessResponse"];
 export type KernelLockBlocker =
   KernelSchemas["Kernel_KernelLockBlockerResponse"];
+export type KernelLockBlockerKind =
+  | "OpenQuery"
+  | "MissingRequiredItem"
+  | "UnverifiedValue"
+  | "UnsignedForm"
+  | "UnopenedVisit"
+  | "ErrorFinding";
 export type KernelLockKind = KernelSchemas["Kernel_LockKind"];
 export type KernelLockMeaning = "Approved" | "Responsibility";
 export type StudyExportFormat =
@@ -92,6 +99,20 @@ export interface KernelCasebookExportQuery {
   knownAt?: string;
 }
 
+/** Formats a concise context summary for a visible `KernelLockBlocker` item. */
+export function formatLockBlockerDetail(blocker: KernelLockBlocker): string {
+  if (blocker.masked) return "";
+  if (blocker.detail) return blocker.detail;
+  const parts: string[] = [];
+  if (blocker.subject_code) parts.push(blocker.subject_code);
+  if (blocker.collection_title) parts.push(blocker.collection_title);
+  const item = blocker.item_label || blocker.item_id;
+  if (item) parts.push(item);
+  if (blocker.rule_id) parts.push(`[${blocker.rule_id}]`);
+  if (blocker.query_text) parts.push(blocker.query_text);
+  return parts.join(" · ");
+}
+
 /** Actionable user-facing explanation when a lock apply or release call fails. */
 export function describeLockError(error: unknown): string {
   const code = assertionErrorCode(error);
@@ -137,7 +158,7 @@ export function describeLockError(error: unknown): string {
     if (parts.length > 0) {
       return parts.join(" ");
     }
-    return "This scope has open queries, missing required items, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
+    return "This scope has open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -199,7 +220,7 @@ export const kernelLocksApi = {
     );
   },
 
-  /** Evaluates lock readiness (open queries, missing required items, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  /** Evaluates all six lock readiness gates (open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
   getStudyLockReadiness(
     studyRef: string,
     scopeRef?: string

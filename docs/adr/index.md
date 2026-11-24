@@ -386,6 +386,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
 - [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) (2026-11-22)
 - [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) (2026-11-23)
+- [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) (2026-11-23)
 
 ### 5. Compliance, Audit & Governance
 
@@ -458,6 +459,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
 - [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
 - [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
+- [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
+- [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -618,6 +621,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) (2026-11-22)
 - [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) (2026-11-22)
 - [ADR-2538: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories](2026-11-22-share-demo-runtime-and-msw-worker-factories.md) (2026-11-22)
+- [ADR-2539: Enforce Strict Workspace TypeScript and Vue SFC Typechecking](2026-11-22-enforce-workspace-vue-tsc-typecheck.md) (2026-11-22)
 - [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) (2026-11-20)
 - [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) (2026-11-20)
 - [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](2026-11-21-kernel-site-setup-and-execution-tenancy.md) (2026-11-21)
@@ -644,3 +648,5 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)
 - [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) (2026-11-22)
 - [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) (2026-11-22)
+- [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) (2026-11-22)
+- [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) (2026-11-23)

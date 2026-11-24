@@ -93,19 +93,22 @@ public sealed record FormQueryResponse(
         FormQuery query,
         IReadOnlyDictionary<ObservationId, int> revisions,
         FormQueryContext? context = null,
-        bool maskBlinded = false) =>
-        From(FormQueryState.Of(query, query.VersionIndex), revisions, context, maskBlinded);
+        bool maskBlinded = false,
+        int? currentRevisionOverride = null) =>
+        From(FormQueryState.Of(query, query.VersionIndex), revisions, context, maskBlinded, currentRevisionOverride);
 
     /// <summary>A query after a command (or reconstructed snapshot), with the current revisions of its form's values.</summary>
     internal static FormQueryResponse From(
         FormQueryState state,
         IReadOnlyDictionary<ObservationId, int> revisions,
         FormQueryContext? context = null,
-        bool maskBlinded = false)
+        bool maskBlinded = false,
+        int? currentRevisionOverride = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(revisions);
-        int? current = revisions.TryGetValue(state.ObservationId, out var revision) ? revision : null;
+        int? current = currentRevisionOverride
+            ?? (revisions.TryGetValue(state.ObservationId, out var revision) ? revision : null);
         var raised = state.Messages[0];
         var question = state.Messages.Last(m => m.Kind is FormQueryMessageKind.Raised or FormQueryMessageKind.Reopened);
         return new FormQueryResponse(
@@ -113,7 +116,7 @@ public sealed record FormQueryResponse(
             state.FormId.Value,
             state.EnrollmentId.Value,
             state.ItemId,
-            state.ObservationId.Value,
+            maskBlinded ? Guid.Empty : state.ObservationId.Value,
             state.Revision,
             current,
             current > state.Revision,

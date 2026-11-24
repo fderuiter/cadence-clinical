@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,9 +17,13 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Host.Onboarding;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;
@@ -458,6 +463,7 @@ public sealed class CommercialAndOnboardingUnitTests
             "effectivity.declare",
             "effectivity.change_status",
             "attestation.sign",
+            "simulation.run",
         ]);
 
         definedRoles.Should().ContainKey("SPONSOR_DESIGNER");
@@ -470,10 +476,16 @@ public sealed class CommercialAndOnboardingUnitTests
             "effectivity.declare",
             "effectivity.change_status",
             "attestation.sign",
+            "simulation.run",
         ]);
+
+        definedRoles.Should().ContainKey("TRIAL_DATA_MANAGER");
+        definedRoles["TRIAL_DATA_MANAGER"].Should().Contain("simulation.run");
 
         var issuedGrants = sender.Commands.OfType<IssueGrant>().ToList();
         issuedGrants.Should().ContainSingle(g => g.Grantee == Actor.ServiceAccount("execution-forms"));
+        issuedGrants.Should().ContainSingle(g =>
+            g.Grantee == Actor.Person(subjectId) && g.Capability == SimulationCapabilities.Run.Token);
 
         var demoDesigner = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DESIGNER");
         demoDesigner.Capabilities.Should().Contain([
@@ -488,6 +500,7 @@ public sealed class CommercialAndOnboardingUnitTests
             "study_site.link",
             "study_site.activate",
             "attestation.sign",
+            "simulation.run",
         ]);
 
         var demoDm = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DATA_MANAGER");
@@ -499,13 +512,104 @@ public sealed class CommercialAndOnboardingUnitTests
             "site.register",
             "study_site.link",
             "study_site.activate",
+            "simulation.run",
         ]);
+    }
+
+    [Fact(DisplayName = "TrialOnboarding_AndDemoSeed_BackfillSimulationRunGrants_WithoutDefineRoleHashConflict")]
+    public async Task TrialOnboardingAndDemoSeedBackfillSimulationRunGrantsWithoutDefineRoleHashConflict()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string subjectId = "88888888-2222-4444-8888-bbbbbbbbbbbb";
+
+        // 1. Existing trial workspace whose prior DefineRole commands lack simulation.run returns K.Command.IdempotencyConflict;
+        //    BootstrapAsync tolerates the conflict and still issues the idempotent founder:simulation-run grant.
+        var conflictingOnboardingSender = new RecordingBootstrapSender(conflictRoleCodes: ["SPONSOR_ADMIN", "SPONSOR_DESIGNER", "TRIAL_DATA_MANAGER"]);
+        var existingTenantId = TenantId.New();
+        var entitlements = new StubEntitlementReader(new TenantEntitlementSnapshot(
+            existingTenantId,
+            SubscriptionId: SubscriptionId.New(),
+            CommercialTier.Individual,
+            SubscriptionStatus.Trialing,
+            StartedAt: T0,
+            TrialEndsAt: T0.AddDays(30),
+            IsReadOnly: false,
+            ProductFamilies: [ProductFamily.Blueprint, ProductFamily.Capture]));
+
+        await using var onboardingProvider = new ServiceCollection()
+            .AddLogging()
+            .AddScoped<ServiceActorScope>()
+            .AddScoped<IKernelCommandSender>(_ => conflictingOnboardingSender)
+            .BuildServiceProvider();
+
+        var service = new TrialOnboardingService(
+            new FixedTenantDirectory(existingTenantId),
+            new EmptyStudyDirectory(),
+            new NoForeignBindingProbe(),
+            entitlements,
+            onboardingProvider.GetRequiredService<IServiceScopeFactory>(),
+            new NoOpKeycloakClient(),
+            new FakeClock(T0),
+            onboardingProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TrialOnboardingService>>());
+
+        var onboardingResult = await service.BootstrapAsync(
+            Actor.Person(subjectId),
+            new TrialOnboardingInput("Meridian Bio", "US", "Individual"),
+            ct);
+
+        onboardingResult.IsSuccess.Should().BeTrue(onboardingResult.Error?.Message);
+        conflictingOnboardingSender.Commands.OfType<IssueGrant>().Should().ContainSingle(g =>
+            g.Grantee == Actor.Person(subjectId)
+            && g.Capability == SimulationCapabilities.Run.Token
+            && g.RoleId == null
+            && g.IdempotencyKey.EndsWith(":grant:simulation-run", StringComparison.Ordinal));
+
+        // 2. Existing demo tenant where DEMO_DESIGNER and DEMO_DATA_MANAGER conflict with prior DefineRole hashes
+        //    receives idempotent direct simulation.run grants for those users, while fresh demo tenants issue none.
+        var freshDemoSender = new RecordingDemoSeedSender(conflictRoleCodes: []);
+        await RunDemoSeedAsync(freshDemoSender, ct);
+        freshDemoSender.Commands.OfType<IssueGrant>()
+            .Where(g => g.Capability == SimulationCapabilities.Run.Token)
+            .Should().BeEmpty("fresh demo roles already include simulation.run");
+
+        var legacyDemoSender = new RecordingDemoSeedSender(conflictRoleCodes: ["DEMO_DESIGNER", "DEMO_DATA_MANAGER"]);
+        await RunDemoSeedAsync(legacyDemoSender, ct);
+        var backfilledGrants = legacyDemoSender.Commands.OfType<IssueGrant>()
+            .Where(g => g.Capability == SimulationCapabilities.Run.Token)
+            .ToList();
+        backfilledGrants.Should().HaveCount(3);
+        backfilledGrants.Select(g => g.IdempotencyKey).Should().BeEquivalentTo(
+            "development-demo:grant:designer_demo:simulation.run",
+            "development-demo:grant:designer.lead:simulation.run",
+            "development-demo:grant:dm.lead:simulation.run");
+    }
+
+    private static async Task RunDemoSeedAsync(RecordingDemoSeedSender sender, CancellationToken ct)
+    {
+        await using var demoProvider = new ServiceCollection()
+            .AddSingleton<IClock>(new FakeClock(T0))
+            .AddSingleton<IProtocolVersionReader>(new ApprovedProtocolReader())
+            .AddSingleton<IStandardsRegistry>(new ApprovedStandardsRegistry())
+            .AddScoped<ServiceActorScope>()
+            .AddScoped<IKernelCommandSender>(_ => sender)
+            .BuildServiceProvider();
+
+        await Cadence.Kernel.Host.DevelopmentDemoData.SeedAsync(
+            TenantId.New(),
+            demoProvider.GetRequiredService<IServiceScopeFactory>(),
+            ct);
     }
 
     private sealed class EmptyTenantDirectory : ITenantDirectory
     {
         public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>
             Task.FromResult<TenantId?>(null);
+    }
+
+    private sealed class FixedTenantDirectory(TenantId tenantId) : ITenantDirectory
+    {
+        public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>
+            Task.FromResult<TenantId?>(tenantId);
     }
 
     private sealed class EmptyStudyDirectory : IStudyDirectory
@@ -534,13 +638,24 @@ public sealed class CommercialAndOnboardingUnitTests
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult<SiteDirectoryEntry?>(null);
 
-        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<SiteDirectoryEntry?>(null);
 
         public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([]);
 
         public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudySiteDirectoryEntry?>(null);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<StudySiteDirectoryEntry?>(null);
     }
 
@@ -574,8 +689,10 @@ public sealed class CommercialAndOnboardingUnitTests
             Task.CompletedTask;
     }
 
-    private sealed class RecordingBootstrapSender : IKernelCommandSender
+    private sealed class RecordingBootstrapSender(IReadOnlyCollection<string>? conflictRoleCodes = null) : IKernelCommandSender
     {
+        private readonly HashSet<string> _conflicts = new(conflictRoleCodes ?? [], StringComparer.Ordinal);
+
         public List<ICommand> Commands { get; } = [];
 
         public Task<CommandResult<TResult>> SendAsync<TResult>(
@@ -584,6 +701,11 @@ public sealed class CommercialAndOnboardingUnitTests
             CancellationToken cancellationToken = default)
         {
             Commands.Add(command);
+            if (command is DefineRole role && _conflicts.Contains(role.Code))
+            {
+                return Task.FromResult(CommandResult<TResult>.Failure(KernelErrors.IdempotencyConflict));
+            }
+
             object outcome = command switch
             {
                 ProvisionTenant pt => pt.TenantId,
@@ -600,6 +722,93 @@ public sealed class CommercialAndOnboardingUnitTests
             };
             return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));
         }
+    }
+
+    private sealed class RecordingDemoSeedSender(IReadOnlyCollection<string> conflictRoleCodes) : IKernelCommandSender
+    {
+        private readonly HashSet<string> _conflicts = new(conflictRoleCodes, StringComparer.Ordinal);
+
+        public List<ICommand> Commands { get; } = [];
+
+        public Task<CommandResult<TResult>> SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command);
+            if (command is DefineRole role && _conflicts.Contains(role.Code))
+            {
+                return Task.FromResult(CommandResult<TResult>.Failure(KernelErrors.IdempotencyConflict));
+            }
+
+            object outcome = command switch
+            {
+                DefineRole dr => new RoleState(dr.RoleId, dr.Code, dr.Name, dr.Capabilities),
+                IssueGrant ig => new GrantState(ig.GrantId, ig.Grantee, ig.Capability, ig.RoleId, ig.Scope, null, ig.WithGrantOption, ig.ValidFrom, ig.ValidTo, false),
+                RegisterOrganization ro => ro.OrganizationId,
+                RegisterStudy rst => rst.StudyId,
+                RegisterSite rs => rs.SiteId,
+                LinkSiteToStudy lss => lss.StudySiteId,
+                RegisterPerson rp => rp.PersonId,
+                RegisterTenantMembership rtm => rtm.TenantMembershipId,
+                DefineConcept dc => new ConceptRef(dc.ConceptId, 1),
+                CreateProtocolDraft cpd => new ProtocolVersionState(cpd.ProtocolVersionId, cpd.StudyId, 1, ProtocolVersionStatus.Draft, null),
+                SubmitProtocolVersionForReview spv => new ProtocolVersionState(spv.ProtocolVersionId, default, 1, ProtocolVersionStatus.InReview, "sha256:0000000000000000000000000000000000000000000000000000000000000000"),
+                RegisterArtifact ra => new ArtifactState(ra.ArtifactId, ra.Kind, ra.StudyId, ra.Title, ra.ArtifactVersionId, 1, ra.Content.ContentHash),
+                DeclareEffectivity de => new EffectivityState(de.EffectivityId, de.ProtocolVersionId, de.Scope, EffectivityStatus.Pending, de.DeclaredAt, []),
+                ChangeEffectivityStatus ces => new EffectivityState(ces.EffectivityId, default, EffectivityScope.Study(), ces.To, ces.EffectiveAt, ces.Evidence),
+                ActivateStudySite ass => new StudySiteState(ass.StudySiteId, "Active", []),
+                DraftLibraryItem dli => new LibraryItemVersion(dli.LibraryItemId, dli.Kind, dli.Key, 1, "sha256:1111111111111111111111111111111111111111111111111111111111111111"),
+                DeclareStudyStandards dss => dss.ProfileId,
+                DefineWorkQueue dwq => new WorkQueueDefinitionState(dwq.WorkQueueDefinitionId, dwq.Code, 1, dwq.Title, dwq.Capability, dwq.VerbClass, dwq.Source),
+                RegisterParticipant part => part.ParticipantId,
+                ScreenParticipant sp => new EnrollmentState(sp.EnrollmentId, sp.ParticipantId, default, sp.StudySiteId, sp.SubjectCode, EnrollmentStatus.Screening, sp.ScreenedAt, null, "sha256:2222222222222222222222222222222222222222222222222222222222222222"),
+                _ => throw new NotSupportedException($"Unexpected demo seed command {command.GetType().Name}."),
+            };
+            return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));
+        }
+    }
+
+    private sealed class ApprovedProtocolReader : IProtocolVersionReader
+    {
+        public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([]);
+
+        public Task<ProtocolVersionSummary?> GetAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult<ProtocolVersionSummary?>(new ProtocolVersionSummary(
+                version, default, 1, null, ProtocolVersionStatus.Approved, "sha256:00", null, AttestationId.New(), null));
+
+        public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult<SoaMatrix?>(null);
+    }
+
+    private sealed class ApprovedStandardsRegistry : IStandardsRegistry
+    {
+        public Task<IReadOnlyList<StandardVersionSummary>> ListStandardVersionsAsync(TenantId tenant, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<StandardVersionSummary>>([]);
+
+        public Task<StandardVersionSummary?> FindStandardVersionAsync(TenantId tenant, StandardVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardVersionSummary?>(ApprovedStandard(id));
+
+        public Task<StandardVersionSummary?> FindStandardVersionAsync(TenantId tenant, string standardCode, string version, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardVersionSummary?>(ApprovedStandard(StandardVersionId.New()));
+
+        public Task<StandardPackage?> GetStandardPackageAsync(TenantId tenant, StandardVersionId id, CancellationToken cancellationToken) =>
+            Task.FromResult<StandardPackage?>(null);
+
+        public Task<LibraryItemView?> FindLibraryItemAsync(TenantId tenant, LibraryItemId id, CancellationToken cancellationToken) =>
+            Task.FromResult<LibraryItemView?>(new LibraryItemView(
+                id, LibraryItemKind.RulePack, "cadence-101-edit-checks", 1, "Checks", JsonDocument.Parse("{}").RootElement,
+                "sha256:11", GovernanceStatus.Approved, [], AttestationId.New(), null));
+
+        public Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<LibraryItemView>>([]);
+
+        public Task<StudyStandardsProfileView?> FindStudyStandardsAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult<StudyStandardsProfileView?>(null);
+
+        private static StandardVersionSummary ApprovedStandard(StandardVersionId id) =>
+            new(id, "CDASHIG", "2.3", "CDASHIG v2.3", "CDISC", null, null, "sha256:33", GovernanceStatus.Approved, AttestationId.New(), null, []);
     }
 
     private sealed class FixedActor(Actor actor) : ICurrentActor

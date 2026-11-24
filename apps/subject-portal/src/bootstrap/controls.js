@@ -3,6 +3,8 @@
 import { isAuthenticatedSession } from "../api/client.js";
 import { retryCompliance } from "../features/compliance.js";
 import {
+  ensureConsentLivenessFresh,
+  isConsentLivenessExpired,
   loadConsentDetails,
   submitConsentAnswers,
   verifyBiometricLiveness,
@@ -60,7 +62,7 @@ export function bindPortalControls() {
   const langSelector = document.getElementById("consent-lang-selector");
   if (langSelector) {
     langSelector.addEventListener("change", () => {
-      loadConsentDetails();
+      void loadConsentDetails();
     });
   }
 
@@ -97,6 +99,10 @@ export function bindPortalControls() {
   const btnTriggerSign = document.getElementById("btn-trigger-consent-sign");
   if (btnTriggerSign) {
     btnTriggerSign.addEventListener("click", () => {
+      if (isConsentLivenessExpired()) {
+        ensureConsentLivenessFresh();
+        return;
+      }
       openSignatureModal("consent");
     });
   }

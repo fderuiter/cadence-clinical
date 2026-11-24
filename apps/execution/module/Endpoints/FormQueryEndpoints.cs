@@ -126,7 +126,19 @@ internal static class FormQueryEndpoints
         CancellationToken cancellationToken)
     {
         var tenant = KernelRequestTenant.Get(context);
-        if (await forms.FindAsync(tenant, CollectionInstanceId.FromGuid(formId), cancellationToken).ConfigureAwait(false) is not { } record)
+        var form = CollectionInstanceId.FromGuid(formId);
+        var canUnblind = false;
+        var evaluatedUnblind = false;
+        if (await forms.FindForReaderAsync(
+            tenant,
+            form,
+            async (enrollmentId, ct) =>
+            {
+                canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                evaluatedUnblind = true;
+                return canUnblind;
+            },
+            cancellationToken).ConfigureAwait(false) is not { } record)
         {
             return FormNotFound(formId);
         }
@@ -136,18 +148,23 @@ internal static class FormQueryEndpoints
             return NotVisible($"form {formId:D}");
         }
 
-        var form = CollectionInstanceId.FromGuid(formId);
         var queries = await ReadAsync(contexts, tenant, q => q.FormId == form, cancellationToken).ConfigureAwait(false);
         var states = ProjectStates(queries, temporalFilter, clock);
-        var canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        if (!evaluatedUnblind)
+        {
+            canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        }
+
         var revisions = Revisions(record);
+        var itemRevisions = RevisionsByItem(record);
         var queryContext = await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([
             .. states.Select(s => FormQueryResponse.From(
                 s,
                 revisions,
                 queryContext,
-                maskBlinded: !canUnblind && record.IsQueryBlinded(s.ItemId, s.ObservationId))),
+                maskBlinded: !canUnblind && record.IsQueryBlinded(s.ItemId, s.ObservationId),
+                currentRevisionOverride: itemRevisions.TryGetValue(s.ItemId, out var itemRev) ? itemRev : null)),
         ]);
     }
 
@@ -750,18 +767,40 @@ internal static class FormQueryEndpoints
             return [];
         }
 
+        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
+        var unblindedEnrollments = new HashSet<EnrollmentId>();
+        foreach (var enrollmentId in queries.Select(q => q.EnrollmentId).Distinct())
+        {
+            var canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false);
+            canUnblindByEnrollment[enrollmentId] = canUnblind;
+            if (canUnblind)
+            {
+                unblindedEnrollments.Add(enrollmentId);
+            }
+        }
+
         var distinctFormIds = queries.Select(q => q.FormId).Distinct().ToList();
-        var recordsById = await forms.FindManyAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false);
+        var recordsById = await forms.FindManyForReaderAsync(
+            tenant,
+            distinctFormIds,
+            unblindedEnrollments,
+            cancellationToken).ConfigureAwait(false);
 
         var revisions = preloadedRevisions is not null
             ? new Dictionary<ObservationId, int>(preloadedRevisions)
             : new Dictionary<ObservationId, int>();
+        var itemRevisions = new Dictionary<(CollectionInstanceId FormId, string ItemId), int>();
         var unresolvedNodes = new List<NodeRef>();
         foreach (var record in recordsById.Values)
         {
             foreach (var (observation, revision) in Revisions(record))
             {
                 revisions[observation] = revision;
+            }
+
+            foreach (var value in record.Values)
+            {
+                itemRevisions[(record.CollectionInstanceId, value.ItemId)] = value.Revision;
             }
 
             if (knownHeaders is null || !knownHeaders.ContainsKey(record.EnrollmentId))
@@ -809,19 +848,14 @@ internal static class FormQueryEndpoints
             }
         }
 
-        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
-        foreach (var enrollmentId in queries.Select(q => q.EnrollmentId).Distinct())
-        {
-            canUnblindByEnrollment[enrollmentId] = await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false);
-        }
-
         return [
             .. queries.Select(q =>
             {
                 var maskBlinded = !canUnblindByEnrollment[q.EnrollmentId]
                     && recordsById.TryGetValue(q.FormId, out var rec)
                     && rec.IsQueryBlinded(q.ItemId, q.ObservationId);
-                return FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId), maskBlinded);
+                int? itemRev = itemRevisions.TryGetValue((q.FormId, q.ItemId), out var foundRev) ? foundRev : null;
+                return FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId), maskBlinded, itemRev);
             }),
         ];
     }
@@ -1070,16 +1104,21 @@ internal static class FormQueryEndpoints
         FormQueryState state,
         CancellationToken cancellationToken)
     {
-        var record = await forms.FindAsync(tenant, state.FormId, cancellationToken).ConfigureAwait(false);
+        var canUnblind = await access.CanUnblindAsync(tenant, state.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var record = await forms.FindForReaderAsync(tenant, state.FormId, canUnblind, cancellationToken).ConfigureAwait(false);
         var queryContext = record is null ? null : await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
         var maskBlinded = record is not null
-            && record.IsQueryBlinded(state.ItemId, state.ObservationId)
-            && !await access.CanUnblindAsync(tenant, state.EnrollmentId, cancellationToken).ConfigureAwait(false);
+            && !canUnblind
+            && record.IsQueryBlinded(state.ItemId, state.ObservationId);
+        int? itemRevision = record is not null && RevisionsByItem(record).TryGetValue(state.ItemId, out var foundRev)
+            ? foundRev
+            : null;
         return FormQueryResponse.From(
             state,
             record is null ? new Dictionary<ObservationId, int>() : Revisions(record),
             queryContext,
-            maskBlinded);
+            maskBlinded,
+            itemRevision);
     }
 
     private static async Task<List<FormQuery>> ReadAsync(
@@ -1199,7 +1238,12 @@ internal static class FormQueryEndpoints
     }
 
     private static Dictionary<ObservationId, int> Revisions(CollectionInstanceRecord record) =>
-        record.Values.ToDictionary(v => v.ObservationId, v => v.Revision);
+        record.Values
+            .Where(v => !v.ObservationId.IsEmpty)
+            .ToDictionary(v => v.ObservationId, v => v.Revision);
+
+    private static Dictionary<string, int> RevisionsByItem(CollectionInstanceRecord record) =>
+        record.Values.ToDictionary(v => v.ItemId, v => v.Revision, StringComparer.Ordinal);
 
     private static ProblemHttpResult BadRequest(string detail) =>
         TypedResults.Problem(title: "Invalid request", detail: detail, statusCode: StatusCodes.Status400BadRequest);

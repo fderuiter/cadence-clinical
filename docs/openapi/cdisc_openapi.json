@@ -1431,6 +1431,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1517,6 +1527,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Designer_AmendmentRegressionReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
                 }
               }
             }
@@ -4491,6 +4511,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionForms_ProblemDetails"
+                }
+              }
+            }
           }
         },
         "x-kernel-errors": [
@@ -4565,6 +4595,10 @@
           {
             "code": "K.Trust.MethodRequired",
             "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
           }
         ]
       }
@@ -7629,6 +7663,16 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -7789,6 +7833,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -9881,7 +9935,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProgramListResponseDto"
+                }
+              }
+            }
           }
         }
       },
@@ -9900,8 +9961,15 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProgramResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -9923,7 +9991,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProgramResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -9945,7 +10020,14 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ValidateLockfileResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -9967,7 +10049,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_LockTokenListResponseDto"
+                }
+              }
+            }
           }
         }
       },
@@ -9986,8 +10075,15 @@
           "required": true
         },
         "responses": {
-          "200": {
-            "description": "OK"
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_LockTokenResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -10016,7 +10112,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
@@ -10038,7 +10141,14 @@
         },
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ExecuteProgramResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -10074,7 +10184,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ExecutionRunListResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -10096,7 +10213,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ExecutionRunDetailResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -10118,7 +10242,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_VerifyManifestResponseDto"
+                }
+              }
+            }
           }
         }
       }
@@ -10148,7 +10279,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
@@ -11544,7 +11682,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Kernel_SimulationResult"
+                  "$ref": "#/components/schemas/Kernel_KernelSimulationResponse"
                 }
               }
             }
@@ -11589,6 +11727,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Simulation.VersionStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Unprocessable Entity. Kernel errors: \u0060K.Simulation.BaseNotFrozen\u0060, \u0060K.Simulation.ContentInvalid\u0060, \u0060K.Simulation.ElementIdDuplicated\u0060.",
             "content": {
@@ -11612,6 +11760,10 @@
           {
             "code": "K.Simulation.VersionUnknown",
             "status": 404
+          },
+          {
+            "code": "K.Simulation.VersionStale",
+            "status": 409
           },
           {
             "code": "K.Simulation.BaseNotFrozen",
@@ -11653,7 +11805,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+                    "$ref": "#/components/schemas/Kernel_KernelMatrixGapFindingResponse"
                   }
                 }
               }
@@ -12092,6 +12244,22 @@
         ],
         "summary": "Lists visible investigational sites in the caller\u0027s tenant.",
         "operationId": "KernelListSites",
+        "parameters": [
+          {
+            "name": "institutionRef",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -12102,6 +12270,16 @@
                   "items": {
                     "$ref": "#/components/schemas/Kernel_KernelSiteSummaryResponse"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
                 }
               }
             }
@@ -14923,6 +15101,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Observation.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
           }
         },
         "x-kernel-errors": [
@@ -14989,6 +15177,10 @@
           {
             "code": "K.Execution.TransitionTimeInvalid",
             "status": 422
+          },
+          {
+            "code": "K.Observation.Locked",
+            "status": 423
           }
         ]
       }
@@ -15331,6 +15523,68 @@
         ]
       }
     },
+    "/api/v1/kernel/locks/in-force": {
+      "get": {
+        "tags": [
+          "Kernel locks"
+        ],
+        "summary": "Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope.",
+        "operationId": "KernelGetScopeWriteLock",
+        "parameters": [
+          {
+            "name": "study_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enrollment_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelScopeWriteLockResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/locks": {
       "get": {
         "tags": [
@@ -15428,7 +15682,7 @@
         "tags": [
           "Kernel locks"
         ],
-        "summary": "Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope.",
+        "summary": "Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings.",
         "operationId": "KernelGetStudyLockReadiness",
         "parameters": [
           {
@@ -17379,11 +17633,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                  }
+                ]
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -22909,6 +23169,12 @@
             ]
           },
           "dataset": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "variable": {
             "type": [
               "null",
               "string"
@@ -31549,6 +31815,56 @@
           }
         }
       },
+      "Interop_DatabaseLockAuthTokenDto": {
+        "required": [
+          "token_id",
+          "study_id",
+          "lock_id",
+          "milestone",
+          "issued_to",
+          "authorized_roles",
+          "issued_at",
+          "expires_at",
+          "signature_hash",
+          "is_revoked"
+        ],
+        "type": "object",
+        "properties": {
+          "token_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "lock_id": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "string"
+          },
+          "issued_to": {
+            "type": "string"
+          },
+          "authorized_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "issued_at": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "signature_hash": {
+            "type": "string"
+          },
+          "is_revoked": {
+            "type": "boolean"
+          }
+        }
+      },
       "Interop_EhrCandidateItemDto": {
         "required": [
           "id",
@@ -32296,6 +32612,33 @@
           }
         }
       },
+      "Interop_ElectronicSignatureBlockDto": {
+        "required": [
+          "signer_id",
+          "signer_role",
+          "signed_at",
+          "signature_meaning",
+          "hmac_signature"
+        ],
+        "type": "object",
+        "properties": {
+          "signer_id": {
+            "type": "string"
+          },
+          "signer_role": {
+            "type": "string"
+          },
+          "signed_at": {
+            "type": "string"
+          },
+          "signature_meaning": {
+            "type": "string"
+          },
+          "hmac_signature": {
+            "type": "string"
+          }
+        }
+      },
       "Interop_ExecuteProgramRequestDto": {
         "required": [
           "study_id",
@@ -32336,6 +32679,190 @@
           "reason_for_execution": {
             "type": "string",
             "default": "Statistical analysis execution run"
+          }
+        }
+      },
+      "Interop_ExecuteProgramResponseDto": {
+        "required": [
+          "manifest"
+        ],
+        "type": "object",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/Interop_ExecutionRunManifestDto"
+          }
+        }
+      },
+      "Interop_ExecutionRunDetailResponseDto": {
+        "required": [
+          "run"
+        ],
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/Interop_ExecutionRunManifestDto"
+          }
+        }
+      },
+      "Interop_ExecutionRunListResponseDto": {
+        "required": [
+          "study_id",
+          "total",
+          "runs"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_ExecutionRunManifestDto"
+            }
+          }
+        }
+      },
+      "Interop_ExecutionRunManifestDto": {
+        "required": [
+          "manifest_id",
+          "run_id",
+          "study_id",
+          "program_id",
+          "program_name",
+          "program_version",
+          "snapshot_id",
+          "snapshot_version_tag",
+          "snapshot_digest",
+          "language",
+          "script_code_digest",
+          "lockfile_digest",
+          "container_image_digest",
+          "execution_start",
+          "execution_end",
+          "duration_ms",
+          "exit_code",
+          "status",
+          "stdout_capture",
+          "stderr_capture",
+          "output_artifacts",
+          "output_artifacts_digest",
+          "is_unblinded_run",
+          "database_lock_token_id",
+          "executed_by",
+          "executed_by_role",
+          "signature_block",
+          "manifest_sha256_seal"
+        ],
+        "type": "object",
+        "properties": {
+          "manifest_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "program_id": {
+            "type": "string"
+          },
+          "program_name": {
+            "type": "string"
+          },
+          "program_version": {
+            "type": "string"
+          },
+          "snapshot_id": {
+            "type": "string"
+          },
+          "snapshot_version_tag": {
+            "type": "string"
+          },
+          "snapshot_digest": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "script_code_digest": {
+            "type": "string"
+          },
+          "lockfile_digest": {
+            "type": "string"
+          },
+          "container_image_digest": {
+            "type": "string"
+          },
+          "execution_start": {
+            "type": "string"
+          },
+          "execution_end": {
+            "type": "string"
+          },
+          "duration_ms": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "exit_code": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stdout_capture": {
+            "type": "string"
+          },
+          "stderr_capture": {
+            "type": "string"
+          },
+          "output_artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_OutputArtifactSchemaDto"
+            }
+          },
+          "output_artifacts_digest": {
+            "type": "string"
+          },
+          "is_unblinded_run": {
+            "type": "boolean"
+          },
+          "database_lock_token_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "executed_by": {
+            "type": "string"
+          },
+          "executed_by_role": {
+            "type": "string"
+          },
+          "signature_block": {
+            "$ref": "#/components/schemas/Interop_ElectronicSignatureBlockDto"
+          },
+          "manifest_sha256_seal": {
+            "type": "string"
           }
         }
       },
@@ -32531,6 +33058,171 @@
           }
         }
       },
+      "Interop_LockfileValidationResultSchemaDto": {
+        "required": [
+          "lock_type",
+          "status",
+          "lock_digest",
+          "package_count",
+          "packages",
+          "is_qualified",
+          "unqualified_packages",
+          "details"
+        ],
+        "type": "object",
+        "properties": {
+          "lock_type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "lock_digest": {
+            "type": "string"
+          },
+          "package_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_PackageEntrySchemaDto"
+            }
+          },
+          "is_qualified": {
+            "type": "boolean"
+          },
+          "unqualified_packages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_LockTokenListResponseDto": {
+        "required": [
+          "study_id",
+          "total",
+          "tokens"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_DatabaseLockAuthTokenDto"
+            }
+          }
+        }
+      },
+      "Interop_LockTokenResponseDto": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/Interop_DatabaseLockAuthTokenDto"
+          }
+        }
+      },
+      "Interop_OutputArtifactSchemaDto": {
+        "required": [
+          "artifact_id",
+          "name",
+          "artifact_type",
+          "file_path",
+          "mime_type",
+          "size_bytes",
+          "sha256_digest"
+        ],
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "artifact_type": {
+            "type": "string"
+          },
+          "file_path": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256_digest": {
+            "type": "string"
+          },
+          "content_preview": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_PackageEntrySchemaDto": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "checksum": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "repository": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_qualified": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "Interop_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -32566,6 +33258,44 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Interop_ProgramListResponseDto": {
+        "required": [
+          "study_id",
+          "total",
+          "programs"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "programs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_StatisticalProgramDto"
+            }
+          }
+        }
+      },
+      "Interop_ProgramResponseDto": {
+        "required": [
+          "program"
+        ],
+        "type": "object",
+        "properties": {
+          "program": {
+            "$ref": "#/components/schemas/Interop_StatisticalProgramDto"
           }
         }
       },
@@ -32659,6 +33389,83 @@
           }
         }
       },
+      "Interop_StatisticalProgramDto": {
+        "required": [
+          "program_id",
+          "study_id",
+          "name",
+          "title",
+          "description",
+          "language",
+          "version",
+          "source_code",
+          "code_hash",
+          "lockfile_content",
+          "lock_type",
+          "lock_digest",
+          "target_domain",
+          "created_by",
+          "created_at",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "program_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "source_code": {
+            "type": "string"
+          },
+          "code_hash": {
+            "type": "string"
+          },
+          "lockfile_content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lock_type": {
+            "type": "string"
+          },
+          "lock_digest": {
+            "type": "string"
+          },
+          "target_domain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          }
+        }
+      },
       "Interop_ValidateLockfileRequestDto": {
         "required": [
           "lock_type",
@@ -32681,6 +33488,28 @@
           "strict_qualification": {
             "type": "boolean",
             "default": false
+          }
+        }
+      },
+      "Interop_ValidateLockfileResponseDto": {
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/Interop_LockfileValidationResultSchemaDto"
+          }
+        }
+      },
+      "Interop_VerifyManifestResponseDto": {
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "object"
           }
         }
       },
@@ -32783,60 +33612,14 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
       "Kernel_AttestationId": {},
-      "Kernel_CandidateKind": {
-        "type": "integer"
-      },
-      "Kernel_CandidateSummary": {
-        "required": [
-          "kind",
-          "version",
-          "base_version",
-          "content_hash",
-          "base_content_hash"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/Kernel_CandidateKind"
-          },
-          "version": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_NodeRef"
-              }
-            ]
-          },
-          "base_version": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_NodeRef"
-              }
-            ]
-          },
-          "content_hash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "base_content_hash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Kernel_CodelistOptionView": {
         "required": [
           "code",
@@ -32868,130 +33651,6 @@
           "Second",
           null
         ]
-      },
-      "Kernel_DependentGroup": {
-        "required": [
-          "kind",
-          "count",
-          "objects"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          },
-          "count": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "objects": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_LineageNode"
-            }
-          }
-        }
-      },
-      "Kernel_DependentsReport": {
-        "required": [
-          "start",
-          "depth",
-          "valid_at",
-          "known_at",
-          "groups",
-          "total",
-          "truncated"
-        ],
-        "type": "object",
-        "properties": {
-          "start": {
-            "type": "string"
-          },
-          "depth": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "valid_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "known_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "groups": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_DependentGroup"
-            }
-          },
-          "total": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "truncated": {
-            "type": "boolean"
-          }
-        }
-      },
-      "Kernel_ElementChange": {
-        "required": [
-          "element_id",
-          "instance_type",
-          "change",
-          "properties"
-        ],
-        "type": "object",
-        "properties": {
-          "element_id": {
-            "type": "string"
-          },
-          "instance_type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "change": {
-            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
-          },
-          "properties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      "Kernel_ElementChangeKind": {
-        "type": "integer"
-      },
-      "Kernel_EngineVersion": {
-        "required": [
-          "name",
-          "version"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          }
-        }
       },
       "Kernel_EvaluatedCondition": {
         "required": [
@@ -33502,6 +34161,45 @@
           },
           "asserted_by": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelCandidateSummaryResponse": {
+        "required": [
+          "kind",
+          "version",
+          "base_version",
+          "content_hash",
+          "base_content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "base_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "base_content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -34098,6 +34796,21 @@
           }
         }
       },
+      "Kernel_KernelEngineVersionResponse": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelEnrollmentLookupResponse": {
         "required": [
           "study_ref",
@@ -34684,6 +35397,12 @@
               "string"
             ]
           },
+          "institution_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "site_id": {
             "type": [
               "null",
@@ -34813,6 +35532,45 @@
               "null",
               "string"
             ]
+          },
+          "current_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "signature_superseded": {
+            "type": "boolean",
+            "default": false
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -34891,6 +35649,33 @@
           },
           "explanation": {
             "$ref": "#/components/schemas/Kernel_KernelExplanationResponse"
+          },
+          "unverified_value_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "unsigned_form_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "unopened_visit_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -35021,6 +35806,55 @@
             "type": "boolean"
           },
           "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelMaskedPartResponse": {
+        "required": [
+          "part",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "part": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelMatrixGapFindingResponse": {
+        "required": [
+          "element_id",
+          "kind",
+          "severity",
+          "json_pointer_path",
+          "description",
+          "recommendation"
+        ],
+        "type": "object",
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "json_pointer_path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommendation": {
             "type": [
               "null",
               "string"
@@ -35267,6 +36101,61 @@
           },
           "kind": {
             "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelPlannedVisitResponse": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "epoch_order",
+          "study_day",
+          "window_before",
+          "window_after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "epoch_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -36267,6 +37156,43 @@
           }
         }
       },
+      "Kernel_KernelScheduleChangeResponse": {
+        "required": [
+          "activity_id",
+          "change",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "change": {
+            "type": "string"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelPlannedVisitResponse"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelPlannedVisitResponse"
+              }
+            ]
+          }
+        }
+      },
       "Kernel_KernelScheduleOfActivitiesResponse": {
         "required": [
           "version",
@@ -36318,6 +37244,35 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelSoaFootnoteResponse"
             }
+          }
+        }
+      },
+      "Kernel_KernelScopeWriteLockResponse": {
+        "required": [
+          "study_exists",
+          "locked",
+          "lock_kind",
+          "scope_kind"
+        ],
+        "type": "object",
+        "properties": {
+          "study_exists": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "lock_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -36407,6 +37362,100 @@
           }
         }
       },
+      "Kernel_KernelSimulationAsOfResponse": {
+        "required": [
+          "valid_at",
+          "known_at"
+        ],
+        "type": "object",
+        "properties": {
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_KernelSimulationResponse": {
+        "required": [
+          "scope",
+          "as_of",
+          "candidate",
+          "engine_versions",
+          "input_hash",
+          "result_hash",
+          "structural_diff",
+          "schedule_changes",
+          "masked",
+          "dependents",
+          "matrix_gaps",
+          "is_empty"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string"
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/Kernel_KernelSimulationAsOfResponse"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Kernel_KernelCandidateSummaryResponse"
+          },
+          "engine_versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelEngineVersionResponse"
+            }
+          },
+          "input_hash": {
+            "type": "string"
+          },
+          "result_hash": {
+            "type": "string"
+          },
+          "structural_diff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelElementChangeResponse"
+            }
+          },
+          "schedule_changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelScheduleChangeResponse"
+            }
+          },
+          "masked": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelMaskedPartResponse"
+            }
+          },
+          "dependents": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelDependentsResponse"
+              }
+            ]
+          },
+          "matrix_gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelMatrixGapFindingResponse"
+            }
+          },
+          "is_empty": {
+            "type": "boolean"
+          }
+        }
+      },
       "Kernel_KernelSiteSummaryResponse": {
         "required": [
           "ref",
@@ -36439,6 +37488,19 @@
           },
           "institution_name": {
             "type": "string"
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
+          },
+          "linked_study_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -37002,6 +38064,14 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelEffectiveVersionResponse"
             }
+          },
+          "study_code": {
+            "type": "string",
+            "default": ""
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -37666,55 +38736,6 @@
           }
         }
       },
-      "Kernel_LineageNode": {
-        "required": [
-          "handle",
-          "kind",
-          "ref",
-          "mask",
-          "distance"
-        ],
-        "type": "object",
-        "properties": {
-          "handle": {
-            "type": "string"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "ref": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_NodeRef"
-              }
-            ]
-          },
-          "mask": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_MaskReason"
-              }
-            ]
-          },
-          "distance": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "is_masked": {
-            "type": "boolean"
-          }
-        }
-      },
       "Kernel_LockKind": {
         "enum": [
           "Frozen",
@@ -37754,26 +38775,12 @@
           },
           "reason_for_change": {
             "type": "string"
-          }
-        }
-      },
-      "Kernel_MaskedPart": {
-        "required": [
-          "part",
-          "reason"
-        ],
-        "type": "object",
-        "properties": {
-          "part": {
-            "type": "string"
           },
-          "reason": {
-            "$ref": "#/components/schemas/Kernel_MaskReason"
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
-      },
-      "Kernel_MaskReason": {
-        "type": "integer"
       },
       "Kernel_MatrixGapCheckRequest": {
         "required": [
@@ -37785,45 +38792,6 @@
             "type": "string"
           }
         }
-      },
-      "Kernel_MatrixGapFinding": {
-        "required": [
-          "element_id",
-          "kind",
-          "severity",
-          "json_pointer_path",
-          "description"
-        ],
-        "type": "object",
-        "properties": {
-          "element_id": {
-            "type": "string"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/Kernel_MatrixGapKind"
-          },
-          "severity": {
-            "$ref": "#/components/schemas/Kernel_MatrixGapSeverity"
-          },
-          "json_pointer_path": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "recommendation": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Kernel_MatrixGapKind": {
-        "type": "integer"
-      },
-      "Kernel_MatrixGapSeverity": {
-        "type": "integer"
       },
       "Kernel_NextAction": {
         "required": [
@@ -38107,61 +39075,6 @@
           }
         }
       },
-      "Kernel_PlannedVisit": {
-        "required": [
-          "activity_id",
-          "name",
-          "epoch_id",
-          "epoch_order",
-          "study_day",
-          "window_before",
-          "window_after"
-        ],
-        "type": "object",
-        "properties": {
-          "activity_id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "epoch_id": {
-            "type": "string"
-          },
-          "epoch_order": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "study_day": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "window_before": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "window_after": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -38209,43 +39122,6 @@
           null
         ]
       },
-      "Kernel_ScheduleChange": {
-        "required": [
-          "activity_id",
-          "change",
-          "before",
-          "after"
-        ],
-        "type": "object",
-        "properties": {
-          "activity_id": {
-            "type": "string"
-          },
-          "change": {
-            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
-          },
-          "before": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_PlannedVisit"
-              }
-            ]
-          },
-          "after": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_PlannedVisit"
-              }
-            ]
-          }
-        }
-      },
       "Kernel_SimulateProtocolRequest": {
         "required": [
           "base_version_ref",
@@ -38285,100 +39161,6 @@
               "string"
             ],
             "format": "date-time"
-          }
-        }
-      },
-      "Kernel_SimulationAsOf": {
-        "required": [
-          "valid_at",
-          "known_at"
-        ],
-        "type": "object",
-        "properties": {
-          "valid_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "known_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "Kernel_SimulationResult": {
-        "required": [
-          "scope",
-          "as_of",
-          "candidate",
-          "engine_versions",
-          "input_hash",
-          "result_hash",
-          "structural_diff",
-          "schedule_changes",
-          "masked"
-        ],
-        "type": "object",
-        "properties": {
-          "scope": {
-            "$ref": "#/components/schemas/Kernel_NodeRef"
-          },
-          "as_of": {
-            "$ref": "#/components/schemas/Kernel_SimulationAsOf"
-          },
-          "candidate": {
-            "$ref": "#/components/schemas/Kernel_CandidateSummary"
-          },
-          "engine_versions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_EngineVersion"
-            }
-          },
-          "input_hash": {
-            "type": "string"
-          },
-          "result_hash": {
-            "type": "string"
-          },
-          "structural_diff": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ElementChange"
-            }
-          },
-          "schedule_changes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_ScheduleChange"
-            }
-          },
-          "masked": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Kernel_MaskedPart"
-            }
-          },
-          "dependents": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/Kernel_DependentsReport"
-              }
-            ]
-          },
-          "matrix_gaps": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
-            }
-          },
-          "is_empty": {
-            "type": "boolean"
           }
         }
       },
@@ -39886,6 +40668,12 @@
               "string"
             ]
           },
+          "syncVerificationToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "studyId": {
             "type": [
               "null",
@@ -40037,6 +40825,18 @@
               "null",
               "string"
             ]
+          },
+          "ocrToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -40119,6 +40919,18 @@
               "string"
             ],
             "format": "double"
+          },
+          "ocrToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

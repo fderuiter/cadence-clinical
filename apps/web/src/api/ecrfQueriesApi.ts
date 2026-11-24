@@ -48,9 +48,15 @@ export type FormQueryResponse = Omit<
 };
 
 export type FormQueryAgingDigestEntry =
-  Schemas["ExecutionForms_FormQueryAgingDigestEntry"];
-export type FormQueryAgingDigestResponse =
-  Schemas["ExecutionForms_FormQueryAgingDigestResponse"];
+  Schemas["ExecutionForms_FormQueryAgingDigestEntry"] & {
+    collection_spec_id?: string | null;
+  };
+export type FormQueryAgingDigestResponse = Omit<
+  Schemas["ExecutionForms_FormQueryAgingDigestResponse"],
+  "entries"
+> & {
+  entries: FormQueryAgingDigestEntry[];
+};
 export type FormQueryAgingDigest = FormQueryAgingDigestResponse;
 export type FormQueryEscalationPassResponse =
   Schemas["ExecutionForms_FormQueryEscalationPassResponse"];

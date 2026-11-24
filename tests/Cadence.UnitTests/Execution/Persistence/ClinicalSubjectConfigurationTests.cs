@@ -313,8 +313,39 @@ public class ClinicalSubjectConfigurationTests
         var act = async () => await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Both inserts are staged in the same ChangeTracker/SaveChangesAsync call, i.e. the same
-        // transaction; the second violates the (StudyCode, EnrollmentIndex) unique index.
+        // transaction; the second violates the (TenantId, StudyCode, EnrollmentIndex) unique index.
         await act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_GivenTwoTenantsWithSameStudyCodeSubjectCodeAndEnrollmentIndex_Succeeds()
+    {
+        using var connection = OpenSqliteConnection();
+        await using (var setupContext = CreateSqliteContext(connection))
+        {
+            await setupContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
+        }
+
+        var tenantA = Guid.NewGuid();
+        var tenantB = Guid.NewGuid();
+
+        await using var context = CreateSqliteContext(connection);
+        var first = ClinicalSubject.Create(
+            new SubjectCode("SUBJ-001"), new StudyCode("CADENCE-101"), new SiteCode("SITE-01"),
+            enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null);
+        var second = ClinicalSubject.Create(
+            new SubjectCode("SUBJ-001"), new StudyCode("CADENCE-101"), new SiteCode("SITE-01"),
+            enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null);
+        context.ClinicalSubjects.AddRange(first, second);
+        context.Entry(first).Property(s => s.TenantId).CurrentValue = tenantA;
+        context.Entry(second).Property(s => s.TenantId).CurrentValue = tenantB;
+
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        await using var verifyContext = CreateSqliteContext(connection);
+        var persisted = await verifyContext.ClinicalSubjects.AsNoTracking()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        persisted.Should().HaveCount(2);
     }
 
     [Fact]

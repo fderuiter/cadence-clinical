@@ -413,6 +413,7 @@ const MESSAGE_LABELS: Record<string, string> = {
 
 <style scoped>
 .form-query {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -420,6 +421,10 @@ const MESSAGE_LABELS: Record<string, string> = {
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .form-query-head {
   display: flex;

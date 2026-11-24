@@ -3,10 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
@@ -62,6 +64,14 @@ internal sealed class ScreenParticipantHandler : ICommandHandler<ScreenParticipa
 
         var studyId = studySite.StudyId;
         await context.Work.LockAsync<Study>(studyId, cancellationToken).ConfigureAwait(false);
+        if (await LocksInForce.AnyAsync(
+                context.Work,
+                LockScopes.Covering(studyId, command.StudySiteId),
+                LocksInForce.DenyingWrites,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
+        }
 
         var code = command.SubjectCode;
         if ((await context.Work.ReadAllAsync<Enrollment>(e => e.StudyId == studyId && e.SubjectCode == code, cancellationToken).ConfigureAwait(false)).Count > 0)
@@ -124,6 +134,15 @@ internal sealed class ChangeEnrollmentStatusHandler(IEnrollmentDirectory directo
             return KernelErrors.NotFound;
         }
 
+        if (await LocksInForce.AnyAsync(
+                context.Work,
+                LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id),
+                LocksInForce.DenyingWrites,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
+        }
+
         var from = enrollment.Status;
         if (enrollment.CheckTransition(command.To, command.EffectiveAt, context.RecordedAt) is { } invalid)
         {
@@ -163,6 +182,15 @@ internal sealed class WithdrawParticipantHandler(IAttestationVerifier verifier) 
         if (await context.Work.FindAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
         {
             return KernelErrors.NotFound;
+        }
+
+        var activeLocks = await LocksInForce.ReadAsync(
+            context.Work,
+            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id),
+            cancellationToken).ConfigureAwait(false);
+        if (activeLocks.Any(l => LocksInForce.DenyingWrites.Contains(l.Kind)))
+        {
+            return ObservationErrors.Locked;
         }
 
         if (!System.Enum.IsDefined(command.Kind))

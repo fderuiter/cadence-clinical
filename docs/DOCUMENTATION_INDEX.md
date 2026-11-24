@@ -595,6 +595,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](adr/2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) | Current | - Status: Accepted |
 | [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](adr/2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) | Current | - Status: Accepted |
 | [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
+| [ADR-2539: Enforce Strict Workspace TypeScript and Vue SFC Typechecking](adr/2026-11-22-enforce-workspace-vue-tsc-typecheck.md) | Current | - Status: Accepted |
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
 | [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
 | [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](adr/2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) | Current | - Status: Accepted |
@@ -607,11 +608,16 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2593: Extend Focus Primitives with Inline Focus Handoff](adr/2026-11-22-extend-focus-primitives-with-inline-focus-handoff.md) | Current | - Status: Accepted |
 | [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](adr/2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) | Current | - Status: Accepted |
 | [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
+| [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](adr/2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) | Current | - Status: Accepted |
 | [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](adr/2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) | Current | - Status: Accepted |
 | [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
 | [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
 | [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](adr/2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) | Current | - Status: Accepted |
+| [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) | Current | - Status: Accepted |
+| [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
+| [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
+| [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -625,7 +631,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
-| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/` |
+| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm cadence sync-openapi-spec`); legacy aggregate snapshot in `openapi/legacy/cdisc_openapi.json` |
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
 | [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |
