@@ -756,10 +756,16 @@ const props = defineProps({
   importSuccessMessage: { type: String, default: "" },
   importErrorMessage: { type: String, default: "" },
   importedDraftSummary: { type: Object, default: null },
-  editingItemId: { type: String, default: null },
+  editingItemId: {
+    type: /** @type {import("vue").PropType<string | null>} */ ([String, null]),
+    default: null,
+  },
   editItemValue: { type: String, default: "" },
   editItemReason: { type: String, default: "" },
-  rejectingItemId: { type: String, default: null },
+  rejectingItemId: {
+    type: /** @type {import("vue").PropType<string | null>} */ ([String, null]),
+    default: null,
+  },
   rejectItemReason: { type: String, default: "" },
   promoteChangeReason: { type: String, default: "" },
   unreviewedCount: { type: Number, required: true },

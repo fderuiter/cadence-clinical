@@ -18,11 +18,12 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 
 ## Scripts
 
-| Command                  | Purpose                                             |
-| ------------------------ | --------------------------------------------------- |
-| `pnpm --filter ui build` | Generates types, then builds the library with Vite. |
-| `pnpm --filter ui test`  | Vitest (`tests/`) with coverage.                    |
-| `pnpm --filter ui lint`  | ESLint.                                             |
+| Command                      | Purpose                                                             |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `pnpm --filter ui build`     | Generates types, then builds the library with Vite.                 |
+| `pnpm --filter ui test`      | Vitest (`tests/`) with coverage.                                    |
+| `pnpm --filter ui lint`      | ESLint.                                                             |
+| `pnpm --filter ui typecheck` | Strict `vue-tsc --noEmit` across `index.d.ts`, Vue SFCs, and tests. |
 
 ## Coverage
 
@@ -33,7 +34,7 @@ in `vite.config.js` are a ratchet floor: raise them when coverage rises, never l
 ## Dependencies
 
 - Runtime: `lucide-vue-next` (tree-shaken named SVG icons via `ClinicalIcon` and `renderClinicalIconSvg`, [ADR-2824](../../docs/adr/2026-11-22-semantic-lucide-icon-primitives-and-emoji-eslint-gates.md)); peer dependency `vue`.
-- Development: Vite, Vitest with `@vitest/coverage-v8`, `axe-core` (backing `ui/vitest`), TypeScript, `pinia`.
+- Development: Vite, Vitest with `@vitest/coverage-v8`, `axe-core` (backing `ui/vitest`), TypeScript, `vue-tsc`, `pinia`.
 
 ## Used by
 

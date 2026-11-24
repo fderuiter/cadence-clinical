@@ -3,6 +3,8 @@ import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
   buildStepUpVerificationPayload,
+  decryptAESGCM,
+  deriveKeyFromPIN,
   getFocusableElements,
   handoffFocus,
   requiresCustomSignatureReason,
@@ -13,19 +15,31 @@ import {
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
+  createNonExtractableCryptoKey,
   deleteDraft,
+  getInMemorySessionKey,
+  getWrappedMasterKeyConfig,
   queueSubmission,
   saveAssignmentsToDB,
+  setInMemorySessionKey,
 } from "../sync-queue.js";
 import { demoNowIso, isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
 import { renderCompliance } from "./compliance.js";
-import { loadConsentDetails } from "./consent.js";
+import {
+  LIVENESS_EXPIRED_MESSAGE,
+  expireConsentLiveness,
+  isConsentLivenessExpired,
+  loadConsentDetails,
+} from "./consent.js";
 import { showView } from "./navigation.js";
 import { syncOfflineQueue } from "./sync.js";
 import { renderTasks } from "./tasks.js";
+
+const RECONSENT_EPRO_GATE_MESSAGE =
+  "Action required: Please review and sign your updated study consent form before signing or submitting surveys.";
 
 let signatureTrapBound = false;
 
@@ -66,11 +80,26 @@ function detachSignatureModalTrap() {
   signatureTrapBound = false;
 }
 
-// Submit with 21 CFR PIN signature validation
+// Submit with 21 CFR PIN / Account Password signature validation
 export function openSignatureModal(actionType = "epro") {
+  const normalizedAction = actionType === "consent" ? "consent" : "epro";
+  if (normalizedAction === "epro" && state.pendingReconsent) {
+    const formErr =
+      typeof document !== "undefined"
+        ? document.getElementById("questionnaire-form-error")
+        : null;
+    if (formErr) {
+      formErr.setAttribute("role", "alert");
+      formErr.setAttribute("aria-live", "assertive");
+      formErr.textContent = RECONSENT_EPRO_GATE_MESSAGE;
+      formErr.style.display = "block";
+    }
+    showToast(RECONSENT_EPRO_GATE_MESSAGE, { variant: "error" });
+    return;
+  }
   if (
     state.currentView === "view-questionnaire" &&
-    actionType !== "consent" &&
+    normalizedAction !== "consent" &&
     (!state.activeQuestionnaire?.assignment ||
       !state.activeQuestionnaire?.instrument)
   ) {
@@ -80,7 +109,13 @@ export function openSignatureModal(actionType = "epro") {
     showView("view-tasks");
     return;
   }
-  state.pendingSignableAction = actionType;
+  if (normalizedAction === "consent" && isConsentLivenessExpired()) {
+    expireConsentLiveness();
+    showToast(LIVENESS_EXPIRED_MESSAGE, { variant: "error" });
+    return;
+  }
+
+  state.pendingSignableAction = normalizedAction;
   if (typeof document !== "undefined") {
     state.previouslyFocusedElement = document.activeElement;
   }
@@ -96,7 +131,7 @@ export function openSignatureModal(actionType = "epro") {
     errorBanner.setAttribute("aria-live", "polite");
   }
 
-  if (actionType === "consent") {
+  if (normalizedAction === "consent") {
     if (modalHeader)
       modalHeader.textContent = "eConsent Electronic Signature Required";
     reasonSelect.innerHTML = `
@@ -268,9 +303,37 @@ export async function verifyAndSubmitSignature() {
   // Clear the actual DOM element for credential hygiene
   passwordInput.value = "";
 
-  const actionType = state.pendingSignableAction;
+  const actionType =
+    state.pendingSignableAction === "consent" ? "consent" : "epro";
+
+  // Enforce signer username match against active session identity
+  const expectedUserId = String(state.session.userId || "").trim();
+  if (
+    (isAuthenticatedSession() && !expectedUserId) ||
+    (expectedUserId &&
+      cleanUsername.toLowerCase() !== expectedUserId.toLowerCase())
+  ) {
+    displayModalOrToastError(
+      errorBanner,
+      "Signature Verification Rejected: Participant ID must match the signed-in participant account."
+    );
+    if (usernameInput && typeof usernameInput.focus === "function") {
+      usernameInput.focus();
+    }
+    return;
+  }
 
   if (actionType === "consent") {
+    // Re-check 15-minute biometric liveness freshness before any network submission
+    if (isConsentLivenessExpired()) {
+      expireConsentLiveness();
+      displayModalOrToastError(
+        errorBanner,
+        `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`
+      );
+      return;
+    }
+
     // eConsent GxP/Part 11 Step-up signature flow
     const tpl = state.consentContent;
     const templateId = tpl?.template_id || "template-icf";
@@ -278,6 +341,15 @@ export async function verifyAndSubmitSignature() {
     const captureActionPath = `/api/v1/econsent/templates/${encodeURIComponent(templateId)}/versions/${versionIndex}/capture-consent`;
 
     if (isAuthenticatedSession()) {
+      if (!state.consentLivenessToken) {
+        expireConsentLiveness();
+        displayModalOrToastError(
+          errorBanner,
+          `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`
+        );
+        return;
+      }
+
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
         const verificationBody = buildStepUpVerificationPayload({
@@ -299,6 +371,16 @@ export async function verifyAndSubmitSignature() {
           throw new Error(
             "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
           );
+        }
+
+        // Re-check liveness freshness immediately before posting to capture-consent
+        if (isConsentLivenessExpired() || !state.consentLivenessToken) {
+          expireConsentLiveness();
+          displayModalOrToastError(
+            errorBanner,
+            `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`
+          );
+          return;
         }
 
         const subjectPseudonym = state.session.userId || cleanUsername;
@@ -415,6 +497,107 @@ export async function verifyAndSubmitSignature() {
     }
   } else {
     // Default ePRO questionnaire submission
+    if (state.pendingReconsent) {
+      displayModalOrToastError(errorBanner, RECONSENT_EPRO_GATE_MESSAGE);
+      return;
+    }
+
+    // Verify online OIDC Account Password or offline local Security PIN before accepting signature
+    if (isAuthenticatedSession()) {
+      try {
+        const eproActionPath = "/api/v1/interop/epro/submit";
+        const verificationBody = buildStepUpVerificationPayload({
+          username: cleanUsername,
+          password: cleanPassword,
+          action: eproActionPath,
+          semanticAction: SEMANTIC_ACTIONS.COLLECTION_SIGN,
+        });
+        const tokenResponse = await dispatchApi(
+          "api/v1/auth/signature-verification",
+          {
+            method: "POST",
+            body: JSON.stringify(verificationBody),
+          }
+        );
+        const sigToken = tokenResponse?.sig_token;
+        if (!sigToken || typeof sigToken !== "string") {
+          throw new Error(
+            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
+          );
+        }
+      } catch (err) {
+        displayModalOrToastError(
+          errorBanner,
+          `Signature Verification Rejected: ${err.message}`
+        );
+        if (passwordInput && typeof passwordInput.focus === "function") {
+          passwordInput.focus();
+        }
+        return;
+      }
+    } else {
+      const wrappedConfig = await getWrappedMasterKeyConfig(
+        state.session.userId
+      );
+      if (wrappedConfig && wrappedConfig.wrappedKey && wrappedConfig.salt) {
+        if (!/^\d+$/.test(cleanPassword)) {
+          displayModalOrToastError(
+            errorBanner,
+            "Signature Verification Rejected: Please enter your numeric Security PIN."
+          );
+          if (passwordInput && typeof passwordInput.focus === "function") {
+            passwordInput.focus();
+          }
+          return;
+        }
+        try {
+          const kwk = await deriveKeyFromPIN(cleanPassword, wrappedConfig.salt);
+          let decrypted;
+          try {
+            decrypted = await decryptAESGCM(wrappedConfig.wrappedKey, kwk);
+          } finally {
+            if (kwk instanceof Uint8Array) {
+              kwk.fill(0);
+            }
+          }
+          if (!getInMemorySessionKey() && decrypted?.masterKey) {
+            const rawMasterKey = new Uint8Array(decrypted.masterKey);
+            if (Array.isArray(decrypted.masterKey)) {
+              decrypted.masterKey.fill(0);
+            }
+            const cryptoKey = await createNonExtractableCryptoKey(rawMasterKey);
+            if (
+              rawMasterKey instanceof Uint8Array &&
+              cryptoKey !== rawMasterKey
+            ) {
+              rawMasterKey.fill(0);
+            }
+            setInMemorySessionKey(cryptoKey);
+          } else if (Array.isArray(decrypted?.masterKey)) {
+            decrypted.masterKey.fill(0);
+          }
+        } catch {
+          displayModalOrToastError(
+            errorBanner,
+            "Signature Verification Rejected: Incorrect Security PIN."
+          );
+          if (passwordInput && typeof passwordInput.focus === "function") {
+            passwordInput.focus();
+          }
+          return;
+        }
+      } else if (!allowUnbackedAction("Offline ePRO diary signature")) {
+        displayModalOrToastError(
+          errorBanner,
+          "Signature Verification Rejected: Security PIN is not configured on this device. Please sign in online or configure your Security PIN."
+        );
+        if (passwordInput && typeof passwordInput.focus === "function") {
+          passwordInput.focus();
+        }
+        return;
+      }
+    }
+
     closeSignatureModal();
 
     const active = state.activeQuestionnaire;
@@ -433,7 +616,7 @@ export async function verifyAndSubmitSignature() {
     let queuedItem;
     try {
       queuedItem = await queueSubmission({
-        subject_id: state.session.userId,
+        subject_id: state.session.userId || cleanUsername,
         diary_id: active.instrument.id,
         assignment_id: active.assignment.id,
         answers: rawAnswers,
@@ -502,6 +685,8 @@ export async function verifyAndSubmitSignature() {
     showView("view-tasks");
 
     // Attempt sync immediately (promotes to COMPLETED only when server confirms)
-    await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+    await syncOfflineQueue(false, {
+      autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+    });
   }
 }

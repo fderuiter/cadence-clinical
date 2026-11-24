@@ -1,4 +1,10 @@
 import { defineStore } from "pinia";
+import {
+  buildDataCollectionPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
+  resolveSiteReadinessPath,
+} from "../canvas/palette";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
 import { isScreenAvailable } from "../router/availability";
 import {
@@ -73,48 +79,81 @@ function normalizeTaskRouteName(task) {
   return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles) {
+export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
 
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  const explicitSiteId =
+    scope?.explicitSiteId !== undefined ? scope.explicitSiteId.trim() : siteId;
+  const subjectCode = scope?.subjectCode?.trim() || "";
+  const participantRef = scope?.participantRef?.trim() || "";
+  const enrollmentId = scope?.enrollmentId?.trim() || "";
+
   if (routeName === "study") {
-    return isScreenAvailable("study") ? "/studies" : null;
+    return isScreenAvailable("study")
+      ? buildStudiesWorkspacePath({
+          studyCode,
+          siteId,
+          subjectCode,
+          participantRef,
+        })
+      : null;
   }
   if (routeName === "overview") {
-    return isScreenAvailable("overview") ? "/overview" : null;
+    return isScreenAvailable("overview")
+      ? buildScopedWorkflowPath("/overview", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
+      : null;
   }
   if (routeName === "ecrf") {
     if (isDemoBuild()) {
       return isScreenAvailable("ecrf") &&
         hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-        ? "/ecrf"
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
-    return isScreenAvailable("study") &&
-      hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/studies"
-      : null;
+    if (
+      !isScreenAvailable("study") ||
+      !hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+    ) {
+      return null;
+    }
+    return studyCode || explicitSiteId || participantRef || subjectCode
+      ? buildDataCollectionPath({
+          studyCode,
+          siteId: explicitSiteId,
+          participantRef,
+          subjectCode,
+          enrollmentId,
+        })
+      : "/studies";
   }
   if (routeName === "site-readiness") {
-    if (
-      isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-    ) {
-      return "/ctms";
-    }
-    if (
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
-    ) {
-      return "/ssu";
-    }
-    return null;
+    return resolveSiteReadinessPath(userRoles, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   if (routeName === "ctms") {
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-      ? "/ctms"
+      ? buildScopedWorkflowPath("/ctms", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "ssu") {
@@ -123,7 +162,11 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
         ...SITE_READINESS_SPONSOR_ROLES,
         ...SITE_READINESS_SITE_ROLES,
       ])
-      ? "/ssu"
+      ? buildScopedWorkflowPath("/ssu", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   return null;
@@ -322,7 +365,11 @@ function readStorageForPersona(personaKey) {
   let bypassOverview = false;
   let completedTasks = [];
   let events = [];
-  let tasks = JSON.parse(JSON.stringify(DEFAULT_SETUP_TASKS));
+  /** @type {typeof DEFAULT_SETUP_TASKS} */
+  let tasks = DEFAULT_SETUP_TASKS.map((t) => ({
+    ...t,
+    keywords: [...t.keywords],
+  }));
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -440,7 +487,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Workspace",
       description:
         "Open any study by code to navigate its lifecycle across Design, Start, Conduct, Data, Analyze, and Submit.",
@@ -493,7 +540,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Data Collection & Validation",
       description:
         "Verify range checks, required clinical observations, and discrepancy query transitions in real time.",
@@ -503,7 +550,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Conduct & Data Stages",
       description:
         "Open a study workspace to inspect participant counts, review proposals, and trace study activity.",
@@ -546,7 +593,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ctms",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness & Activation",
       description:
         "Track site activation requirements, operational readiness, and site startup progress.",
@@ -556,7 +603,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Source Data Verification",
       description:
         "Navigate to participant case report forms to verify clinical observations and manage queries.",
@@ -566,7 +613,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Lifecycle Overview",
       description:
         "Open a study workspace to inspect participant state counts, site progress, and open proposals.",
@@ -599,7 +646,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Study Activity & Provenance",
       description:
         "Open a study by code to review its activity stream, protocol version history, and proposal decisions.",
@@ -652,7 +699,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "ecrf",
-      targetSelector: ".subject-selector-card",
+      targetSelector: "#ecrf-participant-bar, .subject-enrollment-card",
       title: "Participant Selection & Visits",
       description:
         "Select study participants, review visit progress, and enroll new subjects for your site.",
@@ -662,7 +709,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: ".ecrf-form-renderer",
+      targetSelector: ".crc-form-renderer, #ecrf-form-instance",
       title: "Case Report Form Entry",
       description:
         "Enter vital signs and clinical observations with real-time validation checks and query flags.",
@@ -672,7 +719,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "ssu",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness",
       description:
         "Check site activation tasks and operational readiness status for your clinical site.",
@@ -682,7 +729,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Tour Complete!",
       description:
         "Your site coordinator orientation is complete. Move seamlessly across Studies, Data collection, and Site readiness.",
@@ -705,7 +752,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 2,
       routeName: "study",
-      targetSelector: "#nav-studies",
+      targetSelector: "#nav-studies, #btn-mobile-menu-toggle",
       title: "Studies & Lifecycle",
       description:
         "Open any study by code to follow its lifecycle from Design through Submit in three panes.",
@@ -715,7 +762,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 3,
       routeName: "ecrf",
-      targetSelector: "#nav-data-collection",
+      targetSelector: "#nav-data-collection, #btn-mobile-menu-toggle",
       title: "Data Collection",
       description:
         "Review clinical case report forms, field validations, and discrepancy management.",
@@ -725,7 +772,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "ctms",
-      targetSelector: "#nav-site-readiness",
+      targetSelector: "#nav-site-readiness, #btn-mobile-menu-toggle",
       title: "Site Readiness",
       description:
         "Monitor site activation checklists, startup progress, and site operational status.",
@@ -874,12 +921,15 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
-      return (state.tasks || [])
-        .map((task) => {
-          const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
-          return resolvedRoute ? { ...task, route: resolvedRoute } : null;
-        })
-        .filter(Boolean);
+      /** @type {typeof DEFAULT_SETUP_TASKS} */
+      const visible = [];
+      for (const task of state.tasks || []) {
+        const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+        if (resolvedRoute) {
+          visible.push({ ...task, route: resolvedRoute });
+        }
+      }
+      return visible;
     },
     completedTasksCount() {
       return this.visibleTasks.filter((t) => t.completed).length;

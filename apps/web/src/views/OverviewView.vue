@@ -252,25 +252,47 @@
 
 <script setup>
 import { computed, onMounted } from "vue";
+import { getActivePinia } from "pinia";
 import { ClinicalIcon } from "ui";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
   buildDataCollectionPath,
-  buildStudyScopedPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
   resolveSiteReadinessPath,
+  resolveWorkspaceNavigationScope,
 } from "../canvas/palette";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
+let activeRoute = null;
+try {
+  activeRoute = useRoute();
+} catch {
+  activeRoute = null;
+}
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
 const { activeStudyCode } = useActiveStudyScope();
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 onMounted(() => {
   if (
@@ -310,10 +332,23 @@ const effectiveRoles = computed(() => {
 
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
-  const studyCode = activeStudyCode.value;
+  const scope = workspaceScope.value;
+  const studyCode = scope.studyCode || activeStudyCode.value;
+  const siteId = scope.siteId;
+  const explicitSiteId =
+    scope.explicitSiteId !== undefined ? scope.explicitSiteId : siteId;
+  const subjectCode = scope.subjectCode;
+  const participantRef = scope.participantRef;
+  const enrollmentId = scope.enrollmentId;
+
   if (routeSpec === "study" || routeSpec === "/studies") {
     if (!isScreenAvailable("study")) return null;
-    return studyCode ? `/studies/${encodeURIComponent(studyCode)}` : "/studies";
+    return buildStudiesWorkspacePath({
+      studyCode,
+      siteId,
+      subjectCode,
+      participantRef,
+    });
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
     if (isDemoBuild()) {
@@ -326,7 +361,12 @@ function resolveAuthorizedRoute(routeSpec) {
           "cra",
           "monitor",
         ])
-        ? "/ecrf"
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
     return isScreenAvailable("study") &&
@@ -338,13 +378,23 @@ function resolveAuthorizedRoute(routeSpec) {
         "cra",
         "monitor",
       ])
-      ? studyCode
-        ? buildDataCollectionPath({ studyCode })
+      ? studyCode || explicitSiteId || participantRef || subjectCode
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            participantRef,
+            subjectCode,
+            enrollmentId,
+          })
         : "/studies"
       : null;
   }
   if (routeSpec === "site-readiness") {
-    return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
+    return resolveSiteReadinessPath(effectiveRoles.value, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   if (routeSpec === "ctms" || routeSpec === "/ctms") {
     return isScreenAvailable("ctms") &&
@@ -354,7 +404,7 @@ function resolveAuthorizedRoute(routeSpec) {
         "data_manager",
         "sponsor_admin",
       ])
-      ? buildStudyScopedPath("/ctms", studyCode)
+      ? buildScopedWorkflowPath("/ctms", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "ssu" || routeSpec === "/ssu") {
@@ -367,7 +417,7 @@ function resolveAuthorizedRoute(routeSpec) {
         "site_investigator",
         "crc",
       ])
-      ? buildStudyScopedPath("/ssu", studyCode)
+      ? buildScopedWorkflowPath("/ssu", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "etmf" || routeSpec === "/etmf") {
@@ -382,12 +432,12 @@ function resolveAuthorizedRoute(routeSpec) {
         "tmf_auditor",
         "sponsor_admin",
       ])
-      ? buildStudyScopedPath("/etmf", studyCode)
+      ? buildScopedWorkflowPath("/etmf", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "training" || routeSpec === "/training") {
     return isScreenAvailable("training")
-      ? buildStudyScopedPath("/training", studyCode)
+      ? buildScopedWorkflowPath("/training", { studyCode, siteId, subjectCode })
       : null;
   }
   return null;
@@ -423,7 +473,7 @@ const PERSONA_DETAILS = {
       "Manage participant enrollment, record clinical visit observations, and track site operational readiness.",
   },
   site_investigator: {
-    icon: "PI",
+    icon: "building-2",
     title: "Principal Investigator Workspace",
     roleName: "Principal Investigator (PI)",
     description:
@@ -437,7 +487,7 @@ const PERSONA_DETAILS = {
       "Perform source data verification, track site activation readiness, and monitor study conduct.",
   },
   safety_officer: {
-    icon: "PV",
+    icon: "shield-check",
     title: "Pharmacovigilance & Safety Review Workspace",
     roleName: "Safety Officer / QPPV",
     description:

@@ -19,18 +19,117 @@ import {
   clearSessionKeyFromDB,
   closeDatabase,
   getActiveUserId,
+  getAllSubmissions,
+  getDraftAssignmentIds,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
+  hasTrackedLocalQueueActivity,
   initSessionKey,
   setActiveUserId,
+  setTrackedLocalQueueActivity,
 } from "../sync-queue.js";
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
+import { showToast } from "../widgets/toast.js";
 import { renderCompliance } from "./compliance.js";
 import { renderInbox } from "./inbox.js";
 import { checkPINWrapper, clearPendingResetMasterKey } from "./pin.js";
+import {
+  flushActiveQuestionnaireDraft,
+  hasUnsavedQuestionnaireDrafts,
+} from "./questionnaire.js";
 import { showView } from "./navigation.js";
 import { checkOnline, renderSyncQueueList } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
+
+let lastInspectedSignOutState = {
+  draftCount: 0,
+  unsyncedCount: 0,
+};
+
+export function isUnsyncedOrLockedSubmission(sub) {
+  if (!sub || sub.unrecoverable) {
+    return false;
+  }
+  return (
+    sub.status === "QUEUED" ||
+    sub.status === "DECRYPTION_ERROR" ||
+    Boolean(sub.locked)
+  );
+}
+
+export async function prepareSignOutGuardState() {
+  lastInspectedSignOutState = { draftCount: 0, unsyncedCount: 0 };
+  try {
+    await flushActiveQuestionnaireDraft();
+  } catch (err) {
+    console.warn("Could not flush active draft before sign-out check:", err);
+  }
+  try {
+    const draftIds = await getDraftAssignmentIds(state.session.userId);
+    lastInspectedSignOutState.draftCount = Array.isArray(draftIds)
+      ? draftIds.length
+      : 0;
+  } catch {
+    lastInspectedSignOutState.draftCount = 0;
+  }
+  try {
+    const allSubs = await getAllSubmissions();
+    if (Array.isArray(allSubs)) {
+      state.submissions = allSubs;
+      lastInspectedSignOutState.unsyncedCount = allSubs.filter(
+        isUnsyncedOrLockedSubmission
+      ).length;
+    }
+  } catch {
+    lastInspectedSignOutState.unsyncedCount = 0;
+  }
+  const hasPersistedPending =
+    lastInspectedSignOutState.draftCount > 0 ||
+    lastInspectedSignOutState.unsyncedCount > 0;
+  setTrackedLocalQueueActivity(hasPersistedPending);
+  if (!hasUnsavedQuestionnaireDrafts() && Array.isArray(state.assignments)) {
+    if (lastInspectedSignOutState.draftCount === 0) {
+      state.assignments.forEach((a) => {
+        if (a && a.has_draft) a.has_draft = false;
+      });
+    }
+    if (lastInspectedSignOutState.unsyncedCount === 0) {
+      state.assignments.forEach((a) => {
+        if (a && a.status === "PENDING_SYNC") a.status = "PENDING";
+      });
+    }
+  }
+}
+
+export function hasUnsavedOrUnsyncedLocalData() {
+  if (hasUnsavedQuestionnaireDrafts()) {
+    return true;
+  }
+  if (hasTrackedLocalQueueActivity()) {
+    return true;
+  }
+  if (
+    lastInspectedSignOutState.draftCount > 0 ||
+    lastInspectedSignOutState.unsyncedCount > 0
+  ) {
+    return true;
+  }
+  if (
+    Array.isArray(state.assignments) &&
+    state.assignments.some(
+      (a) => Boolean(a?.has_draft) || a?.status === "PENDING_SYNC"
+    )
+  ) {
+    return true;
+  }
+  if (
+    Array.isArray(state.submissions) &&
+    state.submissions.some(isUnsyncedOrLockedSubmission)
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function transitionParticipantScope(nextUserId) {
   const normalizedNext = nextUserId || null;
@@ -42,6 +141,20 @@ function transitionParticipantScope(nextUserId) {
     void renderSyncQueueList([]);
   }
   setActiveUserId(normalizedNext);
+}
+
+async function ensureEphemeralDemoSessionKey() {
+  if (isDemoModeActive() && !getInMemorySessionKey()) {
+    const config = await getWrappedMasterKeyConfig();
+    if (!config.wrappedKey) {
+      const demoMaterial = state.session.userId || "demo-material";
+      try {
+        await initSessionKey(demoMaterial, state.session.userId);
+      } catch (err) {
+        console.warn("Failed to initialize ephemeral demo session key:", err);
+      }
+    }
+  }
 }
 
 function getPortalCurrentReturnUrl() {
@@ -263,17 +376,7 @@ export async function restoreSession() {
   await clearSessionKeyFromDB(state.session.userId);
 
   // Only explicit demo sessions with no PIN wrapper initialize an ephemeral in-memory demo key.
-  if (isDemoModeActive() && !getInMemorySessionKey()) {
-    const config = await getWrappedMasterKeyConfig();
-    if (!config.wrappedKey) {
-      const demoMaterial = state.session.userId || "demo-material";
-      try {
-        await initSessionKey(demoMaterial, state.session.userId);
-      } catch (err) {
-        console.warn("Failed to initialize ephemeral demo session key:", err);
-      }
-    }
-  }
+  await ensureEphemeralDemoSessionKey();
 }
 
 // Signs in through injected storage credentials or Keycloak (check-sso).
@@ -304,6 +407,7 @@ export async function signIn() {
       hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
       transitionParticipantScope(storageUser);
+      await ensureEphemeralDemoSessionKey();
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
@@ -321,6 +425,7 @@ export async function signIn() {
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
       transitionParticipantScope(state.session.userId);
+      await ensureEphemeralDemoSessionKey();
       return;
     } else {
       try {
@@ -464,6 +569,7 @@ export async function login(options = {}) {
       hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
       transitionParticipantScope(resolvedUser);
+      await ensureEphemeralDemoSessionKey();
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
@@ -482,6 +588,7 @@ export async function login(options = {}) {
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
       transitionParticipantScope(demoUserId);
+      await ensureEphemeralDemoSessionKey();
       return;
     } else {
       let keycloak =
@@ -564,7 +671,25 @@ export function watchUserIdentity() {
 }
 
 // User logout clears cached OIDC identity, active in-memory PIN key, and session state.
-export async function logout() {
+export async function logout(options = {}) {
+  const confirmed = Boolean(options?.confirmed || options?.force);
+  if (!confirmed && hasUnsavedOrUnsyncedLocalData()) {
+    if (!hasUnsavedQuestionnaireDrafts() && typeof indexedDB !== "undefined") {
+      await prepareSignOutGuardState();
+    }
+    if (hasUnsavedOrUnsyncedLocalData()) {
+      state.signOutGuardOpen = true;
+      showToast(
+        "You have unsaved survey drafts or unsent submissions on this device. Please confirm sign-out to continue.",
+        { variant: "error" }
+      );
+      return { signedOut: false, guarded: true };
+    }
+  }
+
+  lastInspectedSignOutState = { draftCount: 0, unsyncedCount: 0 };
+  setTrackedLocalQueueActivity(false);
+  state.signOutGuardOpen = false;
   portalSessionCoordinator.beginVoluntaryLogout();
   const wasDemo = Boolean(state.session.isDemoMode);
   state.authError = "";
@@ -607,6 +732,7 @@ export async function logout() {
   state.pinUnlock.requiresReauth = false;
 
   state.activeQuestionnaire = null;
+  state.draftPresence = {};
   state.walletBalance = null;
 
   if (wasDemo) {

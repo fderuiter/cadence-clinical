@@ -9,12 +9,17 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
+using Cadence.Core.Domain.Audit;
+using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
@@ -381,6 +386,186 @@ public sealed class RandomizationPostgresTests(ExecutionPostgresApiFactory facto
         response2.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         string body = await response2.Content.ReadAsStringAsync(Ct);
         body.Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+    }
+
+    [Fact]
+    public async Task ApproveScheme_RetiresActiveVersionStagesMultiBatchSlotsAndPreservesAuditChain()
+    {
+        factory.SkipIfUnavailable();
+        var authorCaller = Caller("stat-a", "unblinded_statistician");
+        var approverCaller = Caller("stat-b", "unblinded_statistician");
+        using var author = factory.CreateSignedClient(authorCaller);
+        using var approver = factory.CreateSignedClient(approverCaller);
+
+        var draftV1 = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", DefaultScheme(), Ct);
+        draftV1.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var v1Json = JsonDocument.Parse(await draftV1.Content.ReadAsStringAsync(Ct));
+        string v1Id = v1Json.RootElement.GetProperty("id").GetString()!;
+        (await PostApproveSchemeAsync(approver, approverCaller, v1Id)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 2,500 slots crosses UnnestBatchSize (2,048), exercising both full and tail unnest batches on PostgreSQL 18.
+        var draftV2 = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", new
+        {
+            study_id = Study,
+            method = "permuted_block",
+            arms = new Dictionary<string, int> { [ArmA] = 1, [ArmB] = 1 },
+            block_sizes = new[] { 2, 4 },
+            slots_per_stratum = 2_500,
+            requires_kit = false,
+        }, Ct);
+        draftV2.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var v2Json = JsonDocument.Parse(await draftV2.Content.ReadAsStringAsync(Ct));
+        string v2Id = v2Json.RootElement.GetProperty("id").GetString()!;
+
+        using var approvedV2 = await PostApproveSchemeAsync(approver, approverCaller, v2Id);
+        approvedV2.StatusCode.Should().Be(HttpStatusCode.OK, await approvedV2.Content.ReadAsStringAsync(Ct));
+
+        await using var db = await OpenAsync();
+        (await CountAsync(db, "SELECT count(*) FROM randomization_list_slots WHERE \"SchemeId\" = @p1::uuid", Study, v2Id))
+            .Should().Be(2_500);
+
+        using var scope = factory.Services.CreateSeedingScope();
+        var efDb = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+        var schemes = await efDb.RandomizationSchemes.AsNoTracking()
+            .Where(s => s.StudyCode == new StudyCode(Study))
+            .OrderBy(s => s.Version)
+            .ToListAsync(Ct);
+        schemes.Should().HaveCount(2);
+        schemes[0].Status.Should().Be(RandomizationSchemeStatus.Retired);
+        schemes[1].Status.Should().Be(RandomizationSchemeStatus.Approved);
+
+        var schemeIds = schemes.Select(s => s.Id.ToString()).ToHashSet(StringComparer.Ordinal);
+        var auditEntries = await efDb.AuditLogEntries.AsNoTracking()
+            .Where(e => e.EntityName == nameof(RandomizationScheme))
+            .ToListAsync(Ct);
+        auditEntries.Where(e => schemeIds.Contains(e.EntityId)).Select(e => e.Action)
+            .Should().Contain(["DRAFT_RANDOMIZATION_SCHEME", "RETIRE_RANDOMIZATION_SCHEME", "APPROVE_RANDOMIZATION_SCHEME"]);
+        AuditLogChainVerifier.Verify(auditEntries).Should().ContainSingle().Which.Valid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ApproveScheme_ConcurrentRequestsByTwoStatisticians_SerializesSoExactlyOneWinsAndOneReturns409()
+    {
+        factory.SkipIfUnavailable();
+        var authorCaller = Caller("stat-a", "unblinded_statistician");
+        var approverB = Caller("stat-b", "unblinded_statistician");
+        var approverC = Caller("stat-c", "unblinded_statistician");
+        using var author = factory.CreateSignedClient(authorCaller);
+        using var clientB = factory.CreateSignedClient(approverB);
+        using var clientC = factory.CreateSignedClient(approverC);
+
+        var drafted = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", new
+        {
+            study_id = Study,
+            method = "permuted_block",
+            arms = new Dictionary<string, int> { [ArmA] = 1, [ArmB] = 1 },
+            slots_per_stratum = 256,
+            requires_kit = false,
+        }, Ct);
+        drafted.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var json = JsonDocument.Parse(await drafted.Content.ReadAsStringAsync(Ct));
+        string schemeId = json.RootElement.GetProperty("id").GetString()!;
+
+        using var barrier = new SemaphoreSlim(0, 2);
+        async Task<HttpResponseMessage> AttemptApproveAsync(HttpClient client, GatewayIdentity caller)
+        {
+            await barrier.WaitAsync(Ct);
+            return await PostApproveSchemeAsync(client, caller, schemeId);
+        }
+
+        var taskB = AttemptApproveAsync(clientB, approverB);
+        var taskC = AttemptApproveAsync(clientC, approverC);
+        barrier.Release(2);
+
+        HttpResponseMessage[] responses = await Task.WhenAll(taskB, taskC);
+        try
+        {
+            responses.Select(r => r.StatusCode).Should().BeEquivalentTo([HttpStatusCode.OK, HttpStatusCode.Conflict]);
+            HttpResponseMessage conflict = responses.Single(r => r.StatusCode == HttpStatusCode.Conflict);
+            (await conflict.Content.ReadAsStringAsync(Ct)).Should().Contain("RANDOMIZATION_SCHEME_NOT_DRAFT");
+        }
+        finally
+        {
+            foreach (var r in responses)
+            {
+                r.Dispose();
+            }
+        }
+
+        await using var db = await OpenAsync();
+        (await CountAsync(db, "SELECT count(*) FROM randomization_list_slots WHERE \"SchemeId\" = @p1::uuid", Study, schemeId))
+            .Should().Be(256, "the losing concurrent approval must abort before inserting duplicate slots");
+    }
+
+    [Fact]
+    public async Task ApproveScheme_FailureAfterStagingSlots_RollsBackSlotsAndLeavesDraftUnchanged()
+    {
+        factory.SkipIfUnavailable();
+        var authorCaller = Caller("stat-a", "unblinded_statistician");
+        using var author = factory.CreateSignedClient(authorCaller);
+        var drafted = await author.PostAsJsonAsync("/api/v1/execution/randomization/schemes", new
+        {
+            study_id = Study,
+            method = "permuted_block",
+            arms = new Dictionary<string, int> { [ArmA] = 1, [ArmB] = 1 },
+            slots_per_stratum = 64,
+            requires_kit = false,
+        }, Ct);
+        drafted.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var json = JsonDocument.Parse(await drafted.Content.ReadAsStringAsync(Ct));
+        Guid schemeId = Guid.Parse(json.RootElement.GetProperty("id").GetString()!);
+
+        using (var scope = factory.Services.CreateSeedingScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+            var protector = scope.ServiceProvider.GetRequiredService<IAllocationProtector>();
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var service = new RandomizationApplicationService(
+                new RandomizationRepository(db),
+                new SubjectRepository(db),
+                new ConsentRepository(db),
+                new SiteComplianceRepository(db),
+                protector,
+                new ThrowingApproveAuditLogWriter(),
+                new FixedApproveAuditContext($"stat-b-{_run}", Reason),
+                clock);
+
+            var act = () => service.ApproveSchemeAsync(schemeId, Reason, Ct);
+            await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Simulated post-staging failure*");
+        }
+
+        await using var rawDb = await OpenAsync();
+        (await CountAsync(rawDb, "SELECT count(*) FROM randomization_list_slots WHERE \"SchemeId\" = @p1::uuid", Study, schemeId.ToString("D")))
+            .Should().Be(0, "untracked slots staged inside the rolled-back transaction must never persist");
+
+        using var verifyScope = factory.Services.CreateSeedingScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+        var scheme = await verifyDb.RandomizationSchemes.AsNoTracking().SingleAsync(s => s.Id == schemeId, Ct);
+        scheme.Status.Should().Be(RandomizationSchemeStatus.Draft);
+        scheme.ApprovedBy.Should().BeNull();
+    }
+
+    private sealed record FixedApproveAuditContext(string UserId, string ChangeReason) : ICurrentAuditContextAccessor;
+
+    private sealed class ThrowingApproveAuditLogWriter : IAuditLogWriter
+    {
+        public Task WriteAsync(
+            string entityName,
+            string recordId,
+            string action,
+            string userId,
+            string changeReason,
+            IReadOnlyDictionary<string, object?>? oldValues,
+            IReadOnlyDictionary<string, object?>? newValues,
+            CancellationToken ct)
+        {
+            if (action == "APPROVE_RANDOMIZATION_SCHEME")
+            {
+                throw new InvalidOperationException("Simulated post-staging failure after AddListSlotsAsync.");
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

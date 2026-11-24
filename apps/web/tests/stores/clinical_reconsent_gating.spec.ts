@@ -48,9 +48,9 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
       global: { plugins: [pinia] },
     });
 
-    const amendmentSubjectIds = amendmentWrapper.vm.subjectsList.map(
-      (s: any) => s.id
-    );
+    const amendmentSubjectIds = (
+      amendmentWrapper.vm as Record<string, any>
+    ).subjectsList.map((s: any) => s.id);
     const ecrfSubjectIds = ecrfWrapper
       .findAll("#ecrf-subject-selector option")
       .map((option) => option.attributes("value"));
@@ -70,7 +70,8 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     await ecrfWrapper.find("#ecrf-subject-selector").setValue(gatedSubjectId);
     await ecrfWrapper.vm.$nextTick();
 
-    expect(ecrfWrapper.vm.isReconsentGated).toBe(true);
+    const ecrfVm = ecrfWrapper.vm as Record<string, any>;
+    expect(ecrfVm.isReconsentGated).toBe(true);
     expect(ecrfWrapper.find("#reconsent-gating-banner").exists()).toBe(true);
     expect(ecrfWrapper.find("fieldset").attributes("disabled")).toBe("");
 
@@ -83,7 +84,7 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     await ecrfWrapper.vm.$nextTick();
 
     expect(clinicalStore.isSubjectGated(gatedSubjectId)).toBe(false);
-    expect(ecrfWrapper.vm.isReconsentGated).toBe(false);
+    expect(ecrfVm.isReconsentGated).toBe(false);
     expect(ecrfWrapper.find("#reconsent-gating-banner").exists()).toBe(false);
     expect(ecrfWrapper.find("fieldset").attributes("disabled")).toBeUndefined();
   });
@@ -105,14 +106,15 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     await ecrfWrapper.find("#ecrf-subject-selector").setValue(gatedSubjectId);
     await ecrfWrapper.vm.$nextTick();
 
-    expect(ecrfWrapper.vm.isReconsentGated).toBe(true);
+    const ecrfVm = ecrfWrapper.vm as Record<string, any>;
+    expect(ecrfVm.isReconsentGated).toBe(true);
 
     // Call re-consent completion directly on eCRF component view
-    await ecrfWrapper.vm.handleCompleteReconsent("PAPER_UPLOAD");
+    await ecrfVm.handleCompleteReconsent("PAPER_UPLOAD");
     await ecrfWrapper.vm.$nextTick();
 
     expect(clinicalStore.isSubjectGated(gatedSubjectId)).toBe(false);
-    expect(ecrfWrapper.vm.isReconsentGated).toBe(false);
+    expect(ecrfVm.isReconsentGated).toBe(false);
     expect(ecrfWrapper.find("#reconsent-gating-banner").exists()).toBe(false);
   });
 

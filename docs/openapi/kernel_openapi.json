@@ -7297,11 +7297,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelDefineWorkQueueRequest"
+                  }
+                ]
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -8153,6 +8159,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13217,6 +13227,10 @@
           },
           "reason_for_change": {
             "type": "string"
+          },
+          "masked": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
