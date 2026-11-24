@@ -1,4 +1,4 @@
-# ADR-2658: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement
+# ADR-2661: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -46,7 +46,7 @@ Following the extraction of `buildStepUpVerificationPayload` and `SEMANTIC_ACTIO
 
 ## 5. Consequences & Trade-offs
 
-- **Positive Impact:** Clinician and participant step-up flows share one payload builder, semantic-action resolver, endpoint constant, and `sig_token` validator; `SignatureCaptureModal.vue` and `ProtocolTrainingConsole.vue` avoid unrelated domain client imports; all web gateway wrappers throw a single `ApiError` class and retry expired bearer tokens once via `fetchWithSingleFlightRetry`; and `cadence check duplication` enforces hand-written `.ts` files alongside `.cs` and `.js`.
+- **Positive Impact:** Clinician and participant step-up flows share one payload builder, semantic-action resolver, endpoint constant, and `sig_token` validator; `SignatureCaptureModal.vue` and `ProtocolTrainingConsole.vue` avoid unrelated domain client imports; all web gateway wrappers throw a single `ApiError` class and retry expired bearer tokens once via `fetchWithSingleFlightRetry`; and `cadence check duplication` enforces hand-written `.ts` files alongside `.cs`, `.js`, `.vue`, and `.css`.
 - **Negative Impact / Technical Debt:** Legacy screens that still call `apps/web/src/api/apiClient.js` remain on that wrapper until their domain endpoints migrate to generated OpenAPI slices ([docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)).
 - **Mitigation Strategy:** Guarded by unit tests in `packages/ui`, `apps/subject-portal`, `apps/web` (including cold-boot bundle and chunk-split specs), `DomainEngineUnitTests`, and `cadence check duplication`.
 

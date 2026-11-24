@@ -17,14 +17,6 @@ public static class DuplicationDetectorService
         "node_modules", "tests", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "coverage", "Migrations", "migrations", ".git", "mockServiceWorker.js"
     ];
 
-    // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244),
-    // and clinician/participant stylesheets standardize identical :root semantic token aliases by design (ADR-2635).
-    private static readonly HashSet<string>[] ExemptedPairs =
-    [
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/web/src/style.css", "apps/subject-portal/src/style.css" }
-    ];
-
     public static int DetectDuplication(
         string[]? targetFiles = null,
         string? repoRoot = null,
@@ -196,12 +188,6 @@ public static class DuplicationDetectorService
                                     continue;
                                 }
 
-                                var pairSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { rel1, rel2 };
-                                if (ExemptedPairs.Any(ex => pairSet.IsSubsetOf(ex)))
-                                {
-                                    continue;
-                                }
-
                                 string dupKey = string.Join("|", new[] { $"{rel1}:{l1.StartLine}", $"{rel2}:{l2.StartLine}" }.OrderBy(x => x));
                                 if (uniqueDupsReported.Add(dupKey))
                                 {
@@ -252,7 +238,7 @@ public static class DuplicationDetectorService
                 }
             }
 
-            // The pre-commit gate passes every staged file; like the full scan, duplicates involving a C#, JavaScript, or TypeScript file fail.
+            // The pre-commit gate passes every staged file; like the full scan, duplicates across C#, JavaScript, TypeScript, Vue, and CSS files fail.
             bool enforcedDuplicatesFound = duplicatesFound.Any(d =>
                 IsEnforcedDuplicationFile(d.Loc1.File) || IsEnforcedDuplicationFile(d.Loc2.File));
 
@@ -269,9 +255,12 @@ public static class DuplicationDetectorService
 
     private static bool IsEnforcedDuplicationFile(string relativePath)
     {
-        return relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
-            relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-            relativePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase);
+        return !relativePath.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) &&
+            (relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
+             relativePath.EndsWith(".css", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsScannableDuplicationPath(string relativePath)
@@ -288,24 +277,20 @@ public static class DuplicationDetectorService
             return false;
         }
 
-        if (norm.EndsWith(".ts", StringComparison.Ordinal))
+        if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+            norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
+            norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
         {
-            if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
-                norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
-                norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
-                norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-
-            return true;
+            return false;
         }
 
         // Python files are porting references, not live code (#4789), so they are not scanned.
-        return norm.EndsWith(".js", StringComparison.Ordinal) ||
-               norm.EndsWith(".vue", StringComparison.Ordinal) ||
-               norm.EndsWith(".css", StringComparison.Ordinal) ||
-               norm.EndsWith(".cs", StringComparison.Ordinal);
+        return norm.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
+               norm.EndsWith(".css", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeLine(string line)

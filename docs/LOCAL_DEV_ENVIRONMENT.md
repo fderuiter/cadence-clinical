@@ -19,12 +19,13 @@ If Corepack is missing from your Node.js installation, install it with `npm inst
 then run `corepack enable`. Use the setup wizard to prepare the workspace:
 
 ```bash
-make wizard                                  # bash scripts/setup_wizard.sh; Windows: scripts/setup_wizard.ps1
-bash scripts/setup_wizard.sh --dev --minimal # no prompts, no Playwright browser download
+make wizard                                  # interactive: bash scripts/setup_wizard.sh; Windows: scripts/setup_wizard.ps1
+make setup                                   # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
 ```
 
-It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install --frozen-lockfile`, sets
-`git config core.hooksPath .githooks`, creates `.env` from `.env.example`, and finishes with
+It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install --frozen-lockfile`,
+provisions `.cadence/venv` (`detect-secrets`) and `.cadence/bin` (`actionlint`, `hadolint`, `shellcheck`),
+sets `git config core.hooksPath .githooks`, creates `.env` from `.env.example`, and finishes with
 `cadence doctor`.
 
 ## 2. Build and test
@@ -34,7 +35,9 @@ dotnet restore Cadence.sln
 dotnet build Cadence.sln                          # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile                    # apps resolve packages/ui directly from source
+pnpm test                                         # workspace Vitest suites + VitePress navigation tests
+make verify                                       # pnpm cadence check + pnpm test + pnpm cadence test
 ```
 
 The [PostgreSQL integration suite](TESTING.md#tests-that-need-postgresql) uses PostgreSQL 18 through
@@ -104,7 +107,7 @@ The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloa
 imported), all 18 .NET hosts (the gateway on 8000 and the 17 services on 8001–8016 and 8018), the web app
 (`http://localhost:3000/cadence-clinical/`), and the subject portal (`http://localhost:5174/subject-portal/`) on the
 same host ports as docker compose. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard. Run
-`pnpm install --frozen-lockfile && pnpm --filter ui build` and set its secret parameters with `dotnet user-secrets`
+`pnpm install --frozen-lockfile` and set its secret parameters with `dotnet user-secrets`
 first; [apps/apphost](../apps/apphost/README.md) lists them.
 
 For kernel and Canvas work, the `core` profile runs PostgreSQL, Keycloak, the 6 core backend hosts (`gateway`,

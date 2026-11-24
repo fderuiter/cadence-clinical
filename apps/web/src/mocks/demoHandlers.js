@@ -1,6 +1,5 @@
 import { http, HttpResponse } from "msw";
 import { isValidSemanticAction, isValidStepUpAction } from "ui";
-import { createDemoInitialSoaState } from "../stores/demo/clinicalUsdm";
 import { demoNowIso, demoNowMs, nextDemoStep } from "../utils/demoMode.js";
 import {
   evaluateCapabilityDecision,
@@ -10,6 +9,7 @@ import {
 } from "./demoPolicy.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
+import { buildUsdmSoaSchedule } from "../stores/demo/usdmSoaSchedule";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -615,9 +615,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
         store.getProtocolVersion(decodeURIComponent(String(params.versionRef)))
       )
     ),
-    http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
-      HttpResponse.json(store.listProposals())
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/proposals", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listProposals({
+          status: url.searchParams.get("status") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        })
+      );
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/locks",
       ({ params, request }) => {
@@ -885,13 +891,21 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post(
       "*/api/v1/kernel/proposals/:proposalRef/rejection",
-      ({ params, request }) =>
-        HttpResponse.json(
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const caller = resolveDemoCaller(request);
+        const reason =
+          readRequiredReasonHeader(request) ||
+          (typeof body?.reason === "string" ? body.reason.trim() : "") ||
+          decodeReasonHeader(request);
+        return HttpResponse.json(
           store.rejectProposal(
             decodeURIComponent(String(params.proposalRef)),
-            decodeReasonHeader(request)
+            reason,
+            caller
           )
-        )
+        );
+      }
     ),
     http.get("*/api/v1/kernel/activity", ({ request }) => {
       const url = new URL(request.url);
@@ -2610,7 +2624,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
 
     // USDM Interactive SoA Builder Mutations (stateful in-memory demo projection)
     ...(() => {
-      const createInitialSoaState = createDemoInitialSoaState;
+      const createInitialSoaState = () =>
+        buildUsdmSoaSchedule(["ACT-DEM", "ACT-VS"]);
 
       let soaState = createInitialSoaState();
       resetSoaState = () => {

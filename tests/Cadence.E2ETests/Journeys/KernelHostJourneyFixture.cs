@@ -99,6 +99,7 @@ public sealed class KernelHostJourneyFixture : IAsyncLifetime
         // deployment job does (KernelMigrationHostedService, ADR-2601).
         _host = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", _appConnectionString)
             .ConfigureTestServices(services => services
                 // Every error a command returns must be one it declares (ADR-2600 §4.5).
