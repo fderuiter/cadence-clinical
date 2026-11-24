@@ -209,4 +209,231 @@ Timestamp,Temperature (°C)
 
     fetchSpy.mockRestore();
   });
+
+  function buildReadyCoc(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "coc-900",
+      study_id: "STUDY-CGT-801",
+      site_id: "SITE-ALPHA",
+      subject_id: "SUBJ-101-0042",
+      din: "=W12342698765400",
+      batch_id: "BATCH-88",
+      current_stage: "BEDSIDE_VERIFICATION",
+      status: "READY_FOR_INFUSION",
+      tamper_evident_barcode: "CGT1|STUDY-CGT-801|...",
+      barcode_signature: "SIG",
+      collection_site_id: "SITE-ALPHA",
+      collection_timestamp: null,
+      manufacturing_facility_id: "CMO-BETA",
+      cryo_temp_excursion_count: 0,
+      lowest_temp_celsius: -196.0,
+      infusion_unlocked: false,
+      ...overrides,
+    };
+  }
+
+  it("initializes without hardcoded fake signature tokens and binds shared alphanumeric step-up password attributes", async () => {
+    const wrapper = mount(CellGeneTherapyCocConsole);
+    const vm = wrapper.vm as Record<string, any>;
+    expect(vm.bedsideForm.primary_signature_token).toBe("");
+    expect(vm.bedsideForm.secondary_signature_token).toBe("");
+    expect(vm.destructionForm.witness_1_signature_token).toBe("");
+    expect(vm.destructionForm.witness_2_signature_token).toBe("");
+
+    vm.openBedsideModal();
+    await wrapper.vm.$nextTick();
+
+    const primaryInput = wrapper.find(
+      '[data-testid="primary-stepup-password"]'
+    );
+    const secondaryInput = wrapper.find(
+      '[data-testid="secondary-stepup-password"]'
+    );
+    expect(primaryInput.exists()).toBe(true);
+    expect(secondaryInput.exists()).toBe(true);
+    expect(primaryInput.attributes("type")).toBe("password");
+    expect(primaryInput.attributes("inputmode")).toBe("text");
+    expect(secondaryInput.attributes("inputmode")).toBe("text");
+  });
+
+  it("acquires dual step-up tokens bound to target record and posts CgtBedsideVerificationRequest and CgtDestructionCertificateCreateRequest shapes", async () => {
+    const wrapper = mount(CellGeneTherapyCocConsole);
+    const vm = wrapper.vm as Record<string, any>;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    let issuedCounter = 0;
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url === "/api/v1/auth/signature-verification") {
+          issuedCounter += 1;
+          return {
+            ok: true,
+            json: async () => ({
+              sig_token: `issued-jwt-${issuedCounter}`,
+            }),
+          } as Response;
+        }
+        if (url === "/api/v1/execution/rtsm/cgt/bedside-verify") {
+          return {
+            ok: true,
+            json: async () => ({
+              unlock_token: "UNLOCK-SERVER-TOKEN",
+              is_match: true,
+            }),
+          } as Response;
+        }
+        if (url === "/api/v1/execution/rtsm/cgt/destruction-certificate") {
+          return {
+            ok: true,
+            json: async () => ({
+              certificate_number: "COD-2026-001",
+              status: "COMPLETED",
+            }),
+          } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({
+            chain_of_custody: vm.cocData,
+            milestones: [],
+          }),
+        } as Response;
+      });
+
+    vm.cocData = buildReadyCoc();
+
+    vm.openBedsideModal();
+    vm.bedsideForm.primary_verifier_id = "nurse-01";
+    vm.bedsideForm.primary_verifier_name = "Sarah Smith, RN";
+    vm.bedsideForm.primary_password = "NursePassword!1"; // pragma: allowlist secret
+    vm.bedsideForm.secondary_verifier_id = "pi-02";
+    vm.bedsideForm.secondary_verifier_name = "Dr. Robert Johnson, MD";
+    vm.bedsideForm.secondary_password = "PiPassword!2"; // pragma: allowlist secret
+
+    await vm.submitBedsideVerify();
+
+    const stepUpCalls = fetchSpy.mock.calls.filter(
+      ([url]) => url === "/api/v1/auth/signature-verification"
+    );
+    expect(stepUpCalls).toHaveLength(2);
+    expect(JSON.parse(String(stepUpCalls[0][1]?.body))).toEqual({
+      username: "nurse-01",
+      password: "NursePassword!1", // pragma: allowlist secret
+      action: "/api/v1/execution/rtsm/cgt/bedside-verify",
+      semantic_action: "execution.cgt.bedside_verify",
+      batch_id: "STUDY-CGT-801:SUBJ-101-0042:=W12342698765400:BATCH-88",
+    });
+    expect(JSON.parse(String(stepUpCalls[1][1]?.body))).toEqual({
+      username: "pi-02",
+      password: "PiPassword!2", // pragma: allowlist secret
+      action: "/api/v1/execution/rtsm/cgt/bedside-verify",
+      semantic_action: "execution.cgt.bedside_verify",
+      batch_id: "STUDY-CGT-801:SUBJ-101-0042:=W12342698765400:BATCH-88",
+    });
+
+    const bedsideCall = fetchSpy.mock.calls.find(
+      ([url]) => url === "/api/v1/execution/rtsm/cgt/bedside-verify"
+    );
+    expect(bedsideCall).toBeDefined();
+    expect(JSON.parse(String(bedsideCall?.[1]?.body))).toEqual({
+      study_id: "STUDY-CGT-801",
+      site_id: "SITE-ALPHA",
+      subject_id: "SUBJ-101-0042",
+      din: "=W12342698765400",
+      batch_id: "BATCH-88",
+      bag_barcode_payload: "CGT1|STUDY-CGT-801|...",
+      patient_wristband_id: "SUBJ-101-0042",
+      primary_verifier_id: "nurse-01",
+      primary_verifier_name: "Sarah Smith, RN",
+      primary_verifier_role: "Bedside Nurse",
+      primary_signature_token: "issued-jwt-1",
+      secondary_verifier_id: "pi-02",
+      secondary_verifier_name: "Dr. Robert Johnson, MD",
+      secondary_verifier_role: "Principal Investigator",
+      secondary_signature_token: "issued-jwt-2",
+    });
+
+    expect(vm.bedsideForm.primary_password).toBe("");
+    expect(vm.bedsideForm.secondary_password).toBe("");
+    expect(vm.bedsideForm.primary_signature_token).toBe("");
+    expect(vm.bedsideForm.secondary_signature_token).toBe("");
+
+    // Now verify dual-witness destruction certificate step-up binding & request shape
+    vm.openDestructionModal();
+    vm.destructionForm.witness_1_id = "pharm-01";
+    vm.destructionForm.witness_1_name = "David Lee, PharmD";
+    vm.destructionForm.witness_1_password = "PharmPassword!1"; // pragma: allowlist secret
+    vm.destructionForm.witness_2_id = "pi-02";
+    vm.destructionForm.witness_2_name = "Dr. Robert Johnson, MD";
+    vm.destructionForm.witness_2_password = "PiPassword!2"; // pragma: allowlist secret
+
+    await vm.submitDestruction();
+
+    const allStepUpCalls = fetchSpy.mock.calls.filter(
+      ([url]) => url === "/api/v1/auth/signature-verification"
+    );
+    expect(allStepUpCalls).toHaveLength(4);
+    expect(JSON.parse(String(allStepUpCalls[2][1]?.body))).toEqual({
+      username: "pharm-01",
+      password: "PharmPassword!1", // pragma: allowlist secret
+      action: "/api/v1/execution/rtsm/cgt/destruction-certificate",
+      semantic_action: "execution.cgt.destruction_certificate",
+      batch_id: "STUDY-CGT-801:SITE-ALPHA:LOT-CAR-T-2026-01:=W12342698765400",
+    });
+
+    const destructionCall = fetchSpy.mock.calls.find(
+      ([url]) => url === "/api/v1/execution/rtsm/cgt/destruction-certificate"
+    );
+    expect(destructionCall).toBeDefined();
+    expect(JSON.parse(String(destructionCall?.[1]?.body))).toMatchObject({
+      study_id: "STUDY-CGT-801",
+      site_id: "SITE-ALPHA",
+      witness_1_id: "pharm-01",
+      witness_1_signature_token: "issued-jwt-3",
+      witness_2_id: "pi-02",
+      witness_2_signature_token: "issued-jwt-4",
+    });
+
+    expect(vm.destructionForm.witness_1_password).toBe("");
+    expect(vm.destructionForm.witness_2_password).toBe("");
+    expect(vm.destructionForm.witness_1_signature_token).toBe("");
+    expect(vm.destructionForm.witness_2_signature_token).toBe("");
+
+    fetchSpy.mockRestore();
+  });
+
+  it("surfaces inline alert and keeps modal open when step-up or bedside verification fails", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        code: "REAUTHENTICATION_REQUIRED",
+        detail: "Step-up electronic signature token is invalid or expired.",
+      }),
+    } as Response);
+
+    const wrapper = mount(CellGeneTherapyCocConsole);
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = buildReadyCoc({ id: "coc-901" });
+
+    vm.openBedsideModal();
+    vm.bedsideForm.primary_verifier_id = "nurse-01";
+    vm.bedsideForm.primary_verifier_name = "Sarah Smith, RN";
+    vm.bedsideForm.primary_password = "WrongPassword"; // pragma: allowlist secret
+    vm.bedsideForm.secondary_verifier_id = "pi-02";
+    vm.bedsideForm.secondary_verifier_name = "Dr. Robert Johnson, MD";
+    vm.bedsideForm.secondary_password = "PiPassword!2"; // pragma: allowlist secret
+
+    await vm.submitBedsideVerify();
+    await wrapper.vm.$nextTick();
+
+    expect(vm.showBedsideModal).toBe(true);
+    const errorAlert = wrapper.find('[data-testid="bedside-verify-error"]');
+    expect(errorAlert.exists()).toBe(true);
+    expect(errorAlert.text()).toContain("Primary Verifier:");
+
+    fetchSpy.mockRestore();
+  });
 });

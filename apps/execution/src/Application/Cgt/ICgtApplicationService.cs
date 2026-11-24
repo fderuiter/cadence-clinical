@@ -7,13 +7,13 @@ namespace Cadence.Apps.Execution.Application.Cgt;
 
 public interface ICgtApplicationService
 {
-    Task<CgtChainOfCustodyResponse> InitializeApheresisAsync(CgtApheresisCreateRequest request, CancellationToken cancellationToken = default);
-    Task<CgtMilestoneResponse> RecordMilestoneAsync(CgtMilestoneCreateRequest request, CancellationToken cancellationToken = default);
-    Task<CgtChainOfCustodyResponse> BindManufacturingBatchAsync(CgtManufacturingBindRequest request, CancellationToken cancellationToken = default);
-    Task<CgtBedsideVerificationResponse> VerifyBedsideAsync(CgtBedsideVerificationRequest request, CancellationToken cancellationToken = default);
-    Task<CgtChainOfCustodyResponse> ExecuteInfusionAsync(CgtInfusionExecuteRequest request, CancellationToken cancellationToken = default);
-    Task<CgtVialReturnReconciliationResponse> LogVialReturnAsync(CgtVialReturnReconciliationRequest request, CancellationToken cancellationToken = default);
-    Task<CgtDestructionCertificateResponse> GenerateDestructionCertificateAsync(CgtDestructionCertificateCreateRequest request, CancellationToken cancellationToken = default);
+    Task<CgtChainOfCustodyResponse> InitializeApheresisAsync(CgtApheresisCreateRequest request, string? callerUserId = null, CancellationToken cancellationToken = default);
+    Task<CgtMilestoneResponse> RecordMilestoneAsync(CgtMilestoneCreateRequest request, string? callerUserId = null, CancellationToken cancellationToken = default);
+    Task<CgtChainOfCustodyResponse> BindManufacturingBatchAsync(CgtManufacturingBindRequest request, string? callerUserId = null, CancellationToken cancellationToken = default);
+    Task<CgtBedsideVerificationResponse> VerifyBedsideAsync(CgtBedsideVerificationRequest request, string callerUserId, CancellationToken cancellationToken = default);
+    Task<CgtChainOfCustodyResponse> ExecuteInfusionAsync(CgtInfusionExecuteRequest request, string callerUserId, CancellationToken cancellationToken = default);
+    Task<CgtVialReturnReconciliationResponse> LogVialReturnAsync(CgtVialReturnReconciliationRequest request, string? callerUserId = null, CancellationToken cancellationToken = default);
+    Task<CgtDestructionCertificateResponse> GenerateDestructionCertificateAsync(CgtDestructionCertificateCreateRequest request, string callerUserId, CancellationToken cancellationToken = default);
     CgtBarcodeVerifyResponse VerifyBarcode(CgtBarcodeVerifyRequest request);
     Task<CgtFullTraceabilityResponse> GetFullTraceabilityAsync(string studyId, string subjectId, CancellationToken cancellationToken = default);
     Task<List<CgtDestructionCertificateResponse>> ListDestructionCertificatesAsync(string studyId, CancellationToken cancellationToken = default);

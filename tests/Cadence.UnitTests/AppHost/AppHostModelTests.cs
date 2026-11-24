@@ -63,7 +63,7 @@ public sealed class AppHostModelTests
             }
         }
 
-        (await EnvironmentNamesAsync(projects["execution"])).Should().Contain("DemographicsEncryption__KeyBase64");
+        (await EnvironmentNamesAsync(projects["execution"])).Should().Contain(["DemographicsEncryption__KeyBase64", "RANDOMIZATION_ALLOCATION_KEY", "CGT_BARCODE_HMAC_KEY"]);
         (await EnvironmentNamesAsync(projects["econsent"])).Should().Contain(["FIELD_ENCRYPTION_KEY", "CADENCE_BIOMETRIC_LIVENESS_KEY"]);
         (await EnvironmentNamesAsync(projects["kernel"])).Should().Contain("CADENCE_BIOMETRIC_LIVENESS_KEY");
         (await EnvironmentNamesAsync(projects["payments"])).Should().Contain("FIELD_ENCRYPTION_KEY");
@@ -137,7 +137,7 @@ public sealed class AppHostModelTests
             gateway[service.UrlVariable].Should().Be($"http://localhost:{service.Port}", service.Name);
         }
         (await EnvironmentAsync(projects["execution"])).Keys
-            .Should().Contain(["GATEWAY_SECRET", "AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "DemographicsEncryption__KeyBase64"]);
+            .Should().Contain(["GATEWAY_SECRET", "AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "DemographicsEncryption__KeyBase64", "RANDOMIZATION_ALLOCATION_KEY", "CGT_BARCODE_HMAC_KEY"]);
         (await EnvironmentAsync(projects["kernel"])).Keys
             .Should().Contain("CADENCE_BIOMETRIC_LIVENESS_KEY");
         (await EnvironmentAsync(projects["etmf"]))["EXECUTION_SERVICE_URL"]

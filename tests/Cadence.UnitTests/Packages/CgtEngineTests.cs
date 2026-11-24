@@ -1,3 +1,6 @@
+using System;
+using System.Security.Cryptography;
+
 using Cadence.Core.Domain.Supply;
 using Cadence.UnitTests.Fixtures;
 
@@ -48,17 +51,20 @@ public class CgtEngineTests
     [Fact]
     public void CgtBarcodeEngine_GeneratesAndVerifiesCryptographicBarcode()
     {
+        byte[] key = CgtBarcodeTestSigner.DefaultTestKey;
         string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STU-001",
             siteId: "SITE-101",
             subjectId: "SUB-8899",
             din: "=W12342698765400",
-            batchId: "BATCH-9911");
+            batchId: "BATCH-9911",
+            secretKey: key);
 
         Assert.NotEmpty(barcodePayload);
 
         var (isValid, failureReason, decoded) = CgtBarcodeEngine.VerifyCryptoBarcode(
             barcodePayload: barcodePayload,
+            secretKey: key,
             expectedSubjectId: "SUB-8899",
             expectedDin: "=W12342698765400",
             expectedBatchId: "BATCH-9911");
@@ -72,20 +78,63 @@ public class CgtEngineTests
     [Fact]
     public void CgtBarcodeEngine_RejectsTamperedBarcodePayload()
     {
+        byte[] key = CgtBarcodeTestSigner.DefaultTestKey;
         string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STU-001",
             siteId: "SITE-101",
             subjectId: "SUB-8899",
             din: "=W12342698765400",
-            batchId: "BATCH-9911");
+            batchId: "BATCH-9911",
+            secretKey: key);
 
         string tamperedPayload = barcodePayload.Replace("SUB-8899", "SUB-9999");
 
         var (isValid, failureReason, _) = CgtBarcodeEngine.VerifyCryptoBarcode(
             barcodePayload: tamperedPayload,
+            secretKey: key,
             expectedSubjectId: "SUB-9999");
 
         Assert.False(isValid);
         Assert.NotNull(failureReason);
+    }
+
+    [Fact]
+    public void CgtBarcodeEngine_RejectsBarcodeSignedWithDifferentKey()
+    {
+        byte[] configuredKey = CgtBarcodeTestSigner.DefaultTestKey;
+        byte[] unconfiguredKey = RandomNumberGenerator.GetBytes(32);
+
+        string barcodePayload = CgtBarcodeTestSigner.SignPayload(
+            studyId: "STU-001",
+            siteId: "SITE-101",
+            subjectId: "SUB-8899",
+            din: "=W12342698765400",
+            batchId: "BATCH-9911",
+            secretKey: unconfiguredKey);
+
+        var (isValid, failureReason, _) = CgtBarcodeEngine.VerifyCryptoBarcode(
+            barcodePayload: barcodePayload,
+            secretKey: configuredKey,
+            expectedSubjectId: "SUB-8899",
+            expectedDin: "=W12342698765400",
+            expectedBatchId: "BATCH-9911");
+
+        Assert.False(isValid);
+        Assert.Contains("Cryptographic signature verification failed", failureReason);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(16)]
+    [InlineData(31)]
+    [InlineData(64)]
+    public void CgtBarcodeEngine_RejectsMissingOrInvalidLengthSecretKey(int keyLength)
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            CgtBarcodeEngine.VerifyCryptoBarcode("{}", null!));
+
+        byte[] invalidKey = new byte[keyLength];
+        Assert.Throws<ArgumentException>(() =>
+            CgtBarcodeEngine.VerifyCryptoBarcode("{}", invalidKey));
     }
 }

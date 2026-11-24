@@ -136,8 +136,8 @@ it has none, so reset Keycloak's data once if it imported the realm before the u
 
 Every database-backed service requires an explicit PostgreSQL connection string (`ConnectionStrings__cadence` or
 `POSTGRES_CONNECTION_STRING`), `GATEWAY_SECRET`, and `AUDIT_LOG_SECRET_KEY` — no environment has a built-in database
-fallback (ADR-2260). For `Cadence.Apps.Execution`, also supply two distinct 32-byte Base64 encryption keys
-(`DemographicsEncryption__KeyBase64` and `RANDOMIZATION_ALLOCATION_KEY`):
+fallback (ADR-2260). For `Cadence.Apps.Execution`, also supply three distinct 32-byte Base64 cryptographic keys
+(`DemographicsEncryption__KeyBase64`, `RANDOMIZATION_ALLOCATION_KEY` and `CGT_BARCODE_HMAC_KEY`):
 
 ```bash
 export ASPNETCORE_ENVIRONMENT=Development
@@ -147,6 +147,7 @@ export GATEWAY_SECRET="local-dev-only-gateway-secret-not-for-production" # pragm
 export AUDIT_LOG_SECRET_KEY="dev-audit-secret-key-change-me" # pragma: allowlist secret
 export DemographicsEncryption__KeyBase64="$(openssl rand -base64 32)"
 export RANDOMIZATION_ALLOCATION_KEY="$(openssl rand -base64 32)"
+export CGT_BARCODE_HMAC_KEY="$(openssl rand -base64 32)"
 dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj --urls http://localhost:8002
 curl -fsS http://localhost:8002/healthz/ready
 ```

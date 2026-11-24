@@ -4,11 +4,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
+using Cadence.Core.Domain.Supply;
+using Cadence.Testing.Security;
+
 namespace Cadence.UnitTests.Fixtures;
 
 internal static class CgtBarcodeTestSigner
 {
-    private static readonly byte[] DefaultTestKey = Encoding.UTF8.GetBytes("Cadence-CGT-HMAC-Secret-Key-2026!"); // pragma: allowlist secret
+    public static byte[] DefaultTestKey => Convert.FromBase64String(TestSecurityContext.CgtBarcodeKeyBase64);
 
     public static string SignPayload(
         string studyId,
@@ -20,6 +23,11 @@ internal static class CgtBarcodeTestSigner
         byte[]? secretKey = null)
     {
         byte[] key = secretKey ?? DefaultTestKey;
+        if (key.Length != CgtBarcodeEngine.SecretKeySizeBytes)
+        {
+            throw new ArgumentException($"CGT barcode HMAC key must be {CgtBarcodeEngine.SecretKeySizeBytes} bytes.", nameof(secretKey));
+        }
+
         string barcodeId = $"BAR-{Guid.NewGuid():N}"[..16].ToUpperInvariant();
         DateTimeOffset timestampOffset = createdAt ?? DateTimeOffset.UnixEpoch;
         string timestamp = timestampOffset.ToString("o");

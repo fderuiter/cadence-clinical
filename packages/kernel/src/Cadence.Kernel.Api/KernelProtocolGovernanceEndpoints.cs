@@ -334,7 +334,19 @@ public static class KernelProtocolGovernanceEndpoints
                 && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
             {
                 var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
-                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor ?? Actor.Person(sigToken.Subject ?? "system");
+                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor;
+                if (actor is null)
+                {
+                    if (string.IsNullOrWhiteSpace(sigToken.Subject))
+                    {
+                        return TypedResults.Problem(
+                            title: "Electronic signature required",
+                            detail: "Verified signature token must identify the signing principal.",
+                            statusCode: StatusCodes.Status401Unauthorized);
+                    }
+
+                    actor = Actor.Person(sigToken.Subject);
+                }
                 var precheck = await ProtocolApprovalSimulationGate.CheckAsync(
                     tenant,
                     unitOfWorkFactory,
