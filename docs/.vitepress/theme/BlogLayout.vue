@@ -11,7 +11,7 @@ const { Layout } = DefaultTheme;
     <template #doc-before>
       <BlogPostHeader />
     </template>
-    <template #doc-footer-before>
+    <template #doc-after>
       <BlogPostFooter />
     </template>
   </Layout>

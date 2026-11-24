@@ -7,6 +7,7 @@ import { createMarkdownRenderer } from "vitepress";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildPortalCspContent, injectHashedPortalCsp } from "./csp.mjs";
+import portalConfig from "./config.mjs";
 
 import {
   assertThemeLinksExist,
@@ -144,14 +145,24 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/schema/kernel")).toBe(true);
     expect(sidebarLinks.has("/ux/CLINICAL_CANVAS")).toBe(true);
     expect(sidebarLinks.has("/web/API_MIGRATION")).toBe(true);
-    expect(sidebarLinks.has("/blog/index")).toBe(true);
+    expect(sidebarLinks.has("/blog/")).toBe(true);
+    expect(sidebarLinks.has("/api/")).toBe(true);
+    expect(sidebarLinks.has("/components/")).toBe(true);
+    expect(sidebarLinks.has("/migration/")).toBe(true);
+
+    // Subdirectory hub links are normalized to trailing slashes rather than /.../index
+    expect(sidebarLinks.has("/blog/index")).toBe(false);
+    expect(sidebarLinks.has("/api/index")).toBe(false);
+    expect(sidebarLinks.has("/components/index")).toBe(false);
+    expect(sidebarLinks.has("/adr/index")).toBe(false);
+    expect(sidebarLinks.has("/migration/index")).toBe(false);
 
     // Verify each route prefix is compact rather than repeating all 600+ portal links
     const rootLinks = collectSidebarLinks(sidebar["/"]);
     expect(rootLinks.size).toBeLessThan(45);
 
     const adrLinks = collectSidebarLinks(sidebar["/adr/"]);
-    expect(adrLinks.has("/adr/index")).toBe(true);
+    expect(adrLinks.has("/adr/")).toBe(true);
     expect(adrLinks.has("/adr/TEMPLATE")).toBe(true);
     expect(
       adrLinks.has(
@@ -219,7 +230,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(blogGroup).toBeDefined();
     expect(blogGroup.collapsed).toBe(false);
     expect(blogGroup.items).toEqual([
-      { text: "All Engineering Posts", link: "/blog/index" },
+      { text: "All Engineering Posts", link: "/blog/" },
       {
         text: "Updated Frontmatter Title Newer",
         link: "/blog/2026-09-29-zeta-slug",
@@ -248,13 +259,15 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
 
     expect(apiGroup).toBeDefined();
-    expect(apiGroup.items[0].link).toBe("/api/index");
+    expect(apiGroup.items[0].link).toBe("/api/");
 
     expect(schemaGroup).toBeDefined();
     expect(schemaGroup.items[0].link).toBe("/schema/README");
     expect(schemaGroup.items.length).toBeGreaterThanOrEqual(18);
 
     expect(historicalGroup).toBeDefined();
+    expect(historicalGroup.items[0].link).toBe("/migration/");
+    expect(historicalGroup.items[1].link.startsWith("/migration/")).toBe(true);
 
     const archiveLinks = collectSidebarLinks(sidebar["/migration/"]);
     expect(archiveLinks.has("/api/kernel")).toBe(false);
@@ -492,6 +505,95 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
     expect(anchors.has("duplicate")).toBe(true);
     expect(anchors.has("duplicate-1")).toBe(true);
+  });
+
+  it("validates nested nav dropdown items, trailing-slash directory hubs, and <= 2-click reachability for demos and RSS", () => {
+    const tmpRepo = makeTempWorkspace();
+    const tmpDocs = path.join(tmpRepo, "docs");
+    fs.mkdirSync(path.join(tmpDocs, "api"), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpDocs, "api", "index.md"),
+      "# API Hub\n\n## Services\n"
+    );
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [
+            {
+              text: "Reference",
+              items: [
+                { text: "API Hub", link: "/api/#services" },
+                { text: "Staff Demo", link: "/demo/" },
+                { text: "RSS", link: "/cadence-clinical/feed.xml" },
+              ],
+            },
+          ],
+          sidebar: {},
+        },
+        tmpDocs,
+        { base: "/cadence-clinical/" }
+      )
+    ).not.toThrow();
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [
+            {
+              text: "Reference",
+              items: [{ text: "Missing Nested", link: "/missing-hub/" }],
+            },
+          ],
+          sidebar: {},
+        },
+        tmpDocs
+      )
+    ).toThrow(/missing pages: \/missing-hub\//);
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [
+            {
+              text: "Reference",
+              items: [{ text: "Broken Nested Anchor", link: "/api/#unknown" }],
+            },
+          ],
+          sidebar: {},
+        },
+        tmpDocs
+      )
+    ).toThrow(/missing anchors: \/api\/#unknown/);
+
+    // Verify configured top-level nav keeps <= 6 items and exposes Staff Demo, Participant Demo, and RSS in <= 2 clicks
+    const configuredNav = portalConfig.themeConfig.nav;
+    expect(configuredNav.length).toBeLessThanOrEqual(6);
+
+    const clickDepthByTarget = new Map();
+    const recordNavDepth = (items, depth) => {
+      for (const item of items ?? []) {
+        if (item.link) {
+          const prev = clickDepthByTarget.get(item.link);
+          if (prev === undefined || depth < prev) {
+            clickDepthByTarget.set(item.link, depth);
+          }
+        }
+        if (Array.isArray(item.items)) {
+          recordNavDepth(item.items, depth + 1);
+        }
+      }
+    };
+    recordNavDepth(configuredNav, 1);
+
+    expect(clickDepthByTarget.get("/demo/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/subject-portal/")).toBeLessThanOrEqual(2);
+    expect(
+      clickDepthByTarget.get("/cadence-clinical/feed.xml")
+    ).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.has("/blog/index")).toBe(false);
+    expect(clickDepthByTarget.has("/api/index")).toBe(false);
+    expect(clickDepthByTarget.has("/adr/index")).toBe(false);
   });
 
   it("hoists hashed Content-Security-Policy <meta> before all <script> and <link> tags and removes trailing placeholders", () => {

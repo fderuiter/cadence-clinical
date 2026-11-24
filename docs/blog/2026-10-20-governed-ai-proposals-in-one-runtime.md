@@ -19,6 +19,8 @@ related:
   - text: "AI Agents Catalogue & Autonomy Ladder"
     link: "../ai/AI_AGENTS.md"
 draft: false
+prev: false
+next: false
 ---
 
 # Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation

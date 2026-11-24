@@ -92,7 +92,7 @@ export function loadPublishedBlogPosts(docsDir) {
 export function getBlogSidebarItems(docsDir) {
   const published = loadPublishedBlogPosts(docsDir);
   return [
-    { text: "All Engineering Posts", link: "/blog/index" },
+    { text: "All Engineering Posts", link: "/blog/" },
     ...published.map((post) => ({
       text: post.title,
       link: `/blog/${post.slug}`,

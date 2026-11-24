@@ -61,7 +61,12 @@ const resolveLinkRel = resolveBlogLinkRel;
 </script>
 
 <template>
-  <header v-if="isBlogPost" class="blog-post-header">
+  <div
+    v-if="isBlogPost"
+    class="blog-post-header"
+    role="region"
+    aria-label="Blog post metadata"
+  >
     <div class="blog-post-eyebrow">
       <a class="blog-back-link" :href="resolveHref('/blog/')">
         ← Engineering Blog
@@ -108,5 +113,5 @@ const resolveLinkRel = resolveBlogLinkRel;
         {{ item.text }}
       </a>
     </div>
-  </header>
+  </div>
 </template>

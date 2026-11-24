@@ -46,7 +46,7 @@ features:
     linkText: "Explore Architecture"
   - title: "API Reference & GxP Validation"
     details: "Examine OpenAPI service contracts, requirements traceability, 21 CFR Part 11 and ICH E6(R3) compliance artifacts, and automated quality sentinels."
-    link: "/api/index"
+    link: "/api/"
     linkText: "Browse API Docs"
 ---
 
