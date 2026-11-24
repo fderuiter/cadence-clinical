@@ -606,8 +606,14 @@ watch(() => props.proposalRef, load, { immediate: true });
 
 .details {
   display: grid;
-  grid-template-columns: minmax(9rem, max-content) 1fr;
+  grid-template-columns: minmax(min(100%, 9rem), max-content) minmax(0, 1fr);
   gap: 4px 16px;
+}
+
+@media (max-width: 640px) {
+  .details {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .details dt {

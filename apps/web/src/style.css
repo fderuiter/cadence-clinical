@@ -4,8 +4,9 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --shell-header-height: 57px;
+  --shell-header-height: 52px;
   --canvas-topbar-height: 45px;
+  --sticky-chrome-offset: 88px;
 }
 
 body {
@@ -26,6 +27,9 @@ main {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  scroll-padding-top: var(--sticky-chrome-offset, 88px);
 }
 
 @media (max-width: 640px) {
@@ -39,6 +43,8 @@ main {
   display: none;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dashboard-section.active {
@@ -389,14 +395,21 @@ a.skip-link.skip-link:focus-visible,
 
 /* Ensure sticky header does not obscure scrolled-to targets and 12-col clinical form inputs shrink cleanly */
 html {
-  scroll-padding-top: 88px;
+  scroll-padding-top: var(--sticky-chrome-offset, 88px);
 }
 
 .clinical-form > *,
 .clinical-form fieldset > div,
 .clinical-input,
 .clinical-input .input-wrapper,
-.clinical-input input[type="text"] {
+.clinical-input input[type="text"],
+.clinical-input input[type="number"],
+.clinical-input input[type="date"],
+.clinical-input input[type="email"],
+.clinical-input input[type="tel"],
+.clinical-input select,
+.clinical-input textarea,
+.clinical-input .clinical-input-control {
   min-width: 0;
 }
 

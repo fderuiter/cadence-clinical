@@ -781,6 +781,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   max-width: 100%;
   min-width: 0;
   padding: 4px;
+  box-sizing: border-box;
 }
 .ecrf-table-scroll:focus-visible {
   outline: 3px solid var(--semantic-color-accent);

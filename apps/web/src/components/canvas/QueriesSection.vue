@@ -686,8 +686,9 @@ const {
   },
   onResolved: async () => {
     if (studyId.value) {
+      const queriesPromise = refreshQueries();
       void refreshDigests();
-      await refreshQueries();
+      await queriesPromise;
     }
   },
 });
