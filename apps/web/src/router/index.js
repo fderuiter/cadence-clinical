@@ -5,8 +5,10 @@ import {
   createWebHistory,
 } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
+import { resolveLensEffectiveRoles } from "../catalog/staffPersonaCore.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
+import { getPiniaStudyScopeRef } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -39,9 +41,12 @@ export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
 }
 
 // The screen each role lands on when opening "/".
-function landingRouteFor(roles) {
-  if (roles.includes("sponsor_designer")) return "mdr";
+export function landingRouteFor(roles) {
+  if (roles.includes("sponsor_designer") || roles.includes("sponsor_admin")) {
+    return "mdr";
+  }
   if (
+    roles.includes("principal_investigator") ||
     roles.includes("site_investigator") ||
     roles.includes("crc") ||
     roles.includes("trial_coordinator")
@@ -51,6 +56,7 @@ function landingRouteFor(roles) {
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
   if (
+    roles.includes("safety_reviewer") ||
     roles.includes("safety_officer") ||
     roles.includes("safety_physician") ||
     roles.includes("qppv")
@@ -60,7 +66,7 @@ function landingRouteFor(roles) {
   if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
     return "audit";
   }
-  return "mdr";
+  return "study";
 }
 
 function primaryFallbackScreens() {
@@ -120,8 +126,20 @@ const routes = [
         return { name: "overview" };
       }
       const roles = authStore.normalizedRoles || [];
-      const preferred = landingRouteFor(roles);
-      if (isScreenAvailable(preferred)) {
+      const lensRoles = authStore.currentPersona
+        ? resolveLensEffectiveRoles(
+            authStore.currentPersona,
+            authStore.rawRoles
+          )
+        : roles;
+      const preferred = landingRouteFor(
+        lensRoles.length > 0 ? lensRoles : roles
+      );
+      const preferredRoute = routes.find((r) => r.name === preferred);
+      if (
+        isScreenAvailable(preferred) &&
+        (!preferredRoute || isRouteAuthorizedForRoles(preferredRoute, roles))
+      ) {
         return { name: preferred };
       }
       // The preferred screen has no .NET backend yet: land on the first
@@ -264,11 +282,22 @@ const routes = [
     path: "/ecrf",
     name: "ecrf",
     component: () => import("../views/EcrfView.vue"),
-    beforeEnter: async (to) => {
+    beforeEnter: async (to, from) => {
       if (!isDemoBuild()) {
         const { buildCanvasLocationFromEcrfQuery } =
           await import("../canvas/ecrfRedirect");
-        return buildCanvasLocationFromEcrfQuery(to.query);
+        const activePinia = getActivePinia();
+        const fallbackStudyCode =
+          [
+            from?.params?.studyCode,
+            from?.query?.studyCode,
+            from?.query?.studyId,
+            activePinia?.state.value?.studyCanvas?.studyCode,
+            getPiniaStudyScopeRef(activePinia)?.value,
+          ]
+            .find((v) => typeof v === "string" && v.trim())
+            ?.trim() || "";
+        return buildCanvasLocationFromEcrfQuery(to.query, fallbackStudyCode);
       }
       return true;
     },
@@ -533,6 +562,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "safety_reviewer",
         "safety_physician",
         "qppv",
         "qppv_officer",

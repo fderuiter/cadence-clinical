@@ -1062,7 +1062,7 @@ const activePersonaLabel = computed(() => {
   const pKey =
     authStore.currentPersona || knowledgeStore.activePersona || "super_admin";
   const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  return p ? p.label : "Sponsor Administrator";
 });
 
 const displayedArticleHtml = computed(() => {

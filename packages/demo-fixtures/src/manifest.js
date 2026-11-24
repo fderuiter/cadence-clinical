@@ -319,9 +319,9 @@ export const DEMO_MANIFEST = Object.freeze({
       siteCode: null,
       grantUuid: "8e26b7fa-ebd1-8390-9bd0-3e41c555c1bb",
       realmRoles: Object.freeze([
+        "Sponsor Admin",
         "Sponsor Designer",
         "Data Manager",
-        "Sponsor Admin",
       ]),
     }),
     Object.freeze({
@@ -336,7 +336,7 @@ export const DEMO_MANIFEST = Object.freeze({
       workspacePersona: "safety_officer",
       siteCode: null,
       grantUuid: "b8dee154-481f-8e8b-99db-9058dc8e6103",
-      realmRoles: Object.freeze(["Sponsor Admin"]),
+      realmRoles: Object.freeze(["Safety Reviewer", "Sponsor Admin"]),
     }),
     Object.freeze({
       username: "auditor.lead",

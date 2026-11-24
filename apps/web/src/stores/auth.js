@@ -23,7 +23,15 @@ import {
   webSessionCoordinator,
 } from "../auth/sessionCoordinator.js";
 import { kernelApi } from "../api/kernelApi";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
+import {
+  PERSONA_PRESETS,
+  ROLE_ALIASES,
+  holdsAnyRole,
+  normalizeRole,
+  personasForRoles,
+  resolveDefaultPersonaForRoles,
+} from "../catalog/staffPersonaCore.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
 import { clearActiveStudyScope } from "./studyScopeBridge";
@@ -78,6 +86,8 @@ function buildAllDemoRoles() {
           "Principal Investigator",
           "Safety Reviewer",
           "TMF Auditor",
+          "pharmacist",
+          "unblinded_statistician",
         ])
       )
     : [];
@@ -132,6 +142,16 @@ function resolveDemoPersonaScope(personaKey) {
       siteIds: [],
       hasAllStudiesScope: true,
     },
+    pharmacist: {
+      rawRoles: ["pharmacist"],
+      siteIds: ["SITE-101"],
+      hasAllStudiesScope: false,
+    },
+    unblinded_statistician: {
+      rawRoles: ["unblinded_statistician"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
   };
   return scopes[personaKey] || scopes.super_admin;
 }
@@ -145,20 +165,6 @@ async function runFullDemoReset(pinia) {
   resetDemoSandboxSync({ pinia });
   await resetDemoSandbox({ pinia });
 }
-
-const ADMIN_ROLE_ALIASES = [
-  "sponsor_admin",
-  "sponsor_designer",
-  "data_manager",
-  "principal_investigator",
-  "site_investigator",
-  "crc",
-  "cra",
-  "monitor",
-  "safety_reviewer",
-  "auditor",
-  "tmf_auditor",
-];
 
 const INDIVIDUAL_FAMILIES = ["Blueprint", "Capture"];
 const COMPLETE_FAMILIES = [
@@ -177,96 +183,7 @@ const BASELINE_CAPABILITIES = [
   "record_export",
 ];
 
-export const ROLE_ALIASES = {
-  crc: ["site_investigator", "crc"],
-  trial_coordinator: ["site_investigator", "crc", "trial_coordinator"],
-  site_investigator: ["site_investigator", "crc"],
-  principal_investigator: [
-    "principal_investigator",
-    "site_investigator",
-    "crc",
-  ],
-  cra: ["cra", "monitor"],
-  monitor: ["cra", "monitor"],
-  safety_reviewer: ["safety_reviewer"],
-  auditor: ["auditor", "tmf_auditor"],
-  tmf_auditor: ["auditor", "tmf_auditor"],
-  designer: ["sponsor_designer"],
-  sponsor_designer: ["sponsor_designer"],
-  study_designer: ["sponsor_designer"],
-  admin: ADMIN_ROLE_ALIASES,
-  sponsor_admin: ADMIN_ROLE_ALIASES,
-  super_admin: ADMIN_ROLE_ALIASES,
-};
-
-/**
- * Workspace personas. A persona only selects which workspace, help content and
- * onboarding tour the UI shows; it never grants a role. Roles always come from
- * the Keycloak access token (`realm_access.roles`). A user can view a persona
- * only when their token carries one of the persona's `requires` roles, and
- * `super_admin` requires the `Sponsor Admin` realm role.
- * Presets are listed in the order used to pick a user's default persona.
- */
-export const PERSONA_PRESETS = [
-  {
-    key: "super_admin",
-    label: "👑 Super Admin (All Access)",
-    requires: ["sponsor_admin"],
-  },
-  {
-    key: "sponsor_designer",
-    label: "📋 Sponsor Protocol Designer",
-    requires: ["sponsor_designer"],
-  },
-  {
-    key: "data_manager",
-    label: "⚙️ Clinical Data Manager",
-    requires: ["data_manager"],
-  },
-  {
-    key: "site_crc",
-    label: "🩺 Site Coordinator / CRC",
-    requires: ["site_investigator", "crc", "trial_coordinator"],
-  },
-  {
-    key: "site_investigator",
-    label: "🏥 Principal Investigator",
-    requires: ["principal_investigator"],
-  },
-  {
-    key: "cra_monitor",
-    label: "📊 CRA Clinical Monitor",
-    requires: ["cra", "monitor"],
-  },
-  {
-    key: "safety_officer",
-    label: "🛡️ Pharmacovigilance & Safety",
-    requires: ["safety_reviewer"],
-  },
-  {
-    key: "auditor",
-    label: "🔒 GxP & Part 11 Auditor",
-    requires: ["auditor", "tmf_auditor"],
-  },
-];
-
-export function normalizeRole(role) {
-  const normalized = (role || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s-_]+/g, "_");
-  if (
-    normalized === "study_designer" ||
-    normalized === "designer" ||
-    normalized === "sponsor_designer"
-  ) {
-    return "sponsor_designer";
-  }
-  if (normalized === "admin" || normalized === "super_admin") {
-    return "sponsor_admin";
-  }
-  return normalized;
-}
+export { PERSONA_PRESETS, ROLE_ALIASES, normalizeRole, personasForRoles };
 
 /** Storage key older builds used to persist tokens; purged on start-up. */
 const LEGACY_AUTH_STORAGE_KEY = "cadence_auth";
@@ -327,23 +244,6 @@ function rehydrateStoresForPersona(personaKey, pinia) {
   } catch {
     // Pinia or store not ready
   }
-}
-
-/**
- * True when one of the user's realm roles is, or implies (via ROLE_ALIASES),
- * one of the normalized `targets`. Implication runs one way only: a Sponsor
- * Admin holds `crc`, but a CRC does not hold `sponsor_admin`.
- */
-function holdsAnyRole(rawRoles, targets) {
-  return (rawRoles || []).map(normalizeRole).some((role) => {
-    if (targets.includes(role)) return true;
-    return (ROLE_ALIASES[role] || []).some((alias) => targets.includes(alias));
-  });
-}
-
-/** Personas the given realm roles entitle the user to view. */
-export function personasForRoles(rawRoles) {
-  return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
 }
 
 function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
@@ -648,17 +548,23 @@ export const useAuthStore = defineStore("auth", {
       this.authError = null;
       webSessionCoordinator.markAuthenticated();
 
+      const accountChanged = authSessionCacheScope(this) !== previousScope;
       const entitled = personasForRoles(this.rawRoles);
-      if (!entitled.some((p) => p.key === this.currentPersona)) {
-        this.currentPersona = entitled[0]?.key || null;
+      if (
+        accountChanged ||
+        !entitled.some((p) => p.key === this.currentPersona)
+      ) {
+        this.currentPersona = resolveDefaultPersonaForRoles(this.rawRoles);
       }
-      if (authSessionCacheScope(this) !== previousScope) {
+      if (accountChanged) {
         resetCanvasSessionCaches();
       }
       purgeLegacyUnscopedKeys();
       // Another account's (or an unattributable) clinical draft never survives
       // this account signing in (#5369).
-      purgeUserScopedStorage(storageScopeOf(this), !isDemoBuild());
+      purgeUserScopedStorage(storageScopeOf(this), !isDemoBuild(), {
+        purgeOnboarding: false,
+      });
       if (this.currentPersona) {
         rehydrateStoresForPersona(this.currentPersona, this._p);
       }
@@ -708,7 +614,9 @@ export const useAuthStore = defineStore("auth", {
       this.user = { ...resolveDemoIdentity(selectedPersona) };
       resetCanvasSessionCaches();
       purgeLegacyUnscopedKeys();
-      purgeUserScopedStorage(storageScopeOf(this));
+      purgeUserScopedStorage(storageScopeOf(this), false, {
+        purgeOnboarding: false,
+      });
       if (this.currentPersona) {
         rehydrateStoresForPersona(this.currentPersona, this._p);
       }
@@ -947,6 +855,7 @@ export const useAuthStore = defineStore("auth", {
       if (!entitled.some((p) => p.key === personaKey)) {
         return false;
       }
+      flushRegisteredDraftSourcesSync();
       this.currentPersona = personaKey;
       if (isDemoBuild() && isOfflineDemo) {
         const scope = resolveDemoPersonaScope(personaKey);

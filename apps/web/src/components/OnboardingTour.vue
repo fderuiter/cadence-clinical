@@ -104,15 +104,20 @@
 
 <script setup>
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
+import { getActivePinia } from "pinia";
 import { useRouter, useRoute } from "vue-router";
 import { useFocusTrap, useEscapeClose } from "ui";
+import { resolveLensEffectiveRoles } from "../catalog/staffPersonaCore.js";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
 } from "../stores/onboarding";
-import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
+import { isDemoBuild } from "../utils/demoMode";
 
 const NON_SHELL_TOUR_ROUTES = new Set([
   "landing",
@@ -140,6 +145,11 @@ const emit = defineEmits(["update:activeTab"]);
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const { activeStudyCode } = useActiveStudyScope();
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
 let router;
 let route;
 
@@ -156,18 +166,27 @@ const currentStepConfig = computed(
 );
 const totalSteps = computed(() => onboardingStore.totalSteps || 1);
 
-const effectiveRoles = computed(() => {
-  const roles = authStore.normalizedRoles || [];
-  const key =
-    authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
-  const preset = PERSONA_PRESETS.find((p) => p.key === key);
-  if (preset && key !== "super_admin" && roles.includes("sponsor_admin")) {
-    return preset.requires;
+const effectiveRoles = computed(() =>
+  resolveLensEffectiveRoles(
+    onboardingStore.currentPersona || authStore.currentPersona || "super_admin",
+    authStore.rawRoles
+  )
+);
+
+function resolveCurrentStudyCode() {
+  for (const candidate of [
+    route?.params?.studyCode,
+    route?.query?.studyCode,
+    route?.query?.studyId,
+    activeStudyCode.value,
+    activeCanvasStore.value?.studyCode,
+  ]) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
   }
-  return authStore.rawRoles?.length
-    ? roles
-    : preset?.requires || ["sponsor_admin"];
-});
+  return "";
+}
 
 function canNavigateToTourRoute(routeName) {
   if (!routeName || NON_SHELL_TOUR_ROUTES.has(routeName)) {
@@ -256,25 +275,56 @@ useEscapeClose(() => onboardingStore.dismissTour(), {
   isOpen: () => isTourOpen.value && !isModalStep.value,
 });
 
+function measureAxis(vvDim, winDim, docDim, fallback) {
+  if (vvDim) return vvDim;
+  if (docDim > 0) return Math.min(winDim || docDim, docDim);
+  return winDim || fallback;
+}
+
+function resolveViewportMetrics(zoomScale = 1) {
+  if (typeof window === "undefined") {
+    return { vpWidth: 1024, vpHeight: 768, vpOffsetLeft: 0, vpOffsetTop: 0 };
+  }
+  const vv = window.visualViewport;
+  const docEl =
+    typeof document !== "undefined" ? document.documentElement : null;
+  const effectiveZoom = zoomScale > 1 ? zoomScale : 1;
+  return {
+    vpWidth:
+      measureAxis(vv?.width, window.innerWidth, docEl?.clientWidth || 0, 1024) /
+      effectiveZoom,
+    vpHeight:
+      measureAxis(
+        vv?.height,
+        window.innerHeight,
+        docEl?.clientHeight || 0,
+        768
+      ) / effectiveZoom,
+    vpOffsetLeft: (vv?.offsetLeft || 0) / effectiveZoom,
+    vpOffsetTop: (vv?.offsetTop || 0) / effectiveZoom,
+  };
+}
+
 function buildCenteredPopoverStyle(cssZoomScale = 1) {
+  const { vpWidth, vpHeight, vpOffsetLeft, vpOffsetTop } =
+    resolveViewportMetrics(cssZoomScale);
+  const maxAllowedWidth = Math.max(0, vpWidth - VIEWPORT_MARGIN_PX * 2);
+  const maxAllowedHeight = Math.max(
+    0,
+    Math.min(vpHeight * 0.9, vpHeight - VIEWPORT_MARGIN_PX * 2)
+  );
   const style = {
     position: "fixed",
-    top: "50%",
-    left: "50%",
+    top: vpOffsetTop ? `${vpOffsetTop + vpHeight / 2}px` : "50%",
+    left: vpOffsetLeft ? `${vpOffsetLeft + vpWidth / 2}px` : "50%",
     transform: "translate(-50%, -50%)",
     zIndex: 1000,
   };
-  if (cssZoomScale > 1 && typeof window !== "undefined") {
-    const vv = window.visualViewport;
-    const rawVpW = vv?.width || window.innerWidth || 1024;
-    const rawVpH = vv?.height || window.innerHeight || 768;
-    const scaledVpW = rawVpW / cssZoomScale;
-    const scaledVpH = rawVpH / cssZoomScale;
-    style.maxWidth = `${Math.max(0, scaledVpW - VIEWPORT_MARGIN_PX * 2)}px`;
-    style.maxHeight = `${Math.max(
-      0,
-      Math.min(scaledVpH * 0.9, scaledVpH - VIEWPORT_MARGIN_PX * 2)
-    )}px`;
+  if (maxAllowedWidth > 0) {
+    style.maxWidth = `${maxAllowedWidth}px`;
+  }
+  if (maxAllowedHeight > 0) {
+    style.maxHeight = `${maxAllowedHeight}px`;
   }
   return style;
 }
@@ -330,6 +380,47 @@ function isElementVisible(el) {
   return rect.width > 0 && rect.height > 0;
 }
 
+function resolveResponsiveFallbackElement(hiddenEl, candidateSelector) {
+  if (typeof document === "undefined") return null;
+  if (hiddenEl && typeof hiddenEl.closest === "function") {
+    if (hiddenEl.closest("#header-secondary-menu")) {
+      const menuBtn = document.getElementById("btn-header-actions-menu");
+      if (isElementVisible(menuBtn)) {
+        return menuBtn;
+      }
+    }
+    if (hiddenEl.closest("#primary-navigation")) {
+      const mobileBtn = document.getElementById("btn-mobile-menu-toggle");
+      if (isElementVisible(mobileBtn)) {
+        return mobileBtn;
+      }
+    }
+  }
+  if (
+    candidateSelector === "#ecrf-participant-bar" ||
+    candidateSelector === ".subject-enrollment-card"
+  ) {
+    const canvasList =
+      document.getElementById("canvas-list-pane") ||
+      document.getElementById("canvas-workspace");
+    if (isElementVisible(canvasList)) {
+      return canvasList;
+    }
+  }
+  if (
+    candidateSelector === "#ecrf-form-instance" ||
+    candidateSelector === ".crc-form-renderer"
+  ) {
+    const canvasDetail =
+      document.getElementById("canvas-detail-pane") ||
+      document.getElementById("canvas-workspace");
+    if (isElementVisible(canvasDetail)) {
+      return canvasDetail;
+    }
+  }
+  return null;
+}
+
 function findFirstVisibleTarget(selectorList) {
   if (!selectorList || typeof document === "undefined") {
     return null;
@@ -339,6 +430,7 @@ function findFirstVisibleTarget(selectorList) {
     .map((part) => part.trim())
     .filter(Boolean);
 
+  const matchedHidden = [];
   for (const candidate of candidates) {
     let nodes;
     try {
@@ -350,6 +442,17 @@ function findFirstVisibleTarget(selectorList) {
       if (isElementVisible(el)) {
         return el;
       }
+      matchedHidden.push({ el, candidate });
+    }
+    if (nodes.length === 0) {
+      matchedHidden.push({ el: null, candidate });
+    }
+  }
+
+  for (const { el, candidate } of matchedHidden) {
+    const fallbackEl = resolveResponsiveFallbackElement(el, candidate);
+    if (fallbackEl) {
+      return fallbackEl;
     }
   }
   return null;
@@ -384,15 +487,61 @@ async function syncStepRoute() {
 
   if (router && route) {
     const targetRouteName = config.routeName;
+    const studyCode = resolveCurrentStudyCode();
+
     if (targetRouteName) {
       if (!canNavigateToTourRoute(targetRouteName)) {
         return;
       }
-      if (route.name !== targetRouteName) {
-        const query = config.query
+      const isAlreadyOnRedirectedConductCanvas =
+        !isDemoBuild() &&
+        targetRouteName === "ecrf" &&
+        route.name === "study" &&
+        route.query?.stage === "conduct" &&
+        (!studyCode || route.params?.studyCode === studyCode);
+
+      if (
+        !isAlreadyOnRedirectedConductCanvas &&
+        (route.name !== targetRouteName ||
+          (targetRouteName === "study" &&
+            !isDemoBuild() &&
+            route.query?.stage === "conduct" &&
+            config.query?.stage !== "conduct"))
+      ) {
+        const nextQuery = config.query
           ? { ...route.query, ...config.query }
           : { ...route.query };
-        await router.push({ name: targetRouteName, query });
+
+        if (targetRouteName !== "ecrf") {
+          if (!config.query?.stage) delete nextQuery.stage;
+          if (!config.query?.section) delete nextQuery.section;
+        }
+
+        if (targetRouteName === "study") {
+          delete nextQuery.studyCode;
+          delete nextQuery.studyId;
+          await router.push(
+            studyCode
+              ? {
+                  name: targetRouteName,
+                  params: { studyCode },
+                  query: nextQuery,
+                }
+              : { name: targetRouteName, query: nextQuery }
+          );
+          return;
+        }
+
+        if (
+          studyCode &&
+          targetRouteName !== "overview" &&
+          !nextQuery.studyCode &&
+          !nextQuery.studyId
+        ) {
+          nextQuery[targetRouteName === "ecrf" ? "studyCode" : "studyId"] =
+            studyCode;
+        }
+        await router.push({ name: targetRouteName, query: nextQuery });
         return;
       }
     }
@@ -413,6 +562,9 @@ async function syncStepRoute() {
       if (needsUpdate) {
         await router.push({
           name: queryRouteName,
+          ...(queryRouteName === "study" && studyCode
+            ? { params: { studyCode } }
+            : {}),
           query: newQuery,
         });
       }
@@ -455,34 +607,10 @@ const updatePosition = () => {
     const zoomScale = getEffectiveCssZoom();
     const el = findFirstVisibleTarget(selector);
     if (el) {
-      let rect = el.getBoundingClientRect();
-      if (
-        rect.width === 0 &&
-        rect.height === 0 &&
-        typeof el.closest === "function" &&
-        el.closest("#header-secondary-menu")
-      ) {
-        const menuBtn = document.getElementById("btn-header-actions-menu");
-        if (menuBtn) {
-          rect = menuBtn.getBoundingClientRect();
-        }
-      }
+      const rect = el.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        const vv = typeof window !== "undefined" ? window.visualViewport : null;
-        const rawVpWidth =
-          vv?.width ||
-          (typeof window !== "undefined" ? window.innerWidth : 1024) ||
-          1024;
-        const rawVpHeight =
-          vv?.height ||
-          (typeof window !== "undefined" ? window.innerHeight : 768) ||
-          768;
-        const vpWidth = zoomScale > 1 ? rawVpWidth / zoomScale : rawVpWidth;
-        const vpHeight = zoomScale > 1 ? rawVpHeight / zoomScale : rawVpHeight;
-        const vpOffsetLeft =
-          (vv?.offsetLeft || 0) / (zoomScale > 1 ? zoomScale : 1);
-        const vpOffsetTop =
-          (vv?.offsetTop || 0) / (zoomScale > 1 ? zoomScale : 1);
+        const { vpWidth, vpHeight, vpOffsetLeft, vpOffsetTop } =
+          resolveViewportMetrics(zoomScale);
 
         const maxAllowedWidth = Math.max(0, vpWidth - VIEWPORT_MARGIN_PX * 2);
         const maxAllowedHeight = Math.max(
@@ -602,8 +730,10 @@ const updatePosition = () => {
           transform: "translateX(-50%)",
           zIndex: 1000,
         };
-        if (zoomScale > 1) {
+        if (maxAllowedWidth > 0) {
           nextStyle.maxWidth = `${maxAllowedWidth}px`;
+        }
+        if (maxAllowedHeight > 0) {
           nextStyle.maxHeight = `${maxAllowedHeight}px`;
         }
         popoverStyle.value = nextStyle;
@@ -642,18 +772,30 @@ const handleScroll = (event) => {
   updatePosition();
 };
 
+let syncingFromStepAction = false;
+
 const handleNext = async () => {
   const currentDesc = stepTargetDescription.value;
-  onboardingStore.nextStep(currentDesc);
-  await syncStepRoute();
+  syncingFromStepAction = true;
+  try {
+    onboardingStore.nextStep(currentDesc);
+    await syncStepRoute();
+  } finally {
+    syncingFromStepAction = false;
+  }
   updatePosition();
   schedulePositionUpdate(50);
   schedulePositionUpdate(150);
 };
 
 const handlePrev = async () => {
-  onboardingStore.prevStep();
-  await syncStepRoute();
+  syncingFromStepAction = true;
+  try {
+    onboardingStore.prevStep();
+    await syncStepRoute();
+  } finally {
+    syncingFromStepAction = false;
+  }
   updatePosition();
   schedulePositionUpdate(50);
   schedulePositionUpdate(150);
@@ -672,7 +814,9 @@ watch(currentStep, async () => {
   if (config?.query?.tab) {
     emit("update:activeTab", config.query.tab);
   }
-  await syncStepRoute();
+  if (!syncingFromStepAction) {
+    await syncStepRoute();
+  }
   updatePosition();
   schedulePositionUpdate(50);
 });

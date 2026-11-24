@@ -104,6 +104,53 @@
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
       <path d="m9 12 2 2 4-4" />
     </template>
+    <template v-else-if="name === 'database'">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+      <path d="M3 12a9 3 0 0 0 18 0" />
+    </template>
+    <template v-else-if="name === 'folder'">
+      <path
+        d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+      />
+    </template>
+    <template v-else-if="name === 'file-text'">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </template>
+    <template v-else-if="name === 'check-circle'">
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </template>
+    <template v-else-if="name === 'alert-triangle'">
+      <path
+        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+      />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </template>
+    <template v-else-if="name === 'message-square'">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </template>
+    <template v-else-if="name === 'lock'">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </template>
+    <template v-else-if="name === 'settings'">
+      <circle cx="12" cy="12" r="3" />
+      <path
+        d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"
+      />
+    </template>
+    <template v-else-if="name === 'compass'">
+      <circle cx="12" cy="12" r="10" />
+      <polygon
+        points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
+      />
+    </template>
     <template v-else>
       <circle cx="12" cy="12" r="10" />
       <path d="M12 16v-4" />

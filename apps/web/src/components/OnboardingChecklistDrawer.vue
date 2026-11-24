@@ -16,7 +16,9 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">🚀</span>
+              <span class="header-icon" aria-hidden="true">
+                <ClinicalIcon name="compass" :size="22" />
+              </span>
               <div>
                 <h3 id="checklist-drawer-title" class="drawer-title">
                   Workspace Setup Checklist
@@ -32,7 +34,7 @@
               aria-label="Close Setup Checklist Drawer"
               @click="onboardingStore.closeDrawer()"
             >
-              ✕
+              <ClinicalIcon name="x" :size="18" />
             </button>
           </div>
 
@@ -64,7 +66,10 @@
               v-if="onboardingStore.isChecklistComplete"
               class="complete-banner"
             >
-              🎉 All setup milestones completed! Study configuration ready.
+              <ClinicalIcon name="check-circle" :size="14" />
+              <span>
+                All setup milestones completed! Study configuration ready.
+              </span>
             </div>
           </div>
         </div>
@@ -98,7 +103,8 @@
               class="task-status-badge"
               :class="task.completed ? 'status-complete' : 'status-pending'"
             >
-              {{ task.completed ? "✓ Done" : "Pending" }}
+              <ClinicalIcon v-if="task.completed" name="check" :size="12" />
+              <span>{{ task.completed ? "Done" : "Pending" }}</span>
             </span>
           </div>
 
@@ -113,7 +119,8 @@
               :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
-              Go to Task ↗
+              <span>Go to Task</span>
+              <ClinicalIcon name="external-link" :size="12" />
             </button>
           </div>
         </div>
@@ -162,20 +169,21 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import { ClinicalDrawer } from "ui";
+import { ClinicalDrawer, ClinicalIcon } from "ui";
 import {
   buildScopedWorkflowPath,
   resolveWorkspaceNavigationScope,
 } from "../canvas/palette";
+import { resolveLensEffectiveRoles } from "../catalog/staffPersonaCore.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
-import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
@@ -195,6 +203,15 @@ try {
 }
 const { activeStudyCode } = useActiveStudyScope();
 
+watch(
+  () => authStore.currentPersona,
+  (nextPersona) => {
+    if (nextPersona && onboardingStore.currentPersona !== nextPersona) {
+      onboardingStore.loadPersonaState(nextPersona);
+    }
+  }
+);
+
 const workspaceScope = computed(() =>
   resolveWorkspaceNavigationScope(
     activeRoute,
@@ -204,15 +221,12 @@ const workspaceScope = computed(() =>
   )
 );
 
-const effectiveRoles = computed(() => {
-  if (authStore.rawRoles?.length > 0) {
-    return authStore.normalizedRoles || [];
-  }
-  const personaKey =
-    authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
-});
+const effectiveRoles = computed(() =>
+  resolveLensEffectiveRoles(
+    onboardingStore.currentPersona || authStore.currentPersona || "super_admin",
+    authStore.rawRoles
+  )
+);
 
 function canPushResolvedPath(targetPath) {
   if (!targetPath || !router) return false;
@@ -240,10 +254,14 @@ function canPushResolvedPath(targetPath) {
 
 function navigateToTask(task) {
   if (!task) return;
+  const scope = {
+    ...workspaceScope.value,
+    studyCode: workspaceScope.value.studyCode || activeStudyCode.value || "",
+  };
   const authorizedRoute = resolveAuthorizedTaskRoute(
     task,
     effectiveRoles.value,
-    workspaceScope.value
+    scope
   );
   if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
     router.push(authorizedRoute);
@@ -410,6 +428,10 @@ function startGuidedTour() {
   font-weight: 600;
   border-radius: 6px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 :deep(.drawer-body) {
@@ -484,6 +506,9 @@ function startGuidedTour() {
   padding: 2px 8px;
   border-radius: 12px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .status-complete {
@@ -520,6 +545,9 @@ function startGuidedTour() {
   cursor: pointer;
   font-weight: 500;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .btn-navigate-task:hover {

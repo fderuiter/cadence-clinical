@@ -459,15 +459,20 @@ export const MediaPlayer: DefineComponent<
   any
 >;
 
+export interface StaffPersonaOption {
+  id: string;
+  label: string;
+  role: string;
+  badge?: string;
+  icon?: string;
+}
+
+export const DEFAULT_STAFF_PERSONAS: ReadonlyArray<StaffPersonaOption>;
+
 export const PersonaSwitcher: DefineComponent<
   {
     modelValue?: string;
-    personas?: Array<{
-      id: string;
-      label: string;
-      role: string;
-      badge?: string;
-    }>;
+    personas?: ReadonlyArray<StaffPersonaOption>;
   },
   {},
   any

@@ -85,43 +85,87 @@ describe("OverviewView Orientation Hub Component", () => {
     expect(saved).toBe("true");
   });
 
-  it("navigates only to live authorized operational views when clicking workflow launcher cards and checklist links across all six personas", async () => {
+  it("navigates only to live authorized operational views when clicking workflow launcher cards and checklist links across all ten staff personas", async () => {
     const personaExpectations = [
       {
         roles: ["Sponsor Admin"],
         persona: "super_admin",
-        expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/studies", "/ctms"],
+        expectedLaunchers: ["/studies", "/studies", "/ctms", "/etmf"],
+        expectedChecklistRoutes: ["/studies", "/studies", "/studies", "/ctms"],
       },
       {
         roles: ["Sponsor Designer"],
         persona: "sponsor_designer",
-        expectedLaunchers: ["/studies"],
-        expectedChecklistRoutes: ["/studies", "/studies", "/studies"],
+        expectedLaunchers: ["/studies", "/knowledge", "/training"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/studies",
+          "/knowledge",
+          "/training",
+        ],
       },
       {
         roles: ["Data Manager"],
         persona: "data_manager",
-        expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/studies", "/studies", "/studies", "/ctms"],
+        expectedLaunchers: ["/studies", "/studies", "/ctms", "/etmf"],
+        expectedChecklistRoutes: ["/studies", "/studies", "/ctms", "/etmf"],
       },
       {
         roles: ["CRC"],
         persona: "site_crc",
-        expectedLaunchers: ["/studies", "/studies", "/ssu"],
-        expectedChecklistRoutes: ["/ssu", "/studies", "/studies"],
+        expectedLaunchers: ["/studies", "/studies", "/ssu", "/etmf"],
+        expectedChecklistRoutes: ["/ssu", "/studies", "/studies", "/training"],
+      },
+      {
+        roles: ["Principal Investigator"],
+        persona: "site_investigator",
+        expectedLaunchers: ["/studies", "/studies", "/ssu", "/training"],
+        expectedChecklistRoutes: ["/studies", "/ssu", "/studies", "/etmf"],
       },
       {
         roles: ["CRA"],
         persona: "cra_monitor",
-        expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/ctms", "/studies", "/studies"],
+        expectedLaunchers: ["/ctms", "/studies", "/studies", "/etmf"],
+        expectedChecklistRoutes: ["/ctms", "/studies", "/studies", "/etmf"],
+      },
+      {
+        roles: ["Safety Reviewer"],
+        persona: "safety_officer",
+        expectedLaunchers: ["/studies", "/tickets", "/knowledge"],
+        expectedChecklistRoutes: ["/studies", "/tickets", "/knowledge"],
       },
       {
         roles: ["Auditor"],
         persona: "auditor",
-        expectedLaunchers: ["/studies"],
-        expectedChecklistRoutes: ["/studies", "/studies", "/studies"],
+        expectedLaunchers: ["/studies", "/etmf", "/knowledge"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/studies",
+          "/etmf",
+          "/knowledge",
+        ],
+      },
+      {
+        roles: ["pharmacist"],
+        persona: "pharmacist",
+        expectedLaunchers: ["/studies", "/training", "/tickets", "/knowledge"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/training",
+          "/tickets",
+          "/knowledge",
+        ],
+      },
+      {
+        roles: ["unblinded_statistician"],
+        persona: "unblinded_statistician",
+        expectedLaunchers: ["/studies", "/knowledge", "/training", "/tickets"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/knowledge",
+          "/training",
+          "/tickets",
+        ],
       },
     ];
 

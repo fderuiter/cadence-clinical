@@ -145,6 +145,8 @@ export const DEMO_PERSONA_DEFAULT_SCOPES = Object.freeze({
       "Safety Reviewer",
       "Auditor",
       "TMF Auditor",
+      "pharmacist",
+      "unblinded_statistician",
     ],
     siteIds: [],
   },
@@ -174,6 +176,14 @@ export const DEMO_PERSONA_DEFAULT_SCOPES = Object.freeze({
   },
   auditor: {
     rawRoles: ["Auditor"],
+    siteIds: [],
+  },
+  pharmacist: {
+    rawRoles: ["pharmacist"],
+    siteIds: ["SITE-101"],
+  },
+  unblinded_statistician: {
+    rawRoles: ["unblinded_statistician"],
     siteIds: [],
   },
 });

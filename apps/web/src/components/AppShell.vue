@@ -407,7 +407,7 @@ import {
   useEscapeClose,
   useSignOutGuard,
 } from "ui";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
@@ -712,6 +712,16 @@ const showOnboardingTour = computed(
     route?.path !== "/forbidden" &&
     route?.name !== "unavailable" &&
     route?.path !== "/unavailable"
+);
+
+watch(
+  () => authStore.currentPersona,
+  (nextPersona) => {
+    if (nextPersona && onboardingStore.currentPersona !== nextPersona) {
+      onboardingStore.loadPersonaState(nextPersona);
+    }
+  },
+  { immediate: true }
 );
 
 const checkActiveRouteAuth = () =>

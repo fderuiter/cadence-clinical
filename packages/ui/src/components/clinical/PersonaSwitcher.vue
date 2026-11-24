@@ -1,5 +1,81 @@
+<script>
+export const DEFAULT_STAFF_PERSONAS = Object.freeze([
+  {
+    id: "super_admin",
+    label: "Sponsor Administrator",
+    role: "sponsor_admin",
+    badge: "Admin",
+    icon: "shield-check",
+  },
+  {
+    id: "sponsor_designer",
+    label: "Sponsor Protocol Designer",
+    role: "sponsor_designer",
+    badge: "Designer",
+    icon: "book-open",
+  },
+  {
+    id: "data_manager",
+    label: "Clinical Data Manager",
+    role: "data_manager",
+    badge: "DM",
+    icon: "database",
+  },
+  {
+    id: "site_crc",
+    label: "Site Coordinator (CRC)",
+    role: "site_investigator",
+    badge: "Site",
+    icon: "clipboard-list",
+  },
+  {
+    id: "site_investigator",
+    label: "Principal Investigator",
+    role: "principal_investigator",
+    badge: "PI",
+    icon: "file-signature",
+  },
+  {
+    id: "cra_monitor",
+    label: "CRA Clinical Monitor",
+    role: "cra",
+    badge: "Monitor",
+    icon: "search",
+  },
+  {
+    id: "safety_officer",
+    label: "Pharmacovigilance & Safety",
+    role: "safety_reviewer",
+    badge: "Safety",
+    icon: "alert-triangle",
+  },
+  {
+    id: "auditor",
+    label: "GxP & Part 11 Auditor",
+    role: "auditor",
+    badge: "Auditor",
+    icon: "lock",
+  },
+  {
+    id: "pharmacist",
+    label: "Site Pharmacist",
+    role: "pharmacist",
+    badge: "Pharmacy",
+    icon: "check-circle",
+  },
+  {
+    id: "unblinded_statistician",
+    label: "Unblinded Statistician",
+    role: "unblinded_statistician",
+    badge: "Biostats",
+    icon: "trending-up",
+  },
+]);
+</script>
+
 <script setup>
 import { computed, ref } from "vue";
+import ClinicalIcon from "./ClinicalIcon.vue";
 
 const props = defineProps({
   modelValue: {
@@ -8,44 +84,7 @@ const props = defineProps({
   },
   personas: {
     type: Array,
-    default: () => [
-      {
-        id: "super_admin",
-        label: "Super Administrator",
-        role: "admin",
-        badge: "Admin",
-      },
-      {
-        id: "sponsor_designer",
-        label: "Protocol Author",
-        role: "sponsor_designer",
-        badge: "Designer",
-      },
-      {
-        id: "site_crc",
-        label: "Site Coordinator (CRC)",
-        role: "site_crc",
-        badge: "Site",
-      },
-      {
-        id: "cra_monitor",
-        label: "CRA Monitor",
-        role: "cra_monitor",
-        badge: "Monitor",
-      },
-      {
-        id: "data_manager",
-        label: "Clinical Data Manager",
-        role: "data_manager",
-        badge: "DM",
-      },
-      {
-        id: "auditor",
-        label: "Independent Auditor",
-        role: "auditor",
-        badge: "Auditor",
-      },
-    ],
+    default: () => DEFAULT_STAFF_PERSONAS,
   },
 });
 
@@ -53,9 +92,16 @@ const emit = defineEmits(["update:modelValue", "change"]);
 
 const isOpen = ref(false);
 
+const resolvedPersonas = computed(() =>
+  Array.isArray(props.personas) && props.personas.length > 0
+    ? props.personas
+    : DEFAULT_STAFF_PERSONAS
+);
+
 const activePersona = computed(() => {
   return (
-    props.personas.find((p) => p.id === props.modelValue) || props.personas[0]
+    resolvedPersonas.value.find((p) => p.id === props.modelValue) ||
+    resolvedPersonas.value[0]
   );
 });
 
@@ -81,9 +127,12 @@ const selectPersona = (persona) => {
         <span class="persona-badge">{{ activePersona.badge }}</span>
       </div>
       <span class="sr-only"> — Switch User Persona or Role</span>
-      <span class="dropdown-arrow" aria-hidden="true">{{
-        isOpen ? "▲" : "▼"
-      }}</span>
+      <span class="dropdown-arrow" aria-hidden="true">
+        <ClinicalIcon
+          :name="isOpen ? 'chevron-up' : 'chevron-down'"
+          size="xs"
+        />
+      </span>
     </button>
 
     <div
@@ -94,8 +143,9 @@ const selectPersona = (persona) => {
     >
       <div class="menu-header">Active Persona & Role Scope</div>
       <button
-        v-for="persona in personas"
+        v-for="persona in resolvedPersonas"
         :key="persona.id"
+        type="button"
         :class="['menu-item', { active: persona.id === modelValue }]"
         role="menuitem"
         @click="selectPersona(persona)"

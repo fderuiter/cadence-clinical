@@ -117,11 +117,14 @@ export function hasUserScopedDrafts(scope = null) {
  */
 export function purgeUserScopedStorage(
   keepScope = null,
-  purgeClinical = false
+  purgeClinical = false,
+  options = {}
 ) {
   const ls = storage();
   if (!ls) return 0;
   const keep = scopePrefix(keepScope);
+  const purgeOnboarding =
+    options?.purgeOnboarding !== undefined ? options.purgeOnboarding : !keep;
   try {
     const doomed = [];
     for (let i = 0; i < ls.length; i++) {
@@ -129,6 +132,7 @@ export function purgeUserScopedStorage(
       if (
         key !== null &&
         (LEGACY_UNOWNED_PREFIXES.some((p) => key.startsWith(p)) ||
+          (purgeOnboarding && key.startsWith("onboarding_")) ||
           (key.startsWith(USER_SCOPED_ROOT) &&
             (!keep ||
               !key.startsWith(keep) ||

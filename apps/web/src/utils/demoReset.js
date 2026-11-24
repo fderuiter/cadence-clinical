@@ -91,6 +91,14 @@ function resetMountedStoresSync(pinia) {
         studyCanvasStore.clearSessionCaches();
       }
     }
+
+    const onboardingStore = registry.get("onboarding");
+    if (
+      onboardingStore &&
+      typeof onboardingStore.clearSessionState === "function"
+    ) {
+      onboardingStore.clearSessionState();
+    }
   } else {
     resetClinicalSession(activePinia);
   }

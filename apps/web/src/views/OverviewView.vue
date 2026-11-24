@@ -4,7 +4,10 @@
     <header class="overview-header-card">
       <div class="welcome-main">
         <div class="persona-icon-badge" aria-hidden="true">
-          {{ personaConfig.icon }}
+          <ClinicalIcon
+            :name="personaConfig.icon || 'shield-check'"
+            :size="36"
+          />
         </div>
         <div class="welcome-text-content">
           <h1 class="welcome-title">Welcome, {{ userName }}!</h1>
@@ -21,7 +24,7 @@
       <!-- User Preference Toggle Card -->
       <div class="landing-preference-card">
         <div class="preference-header">
-          <span class="pref-icon">⚙️</span>
+          <ClinicalIcon name="settings" :size="16" class="pref-icon" />
           <span class="pref-title">Default Landing Preference</span>
         </div>
         <label class="pref-toggle-label" for="toggle-bypass-overview">
@@ -42,11 +45,17 @@
           class="pref-status-badge"
           :class="{ 'is-bypassed': onboardingStore.bypassOverview }"
         >
-          {{
-            onboardingStore.bypassOverview
-              ? "⚡ Direct workspace navigation active"
-              : "🏠 Orientation Hub set as default landing"
-          }}
+          <ClinicalIcon
+            :name="onboardingStore.bypassOverview ? 'chevron-right' : 'compass'"
+            :size="14"
+          />
+          <span>
+            {{
+              onboardingStore.bypassOverview
+                ? "Direct workspace navigation active"
+                : "Orientation Hub set as default landing"
+            }}
+          </span>
         </div>
       </div>
     </header>
@@ -122,7 +131,12 @@
       >
         <div class="section-header">
           <h2 id="heading-quickstart" class="section-title">
-            <span class="section-icon">📋</span> Quick-Start Task Checklist
+            <ClinicalIcon
+              name="clipboard-list"
+              :size="20"
+              class="section-icon"
+            />
+            <span>Quick-Start Task Checklist</span>
           </h2>
           <span class="progress-badge">
             {{ completedCount }} of {{ currentChecklist.length }} tasks complete
@@ -148,15 +162,17 @@
             v-for="task in currentChecklist"
             :key="task.id"
             class="checklist-item-row"
-            :class="{ 'is-completed': isTaskCompleted(task.id) }"
+            :class="{ 'is-completed': task.completed }"
           >
             <label :for="'task-' + task.id" class="checklist-item-label">
               <input
                 type="checkbox"
                 :id="'task-' + task.id"
                 class="task-checkbox"
-                :checked="isTaskCompleted(task.id)"
-                @change="onboardingStore.toggleTaskCompletion(task.id)"
+                :checked="task.completed"
+                @change="
+                  onboardingStore.toggleTask(task.id, $event.target.checked)
+                "
               />
               <div class="task-content">
                 <span class="task-title">{{ task.title }}</span>
@@ -168,10 +184,11 @@
               type="button"
               class="btn btn-task-launch"
               :title="'Open ' + task.title"
-              @click="navigateToRoute(task.targetRoute)"
+              @click="navigateToRoute(task)"
             >
-              Go <span aria-hidden="true">↗</span
-              ><span class="sr-only">to {{ task.title }}</span>
+              <span>Go</span>
+              <ClinicalIcon name="external-link" :size="12" />
+              <span class="sr-only">to {{ task.title }}</span>
             </button>
           </li>
         </ul>
@@ -182,7 +199,17 @@
             class="btn btn-primary btn-start-tour"
             @click="startGuidedTour"
           >
-            🚀 Launch Interactive Guided Tour
+            <ClinicalIcon name="compass" :size="16" />
+            <span>Launch Interactive Guided Tour</span>
+          </button>
+          <button
+            v-if="completedCount > 0"
+            type="button"
+            class="btn btn-secondary btn-reset-checklist overview-reset-btn"
+            @click="onboardingStore.resetChecklist()"
+          >
+            <ClinicalIcon name="refresh" :size="14" />
+            <span>Reset Progress</span>
           </button>
         </div>
       </section>
@@ -194,7 +221,8 @@
       >
         <div class="section-header">
           <h2 id="heading-launchers" class="section-title">
-            <span class="section-icon">🚀</span> Core Workflow Launchers
+            <ClinicalIcon name="compass" :size="20" class="section-icon" />
+            <span>Core Workflow Launchers</span>
           </h2>
           <span class="subtitle-tag">One-click deep operational access</span>
         </div>
@@ -211,7 +239,9 @@
             :class="{ 'is-featured': launcher.featured }"
           >
             <div class="launcher-header">
-              <span class="launcher-icon">{{ launcher.icon }}</span>
+              <span class="launcher-icon" aria-hidden="true">
+                <ClinicalIcon :name="launcher.icon || 'book-open'" :size="22" />
+              </span>
               <span class="launcher-badge" :class="launcher.badgeClass">{{
                 launcher.badgeText
               }}</span>
@@ -222,9 +252,10 @@
               <button
                 type="button"
                 class="btn btn-launcher-action"
-                @click="navigateToRoute(launcher.route)"
+                @click="navigateToRoute(launcher.routeSpec)"
               >
-                Launch {{ launcher.title }} ↗
+                <span>Launch {{ launcher.title }}</span>
+                <ClinicalIcon name="external-link" :size="13" />
               </button>
             </div>
           </div>
@@ -235,24 +266,23 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
-import {
-  buildDataCollectionPath,
-  buildScopedWorkflowPath,
-  buildStudiesWorkspacePath,
-  resolveSiteReadinessPath,
-  resolveWorkspaceNavigationScope,
-} from "../canvas/palette";
+import { ClinicalIcon } from "ui";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
+import { resolveLensEffectiveRoles } from "../catalog/staffPersonaCore.js";
+import { getPersonaOverviewEntry as getPersonaCatalogEntry } from "../catalog/staffPersonaOverview.js";
+import { resolveWorkspaceNavigationScope } from "../canvas/palette";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
-import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
-import { useOnboardingStore } from "../stores/onboarding";
+import { useAuthStore } from "../stores/auth";
+import {
+  resolveAuthorizedTaskRoute,
+  useOnboardingStore,
+} from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
-import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
 let activeRoute = null;
@@ -277,7 +307,26 @@ const workspaceScope = computed(() =>
   )
 );
 
+function syncOnboardingPersona() {
+  if (
+    authStore.currentPersona &&
+    onboardingStore.currentPersona !== authStore.currentPersona
+  ) {
+    onboardingStore.loadPersonaState(authStore.currentPersona);
+  }
+}
+
+syncOnboardingPersona();
+
+watch(
+  () => authStore.currentPersona,
+  () => {
+    syncOnboardingPersona();
+  }
+);
+
 onMounted(() => {
+  syncOnboardingPersona();
   if (
     authStore.isAuthenticated &&
     typeof authStore.loadEntitlements === "function"
@@ -294,461 +343,56 @@ const userName = computed(() => {
 });
 
 const currentPersonaKey = computed(
-  () => authStore.currentPersona || "super_admin"
+  () =>
+    authStore.currentPersona || onboardingStore.currentPersona || "super_admin"
 );
 
-const effectiveRoles = computed(() => {
-  const roles = authStore.normalizedRoles || [];
-  const preset = PERSONA_PRESETS.find((p) => p.key === currentPersonaKey.value);
-  if (
-    preset &&
-    currentPersonaKey.value !== "super_admin" &&
-    roles.includes("sponsor_admin")
-  ) {
-    return [...preset.requires];
-  }
-  if (authStore.rawRoles?.length > 0) {
-    return roles;
-  }
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+const effectiveRoles = computed(() =>
+  resolveLensEffectiveRoles(currentPersonaKey.value, authStore.rawRoles)
+);
+
+const catalogEntry = computed(() =>
+  getPersonaCatalogEntry(currentPersonaKey.value, authStore.rawRoles)
+);
+
+const personaConfig = computed(() => catalogEntry.value.orientation);
+
+const resolvedNavigationScope = computed(() => {
+  const scope = workspaceScope.value;
+  return {
+    ...scope,
+    studyCode: scope.studyCode || activeStudyCode.value || "",
+  };
 });
 
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
-  const scope = workspaceScope.value;
-  const studyCode = scope.studyCode || activeStudyCode.value;
-  const siteId = scope.siteId;
-  const explicitSiteId =
-    scope.explicitSiteId !== undefined ? scope.explicitSiteId : siteId;
-  const subjectCode = scope.subjectCode;
-  const participantRef = scope.participantRef;
-  const enrollmentId = scope.enrollmentId;
-
-  if (routeSpec === "study" || routeSpec === "/studies") {
-    if (!isScreenAvailable("study")) return null;
-    return buildStudiesWorkspacePath({
-      studyCode,
-      siteId,
-      subjectCode,
-      participantRef,
-    });
-  }
-  if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
-    if (isDemoBuild()) {
-      return isScreenAvailable("ecrf") &&
-        hasRequiredRole(effectiveRoles.value, [
-          "site_investigator",
-          "crc",
-          "data_manager",
-          "sponsor_admin",
-          "cra",
-          "monitor",
-        ])
-        ? buildDataCollectionPath({
-            studyCode,
-            siteId: explicitSiteId,
-            subjectCode,
-            enrollmentId,
-          })
-        : null;
-    }
-    return isScreenAvailable("study") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-      ])
-      ? studyCode || explicitSiteId || participantRef || subjectCode
-        ? buildDataCollectionPath({
-            studyCode,
-            siteId: explicitSiteId,
-            participantRef,
-            subjectCode,
-            enrollmentId,
-          })
-        : "/studies"
-      : null;
-  }
-  if (routeSpec === "site-readiness") {
-    return resolveSiteReadinessPath(effectiveRoles.value, {
-      studyCode,
-      siteId,
-      subjectCode,
-    });
-  }
-  if (routeSpec === "ctms" || routeSpec === "/ctms") {
-    return isScreenAvailable("ctms") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-      ])
-      ? buildScopedWorkflowPath("/ctms", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "ssu" || routeSpec === "/ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-        "site_investigator",
-        "crc",
-      ])
-      ? buildScopedWorkflowPath("/ssu", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "etmf" || routeSpec === "/etmf") {
-    return isScreenAvailable("etmf") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "site_investigator",
-        "crc",
-        "auditor",
-        "tmf_auditor",
-        "sponsor_admin",
-      ])
-      ? buildScopedWorkflowPath("/etmf", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "training" || routeSpec === "/training") {
-    return isScreenAvailable("training")
-      ? buildScopedWorkflowPath("/training", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  return null;
+  return resolveAuthorizedTaskRoute(
+    routeSpec,
+    effectiveRoles.value,
+    resolvedNavigationScope.value
+  );
 }
 
-const PERSONA_DETAILS = {
-  super_admin: {
-    icon: "👑",
-    title: "Super Admin Workspace",
-    roleName: "Super Admin",
-    description:
-      "Full oversight across study workspaces, clinical data collection, site readiness, and regulatory governance.",
-  },
-  sponsor_designer: {
-    icon: "📋",
-    title: "Sponsor Protocol & Design Workspace",
-    roleName: "Sponsor Protocol Designer",
-    description:
-      "Structure study lifecycle stages, inspect recorded protocol versions, and review clinical schedules.",
-  },
-  data_manager: {
-    icon: "⚙️",
-    title: "Clinical Data Management Workspace",
-    roleName: "Clinical Data Manager",
-    description:
-      "Review clinical case report forms, field validation rules, and discrepancy query resolution.",
-  },
-  site_crc: {
-    icon: "🩺",
-    title: "Site Investigator & Coordinator Workspace",
-    roleName: "Site Coordinator / CRC",
-    description:
-      "Manage participant enrollment, record clinical visit observations, and track site operational readiness.",
-  },
-  site_investigator: {
-    icon: "PI",
-    title: "Principal Investigator Workspace",
-    roleName: "Principal Investigator (PI)",
-    description:
-      "Oversee site clinical conduct, review participant case report forms, and apply 21 CFR Part 11 investigator signatures.",
-  },
-  cra_monitor: {
-    icon: "📊",
-    title: "Clinical Monitoring & Site Readiness",
-    roleName: "CRA / Clinical Monitor",
-    description:
-      "Perform source data verification, track site activation readiness, and monitor study conduct.",
-  },
-  safety_officer: {
-    icon: "PV",
-    title: "Pharmacovigilance & Safety Review Workspace",
-    roleName: "Safety Officer / QPPV",
-    description:
-      "Monitor serious adverse event narratives, unblinded safety signals, and aggregate pharmacovigilance governance.",
-  },
-  auditor: {
-    icon: "🔒",
-    title: "GxP & Part 11 Regulatory Workspace",
-    roleName: "GxP Auditor",
-    description:
-      "Inspect immutable study activity, protocol version provenance, and 21 CFR Part 11 governance decisions.",
-  },
-};
-
-const personaConfig = computed(() => {
-  return (
-    PERSONA_DETAILS[currentPersonaKey.value] || PERSONA_DETAILS.super_admin
-  );
-});
-
-const CHECKLISTS = {
-  super_admin: [
-    {
-      id: "sa-1",
-      title: "Open a Study Workspace",
-      description:
-        "Open a study by code to inspect lifecycle stages, participants, and activity.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "sa-2",
-      title: "Review Site Readiness",
-      description:
-        "Check site activation checklists, startup progress, and readiness status.",
-      targetRoute: "site-readiness",
-    },
-    {
-      id: "sa-3",
-      title: "Customize Landing Preferences",
-      description:
-        "Set your default landing behavior or bypass option for future sign-ins.",
-      targetRoute: null,
-    },
-  ],
-  sponsor_designer: [
-    {
-      id: "sd-1",
-      title: "Open Study Design Stage",
-      description:
-        "Open a study workspace to inspect its Design stage and recorded protocol versions.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "sd-2",
-      title: "Navigate Study Lifecycle",
-      description:
-        "Verify lifecycle progression across Design, Start, Conduct, Data, Analyze, and Submit.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "sd-3",
-      title: "Review Protocol Governance",
-      description:
-        "Inspect open proposals and protocol amendment provenance in the study workspace.",
-      targetRoute: "/studies",
-    },
-  ],
-  data_manager: [
-    {
-      id: "dm-1",
-      title: "Validation Rules & Queries",
-      description:
-        "Inspect real-time field checks and discrepancy notes in Data collection.",
-      targetRoute: "/ecrf",
-    },
-    {
-      id: "dm-2",
-      title: "Study Conduct & Participant Status",
-      description:
-        "Review participant counts and open governance proposals in the study workspace.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "dm-3",
-      title: "Case Report Form Completeness",
-      description:
-        "Verify participant visit entries and discrepancy resolution status.",
-      targetRoute: "/ecrf",
-    },
-    {
-      id: "dm-4",
-      title: "Site Readiness & Activation",
-      description:
-        "Certify startup greenlight readiness and activate compliant study sites.",
-      targetRoute: "site-readiness",
-    },
-  ],
-  site_crc: [
-    {
-      id: "crc-1",
-      title: "Site Readiness Check",
-      description:
-        "Verify site activation readiness and startup requirements for your site.",
-      targetRoute: "site-readiness",
-    },
-    {
-      id: "crc-2",
-      title: "Participant Enrollment & Data Collection",
-      description:
-        "Register participants and complete clinical visit case report forms.",
-      targetRoute: "/ecrf",
-    },
-    {
-      id: "crc-3",
-      title: "Study Participant Overview",
-      description:
-        "Inspect participant statuses and conduct activity in the study workspace.",
-      targetRoute: "/studies",
-    },
-  ],
-  site_investigator: [
-    {
-      id: "pi-1",
-      title: "Case Report Form & Signature Review",
-      description:
-        "Review clinical visit observations and sign completed case report forms.",
-      targetRoute: "/ecrf",
-    },
-    {
-      id: "pi-2",
-      title: "Site Readiness & Investigator Oversight",
-      description:
-        "Confirm site startup obligations and delegation readiness for your site.",
-      targetRoute: "site-readiness",
-    },
-    {
-      id: "pi-3",
-      title: "Study Conduct & Participant Oversight",
-      description:
-        "Inspect enrolled participants and governance activity in the study workspace.",
-      targetRoute: "/studies",
-    },
-  ],
-  cra_monitor: [
-    {
-      id: "cra-1",
-      title: "Site Readiness & Activation Review",
-      description:
-        "Track site onboarding milestones and operational activation state.",
-      targetRoute: "site-readiness",
-    },
-    {
-      id: "cra-2",
-      title: "Source Data Verification (SDV)",
-      description:
-        "Review and verify clinical form entries at the participant level.",
-      targetRoute: "/ecrf",
-    },
-    {
-      id: "cra-3",
-      title: "Monitor Study Conduct",
-      description:
-        "Inspect study-wide participant counts and site status in the study workspace.",
-      targetRoute: "/studies",
-    },
-  ],
-  safety_officer: [
-    {
-      id: "pv-1",
-      title: "Study Safety & Conduct Overview",
-      description:
-        "Inspect participant conduct status, adverse event signals, and protocol versions.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "pv-2",
-      title: "Unblinded Safety Allocation Governance",
-      description:
-        "Verify safety governance proposals and audit provenance in the study workspace.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "pv-3",
-      title: "Workspace Orientation Preferences",
-      description:
-        "Configure landing preferences and review pharmacovigilance SOP guidance.",
-      targetRoute: null,
-    },
-  ],
-  auditor: [
-    {
-      id: "aud-1",
-      title: "Study Activity Trail Verification",
-      description:
-        "Open a study workspace to inspect chronological activity and provenance.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "aud-2",
-      title: "Protocol Version Provenance",
-      description:
-        "Verify recorded protocol versions and effective lifecycle dates.",
-      targetRoute: "/studies",
-    },
-    {
-      id: "aud-3",
-      title: "Governance & Decision Review",
-      description:
-        "Inspect proposal review records and 21 CFR Part 11 accountability.",
-      targetRoute: "/studies",
-    },
-  ],
-};
-
 const currentChecklist = computed(() => {
-  const raw = CHECKLISTS[currentPersonaKey.value] || CHECKLISTS.super_admin;
-  return raw.map((item) => ({
+  return (onboardingStore.visibleTasks || []).map((item) => ({
     ...item,
-    targetRoute: resolveAuthorizedRoute(item.targetRoute),
+    targetRoute:
+      item.routeName === "overview" ? null : resolveAuthorizedRoute(item),
   }));
 });
 
-function isTaskCompleted(taskId) {
-  return (onboardingStore.completedTasks || []).includes(taskId);
-}
-
-const completedCount = computed(() => {
-  return currentChecklist.value.filter((t) => isTaskCompleted(t.id)).length;
-});
-
-const progressPercent = computed(() => {
-  if (currentChecklist.value.length === 0) return 0;
-  return Math.round(
-    (completedCount.value / currentChecklist.value.length) * 100
-  );
-});
-
-const ALL_LAUNCHERS = [
-  {
-    id: "study",
-    title: "Studies",
-    icon: "📐",
-    description:
-      "Open a study workspace to navigate lifecycle stages, participant status, protocol versions, and activity.",
-    routeSpec: "study",
-    badgeText: "Blueprint · Live",
-    badgeClass: "badge-active",
-    featured: true,
-  },
-  {
-    id: "data-collection",
-    title: "Data collection",
-    icon: "🩺",
-    description:
-      "Capture clinical visit observations, validate case report forms, and perform source data verification.",
-    routeSpec: "ecrf",
-    badgeText: "Capture · Live",
-    badgeClass: "badge-active",
-    featured: true,
-  },
-  {
-    id: "site-readiness",
-    title: "Site readiness",
-    icon: "📊",
-    description:
-      "Track site activation requirements, startup milestones, and operational site readiness.",
-    routeSpec: "site-readiness",
-    badgeText: "Orbit · Live",
-    badgeClass: "badge-active",
-    featured: true,
-  },
-];
+const completedCount = computed(() => onboardingStore.completedTasksCount);
+const progressPercent = computed(() => onboardingStore.progressPercentage);
 
 const personaLaunchers = computed(() => {
-  return ALL_LAUNCHERS.map((launcher) => {
-    const resolvedRoute = resolveAuthorizedRoute(launcher.routeSpec);
-    return resolvedRoute ? { ...launcher, route: resolvedRoute } : null;
-  }).filter(Boolean);
+  const launchers = catalogEntry.value.launchers || [];
+  return launchers
+    .map((launcher) => {
+      const resolvedRoute = resolveAuthorizedRoute(launcher.routeSpec);
+      return resolvedRoute ? { ...launcher, route: resolvedRoute } : null;
+    })
+    .filter(Boolean);
 });
 
 function handleBypassToggle(event) {
@@ -756,8 +400,8 @@ function handleBypassToggle(event) {
   onboardingStore.setBypassOverview(isChecked);
 }
 
-function navigateToRoute(routePathOrName) {
-  const resolved = resolveAuthorizedRoute(routePathOrName);
+function navigateToRoute(routePathOrTask) {
+  const resolved = resolveAuthorizedRoute(routePathOrTask);
   if (!resolved || !router) return;
   if (typeof router.resolve === "function") {
     const target = router.resolve(resolved);
@@ -903,6 +547,9 @@ function startGuidedTour() {
   background: rgba(56, 189, 248, 0.15);
   color: var(--semantic-color-accent-inverse);
   border: 1px solid rgba(56, 189, 248, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .pref-status-badge.is-bypassed {
@@ -1148,6 +795,9 @@ function startGuidedTour() {
   font-weight: 600;
   white-space: nowrap;
   margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .btn-task-launch:hover {
@@ -1159,6 +809,9 @@ function startGuidedTour() {
 .tour-action-footer {
   padding-top: 12px;
   border-top: 1px solid var(--semantic-color-surface-header);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .btn-start-tour {
@@ -1172,6 +825,23 @@ function startGuidedTour() {
   color: var(--semantic-color-surface);
   border: none;
   transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.overview-reset-btn {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn-start-tour:hover {
@@ -1264,6 +934,10 @@ function startGuidedTour() {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .launcher-card:hover .btn-launcher-action {

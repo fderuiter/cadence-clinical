@@ -24,12 +24,14 @@ function firstString(value: unknown): string {
  * `/studies`) preserving participant, site, spec, visit, item, and form state.
  */
 export function buildCanvasLocationFromEcrfQuery(
-  query: LocationQuery | Record<string, unknown> | null | undefined
+  query: LocationQuery | Record<string, unknown> | null | undefined,
+  fallbackStudyCode?: string | null
 ): RouteLocationRaw {
   const studyCode =
     firstString(query?.studyId) ||
     firstString(query?.studyCode) ||
-    firstString(query?.study);
+    firstString(query?.study) ||
+    firstString(fallbackStudyCode);
 
   if (!studyCode) {
     return { name: "study" };

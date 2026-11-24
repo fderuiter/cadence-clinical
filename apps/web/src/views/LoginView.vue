@@ -246,7 +246,7 @@ import {
   peekWebReturnUrl,
   saveWebReturnUrl,
 } from "../auth/sessionCoordinator.js";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
 import { useAuthStore } from "../stores/auth";
 import { formatRoleList } from "../utils/clinicalLabels";
 import DemoResetButton from "./demo/DemoResetButton.vue";
