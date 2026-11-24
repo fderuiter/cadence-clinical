@@ -408,6 +408,7 @@ export function getPortalRouter() {
       state.unavailableScreen = to.query?.screen
         ? String(to.query.screen)
         : null;
+      return;
     }
 
     // Validate /questionnaire on EVERY navigation (initial load, cold reload, and browser Back/Forward).
@@ -637,7 +638,13 @@ export function getPortalRouter() {
       if (!route) return;
 
       if (route.name !== "unavailable" && !isScreenAvailable(route.name)) {
-        state.unavailableScreen = String(route.name);
+        if (route.name === "tasks" && isScreenAvailable("wallet")) {
+          state.unavailableScreen = null;
+          state.currentView = "view-wallet";
+          return;
+        }
+        state.unavailableScreen =
+          route.name === "tasks" ? null : String(route.name);
         state.currentView = "view-unavailable";
         return;
       }
@@ -645,7 +652,14 @@ export function getPortalRouter() {
       const effectiveCurrentName = pendingRouteName ?? current.name;
 
       if (route.name === "unavailable") {
-        if (effectiveCurrentName !== "unavailable") {
+        const currentQueryScreen = router.currentRoute.value.query?.screen
+          ? String(router.currentRoute.value.query.screen)
+          : null;
+        if (
+          effectiveCurrentName !== "unavailable" ||
+          (pendingRouteName === null &&
+            currentQueryScreen !== (state.unavailableScreen || null))
+        ) {
           syncPushRoute(
             {
               name: "unavailable",

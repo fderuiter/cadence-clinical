@@ -5,6 +5,10 @@ import {
   type Pinia,
   type StoreGeneric,
 } from "pinia";
+import {
+  registerLogoutCleanup,
+  registerSessionCacheClearHandler,
+} from "../auth/sessionCoordinator.js";
 
 const scopeByPinia = new WeakMap<Pinia, Ref<string>>();
 const installedPinias = new WeakSet<Pinia>();
@@ -145,3 +149,8 @@ export function clearActiveStudyScope(): void {
   if (scopeRef) scopeRef.value = "";
   applyScopeToStores(pinia, "", true);
 }
+
+registerSessionCacheClearHandler(() => {
+  clearActiveStudyScope();
+});
+registerLogoutCleanup(clearActiveStudyScope);

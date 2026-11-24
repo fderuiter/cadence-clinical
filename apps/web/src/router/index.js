@@ -5,8 +5,10 @@ import {
   createWebHistory,
 } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
+import { getRegisteredI18nApp } from "../i18n/runtime.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
-import { useOnboardingStore } from "../stores/onboarding.js";
+import { readPassiveOnboardingBypassOverview } from "../stores/onboardingSummary.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -71,21 +73,19 @@ function primaryFallbackScreens() {
 
 function redirectToCanvasSection(stage, section) {
   return (to) => {
-    const canvasStudyCode =
-      getActivePinia()?.state.value?.studyCanvas?.studyCode;
+    const canvasState = getActivePinia()?.state.value?.studyCanvas;
+    const scope = resolveActiveWorkspaceScope(to, canvasState);
     const rawCode =
       (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
       (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
-      (typeof canvasStudyCode === "string" && canvasStudyCode.trim()) ||
+      scope.studyCode ||
+      "";
+    const rawSite =
+      (typeof to.query?.site === "string" && to.query.site.trim()) ||
+      (typeof to.query?.siteId === "string" && to.query.siteId.trim()) ||
+      scope.siteId ||
       "";
     const nextQuery = { ...to.query, stage, section };
-    if (
-      !nextQuery.site &&
-      typeof nextQuery.siteId === "string" &&
-      nextQuery.siteId.trim()
-    ) {
-      nextQuery.site = nextQuery.siteId.trim();
-    }
     if (
       !nextQuery.participant &&
       typeof nextQuery.subjectId === "string" &&
@@ -97,6 +97,9 @@ function redirectToCanvasSection(stage, section) {
     delete nextQuery.studyId;
     delete nextQuery.siteId;
     delete nextQuery.subjectId;
+    if (rawSite) {
+      nextQuery.site = rawSite;
+    }
     return rawCode
       ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
       : { name: "study", query: nextQuery };
@@ -115,8 +118,12 @@ const routes = [
       if (authStore.needsTrialOnboarding) {
         return { name: "trial-onboarding" };
       }
-      const onboardingStore = useOnboardingStore();
-      if (!onboardingStore.bypassOverview) {
+      if (
+        !readPassiveOnboardingBypassOverview(
+          getActivePinia(),
+          authStore.currentPersona
+        )
+      ) {
         return { name: "overview" };
       }
       const roles = authStore.normalizedRoles || [];
@@ -210,6 +217,7 @@ const routes = [
     component: () => import("../views/ICFBuilderView.vue"),
     meta: {
       requiresAuth: true,
+      requiresI18n: true,
     },
   },
   {
@@ -218,6 +226,7 @@ const routes = [
     component: () => import("../views/ConsentAuthoringView.vue"),
     meta: {
       requiresAuth: true,
+      requiresI18n: true,
       requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
     },
   },
@@ -274,6 +283,7 @@ const routes = [
     },
     meta: {
       requiresAuth: true,
+      requiresI18n: true,
       requiresRole: [
         "site_investigator",
         "crc",
@@ -745,5 +755,13 @@ router.beforeEach(async (to) => {
 
   if (to.name && !isScreenAvailable(to.name)) {
     return { name: "unavailable", query: { screen: String(to.name) } };
+  }
+
+  const requiresI18n = to.matched.some((record) => record.meta?.requiresI18n);
+  if (requiresI18n && !(to.name === "ecrf" && !isDemoBuild())) {
+    const requestedLocale =
+      typeof to.query?.lang === "string" ? to.query.lang.trim() : undefined;
+    const { ensureI18nInstalled } = await import("../i18n/index.js");
+    await ensureI18nInstalled(getRegisteredI18nApp(), requestedLocale);
   }
 });

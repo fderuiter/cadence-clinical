@@ -16,18 +16,18 @@ import {
   peekWebReturnUrl,
   registerAuthSessionBridge,
   rehydrateClinicalPersona,
+  rehydrateOnboardingPersona,
   resetClinicalSession,
   resolveWebRedirectUri,
   runLogoutCleanups,
   saveWebReturnUrl,
   webSessionCoordinator,
 } from "../auth/sessionCoordinator.js";
-import { kernelApi } from "../api/kernelApi";
+import { kernelEntitlementsApi } from "../api/kernel/entitlements";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
 import { clearActiveStudyScope } from "./studyScopeBridge";
-import { useOnboardingStore } from "./onboarding.js";
 import {
   purgeUserScopedStorage,
   storageScopeOf,
@@ -365,12 +365,7 @@ function rehydrateStoresForPersona(personaKey, pinia) {
     // Pinia or store not ready
   }
   try {
-    const onboardingStore = pinia
-      ? useOnboardingStore(pinia)
-      : useOnboardingStore();
-    if (typeof onboardingStore.loadPersonaState === "function") {
-      onboardingStore.loadPersonaState(personaKey);
-    }
+    rehydrateOnboardingPersona(personaKey, pinia);
   } catch {
     // Pinia or store not ready
   }
@@ -497,7 +492,7 @@ function emptyAuthState() {
     currentPersona: null,
     /** @type {string | null} */
     authError: null,
-    /** @type {import("../api/kernelApi").KernelEntitlements | null} */
+    /** @type {import("../api/kernel/entitlements").KernelEntitlements | null} */
     entitlements: null,
     entitlementsLoaded: false,
     /** @type {string | null} */
@@ -822,7 +817,7 @@ export const useAuthStore = defineStore("auth", {
         }
       }
       try {
-        const snapshot = await kernelApi.entitlements();
+        const snapshot = await kernelEntitlementsApi.entitlements();
         this.applyEntitlements(snapshot);
         return snapshot;
       } catch {

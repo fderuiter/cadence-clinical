@@ -292,10 +292,20 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
             cgtDenied.StatusCode.Should().Be(HttpStatusCode.Forbidden, cgtPath);
         }
 
-        // Trial coordinator holds cgt_chain_of_custody:read and receives 200 on CGT custody read endpoints.
+        // Under ADR-2662, non-trial trial_coordinator callers are site-bound and read CGT custody for their assigned site,
+        // while unconfigured SiteIds fail closed with 403 FORBIDDEN_SCOPE.
+        var unscopedNonTrialCoordinator = Caller("trial-coord-unscoped", RoleNormalization.ROLE_TRIAL_COORDINATOR) with
+        {
+            StudyIds = [studyCode],
+        };
+        using var unscopedCoordinatorClient = factory.CreateSignedClient(unscopedNonTrialCoordinator);
+        using var unscopedCgtDenied = await unscopedCoordinatorClient.GetAsync($"/api/v1/execution/rtsm/cgt/certificates/{studyCode}", Ct);
+        unscopedCgtDenied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
         var trialCoordinatorIdentity = Caller("trial-coord", RoleNormalization.ROLE_TRIAL_COORDINATOR) with
         {
             StudyIds = [studyCode],
+            SiteIds = ["SITE-01"],
         };
         using var trialCoordinator = factory.CreateSignedClient(trialCoordinatorIdentity);
         foreach (string cgtPath in new[]

@@ -174,6 +174,19 @@ function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function buildScopedRoutePath(
+  basePath: string,
+  scope?: { studyCode?: string; siteId?: string }
+): string {
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  if (!studyCode && !siteId) return basePath;
+  const params = new URLSearchParams();
+  if (studyCode) params.set("studyId", studyCode);
+  if (siteId) params.set("siteId", siteId);
+  return `${basePath}?${params.toString()}`;
+}
+
 export function resolveSiteReadinessPath(
   normalizedRoles: string[],
   scopeOrStudyCode?:
@@ -516,6 +529,7 @@ export function resolveActiveWorkspaceScope(
     activeStudyId?: string;
     activeSiteId?: string;
     activeSubjectId?: string;
+    subjects?: Array<{ id?: string }>;
   } | null
 ): WorkspaceScopeSnapshot {
   const effectiveClinical =
@@ -593,6 +607,22 @@ export function resolveActiveWorkspaceScope(
     ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
     : { subjectCode: "", participantRef: "", enrollmentId: "" };
 
+  const rawClinicalSubject = cleanQueryString(
+    effectiveClinical?.activeSubjectId
+  );
+  const clinicalSubjects =
+    clinicalStore?.subjects ??
+    (
+      getActivePinia()?.state.value as
+        { clinical?: { subjects?: Array<{ id?: string }> } } | undefined
+    )?.clinical?.subjects;
+  const verifiedClinicalSubject =
+    rawClinicalSubject &&
+    (rawClinicalSubject !== "SUBJ-001" ||
+      Boolean(clinicalSubjects?.some((s) => s?.id === rawClinicalSubject)))
+      ? rawClinicalSubject
+      : "";
+
   const subjectCode =
     routeSubject ||
     canvasParticipant.subjectCode ||
@@ -600,7 +630,7 @@ export function resolveActiveWorkspaceScope(
     !hasExplicitStandaloneStudyQuery &&
     studyCode &&
     cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
-      ? cleanQueryString(effectiveClinical?.activeSubjectId)
+      ? verifiedClinicalSubject
       : "");
 
   let participantRef =
@@ -940,7 +970,11 @@ export function buildWorkspacePaletteItems(options: {
       const routePath =
         mod.routeName === "observation"
           ? mod.defaultPath
-          : buildStudyScopedPath(mod.defaultPath, options.activeStudyCode);
+          : buildScopedWorkflowPath(mod.defaultPath, {
+              studyCode: options.activeStudyCode,
+              siteId: options.activeSiteId,
+              subjectCode: options.activeSubjectCode,
+            });
       items.push({
         key: `preview:${mod.routeName}`,
         group: "Preview",

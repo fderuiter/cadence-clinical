@@ -63,7 +63,7 @@ In addition:
 
 ## 6. Implementation & Verification
 
-- **Affected Packages / Services:** `packages/security` (`PermissionMatrix.Execution.cs`), `apps/execution` (`ExecutionDbSeeder.cs`, `Program.cs`), `apps/web` (`supply.ts`, `permissions.ts`, `RtsmSupplySection.vue`, `auth.js`, `demoPolicy.js`, `router/index.js`, `palette.ts`, `onboarding.js`), `packages/demo-fixtures` (`index.js`).
+- **Affected Packages / Services:** `packages/security` (`PermissionMatrix.Execution.cs`), `apps/execution` (`ExecutionDbSeeder.cs`, `Program.cs`), `apps/web` (`supply.ts`, `permissions.ts`, `RtsmSupplySection.vue`, `auth.js`, `demoPolicy.js`, `router/index.js`, `palette.ts`, `onboarding.js`, `onboardingSummary.js`), `packages/demo-fixtures` (`index.js`).
 - **Verification Plan:**
   - `SubjectRouteAuthorityTests`, `RandomizationPostgresTests`, and `ExecutionTenantIsolationPostgresTests` verify `unblinded_statistician` subject list/count/unblinded detail reads, blinded-role arm masking, `trial_coordinator` CGT custody reads, `unblinded_statistician` CGT `403` rejection, `cadence-local`-only scheme/kit seeding, Merkle audit chain integrity, and immediate participant randomization.
   - `StudyCanvasRtsmWorkflows.spec.js` and `contracts.spec.ts` verify permission-gated subpanel loading, role-accurate `403` API mocks, scoped subpanel error alerts, two-person scheme approval, and `/ctms` + `/ssu` persona routing.

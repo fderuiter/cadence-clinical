@@ -15,6 +15,7 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Trust;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -457,4 +458,424 @@ public sealed class OdmDesignImporterTests
     private sealed record ExpectedForm(string Name, List<ExpectedItem> Items);
 
     private sealed record ExpectedItem(string ItemOid, string Prompt, bool Mandatory);
+
+    [Fact]
+    [KernelRule("K-PROT-1")]
+    public async Task ReplaceForms_OnCadence101Design_RetainsAll18NonFormElements_PrunesRemovedSpecs_AndPassesRead()
+    {
+        var baseDesign = BuildCadence101LikeDesign();
+        var catalog = new CdiscLibraryTemplateCatalog();
+        var service = new ProtocolDesignImporterService(catalog);
+
+        const string replacementOdm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.REPLACE" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-03-01T00:00:00Z">
+              <Study OID="S.CADENCE.101">
+                <GlobalVariables>
+                  <StudyName>CADENCE-101 Updated Forms</StudyName>
+                  <StudyDescription>Replacement eCRFs</StudyDescription>
+                  <ProtocolName>CADENCE-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.2" Name="v2">
+                  <FormDef OID="cs.vitals" Name="Vital Signs Seated" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <FormDef OID="cs.ecg" Name="12-Lead ECG" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.ECG" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vitals" Repeating="No">
+                    <ItemRef ItemOID="vs.sbp" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemGroupDef OID="IG.ECG" Name="ECG" Repeating="No">
+                    <ItemRef ItemOID="ecg.hr" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="vs.sbp" Name="SYSBP" DataType="integer">
+                    <Alias Context="prompt" Name="Seated Systolic BP"/>
+                  </ItemDef>
+                  <ItemDef OID="ecg.hr" Name="ECGHR" DataType="integer">
+                    <Alias Context="prompt" Name="Ventricular Rate"/>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var outcome = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                RawBytes: Encoding.UTF8.GetBytes(replacementOdm),
+                FileName: "cadence101-replace.xml",
+                Format: ProtocolImportFormat.OdmXml,
+                BaseDesign: baseDesign,
+                ReplaceForms: true),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.Should().BeTrue(string.Join("; ", outcome.Problems));
+        var design = outcome.Design!;
+
+        var roundTrip = ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(design));
+        roundTrip.IsValid.Should().BeTrue(string.Join("; ", roundTrip.Problems));
+
+        int nonFormCount =
+            design.Objectives.Count
+            + design.Endpoints.Count
+            + design.Estimands.Count
+            + design.Populations.Count
+            + design.EligibilityCriteria.Count
+            + design.Interventions.Count
+            + design.Arms.Count
+            + design.SafetyRules.Count
+            + design.Epochs.Count
+            + design.PlannedActivities.Count;
+        nonFormCount.Should().Be(18);
+
+        design.CollectionSpecs.Select(s => s.Id).Should().Equal("cs.vitals", "cs.ecg");
+        design.PlannedActivities.Single(a => a.Id == "act.screening").CollectionSpecIds.Should().Equal("cs.vitals");
+        design.PlannedActivities.Single(a => a.Id == "act.eos").CollectionSpecIds.Should().Equal("cs.vitals");
+        design.ImportNotes.Should().Contain(n => n.Source == "act.screening" && n.Message.Contains("cs.physical_exam", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    [KernelRule("K-PROT-1")]
+    public async Task UsdmImport_WithReplaceFormsFalse_MergesFormsAndSectionsOntoBaseDesign()
+    {
+        var baseConcept = new ConceptRef(ConceptId.New(), 1);
+        var baseDesign = new ProtocolDesign
+        {
+            Title = "CADENCE-101",
+            Objectives = [new Objective("obj.primary", ObjectiveLevel.Primary, "Primary objective")],
+            Epochs = [new Epoch("ep.screening", "Screening", 1)],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.demographics",
+                    "Demographics",
+                    [new CollectionItem("dm.age", baseConcept, "yr", Required: true, ValueKind: ObservationValueKind.Quantity, Prompt: "Age")]),
+            ],
+        };
+
+        const string usdmJson = """
+            {
+              "usdmVersion": "4.0.0",
+              "study": {
+                "id": "Study_CADENCE_101",
+                "name": "CADENCE-101",
+                "versions": [
+                  {
+                    "id": "SV_1",
+                    "titles": [
+                      { "id": "T_1", "text": "CADENCE-101", "type": { "code": "C207616", "decode": "Official Study Title" } }
+                    ],
+                    "biomedicalConcepts": [
+                      {
+                        "id": "BC_SBP",
+                        "name": "Systolic Blood Pressure",
+                        "label": "Systolic Blood Pressure",
+                        "code": { "id": "AC_1", "standardCode": { "code": "C25298", "decode": "Systolic Blood Pressure" } }
+                      }
+                    ],
+                    "studyDesigns": [
+                      {
+                        "id": "SD_1",
+                        "epochs": [
+                          { "id": "ep.treatment", "name": "Treatment" }
+                        ],
+                        "activities": [
+                          {
+                            "id": "ACT.VITALS",
+                            "name": "Vital Signs",
+                            "biomedicalConceptIds": [ "BC_SBP" ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+            """;
+
+        var service = new ProtocolDesignImporterService(new CdiscLibraryTemplateCatalog());
+        var outcome = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                RawBytes: Encoding.UTF8.GetBytes(usdmJson),
+                FileName: "usdm-v4.json",
+                Format: ProtocolImportFormat.UsdmJson,
+                BaseDesign: baseDesign,
+                ReplaceForms: false),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.Should().BeTrue(string.Join("; ", outcome.Problems));
+        outcome.Design!.Objectives.Select(o => o.Id).Should().Equal("obj.primary");
+        outcome.Design.Epochs.Select(e => e.Id).Should().Equal("ep.screening", "ep.treatment");
+        outcome.Design.CollectionSpecs.Select(s => s.Id).Should().Equal("cs.demographics", "ACT.VITALS");
+    }
+
+    [Fact]
+    [KernelRule("K-PROT-1")]
+    public async Task CombinedRawBytesAndTemplates_ImportsFormsFromBothSourcesInDeterministicOrder()
+    {
+        var catalog = new CdiscLibraryTemplateCatalog();
+        var templates = catalog.ListTemplates().Take(2).ToList();
+        var service = new ProtocolDesignImporterService(catalog);
+
+        const string customOdm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.COMBINED" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-03-01T00:00:00Z">
+              <Study OID="S.COMBINED">
+                <GlobalVariables>
+                  <StudyName>Combined Import Study</StudyName>
+                  <StudyDescription>Combined</StudyDescription>
+                  <ProtocolName>COMB-01</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.1" Name="v1">
+                  <FormDef OID="F.CUSTOM_PK" Name="Pharmacokinetics Sampling" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.PK" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.PK" Name="PK" Repeating="No">
+                    <ItemRef ItemOID="IT.PKTIME" OrderNumber="1" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.PKTIME" Name="PKTIME" DataType="text">
+                    <Alias Context="prompt" Name="Sample Collection Time"/>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var outcome = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                RawBytes: Encoding.UTF8.GetBytes(customOdm),
+                FileName: "custom-pk.xml",
+                Format: ProtocolImportFormat.OdmXml,
+                TemplateIds: [templates[0].Id, templates[1].Id],
+                ReplaceForms: false),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        outcome.IsSuccess.Should().BeTrue(string.Join("; ", outcome.Problems));
+        outcome.Design!.CollectionSpecs.Select(s => s.Id).Should().Equal(
+            "F.CUSTOM_PK",
+            templates[0].FormOid,
+            templates[1].FormOid);
+    }
+
+    [Fact]
+    [KernelRule("K-PROT-1")]
+    public async Task OdmScheduleAndRenamedForms_PopulateEpochsAndPlannedActivities_AndUpdateInPlaceWithoutSuffixes()
+    {
+        const string initialOdm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.SOA.1" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-03-01T00:00:00Z">
+              <Study OID="S.SOA">
+                <GlobalVariables>
+                  <StudyName>SOA ODM Study</StudyName>
+                  <StudyDescription>SOA</StudyDescription>
+                  <ProtocolName>SOA-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.1" Name="v1">
+                  <Protocol>
+                    <StudyEventRef StudyEventOID="SE.WK4" OrderNumber="2" Mandatory="Yes"/>
+                    <StudyEventRef StudyEventOID="SE.SCR" OrderNumber="1" Mandatory="Yes"/>
+                  </Protocol>
+                  <StudyEventDef OID="SE.SCR" Name="Screening Visit" Repeating="No" Type="Scheduled">
+                    <FormRef FormOID="F.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </StudyEventDef>
+                  <StudyEventDef OID="SE.WK4" Name="Week 4 Visit" Repeating="No" Type="Scheduled" Category="Treatment">
+                    <FormRef FormOID="F.VS" OrderNumber="1" Mandatory="No"/>
+                  </StudyEventDef>
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vitals" Repeating="No">
+                    <ItemRef ItemOID="IT.SYS" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.DIA" OrderNumber="2" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.SYS" Name="SYSBP" DataType="integer">
+                    <Alias Context="prompt" Name="Systolic Blood Pressure"/>
+                  </ItemDef>
+                  <ItemDef OID="IT.DIA" Name="DIABP" DataType="integer">
+                    <Alias Context="prompt" Name="Diastolic Blood Pressure"/>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        const string renamedFormOdm = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.SOA.2" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-03-02T00:00:00Z">
+              <Study OID="S.SOA">
+                <GlobalVariables>
+                  <StudyName>SOA ODM Study</StudyName>
+                  <StudyDescription>SOA</StudyDescription>
+                  <ProtocolName>SOA-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.2" Name="v2">
+                  <FormDef OID="F.VS" Name="Vital Signs (Seated)" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vitals" Repeating="No">
+                    <ItemRef ItemOID="IT.SYS" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.DIA" OrderNumber="2" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.PULSE" OrderNumber="3" Mandatory="No"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.SYS" Name="SYSBP" DataType="integer">
+                    <Alias Context="prompt" Name="Seated Systolic Blood Pressure"/>
+                  </ItemDef>
+                  <ItemDef OID="IT.DIA" Name="DIABP" DataType="integer">
+                    <Alias Context="prompt" Name="Seated Diastolic Blood Pressure"/>
+                  </ItemDef>
+                  <ItemDef OID="IT.PULSE" Name="PULSE" DataType="integer">
+                    <Alias Context="prompt" Name="Pulse Rate"/>
+                  </ItemDef>
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
+
+        var service = new ProtocolDesignImporterService(new CdiscLibraryTemplateCatalog());
+        var first = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                RawBytes: Encoding.UTF8.GetBytes(initialOdm),
+                FileName: "soa-v1.xml",
+                Format: ProtocolImportFormat.OdmXml),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        first.IsSuccess.Should().BeTrue(string.Join("; ", first.Problems));
+        first.Design!.Epochs.Select(e => (e.Id, e.Name, e.Order)).Should().Equal(
+            ("Epoch.scheduled", "Scheduled", 1),
+            ("Epoch.Treatment", "Treatment", 2));
+        first.Design.PlannedActivities.Select(a => (a.Id, a.EpochId)).Should().Equal(
+            ("SE.SCR", "Epoch.scheduled"),
+            ("SE.WK4", "Epoch.Treatment"));
+        first.Design.PlannedActivities.Should().OnlyContain(a => a.CollectionSpecIds.SequenceEqual(new[] { "F.VS" }));
+
+        var merged = await service.ImportAsync(
+            new ProtocolDesignImportRequest(
+                RawBytes: Encoding.UTF8.GetBytes(renamedFormOdm),
+                FileName: "soa-v2.xml",
+                Format: ProtocolImportFormat.OdmXml,
+                BaseDesign: first.Design,
+                ReplaceForms: false),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+
+        merged.IsSuccess.Should().BeTrue(string.Join("; ", merged.Problems));
+        merged.Design!.CollectionSpecs.Should().ContainSingle(s => s.Id == "F.VS" && s.Name == "Vital Signs (Seated)");
+        merged.Design.CollectionSpecs[0].Items.Select(i => i.Id).Should().Equal("IT.SYS", "IT.DIA", "IT.PULSE");
+        merged.Design.CollectionSpecs[0].Items.Select(i => i.Id).Should().NotContain(id => id.EndsWith("_2", StringComparison.Ordinal));
+        ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(merged.Design)).IsValid.Should().BeTrue();
+    }
+
+    private static ProtocolDesign BuildCadence101LikeDesign()
+    {
+        var systolic = new ConceptRef(ConceptId.New(), 1);
+        var diastolic = new ConceptRef(ConceptId.New(), 1);
+        var heartRate = new ConceptRef(ConceptId.New(), 1);
+        var examFinding = new ConceptRef(ConceptId.New(), 1);
+        var adverseEventTerm = new ConceptRef(ConceptId.New(), 1);
+        var adverseEventSeverity = new ConceptRef(ConceptId.New(), 1);
+        var medicationName = new ConceptRef(ConceptId.New(), 1);
+        var medicationIndication = new ConceptRef(ConceptId.New(), 1);
+
+        return new ProtocolDesign
+        {
+            Title = "Cardiovascular outcomes clinical protocol",
+            Objectives =
+            [
+                new Objective("obj.primary", ObjectiveLevel.Primary, "Evaluate blood pressure control over 4 weeks of treatment."),
+            ],
+            Endpoints =
+            [
+                new Endpoint("ep.sbp_change", "obj.primary", ObjectiveLevel.Primary, "Change from baseline in systolic blood pressure at Week 4.", systolic),
+            ],
+            Estimands =
+            [
+                new Estimand(
+                    "est.primary",
+                    "ep.sbp_change",
+                    "pop.itt",
+                    ["arm.active", "arm.placebo"],
+                    "Change in seated systolic blood pressure from Day 1 to Week 4",
+                    [new IntercurrentEvent("Treatment discontinuation", IntercurrentEventStrategy.TreatmentPolicy)],
+                    "Difference in mean change between arms"),
+            ],
+            Populations =
+            [
+                new Population("pop.itt", "Intent-to-treat", ["crit.htn"]),
+            ],
+            EligibilityCriteria =
+            [
+                new EligibilityCriterion("crit.htn", CriterionCategory.Inclusion, "Seated systolic blood pressure >= 140 mm[Hg] at screening.", [systolic]),
+            ],
+            Interventions =
+            [
+                new Intervention("int.investigational", "Investigational antihypertensive", Dose: new Dose(10m, "mg"), Route: "Oral", Regimen: "Once daily"),
+                new Intervention("int.placebo", "Matching placebo", Route: "Oral", Regimen: "Once daily"),
+            ],
+            Arms =
+            [
+                new Arm("arm.active", "Active treatment", ArmType.Experimental, ["int.investigational"]),
+                new Arm("arm.placebo", "Placebo", ArmType.PlaceboComparator, ["int.placebo"]),
+            ],
+            SafetyRules =
+            [
+                new ProtocolRule("rule.safety_monitoring", "Monitor treatment-emergent adverse events and concomitant medications.", [adverseEventTerm, medicationName]),
+            ],
+            Epochs =
+            [
+                new Epoch("ep.screening", "Screening", 1),
+                new Epoch("ep.treatment", "Treatment", 2),
+                new Epoch("ep.followup", "Follow-up", 3),
+            ],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.screening", "Screening Visit", "ep.screening", [ActivityLocation.Site], ["cs.vitals", "cs.physical_exam"], new ActivityTiming(-7, 7, 0)),
+                new PlannedActivity("act.day1", "Day 1 Baseline", "ep.treatment", [ActivityLocation.Site], ["cs.vitals", "cs.physical_exam"], new ActivityTiming(1, 0, 1)),
+                new PlannedActivity("act.week2", "Week 2 Visit", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(14, 2, 2)),
+                new PlannedActivity("act.week4", "Week 4 Primary Endpoint", "ep.treatment", [ActivityLocation.Site], ["cs.vitals", "cs.physical_exam"], new ActivityTiming(28, 3, 3)),
+                new PlannedActivity("act.eos", "End of Study", "ep.followup", [ActivityLocation.Site], ["cs.vitals", "cs.physical_exam"], new ActivityTiming(42, 3, 5)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.vitals",
+                    "Vital Signs",
+                    [
+                        new CollectionItem("item.sbp", systolic, "mm[Hg]", Required: true),
+                        new CollectionItem("item.dbp", diastolic, "mm[Hg]", Required: true),
+                        new CollectionItem("item.hr", heartRate, "/min", Required: true),
+                        new CollectionItem("item.vs_notes", systolic, ValueKind: ObservationValueKind.Text),
+                    ],
+                    new DataPurpose { EndpointIds = ["ep.sbp_change"], EstimandIds = ["est.primary"] }),
+                new CollectionSpec(
+                    "cs.physical_exam",
+                    "Physical Examination",
+                    [
+                        new CollectionItem("item.pe_summary", examFinding, Required: true, ValueKind: ObservationValueKind.Text),
+                        new CollectionItem("item.pe_clinically_significant", examFinding, Required: true, ValueKind: ObservationValueKind.Boolean),
+                    ],
+                    new DataPurpose { OperationalNeed = "Baseline and follow-up clinical assessment" }),
+                new CollectionSpec(
+                    "cs.adverse_event",
+                    "Adverse Event Log",
+                    [
+                        new CollectionItem("item.ae_term", adverseEventTerm, Required: true, ValueKind: ObservationValueKind.Text),
+                        new CollectionItem("item.ae_severity", adverseEventSeverity, Required: true, ValueKind: ObservationValueKind.Text),
+                    ],
+                    new DataPurpose { SafetyRuleIds = ["rule.safety_monitoring"] }),
+                new CollectionSpec(
+                    "cs.concomitant_meds",
+                    "Concomitant Medications",
+                    [
+                        new CollectionItem("item.cm_name", medicationName, Required: true, ValueKind: ObservationValueKind.Text),
+                        new CollectionItem("item.cm_indication", medicationIndication, ValueKind: ObservationValueKind.Text),
+                    ],
+                    new DataPurpose { SafetyRuleIds = ["rule.safety_monitoring"] }),
+            ],
+        };
+    }
 }

@@ -45,14 +45,20 @@ signatures and audit digests shared by every Cadence service.
   gets `403` ([ADR-2510](../../docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md)).
   Routes are denied by default: the fallback policy refuses any route that declares neither a permission,
   `RequireSignedInCaller(reason)` (any signed caller, with the reason kept on the endpoint) nor `AllowAnonymous()`.
-  Module permissions live in `PermissionMatrix.<Module>.cs`, and a permission no role holds is refused (`RoleNormalization.ROLE_TRIAL_COORDINATOR` provides self-service trial subject, eCRF, randomisation, site-compliance, and CGT custody read permissions outside `SiteAccessEvaluator.SITE_SCOPED_ROLES` while keeping `sponsor_dm` read-only separation of duties intact; `RoleNormalization.ROLE_UNBLINDED_STATISTICIAN` holds `subject_enrollment:read` and `randomization_scheme` capabilities without CGT chain-of-custody grants).
+  Module permissions live in `PermissionMatrix.<Module>.cs`, and a permission no role holds is refused (`RoleNormalization.ROLE_TRIAL_COORDINATOR` provides self-service trial subject, eCRF, randomisation, site-compliance, CGT custody read, and support-ticket permissions outside `SiteAccessEvaluator.SITE_SCOPED_ROLES` while keeping `sponsor_dm` read-only separation of duties intact; `PermissionAuthorizationHandler` ignores `trial_coordinator` write grants unless `ClinicalScopeGuard.IsVerifiedTrialTenant(principal.TenantId)` matches `^trial-[0-9a-f]{12}\z`, and `ClinicalScopeGuard.IsSiteBound` / `SiteAccessEvaluator.CanAccessSite` treat non-trial `trial_coordinator` callers without an unscoped sponsor or oversight role as site-bound, [ADR-2662](../../docs/adr/2026-11-23-enforce-trial-tenant-writes-and-sponsor-comment-allowlist.md); `RoleNormalization.ROLE_UNBLINDED_STATISTICIAN` holds `subject_enrollment:read` and `randomization_scheme` capabilities without CGT chain-of-custody grants, [ADR-2833](../../docs/adr/2026-11-23-rtsm-supply-isolation-rbac-and-demo-seeding.md)).
   Standalone routes also declare explicit `EndpointScopeMetadata` via `RequireTenantScope()`, `RequireCallerStudyScope()`,
   `RequireCallerStudyAndSiteScope()`, `RequireStudyScope(routeParameter)` and `RequireSiteScope(routeParameter)`; study assignments
-  arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim. Handlers check scope that the route path cannot name
-  (query/body parameters, stored records, or filtered matrix lists) through `ClinicalScopeGuard` (`EnsureTenant`, `EnsureStudy`,
-  `EnsureSite`, `EnsureStudyAndSite`, `FilterAuthorizedSiteIds`) and `CallerScope`, failing closed with HTTP 403
+  arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim. Handlers check scope and caller attribution that the route path
+  cannot name (query/body parameters, stored records, filtered in-memory lists, or EF Core `IQueryable<T>` queries) through
+  `ClinicalScopeGuard` (`IsVerifiedTrialTenant`, `RequireTenant`, `RequireVerifiedTenant`, `RequireStudy`, `RequireSite`, `RequireStudyAndSite`, `RequireStudyAndOptionalSite`,
+  `ResolveStudyFilter`, `ResolveSiteFilter` and `ResolveSingleSiteFilter` with `StringComparer.OrdinalIgnoreCase`, `ApplyFilters`, `NarrowToStudyScope`,
+  `NarrowToScope`, `IsUnrestricted`, `Forbidden`, `OutsideStudy`) and `CallerScope` (`Principal` with authenticated `ClaimsPrincipal`
+  `sub` fallback, `UserId`, `VerifiedUserId`, `RequiredPrincipal`, `RequiredUserId`, `Roles`, `ResolveActor`), failing closed with
+  `ProblemHttpResult` HTTP 403
   ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md),
-  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)).
+  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md),
+  [ADR-2552](../../docs/adr/2026-11-21-kernel-site-setup-and-execution-tenancy.md),
+  [ADR-2661](../../docs/adr/2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md)).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256), `AsymmetricSigner` (RSA/X.509, used by `Cadence.Deid` for redaction manifests and de-identification certificates), and `BiometricLivenessTokenService` + `BiometricLivenessOptions` (`AddCadenceBiometricLiveness()`, requiring `CADENCE_BIOMETRIC_LIVENESS_KEY` as base64 of 32 bytes at startup, bounding biometric liveness tokens to a 15-minute lifetime with 5-second clock skew on `IClock`, [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)).
 - **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `IAuditLogWriter`.
