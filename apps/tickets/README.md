@@ -19,10 +19,10 @@ Support ticket service. It serves authenticated support ticket creation (`POST /
 - `GET /api/v1/tickets/status` (anonymous status payload).
 - `POST /api/v1/tickets` (`tickets:create`, requires `X-Change-Reason`, rejects direct participant PII, derives reporter/creator strictly from verified gateway claims, enforces study/site `CallerScope`, and computes Dual-Target SLA deadlines via `IClock`).
 - `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticket_id}` (`tickets:read`, filtered to the caller's authorized study and site scope; supports UUID or human-readable `TKT-YYYY-NNNN` reference).
-- `GET /api/v1/tickets/{ticket_id}/comments` (`tickets:read`, hides `INTERNAL_SPONSOR` notes from site-bound roles) and `POST /api/v1/tickets/{ticket_id}/comments` (`tickets:comment`, requires `X-Change-Reason`, scans for participant PII, and forbids site-bound roles from posting `INTERNAL_SPONSOR` comments).
+- `GET /api/v1/tickets/{ticket_id}/comments` (`tickets:read`, fails closed to `PUBLIC` notes unless the caller holds a role in `SponsorCommentCapableRoles`) and `POST /api/v1/tickets/{ticket_id}/comments` (`tickets:comment`, requires `X-Change-Reason`, scans for participant PII, and rejects `INTERNAL_SPONSOR` comments with HTTP 403 unless the caller holds `SponsorCommentCapableRoles`).
 - `POST /api/v1/tickets/{ticket_id}/transitions` (`tickets:transition`, requires `X-Change-Reason`, enforces `TicketTransitionGraph`, pauses/resumes SLA targets via `IClock`, requires root-cause summary + resolution code on `RESOLVED`, and scans for participant PII).
 - `POST /api/v1/tickets/{ticket_id}/sign` (`tickets:sign`, requires `X-Change-Reason` and a single-use step-up `X-Sig-Token` with semantic action `tickets.ticket.sign` backed by `tickets.consumed_signature_tokens`; locks the ticket against subsequent comments or transitions).
-- `GET /api/v1/tickets/{ticket_id}/audit-trail` (`tickets:read`, returns the Merkle-chained `audit_log_entries` history for the ticket and its visible comments).
+- `GET /api/v1/tickets/{ticket_id}/audit-trail` (`tickets:read`, returns the Merkle-chained `audit_log_entries` history for the ticket and its caller-visible comments, failing closed on `INTERNAL_SPONSOR` comment audit entries unless the caller holds `SponsorCommentCapableRoles`).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/tickets/**` to this service. Compose publishes host port 8009 (container port 8080).
 

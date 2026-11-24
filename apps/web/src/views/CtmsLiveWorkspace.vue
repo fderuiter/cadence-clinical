@@ -19,31 +19,37 @@
         v-if="activeSection === 'activation'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsGreenlightSection
         v-else-if="activeSection === 'startup'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsMilestonesSection
         v-else-if="activeSection === 'milestones'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsMonitoringSection
         v-else-if="activeSection === 'monitoring'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsDelegationSection
         v-else-if="activeSection === 'delegation'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <RtsmSupplySection
         v-else-if="activeSection === 'supply'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
     </div>
 
@@ -81,10 +87,16 @@ const props = defineProps({
 const route = useRoute();
 const scopeStore = useClinicalScopeStore();
 
+const hasFixedStudyProp = computed(() => Boolean(props.studyCode.trim()));
+
 const scopedStudyProp = computed(() => {
   const routeStudy =
     typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
-  return props.studyCode.trim() || routeStudy;
+  return (
+    props.studyCode.trim() ||
+    routeStudy ||
+    (scopeStore.activeStudyId || "").trim()
+  );
 });
 
 const siteId = computed(() => {

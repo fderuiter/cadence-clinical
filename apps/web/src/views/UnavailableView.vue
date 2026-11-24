@@ -81,7 +81,7 @@
 import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
-import { screenMetadata, screenTitle } from "../router/availability";
+import { screenMetadata, screenTitle } from "../router/screenCatalog";
 import { useAuthStore } from "../stores/auth";
 
 const route = useRoute();

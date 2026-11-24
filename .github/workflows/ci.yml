@@ -81,11 +81,29 @@ jobs:
       - name: Build frontend workspace
         run: pnpm build
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            global.json
+            Directory.Build.props
+            Directory.Build.targets
+            Directory.Packages.props
+            NuGet.Config
+            **/*.csproj
+
+      - name: Download Cadence CLI Artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ./bin
+
       - name: Run frontend style and lint
         run: |
           pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
-          pnpm -r lint
-          pnpm exec eslint --max-warnings 0 .
+          node scripts/run-cli.js check eslint
           pnpm -r typecheck
 
       - name: Run Hadolint on Dockerfiles
@@ -122,7 +140,7 @@ jobs:
             if [ ${#DOCKERFILES[@]} -gt 0 ] && [ -n "${DOCKERFILES[0]}" ]; then
               echo "Linting Dockerfiles:"
               printf '%s\n' "${DOCKERFILES[@]}"
-              hadolint --failure-threshold error "${DOCKERFILES[@]}"
+              hadolint --failure-threshold warning "${DOCKERFILES[@]}"
             else
               echo "No Dockerfiles found to lint."
             fi
@@ -141,11 +159,11 @@ jobs:
             fi
           fi
           if command -v shellcheck >/dev/null 2>&1; then
-            mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*")
+            mapfile -t SHELL_SCRIPTS < <(find . -type f \( -name "*.sh" -o -path "./.githooks/*" \) -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*" | sort)
             if [ ${#SHELL_SCRIPTS[@]} -gt 0 ] && [ -n "${SHELL_SCRIPTS[0]}" ]; then
               echo "Linting shell scripts:"
               printf '%s\n' "${SHELL_SCRIPTS[@]}"
-              shellcheck "${SHELL_SCRIPTS[@]}"
+              shellcheck -x "${SHELL_SCRIPTS[@]}"
             else
               echo "No shell scripts found to lint."
             fi
@@ -155,26 +173,7 @@ jobs:
           fi
 
       - name: Run installer checksum tests
-        run: bash tests/test_installer_checksums.sh
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
-        with:
-          global-json-file: global.json
-          cache: true
-          cache-dependency-path: |
-            global.json
-            Directory.Build.props
-            Directory.Build.targets
-            Directory.Packages.props
-            NuGet.Config
-            **/*.csproj
-
-      - name: Download Cadence CLI Artifact
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ./bin
+        run: bash scripts/test_installer_checksums.sh
 
       - name: Run Markdown validation
         run: node scripts/run-cli.js check markdown
@@ -234,7 +233,7 @@ jobs:
           else
             SCOPE_ARGS=()
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude typecheck --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude typecheck --exclude actionlint --exclude hadolint --exclude shellcheck --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build

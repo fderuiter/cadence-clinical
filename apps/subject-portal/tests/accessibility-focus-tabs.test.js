@@ -285,6 +285,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
         },
       },
     };
+    state.session.isDemoMode = true;
     state.activeQuestionnaire = {
       assignment: state.assignments[0],
       instrument: state.instruments.inst_cancel_test,
@@ -343,7 +344,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     state.activeQuestionnaire = null;
   });
 
-  it("drives participant portal tabs from a single state source across authenticated production mode and 6-tab demo mode", async () => {
+  it("drives participant portal tabs from a single state source across authenticated production mode, unauthenticated mode, and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
 
     // 1. Authenticated non-demo mode renders only My Wallet and wraps keyboard navigation cleanly
@@ -358,18 +359,18 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(1);
 
     // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
-    const tasksPanelGated = document.getElementById("view-tasks");
-    const layPanelGated = document.getElementById("view-lay-summaries");
-    expect(tasksPanelGated.getAttribute("role")).toBe("region");
-    expect(tasksPanelGated.getAttribute("aria-label")).toBe(
-      "My Daily Questionnaires"
-    );
-    expect(tasksPanelGated.hasAttribute("aria-labelledby")).toBe(false);
-    expect(layPanelGated.getAttribute("role")).toBe("region");
-    expect(layPanelGated.getAttribute("aria-label")).toBe(
-      "Plain-Language Clinical Trial Results"
-    );
-    expect(layPanelGated.hasAttribute("aria-labelledby")).toBe(false);
+    for (const [viewId, expectedLabel] of [
+      ["view-tasks", "My Daily Questionnaires"],
+      ["view-compliance", "My Compliance Overview"],
+      ["view-inbox", "My Notification Inbox"],
+      ["view-consent", "My Informed Consent Review"],
+      ["view-lay-summaries", "Plain-Language Clinical Trial Results"],
+    ]) {
+      const panel = document.getElementById(viewId);
+      expect(panel.getAttribute("role")).toBe("region");
+      expect(panel.getAttribute("aria-label")).toBe(expectedLabel);
+      expect(panel.hasAttribute("aria-labelledby")).toBe(false);
+    }
 
     for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
       const refIds = labelledEl
@@ -385,6 +386,11 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     expect(walletTab).not.toBeNull();
     expect(walletTab.getAttribute("aria-selected")).toBe("true");
     expect(walletTab.getAttribute("tabindex")).toBe("0");
+    const walletPanelLive = document.getElementById("view-wallet");
+    expect(walletPanelLive.getAttribute("role")).toBe("tabpanel");
+    expect(walletPanelLive.getAttribute("aria-labelledby")).toBe(
+      "btn-tab-btn-wallet"
+    );
     walletTab.focus();
     walletTab.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -418,6 +424,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     }
 
     // 2. Demo mode renders all 6 tabs with bidirectional ARIA links and roving tabindex navigation
+    state.session.token = null;
+    state.session.userId = null;
     state.session.isDemoMode = true;
     await settle();
 

@@ -30,21 +30,16 @@ public static class SiteAccessEvaluator
     {
         if (principal == null) return false;
 
-        bool hasSiteScopedRoles = principal.Roles.Any(r => SITE_SCOPED_ROLES.Contains(r));
+        bool isSiteBound = ClinicalScopeGuard.IsSiteBound(principal);
 
         if (string.IsNullOrWhiteSpace(siteId))
         {
-            return !hasSiteScopedRoles && principal.AssignedSites.Count == 0;
+            return !isSiteBound;
         }
 
         string targetSite = siteId.Trim();
 
-        if (hasSiteScopedRoles)
-        {
-            return principal.AssignedSites.Any(s => string.Equals(s.Trim(), targetSite, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (principal.AssignedSites.Count > 0)
+        if (isSiteBound)
         {
             return principal.AssignedSites.Any(s => string.Equals(s.Trim(), targetSite, StringComparison.OrdinalIgnoreCase));
         }
