@@ -71,9 +71,6 @@ updates:
       # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0 (ADR-2233, ADR-2527).
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
-      # xunit.v3 >= 4.0.0 switches to xunit.v3.mtp-v2, which rejects VSTest on .NET 10 SDK; stay below 4.0.0 until dotnet test / GxP TRX pipelines migrate to MTP (#6038).
-      - dependency-name: "xunit.v3"
-        versions: [">= 4.0.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"
