@@ -3949,6 +3949,38 @@ export function createWebDemoStore() {
           },
         };
       }
+      const rawObsUuid = normalized.replace(/^observation:/, "");
+      const hasOpenQuery = (target.assertions || []).some(
+        (a) => String(a.kind).toLowerCase() === "queried" && !a.retracted_at
+      );
+      if (hasOpenQuery) {
+        return {
+          conflict: true,
+          problem: {
+            title: "Observation has an open query",
+            status: 409,
+            code: "K.Assertion.QueryOpen",
+            detail: `Observation ${normalized} has an open query that must be closed before verification.`,
+          },
+        };
+      }
+      const alreadyVerified = (target.assertions || []).some(
+        (a) =>
+          String(a.kind).toLowerCase() === "verified" &&
+          !a.retracted_at &&
+          Number(a.revision) === Number(requestedRev)
+      );
+      if (alreadyVerified) {
+        return {
+          conflict: true,
+          problem: {
+            title: "Observation revision is already verified",
+            status: 409,
+            code: "K.Assertion.AlreadyVerified",
+            detail: `Observation ${normalized} revision ${requestedRev} already has an active verification.`,
+          },
+        };
+      }
       const idx = nextCounter();
       const assertionUuid =
         body?.assertion_id || makeUuidFromIndex("00008000", idx);
@@ -3956,6 +3988,7 @@ export function createWebDemoStore() {
       const now = new Date().toISOString();
       const assertionEntry = {
         assertion_id: assertionUuid,
+        ref: assertionRef,
         kind: "Verified",
         target: normalized,
         revision: requestedRev,
@@ -3963,19 +3996,19 @@ export function createWebDemoStore() {
         asserted_by: "usr-cra-01",
         asserted_at: now,
         reason,
+        reason_for_change: reason,
         retracted_at: null,
       };
-      target.assertions.push({
-        ref: assertionRef,
-        kind: "Verified",
-        target: normalized,
-        revision: requestedRev,
-        retracts: null,
-        asserted_at: now,
-        asserted_by: "usr-cra-01",
-        retracted_at: null,
+      target.assertions.push(cloneJson(assertionEntry));
+      target.audit.push({
+        sequence: nextCounter(),
+        recorded_at: now,
+        actor_id: "usr-cra-01",
+        action: "assertion.verified",
+        subject: assertionRef,
+        version: 1,
+        reason_for_change: reason,
       });
-      const rawObsUuid = normalized.replace(/^observation:/, "");
       for (const form of state.forms.values()) {
         if (form.items.some((it) => it.observation_id === rawObsUuid)) {
           form.assertions.push(cloneJson(assertionEntry));
@@ -4869,6 +4902,98 @@ export function createWebDemoStore() {
       return cloneJson(results);
     },
 
+    listSdvAlerts(options = {}, caller = null) {
+      const studyFilter = options?.studyId
+        ? String(options.studyId).trim()
+        : "";
+      const enrollmentFilter = options?.enrollmentId
+        ? String(options.enrollmentId).trim()
+        : "";
+      const canonicalDemoStudyIds = new Set(
+        [STUDY_UUID, DEMO_STUDY?.uuid, DEMO_STUDY?.studyUuid].filter(Boolean)
+      );
+      const alerts = [];
+      for (const form of state.forms.values()) {
+        if (
+          caller &&
+          form.site_code &&
+          !isSitePermitted(caller, form.site_code)
+        ) {
+          continue;
+        }
+        if (enrollmentFilter && form.enrollment_id !== enrollmentFilter) {
+          continue;
+        }
+        if (
+          studyFilter &&
+          form.study_id &&
+          form.study_id !== studyFilter &&
+          !(
+            canonicalDemoStudyIds.has(studyFilter) &&
+            canonicalDemoStudyIds.has(form.study_id)
+          )
+        ) {
+          continue;
+        }
+        for (const item of form.items || []) {
+          if (!item.observation_id || Number(item.revision) <= 1) continue;
+          const obsTarget = `observation:${item.observation_id}`;
+          const hasCurrentVerified = (form.assertions || []).some(
+            (a) =>
+              String(a.kind).toLowerCase() === "verified" &&
+              !a.retracted_at &&
+              (a.target === obsTarget ||
+                String(a.target).startsWith(`${obsTarget}@`)) &&
+              Number(a.revision) === Number(item.revision)
+          );
+          if (hasCurrentVerified) continue;
+          const priorVerified = [...(form.assertions || [])]
+            .reverse()
+            .find(
+              (a) =>
+                String(a.kind).toLowerCase() === "verified" &&
+                !a.retracted_at &&
+                (a.target === obsTarget ||
+                  String(a.target).startsWith(`${obsTarget}@`)) &&
+                Number(a.revision) < Number(item.revision)
+            );
+          if (!priorVerified) continue;
+          const subjectLabel = form.subject_code || form.enrollment_id;
+          const visitSuffix = form.planned_activity_id
+            ? ` - Visit ${form.planned_activity_id}`
+            : form.collection_spec_id
+              ? ` - ${form.collection_spec_id}`
+              : "";
+          alerts.push({
+            alert_id: priorVerified.assertion_id,
+            study_id:
+              form.study_id ||
+              studyFilter ||
+              "0192f3c4-5e6a-7b8c-9d0e-000000000001",
+            study_site_id: form.study_site_id || null,
+            enrollment_id: form.enrollment_id,
+            form_id: form.form_id,
+            observation_id: item.observation_id,
+            study_code: form.study_code || null,
+            site_code: form.site_code || null,
+            subject_code: form.subject_code || null,
+            collection_spec_id: form.collection_spec_id || null,
+            planned_activity_id: form.planned_activity_id || null,
+            item_id: item.item_id,
+            superseded_revision: Number(priorVerified.revision),
+            current_revision: Number(item.revision),
+            verified_by: priorVerified.asserted_by || "usr-cra-01",
+            verified_at: priorVerified.asserted_at || item.recorded_at,
+            modified_by: item.recorded_by || "usr-crc-01",
+            modified_at: item.recorded_at,
+            reason_for_change: "Clinical observation correction",
+            message: `Previously verified field modified on Subject ${subjectLabel}${visitSuffix} (${item.item_id})`,
+          });
+        }
+      }
+      return cloneJson(alerts);
+    },
+
     listEnrollmentQueries(enrollmentIdOrOptions, caller = null) {
       const opts =
         enrollmentIdOrOptions && typeof enrollmentIdOrOptions === "object"
@@ -5043,6 +5168,37 @@ export function createWebDemoStore() {
         planned_activity_id: form.planned_activity_id || "visit-baseline",
       };
       state.queries.set(queryId, created);
+      const obsRef = `observation:${created.observation_id}`;
+      if (!state.observations.has(obsRef)) {
+        this.getObservation(obsRef);
+      }
+      const targetObs = state.observations.get(obsRef);
+      const queryAssertion = {
+        assertion_id: queryId,
+        ref: `assertion:${queryId}`,
+        kind: "Queried",
+        target: obsRef,
+        revision: rev,
+        text,
+        asserted_by: "usr-cra-01",
+        asserted_at: now,
+        reason: reasonHeader || text,
+        reason_for_change: reasonHeader || text,
+        retracted_at: null,
+      };
+      if (targetObs) {
+        targetObs.assertions.push(cloneJson(queryAssertion));
+        targetObs.audit.push({
+          sequence: nextCounter(),
+          recorded_at: now,
+          actor_id: "usr-cra-01",
+          action: "assertion.queried",
+          subject: `assertion:${queryId}`,
+          version: 1,
+          reason_for_change: reasonHeader || text,
+        });
+      }
+      form.assertions.push(cloneJson(queryAssertion));
       recordActivity(
         "execution.query.raised",
         "execution",
@@ -5196,6 +5352,79 @@ export function createWebDemoStore() {
         at: now,
         reason_for_change: reason || messageText,
       });
+      const obsRef = `observation:${existing.observation_id}`;
+      const targetObs = state.observations.get(obsRef);
+      const form = state.forms.get(existing.form_id);
+      if (action === "answer") {
+        const answerId = makeUuidFromIndex("00008100", nextCounter());
+        const answerEntry = {
+          assertion_id: answerId,
+          ref: `assertion:${answerId}`,
+          kind: "QueryAnswered",
+          target: `assertion:${queryId}`,
+          revision: null,
+          text: messageText,
+          asserted_by: actor,
+          asserted_at: now,
+          reason: reason || messageText,
+          reason_for_change: reason || messageText,
+          retracted_at: null,
+        };
+        if (targetObs) {
+          targetObs.assertions.push(cloneJson(answerEntry));
+          targetObs.audit.push({
+            sequence: nextCounter(),
+            recorded_at: now,
+            actor_id: actor,
+            action: "assertion.query_answered",
+            subject: `assertion:${answerId}`,
+            version: 1,
+            reason_for_change: reason || messageText,
+          });
+        }
+        if (form) {
+          form.assertions.push(cloneJson(answerEntry));
+        }
+      } else if (action === "close" || action === "cancel") {
+        const markRetracted = (list = []) => {
+          for (const a of list) {
+            if (
+              a.assertion_id === queryId ||
+              a.ref === `assertion:${queryId}`
+            ) {
+              a.retracted_at = now;
+            }
+          }
+        };
+        if (targetObs) {
+          markRetracted(targetObs.assertions);
+          targetObs.audit.push({
+            sequence: nextCounter(),
+            recorded_at: now,
+            actor_id: actor,
+            action: "assertion.retracted",
+            subject: `assertion:${queryId}`,
+            version: 1,
+            reason_for_change: reason || messageText,
+          });
+        }
+        if (form) {
+          markRetracted(form.assertions);
+        }
+      } else if (action === "reopen") {
+        const clearRetracted = (list = []) => {
+          for (const a of list) {
+            if (
+              a.assertion_id === queryId ||
+              a.ref === `assertion:${queryId}`
+            ) {
+              a.retracted_at = null;
+            }
+          }
+        };
+        if (targetObs) clearRetracted(targetObs.assertions);
+        if (form) clearRetracted(form.assertions);
+      }
       recordActivity(
         `execution.query.${kindMap[action]}`,
         "execution",

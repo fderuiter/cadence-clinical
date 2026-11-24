@@ -381,8 +381,25 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Evaluates a candidate USDM protocol version in memory without database changes. */
+    /** Evaluates a candidate protocol version, mapping specification, or rule pack in memory at a bitemporal (valid_at, known_at) instant without database changes. */
     post: operations["KernelSimulateProtocol"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/studies/{studyRef}/simulation-reports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Registers an unmasked SimulationResult as an immutable SimulationReport artifact version for Part 11 review attestation (K-SIM-5). */
+    post: operations["KernelSaveSimulationReport"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1301,6 +1318,10 @@ export interface components {
       claim: string;
       evidence: unknown[];
     };
+    Kernel_HiddenObjects: {
+      more_exist: boolean;
+      reasons: components["schemas"]["Kernel_MaskReason"][];
+    };
     Kernel_KernelAcceptFindingRequest: {
       rationale: string;
       /** Format: uuid */
@@ -1351,6 +1372,32 @@ export interface components {
       changed_elements: components["schemas"]["Kernel_KernelElementChangeResponse"][];
       schedule:
         null | components["schemas"]["Kernel_KernelSoaAmendmentDiffResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      active_site_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      pending_site_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      total_participant_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      affected_participant_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      reconsent_participant_count: number | string;
+      hidden?: null | components["schemas"]["Kernel_HiddenObjects"];
     };
     Kernel_KernelApplyLockRequest: {
       study_ref: string;
@@ -1372,6 +1419,7 @@ export interface components {
       expected_content_hash?: null | string;
       /** Format: uuid */
       attestation_id?: null | string;
+      review_attestation_ref?: null | string;
     };
     Kernel_KernelArtifactResponse: {
       artifact_ref: string;
@@ -1641,6 +1689,10 @@ export interface components {
       more_exist: boolean;
       reasons: string[];
     };
+    Kernel_KernelHiddenObjectsResponse: {
+      more_exist: boolean;
+      reasons: string[];
+    };
     Kernel_KernelImportedRulePackSummaryResponse: {
       ref: string;
       key: string;
@@ -1850,11 +1902,52 @@ export interface components {
       /** Format: int32 */
       revision: number | string;
     };
+    Kernel_KernelOperationalImpactResponse: {
+      /** Format: int32 */
+      active_site_count: number | string;
+      /** Format: int32 */
+      pending_site_count: number | string;
+      /** Format: int32 */
+      total_participant_count: number | string;
+      /** Format: int32 */
+      affected_participant_count: number | string;
+      /** Format: int32 */
+      reconsent_participant_count: number | string;
+      participant_impacts: components["schemas"]["Kernel_KernelParticipantSimulationImpactResponse"][];
+      hidden: components["schemas"]["Kernel_KernelHiddenObjectsResponse"];
+    };
     Kernel_KernelOrganizationSummaryResponse: {
       ref: string;
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelParticipantPlannedVisitResponse: {
+      visit_id: string;
+      /** Format: date */
+      target_date: string;
+      /** Format: date */
+      window_start: string;
+      /** Format: date */
+      window_end: string;
+    };
+    Kernel_KernelParticipantScheduleShiftResponse: {
+      activity_id: string;
+      change: string;
+      before:
+        | null
+        | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+      after:
+        | null
+        | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+    };
+    Kernel_KernelParticipantSimulationImpactResponse: {
+      enrollment: string;
+      subject_code: string;
+      status: string;
+      cohort: string;
+      requires_reconsent: boolean;
+      schedule_shifts: components["schemas"]["Kernel_KernelParticipantScheduleShiftResponse"][];
     };
     Kernel_KernelPlannedVisitResponse: {
       activity_id: string;
@@ -1880,6 +1973,26 @@ export interface components {
       participant_count: number | string;
       /** Format: int32 */
       active_study_count: number | string;
+    };
+    Kernel_KernelProjectionDatasetChangeResponse: {
+      dataset: string;
+      /** Format: int32 */
+      added_count: number | string;
+      /** Format: int32 */
+      removed_count: number | string;
+      /** Format: int32 */
+      changed_count: number | string;
+      samples: components["schemas"]["Kernel_KernelProjectionRecordChangeSampleResponse"][];
+    };
+    Kernel_KernelProjectionRecordChangeSampleResponse: {
+      record_key: string;
+      change: string;
+      before: null | {
+        [key: string]: string;
+      };
+      after: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelProposalAffectedResponse: {
       ref: string;
@@ -2129,6 +2242,16 @@ export interface components {
       /** Format: double */
       rank: number | string;
     };
+    Kernel_KernelSimulatedValidationFindingResponse: {
+      rule_id: string;
+      /** Format: int32 */
+      rule_version: number | string;
+      severity: string;
+      stage: string;
+      dataset: string;
+      subject: string;
+      explanation: string;
+    };
     Kernel_KernelSimulationAsOfResponse: {
       /** Format: date-time */
       valid_at: string;
@@ -2149,6 +2272,13 @@ export interface components {
         null | components["schemas"]["Kernel_KernelDependentsResponse"];
       matrix_gaps: components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
       is_empty: boolean;
+      operational_impact?:
+        null | components["schemas"]["Kernel_KernelOperationalImpactResponse"];
+      projection_changes?:
+        | null
+        | components["schemas"]["Kernel_KernelProjectionDatasetChangeResponse"][];
+      validation_delta?:
+        null | components["schemas"]["Kernel_KernelValidationDeltaResponse"];
     };
     Kernel_KernelSiteSummaryResponse: {
       ref: string;
@@ -2344,6 +2474,12 @@ export interface components {
     Kernel_KernelUpgradeSubscriptionRequest: {
       tier: string;
     };
+    Kernel_KernelValidationDeltaResponse: {
+      opening: components["schemas"]["Kernel_KernelSimulatedValidationFindingResponse"][];
+      resolving: components["schemas"]["Kernel_KernelSimulatedValidationFindingResponse"][];
+      /** Format: int32 */
+      unchanged_count: number | string;
+    };
     Kernel_KernelValidationFindingDetailResponse: {
       finding: components["schemas"]["Kernel_KernelValidationFindingResponse"];
       explanation: components["schemas"]["Kernel_Explanation"];
@@ -2452,6 +2588,7 @@ export interface components {
       /** @default false */
       masked: boolean;
     };
+    Kernel_MaskReason: number;
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
     };
@@ -2545,6 +2682,14 @@ export interface components {
     };
     /** @enum {unknown} */
     Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
+    Kernel_SaveSimulationReportRequest: {
+      title: null | string;
+      result: null | components["schemas"]["Kernel_KernelSimulationResponse"];
+      /** Format: uuid */
+      artifact_id?: null | string;
+      /** Format: uuid */
+      artifact_version_id?: null | string;
+    };
     Kernel_SimulateProtocolRequest: {
       base_version_ref: null | string;
       stored_version_ref: null | string;
@@ -2553,6 +2698,11 @@ export interface components {
       valid_at?: null | string;
       /** Format: date-time */
       known_at?: null | string;
+      kind?: null | string;
+      study_ref?: null | string;
+      library_item_ref?: null | string;
+      base_library_item_ref?: null | string;
+      standard_version_ref?: null | string;
     };
   };
   responses: never;
@@ -3599,7 +3749,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Simulation.VersionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Simulation.LibraryItemUnknown`, `K.Simulation.StudyUnknown`, `K.Simulation.VersionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -3617,7 +3767,88 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`, `K.Simulation.MappingSpecificationInvalid`, `K.Simulation.RulePackInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelSaveSimulationReport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_SaveSimulationReportRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelArtifactResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Evidence.StudyUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Evidence.ContentInvalid`, `K.Evidence.KindInvalid`, `K.Evidence.SimulationReportInvalid`, `K.Evidence.TitleInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4384,7 +4615,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Protocol.ReferenceUnknown`, `K.Protocol.UndeclaredImpactedElements`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4533,7 +4764,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`, `K.Protocol.SimulationReviewRequired`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -5257,7 +5488,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.RevisionStale`, `K.Command.IdempotencyConflict`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyVerified`, `K.Assertion.QueryOpen`, `K.Assertion.RevisionStale`, `K.Command.IdempotencyConflict`. */
       409: {
         headers: {
           [name: string]: unknown;
