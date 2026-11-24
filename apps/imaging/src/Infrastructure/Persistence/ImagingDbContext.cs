@@ -2,8 +2,10 @@ using System;
 
 using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +30,8 @@ public sealed class ImagingDbContext(DbContextOptions<ImagingDbContext> options)
     public DbSet<TumorResponseAssessment> TumorResponseAssessments => Set<TumorResponseAssessment>();
     public DbSet<ImagingAdjudicationSession> ImagingAdjudicationSessions => Set<ImagingAdjudicationSession>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
+    public DbSet<ConsumedSignatureToken> ConsumedSignatureTokens => Set<ConsumedSignatureToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +46,8 @@ public sealed class ImagingDbContext(DbContextOptions<ImagingDbContext> options)
         modelBuilder.ApplyConfiguration(new TumorResponseAssessmentConfiguration());
         modelBuilder.ApplyConfiguration(new ImagingAdjudicationSessionConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

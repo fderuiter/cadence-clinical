@@ -781,6 +781,10 @@ td select,
   width: 100%;
 }
 
+.query-flag {
+  flex-shrink: 0;
+}
+
 /* WCAG 2.2 SC 2.5.8 Target Size (Minimum) (24x24px via Technique C42).
    Excludes inline <a> links under the Inline exception; preserves 48px on .clinical-input and .touch-target. */
 :where(

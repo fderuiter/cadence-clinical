@@ -1885,7 +1885,7 @@ internal static class KernelExportStreamer
             var latestRev = obs.Revisions[^1];
             await xml.WriteStartElementAsync(null, "AuditRecord", OdmNamespace).ConfigureAwait(false);
             await xml.WriteStartElementAsync(null, "UserRef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "UserOID", null, latestRev.RecordedBy ?? "system").ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "UserOID", null, latestRev.RecordedBy ?? "masked").ConfigureAwait(false);
             await xml.WriteEndElementAsync().ConfigureAwait(false);
             await xml.WriteStartElementAsync(null, "LocationRef", OdmNamespace).ConfigureAwait(false);
             await xml.WriteAttributeStringAsync(null, "LocationOID", null, siteCode).ConfigureAwait(false);
@@ -1903,7 +1903,7 @@ internal static class KernelExportStreamer
                     await xml.WriteStartElementAsync("cadence", "Revision", CadenceNamespace).ConfigureAwait(false);
                     await xml.WriteAttributeStringAsync(null, "Number", null, rev.Revision.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
                     await xml.WriteAttributeStringAsync(null, "Value", null, rev.DisplayValue).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "RecordedBy", null, rev.RecordedBy ?? "system").ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "RecordedBy", null, rev.RecordedBy ?? "masked").ConfigureAwait(false);
                     await xml.WriteAttributeStringAsync(null, "RecordedAt", null, FormatInstant(rev.RecordedAt)).ConfigureAwait(false);
                     await xml.WriteAttributeStringAsync(null, "ReasonForChange", null, rev.ReasonForChange ?? string.Empty).ConfigureAwait(false);
                     await xml.WriteEndElementAsync().ConfigureAwait(false);

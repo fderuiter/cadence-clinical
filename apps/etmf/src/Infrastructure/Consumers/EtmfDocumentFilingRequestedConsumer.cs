@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database.Audit;
 
 using MassTransit;
 
@@ -43,6 +44,9 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
 
         int zone = int.TryParse(msg.ZoneCode, out var parsedZone) && parsedZone > 0 ? parsedZone : 1;
         var createdBy = string.IsNullOrWhiteSpace(msg.RequestedBy) ? "svc:etmf-outbox" : msg.RequestedBy;
+        using var _ = AmbientAuditActorScope.BeginScope(
+            "svc:etmf-outbox",
+            "eTMF document filing request outbox sync");
         var safeFilename = TmfDocument.SanitizePathSegment(msg.DocumentTitle, "document.pdf");
         var safeSection = TmfDocument.SanitizePathSegment(msg.SectionCode, "01.01");
 

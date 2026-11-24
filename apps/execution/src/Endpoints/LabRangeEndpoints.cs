@@ -58,7 +58,7 @@ public static class LabRangeEndpoints
         rangesGroup.MapPost("/", CreateReferenceRangeAsync)
             .WithName("CreateReferenceRange")
             .WithSummary("Create laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -67,7 +67,7 @@ public static class LabRangeEndpoints
         rangesGroup.MapPut("/{id:guid}", UpdateReferenceRangeAsync)
             .WithName("UpdateReferenceRange")
             .WithSummary("Update laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -76,7 +76,7 @@ public static class LabRangeEndpoints
         rangesGroup.MapDelete("/{id:guid}", DeleteReferenceRangeAsync)
             .WithName("DeleteReferenceRange")
             .WithSummary("Deactivate laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<object>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -98,7 +98,7 @@ public static class LabRangeEndpoints
             .WithName("CommitLabRangeImport")
             .WithSummary("Commit validated bulk lab ranges into persistent store with Part 11 audit logging")
             .DisableAntiforgery()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .RequireChangeReasonHeader()
             .Produces<BulkLabRangeImportJobResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -501,5 +501,5 @@ public static class LabRangeEndpoints
     private static string ResolveActorId(HttpContext httpContext) =>
         ClinicalScopeGuard.ResolvePrincipal(httpContext)?.UserId is { Length: > 0 } actorId && !string.IsNullOrWhiteSpace(actorId)
             ? actorId
-            : "DATA_MANAGER";
+            : throw new AuditActorUnresolvedException();
 }

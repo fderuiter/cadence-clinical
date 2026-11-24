@@ -445,6 +445,8 @@ function onSiteSelect(value: string | number) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .participants-header {

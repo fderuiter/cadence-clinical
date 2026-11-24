@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Database.Audit;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -41,6 +43,9 @@ public abstract class FileshareWorkerBase : BackgroundService
         {
             try
             {
+                using var _ = AmbientAuditActorScope.BeginScope(
+                    "svc:fileshare-worker",
+                    $"Automated {workerName} background processing");
                 await ProcessPendingAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)

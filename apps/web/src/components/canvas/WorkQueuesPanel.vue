@@ -388,7 +388,7 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queues-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 12px;
 }
 
@@ -396,6 +396,9 @@ watch(() => props.studyCode, load, { immediate: true });
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -404,19 +407,24 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queue-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .work-queue-title {
   margin: 0;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 
 .work-queue-capability {
   display: inline-block;
   margin-top: 2px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
 }

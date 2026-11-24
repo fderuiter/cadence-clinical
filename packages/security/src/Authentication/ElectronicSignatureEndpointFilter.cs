@@ -16,7 +16,9 @@ namespace Cadence.Security.Authentication;
 /// runs, so no write happens.
 /// @req:SRS-SYS-005
 /// </summary>
-public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding) : IEndpointFilter
+public sealed class ElectronicSignatureEndpointFilter(
+    Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding,
+    Func<EndpointFilterInvocationContext, bool>? requiresSignature = null) : IEndpointFilter
 {
     /// <summary>A filter binding the token to <paramref name="semanticAction"/> on the action the request names.</summary>
     public ElectronicSignatureEndpointFilter(string semanticAction, Func<HttpContext, string> resolveAction)
@@ -31,6 +33,11 @@ public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocat
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(next);
+
+        if (requiresSignature is not null && !requiresSignature(context))
+        {
+            return await next(context).ConfigureAwait(false);
+        }
 
         var httpContext = context.HttpContext;
         string? userId = httpContext.User.FindFirst(CadenceClaimTypes.Subject)?.Value;
@@ -125,6 +132,49 @@ public static class ElectronicSignatureEndpointExtensions
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(resolveBinding))
             .WithMetadata(ElectronicSignatureRequired.Instance)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>
+    /// Gates the endpoint on an e-signature step-up token whenever <paramref name="requiresSignature"/> returns
+    /// <see langword="true"/> for the bound request (for example, irreversible <c>UNBLINDED</c> and <c>WITHDRAWN</c>
+    /// participant transitions on a shared state-transition route), while allowing routine invocations through.
+    /// </summary>
+    public static RouteHandlerBuilder RequireElectronicSignatureWhen(
+        this RouteHandlerBuilder builder,
+        Func<EndpointFilterInvocationContext, bool> requiresSignature,
+        Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(requiresSignature);
+        ArgumentNullException.ThrowIfNull(resolveBinding);
+
+        return builder
+            .AddEndpointFilter(new ElectronicSignatureEndpointFilter(resolveBinding, requiresSignature))
+            .WithMetadata(ElectronicSignatureRequired.Instance)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>
+    /// Gates the endpoint on an e-signature step-up token whenever <paramref name="requiresSignature"/> returns
+    /// <see langword="true"/>, binding the token to the semantic action and concrete resource path computed from
+    /// <see cref="HttpContext"/>.
+    /// </summary>
+    public static RouteHandlerBuilder RequireElectronicSignatureWhen(
+        this RouteHandlerBuilder builder,
+        Func<EndpointFilterInvocationContext, bool> requiresSignature,
+        Func<HttpContext, string> resolveSemanticAction,
+        Func<HttpContext, string> resolveAction)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(requiresSignature);
+        ArgumentNullException.ThrowIfNull(resolveSemanticAction);
+        ArgumentNullException.ThrowIfNull(resolveAction);
+
+        return builder.RequireElectronicSignatureWhen(
+            requiresSignature,
+            context => new SigTokenBinding(
+                resolveAction(context.HttpContext),
+                resolveSemanticAction(context.HttpContext)));
     }
 
     /// <summary>The token the filter verified and consumed for this request, or null when no filter ran.</summary>

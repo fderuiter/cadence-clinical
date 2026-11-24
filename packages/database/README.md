@@ -18,9 +18,8 @@ migration application.
   (sets `cadence.tenant_id` on open and resets to `''` on close), and `StandaloneTenantSaveChangesInterceptor`
   (stamps verified `tenant_id` shadow columns on insert, blocks cross-tenant mutation, and refuses writes when `ICurrentTenantAccessor.IsTenantReadOnly` is true), backing PostgreSQL
   `ENABLE` + `FORCE ROW LEVEL SECURITY` (`tenant_isolation` using `kernel.current_tenant_id()`,
-  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)). The optional
-  `configureOptions(serviceProvider, options)` runs per scope after the provider is set, so a host can add a
-  `GxPAuditInterceptor` whose actor is the request's verified caller (the safety service does).
+  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)). By default (`enableDefaultGxPAudit: true`), it also registers scoped `IAuditActorScope` and attaches a single `GxPAuditInterceptor` per `DbContext` composition that resolves the actor from `IAuditActorScope` (`svc:` service accounts for background workers, MassTransit consumers, and seeders) or the verified HTTP caller, failing closed when neither is present. The optional
+  `configureOptions(serviceProvider, options)` runs per scope after the provider is set for host-specific options.
 - `ApplyStandaloneTenancy()` (`StandaloneTenantModelExtensions`) and `StandaloneTenantIsolationSql`: configure the
   `tenant_id uuid NOT NULL` shadow property across entity types (plus matching non-relational EF Core query filters
   for in-memory test hosts) and emit idempotent schema migration DDL for `ENABLE` / `FORCE ROW LEVEL SECURITY`.

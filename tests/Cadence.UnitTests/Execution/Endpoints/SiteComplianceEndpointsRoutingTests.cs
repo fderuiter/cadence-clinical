@@ -69,8 +69,14 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     /// </summary>
     public SiteComplianceEndpointsRoutingTests()
     {
-        _client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager"));
-        _etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
+        _client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager") with
+        {
+            ChangeReason = "Site activation readiness check",
+        });
+        _etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole) with
+        {
+            ChangeReason = "Automated eTMF completeness webhook sync",
+        });
     }
 
     public void Dispose()
@@ -461,7 +467,10 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // AC #4, exercised through the REAL ISiteComplianceApplicationService/ISiteComplianceRepository/
         // ExecutionDbContext -- not a fake -- proving the eTMF webhook route's full DI graph actually
         // persists a new SiteComplianceCache row end to end. eTMF calls it as its signed service account.
-        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
+        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole) with
+        {
+            ChangeReason = "Automated eTMF completeness webhook sync",
+        });
         var payload = new EtmfCompletenessWebhookPayload("STUDY-E2E", "SITE-E2E", "SITE_ACTIVATION", true, null);
 
         var response = await client.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", payload,
@@ -481,7 +490,10 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // eTMF. Missing expected documents.'" -- exercised end to end: no SiteComplianceCache row exists yet
         // for this (study, site) pair, which is itself "not compliant" per
         // SiteComplianceApplicationService.ActivateSiteAsync's own `gate is not { IsComplete: true }` check.
-        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager"));
+        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager") with
+        {
+            ChangeReason = "Attempt activation of non-compliant site",
+        });
         var request = new SiteActivationRequest("STUDY-E2E-BLOCKED");
 
         var response = await client.PostAsJsonAsync("/api/v1/execution/sites/SITE-E2E-BLOCKED/activate", request,
@@ -516,7 +528,10 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     [Fact]
     public async Task ActivateSite_EndToEnd_CompliantSite_PersistsActivatedStatusAcrossReloadsAndIsIdempotent()
     {
-        using var etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
+        using var etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole) with
+        {
+            ChangeReason = "Automated eTMF completeness webhook sync",
+        });
         using var dm = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-dm-9", "Data Manager") with
         {
             ChangeReason = "All startup artifacts verified complete"

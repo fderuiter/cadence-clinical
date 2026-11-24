@@ -255,26 +255,44 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
 
 <!-- architecture-signatures:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-Signature-gated routes (`16` `RequireElectronicSignature` endpoints across `6` durable `AddCadenceDurableSigTokenStore<TContext>()` registrations: `econsent` (`EconsentDbContext` → `econsent.consumed_signature_tokens`), `execution` (`ExecutionDbContext` → `edc.consumed_signature_tokens`), `kernel` (`ExecutionSignatureTokenDbContext` → `execution.consumed_signature_tokens`), `knowledge` (`KnowledgeDbContext` → `knowledge.consumed_signature_tokens`), `safety` (`SafetyDbContext` → `safety.consumed_signature_tokens`), `tickets` (`TicketsDbContext` → `tickets.consumed_signature_tokens`)):
+Signature-gated routes (`34` `RequireElectronicSignature` endpoints across `10` durable `AddCadenceDurableSigTokenStore<TContext>()` registrations: `ctms` (`CtmsDbContext` → `ctms.consumed_signature_tokens`), `econsent` (`EconsentDbContext` → `econsent.consumed_signature_tokens`), `execution` (`ExecutionDbContext` → `edc.consumed_signature_tokens`), `imaging` (`ImagingDbContext` → `imaging.consumed_signature_tokens`), `interop` (`InteropDbContext` → `interop.consumed_signature_tokens`), `kernel` (`ExecutionSignatureTokenDbContext` → `execution.consumed_signature_tokens`), `knowledge` (`KnowledgeDbContext` → `knowledge.consumed_signature_tokens`), `payments` (`PaymentsDbContext` → `payments.consumed_signature_tokens`), `safety` (`SafetyDbContext` → `safety.consumed_signature_tokens`), `tickets` (`TicketsDbContext` → `tickets.consumed_signature_tokens`)):
 
-| Host        | Endpoint                                                                                            | `semantic_action`                      | `action`                                                                            |
-| ----------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
-| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/capture-consent`                                     | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/capture-consent`                          |
-| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`            | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` |
-| `execution` | `POST /api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                                         | `execution.cec.chair_adjudicate`       | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                              |
-| `execution` | `POST /api/v1/execution/labs/toxicity/review/{review_id}/action`                                    | `execution.lab_toxicity_review.action` | `/api/v1/execution/labs/toxicity/review/{review_id}/action`                         |
-| `execution` | `POST /api/v1/execution/randomization/schemes/{schemeId}/approve`                                   | `execution.form.approve`               | `/api/v1/execution/randomization/schemes/{schemeId}/approve`                        |
-| `execution` | `POST /api/v1/execution/subjects/{subjectId}/randomize`                                             | `execution.subject.randomize`          | `/api/v1/execution/subjects/{subjectId}/randomize`                                  |
-| `kernel`    | `POST /api/v1/execution/forms/{formId}/signatures`                                                  | `execution.form.sign`                  | `/api/v1/execution/forms/{formId}/signatures`                                       |
-| `kernel`    | `POST /api/v1/kernel/library-items/{itemRef}/approve`                                               | `kernel.library_item.approve`          | `/api/v1/kernel/library-items/{itemRef}/approve`                                    |
-| `kernel`    | `POST /api/v1/kernel/locks`                                                                         | `kernel.lock.apply`                    | `/api/v1/kernel/locks`                                                              |
-| `kernel`    | `POST /api/v1/kernel/locks/{lockRef}/release`                                                       | `kernel.lock.release`                  | `/api/v1/kernel/locks/{lockRef}/release`                                            |
-| `kernel`    | `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`                                        | `kernel.protocol_version.approve`      | `/api/v1/kernel/protocol-versions/{versionRef}/approve`                             |
-| `kernel`    | `POST /api/v1/kernel/validation/findings/{findingRef}/accept`                                       | `kernel.validation_finding.accept`     | `/api/v1/kernel/validation/findings/{findingRef}/accept`                            |
-| `kernel`    | `POST /api/v1/kernel/validation/findings/{findingRef}/explain`                                      | `kernel.validation_finding.explain`    | `/api/v1/kernel/validation/findings/{findingRef}/explain`                           |
-| `knowledge` | `POST /api/v1/training/delegations/bulk-signoff`                                                    | `knowledge.delegation.sign_off`        | `/api/v1/training/delegations/bulk-signoff` (`batch_id` SHA-256)                    |
-| `safety`    | `POST /api/v1/safety/dsur/{id}/approve` (alias `POST /api/v1/safety/periodic-reports/{id}/approve`) | `safety.periodic_report.approve`       | `/api/v1/safety/dsur/{reportId}/approve`                                            |
-| `tickets`   | `POST /api/v1/tickets/{ticket_id}/sign`                                                             | `tickets.ticket.sign`                  | `/api/v1/tickets/{ticket_id}/sign`                                                  |
+| Host        | Endpoint                                                                                            | `semantic_action`                                        | `action`                                                                            |
+| ----------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ctms`      | `POST /api/v1/ctms/doa/sign-off`                                                                    | `ctms.doa.sign_off`                                      | `/api/v1/ctms/doa/sign-off`                                                         |
+| `ctms`      | `GET /api/v1/ctms/doa/sites/{site_id}/export-pdf`                                                   | `ctms.doa.export_pdf`                                    | `/api/v1/ctms/doa/sites/{site_id}/export-pdf`                                       |
+| `ctms`      | `POST /api/v1/ctms/letters/compile`                                                                 | `ctms.letter.compile`                                    | `/api/v1/ctms/letters/compile`                                                      |
+| `ctms`      | `POST /api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                           | `ctms.monitoring_visit.sign_off`                         | `/api/v1/ctms/monitoring-visits/{visit_id}/sign-off`                                |
+| `ctms`      | `POST /api/v1/ctms/startup/matrix/batch-certify`                                                    | `ctms.greenlight.batch_certify`                          | `/api/v1/ctms/startup/matrix/batch-certify`                                         |
+| `ctms`      | `POST /api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                                       | `ctms.greenlight.certify`                                | `/api/v1/ctms/startup/sites/{siteId}/greenlight/certify`                            |
+| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/capture-consent`                                     | `econsent.consent.capture`                               | `/api/v1/econsent/templates/{template_id}/capture-consent`                          |
+| `econsent`  | `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`            | `econsent.consent.capture`                               | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` |
+| `execution` | `POST /api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                                         | `execution.cec.chair_adjudicate`                         | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                              |
+| `execution` | `POST /api/v1/execution/devices/quarantine/release`                                                 | `execution.device.quarantine_release`                    | `/api/v1/execution/devices/quarantine/release`                                      |
+| `execution` | `POST /api/v1/execution/labs/toxicity/review/{review_id}/action`                                    | `execution.lab_toxicity_review.action`                   | `/api/v1/execution/labs/toxicity/review/{review_id}/action`                         |
+| `execution` | `POST /api/v1/execution/randomization/schemes/{schemeId}/approve`                                   | `execution.form.approve`                                 | `/api/v1/execution/randomization/schemes/{schemeId}/approve`                        |
+| `execution` | `POST /api/v1/execution/rtsm/cgt/bedside-verify`                                                    | `execution.cgt.bedside_verify`                           | `/api/v1/execution/rtsm/cgt/bedside-verify`                                         |
+| `execution` | `POST /api/v1/execution/rtsm/cgt/destruction-certificate`                                           | `execution.cgt.destruction_certificate`                  | `/api/v1/execution/rtsm/cgt/destruction-certificate`                                |
+| `execution` | `POST /api/v1/execution/rtsm/kits/reconcile-batch`                                                  | `execution.rtsm.reconcile_batch`                         | `/api/v1/execution/rtsm/kits/reconcile-batch`                                       |
+| `execution` | `POST /api/v1/execution/subjects/{subjectId}/randomize`                                             | `execution.subject.randomize`                            | `/api/v1/execution/subjects/{subjectId}/randomize`                                  |
+| `execution` | `PATCH /api/v1/execution/subjects/{subjectId}/state`                                                | `execution.subject.unblind / execution.subject.withdraw` | `/api/v1/execution/subjects/{subjectId}/state`                                      |
+| `imaging`   | `POST /api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                                   | `imaging.adjudication.chair_adjudicate`                  | `/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate`                        |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/accept`                                                     | `interop.esource.accept`                                 | `/api/v1/interop/esource/reconcile/accept`                                          |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/batch-accept`                                               | `interop.esource.batch_accept`                           | `/api/v1/interop/esource/reconcile/batch-accept`                                    |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/batch-reject`                                               | `interop.esource.batch_reject`                           | `/api/v1/interop/esource/reconcile/batch-reject`                                    |
+| `interop`   | `POST /api/v1/interop/esource/reconcile/reject`                                                     | `interop.esource.reject`                                 | `/api/v1/interop/esource/reconcile/reject`                                          |
+| `kernel`    | `POST /api/v1/execution/forms/{formId}/signatures`                                                  | `execution.form.sign`                                    | `/api/v1/execution/forms/{formId}/signatures`                                       |
+| `kernel`    | `POST /api/v1/kernel/library-items/{itemRef}/approve`                                               | `kernel.library_item.approve`                            | `/api/v1/kernel/library-items/{itemRef}/approve`                                    |
+| `kernel`    | `POST /api/v1/kernel/locks`                                                                         | `kernel.lock.apply`                                      | `/api/v1/kernel/locks`                                                              |
+| `kernel`    | `POST /api/v1/kernel/locks/{lockRef}/release`                                                       | `kernel.lock.release`                                    | `/api/v1/kernel/locks/{lockRef}/release`                                            |
+| `kernel`    | `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`                                        | `kernel.protocol_version.approve`                        | `/api/v1/kernel/protocol-versions/{versionRef}/approve`                             |
+| `kernel`    | `POST /api/v1/kernel/validation/findings/{findingRef}/accept`                                       | `kernel.validation_finding.accept`                       | `/api/v1/kernel/validation/findings/{findingRef}/accept`                            |
+| `kernel`    | `POST /api/v1/kernel/validation/findings/{findingRef}/explain`                                      | `kernel.validation_finding.explain`                      | `/api/v1/kernel/validation/findings/{findingRef}/explain`                           |
+| `knowledge` | `POST /api/v1/training/delegations/bulk-signoff`                                                    | `knowledge.delegation.sign_off`                          | `/api/v1/training/delegations/bulk-signoff` (`batch_id` SHA-256)                    |
+| `payments`  | `POST /api/v1/payments/invoices/{id}/approve`                                                       | `payments.invoice.approve`                               | `/api/v1/payments/invoices/{id}/approve`                                            |
+| `payments`  | `POST /api/v1/payments/invoices/{id}/remittance-advice/sign`                                        | `payments.remittance.sign`                               | `/api/v1/payments/invoices/{id}/remittance-advice/sign`                             |
+| `safety`    | `POST /api/v1/safety/dsur/{id}/approve` (alias `POST /api/v1/safety/periodic-reports/{id}/approve`) | `safety.periodic_report.approve`                         | `/api/v1/safety/dsur/{reportId}/approve`                                            |
+| `tickets`   | `POST /api/v1/tickets/{ticket_id}/sign`                                                             | `tickets.ticket.sign`                                    | `/api/v1/tickets/{ticket_id}/sign`                                                  |
 
 <!-- architecture-signatures:end -->
 
@@ -339,12 +357,23 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 
 <!-- architecture-audit-hosts:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-| Host        | DbContext            | Schema      | Registration                    |
-| ----------- | -------------------- | ----------- | ------------------------------- |
-| `execution` | `ExecutionDbContext` | `edc`       | `apps/execution/src/Program.cs` |
-| `knowledge` | `KnowledgeDbContext` | `knowledge` | `apps/knowledge/src/Program.cs` |
-| `safety`    | `SafetyDbContext`    | `safety`    | `apps/safety/src/Program.cs`    |
-| `tickets`   | `TicketsDbContext`   | `tickets`   | `apps/tickets/src/Program.cs`   |
+| Host            | DbContext                | Schema          | Registration                        |
+| --------------- | ------------------------ | --------------- | ----------------------------------- |
+| `ctms`          | `CtmsDbContext`          | `ctms`          | `apps/ctms/src/Program.cs`          |
+| `econsent`      | `EconsentDbContext`      | `econsent`      | `apps/econsent/src/Program.cs`      |
+| `eisf`          | `EisfDbContext`          | `eisf`          | `apps/eisf/src/Program.cs`          |
+| `etmf`          | `EtmfDbContext`          | `etmf`          | `apps/etmf/src/Program.cs`          |
+| `execution`     | `ExecutionDbContext`     | `edc`           | `apps/execution/src/Program.cs`     |
+| `fileshare`     | `FileshareDbContext`     | `fileshare`     | `apps/fileshare/src/Program.cs`     |
+| `imaging`       | `ImagingDbContext`       | `imaging`       | `apps/imaging/src/Program.cs`       |
+| `interop`       | `InteropDbContext`       | `interop`       | `apps/interop/src/Program.cs`       |
+| `knowledge`     | `KnowledgeDbContext`     | `knowledge`     | `apps/knowledge/src/Program.cs`     |
+| `notifications` | `NotificationsDbContext` | `notifications` | `apps/notifications/src/Program.cs` |
+| `org`           | `OrgDbContext`           | `org`           | `apps/org/src/Program.cs`           |
+| `payments`      | `PaymentsDbContext`      | `payments`      | `apps/payments/src/Program.cs`      |
+| `quality`       | `QualityDbContext`       | `quality`       | `apps/quality/src/Program.cs`       |
+| `safety`        | `SafetyDbContext`        | `safety`        | `apps/safety/src/Program.cs`        |
+| `tickets`       | `TicketsDbContext`       | `tickets`       | `apps/tickets/src/Program.cs`       |
 
 <!-- architecture-audit-hosts:end -->
 

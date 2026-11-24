@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Tenancy;
@@ -25,6 +26,7 @@ public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> opti
     public DbSet<PlaybackAuditLog> PlaybackAuditLogs => Set<PlaybackAuditLog>();
     public DbSet<FileAuditLog> FileAuditLogs => Set<FileAuditLog>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +38,7 @@ public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> opti
         modelBuilder.ApplyConfiguration(new PlaybackAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new FileAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

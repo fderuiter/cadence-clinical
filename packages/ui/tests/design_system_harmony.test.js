@@ -2048,6 +2048,50 @@ const open = () => {};
       }
     });
 
+    it("enforces minmax(0, 1fr) responsive grid tracks, nested fieldset span resets, relative scroll wrappers, and clinical-input shrink safety (ADR-2663)", () => {
+      const responsiveCss = fs.readFileSync(
+        path.join(uiDir, "responsive.css"),
+        "utf8"
+      );
+      const cleanResponsive = responsiveCss.replace(/\/\*[\s\S]*?\*\//g, "");
+
+      expect(cleanResponsive).toMatch(
+        /\.responsive-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-layout-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-layout-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*2fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-2-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-asymmetric-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-asymmetric-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1\.2fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /@media\s*\(max-width:\s*1023px\)\s*\{\s*\.responsive-grid\s*>\s*\*,\s*\.responsive-grid\s+fieldset\s*>\s*\*\s*\{\s*grid-column:\s*span\s+1\s*\/\s*span\s+1\s*!important;/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.scrollable-table-wrapper\s*\{[^}]*position:\s*relative;/
+      );
+
+      expect(tokensCss).toMatch(
+        /\.clinical-input,\s*\.clinical-radio-grid\s*\{[^}]*min-width:\s*0;/
+      );
+      expect(tokensCss).toMatch(
+        /\.clinical-input\s+\.input-wrapper\s*\{[^}]*min-width:\s*0;/
+      );
+      expect(tokensCss).toMatch(/\.query-flag\s*\{\s*flex-shrink:\s*0;\s*\}/);
+      expect(tokensCss).toMatch(
+        /\.clinical-input\s+\.clinical-input-control\s*\{[^}]*min-width:\s*0;/
+      );
+    });
+
     it("enforces custom-vue/no-unscoped-clinical-tabs-css against unscoped list-class, tab-class, and active-tab-class selectors while permitting :deep(...) and variants", async () => {
       const { ESLint } = await import("eslint");
       const eslint = new ESLint({

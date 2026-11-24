@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Tenancy;
@@ -30,6 +31,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
     public DbSet<TmfDocumentQcTransition> TmfDocumentQcTransitions => Set<TmfDocumentQcTransition>();
     public DbSet<TmfExportJob> TmfExportJobs => Set<TmfExportJob>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +46,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new TmfDocumentQcTransitionConfiguration());
         modelBuilder.ApplyConfiguration(new TmfExportJobConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
         modelBuilder.ConfigureStandaloneTenancy(this);

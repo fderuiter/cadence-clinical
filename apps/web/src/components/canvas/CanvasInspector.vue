@@ -1483,6 +1483,9 @@ watch(aiEnabled, (on) => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .inspector-kind {
@@ -1490,11 +1493,13 @@ watch(aiEnabled, (on) => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  overflow-wrap: anywhere;
 }
 
 .inspector-title {
   margin: 0;
   font-size: 1.15rem;
+  overflow-wrap: anywhere;
 }
 
 .inspector-ref {
@@ -1508,12 +1513,18 @@ watch(aiEnabled, (on) => {
   margin-top: 2px;
   font-size: 0.78rem;
   color: var(--neutral-dark);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .inspector-ref-summary {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   min-height: var(--semantic-control-target-min, 24px);
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   cursor: pointer;
   user-select: none;
 }
@@ -1582,17 +1593,30 @@ watch(aiEnabled, (on) => {
 
 .details {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   gap: 6px 12px;
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .details dt {
   color: var(--neutral-dark);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .details dd {
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .details {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .numeric {
@@ -1607,6 +1631,8 @@ watch(aiEnabled, (on) => {
 .inspector-link {
   align-self: flex-start;
   color: var(--accent);
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .sdv {

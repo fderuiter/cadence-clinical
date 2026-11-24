@@ -46,7 +46,8 @@ public static class CecEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("cec_adjudication:adjudicate").RequireCallerStudyScope()
-            .RequireElectronicSignature(ChairAdjudicateSemanticAction, ChairAdjudicateActionFor);
+            .RequireElectronicSignature(ChairAdjudicateSemanticAction, ChairAdjudicateActionFor)
+            .RequireChangeReasonHeader();
 
         group.MapGet("/{id}", GetDossierByIdAsync)
             .WithName("GetCecDossierById")

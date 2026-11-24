@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Org.Domain;
 using Cadence.Apps.Org.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Tenancy;
@@ -25,6 +26,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
     public DbSet<TrainingLog> TrainingLogs => Set<TrainingLog>();
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,6 +38,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
         modelBuilder.ApplyConfiguration(new TrainingLogConfiguration());
         modelBuilder.ApplyConfiguration(new OrgAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }
