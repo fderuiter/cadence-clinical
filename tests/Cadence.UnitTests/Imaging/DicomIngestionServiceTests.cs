@@ -762,6 +762,348 @@ public sealed class DicomIngestionServiceTests
         totalAllocatedAt100Slices.Should().BeLessThan(35L * 1024 * 1024);
     }
 
+    [Fact]
+    public async Task IngestInstanceAsync_RejectsHeaderOnlyMaxUshortDimensions_WithoutOverflowOrPersistence()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingOverflowDimsInstance_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        byte[] headerOnlyDicom = CreateHeaderOnlyDicomBytes(rows: ushort.MaxValue, columns: ushort.MaxValue);
+
+        var act = async () => await service.IngestInstanceAsync(
+            headerOnlyDicom,
+            subjectId: "SUBJ-DIMS-01",
+            siteId: "SITE-101",
+            studyId: "STUDY-DIMS-01",
+            operatorIdentity: "tester@cadence.org",
+            cancellationToken: ct);
+
+        await act.Should().ThrowAsync<DicomInvalidDimensionsException>();
+
+        (await dbContext.DeidentificationCertificates.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(0, 512)]
+    [InlineData(512, 0)]
+    [InlineData(8192, 4097)]
+    public async Task IngestInstanceAsync_RejectsZeroOrOversizedFrameDimensions(ushort rows, ushort columns)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingInvalidDimsTheory_{rows}_{columns}_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        byte[] headerOnlyDicom = CreateHeaderOnlyDicomBytes(rows, columns);
+
+        var act = async () => await service.IngestInstanceAsync(
+            headerOnlyDicom,
+            subjectId: "SUBJ-DIMS-02",
+            siteId: "SITE-101",
+            studyId: "STUDY-DIMS-02",
+            operatorIdentity: "tester@cadence.org",
+            cancellationToken: ct);
+
+        await act.Should().ThrowAsync<DicomInvalidDimensionsException>();
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidateFrameDimensions_AllowsExact64MegabyteBoundary_AndRejectsAboveBoundary()
+    {
+        var validBoundary = () => DicomIngestionService.ValidateFrameDimensions(rows: 8192, columns: 4096, bitsAllocated: 16);
+        validBoundary.Should().NotThrow();
+
+        var overBoundary = () => DicomIngestionService.ValidateFrameDimensions(rows: 8192, columns: 4097, bitsAllocated: 16);
+        overBoundary.Should().Throw<DicomInvalidDimensionsException>();
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_AbortsPersistence_WhenHeaderOnlySliceHasOverflowDimensions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingBatchOverflowDims_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        var request = new BatchIngestionRequest(
+            Files:
+            [
+                new("slice_001.dcm", CreateSampleDicomBytesWithPhi("9101")),
+                new("slice_overflow.dcm", CreateHeaderOnlyDicomBytes(rows: ushort.MaxValue, columns: ushort.MaxValue))
+            ],
+            SubjectId: "SUBJ-BATCH-DIMS",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-BATCH-DIMS");
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+
+        await act.Should().ThrowAsync<DicomInvalidDimensionsException>();
+
+        (await dbContext.DeidentificationCertificates.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_RejectsHighRatioZeroFilledZipArchive_WithBatchPayloadTooLargeException()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingZipBombRatio_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        byte[] highRatioZip = CreateZeroFilledZipBytes(entryCount: 8, bytesPerEntry: 16 * 1024 * 1024);
+        var spoolFilesBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip").ToHashSet(StringComparer.Ordinal);
+
+        var request = new BatchIngestionRequest(
+            Files: [],
+            SubjectId: "SUBJ-BOMB-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-BOMB-01")
+        {
+            StreamFiles = SingleNonSeekableZipStreamAsync("bomb_8x16mb.zip", highRatioZip)
+        };
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+
+        await act.Should().ThrowAsync<BatchPayloadTooLargeException>()
+            .WithMessage("*decompression ratio limit*");
+
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(ct)).Should().Be(0);
+        (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
+
+        var leakedSpoolFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip")
+            .Where(path => !spoolFilesBefore.Contains(path))
+            .ToArray();
+        leakedSpoolFiles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_RejectsZipArchiveExceedingMaxEntryCount()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingZipEntryCap_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        byte[] manyEntriesZip = CreateTinyEntriesZipBytes(entryCount: BatchArchiveQuotas.DefaultMaxEntryCount + 1);
+
+        var request = new BatchIngestionRequest(
+            Files: [new("many_entries.zip", manyEntriesZip)],
+            SubjectId: "SUBJ-ENTRIES-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-ENTRIES-01");
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+
+        await act.Should().ThrowAsync<BatchPayloadTooLargeException>()
+            .WithMessage("*entry count*");
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_RejectsZipEntryExceedingPerEntryUncompressedQuota()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingPerEntryZipQuota_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var quotas = new BatchArchiveQuotas(
+            MaxEntryUncompressedBytes: 512 * 1024,
+            MaxTotalUncompressedBytes: 16 * 1024 * 1024);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance, quotas);
+
+        byte[] oversizedEntryZip = CreateArchiveBytes(
+        [
+            ("DICOM/oversized.dcm", RandomNumberGenerator.GetBytes(1024 * 1024))
+        ]);
+
+        var request = new BatchIngestionRequest(
+            Files: [new("oversized_entry.zip", oversizedEntryZip)],
+            SubjectId: "SUBJ-ENTRY-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-ENTRY-01");
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+
+        await act.Should().ThrowAsync<BatchPayloadTooLargeException>()
+            .WithMessage("*per-entry limit*");
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_RejectsUnseekableStreamWithoutDeclaredLength_WhenReadBytesExceedPerEntryQuota()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingUnknownLengthQuota_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var quotas = new BatchArchiveQuotas(
+            MaxEntryUncompressedBytes: 512 * 1024,
+            MaxTotalUncompressedBytes: 16 * 1024 * 1024);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance, quotas);
+
+        byte[] payload = RandomNumberGenerator.GetBytes(1024 * 1024);
+        await using var innerMs = new MemoryStream(payload, writable: false);
+        await using var unknownLengthStream = new NonSeekableTestReadStream(innerMs);
+
+        var request = new BatchIngestionRequest(
+            Files: [],
+            SubjectId: "SUBJ-STREAM-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-STREAM-01")
+        {
+            StreamFiles = SingleStreamAsync(new BatchStreamItem("oversized_slice.dcm", unknownLengthStream))
+        };
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+
+        await act.Should().ThrowAsync<BatchPayloadTooLargeException>()
+            .WithMessage("*exceeds maximum uncompressed size limit*");
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_RejectsBatchExceedingCumulativeUncompressedBytesQuota()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingCumulativeQuota_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var quotas = new BatchArchiveQuotas(
+            MaxEntryUncompressedBytes: 2 * 1024 * 1024,
+            MaxTotalUncompressedBytes: 3 * 1024 * 1024);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance, quotas);
+
+        byte[] archiveBytes = CreateArchiveBytes(
+            Enumerable.Range(1, 4)
+                .Select(i => ($"DICOM/blob_{i}.bin", RandomNumberGenerator.GetBytes(1024 * 1024)))
+                .ToArray());
+
+        var request = new BatchIngestionRequest(
+            Files: [new("cumulative.zip", archiveBytes)],
+            SubjectId: "SUBJ-TOTAL-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-TOTAL-01");
+
+        var act = async () => await service.IngestBatchAsync(request, ct);
+
+        await act.Should().ThrowAsync<BatchPayloadTooLargeException>()
+            .WithMessage("*maximum total decompressed size limit*");
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_PreservesFallbackToNonDicomSkip_WhenFileWithZipExtensionIsNotValidZip()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingCorruptZipFallback_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+
+        var request = new BatchIngestionRequest(
+            Files:
+            [
+                new("slice_001.dcm", CreateSampleDicomBytesWithPhi("9301")),
+                new("corrupt_upload.zip", Encoding.UTF8.GetBytes("not a valid PK zip stream"))
+            ],
+            SubjectId: "SUBJ-FALLBK-01",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-FALLBK-01");
+
+        var result = await service.IngestBatchAsync(request, ct);
+
+        result.IngestedSliceCount.Should().Be(1);
+        result.SkippedNonDicomCount.Should().Be(1);
+        result.SkippedNonDicomFiles.Should().ContainSingle().Which.Should().Be("corrupt_upload.zip");
+    }
+
+    internal static byte[] CreateHeaderOnlyDicomBytes(ushort rows, ushort columns, string sopSuffix = "99995")
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.CTImageStorage },
+            { DicomTag.SOPInstanceUID, $"1.2.840.10008.5.1.4.1.1.2.{sopSuffix}" },
+            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.2.99994" },
+            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.2.99994.1" },
+            { DicomTag.PatientID, "PHI-HEADER-ONLY" },
+            { DicomTag.PatientName, "DOE^HEADER" },
+            { DicomTag.Modality, "CT" },
+            { DicomTag.Rows, rows },
+            { DicomTag.Columns, columns },
+            { DicomTag.BitsAllocated, (ushort)16 }
+        };
+
+        using var ms = new MemoryStream();
+        new DicomFile(dataset).Save(ms);
+        return ms.ToArray();
+    }
+
+    internal static byte[] CreateZeroFilledZipBytes(int entryCount, int bytesPerEntry)
+    {
+        using var zipMs = new MemoryStream();
+        byte[] zeroChunk = new byte[65_536];
+        using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            for (int i = 1; i <= entryCount; i++)
+            {
+                var entry = archive.CreateEntry($"DICOM/zero_{i:D3}.dcm", CompressionLevel.SmallestSize);
+                using var entryStream = entry.Open();
+                int remaining = bytesPerEntry;
+                while (remaining > 0)
+                {
+                    int toWrite = Math.Min(zeroChunk.Length, remaining);
+                    entryStream.Write(zeroChunk, 0, toWrite);
+                    remaining -= toWrite;
+                }
+            }
+        }
+
+        return zipMs.ToArray();
+    }
+
+    private static byte[] CreateTinyEntriesZipBytes(int entryCount)
+    {
+        using var zipMs = new MemoryStream();
+        ReadOnlySpan<byte> payload = "DATA"u8;
+        using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            for (int i = 1; i <= entryCount; i++)
+            {
+                var entry = archive.CreateEntry($"e_{i}.bin", CompressionLevel.NoCompression);
+                using var entryStream = entry.Open();
+                entryStream.Write(payload);
+            }
+        }
+
+        return zipMs.ToArray();
+    }
+
     internal static byte[] CreateArchiveBytes((string EntryName, byte[] Content)[] entries)
     {
         using var zipMs = new MemoryStream();
