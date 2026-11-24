@@ -18,7 +18,7 @@ public static class DoctorCommand
     {
         var autoFixOption = new Option<bool>("--auto-fix", "-f")
         {
-            Description = "Provision pinned CLI linters, .cadence/venv, local .NET tools, packages/ui/dist, and .githooks/pre-commit",
+            Description = "Provision pinned CLI linters, .cadence/venv, local .NET tools, pnpm workspace dependencies, and .githooks/pre-commit",
         };
         var minimalOption = new Option<bool>("--minimal")
         {
@@ -100,21 +100,18 @@ public static class DoctorCommand
         // 4. pnpm against the packageManager pin (#5331, read-only)
         bool pnpmOk = CheckPnpm(root, runtime);
 
-        // 5. Shared UI bundle (packages/ui/dist, read-only)
-        bool uiDistOk = CheckUiBundle(root);
-
-        // 6. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx, read-only)
+        // 5. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx, read-only)
         bool detectSecretsOk = CheckDetectSecrets(root, runtime.GetEnvironmentVariable);
 
-        // 7. CLI linters (.cadence/bin or PATH, read-only)
+        // 6. CLI linters (.cadence/bin or PATH, read-only)
         bool actionlintOk = CheckActionlint(root, runtime.GetEnvironmentVariable);
         bool hadolintOk = CheckHadolint(root, runtime.GetEnvironmentVariable);
         bool shellcheckOk = CheckShellcheck(root, runtime.GetEnvironmentVariable);
 
-        // 8. Git pre-commit hook (.githooks/pre-commit, read-only)
+        // 7. Git pre-commit hook (.githooks/pre-commit, read-only)
         bool gitHooksOk = CheckGitHooks(root, runtime);
 
-        // 9. PostgreSQL connectivity (informational, non-blocking)
+        // 8. PostgreSQL connectivity (informational, non-blocking)
         ProbePostgres();
 
         return provisioningOk &&
@@ -122,7 +119,6 @@ public static class DoctorCommand
                cpm &&
                dotnetToolsOk &&
                pnpmOk &&
-               uiDistOk &&
                detectSecretsOk &&
                actionlintOk &&
                hadolintOk &&
@@ -178,26 +174,6 @@ public static class DoctorCommand
         }
 
         return allOk;
-    }
-
-    private static bool CheckUiBundle(string repoRoot)
-    {
-        string uiPackageJson = Path.Combine(repoRoot, "packages", "ui", "package.json");
-        if (!File.Exists(uiPackageJson))
-        {
-            return true;
-        }
-
-        string distJs = Path.Combine(repoRoot, "packages", "ui", "dist", "index.js");
-        string distCss = Path.Combine(repoRoot, "packages", "ui", "dist", "index.css");
-        if (File.Exists(distJs) && File.Exists(distCss))
-        {
-            AnsiConsole.MarkupLine("  packages/ui/dist: [green]Ready (index.js & index.css)[/]");
-            return true;
-        }
-
-        AnsiConsole.MarkupLine("  packages/ui/dist: [red]Missing[/] (run 'pnpm cadence doctor --auto-fix' or 'pnpm --filter ui build')");
-        return false;
     }
 
     private static bool CheckGitHooks(string repoRoot, IDoctorProvisioningRuntime runtime)

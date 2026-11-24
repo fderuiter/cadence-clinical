@@ -21,14 +21,14 @@ installation) or `make setup` / `pnpm cadence doctor --auto-fix` when `.NET 10`,
 already installed:
 
 ```bash
-make wizard                                  # bash scripts/setup_wizard.sh; Windows: pwsh scripts/setup_wizard.ps1
-bash scripts/setup_wizard.sh --dev --minimal # no prompts, no Playwright browser download or cert trust prompt
-pnpm cadence doctor --auto-fix --minimal     # self-heal .cadence/bin, .cadence/venv, local .NET tools, packages/ui/dist & .githooks
+make wizard                                  # interactive: bash scripts/setup_wizard.sh; Windows: pwsh scripts/setup_wizard.ps1
+make setup                                   # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
+pnpm cadence doctor --auto-fix --minimal     # self-heal .cadence/bin, .cadence/venv, local .NET tools, pnpm workspace & .githooks
 ```
 
-`setup_wizard.{sh,ps1}` validates or installs the `.NET 10` SDK (`setup_dotnet_env.{sh,ps1}`), requires
-`dotnet`, `node`, and `pnpm`, and delegates workspace provisioning to `cadence doctor --auto-fix` (which runs
-`dotnet tool restore`, `pnpm install --frozen-lockfile`, `pnpm --filter ui build`, `.cadence/venv` and
+`setup_wizard.{sh,ps1}` validates or installs the `.NET 10` SDK and HTTPS dev certificate (`setup_dotnet_env.{sh,ps1}`),
+requires `dotnet`, `node`, and `pnpm`, and delegates workspace provisioning to `cadence doctor --auto-fix` (which runs
+`dotnet tool restore`, `dotnet restore Cadence.sln`, `pnpm install --frozen-lockfile`, `.cadence/venv` and
 SHA-256-verified `.cadence/bin` linter setup, `.env` initialization, and `git config core.hooksPath .githooks`).
 
 ## 2. Build and test
@@ -38,7 +38,9 @@ dotnet restore Cadence.sln
 dotnet build Cadence.sln                          # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile                    # apps resolve packages/ui directly from source
+pnpm test                                         # workspace Vitest suites + VitePress navigation tests
+make verify                                       # pnpm cadence check + pnpm test + pnpm cadence test
 ```
 
 The [PostgreSQL integration suite](TESTING.md#tests-that-need-postgresql) uses PostgreSQL 18 through
@@ -108,7 +110,7 @@ The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloa
 imported), all 18 .NET hosts (the gateway on 8000 and the 17 services on 8001–8016 and 8018), the web app
 (`http://localhost:3000/cadence-clinical/`), and the subject portal (`http://localhost:5174/subject-portal/`) on the
 same host ports as docker compose. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard. Run
-`pnpm install --frozen-lockfile && pnpm --filter ui build` and set its secret parameters with `dotnet user-secrets`
+`pnpm install --frozen-lockfile` and set its secret parameters with `dotnet user-secrets`
 first; [apps/apphost](../apps/apphost/README.md) lists them.
 
 For kernel and Canvas work, the `core` profile runs PostgreSQL, Keycloak, the 6 core backend hosts (`gateway`,

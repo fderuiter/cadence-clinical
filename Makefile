@@ -18,12 +18,8 @@ CADENCE_CLI := pnpm cadence
 
 ##@ Setup
 
-setup: ## Verify prerequisites and provision the workspace via cadence doctor --auto-fix
-	@command -v dotnet >/dev/null 2>&1 || { echo "Error: .NET 10 SDK (dotnet) not found on PATH." >&2; exit 1; }
-	@command -v node >/dev/null 2>&1 || { echo "Error: Node.js (node) not found on PATH." >&2; exit 1; }
-	@command -v pnpm >/dev/null 2>&1 || { echo "Error: pnpm not found on PATH. Run 'corepack enable'." >&2; exit 1; }
-	node scripts/run-cli.js doctor --auto-fix
-	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
+setup: ## Provision local dev environment non-interactively (.NET, pnpm, .cadence/venv, linters, hooks)
+	bash scripts/setup_wizard.sh --dev --minimal
 
 wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/CI/Codespaces environments)
 	bash scripts/setup_wizard.sh
@@ -63,8 +59,9 @@ action-pinning: ## Validate GitHub Actions workflow security and SHA pinning
 check: ## Run every quality gate (cadence check)
 	$(CADENCE_CLI) check
 
-verify: ## Run the quality gates and .NET test suites
+verify: ## Run the quality gates, frontend tests, and .NET test suites
 	$(CADENCE_CLI) check
+	pnpm test
 	$(CADENCE_CLI) test
 
 ci: ## Run the CI workflow's jobs locally (mirrors .github/workflows/ci.yml; needs PostgreSQL)

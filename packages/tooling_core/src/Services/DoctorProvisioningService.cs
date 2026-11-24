@@ -247,7 +247,7 @@ public sealed class DefaultDoctorProvisioningRuntime : IDoctorProvisioningRuntim
 /// <summary>
 /// AOT-safe workspace provisioning backing <c>cadence doctor --auto-fix</c>.
 /// Consolidates SHA-256 verified CLI linter downloads, <c>.cadence/venv</c> secret-scanner setup,
-/// <c>dotnet tool restore</c>, <c>pnpm --filter ui build</c>, <c>.env</c> initialization,
+/// <c>dotnet tool restore</c>, <c>pnpm install --frozen-lockfile</c>, <c>.env</c> initialization,
 /// and fail-closed Git pre-commit hook activation.
 /// </summary>
 public static class DoctorProvisioningService
@@ -393,7 +393,7 @@ public static class DoctorProvisioningService
         bool earlyBlockingFailure = steps.Any(s => !s.Succeeded && s.Blocking);
         if (!earlyBlockingFailure)
         {
-            ProvisionFrontendAndUiBundle(options.RepoRoot, runtime, steps);
+            ProvisionFrontendWorkspace(options.RepoRoot, runtime, steps);
         }
 
         ProvisionEnvFile(options.RepoRoot, steps);
@@ -667,56 +667,33 @@ public static class DoctorProvisioningService
         }
     }
 
-    private static void ProvisionFrontendAndUiBundle(
+    private static void ProvisionFrontendWorkspace(
         string repoRoot,
         IDoctorProvisioningRuntime runtime,
         List<DoctorProvisioningStepResult> steps)
     {
         string lockfilePath = Path.Combine(repoRoot, "pnpm-lock.yaml");
-        if (File.Exists(lockfilePath))
-        {
-            var installResult = runtime.RunProcess("pnpm", ["install", "--frozen-lockfile"], repoRoot, 600_000);
-            if (installResult.ExitCode != 0)
-            {
-                steps.Add(new DoctorProvisioningStepResult(
-                    "pnpm-install",
-                    Succeeded: false,
-                    Blocking: true,
-                    $"pnpm install --frozen-lockfile failed: {installResult.CombinedOutput}"));
-                return;
-            }
-
-            steps.Add(new DoctorProvisioningStepResult(
-                "pnpm-install",
-                Succeeded: true,
-                Blocking: true,
-                "pnpm workspace dependencies verified."));
-        }
-
-        string uiPackageJson = Path.Combine(repoRoot, "packages", "ui", "package.json");
-        if (!File.Exists(uiPackageJson))
+        if (!File.Exists(lockfilePath))
         {
             return;
         }
 
-        var buildResult = runtime.RunProcess("pnpm", ["--filter", "ui", "build"], repoRoot, 300_000);
-        string distJs = Path.Combine(repoRoot, "packages", "ui", "dist", "index.js");
-        string distCss = Path.Combine(repoRoot, "packages", "ui", "dist", "index.css");
-        if (buildResult.ExitCode != 0 || !File.Exists(distJs) || !File.Exists(distCss))
+        var installResult = runtime.RunProcess("pnpm", ["install", "--frozen-lockfile"], repoRoot, 600_000);
+        if (installResult.ExitCode != 0)
         {
             steps.Add(new DoctorProvisioningStepResult(
-                "ui-build",
+                "pnpm-install",
                 Succeeded: false,
                 Blocking: true,
-                $"pnpm --filter ui build failed to produce packages/ui/dist artifacts: {buildResult.CombinedOutput}"));
+                $"pnpm install --frozen-lockfile failed: {installResult.CombinedOutput}"));
             return;
         }
 
         steps.Add(new DoctorProvisioningStepResult(
-            "ui-build",
+            "pnpm-install",
             Succeeded: true,
             Blocking: true,
-            "packages/ui/dist built successfully."));
+            "pnpm workspace dependencies verified."));
     }
 
     private static void ProvisionDetectSecretsVenv(

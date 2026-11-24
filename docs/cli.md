@@ -23,7 +23,6 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 
 | `make` target                            | Runs                                          |
 | ---------------------------------------- | --------------------------------------------- |
-| `make setup`                             | `cadence doctor --auto-fix`                   |
 | `make doctor`                            | `cadence doctor --auto-fix`                   |
 | `make ports`                             | `cadence check-ports`                         |
 | `make dev`                               | `cadence dev`                                 |
@@ -31,7 +30,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make check`                             | `cadence check`                               |
 | `make action-pinning`                    | `cadence check workflow-security`             |
 | `make test`                              | `cadence test`                                |
-| `make verify`                            | `cadence check`, then `cadence test`          |
+| `make verify`                            | `cadence check`, `pnpm test`, `cadence test`  |
 | `make ci`                                | `cadence ci`                                  |
 | `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                            |
 | `make rtm`                               | `cadence gxp validate`                        |
@@ -40,7 +39,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make post TITLE="..."`                  | `cadence scaffold post "<title>"`             |
 | `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
 
-`make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
+`make wizard` and `make setup` run `scripts/setup_wizard.sh` directly (`make setup` passes `--dev --minimal`), which bootstraps the `.NET 10` SDK and delegates workspace provisioning to `cadence doctor --auto-fix`. `cadence wizard onboarding` runs the same script.
 
 System.CommandLine adds `-h|--help|-?` to every command, for example `pnpm cadence check --help`, and `--version` to the root command. There are no other global options. Every run prints a "Cadence" banner first.
 
@@ -58,21 +57,20 @@ Checks the local environment (read-only unless `--auto-fix` is passed). In full 
 - whether `Directory.Packages.props` exists in the repository root
 - whether local `.NET` tools declared in `.config/dotnet-tools.json` (`dotnet-ef` `10.0.15` with `rollForward: false`, ADR-2527) are restored
 - whether the `pnpm` on `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
-- whether `packages/ui/dist` (`index.js` and `index.css`) is built for `apps/web` and `apps/subject-portal`
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
 - whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` (or `CADENCE_BIN_DIR`) or `PATH`
 - whether Git pre-commit hooks are active (`core.hooksPath` set to `.githooks`)
 - whether PostgreSQL answers on `127.0.0.1:5432` (informational; does not affect the exit code)
 
-Without `--auto-fix`, `cadence doctor` performs zero filesystem or Git configuration writes and exits `1` when any required tool or workspace artifact above is missing, and `0` otherwise.
+Without `--auto-fix`, `cadence doctor` performs zero filesystem or Git configuration writes and exits `1` when any required tool or workspace configuration above is missing, and `0` otherwise.
 
-With `-f|--auto-fix`, `DoctorProvisioningService` (`packages/tooling_core/src/Services/DoctorProvisioningService.cs`) verifies `dotnet`, `node`, and `pnpm` (running `corepack enable` if needed), runs `dotnet tool restore`, provisions `detect-secrets==1.5.0` in `.cadence/venv`, downloads and SHA-256-verifies `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) into `.cadence/bin` (verifying binary execution such as `hadolint.exe --version` on Windows `arm64`), runs `pnpm install --frozen-lockfile` and `pnpm --filter ui build`, initializes `.env` from `.env.example` when absent, optionally installs Playwright Chromium (skipped with `--minimal`), and enables `.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking steps succeed.
+With `-f|--auto-fix`, `DoctorProvisioningService` (`packages/tooling_core/src/Services/DoctorProvisioningService.cs`) verifies `dotnet`, `node`, and `pnpm` (running `corepack enable` if needed), runs `dotnet tool restore` and `dotnet restore Cadence.sln`, provisions `detect-secrets==1.5.0` in `.cadence/venv`, downloads and SHA-256-verifies `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) into `.cadence/bin` (verifying binary execution such as `hadolint.exe --version` on Windows `arm64`), runs `pnpm install --frozen-lockfile`, initializes `.env` from `.env.example` when absent, optionally installs Playwright Chromium (skipped with `--minimal`), and enables `.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking steps succeed.
 
-| Option           | Description                                                                                                                |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `-f\|--auto-fix` | Provision `.cadence/bin` linters, `.cadence/venv`, local `.NET` tools, `packages/ui/dist`, and `.githooks/pre-commit`.     |
-| `--minimal`      | Skip optional heavy provisioning steps (Playwright Chromium browser download) during `--auto-fix`.                         |
-| `--linters-only` | Scope `--auto-fix` provisioning and read-only diagnostics to `actionlint`, `hadolint`, and `shellcheck` in `.cadence/bin`. |
+| Option           | Description                                                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `-f\|--auto-fix` | Provision `.cadence/bin` linters, `.cadence/venv`, local `.NET` tools, `pnpm` workspace dependencies, and `.githooks/pre-commit`. |
+| `--minimal`      | Skip optional heavy provisioning steps (Playwright Chromium browser download) during `--auto-fix`.                                |
+| `--linters-only` | Scope `--auto-fix` provisioning and read-only diagnostics to `actionlint`, `hadolint`, and `shellcheck` in `.cadence/bin`.        |
 
 ### `cadence check`
 
@@ -136,7 +134,8 @@ must make it fail.
 | `codeowners`          | `validate-codeowners`                                                  |                 | Runs                                                                                                                                                                                  |
 | `workflow-security`   | `validate-workflow-security`, `action-pinning`, `check-action-pinning` | yes             | Runs on the staged files                                                                                                                                                              |
 | `rulesets`            | `validate-rulesets`                                                    |                 | Quick: validates staged `.github/rulesets` and `.github/workflows` blobs                                                                                                              |
-| `imports`             | `validate-imports`                                                     |                 | Runs                                                                                                                                                                                  |
+| `imports`             | `validate-imports`                                                     |                 | Quick: validates staged `apps/<service>` C# blobs and `cross-service-isolation.baseline.txt` against cross-service imports and reflection lookups                                     |
+| `permission-matrix`   | `validate-permission-matrix`, `rbac-matrix`                            |                 | Quick: checks staged RBAC sources and `permission-matrix.baseline.txt` against the shrink-only grant inventory                                                                        |
 | `security`            | `audit-security`                                                       | yes             | Runs on the staged files                                                                                                                                                              |
 | `deid`                | `deid-compliance-scan`                                                 | yes             | Runs on the staged files                                                                                                                                                              |
 | `openapi`             | `auto-stage-openapi`                                                   | yes             | Quick: exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`                                                |
@@ -150,11 +149,11 @@ must make it fail.
 | `demo-manifest`       | `validate-demo-manifest`                                               | yes             | Quick: runs when staged files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` or `docker/cadence-realm.json`, otherwise skips it                     |
 | `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                                                                                                                                  |
 | `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                                                                                                                                  |
-| `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                                                         |
+| `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` admits growth                                                                       |
 | `merge-readiness`     | `check-merge-readiness`                                                |                 | Skipped: skipped so pre-commit stays offline and fast; runs in `cadence check`, `cadence ci`, pull requests, and `merge_group`                                                        |
 | `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: post-build gate; skipped in unscoped `check` only when all three `dist/` folders are absent, and enforced fail-closed in `docs-build` and `deploy-docs`                      |
 | `branch-freshness`    | `check-branch-freshness`, `validate-branch-freshness`                  |                 | Skipped: skipped on commit so local work-in-progress commits stay offline; run by `cadence check` before push                                                                         |
-| `architecture-tests`  | `arch-tests`                                                           |                 | Skipped: full xUnit architecture suite; run by `cadence check` and CI's `dotnet-quality` job                                                                                          |
+| `architecture-tests`  | `arch-tests`                                                           | yes             | Quick: runs when staged files touch backend C#/MSBuild, architecture baselines, or test files; skips docs-only and non-test frontend asset commits                                    |
 | `unit-tests`          | `dotnet-unit-tests`                                                    |                 | Skipped: full xUnit unit test suite; run by `cadence check` and CI's `dotnet-unit-tests` job                                                                                          |
 
 <!-- quality-gates:end -->
@@ -169,10 +168,10 @@ pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed t
 The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gate gained an entry: every tracked
 `*.baseline.txt` or `*-baseline.txt` shard (comment lines ignored) and the `results` of `baselines/secrets/*.secrets.baseline.json`
 shards, aggregated per gate as multisets, so a reorder, shard split, or shrink passes. With `--pre-commit` it compares the staged
-index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<reason>"` is set. Outside `--pre-commit`
+index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` is set. Outside `--pre-commit`
 it rejects any uncommitted working-tree growth and inspects every commit in `compareBase..HEAD` (`--push-before <sha>` or the merge
 base with `--base <ref>`, falling back from default `origin/main` to `refs/heads/main` when `origin/main` is absent), requiring each
-commit that grows a baseline gate to carry a matching `Baseline-Growth: <path> - <reason>` trailer covering the gate. When neither
+commit that grows a baseline gate to carry a matching file-and-count-scoped `Baseline-Growth: <path> +<count> - <reason>` trailer covering the gate. When neither
 `origin/main` nor `refs/heads/main` (or an explicit `--base <ref>`) exists, it fails closed both locally and in CI.
 
 The `merge-readiness` gate (also `check-merge-readiness`) verifies that `--base <ref>` (`origin/main` by default) exists
@@ -203,8 +202,10 @@ URLs, and missing or permissive `Content-Security-Policy` `<meta>` directives. I
 skipped by unscoped `cadence check` only when all three `dist/` folders are absent (partial `dist/` output fails
 closed), and always fails closed on direct `cadence check public-bundle` calls in `docs-build` and `deploy-docs.yml`.
 
-The `branch-freshness`, `architecture-tests` and `unit-tests` gates are also skipped by `--pre-commit` so local commits
-stay fast and offline, and run in full during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or
+The `branch-freshness` and `unit-tests` gates are skipped by `--pre-commit` so local commits
+stay fast and offline, while `architecture-tests` runs in `--pre-commit` whenever staged files touch backend C#/MSBuild,
+architecture baselines, or test files (skipping docs-only and non-test frontend asset commits), and all three run in full
+during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or
 `--base <ref>`) is missing or not an ancestor of `HEAD` (skipping post-push `--push-before` runs), `architecture-tests`
 runs `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, and `unit-tests` runs
 `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`. The `demo-manifest` gate runs in `--pre-commit` only when staged

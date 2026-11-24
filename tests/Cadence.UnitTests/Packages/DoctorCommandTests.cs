@@ -92,7 +92,7 @@ public sealed class DoctorCommandTests : IDisposable
     }
 
     [Fact]
-    public void Execute_WithAutoFix_ProvisionsCadenceBinVenvDotnetToolsUiDistEnvAndGitHooks_ThenExitsZero()
+    public void Execute_WithAutoFix_ProvisionsCadenceBinVenvDotnetToolsWorkspaceEnvAndGitHooks_ThenExitsZero()
     {
         if (OperatingSystem.IsWindows())
         {
@@ -166,15 +166,6 @@ public sealed class DoctorCommandTests : IDisposable
                     return new ProcessExecutionResult(0, "Done", string.Empty);
                 }
 
-                if (fileName == "pnpm" && args.SequenceEqual(["--filter", "ui", "build"]))
-                {
-                    string distDir = Path.Combine(workingDir, "packages", "ui", "dist");
-                    Directory.CreateDirectory(distDir);
-                    File.WriteAllText(Path.Combine(distDir, "index.js"), "export {};\n");
-                    File.WriteAllText(Path.Combine(distDir, "index.css"), "/* ui */\n");
-                    return new ProcessExecutionResult(0, "Built ui", string.Empty);
-                }
-
                 if (fileName == "uv" && args.Count == 2 && args[0] == "venv")
                 {
                     Directory.CreateDirectory(Path.Combine(args[1], "bin"));
@@ -220,8 +211,7 @@ public sealed class DoctorCommandTests : IDisposable
         File.Exists(Path.Combine(repoRoot, ".cadence", "bin", "hadolint")).Should().BeTrue();
         File.Exists(Path.Combine(repoRoot, ".cadence", "bin", "shellcheck")).Should().BeTrue();
         File.Exists(Path.Combine(repoRoot, ".cadence", "venv", "bin", "detect-secrets-hook")).Should().BeTrue();
-        File.Exists(Path.Combine(repoRoot, "packages", "ui", "dist", "index.js")).Should().BeTrue();
-        File.Exists(Path.Combine(repoRoot, "packages", "ui", "dist", "index.css")).Should().BeTrue();
+        Directory.Exists(Path.Combine(repoRoot, "packages", "ui", "dist")).Should().BeFalse("apps resolve packages/ui directly from workspace source per ADR-2658");
         File.Exists(Path.Combine(repoRoot, ".env")).Should().BeTrue();
         ReadLocalHooksPath(repoRoot).Should().Be(".githooks");
         var preCommitMode = File.GetUnixFileMode(Path.Combine(repoRoot, ".githooks", "pre-commit"));
@@ -543,7 +533,7 @@ public sealed class DoctorCommandTests : IDisposable
     }
 
     [Fact]
-    public void Provision_WhenPnpmPrepareMutatesHooksPathBeforeUiBuildFails_RestoresInitialHooksPath()
+    public void Provision_WhenPnpmInstallMutatesHooksPathBeforeFailing_RestoresInitialHooksPath()
     {
         string repoRoot = CreateMinimalRepoFixture();
         string payloadDir = Path.Combine(_tempDir, "rollback-payloads");
@@ -598,14 +588,9 @@ public sealed class DoctorCommandTests : IDisposable
 
                 if (fileName == "pnpm" && args.SequenceEqual(["install", "--frozen-lockfile"]))
                 {
-                    // Simulate root package.json "prepare": "node scripts/setup-git-hooks.js" mutating core.hooksPath.
+                    // Simulate root package.json "prepare": "node scripts/setup-git-hooks.js" mutating core.hooksPath before a workspace lifecycle script fails.
                     _ = RunGit(workingDir, ["config", "core.hooksPath", ".githooks"]);
-                    return new ProcessExecutionResult(0, "Installed", string.Empty);
-                }
-
-                if (fileName == "pnpm" && args.SequenceEqual(["--filter", "ui", "build"]))
-                {
-                    return new ProcessExecutionResult(1, string.Empty, "Vite UI build failed");
+                    return new ProcessExecutionResult(1, string.Empty, "Workspace postinstall failed");
                 }
 
                 if (fileName == "uv" && args.Count == 2 && args[0] == "venv")
@@ -682,7 +667,7 @@ public sealed class DoctorCommandTests : IDisposable
         }
 
         string makefile = File.ReadAllText(Path.Combine(repoRoot, "Makefile"));
-        makefile.Should().Contain("node scripts/run-cli.js doctor --auto-fix");
+        makefile.Should().Contain("bash scripts/setup_wizard.sh --dev --minimal");
     }
 
     private string CreateMinimalRepoFixture()

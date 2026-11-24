@@ -9,12 +9,14 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 
 | Task                    | Command                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------ |
-| Set up a new machine    | `make wizard`                                                                  |
+| Set up a new machine    | `make wizard` (headless: `make setup`)                                         |
 | Build                   | `dotnet build Cadence.sln`                                                     |
-| Unit tests              | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| Unit tests (.NET)       | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
 | Architecture tests      | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| Frontend & docs tests   | `pnpm test`                                                                    |
 | Format check            | `dotnet format Cadence.sln --verify-no-changes`                                |
 | All quality gates       | `pnpm cadence check`                                                           |
+| Full local verification | `make verify`                                                                  |
 | Auto-fix                | `pnpm cadence fix`                                                             |
 | Traceability validation | `pnpm cadence gxp sync`                                                        |
 | New ADR                 | `pnpm cadence scaffold adr "<title>"`                                          |
@@ -32,23 +34,26 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
-make wizard            # installs/validates .NET 10 SDK, then runs `cadence doctor --auto-fix` (Windows: scripts/setup_wizard.ps1)
-make setup             # when .NET 10, Node.js, and pnpm are already installed (`pnpm cadence doctor --auto-fix`)
+make wizard            # interactive: bash scripts/setup_wizard.sh (Windows: pwsh scripts/setup_wizard.ps1)
+make setup             # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
 ```
 
 `scripts/setup_wizard.sh` (and `scripts/setup_wizard.ps1` on Windows) is a fail-closed bootstrap wrapper:
-it installs or validates the .NET 10 SDK and HTTPS dev certificate via `scripts/setup_dotnet_env.{sh,ps1}`,
+it detects the environment (workstation, Codespaces, devcontainer, Claude Code remote session, or CI),
+installs or validates the .NET 10 SDK and HTTPS dev certificate via `scripts/setup_dotnet_env.{sh,ps1}`,
 verifies `dotnet`, `node`, and `pnpm` are active, and delegates workspace provisioning to
 `node scripts/run-cli.js doctor --auto-fix`. `cadence doctor --auto-fix` runs `dotnet tool restore`
-(`.config/dotnet-tools.json`), provisions `detect-secrets==1.5.0` in `.cadence/venv` and SHA-256-verified
-`actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) in `.cadence/bin`, installs the
-`pnpm` workspace and builds `packages/ui/dist`, creates `.env` from `.env.example` if absent, and enables
-`.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking checks pass. Pass
-`--dev` / `-NonInteractive` (or `-y`) to skip prompts, `--minimal` / `-Minimal` to skip Playwright browser
-downloads and cert trust prompts, or `--linters-only` / `-LintersOnly` to provision only `.cadence/bin` linters.
+(`.config/dotnet-tools.json`) and `dotnet restore Cadence.sln`, provisions `detect-secrets==1.5.0` in
+`.cadence/venv` and SHA-256-verified `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck`
+(`0.11.0`) in `.cadence/bin`, installs the `pnpm` workspace (`pnpm install --frozen-lockfile`), creates
+`.env` from `.env.example` if absent, and enables `.githooks/pre-commit`
+(`git config core.hooksPath .githooks`) only after all blocking checks pass. `make setup` passes
+`--dev --minimal` to skip prompts, HTTPS cert trust prompts, and Playwright browser downloads; pass
+`--linters-only` / `-LintersOnly` to provision only `.cadence/bin` linters.
 
-With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the `.NET` solution
-and workspace at any time with `dotnet restore Cadence.sln && pnpm cadence doctor --auto-fix --minimal`.
+With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites) and developer tools
+already provisioned, restore the workspaces directly with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`,
+or self-heal the local toolchain at any time with `pnpm cadence doctor --auto-fix --minimal`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -77,10 +82,13 @@ dotnet build Cadence.sln
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 dotnet format Cadence.sln --verify-no-changes
+pnpm test
 pnpm cadence check
 ```
 
-Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
+`make verify` runs `pnpm cadence check`, `pnpm test`, and `pnpm cadence test` in sequence.
+
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
 `duplication`, `security`, `deid`, `vulnerabilities`.
 
@@ -171,11 +179,12 @@ Every PR updates what its change makes stale, in the same PR:
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]`.
 - Ratchet baselines (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`,
   `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`,
+  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/{direct-state-writes,permission-matrix,cross-service-isolation}.baseline.txt`,
   `baselines/deid/<unit>.baseline.txt`, `baselines/secrets/<unit>.secrets.baseline.json`, and any other
   `*.baseline.txt`) may only shrink, aggregated per gate across all shards. The `baseline-ratchet` gate fails on uncommitted
-  working-tree growth and when any commit on the branch or push range adds an entry without a matching
-  `Baseline-Growth: <path> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> - <reason>"`).
-  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+  working-tree growth and when any commit on the branch or push range adds an entry without a matching file-and-count-scoped
+  `Baseline-Growth: <path> +<count> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> +<count> - <reason>"`).
+  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` so the pre-commit hook admits it
   ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
