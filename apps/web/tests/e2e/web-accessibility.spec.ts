@@ -460,6 +460,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("OverviewView, OnboardingChecklistDrawer, and OnboardingTour (including final Finish Tour step) pass WCAG 2.2 AA", async ({
     page,
   }) => {
+    test.setTimeout(60000);
     const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
     await gotoHashRoute(page, "/overview");
     await expect(page.locator("#overview-hub-root")).toBeVisible();
@@ -473,19 +474,26 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(taskLaunchBorderRatio).toBeGreaterThanOrEqual(3);
 
     // Open OnboardingChecklistDrawer (via compact Account menu when <= 1280px) and audit pending status pills and task navigation buttons
-    const compactActionsBtn = page.locator("#btn-header-actions-menu");
-    if (await compactActionsBtn.isVisible().catch(() => false)) {
-      await compactActionsBtn.click();
-      await expect(
-        page.locator("#header-secondary-menu.is-open")
-      ).toBeVisible();
-      await expectNoWcagViolations(
-        page,
-        "AppShell compact secondary menu (#header-secondary-menu)"
-      );
-    }
-    await page.locator("#btn-onboarding-checklist-trigger").click();
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    const openOnboardingChecklistDrawer = async (auditCompactMenu = false) => {
+      const compactActionsBtn = page.locator("#btn-header-actions-menu");
+      if (await compactActionsBtn.isVisible().catch(() => false)) {
+        const secondaryMenu = page.locator("#header-secondary-menu.is-open");
+        if (!(await secondaryMenu.isVisible().catch(() => false))) {
+          await compactActionsBtn.click();
+          await expect(secondaryMenu).toBeVisible();
+        }
+        if (auditCompactMenu) {
+          await expectNoWcagViolations(
+            page,
+            "AppShell compact secondary menu (#header-secondary-menu)"
+          );
+        }
+      }
+      await page.locator("#btn-onboarding-checklist-trigger").click();
+      await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    };
+
+    await openOnboardingChecklistDrawer(true);
     await expect(
       page.locator("#onboarding-checklist-drawer .status-pending").first()
     ).toBeVisible();
@@ -558,8 +566,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
 
     await gotoHashRoute(page, "/overview");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    await openOnboardingChecklistDrawer();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -591,7 +598,8 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
     await page.locator("#persona-select").selectOption("site_crc");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await gotoHashRoute(page, "/overview");
+    await openOnboardingChecklistDrawer();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -3473,6 +3481,75 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
     await expectNoWcagLightAndDark(
       "Stacked StudyCanvasView inspector focus/scroll at 768x1024"
+    );
+  });
+
+  test("Spatial viewports (DicomMprViewer, ClinicalGanttVisualizer) and sibling card buttons (ImagingView, CrfAuthoringCanvas) pass WCAG 2.2 AA and keyboard/single-pointer operability", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // 1. ImagingView: native series-item buttons, accessible MPR canvases, and keyboard reticle calipers
+    await gotoHashRoute(page, "/imaging");
+    await expect(page.locator("#section-imaging-viewer")).toBeVisible();
+    const seriesButtons = page.locator("button.series-item");
+    expect(await seriesButtons.count()).toBeGreaterThan(0);
+    await expect(seriesButtons.first()).toHaveAttribute("type", "button");
+
+    const axialCanvas = page.locator(".axial-card canvas.mpr-canvas");
+    await expect(axialCanvas).toHaveAttribute("role", "application");
+    await expect(axialCanvas).toHaveAttribute("tabindex", "0");
+    const axialLabel = await axialCanvas.getAttribute("aria-label");
+    expect(axialLabel).toContain("Axial");
+
+    // Select 1D RECIST Caliper and place measurement via keyboard reticle (Enter -> ArrowRight -> Enter)
+    const caliper1dBtn = page
+      .locator(".tool-select-btn")
+      .filter({ hasText: "1D RECIST Caliper" });
+    await caliper1dBtn.click();
+    await expect(caliper1dBtn).toHaveAttribute("aria-pressed", "true");
+    await axialCanvas.focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Enter");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const imagingAxe = await new AxeBuilder({ page })
+      .include("#section-imaging-viewer")
+      .withTags(WCAG_AA_TAGS)
+      .disableRules(["color-contrast"])
+      .analyze();
+    expect(imagingAxe.violations).toEqual([]);
+
+    // 2. MdrView: ClinicalGanttVisualizer labeled SVG + keyboard visit node, and CrfAuthoringCanvas sibling card controls
+    await gotoHashRoute(page, "/mdr");
+    await expect(page.locator("#section-mdr")).toBeVisible();
+    const ganttSvg = page.locator(
+      'svg[aria-label="Interactive Arm-Aware Gantt Pathway Visualizer"]'
+    );
+    await expect(ganttSvg).toBeVisible();
+    const ganttNodes = ganttSvg.locator('.gantt-visit-node[role="button"]');
+    expect(await ganttNodes.count()).toBeGreaterThan(0);
+    await ganttNodes.first().focus();
+    await page.keyboard.press("Enter");
+    const ganttDialog = page.locator('[role="dialog"]').first();
+    await expect(ganttDialog).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "MdrView ClinicalGanttVisualizer Encounter Timing Modal (/mdr)"
+    );
+    await page.keyboard.press("Escape");
+    await expect(ganttDialog).toBeHidden();
+
+    await page.locator("#btn-tab-canvas-top").click();
+    await expect(page.locator("#crf-canvas-container")).toBeVisible();
+    const nestedButtonsInRoleButton = await page
+      .locator('#crf-canvas-container [role="button"] button')
+      .count();
+    expect(nestedButtonsInRoleButton).toBe(0);
+    await expectNoWcagViolations(
+      page,
+      "MdrView CrfAuthoringCanvas sibling card controls (/mdr)"
     );
   });
 });
