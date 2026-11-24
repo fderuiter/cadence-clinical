@@ -132,7 +132,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
+      ...createUiWorkspaceAliases(__dirname),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",
@@ -164,7 +164,12 @@ export default defineConfig({
     ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
   optimizeDeps: {
-    entries: ["index.html", "tests/browser/observation.html"],
+    entries: [
+      "index.html",
+      "tests/browser/observation.html",
+      "../../packages/ui/index.js",
+    ],
+    include: ["ui > axe-core"],
   },
   build: {
     outDir: "dist",
@@ -177,6 +182,20 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (
+                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "ui-shell";
+              }
+              if (
+                /\/apps\/web\/src\/(?:stores\/(?:auth|onboarding|studyScopeBridge|toasts|clinicalScope)|canvas\/(?:palette|nodeRef|lifecycle|stages\/[^/]+|generated\/(?:nodeKinds|participantContracts))|utils\/(?:demoMode|apiErrors|unbackedActions)|router\/availability|catalog\/productCatalog)\.(?:js|ts)(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "app-shell-core";
+              }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
               }

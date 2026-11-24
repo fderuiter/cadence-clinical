@@ -684,6 +684,175 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
+    it("achieves >= 4.5:1 label contrast and >= 3:1 active indicator contrast across all ClinicalTabs variants in light and dark themes", () => {
+      const clinicalTabsSfc = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalTabs.vue"),
+        "utf-8"
+      );
+      const styleMatch = clinicalTabsSfc.match(
+        /<style\s+scoped>([\s\S]*?)<\/style>/
+      );
+      expect(styleMatch).not.toBeNull();
+      const tabsCss = styleMatch[1];
+
+      const triggerBase = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-trigger\s*\{/
+      );
+      expect(triggerBase).not.toBeNull();
+      expect(triggerBase.appearance).toBe("none");
+      expect(triggerBase["border-style"]).toBe("solid");
+      expect(triggerBase["min-height"]).toBe("44px");
+      expect(triggerBase["min-width"]).toBe("44px");
+
+      const badgeBase = parseRuleProps(tabsCss, /\.clinical-tabs-badge\s*\{/);
+      expect(badgeBase).not.toBeNull();
+      expect(badgeBase["font-variant-numeric"]).toBe("tabular-nums");
+
+      const underlineTrigger = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-underline\s+\.clinical-tabs-trigger\s*\{/
+      );
+      const underlineActive = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-underline\s+\.clinical-tabs-trigger\[aria-selected="true"\]\s*\{/
+      );
+      const underlineActiveBadge = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-underline\s+\.clinical-tabs-trigger\[aria-selected="true"\]\s+\.clinical-tabs-badge\s*\{/
+      );
+
+      const pillsTrigger = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-pills\s+\.clinical-tabs-trigger\s*\{/
+      );
+      const pillsActive = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-pills\s+\.clinical-tabs-trigger\[aria-selected="true"\]\s*\{/
+      );
+      const solidActiveBadge = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-pills\s+\.clinical-tabs-trigger\[aria-selected="true"\]\s+\.clinical-tabs-badge,\s*\.clinical-tabs-list\.variant-segmented\s+\.clinical-tabs-trigger\[aria-selected="true"\]\s+\.clinical-tabs-badge\s*\{/
+      );
+
+      const segmentedList = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-segmented\s*\{/
+      );
+      const segmentedTrigger = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-segmented\s+\.clinical-tabs-trigger\s*\{/
+      );
+      const segmentedActive = parseRuleProps(
+        tabsCss,
+        /\.clinical-tabs-list\.variant-segmented\s+\.clinical-tabs-trigger\[aria-selected="true"\]\s*\{/
+      );
+
+      for (const [mode, map] of [
+        ["light", lightTheme],
+        ["dark", darkTheme],
+      ]) {
+        const surfaceBg = resolveVar("--semantic-color-surface", map);
+        const headerBg = resolveVar("--semantic-color-surface-header", map);
+
+        // 1. Underline variant: >= 4.5:1 label & badge contrast, >= 3:1 active indicator contrast
+        const underlineInactiveFg = resolveCssColorExpr(
+          underlineTrigger.color,
+          map
+        );
+        const underlineActiveFg = resolveCssColorExpr(
+          underlineActive.color,
+          map
+        );
+        const underlineIndicator = resolveCssColorExpr(
+          underlineActive["border-bottom-color"],
+          map
+        );
+        for (const hostBg of [surfaceBg, headerBg]) {
+          expect(
+            contrastRatio(underlineInactiveFg, hostBg),
+            `underline inactive label (${mode})`
+          ).toBeGreaterThanOrEqual(4.5);
+          expect(
+            contrastRatio(underlineActiveFg, hostBg),
+            `underline active label (${mode})`
+          ).toBeGreaterThanOrEqual(4.5);
+          expect(
+            contrastRatio(underlineIndicator, hostBg),
+            `underline active indicator (${mode})`
+          ).toBeGreaterThanOrEqual(3.0);
+        }
+        expect(
+          contrastRatio(
+            resolveCssColorExpr(underlineActiveBadge.color, map),
+            resolveCssColorExpr(underlineActiveBadge["background-color"], map)
+          ),
+          `underline active badge (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+
+        // 2. Pills variant: >= 4.5:1 label & badge contrast, >= 3:1 active pill contrast
+        const pillsInactiveBg = resolveCssColorExpr(
+          pillsTrigger["background-color"],
+          map
+        );
+        const pillsInactiveFg = resolveCssColorExpr(pillsTrigger.color, map);
+        const pillsActiveBg = resolveCssColorExpr(
+          pillsActive["background-color"],
+          map
+        );
+        const pillsActiveFg = resolveCssColorExpr(pillsActive.color, map);
+        expect(
+          contrastRatio(pillsInactiveFg, pillsInactiveBg),
+          `pills inactive label (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrastRatio(pillsActiveFg, pillsActiveBg),
+          `pills active label (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrastRatio(pillsActiveBg, pillsInactiveBg),
+          `pills active vs inactive (${mode})`
+        ).toBeGreaterThanOrEqual(3.0);
+        for (const hostBg of [surfaceBg, headerBg]) {
+          expect(
+            contrastRatio(pillsActiveBg, hostBg),
+            `pills active indicator vs surface (${mode})`
+          ).toBeGreaterThanOrEqual(3.0);
+        }
+        expect(
+          contrastRatio(
+            resolveCssColorExpr(solidActiveBadge.color, map),
+            resolveCssColorExpr(solidActiveBadge["background-color"], map)
+          ),
+          `pills/segmented active badge (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+
+        // 3. Segmented variant: >= 4.5:1 label contrast, >= 3:1 active segment vs track contrast
+        const trackBg = resolveCssColorExpr(
+          segmentedList["background-color"],
+          map
+        );
+        const segInactiveFg = resolveCssColorExpr(segmentedTrigger.color, map);
+        const segActiveBg = resolveCssColorExpr(
+          segmentedActive["background-color"],
+          map
+        );
+        const segActiveFg = resolveCssColorExpr(segmentedActive.color, map);
+        expect(
+          contrastRatio(segInactiveFg, trackBg),
+          `segmented inactive label (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrastRatio(segActiveFg, segActiveBg),
+          `segmented active label (${mode})`
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrastRatio(segActiveBg, trackBg),
+          `segmented active indicator vs track (${mode})`
+        ).toBeGreaterThanOrEqual(3.0);
+      }
+    });
+
     it("achieves >= 4.5:1 WCAG AA contrast on centralized .btn-primary, portal .sync-badge, and clinician CRF designer badges/buttons", () => {
       const btnPrimary = parseRuleProps(
         tokensCss,
@@ -839,7 +1008,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
     });
   });
 
-  describe("Requirement 6: Tabular Numeral Alignment Across Tokens, Form Controls, Readouts, & AST Lint (ADR-2658)", () => {
+  describe("Requirement 6: Tabular Numeral Alignment Across Tokens, Form Controls, Readouts, & AST Lint (ADR-2670)", () => {
     it("enforces --font-variant-numeric-tabular in tokens.css across tables, time, badges, and numeric/date controls while preserving coarse-pointer >=16px font-size and proportional textareas", () => {
       const tokensCss = fs.readFileSync(
         path.join(uiDir, "tokens.css"),
@@ -1862,6 +2031,97 @@ const open = () => {};
         );
         expect(aiErrors).toEqual([]);
       }
+    });
+
+    it("enforces custom-vue/no-unscoped-clinical-tabs-css against unscoped list-class, tab-class, and active-tab-class selectors while permitting :deep(...) and variants", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const invalidCode = `<template>
+  <ClinicalTabs
+    v-model="active"
+    :tabs="tabs"
+    aria-label="Workspace sections"
+    list-class="custom-tab-bar"
+    :tab-class="['custom-tab-btn']"
+    active-tab-class="is-selected-tab"
+  />
+</template>
+<script setup>
+import { ref } from "vue";
+import { ClinicalTabs } from "ui";
+const active = ref("a");
+const tabs = [{ id: "a", label: "Alpha" }];
+</script>
+<style scoped>
+.custom-tab-bar {
+  display: flex;
+}
+.custom-tab-btn {
+  padding: 8px;
+}
+@media (max-width: 768px) {
+  .is-selected-tab {
+    font-weight: 700;
+  }
+}
+</style>
+`;
+      const [invalidResult] = await eslint.lintText(invalidCode, {
+        filePath: path.join(webSrcDir, "views/__SyntheticTabsInvalid.vue"),
+      });
+      const unscopedErrors = invalidResult.messages.filter(
+        (m) =>
+          m.ruleId === "custom-vue/no-unscoped-clinical-tabs-css" &&
+          m.severity === 2
+      );
+      expect(unscopedErrors).toHaveLength(3);
+
+      const validDeepAndVariantCode = `<template>
+  <div>
+    <ClinicalTabs
+      v-model="active"
+      :tabs="tabs"
+      variant="pills"
+      overflow="scroll"
+      aria-label="Primary tabs"
+    />
+    <ClinicalTabs
+      v-model="active"
+      :tabs="tabs"
+      variant="underline"
+      aria-label="Deep escaped tabs"
+      list-class="escaped-tab-bar"
+      tab-class="escaped-tab-btn"
+    />
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { ClinicalTabs } from "ui";
+const active = ref("a");
+const tabs = [{ id: "a", label: "Alpha" }];
+</script>
+<style scoped>
+:deep(.escaped-tab-bar) {
+  margin-bottom: 8px;
+}
+.wrapper :deep(.escaped-tab-btn:not(:disabled)) {
+  letter-spacing: 0.01em;
+}
+</style>
+`;
+      const [validResult] = await eslint.lintText(validDeepAndVariantCode, {
+        filePath: path.join(webSrcDir, "views/__SyntheticTabsValid.vue"),
+      });
+      expect(
+        validResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-unscoped-clinical-tabs-css"
+        )
+      ).toEqual([]);
     });
   });
 });

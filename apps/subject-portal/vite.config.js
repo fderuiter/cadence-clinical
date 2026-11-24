@@ -13,133 +13,28 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const VIRTUAL_TLDTS_ID = "\0virtual:tldts-browser-shim";
-const TLDTS_BROWSER_SHIM_SOURCE = `
-const MULTI_PART_SUFFIXES = new Set([
-  "github.io",
-  "gitlab.io",
-  "pages.dev",
-  "vercel.app",
-  "netlify.app",
-  "co.uk",
-  "org.uk",
-  "ac.uk",
-  "gov.uk",
-  "com.au",
-  "org.au",
-  "co.jp",
-  "co.nz",
-  "com.br",
-]);
-
-function extractHost(input) {
-  if (typeof input !== "string" || !input) return "";
-  let host = input.trim().toLowerCase();
-  if (host.includes("://")) {
-    try {
-      host = new URL(host).hostname.toLowerCase();
-    } catch {
-      return "";
-    }
-  } else {
-    const slash = host.indexOf("/");
-    if (slash !== -1) host = host.slice(0, slash);
-    if (!host.startsWith("[")) {
-      const colon = host.indexOf(":");
-      if (colon !== -1) host = host.slice(0, colon);
-    }
-  }
-  return host.endsWith(".") ? host.slice(0, -1) : host;
-}
-
-export function getHostname(input) {
-  const host = extractHost(input);
-  return host || null;
-}
-
-export function getPublicSuffix(input) {
-  const host = extractHost(input);
-  if (!host || host.includes(":") || /^\\d+(\\.\\d+){3}$/.test(host)) return null;
-  const parts = host.split(".");
-  if (parts.length < 2) return parts[0] || null;
-  const lastTwo = parts.slice(-2).join(".");
-  return MULTI_PART_SUFFIXES.has(lastTwo) ? lastTwo : parts[parts.length - 1];
-}
-
-export function getDomain(input) {
-  const host = extractHost(input);
-  if (!host || host.includes(":") || /^\\d+(\\.\\d+){3}$/.test(host)) return null;
-  const parts = host.split(".");
-  if (parts.length < 2) return null;
-  const lastTwo = parts.slice(-2).join(".");
-  if (MULTI_PART_SUFFIXES.has(lastTwo)) {
-    return parts.length >= 3 ? parts.slice(-3).join(".") : null;
-  }
-  return lastTwo;
-}
-
-export function getFullDomain(input) {
-  return getDomain(input) === null ? null : getHostname(input);
-}
-
-export function getSubdomain(input) {
-  const domain = getDomain(input);
-  const host = getHostname(input);
-  if (!domain || !host || host === domain) return domain ? "" : null;
-  return host.slice(0, host.length - domain.length - 1);
-}
-
-export function getDomainWithoutSuffix(input) {
-  const domain = getDomain(input);
-  const suffix = getPublicSuffix(input);
-  if (!domain || !suffix || domain === suffix) return null;
-  return domain.slice(0, domain.length - suffix.length - 1);
-}
-
-export function parse(input) {
-  const hostname = getHostname(input);
-  const domain = getDomain(input);
-  const publicSuffix = getPublicSuffix(input);
-  const isIp = Boolean(
-    hostname && (hostname.includes(":") || /^\\d+(\\.\\d+){3}$/.test(hostname))
-  );
-  return {
-    hostname,
-    isIp,
-    subdomain: getSubdomain(input),
-    domain,
-    publicSuffix,
-    domainWithoutSuffix: getDomainWithoutSuffix(input),
-    isIcann: Boolean(publicSuffix),
-    isPrivate: false,
-  };
-}
-`;
-
-function createBrowserTldtsShimPlugin() {
-  return {
-    name: "browser-tldts-shim",
-    apply: "build",
-    enforce: "pre",
-    resolveId(source) {
-      if (source === "tldts") {
-        return VIRTUAL_TLDTS_ID;
-      }
-      return null;
-    },
-    load(id) {
-      if (id === VIRTUAL_TLDTS_ID) {
-        return TLDTS_BROWSER_SHIM_SOURCE;
-      }
-      return null;
-    },
-  };
-}
-
 const DEV_PORT = 5174;
 // Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint; docker compose names
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
+const VIRTUAL_DEMO_TLDTS_STUB_ID = "\0virtual:demo-msw-tldts-stub";
+
+const DEMO_TLDTS_STUB = `
+export function getDomain(input, options = {}) {
+  if (typeof input !== "string" || !input) return null;
+  const host = input.trim().toLowerCase().replace(/\\.+$/, "");
+  if (!host || /^\\d+(?:\\.\\d+){3}$/.test(host) || host.includes(":")) {
+    return null;
+  }
+  const labels = host.split(".").filter(Boolean);
+  if (labels.length < 2) return null;
+  const tailTwo = labels.slice(-2).join(".");
+  if (options.allowPrivateDomains && tailTwo === "github.io") {
+    return labels.length >= 3 ? labels.slice(-3).join(".") : null;
+  }
+  return tailTwo;
+}
+`;
 
 export default defineConfig(({ mode }) => ({
   base: process.env.VITE_BASE_PATH || "/subject-portal/",
@@ -278,9 +173,27 @@ export default defineConfig(({ mode }) => ({
       };
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
-    createBrowserTldtsShimPlugin(),
     createDemoFixturesPlugin(__dirname),
     createConstantFoldDemoModePlugin(__dirname),
+    {
+      name: "slim-demo-msw-tldts",
+      apply: "build",
+      enforce: "pre",
+      resolveId(source, importer) {
+        if (
+          mode !== "demo" ||
+          source !== "tldts" ||
+          !importer ||
+          !importer.replace(/\\/g, "/").includes("/tough-cookie/")
+        ) {
+          return null;
+        }
+        return VIRTUAL_DEMO_TLDTS_STUB_ID;
+      },
+      load(id) {
+        return id === VIRTUAL_DEMO_TLDTS_STUB_ID ? DEMO_TLDTS_STUB : null;
+      },
+    },
   ],
   server: {
     port: DEV_PORT,

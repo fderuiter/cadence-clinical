@@ -251,13 +251,15 @@ public sealed record FormResponse(
             .Where(i => i.Required && (i.Value is null || i.Value is MissingValue { Reason: NullFlavor.NotAsked }))
             .Select(i => i.ItemId)
             .ToList();
+        var recordedCount = record.Values.Count(v => v.Value is not null and not MissingValue { Reason: NullFlavor.NotAsked });
         var effectiveOpen = openQueryCount ?? record.OpenQueryCount;
         var effectiveAnswered = answeredQueryCount ?? record.AnsweredQueryCount;
-        var complete = CollectionReadiness.IsComplete(
-            missing.Count,
-            effectiveOpen,
-            effectiveAnswered,
-            record.OpenErrorFindingCount);
+        var complete = (items.Count == 0 || recordedCount > 0)
+            && CollectionReadiness.IsComplete(
+                missing.Count,
+                effectiveOpen,
+                effectiveAnswered,
+                record.OpenErrorFindingCount);
         var blockers = CollectionReadiness.BuildBlockers(
             missing,
             missing.Count,
@@ -351,6 +353,34 @@ public sealed record FormResponse(
 
 internal static class ExecutionQueryMerger
 {
+    internal static (int OpenCount, int AnsweredCount) Merge(
+        IReadOnlySet<AssertionId> activeQueryAssertionIds,
+        IReadOnlySet<AssertionId>? answeredQueryAssertionIds,
+        IReadOnlyCollection<(Guid KernelQueryId, FormQueryStatus Status)> executionQueries)
+    {
+        var ownedKernelIds = executionQueries.Select(q => AssertionId.FromGuid(q.KernelQueryId)).ToHashSet();
+        var unownedActiveCount = 0;
+        var unownedAnsweredCount = 0;
+        foreach (var assertionId in activeQueryAssertionIds)
+        {
+            if (ownedKernelIds.Contains(assertionId))
+            {
+                continue;
+            }
+
+            unownedActiveCount++;
+            if (answeredQueryAssertionIds?.Contains(assertionId) ?? false)
+            {
+                unownedAnsweredCount++;
+            }
+        }
+
+        var kernelOpen = unownedActiveCount - unownedAnsweredCount;
+        var execOpen = executionQueries.Count(q => q.Status == FormQueryStatus.Open);
+        var execAnswered = executionQueries.Count(q => q.Status == FormQueryStatus.Answered);
+        return (kernelOpen + execOpen, unownedAnsweredCount + execAnswered);
+    }
+
     internal static (int OpenCount, int AnsweredCount) Merge(
         IReadOnlyList<AssertionView> kernelAssertions,
         IReadOnlyCollection<(Guid KernelQueryId, FormQueryStatus Status)> executionQueries)
