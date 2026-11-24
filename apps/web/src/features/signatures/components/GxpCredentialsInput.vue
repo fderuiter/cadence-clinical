@@ -11,7 +11,12 @@
         :disabled="disabled"
         :class="usernameClass"
         :style="inputStyle"
+        :aria-invalid="usernameInvalid ? 'true' : undefined"
+        :aria-describedby="
+          usernameInvalid && errorDescribedby ? errorDescribedby : undefined
+        "
         @input="$emit('update:username', $event.target.value)"
+        @keydown.enter.prevent="$emit('keydown-enter')"
       />
     </div>
 
@@ -27,11 +32,10 @@
         :class="passwordClass"
         :style="inputStyle"
         :required="passwordRequired"
-        :aria-invalid="passwordReentryRequired ? 'true' : undefined"
-        :aria-describedby="
-          passwordReentryRequired ? `${passwordId}-reentry-cue` : undefined
-        "
+        :aria-invalid="passwordAriaInvalid"
+        :aria-describedby="passwordAriaDescribedby"
         @input="$emit('update:password', $event.target.value)"
+        @keydown.enter.prevent="$emit('keydown-enter')"
         @keyup.enter="$emit('keyup-enter')"
       />
       <p
@@ -58,15 +62,17 @@
         :class="totpClass"
         :style="inputStyle"
         @input="$emit('update:totp', $event.target.value)"
+        @keydown.enter.prevent="$emit('keydown-enter')"
       />
     </div>
   </div>
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { SIGNATURE_PASSWORD_INPUT_ATTRS } from "ui";
 
-defineProps({
+const props = defineProps({
   username: {
     type: String,
     default: "",
@@ -147,6 +153,18 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  usernameInvalid: {
+    type: Boolean,
+    default: false,
+  },
+  passwordInvalid: {
+    type: Boolean,
+    default: false,
+  },
+  errorDescribedby: {
+    type: String,
+    default: "",
+  },
   passwordReentryMessage: {
     type: String,
     default:
@@ -170,8 +188,27 @@ defineEmits([
   "update:username",
   "update:password",
   "update:totp",
+  "keydown-enter",
   "keyup-enter",
 ]);
+
+const passwordAriaInvalid = computed(() =>
+  props.passwordReentryRequired || props.passwordInvalid ? "true" : undefined
+);
+
+const passwordAriaDescribedby = computed(() => {
+  const ids = [];
+  if (
+    props.errorDescribedby &&
+    (props.passwordInvalid || props.passwordReentryRequired)
+  ) {
+    ids.push(props.errorDescribedby);
+  }
+  if (props.passwordReentryRequired) {
+    ids.push(`${props.passwordId}-reentry-cue`);
+  }
+  return ids.length > 0 ? ids.join(" ") : undefined;
+});
 </script>
 
 <style scoped>

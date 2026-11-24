@@ -10,54 +10,63 @@
     :aria-labelledby="idPrefix + 'modal-title'"
     @close="onCancel"
   >
-    <p v-if="description">
-      {{ description }}
-    </p>
+    <form :id="formId" novalidate @submit.prevent="onConfirm">
+      <p v-if="description">
+        {{ description }}
+      </p>
 
-    <div class="form-group" style="margin-bottom: 12px">
-      <label :for="idPrefix + 'change-reason-select'"
-        >Select Standard Reason</label
-      >
-      <select
-        :id="idPrefix + 'change-reason-select'"
-        v-model="selectedOption"
-        class="reason-control"
-        @change="handleSelectChange"
-      >
-        <option v-for="opt in options" :key="opt.value" :value="opt.value">
-          {{ opt.text }}
-        </option>
-      </select>
-    </div>
+      <div class="form-group" style="margin-bottom: 12px">
+        <label :for="idPrefix + 'change-reason-select'"
+          >Select Standard Reason</label
+        >
+        <select
+          :id="idPrefix + 'change-reason-select'"
+          v-model="selectedOption"
+          class="reason-control"
+          @change="handleSelectChange"
+          @keydown.enter.prevent="onConfirm"
+        >
+          <option v-for="opt in options" :key="opt.value" :value="opt.value">
+            {{ opt.text }}
+          </option>
+        </select>
+      </div>
 
-    <div class="form-group">
-      <label :for="idPrefix + 'change-reason-text'"
-        >Custom Explanation (Optional)</label
-      >
-      <textarea
-        :id="idPrefix + 'change-reason-text'"
-        v-model="customText"
-        class="reason-control"
-        :placeholder="placeholder"
-        @input="clearError"
-      />
-    </div>
+      <div class="form-group">
+        <label :for="idPrefix + 'change-reason-text'">
+          Custom Explanation ({{ isOtherSelected ? "Required" : "Optional" }})
+        </label>
+        <textarea
+          :id="idPrefix + 'change-reason-text'"
+          ref="reasonTextareaRef"
+          v-model="customText"
+          class="reason-control"
+          :placeholder="placeholder"
+          :required="isOtherSelected"
+          :aria-required="isOtherSelected ? 'true' : undefined"
+          :aria-invalid="validationError ? 'true' : undefined"
+          :aria-describedby="validationError ? errorId : undefined"
+          @input="clearError"
+          @keydown="handleTextareaKeydown"
+        />
+      </div>
 
-    <!-- Accessible Validation Feedback -->
-    <div
-      v-if="validationError"
-      :id="idPrefix + 'reason-error'"
-      class="validation-error-msg"
-      style="
-        color: var(--semantic-color-error);
-        margin-top: 8px;
-        font-weight: 600;
-      "
-      role="status"
-      aria-live="polite"
-    >
-      ⚠️ {{ validationError }}
-    </div>
+      <!-- Accessible Validation Feedback -->
+      <div
+        v-if="validationError"
+        :id="errorId"
+        class="validation-error-msg"
+        style="
+          color: var(--semantic-color-error);
+          margin-top: 8px;
+          font-weight: 600;
+        "
+        role="status"
+        aria-live="polite"
+      >
+        ⚠️ {{ validationError }}
+      </div>
+    </form>
 
     <template #footer>
       <button
@@ -71,8 +80,9 @@
       <button
         :id="idPrefix + 'btn-save-change'"
         class="btn btn-primary"
-        type="button"
-        @click="onConfirm"
+        type="submit"
+        :form="formId"
+        @click="onSubmitClick"
       >
         {{ confirmText }}
       </button>
@@ -81,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { ClinicalModal } from "ui";
 
 const props = defineProps({
@@ -133,17 +143,32 @@ const props = defineProps({
 
 const emit = defineEmits(["confirm", "cancel"]);
 
+const reasonTextareaRef = ref(null);
 const selectedOption = ref("");
 const customText = ref("");
 const validationError = ref("");
+
+const formId = computed(() => `${props.idPrefix}reason-modal-form`);
+const errorId = computed(() => `${props.idPrefix}reason-error`);
+const isOtherSelected = computed(() => selectedOption.value === "Other");
+
+function resolveDefaultOption() {
+  const opts = Array.isArray(props.options) ? props.options : [];
+  if (
+    props.defaultOption &&
+    opts.some((opt) => opt?.value === props.defaultOption)
+  ) {
+    return props.defaultOption;
+  }
+  return opts[0]?.value || "";
+}
 
 // Watch show to reset state on open
 watch(
   () => props.show,
   (newVal) => {
     if (newVal) {
-      selectedOption.value =
-        props.defaultOption || props.options[0]?.value || "";
+      selectedOption.value = resolveDefaultOption();
       customText.value = "";
       validationError.value = "";
     }
@@ -159,8 +184,25 @@ function clearError() {
   validationError.value = "";
 }
 
+function handleTextareaKeydown(event) {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    onConfirm();
+  }
+}
+
+function onSubmitClick(event) {
+  event?.preventDefault?.();
+  onConfirm();
+}
+
 function onCancel() {
   emit("cancel");
+}
+
+async function focusReasonText() {
+  await nextTick();
+  reasonTextareaRef.value?.focus?.();
 }
 
 function onConfirm() {
@@ -172,6 +214,7 @@ function onConfirm() {
     if (!cust) {
       validationError.value =
         "Custom explanation is required when selecting 'Other'.";
+      void focusReasonText();
       return;
     }
   }
@@ -182,6 +225,7 @@ function onConfirm() {
   if (!finalReason.trim()) {
     validationError.value =
       "A non-empty reason for change is strictly required.";
+    void focusReasonText();
     return;
   }
 

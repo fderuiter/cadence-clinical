@@ -507,6 +507,7 @@
       :username="currentUserId"
       :busy="isApproving"
       :error-message="approvalError"
+      @clear-error="approvalError = ''"
       @cancel="isReAuthOpen = false"
       @close="isReAuthOpen = false"
       @confirm="handleApproveConfirm"

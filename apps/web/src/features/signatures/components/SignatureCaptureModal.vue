@@ -11,7 +11,13 @@
     close-label="Close electronic signature dialog"
     @close="cancel"
   >
-    <div ref="bodyRootRef" class="signature-capture-fields">
+    <form
+      id="signature-capture-form"
+      ref="bodyRootRef"
+      class="signature-capture-fields"
+      novalidate
+      @submit.prevent="confirm"
+    >
       <p class="modal-desc">
         To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
         must re-verify your credentials and select a controlled signing reason
@@ -28,12 +34,18 @@
           placeholder="e.g. John Doe"
           :disabled="busy"
           class="form-control"
+          @keydown.enter.prevent="confirm"
         />
       </div>
 
       <div class="form-group">
         <label for="sig-role">Signer Role</label>
-        <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
+        <select
+          id="sig-role"
+          v-model="signerRoleVal"
+          :disabled="busy"
+          @keydown.enter.prevent="confirm"
+        >
           <option value="Subject">Subject / Participant</option>
           <option value="PI">PI / Principal Investigator</option>
           <option value="Site CRC">Site CRC</option>
@@ -52,9 +64,12 @@
         v-model:username="usernameVal"
         v-model:totp="totp"
         :password-reentry-required="needsPasswordReentry"
+        :username-invalid="isUsernameInvalid"
+        :password-invalid="isPasswordInvalid"
+        :error-describedby="error ? 'sig-error-msg' : ''"
         data-pragma="pragma: allowlist secret"
         :disabled="busy"
-        @keyup-enter="confirm"
+        @keydown-enter="confirm"
         v-model:password="password"/><!-- pragma: allowlist secret -->
 
       <div class="form-group last-group">
@@ -64,6 +79,9 @@
           v-model="signingReason"
           data-testid="sig-meaning-select"
           :disabled="busy"
+          :aria-invalid="isReasonInvalid ? 'true' : undefined"
+          :aria-describedby="isReasonInvalid ? 'sig-error-msg' : undefined"
+          @keydown.enter.prevent="confirm"
         >
           <option value="" disabled>-- Select Meaning / Reason --</option>
           <option v-for="r in availableReasons" :key="r" :value="r">
@@ -78,9 +96,9 @@
         retry-label="Retry"
         dismiss-label="Dismiss"
         @retry="handleRetry"
-        @dismiss="error = ''"
+        @dismiss="handleDismissError"
       />
-    </div>
+    </form>
 
     <template #footer>
       <button
@@ -94,10 +112,11 @@
       </button>
       <button
         id="btn-confirm-sig"
-        type="button"
+        type="submit"
+        form="signature-capture-form"
         class="btn btn-primary"
-        :disabled="busy"
-        @click="confirm"
+        :disabled="isConfirmDisabled"
+        @click="onConfirmClick"
       >
         {{ busy ? "Signing..." : "Verify & Sign" }}
       </button>
@@ -118,7 +137,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 </script>
 
 <script setup>
-import { computed, ref, watch, inject } from "vue";
+import { computed, ref, watch, inject, nextTick } from "vue";
 import { ClinicalModal, deriveSignerRoleFromClaims, ModalErrorAlert } from "ui";
 import { useAuthStore } from "../../../stores/auth.js";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
@@ -218,9 +237,50 @@ watch(
   }
 );
 
+const isConfirmDisabled = computed(() =>
+  Boolean(
+    busy.value ||
+    !usernameVal.value.trim() ||
+    !password.value ||
+    !signingReason.value
+  )
+);
+
+const isUsernameInvalid = computed(() =>
+  Boolean(error.value && !usernameVal.value.trim())
+);
+
+const isPasswordInvalid = computed(() =>
+  Boolean(error.value && usernameVal.value.trim() && !password.value)
+);
+
+const isReasonInvalid = computed(() =>
+  Boolean(
+    error.value &&
+    usernameVal.value.trim() &&
+    password.value &&
+    !signingReason.value
+  )
+);
+
+watch(usernameVal, (nextUsername) => {
+  if (nextUsername.trim() && error.value === "Username is required.") {
+    error.value = "";
+  }
+});
+
 watch(password, (nextPassword) => {
   if (nextPassword) {
     needsPasswordReentry.value = false;
+    if (error.value === "Password is required.") {
+      error.value = "";
+    }
+  }
+});
+
+watch(signingReason, (nextReason) => {
+  if (nextReason && error.value === "Signing reason is required.") {
+    error.value = "";
   }
 });
 
@@ -266,14 +326,34 @@ function focusModalField(selector) {
   }
 }
 
+function handleDismissError() {
+  error.value = "";
+  if (!usernameVal.value.trim()) {
+    focusModalField("#sig-username");
+  } else if (!password.value) {
+    focusModalField("#sig-password");
+  } else if (!signingReason.value) {
+    focusModalField("#sig-reason");
+  }
+}
+
+function onConfirmClick(event) {
+  event?.preventDefault?.();
+  void confirm();
+}
+
 async function handleRetry() {
-  if (!usernameVal.value) {
+  if (!usernameVal.value.trim()) {
     focusModalField("#sig-username");
     return;
   }
   if (!password.value) {
     needsPasswordReentry.value = true;
     focusModalField("#sig-password");
+    return;
+  }
+  if (!signingReason.value) {
+    focusModalField("#sig-reason");
     return;
   }
   await confirm();
@@ -302,20 +382,23 @@ function isFailedSignoffOutcome(result) {
 }
 
 async function confirm() {
-  if (!usernameVal.value) {
+  if (!usernameVal.value.trim()) {
     error.value = "Username is required.";
+    focusModalField("#sig-username");
     return;
   }
   if (!password.value) {
     error.value = "Password is required.";
+    focusModalField("#sig-password");
     return;
   }
   if (!signingReason.value) {
     error.value = "Signing reason is required.";
+    focusModalField("#sig-reason");
     return;
   }
 
-  const u = usernameVal.value;
+  const u = usernameVal.value.trim();
   const p = password.value;
   const t = totp.value || null;
   const r = signingReason.value;
@@ -328,6 +411,7 @@ async function confirm() {
   needsPasswordReentry.value = false;
   error.value = "";
   busy.value = true;
+  let focusPasswordAfterFailure = false;
 
   try {
     const service = signatureService;
@@ -414,6 +498,7 @@ async function confirm() {
     ) {
       displayError =
         "Identity verification expired or invalid. Please try again.";
+      focusPasswordAfterFailure = true;
     } else if (
       errMessage.includes("Invalid credentials") ||
       errDetail.includes("Invalid credentials") ||
@@ -421,6 +506,7 @@ async function confirm() {
       errResponse.status === 401
     ) {
       displayError = "Identity verification failed: Invalid credentials.";
+      focusPasswordAfterFailure = true;
     } else if (errDetail) {
       displayError = `Signing failed: ${errDetail}`;
     } else if (errMessage) {
@@ -432,6 +518,10 @@ async function confirm() {
     emit("error", err);
   } finally {
     busy.value = false;
+    if (focusPasswordAfterFailure) {
+      await nextTick();
+      focusModalField("#sig-password");
+    }
   }
 }
 
@@ -443,6 +533,8 @@ defineExpose({
   signerRoleVal,
   signingReason,
   needsPasswordReentry,
+  confirm,
+  handleRetry,
 });
 </script>
 

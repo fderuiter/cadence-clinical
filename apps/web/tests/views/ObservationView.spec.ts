@@ -192,6 +192,7 @@ describe("ObservationView (ADR-2620)", () => {
           locked_at: "2026-10-15T10:00:00Z",
           locked_by: "dm@sponsor.test",
           reason_for_change: "Data review complete",
+          masked: false,
         },
       ],
     });
@@ -493,6 +494,7 @@ describe("ObservationView (ADR-2620)", () => {
               locked_at: "2026-10-15T10:00:00Z",
               locked_by: dmPersonRef,
               reason_for_change: "Interim review cut",
+              masked: false,
             },
           ],
         })
@@ -656,5 +658,24 @@ describe("ObservationView (ADR-2620)", () => {
     expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
     expect(backLink.attributes("href")).toBe(returnUrl);
     standaloneWrapper.unmount();
+  });
+
+  it("excludes Initial Entry and defaults to Typographical Error in the correction reason modal", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    const wrapper = await mountView();
+
+    await wrapper.find("#observation-new-value").setValue("128");
+    await wrapper.find("form.observation-correction").trigger("submit");
+
+    const select = wrapper.find("#observation-change-reason-select");
+    expect(select.exists()).toBe(true);
+    const values = select
+      .findAll("option")
+      .map((opt) => opt.attributes("value"));
+    expect(values).not.toContain("Initial Entry");
+    expect((select.element as HTMLSelectElement).value).toBe(
+      "Typographical Error"
+    );
+    wrapper.unmount();
   });
 });

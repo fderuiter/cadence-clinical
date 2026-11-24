@@ -269,7 +269,9 @@ export const ModalErrorAlert: DefineComponent<
     showDismiss?: boolean;
     onRetry?: (...args: any[]) => void;
     onDismiss?: (...args: any[]) => void;
+    onClearError?: (...args: any[]) => void;
     id?: string;
+    autoFocus?: boolean;
   },
   {},
   any

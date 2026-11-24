@@ -19,6 +19,29 @@ describe("ReasonForChangeModal.vue - Wrapper Component", () => {
     );
   });
 
+  it("defaults to post-entry correction reasons excluding Initial Entry", () => {
+    const wrapper = mount(ReasonForChangeModal, {
+      props: {
+        show: true,
+        idPrefix: "corr-",
+      },
+    });
+
+    const select = wrapper.find("#corr-change-reason-select");
+    const optionValues = select
+      .findAll("option")
+      .map((opt) => opt.attributes("value"));
+
+    expect(optionValues).not.toContain("Initial Entry");
+    expect(optionValues).toEqual([
+      "Typographical Error",
+      "Transcription Error",
+      "Source Data Clarification",
+      "Other",
+    ]);
+    expect(select.element.value).toBe("Typographical Error");
+  });
+
   it("bubbles cancel and confirm events correctly", async () => {
     const wrapper = mount(ReasonForChangeModal, {
       props: {
@@ -38,7 +61,7 @@ describe("ReasonForChangeModal.vue - Wrapper Component", () => {
     await wrapper.find("#evt-btn-save-change").trigger("click");
     expect(wrapper.emitted("confirm")).toBeTruthy();
     expect(wrapper.emitted("confirm")[0]).toEqual([
-      "Initial Entry: Adding custom verification details",
+      "Typographical Error: Adding custom verification details",
     ]);
   });
 });

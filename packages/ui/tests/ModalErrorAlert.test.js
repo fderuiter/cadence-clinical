@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
+import { createApp, h, nextTick, ref } from "vue";
 import fs from "fs";
 import path from "path";
 import { ModalErrorAlert, useAsyncRetry } from "../index.js";
@@ -65,5 +67,60 @@ describe("ModalErrorAlert & useAsyncRetry (#4523)", () => {
     error.value = new Error("Manual error");
     clearError();
     expect(error.value).toBe(null);
+  });
+
+  it("does not steal focus from active form controls by default when an error appears", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const errorMsg = ref("");
+
+    const app = createApp({
+      setup() {
+        return () =>
+          h("div", [
+            h("input", { id: "active-credential-input" }),
+            h(ModalErrorAlert, { error: errorMsg.value }),
+          ]);
+      },
+    });
+    app.mount(host);
+
+    const input = host.querySelector("#active-credential-input");
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    errorMsg.value = "Invalid credential";
+    await nextTick();
+    await nextTick();
+
+    expect(host.querySelector('[role="alert"]')).not.toBeNull();
+    expect(document.activeElement).toBe(input);
+
+    app.unmount();
+    host.remove();
+  });
+
+  it("focuses the alert container when autoFocus is explicitly enabled", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+
+    const app = createApp({
+      setup() {
+        return () =>
+          h(ModalErrorAlert, {
+            error: "Fatal overlay error",
+            autoFocus: true,
+          });
+      },
+    });
+    app.mount(host);
+    await nextTick();
+
+    const alertEl = host.querySelector('[role="alert"]');
+    expect(alertEl).not.toBeNull();
+    expect(document.activeElement).toBe(alertEl);
+
+    app.unmount();
+    host.remove();
   });
 });

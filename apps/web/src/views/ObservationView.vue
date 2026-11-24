@@ -237,6 +237,8 @@
       id-prefix="observation-"
       title="Reason for correction"
       confirm-text="Save correction"
+      :options="correctionReasonOptions"
+      default-option="Typographical Error"
       @confirm="onReason"
       @cancel="reasonOpen = false"
     />
@@ -477,6 +479,21 @@ function lockScopeLabel(scope: unknown): string {
 
 const newValue = ref("");
 const reasonOpen = ref(false);
+const correctionReasonOptions = [
+  {
+    value: "Typographical Error",
+    text: "Correction of typographical error",
+  },
+  {
+    value: "Transcription Error",
+    text: "Correction of transcription error",
+  },
+  {
+    value: "Source Data Clarification",
+    text: "Source data clarification",
+  },
+  { value: "Other", text: "Other (specify below)" },
+];
 
 const expectedSpec = computed<ExpectedItemSpec | null>(() => {
   const obs = observation.value;

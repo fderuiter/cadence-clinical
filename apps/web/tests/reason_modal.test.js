@@ -118,23 +118,42 @@ describe("ReasonModal.vue", () => {
     ]);
   });
 
-  it("strictly validates custom explanation is non-empty when Other is selected", async () => {
+  it("strictly validates custom explanation is non-empty when Other is selected and focuses textarea", async () => {
     const wrapper = mount(ReasonModal, {
+      attachTo: document.body,
       props: {
         show: true,
         idPrefix: "val-",
         options: [
-          { value: "Initial Entry", text: "Initial Setup" },
+          { value: "Typographical Error", text: "Correction of typo" },
           { value: "Other", text: "Other (specify below)" },
         ],
       },
     });
 
+    const form = wrapper.find("#val-reason-modal-form");
+    expect(form.exists()).toBe(true);
+    expect(form.attributes("novalidate")).toBeDefined();
+
+    const saveBtn = wrapper.find("#val-btn-save-change");
+    expect(saveBtn.attributes("type")).toBe("submit");
+    expect(saveBtn.attributes("form")).toBe("val-reason-modal-form");
+
+    const textLabel = wrapper.find("label[for='val-change-reason-text']");
+    const textarea = wrapper.find("#val-change-reason-text");
+    expect(textLabel.text()).toContain("Custom Explanation (Optional)");
+    expect(textarea.attributes("aria-required")).toBeUndefined();
+
     const select = wrapper.find("select");
     await select.setValue("Other");
 
+    expect(textLabel.text()).toContain("Custom Explanation (Required)");
+    expect(textarea.attributes("required")).toBeDefined();
+    expect(textarea.attributes("aria-required")).toBe("true");
+
     // Click confirm with empty custom explanation
-    await wrapper.find("#val-btn-save-change").trigger("click");
+    await saveBtn.trigger("click");
+    await wrapper.vm.$nextTick();
 
     expect(wrapper.emitted("confirm")).toBeFalsy();
     const errorMsg = wrapper.find("#val-reason-error");
@@ -144,12 +163,58 @@ describe("ReasonModal.vue", () => {
     expect(errorMsg.text()).toContain(
       "Custom explanation is required when selecting 'Other'."
     );
+    expect(textarea.attributes("aria-invalid")).toBe("true");
+    expect(textarea.attributes("aria-describedby")).toBe("val-reason-error");
+    expect(document.activeElement).toBe(textarea.element);
 
-    // Provide custom explanation and confirm
-    await wrapper.find("textarea").setValue("Authorized modification");
-    await wrapper.find("#val-btn-save-change").trigger("click");
+    // Provide custom explanation and confirm via Ctrl+Enter
+    await textarea.setValue("Authorized modification");
+    expect(textarea.attributes("aria-invalid")).toBeUndefined();
+    await textarea.trigger("keydown", { key: "Enter", ctrlKey: true });
 
     expect(wrapper.emitted("confirm")).toBeTruthy();
     expect(wrapper.emitted("confirm")[0]).toEqual(["Authorized modification"]);
+    wrapper.unmount();
+  });
+
+  it("supports Enter submission from select and falls back safely when defaultOption or options are missing", async () => {
+    const wrapper = mount(ReasonModal, {
+      attachTo: document.body,
+      props: {
+        show: true,
+        idPrefix: "kbd-",
+        defaultOption: "NonExistentOption",
+        options: [
+          { value: "Typographical Error", text: "Correction of typo" },
+          { value: "Other", text: "Other (specify below)" },
+        ],
+      },
+    });
+
+    const select = wrapper.find("#kbd-change-reason-select");
+    expect(select.element.value).toBe("Typographical Error");
+
+    await select.trigger("keydown.enter");
+    expect(wrapper.emitted("confirm")?.[0]).toEqual(["Typographical Error"]);
+    wrapper.unmount();
+
+    const emptyOptionsWrapper = mount(ReasonModal, {
+      attachTo: document.body,
+      props: {
+        show: true,
+        idPrefix: "empty-",
+        options: [],
+      },
+    });
+
+    await emptyOptionsWrapper.find("#empty-btn-save-change").trigger("click");
+    await emptyOptionsWrapper.vm.$nextTick();
+
+    expect(emptyOptionsWrapper.emitted("confirm")).toBeFalsy();
+    expect(emptyOptionsWrapper.find("#empty-reason-error").text()).toContain(
+      "A non-empty reason for change is strictly required."
+    );
+    expect(document.activeElement?.id).toBe("empty-change-reason-text");
+    emptyOptionsWrapper.unmount();
   });
 });

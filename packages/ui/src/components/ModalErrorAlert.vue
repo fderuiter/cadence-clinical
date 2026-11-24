@@ -42,6 +42,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  autoFocus: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["retry", "dismiss", "clear-error"]);
@@ -71,14 +75,18 @@ function handleDismiss(event) {
   emit("clear-error", event);
 }
 
-watch(hasError, (newVal) => {
-  if (newVal && alertRef.value) {
-    alertRef.value.focus();
-  }
-});
+watch(
+  hasError,
+  (newVal) => {
+    if (newVal && props.autoFocus && alertRef.value) {
+      alertRef.value.focus();
+    }
+  },
+  { flush: "post" }
+);
 
 onMounted(() => {
-  if (hasError.value && alertRef.value) {
+  if (hasError.value && props.autoFocus && alertRef.value) {
     alertRef.value.focus();
   }
 });

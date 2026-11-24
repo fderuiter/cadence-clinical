@@ -91,5 +91,7 @@ defineExpose({
   signerRole: signerRoleProxy,
   signingReason,
   needsPasswordReentry,
+  confirm: (...args) => innerRef.value?.confirm?.(...args),
+  handleRetry: (...args) => innerRef.value?.handleRetry?.(...args),
 });
 </script>

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import SignatureCaptureModal from "../../src/features/signatures/components/SignatureCaptureModal.vue";
+import LegacySignatureCaptureModal from "../../src/components/SignatureCaptureModal.vue";
 import UpversioningImpactDrawer from "../../src/components/UpversioningImpactDrawer.vue";
 import ReAuthModal from "../../src/components/shared/ReAuthModal.vue";
 import { FileUploadModal } from "ui";
@@ -173,6 +174,83 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       expect(wrapper.find("#sig-error-msg").text()).toContain(
         "You are not authorised to sign this form."
       );
+    });
+
+    it("gates Verify & Sign until required fields are filled, supports Enter submission, and restores focus to #sig-password after 401 failure", async () => {
+      const mockSignatureService = {
+        verifySignature: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("Invalid credentials"))
+          .mockResolvedValueOnce({ sig_token: "mock-sig-token-ok" }),
+      };
+      const mockOnSign = vi.fn(async () => ({ kind: "signed" }));
+
+      const wrapper = mount(SignatureCaptureModal, {
+        attachTo: document.body,
+        props: {
+          isOpen: true,
+          username: "dr_smith",
+          signerName: "Dr. Smith", // deid-ignore
+          actionUrl: "/api/v1/execution/forms/form-1/signatures",
+          onSign: mockOnSign,
+        },
+        global: {
+          provide: {
+            signatureService: mockSignatureService,
+          },
+        },
+      });
+
+      const confirmBtn = wrapper.find("#btn-confirm-sig");
+      expect(confirmBtn.attributes("type")).toBe("submit");
+      expect(confirmBtn.attributes("form")).toBe("signature-capture-form");
+      expect(confirmBtn.attributes("disabled")).toBeDefined();
+
+      // Pressing Enter on password before selecting signing reason marks only #sig-reason invalid and focuses it
+      await wrapper.find("#sig-password").setValue("WrongPass1!"); // pragma: allowlist secret
+      expect(confirmBtn.attributes("disabled")).toBeDefined();
+      await wrapper.find("#sig-password").trigger("keydown.enter");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#sig-error-msg").text()).toContain(
+        "Signing reason is required."
+      );
+      expect(wrapper.find("#sig-reason").attributes("aria-invalid")).toBe(
+        "true"
+      );
+      expect(
+        wrapper.find("#sig-password").attributes("aria-invalid")
+      ).toBeUndefined();
+      expect(document.activeElement?.id).toBe("sig-reason");
+
+      // Selecting signing reason clears client validation error and enables Verify & Sign
+      await wrapper.find("#sig-reason").setValue("APPROVAL");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#sig-error-msg").exists()).toBe(false);
+      expect(confirmBtn.attributes("disabled")).toBeUndefined();
+
+      // Submitting with wrong password clears password and returns focus directly to #sig-password (not the alert container)
+      await wrapper.find("#sig-reason").trigger("keydown.enter");
+      await wrapper.vm.$nextTick();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#sig-error-msg").text()).toContain(
+        "Identity verification failed: Invalid credentials."
+      );
+      expect(document.activeElement?.id).toBe("sig-password");
+      wrapper.unmount();
+
+      // Verify legacy wrapper exposes confirm and handleRetry proxies
+      const legacyWrapper = mount(LegacySignatureCaptureModal, {
+        props: {
+          isOpen: true,
+          username: "dr_smith",
+          actionUrl: "/api/v1/etmf/documents/doc-1/sign-off",
+        },
+      });
+      expect(typeof (legacyWrapper.vm as any).confirm).toBe("function");
+      expect(typeof (legacyWrapper.vm as any).handleRetry).toBe("function");
+      legacyWrapper.unmount();
     });
   });
 

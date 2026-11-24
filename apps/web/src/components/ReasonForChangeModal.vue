@@ -9,8 +9,25 @@ defineProps({
   show: { type: Boolean, required: true },
   title: { type: String, default: undefined },
   description: { type: String, default: undefined },
-  options: { type: Array, default: undefined },
-  defaultOption: { type: String, default: undefined },
+  options: {
+    type: Array,
+    default: () => [
+      {
+        value: "Typographical Error",
+        text: "Correction of typographical error",
+      },
+      {
+        value: "Transcription Error",
+        text: "Correction of transcription error",
+      },
+      {
+        value: "Source Data Clarification",
+        text: "Source data clarification",
+      },
+      { value: "Other", text: "Other (specify below)" },
+    ],
+  },
+  defaultOption: { type: String, default: "Typographical Error" },
   idPrefix: { type: String, default: undefined },
   cancelText: { type: String, default: undefined },
   confirmText: { type: String, default: undefined },
