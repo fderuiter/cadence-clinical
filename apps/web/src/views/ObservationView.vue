@@ -272,6 +272,7 @@ import {
   tryNodeRef,
 } from "../canvas/nodeRef";
 import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
+import { buildStudiesWorkspacePath } from "../canvas/palette";
 import { canCorrectObservations } from "../canvas/authority";
 import {
   toCoveringScopeLocks,
@@ -404,7 +405,15 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
     return { name: "studies" };
   }
   if (activeRouter.hasRoute("study")) {
-    return "/studies";
+    return buildStudiesWorkspacePath({
+      studyCode: studyFromContext,
+      siteId:
+        queryString("site") || queryString("siteId") || resolvedSiteLabel.value,
+      subjectCode:
+        queryString("subjectId") ||
+        queryString("subject") ||
+        resolvedParticipantLabel.value,
+    });
   }
   return "/";
 });
@@ -441,7 +450,7 @@ const SCOPE_LABELS: Record<string, string> = {
 };
 
 const { studyRef: observationStudyRef } = useKernelStudyRef(
-  () => props.studyCode,
+  () => props.studyCode || queryString("studyId") || queryString("study"),
   {
     studyRef: () => props.studyRef,
     embedded: () => props.embedded,
@@ -603,7 +612,13 @@ watch(
       const legacyStudyNode =
         (studyStep as { node?: string | null } | undefined)?.node ?? null;
       const studyRef = studyStep?.ref ?? legacyStudyNode;
-      if (!props.studyRef && !props.studyCode) {
+      const explicitStudyFromQuery =
+        queryString("studyId") || queryString("study");
+      if (
+        !props.studyRef &&
+        !props.studyCode &&
+        !(isDemoBuild() && explicitStudyFromQuery)
+      ) {
         observationStudyRef.value = studyRef;
       }
       const enrollmentStep = steps.find(
@@ -637,7 +652,7 @@ watch(
         queryString("subject");
       const resolvedStudyCode = demoMode
         ? explicitStudy || lineageStudyCode
-        : lineageStudyCode;
+        : lineageStudyCode || explicitStudy;
       if (!resolvedStudyCode) return;
       syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(

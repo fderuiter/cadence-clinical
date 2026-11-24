@@ -117,7 +117,12 @@ import {
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
+import { getActivePinia } from "pinia";
 import { hasRequiredRole } from "../router";
+import {
+  buildScopedStudyLocation,
+  resolveActiveWorkspaceScope,
+} from "../canvas/palette";
 
 const NON_SHELL_TOUR_ROUTES = new Set([
   "landing",
@@ -125,6 +130,12 @@ const NON_SHELL_TOUR_ROUTES = new Set([
   "forbidden",
   "unavailable",
 ]);
+
+const STRIPPED_TOUR_QUERY_KEYS = new Set(
+  "stage,section,site,participant,node,form,item,observation,proposal,ask,status,q,spec,visit,studyId,study,siteId,subjectId,subject,enrollmentId,visitId".split(
+    ","
+  )
+);
 
 const VIEWPORT_MARGIN_PX = 12;
 const ANCHOR_GAP_PX = 12;
@@ -153,6 +164,11 @@ try {
   route = useRoute();
 } catch {
   // Gracefully fallback if router is not provided in isolated unit test environments
+}
+
+function readTourWorkspaceScope() {
+  const canvasState = getActivePinia()?.state.value?.studyCanvas ?? null;
+  return resolveActiveWorkspaceScope(route ?? undefined, canvasState);
 }
 
 const currentStep = computed(() => onboardingStore.currentStep);
@@ -437,10 +453,53 @@ async function syncStepRoute() {
         return;
       }
       if (route.name !== targetRouteName) {
-        const query = config.query
-          ? { ...route.query, ...config.query }
-          : { ...route.query };
-        await router.push({ name: targetRouteName, query });
+        const scope = readTourWorkspaceScope();
+        if (targetRouteName === "study") {
+          const baseLocation = buildScopedStudyLocation(
+            scope.studyCode,
+            route ?? undefined,
+            {
+              siteId: scope.siteId,
+              participantRef: scope.participantRef,
+              subjectCode: scope.subjectCode,
+              enrollmentId: scope.enrollmentId,
+              recordParticipantParam: scope.recordParticipantParam,
+              inspectorNodeParam: scope.inspectorNodeParam,
+            }
+          );
+          const {
+            stage: _stage,
+            section: _section,
+            ...cleanBaseQuery
+          } = baseLocation.query || {};
+          await router.push({
+            ...baseLocation,
+            query: config.query
+              ? { ...cleanBaseQuery, ...config.query }
+              : cleanBaseQuery,
+          });
+          return;
+        }
+
+        const standaloneQuery = {};
+        for (const [key, value] of Object.entries(route.query || {})) {
+          if (!STRIPPED_TOUR_QUERY_KEYS.has(key) && value !== undefined) {
+            standaloneQuery[key] = value;
+          }
+        }
+        if (scope.studyCode) {
+          standaloneQuery.studyId = scope.studyCode;
+        }
+        if (scope.siteId) {
+          standaloneQuery.siteId = scope.siteId;
+        }
+        if (scope.subjectCode && !scope.subjectCode.includes(":")) {
+          standaloneQuery.subjectId = scope.subjectCode;
+        }
+        if (config.query) {
+          Object.assign(standaloneQuery, config.query);
+        }
+        await router.push({ name: targetRouteName, query: standaloneQuery });
         return;
       }
     }
@@ -461,6 +520,9 @@ async function syncStepRoute() {
       if (needsUpdate) {
         await router.push({
           name: queryRouteName,
+          ...(route.params && Object.keys(route.params).length > 0
+            ? { params: { ...route.params } }
+            : {}),
           query: newQuery,
         });
       }

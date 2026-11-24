@@ -274,7 +274,10 @@
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
-                  studyLocation({ stage: 'conduct', section: 'participants' })
+                  scopedStudyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                  })
                 "
               >
                 Find it in Participants </router-link
@@ -353,7 +356,10 @@
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
-                  studyLocation({ stage: 'conduct', section: 'participants' })
+                  scopedStudyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                  })
                 "
               >
                 Find it in Participants </router-link
@@ -2015,8 +2021,21 @@ const activeInspectorParticipantNodeParam = computed(() => {
 
 function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
   const preservedSite = siteFilter.value || zoomSite.value || undefined;
-  const preservedParticipant = activeParticipantScopeParam.value || undefined;
   const preservedNode = activeInspectorParticipantNodeParam.value || undefined;
+  const parsedPreservedNode = preservedNode
+    ? parseNodeRef(preservedNode)
+    : null;
+  const parsedNextNode = query.node ? parseNodeRef(query.node) : null;
+  const overridesParticipantInspectorWithOtherNode = Boolean(
+    query.node &&
+    (parsedPreservedNode?.kind === "participant" ||
+      parsedPreservedNode?.kind === "enrollment") &&
+    parsedNextNode?.kind !== "participant" &&
+    parsedNextNode?.kind !== "enrollment"
+  );
+  const preservedParticipant =
+    activeParticipantScopeParam.value ||
+    (overridesParticipantInspectorWithOtherNode ? preservedNode : undefined);
   return studyLocation(
     {
       site: preservedSite,
@@ -2440,7 +2459,7 @@ async function onObservationLoaded(obs: KernelObservation) {
 async function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
   await router.push(
-    studyLocation({
+    scopedStudyLocation({
       stage: "design",
       section: "protocol-versions",
       node: version.ref,
@@ -2495,7 +2514,7 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
 
 function drillToParticipants(status: string) {
   router.push(
-    studyLocation({ stage: "conduct", section: "participants", status })
+    scopedStudyLocation({ stage: "conduct", section: "participants", status })
   );
 }
 

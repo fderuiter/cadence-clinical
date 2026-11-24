@@ -235,11 +235,7 @@
           v-if="studyCode"
           :id="`${idPrefix}-open-validation`"
           class="btn btn-secondary"
-          :to="{
-            name: 'study',
-            params: { studyCode },
-            query: { stage: 'data', section: 'validation' },
-          }"
+          :to="validationLocation"
         >
           Review &amp; pin in Validation
         </router-link>
@@ -321,6 +317,7 @@ import {
   type KernelProtocolTemplate,
 } from "../../api/kernelApi";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -341,6 +338,11 @@ const props = withDefaults(
 const emit = defineEmits<{
   imported: [summary: KernelProtocolDraftSummary];
 }>();
+
+const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
+const validationLocation = computed(() =>
+  scopedStudyLocation({ stage: "data", section: "validation" })
+);
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);

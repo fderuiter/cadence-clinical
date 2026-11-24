@@ -311,6 +311,7 @@ import {
   resolveNode,
   seedNodeSummary,
 } from "../../canvas/nodeResolver";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -326,6 +327,7 @@ const props = defineProps<{
   reviewer: string;
 }>();
 const emit = defineEmits<{ decided: [status: string] }>();
+const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
 
 const proposal = ref<KernelProposal | null>(null);
 const loading = ref(false);
@@ -407,10 +409,7 @@ const decisionWords = computed(() => {
   }
 });
 
-const backLocation = computed<RouteLocationRaw>(() => ({
-  name: "study",
-  params: { studyCode: props.studyCode },
-}));
+const backLocation = computed<RouteLocationRaw>(() => scopedStudyLocation());
 
 function when(value: string | null | undefined): string {
   if (!value) return "Not recorded";
@@ -437,20 +436,16 @@ function canvasLocation(refText: string): RouteLocationRaw | null {
   if (!node) return null;
   const text = formatNodeRef({ kind: node.kind, id: node.id });
   if (node.kind === "protocol_version") {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: { stage: "design", section: "protocol-versions", node: text },
-    };
+    return scopedStudyLocation({
+      stage: "design",
+      section: "protocol-versions",
+      node: text,
+    });
   }
   if (node.kind === "study") {
-    return { name: "study", params: { studyCode: props.studyCode } };
+    return scopedStudyLocation({ preserveStageSection: false });
   }
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: { node: formatNodeRef(node) },
-  };
+  return scopedStudyLocation({ node: formatNodeRef(node) });
 }
 
 async function openSource(source: ProposalSource) {

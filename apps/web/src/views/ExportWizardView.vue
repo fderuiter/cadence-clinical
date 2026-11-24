@@ -31,11 +31,7 @@
           v-if="selectedStudyCode"
           class="btn btn-secondary"
           data-testid="open-canvas-exports-link"
-          :to="{
-            name: 'study',
-            params: { studyCode: selectedStudyCode },
-            query: { stage: 'submit', section: 'exports' },
-          }"
+          :to="canvasExportsLocation"
         >
           Open in Clinical Canvas
         </router-link>
@@ -60,11 +56,19 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import ExportsSection from "../components/canvas/ExportsSection.vue";
 import { useConsolidatedStudyList } from "../composables/useConsolidatedStudyList";
+import { useScopedNavigation } from "../composables/useScopedNavigation";
 
 const { studies, studiesLoading, studiesError, selectedStudyCode } =
   useConsolidatedStudyList();
+const { scopedStudyLocation } = useScopedNavigation(
+  () => selectedStudyCode.value
+);
+const canvasExportsLocation = computed(() =>
+  scopedStudyLocation({ stage: "submit", section: "exports" })
+);
 </script>
 
 <style scoped src="./consolidatedCanvasView.css"></style>

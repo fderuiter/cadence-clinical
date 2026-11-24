@@ -1,3 +1,4 @@
+import { DEMO_PARTICIPANTS, DEMO_STUDY } from "demo-fixtures";
 import { getActivePinia } from "pinia";
 import type { LocationQuery, RouteLocationRaw, Router } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
@@ -288,9 +289,33 @@ export function buildScopedStudyLocation(
       currentScope?.recordParticipantParam
     );
     const inspectorNode = cleanQueryString(currentScope?.inspectorNodeParam);
+    const parsedInspectorNode = parseNodeRef(inspectorNode);
+    const inspectorIsParticipant =
+      parsedInspectorNode?.kind === "enrollment" ||
+      parsedInspectorNode?.kind === "participant";
+    const nextExplicitNode =
+      options.node !== undefined ? cleanQueryString(options.node) : undefined;
+    const parsedNextNode = nextExplicitNode
+      ? parseNodeRef(nextExplicitNode)
+      : null;
+    const overridesParticipantInspectorWithOtherNode = Boolean(
+      nextExplicitNode &&
+      inspectorIsParticipant &&
+      parsedNextNode?.kind !== "enrollment" &&
+      parsedNextNode?.kind !== "participant"
+    );
+    const promotedInspectorParticipant =
+      overridesParticipantInspectorWithOtherNode
+        ? formatNodeRef({
+            kind: parsedInspectorNode!.kind,
+            id: parsedInspectorNode!.id,
+          })
+        : "";
     const fallbackParticipant =
-      !recordParticipant && !inspectorNode
-        ? cleanQueryString(currentScope?.participantRef) ||
+      !recordParticipant &&
+      (!inspectorNode || overridesParticipantInspectorWithOtherNode)
+        ? promotedInspectorParticipant ||
+          cleanQueryString(currentScope?.participantRef) ||
           cleanQueryString(currentScope?.subjectCode)
         : "";
     const participant =
@@ -298,9 +323,7 @@ export function buildScopedStudyLocation(
         ? cleanQueryString(options.participant)
         : recordParticipant || fallbackParticipant;
     const node =
-      options.node !== undefined
-        ? cleanQueryString(options.node)
-        : inspectorNode;
+      nextExplicitNode !== undefined ? nextExplicitNode : inspectorNode;
 
     if (site) query.site = site;
     if (participant) query.participant = participant;
@@ -503,12 +526,34 @@ export function resolveActiveWorkspaceScope(
     activeStudyId?: string;
     activeSiteId?: string;
     activeSubjectId?: string;
+    subjects?: ReadonlyArray<{
+      id?: string;
+      recordId?: string;
+      siteId?: string;
+      site_id?: string;
+    }>;
   } | null
 ): WorkspaceScopeSnapshot {
   const effectiveClinical =
     clinicalStore !== undefined
       ? clinicalStore
       : readInstantiatedClinicalScope();
+  const clinicalSubjects =
+    clinicalStore?.subjects ??
+    (
+      getActivePinia()?.state.value as
+        | {
+            clinicalScope?: {
+              subjects?: ReadonlyArray<{
+                id?: string;
+                recordId?: string;
+                siteId?: string;
+                site_id?: string;
+              }>;
+            };
+          }
+        | undefined
+    )?.clinicalScope?.subjects;
   const allowClinicalFallback = Boolean(effectiveClinical);
   const routeParamStudy = cleanQueryString(route?.params?.studyCode);
   const routeQueryStudy =
@@ -529,22 +574,46 @@ export function resolveActiveWorkspaceScope(
   const routeSite =
     cleanQueryString(route?.query?.site) ||
     cleanQueryString(route?.query?.siteId);
+  const extractedRouteParticipantNode =
+    extractParticipantNodeFromQueryValue(route?.query?.participant) ??
+    extractParticipantNodeFromQueryValue(route?.query?.node);
+  const matchedClinicalSubject =
+    extractedRouteParticipantNode && Array.isArray(clinicalSubjects)
+      ? clinicalSubjects.find(
+          (item) => item?.recordId === extractedRouteParticipantNode.id
+        )
+      : undefined;
+  const matchedDemoParticipant =
+    isDemoBuild() &&
+    extractedRouteParticipantNode &&
+    studyCode === DEMO_STUDY.code
+      ? DEMO_PARTICIPANTS.find(
+          (item) =>
+            item.enrollmentUuid === extractedRouteParticipantNode.id ||
+            item.participantUuid === extractedRouteParticipantNode.id
+        )
+      : undefined;
 
   let participantSite = "";
   if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
-    const extractedNode =
-      extractParticipantNodeFromQueryValue(route?.query?.participant) ??
-      extractParticipantNodeFromQueryValue(route?.query?.node);
-    if (extractedNode?.kind === "enrollment") {
+    if (extractedRouteParticipantNode?.kind === "enrollment") {
       const known =
-        canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
-        canvasStore.knownParticipants?.[extractedNode.id];
+        canvasStore.knownParticipantsByEnrollmentId?.[
+          extractedRouteParticipantNode.id
+        ] ?? canvasStore.knownParticipants?.[extractedRouteParticipantNode.id];
       participantSite = cleanQueryString(known?.site_id);
-    } else if (extractedNode?.kind === "participant") {
+    } else if (extractedRouteParticipantNode?.kind === "participant") {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[extractedNode.id]?.site_id
+        canvasStore.knownParticipants?.[extractedRouteParticipantNode.id]
+          ?.site_id
       );
     }
+  }
+  if (!routeSite && !participantSite && extractedRouteParticipantNode) {
+    participantSite =
+      cleanQueryString(
+        matchedClinicalSubject?.siteId ?? matchedClinicalSubject?.site_id
+      ) || cleanQueryString(matchedDemoParticipant?.siteCode);
   }
 
   let storeSite = "";
@@ -579,12 +648,21 @@ export function resolveActiveWorkspaceScope(
   const canvasParticipant = canvasStore
     ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
     : { subjectCode: "", participantRef: "", enrollmentId: "" };
+  const resolvedNodeSubjectCode =
+    cleanQueryString(matchedClinicalSubject?.id) ||
+    cleanQueryString(matchedDemoParticipant?.subjectCode);
+  const clinicalSiteId = cleanQueryString(effectiveClinical?.activeSiteId);
+  const siteMatchesClinicalStore =
+    !routeSite || !clinicalSiteId || clinicalSiteId === routeSite;
 
   const subjectCode =
     routeSubject ||
     canvasParticipant.subjectCode ||
+    resolvedNodeSubjectCode ||
     (allowClinicalFallback &&
     !hasExplicitStandaloneStudyQuery &&
+    !extractedRouteParticipantNode &&
+    siteMatchesClinicalStore &&
     studyCode &&
     cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
       ? cleanQueryString(effectiveClinical?.activeSubjectId)
@@ -924,10 +1002,11 @@ export function buildWorkspacePaletteItems(options: {
       ) {
         continue;
       }
-      const routePath =
-        mod.routeName === "observation"
-          ? mod.defaultPath
-          : buildStudyScopedPath(mod.defaultPath, options.activeStudyCode);
+      const routePath = buildScopedWorkflowPath(mod.defaultPath, {
+        studyCode: options.activeStudyCode,
+        siteId: options.activeSiteId,
+        subjectCode: options.activeSubjectCode,
+      });
       items.push({
         key: `preview:${mod.routeName}`,
         group: "Preview",

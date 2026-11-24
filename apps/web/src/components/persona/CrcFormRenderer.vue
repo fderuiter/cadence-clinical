@@ -170,11 +170,16 @@
           </p>
         </div>
         <div v-if="trainingAvailable">
-          <router-link v-slot="{ navigate }" to="/training" custom>
+          <router-link
+            v-slot="{ href, navigate }"
+            :to="trainingLocation"
+            custom
+          >
             <button
               id="btn-complete-training"
               type="button"
               class="btn btn-primary"
+              :data-href="href || trainingLocation"
               style="
                 background-color: var(--semantic-color-warning-action);
                 color: white;
@@ -934,6 +939,7 @@
 import { computed, reactive, ref } from "vue";
 import { ClinicalFormField, ClinicalModal } from "ui";
 import { isScreenAvailable } from "../../router/availability.js";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { useClinicalStore } from "../../stores/clinical";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
@@ -1007,6 +1013,35 @@ const currentStore = computed(() => props.store || clinicalStore);
 const activeSubject = computed(() => {
   const list = currentStore.value?.subjects || [];
   return list.find((s) => s.id === props.selectedSubjectId);
+});
+
+const { workspaceScope, scopedWorkflowPath } = useScopedNavigation();
+
+const trainingLocation = computed(() => {
+  const studyCode =
+    workspaceScope.value.studyCode ||
+    (typeof currentStore.value?.activeStudyId === "string"
+      ? currentStore.value.activeStudyId.trim()
+      : "");
+  const siteId =
+    workspaceScope.value.siteId ||
+    (typeof activeSubject.value?.siteId === "string"
+      ? activeSubject.value.siteId.trim()
+      : "") ||
+    (typeof currentStore.value?.activeSiteId === "string"
+      ? currentStore.value.activeSiteId.trim()
+      : "");
+  const selectedSubject =
+    typeof props.selectedSubjectId === "string" &&
+    !props.selectedSubjectId.includes(":")
+      ? props.selectedSubjectId.trim()
+      : "";
+  const subjectCode = selectedSubject || workspaceScope.value.subjectCode || "";
+  return scopedWorkflowPath("/training", {
+    studyCode,
+    siteId,
+    subjectCode,
+  });
 });
 
 const activeSubjectVersion = computed(() => {

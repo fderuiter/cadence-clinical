@@ -95,6 +95,7 @@ import {
 } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -105,6 +106,7 @@ import AiLabel from "./AiLabel.vue";
  * Findings, signals and the other attention items join it as their kernel reads arrive.
  */
 const props = defineProps<{ studyCode: string }>();
+const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
 
 const LIMIT = 20;
 
@@ -180,11 +182,7 @@ const statusLine = computed(() => {
 });
 
 function reviewLocation(ref: string): RouteLocationRaw {
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: { proposal: ref },
-  };
+  return scopedStudyLocation({ proposal: ref });
 }
 
 function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
@@ -196,17 +194,13 @@ function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
     finding.target_kind === "Observation"
       ? observationNodeRef(finding.record_key)
       : null;
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: {
-      stage: "data",
-      section: "validation",
-      ...(formRef ? { form: formRef } : {}),
-      ...(formRef && finding.variable ? { item: finding.variable } : {}),
-      ...(obsRef ? { observation: obsRef } : {}),
-    },
-  };
+  return scopedStudyLocation({
+    stage: "data",
+    section: "validation",
+    ...(formRef ? { form: formRef } : {}),
+    ...(formRef && finding.variable ? { item: finding.variable } : {}),
+    ...(obsRef ? { observation: obsRef } : {}),
+  });
 }
 
 function when(value: string): string {

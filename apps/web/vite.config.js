@@ -189,6 +189,13 @@ export default defineConfig({
               ) {
                 return "ui-shell";
               }
+              if (
+                /\/apps\/web\/src\/canvas\/(?:(?:lifecycle|nodeRef)\.ts|generated\/(?:nodeKinds|participantContracts)\.ts|stages\/(?:analyze|conduct|data|design|index|participants|start|submit)\.ts)(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "canvas-core";
+              }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
               }
@@ -202,15 +209,14 @@ export default defineConfig({
                 pkgPath.startsWith("vue/") ||
                 pkgPath.startsWith("@vue/") ||
                 pkgPath.startsWith("vue-router/") ||
-                pkgPath.startsWith("pinia/")
+                pkgPath.startsWith("pinia/") ||
+                pkgPath.startsWith("vue-i18n/") ||
+                pkgPath.startsWith("@intlify/")
               ) {
                 return "vendor-vue";
               }
               if (pkgPath.startsWith("hls.js/")) {
                 return "vendor-media";
-              }
-              if (pkgPath.startsWith("keycloak-js/")) {
-                return "vendor-auth";
               }
               if (
                 pkgPath.startsWith("vuedraggable/") ||
@@ -219,11 +225,10 @@ export default defineConfig({
                 return "vendor-vuedraggable";
               }
               if (
-                pkgPath.startsWith("vue-i18n/") ||
-                pkgPath.startsWith("@intlify/") ||
+                pkgPath.startsWith("keycloak-js/") ||
                 pkgPath.startsWith("openapi-fetch/")
               ) {
-                return "vendor";
+                return "vendor-auth";
               }
               return undefined;
             },
