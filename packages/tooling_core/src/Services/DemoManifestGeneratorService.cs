@@ -116,7 +116,7 @@ public static partial class DemoManifestGeneratorService
         "email",
         "firstName",
         "lastName",
-        "tenantId",
+        "tenantCode",
         "role",
         "site",
         "workflow",
@@ -626,7 +626,7 @@ public static partial class DemoManifestGeneratorService
                 string.IsNullOrWhiteSpace(rawUser.Email) ||
                 string.IsNullOrWhiteSpace(rawUser.FirstName) ||
                 string.IsNullOrWhiteSpace(rawUser.LastName) ||
-                string.IsNullOrWhiteSpace(rawUser.TenantId) ||
+                string.IsNullOrWhiteSpace(rawUser.TenantCode) ||
                 string.IsNullOrWhiteSpace(roleCode) ||
                 string.IsNullOrWhiteSpace(rawUser.Workflow) ||
                 string.IsNullOrWhiteSpace(rawUser.WorkspacePersona) ||
@@ -679,8 +679,8 @@ public static partial class DemoManifestGeneratorService
             if (!string.Equals(realmUser.Email, rawUser.Email, StringComparison.Ordinal) ||
                 !string.Equals(realmUser.FirstName, rawUser.FirstName, StringComparison.Ordinal) ||
                 !string.Equals(realmUser.LastName, rawUser.LastName, StringComparison.Ordinal) ||
-                !string.Equals(realmUser.TenantCode, rawUser.TenantId, StringComparison.Ordinal) ||
-                !string.Equals(tenantCode, rawUser.TenantId, StringComparison.Ordinal))
+                !string.Equals(realmUser.TenantCode, rawUser.TenantCode, StringComparison.Ordinal) ||
+                !string.Equals(tenantCode, rawUser.TenantCode, StringComparison.Ordinal))
             {
                 issues.Add(
                     $"Identity attribute mismatch for '{username}' between '{DemoSeedRelativePath}' and '{RealmRelativePath}'.");
@@ -718,7 +718,7 @@ public static partial class DemoManifestGeneratorService
                 Email: rawUser.Email,
                 FirstName: rawUser.FirstName,
                 LastName: rawUser.LastName,
-                TenantCode: rawUser.TenantId,
+                TenantCode: rawUser.TenantCode,
                 KernelRoleCode: roleCode,
                 Workflow: rawUser.Workflow,
                 WorkspacePersona: rawUser.WorkspacePersona,
@@ -989,7 +989,7 @@ public static partial class DemoManifestGeneratorService
         string Email,
         string FirstName,
         string LastName,
-        string TenantId,
+        string TenantCode,
         string Role,
         string? Site,
         string Workflow,

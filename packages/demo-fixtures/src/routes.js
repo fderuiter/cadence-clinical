@@ -126,7 +126,9 @@ export function parseDemoReceiptContent(body = {}, options = {}) {
       : typeof body?.raw_text === "string" && body.raw_text.trim()
         ? body.raw_text.trim()
         : "";
-  const rawInput = explicitText || decodeReceiptBase64ToText(imagePayload);
+  const rawInput = imagePayload
+    ? decodeReceiptBase64ToText(imagePayload)
+    : explicitText;
 
   if (!rawInput || rawInput.replace(/[^a-zA-Z0-9]/g, "").length < 3) {
     const emptyCategory = fallbackOnPlainText ? "OTHER" : "";
@@ -291,7 +293,11 @@ export function parseDemoReceiptContent(body = {}, options = {}) {
   const netAmount = Number((grossAmount - taxDeduction).toFixed(2));
 
   let ocrToken = null;
-  if (issueToken && (receiptSha256 || fallbackOnPlainText)) {
+  if (
+    issueToken &&
+    ocrReadable &&
+    ((receiptSha256 && !explicitText) || fallbackOnPlainText)
+  ) {
     ocrToken = `${tokenPrefix}${nextTimestampMs()}`;
     if (receiptSha256 && tokenStore?.ocrTokens) {
       tokenStore.ocrTokens.set(ocrToken, {

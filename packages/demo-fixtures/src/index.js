@@ -212,7 +212,7 @@ function buildDemoPersonas(tenantCode, tenantUuid, rawUsers) {
         email: rawUser.email,
         firstName: rawUser.firstName,
         lastName: rawUser.lastName,
-        tenantId: rawUser.tenantId || tenantCode,
+        tenantId: rawUser.tenantCode || rawUser.tenantId || tenantCode,
         kernelRole: rawUser.role,
         workflow: rawUser.workflow,
         workspacePersona: rawUser.workspacePersona,

@@ -910,7 +910,7 @@ internal sealed record DevelopmentDemoUserSeed(
     string Email,
     string FirstName,
     string LastName,
-    string TenantId,
+    string TenantCode,
     string Role,
     string? Site,
     string Workflow,

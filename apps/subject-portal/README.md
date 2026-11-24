@@ -47,7 +47,7 @@ Run from the repository root with pnpm:
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm --filter subject-portal dev`        | Vite dev server on `http://localhost:5174/subject-portal/`.                                                                |
 | `pnpm --filter subject-portal dev:demo`   | Vite dev server in explicit `demo` mode with synthetic study data.                                                         |
-| `pnpm --filter subject-portal build`      | Production build. Build `ui` first (`pnpm --filter ui build`).                                                             |
+| `pnpm --filter subject-portal build`      | Production build (`ui` resolves directly from workspace source).                                                           |
 | `pnpm --filter subject-portal build:demo` | Demo build (`--mode demo`) with explicit synthetic data banner.                                                            |
 | `pnpm --filter subject-portal test`       | Vitest with coverage (80% thresholds on `src/sync-queue.js`).                                                              |
 | `pnpm --filter subject-portal test:e2e`   | Playwright (accessibility, PIN recovery, and `/cadence-clinical/subject-portal/` staged subpath worker + chunking checks). |

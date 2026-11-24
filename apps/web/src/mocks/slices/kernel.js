@@ -547,7 +547,7 @@ export function createKernelSliceStore(ctx) {
         PROPOSAL_1_REF,
         {
           ref: PROPOSAL_1_REF,
-          study: STUDY_REF,
+          study: canonicalStudyEntry.ref,
           intent: "Extend Week 4 visit window from +/-2 days to +/-3 days",
           plan: {
             ref: "plan:00000000-0000-0000-0000-000000004101", // deid-ignore
@@ -561,15 +561,17 @@ export function createKernelSliceStore(ctx) {
           simulated_impact:
             "2 scheduled visit windows updated; 0 re-consents required.",
           requested_capabilities: ["protocol.amend"],
-          proposed_at: "2026-08-03T10:00:00Z", // deid-ignore
-          expires_at: "2026-09-03T10:00:00Z", // deid-ignore
-          proposed_by: "usr-designer-01",
-          proposed_by_kind: "human",
-          requested_by: "usr-designer-01",
-          model_id: null,
-          confidence_score: null,
+          proposed_at: demoNowIso(),
+          expires_at: demoNowIso(30, 86_400_000),
+          proposed_by: "agent:protocol-visit-window",
+          proposed_by_kind: "AutomationAgent",
+          requested_by:
+            getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+            "designer_demo",
+          model_id: "cadence-protocol-guardian-1.2",
+          confidence_score: 0.89,
           content_hash: "sha256-demo-prop-4001",
-          status: "PENDING",
+          status: "Open",
           decided_at: null,
           decided_by: null,
           approval_attestation: null,
@@ -939,6 +941,44 @@ export function createKernelSliceStore(ctx) {
           status: "PUBLISHED",
           mask: null,
         };
+      }
+      if (String(nodeRef).startsWith("plan:")) {
+        const unversionedPlan = String(nodeRef).split("@")[0];
+        const matchingProposal = [...state.proposals.values()].find(
+          (p) => String(p.plan?.ref || "").split("@")[0] === unversionedPlan
+        );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "plan",
+            title:
+              matchingProposal?.plan?.title ||
+              "Protocol Amendment 2 Visit Window Adjustment",
+            code: `v${matchingProposal?.plan?.number ?? 2}`,
+            status: "PROPOSED",
+            mask: null,
+          },
+          caller
+        );
+      }
+      if (String(nodeRef).startsWith("proposal:")) {
+        const unversionedProp = String(nodeRef).split("@")[0];
+        const matchingProposal =
+          state.proposals.get(unversionedProp) ||
+          [...state.proposals.values()].find(
+            (p) => String(p.ref || "").split("@")[0] === unversionedProp
+          );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "proposal",
+            title: matchingProposal?.intent || "Protocol Amendment Proposal",
+            code: String(unversionedProp).split(":")[1]?.slice(-4) || "4001",
+            status: matchingProposal?.status || "Open",
+            mask: null,
+          },
+          caller
+        );
       }
       if (String(nodeRef).startsWith("study_site:")) {
         const siteCode = resolveSiteCodeFromRef(
@@ -2017,30 +2057,64 @@ export function createKernelSliceStore(ctx) {
       };
     },
 
-    listProposals() {
-      return cloneJson([...state.proposals.values()]);
+    listProposals({ status, limit } = {}) {
+      let items = [...state.proposals.values()];
+      const normalizedStatus = String(status || "")
+        .trim()
+        .toLowerCase();
+      if (normalizedStatus) {
+        items = items.filter(
+          (item) =>
+            String(item.status || "")
+              .trim()
+              .toLowerCase() === normalizedStatus
+        );
+      }
+      const maxItems = Number(limit);
+      if (Number.isFinite(maxItems) && maxItems > 0) {
+        items = items.slice(0, maxItems);
+      }
+      return cloneJson(items);
     },
 
     getProposal(proposalRef) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       return cloneJson(
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0]
+        state.proposals.get(cleanRef) ||
+          state.proposals.get(proposalRef) ||
+          [...state.proposals.values()][0]
       );
     },
 
-    rejectProposal(proposalRef, reason = "Rejected in demo review") {
+    rejectProposal(
+      proposalRef,
+      reason = "Rejected in demo review",
+      caller = null
+    ) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       const existing =
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0];
-      const now = new Date().toISOString();
-      existing.status = "REJECTED";
+        state.proposals.get(cleanRef) ||
+        state.proposals.get(proposalRef) ||
+        [...state.proposals.values()][0];
+      const now = demoNowIso(nextCounter());
+      const personaUsername = caller?.persona
+        ? getDemoPersonaForWorkspace(caller.persona)?.username
+        : null;
+      const actor =
+        personaUsername ||
+        caller?.userId ||
+        getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+        "designer_demo";
+      existing.status = "Rejected";
       existing.decided_at = now;
-      existing.decided_by = "usr-demo-operator";
+      existing.decided_by = actor;
       existing.decision_reason = reason;
       recordActivity(
         "proposal.rejected",
         "governance",
         "proposal",
         existing.ref,
-        "usr-demo-operator"
+        actor
       );
       return {
         ref: existing.ref,
@@ -3218,9 +3292,15 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
         });
       }
     ),
-    http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
-      HttpResponse.json(store.listProposals())
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/proposals", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listProposals({
+          status: url.searchParams.get("status") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        })
+      );
+    }),
     http.get("*/api/v1/kernel/studies/:studyRef/rule-packs", ({ params }) =>
       HttpResponse.json(
         store.listStudyRulePacks(decodeURIComponent(String(params.studyRef)))
@@ -3451,13 +3531,21 @@ export function createKernelSliceHandlers(store, { http, HttpResponse }) {
     ),
     http.post(
       "*/api/v1/kernel/proposals/:proposalRef/rejection",
-      ({ params, request }) =>
-        HttpResponse.json(
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const caller = resolveDemoCaller(request);
+        const reason =
+          readRequiredReasonHeader(request) ||
+          (typeof body?.reason === "string" ? body.reason.trim() : "") ||
+          decodeReasonHeader(request);
+        return HttpResponse.json(
           store.rejectProposal(
             decodeURIComponent(String(params.proposalRef)),
-            decodeReasonHeader(request)
+            reason,
+            caller
           )
-        )
+        );
+      }
     ),
     http.get("*/api/v1/kernel/activity", ({ request }) => {
       const url = new URL(request.url);
