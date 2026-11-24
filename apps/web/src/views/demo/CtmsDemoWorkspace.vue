@@ -879,7 +879,7 @@
             class="btn btn-primary"
             style="
               background: var(--semantic-color-primary-dark);
-              color: var(--semantic-color-text-on-solid);
+              color: var(--semantic-color-text-on-primary);
             "
             :disabled="!siteId.trim()"
             @click="exportDoaPdf"
@@ -4666,7 +4666,7 @@ defineExpose({
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
   color: var(--semantic-color-text-dark);
 }
@@ -4677,7 +4677,7 @@ defineExpose({
   font-weight: 600;
   font-size: 16px;
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
 }
 
 .modal-body {
@@ -4706,7 +4706,8 @@ textarea {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 13px;
-  background: white;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   box-sizing: border-box;
 }
 
@@ -4746,7 +4747,8 @@ textarea {
 
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
-  background: white;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary {
@@ -4757,7 +4759,7 @@ textarea {
 
 .btn-primary {
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
   border: none;
 }
 

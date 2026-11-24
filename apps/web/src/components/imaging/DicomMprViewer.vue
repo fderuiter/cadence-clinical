@@ -229,6 +229,10 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from "vue";
+import {
+  observeActiveThemeChanges,
+  resolveThemeToken,
+} from "../../utils/themeColorResolver";
 
 const props = defineProps({
   seriesUid: {
@@ -513,8 +517,58 @@ function renderViewport(canvas, plane, sliceVal) {
   const w = canvas.width;
   const h = canvas.height;
 
+  const inverseTextColor = resolveThemeToken(
+    "--semantic-color-text-inverse",
+    canvas
+  );
+  const sunkenSurfaceColor = resolveThemeToken(
+    "--semantic-color-surface-sunken",
+    canvas
+  );
+  const inverseSurfaceColor = resolveThemeToken(
+    "--semantic-color-surface-inverse",
+    canvas
+  );
+  const elevatedSurfaceColor = resolveThemeToken(
+    "--semantic-color-surface-elevated",
+    canvas
+  );
+  const controlBorderColor = resolveThemeToken(
+    "--color-border-control",
+    canvas
+  );
+  const inverseMutedTextColor = resolveThemeToken(
+    "--semantic-color-text-inverse-muted",
+    canvas
+  );
+  const imagingHighlightColor = resolveThemeToken(
+    "--semantic-color-imaging-highlight",
+    canvas
+  );
+  const subtleTextColor = resolveThemeToken(
+    "--semantic-color-text-subtle",
+    canvas
+  );
+  const inverseBorderColor = resolveThemeToken(
+    "--semantic-color-border-inverse",
+    canvas
+  );
+  const accentOverlayColor = resolveThemeToken(
+    "--semantic-color-accent-inverse",
+    canvas
+  );
+  const manualContourColor = resolveThemeToken(
+    "--semantic-color-emerald-inverse-border",
+    canvas
+  );
+  const perpendicularCaliperColor = resolveThemeToken(
+    "--semantic-badge-queried-border",
+    canvas
+  );
+  const newLesionColor = resolveThemeToken("--semantic-color-error", canvas);
+
   // Background
-  ctx.fillStyle = isInverted.value ? "#ffffff" : "#0a0f1d";
+  ctx.fillStyle = isInverted.value ? inverseTextColor : sunkenSurfaceColor;
   ctx.fillRect(0, 0, w, h);
 
   // Draw simulated anatomical structure (e.g. Thorax / Liver / Lesion)
@@ -530,15 +584,15 @@ function renderViewport(canvas, plane, sliceVal) {
   );
 
   if (isInverted.value) {
-    grad.addColorStop(0, "#1e293b");
-    grad.addColorStop(0.4, "#64748b");
-    grad.addColorStop(0.8, "#cbd5e1");
-    grad.addColorStop(1, "#f8fafc");
+    grad.addColorStop(0, elevatedSurfaceColor);
+    grad.addColorStop(0.4, controlBorderColor);
+    grad.addColorStop(0.8, inverseMutedTextColor);
+    grad.addColorStop(1, imagingHighlightColor);
   } else {
-    grad.addColorStop(0, "#f8fafc");
-    grad.addColorStop(0.3, "#94a3b8");
-    grad.addColorStop(0.7, "#334155");
-    grad.addColorStop(1, "#0f172a");
+    grad.addColorStop(0, imagingHighlightColor);
+    grad.addColorStop(0.3, subtleTextColor);
+    grad.addColorStop(0.7, inverseBorderColor);
+    grad.addColorStop(1, inverseSurfaceColor);
   }
 
   ctx.fillStyle = grad;
@@ -553,7 +607,7 @@ function renderViewport(canvas, plane, sliceVal) {
   ctx.fill();
 
   // Draw simulated target tumor lesion in center-right quadrant
-  ctx.fillStyle = isInverted.value ? "#0f172a" : "#ffffff";
+  ctx.fillStyle = isInverted.value ? inverseSurfaceColor : inverseTextColor;
   ctx.beginPath();
   const tumorX = centerX + 40;
   const tumorY = centerY - 20;
@@ -563,8 +617,10 @@ function renderViewport(canvas, plane, sliceVal) {
 
   // Render crosshairs
   if (isCrosshairEnabled.value) {
+    ctx.save();
+    ctx.globalAlpha = 0.65;
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.65)"; // Sky blue crosshairs
+    ctx.strokeStyle = accentOverlayColor;
     ctx.setLineDash([4, 4]);
 
     const crossX = (sagittalSlice.value / 512) * w;
@@ -577,21 +633,20 @@ function renderViewport(canvas, plane, sliceVal) {
     ctx.lineTo(w, crossY);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.restore();
   }
 
   // Render active annotations for this slice
   props.activeAnnotations.forEach((annot, idx) => {
     if (annot.points && annot.points.length > 2) {
       // Polygon contour overlay (AI auto-segment contour or manual polygon)
+      const isAiContour =
+        annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted;
+      const contourColor = isAiContour
+        ? accentOverlayColor
+        : manualContourColor;
       ctx.lineWidth = 2;
-      ctx.strokeStyle =
-        annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted
-          ? "#38bdf8"
-          : "#10b981";
-      ctx.fillStyle =
-        annot.measurement_type === "AI_AUTO_CONTOUR" || annot.is_ai_assisted
-          ? "rgba(56, 189, 248, 0.22)"
-          : "rgba(16, 185, 129, 0.15)";
+      ctx.strokeStyle = contourColor;
 
       ctx.beginPath();
       ctx.moveTo(annot.points[0].x, annot.points[0].y);
@@ -599,7 +654,11 @@ function renderViewport(canvas, plane, sliceVal) {
         ctx.lineTo(annot.points[i].x, annot.points[i].y);
       }
       ctx.closePath();
+      ctx.save();
+      ctx.globalAlpha = isAiContour ? 0.22 : 0.15;
+      ctx.fillStyle = contourColor;
       ctx.fill();
+      ctx.restore();
       ctx.stroke();
 
       // Fitted caliper lines
@@ -611,7 +670,9 @@ function renderViewport(canvas, plane, sliceVal) {
           if (sp && ep) {
             ctx.lineWidth = 2;
             ctx.strokeStyle =
-              type === "PERPENDICULAR_DIAMETER" ? "#f59e0b" : "#38bdf8";
+              type === "PERPENDICULAR_DIAMETER"
+                ? perpendicularCaliperColor
+                : accentOverlayColor;
             if (type === "PERPENDICULAR_DIAMETER") {
               ctx.setLineDash([4, 3]);
             }
@@ -625,7 +686,7 @@ function renderViewport(canvas, plane, sliceVal) {
       } else if (annot.points.length >= 2) {
         const midIdx = Math.floor(annot.points.length / 2);
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "#38bdf8";
+        ctx.strokeStyle = accentOverlayColor;
         ctx.beginPath();
         ctx.moveTo(annot.points[0].x, annot.points[0].y);
         ctx.lineTo(annot.points[midIdx].x, annot.points[midIdx].y);
@@ -633,28 +694,30 @@ function renderViewport(canvas, plane, sliceVal) {
       }
 
       // Contour overlay label
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = accentOverlayColor;
       ctx.font = "bold 11px sans-serif";
-      const labelText = `🤖 ${annot.lesion_id || "TL" + (idx + 1)}: ${annot.longest_diameter_mm}mm (AI)`;
+      const labelText = `${annot.lesion_id || "TL" + (idx + 1)}: ${annot.longest_diameter_mm}mm (AI)`;
       ctx.fillText(labelText, annot.points[0].x, annot.points[0].y - 8);
     } else if (annot.points && annot.points.length === 2) {
       ctx.lineWidth = 2;
       ctx.strokeStyle =
-        annot.lesion_type === "NEW_LESION" ? "#ef4444" : "#10b981";
+        annot.lesion_type === "NEW_LESION"
+          ? newLesionColor
+          : manualContourColor;
       ctx.beginPath();
       ctx.moveTo(annot.points[0].x, annot.points[0].y);
       ctx.lineTo(annot.points[1].x, annot.points[1].y);
       ctx.stroke();
 
       // Caliper end ticks
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = inverseTextColor;
       ctx.beginPath();
       ctx.arc(annot.points[0].x, annot.points[0].y, 3, 0, Math.PI * 2);
       ctx.arc(annot.points[1].x, annot.points[1].y, 3, 0, Math.PI * 2);
       ctx.fill();
 
       // Label
-      ctx.fillStyle = "#38bdf8";
+      ctx.fillStyle = accentOverlayColor;
       ctx.font = "bold 11px sans-serif";
       const midX = (annot.points[0].x + annot.points[1].x) / 2;
       const midY = (annot.points[0].y + annot.points[1].y) / 2 - 8;
@@ -687,13 +750,22 @@ watch(
   }
 );
 
+let stopThemeObserver = null;
+
 onMounted(() => {
   renderAllViewports();
+  stopThemeObserver = observeActiveThemeChanges(() => {
+    renderAllViewports();
+  });
 });
 
 onUnmounted(() => {
   if (cineInterval) {
     clearInterval(cineInterval);
+  }
+  if (stopThemeObserver) {
+    stopThemeObserver();
+    stopThemeObserver = null;
   }
 });
 </script>
@@ -733,9 +805,9 @@ onUnmounted(() => {
 .timepoint-tag {
   font-size: 0.72rem;
   font-weight: 600;
-  background-color: rgba(56, 189, 248, 0.15);
+  background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid var(--semantic-color-border-inverse);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -751,15 +823,15 @@ onUnmounted(() => {
 }
 
 .sync-status-badge.synced {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: var(--semantic-color-emerald-inverse-bg);
   color: var(--semantic-color-emerald-inverse-text);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid var(--semantic-color-emerald-inverse-border);
 }
 
 .sync-status-badge.unlinked {
-  background-color: rgba(251, 146, 60, 0.15);
-  color: var(--semantic-color-orange-text);
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  background-color: var(--semantic-badge-warning-bg);
+  color: var(--semantic-badge-warning-text);
+  border: 1px solid var(--semantic-badge-warning-border);
 }
 
 .mpr-toolbar {
@@ -825,7 +897,7 @@ onUnmounted(() => {
 .toolbar-btn.active {
   background-color: var(--semantic-color-primary);
   border-color: var(--semantic-color-accent-inverse);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .cine-speed-label {
@@ -876,21 +948,21 @@ onUnmounted(() => {
 }
 
 .axial-badge {
-  background-color: rgba(56, 189, 248, 0.2);
+  background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  border: 1px solid var(--semantic-color-border-inverse);
 }
 
 .sagittal-badge {
-  background-color: rgba(52, 211, 153, 0.2);
+  background-color: var(--semantic-color-emerald-inverse-bg);
   color: var(--semantic-color-emerald-inverse-text);
-  border: 1px solid rgba(52, 211, 153, 0.4);
+  border: 1px solid var(--semantic-color-emerald-inverse-border);
 }
 
 .coronal-badge {
-  background-color: rgba(251, 191, 36, 0.2);
-  color: var(--semantic-color-warning);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  background-color: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border: 1px solid var(--semantic-badge-queried-border);
 }
 
 .slice-loc-label {

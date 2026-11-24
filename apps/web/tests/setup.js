@@ -1,8 +1,27 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach, vi, expect } from "vitest";
 import { config } from "@vue/test-utils";
 import { toBeAccessible } from "ui/vitest";
 import * as usdmSchemas from "usdm-schemas";
 import { i18n } from "../src/i18n/index.js";
+
+const setupDir = path.dirname(fileURLToPath(import.meta.url));
+const sharedTokensCssPath = path.resolve(
+  setupDir,
+  "../../../packages/ui/tokens.css"
+);
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById("cadence-shared-ui-tokens") &&
+  fs.existsSync(sharedTokensCssPath)
+) {
+  const styleEl = document.createElement("style");
+  styleEl.id = "cadence-shared-ui-tokens";
+  styleEl.textContent = fs.readFileSync(sharedTokensCssPath, "utf8");
+  document.head.appendChild(styleEl);
+}
 
 globalThis.__CADENCE_USDM_SCHEMAS__ = usdmSchemas;
 

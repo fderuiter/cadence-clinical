@@ -8,7 +8,7 @@
           class="badge"
           style="
             background-color: var(--accent);
-            color: white;
+            color: var(--semantic-color-text-on-accent);
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
@@ -176,7 +176,7 @@
                 font-size: 0.9rem;
                 font-weight: 700;
                 margin-bottom: 8px;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               {{ $t("ecrf.validationRulesTitle") }}
@@ -211,7 +211,7 @@
                 font-size: 0.9rem;
                 font-weight: 700;
                 margin-bottom: 8px;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               {{ $t("ecrf.queryManagementTitle") }}

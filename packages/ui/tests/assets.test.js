@@ -412,6 +412,191 @@ describe("CSS Assets and Package Exports", () => {
       }
     });
 
+    it("maintains 1:1 parity across :root, :root[data-theme='dark'], and :root[data-theme='auto'] for all non-inverse color, badge, backdrop, watermark, and shadow tokens (ADR-2675)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      function extractRawBlockMap(headerRegex) {
+        const headerMatch = tokensContent.match(headerRegex);
+        expect(headerMatch, `Missing block ${headerRegex}`).not.toBeNull();
+        const startBrace = tokensContent.indexOf("{", headerMatch.index);
+        let depth = 0;
+        let endBrace = startBrace;
+        for (let i = startBrace; i < tokensContent.length; i++) {
+          if (tokensContent[i] === "{") depth++;
+          else if (tokensContent[i] === "}") {
+            depth--;
+            if (depth === 0) {
+              endBrace = i;
+              break;
+            }
+          }
+        }
+        const cleanBody = tokensContent
+          .slice(startBrace + 1, endBrace)
+          .replace(/\/\*[\s\S]*?\*\//g, "");
+        const map = new Map();
+        for (const decl of cleanBody.matchAll(
+          /(--[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g
+        )) {
+          map.set(decl[1], decl[2].trim());
+        }
+        return map;
+      }
+
+      const rootRaw = extractRawBlockMap(/:root\s*\{/);
+      const darkRaw = extractRawBlockMap(/:root\[data-theme="dark"\][^{]*\{/);
+      const autoRaw = extractRawBlockMap(/:root\[data-theme="auto"\]\s*\{/);
+
+      // Exact 1:1 key & value parity between explicit dark and system-auto dark blocks
+      expect([...darkRaw.keys()].sort()).toEqual([...autoRaw.keys()].sort());
+      for (const [key, darkVal] of darkRaw.entries()) {
+        expect(autoRaw.get(key), `Auto mismatch for ${key}`).toBe(darkVal);
+      }
+
+      // Every non-inverse color, badge, watermark, shadow, and color-alias token in :root must have dark & auto overrides
+      const invariantPrefixes = [
+        "--radius-",
+        "--spacing-",
+        "--font-",
+        "--breakpoint-",
+        "--touch-target-",
+        "--control-target-",
+        "--drawer-width-",
+        "--semantic-radius-",
+        "--semantic-border-radius-",
+        "--semantic-font-",
+        "--semantic-spacing-",
+        "--semantic-touch-target-",
+        "--semantic-control-target-",
+        "--semantic-drawer-width-",
+        "--semantic-shadow-sm",
+        "--semantic-shadow-xl",
+        "--transition-",
+      ];
+
+      const unmappedDarkTokens = [];
+      for (const key of rootRaw.keys()) {
+        if (key === "--font") continue;
+        if (invariantPrefixes.some((p) => key.startsWith(p))) continue;
+        if (key.includes("-inverse") && !key.includes("-inverse-tint")) {
+          continue;
+        }
+        if (!darkRaw.has(key) || !autoRaw.has(key)) {
+          unmappedDarkTokens.push(key);
+        }
+      }
+      expect(unmappedDarkTokens).toEqual([]);
+    });
+
+    it("delivers >= 4.5:1 dark-mode text, badge, and solid-fill contrast and >= 3:1 dark control border contrast across #0f172a, #1e293b, and #090d16 (ADR-2675)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      const darkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="dark"\][^{]*\{([\s\S]*?)\}/,
+        tokens
+      );
+      const darkSurfaces = ["#0f172a", "#1e293b", "#090d16"];
+
+      const darkTextTokens = [
+        "--semantic-color-text",
+        "--semantic-color-text-dark",
+        "--semantic-color-text-body",
+        "--semantic-color-text-muted",
+        "--semantic-color-text-secondary",
+        "--semantic-color-text-subtle",
+        "--semantic-color-primary",
+        "--semantic-color-primary-dark",
+        "--semantic-color-accent",
+        "--semantic-color-interactive-primary",
+        "--semantic-color-interactive-primary-hover",
+        "--semantic-color-interactive-brand",
+        "--semantic-color-info",
+        "--semantic-color-success",
+        "--semantic-color-success-dark",
+        "--semantic-color-warning",
+        "--semantic-color-warning-text",
+        "--semantic-color-warning-text-dark",
+        "--semantic-color-error",
+        "--semantic-color-error-dark",
+        "--semantic-color-error-text-dark",
+        "--semantic-color-error-text-deep",
+        "--semantic-color-ai",
+        "--semantic-color-ai-dark",
+        "--semantic-color-teal-text",
+        "--semantic-color-indigo-text",
+        "--semantic-color-purple-text",
+        "--semantic-color-orange-text",
+        "--semantic-color-rose-text",
+        "--semantic-color-pink-text",
+      ];
+
+      for (const tokenName of darkTextTokens) {
+        const fgHex = darkTokens.get(tokenName);
+        for (const bgHex of darkSurfaces) {
+          const ratio = contrastRatio(fgHex, bgHex);
+          expect(
+            ratio,
+            `Dark ${tokenName} (${fgHex}) on ${bgHex} achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+
+      const darkBadgeAndFillPairs = [
+        ["--semantic-badge-draft-text", "--semantic-badge-draft-bg"],
+        ["--semantic-badge-verified-text", "--semantic-badge-verified-bg"],
+        ["--semantic-badge-queried-text", "--semantic-badge-queried-bg"],
+        ["--semantic-badge-candidate-text", "--semantic-badge-candidate-bg"],
+        [
+          "--semantic-badge-in-progress-text",
+          "--semantic-badge-in-progress-bg",
+        ],
+        ["--semantic-badge-regulatory-text", "--semantic-badge-regulatory-bg"],
+        ["--semantic-badge-frozen-text", "--semantic-badge-frozen-bg"],
+        ["--semantic-badge-signed-text", "--semantic-badge-signed-bg"],
+        ["--semantic-badge-locked-text", "--semantic-badge-locked-bg"],
+        ["--semantic-badge-warning-text", "--semantic-badge-warning-bg"],
+        ["--semantic-badge-error-text", "--semantic-badge-error-bg"],
+        ["--semantic-color-info", "--semantic-color-info-bg"],
+        ["--semantic-color-info", "--semantic-color-info-bg-soft"],
+        ["--semantic-color-info", "--semantic-color-info-light"],
+        ["--semantic-color-primary", "--semantic-color-primary-light"],
+        ["--semantic-color-text-on-primary", "--semantic-color-primary"],
+        ["--semantic-color-text-on-accent", "--semantic-color-accent"],
+        [
+          "--semantic-color-text-on-solid",
+          "--semantic-color-error-interactive",
+        ],
+        [
+          "--semantic-color-text-on-solid",
+          "--semantic-color-error-interactive-hover",
+        ],
+        [
+          "--semantic-color-text-on-solid",
+          "--semantic-color-success-interactive",
+        ],
+        ["--semantic-color-text-on-solid", "--semantic-color-warning-action"],
+      ];
+
+      for (const [fgToken, bgToken] of darkBadgeAndFillPairs) {
+        const fgHex = darkTokens.get(fgToken);
+        const bgHex = darkTokens.get(bgToken);
+        const ratio = contrastRatio(fgHex, bgHex);
+        expect(
+          ratio,
+          `Dark ${fgToken} (${fgHex}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 4.5:1)`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+
+      const darkControlBorderHex = darkTokens.get(
+        "--semantic-color-border-control"
+      );
+      for (const bgHex of darkSurfaces) {
+        expect(
+          contrastRatio(darkControlBorderHex, bgHex),
+          `Dark --semantic-color-border-control (${darkControlBorderHex}) on ${bgHex}`
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
+
     it("delivers >= 3:1 non-text accent border contrast and >= 4.5:1 text contrast for edited rows and Unsaved badges across light and dark themes (SC 1.4.3 / SC 1.4.11)", () => {
       const tokensContent = fs.readFileSync(tokensPath, "utf-8");
       const darkTokens = parseThemeOverlayTokens(
@@ -543,6 +728,50 @@ describe("CSS Assets and Package Exports", () => {
       const cssRules = cssResult.messages.map((m) => m.ruleId);
       expect(cssRules).toContain("custom-vue/no-inline-hex");
       expect(cssRules).toContain("custom-vue/no-undefined-css-vars");
+    });
+
+    it("rejects <script>, .ts, and CSS rgba()/hsl()/white/black color literals while allowing DOM ID selectors (ADR-2675)", async () => {
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const [scriptVueResult] = await eslint.lintText(
+        `<template>\n  <div id="add-participant-code">{{ label }}</div>\n</template>\n<script setup lang="ts">\nconst label = "Ready";\nconst badHex = "#38bdf8";\nconst badRgba = "rgba(15, 23, 42, 0.5)";\ndocument.querySelector("#add-participant-code");\n</script>\n<style scoped>\n.panel {\n  background: rgba(255, 255, 255, 0.8);\n  color: white;\n}\n</style>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/ScriptColorProbe.vue"
+          ),
+        }
+      );
+      expect(
+        scriptVueResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-inline-hex"
+        )
+      ).toHaveLength(4);
+
+      const [tsResult] = await eslint.lintText(
+        `export const ACCENT = "#026597";\nexport const TINT = "hsl(210, 50%, 40%)";\nexport const SELECTOR = "#btn-submit";\n`,
+        {
+          filePath: path.join(repoRoot, "apps/web/src/utils/colorProbe.ts"),
+        }
+      );
+      expect(
+        tsResult.messages.filter((m) => m.ruleId === "custom-vue/no-inline-hex")
+      ).toHaveLength(2);
+
+      const [cssFnResult] = await eslint.lintText(
+        `.backdrop {\n  background-color: hsla(220, 40%, 10%, 0.6);\n  border-color: black;\n}\n`,
+        {
+          filePath: path.join(repoRoot, "apps/subject-portal/src/probe.css"),
+        }
+      );
+      expect(
+        cssFnResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-inline-hex"
+        )
+      ).toHaveLength(2);
     });
 
     it("rejects synthetic Vue and CSS fixtures with bare outline: none / outline: 0 without :focus-visible while permitting :focus:not(:focus-visible)", async () => {

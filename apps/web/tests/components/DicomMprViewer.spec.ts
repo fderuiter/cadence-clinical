@@ -268,4 +268,111 @@ describe("DicomMprViewer.vue - Mobile Single-Column Vertical Stack and Canvas Sc
     const emittedSync = wrapper.emitted("update:syncedState");
     expect(emittedSync).toBeFalsy();
   });
+
+  it("resolves concrete theme colors for Canvas 2D contexts without passing unresolved var(--...) tokens and updates dynamically when data-theme switches to dark", async () => {
+    const recordedColors: string[] = [];
+    const gradientStops: string[] = [];
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+
+    let currentFillStyle: string | CanvasGradient = "";
+    let currentStrokeStyle: string | CanvasGradient = "";
+
+    const mockCtx = {
+      get fillStyle() {
+        return currentFillStyle;
+      },
+      set fillStyle(val: string | CanvasGradient) {
+        currentFillStyle = val;
+        if (typeof val === "string") {
+          recordedColors.push(val);
+        }
+      },
+      get strokeStyle() {
+        return currentStrokeStyle;
+      },
+      set strokeStyle(val: string | CanvasGradient) {
+        currentStrokeStyle = val;
+        if (typeof val === "string") {
+          recordedColors.push(val);
+        }
+      },
+      lineWidth: 1,
+      globalAlpha: 1,
+      font: "",
+      fillRect: () => {},
+      beginPath: () => {},
+      ellipse: () => {},
+      fill: () => {},
+      arc: () => {},
+      save: () => {},
+      restore: () => {},
+      setLineDash: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      closePath: () => {},
+      stroke: () => {},
+      fillText: () => {},
+      createRadialGradient: () =>
+        ({
+          addColorStop: (_offset: number, color: string) => {
+            gradientStops.push(color);
+            recordedColors.push(color);
+          },
+        }) as unknown as CanvasGradient,
+    } as unknown as CanvasRenderingContext2D;
+
+    HTMLCanvasElement.prototype.getContext = (() =>
+      mockCtx) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+    try {
+      document.documentElement.setAttribute("data-theme", "light");
+      const wrapper = mount(DicomMprViewer, {
+        props: {
+          seriesUid: "1.2.840.113619.2.55.3.200.1",
+          activeAnnotations: [
+            {
+              id: "ann-1",
+              measurement_type: "RECIST_1D",
+              length_mm: 24.5,
+              points: [
+                { x: 90, y: 90 },
+                { x: 140, y: 120 },
+              ],
+            },
+          ],
+        },
+      });
+
+      await wrapper.vm.$nextTick();
+      expect(recordedColors.length).toBeGreaterThan(0);
+      for (const color of recordedColors) {
+        expect(color).not.toContain("var(--");
+        expect(color).toMatch(/^#[0-9a-fA-F]{6}$|^rgba?\(/);
+      }
+      // Light theme resolves --semantic-color-text-subtle (#475569) in anatomical gradient
+      expect(gradientStops).toContain("#475569");
+
+      recordedColors.length = 0;
+      gradientStops.length = 0;
+
+      // Toggle document theme to dark; MutationObserver in DicomMprViewer re-renders viewports
+      document.documentElement.setAttribute("data-theme", "dark");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await wrapper.vm.$nextTick();
+
+      expect(recordedColors.length).toBeGreaterThan(0);
+      for (const color of recordedColors) {
+        expect(color).not.toContain("var(--");
+        expect(color).toMatch(/^#[0-9a-fA-F]{6}$|^rgba?\(/);
+      }
+      // Dark theme resolves --semantic-color-text-subtle (#94a3b8) instead of #475569
+      expect(gradientStops).toContain("#94a3b8");
+      expect(gradientStops).not.toContain("#475569");
+
+      wrapper.unmount();
+    } finally {
+      document.documentElement.removeAttribute("data-theme");
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+  });
 });

@@ -2,7 +2,7 @@
 // inputs, radio grids, visual analog sliders) and their query flag and panel.
 
 const SLIDER_TOUCHED_BADGE_STYLE =
-  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-surface); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
+  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-text-on-primary); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
 const SLIDER_UNTOUCHED_BADGE_STYLE =
   "background: var(--semantic-color-surface); color: var(--semantic-color-text-secondary); border: 1px solid var(--semantic-color-border-control); padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
 

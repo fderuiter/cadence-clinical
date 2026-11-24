@@ -716,7 +716,7 @@ function downloadDefineXml() {
 
 .badge-gxp {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-cdisc {
@@ -1025,7 +1025,7 @@ function downloadDefineXml() {
 
 .vlm-label {
   font-weight: 700;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .vlm-val {

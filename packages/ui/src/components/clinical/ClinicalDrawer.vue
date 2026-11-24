@@ -254,7 +254,7 @@ useFocusTrap(drawerRef, {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--semantic-color-backdrop-soft);
   backdrop-filter: blur(2px);
   z-index: 9999;
   display: flex;
@@ -275,7 +275,7 @@ useFocusTrap(drawerRef, {
   max-width: 100vw;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
-  box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: clinical-drawer-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -288,7 +288,7 @@ useFocusTrap(drawerRef, {
 .clinical-drawer-panel.position-left {
   border-left: none;
   border-right: 1px solid var(--color-border);
-  box-shadow: 8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-drawer-right);
   animation-name: clinical-drawer-slide-in-left;
 }
 
@@ -299,7 +299,7 @@ useFocusTrap(drawerRef, {
   border-left: none;
   border-top: 1px solid var(--color-border);
   border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
-  box-shadow: 0 -8px 24px -4px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-drawer-bottom);
   animation-name: clinical-drawer-slide-in-bottom;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -458,6 +458,7 @@ useFocusTrap(drawerRef, {
     border-right: none;
     border-top: 1px solid var(--color-border);
     border-radius: var(--radius-xl, 16px) var(--radius-xl, 16px) 0 0;
+    box-shadow: var(--shadow-drawer-bottom);
     animation-name: clinical-drawer-slide-in-bottom;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }

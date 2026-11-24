@@ -18,6 +18,11 @@ vi.mock("../../src/api/executionApi", () => ({
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
+    getStudyAttention: vi.fn(async () => ({
+      study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-0000000000a1@2",
+      proposals: [],
+      findings: [],
+    })),
     listProposals: vi.fn(async () => []),
     search: vi.fn(),
     activity: vi.fn(),

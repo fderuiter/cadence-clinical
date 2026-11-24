@@ -836,7 +836,7 @@ function getDocumentCount(node) {
 
 .doc-count-badge {
   background-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-text-on-solid);
+  color: var(--semantic-color-text-on-primary);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 6px;

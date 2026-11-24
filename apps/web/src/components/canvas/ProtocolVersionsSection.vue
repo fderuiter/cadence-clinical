@@ -1241,7 +1241,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   padding: 2px 4px;
   font: inherit;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
   cursor: pointer;
   box-sizing: border-box;
 }

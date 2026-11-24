@@ -473,6 +473,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
 - [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
 - [ADR-2673: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives](2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md) (2026-11-24)
+- [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 

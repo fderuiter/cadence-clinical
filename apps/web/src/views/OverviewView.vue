@@ -981,7 +981,7 @@ function startGuidedTour() {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .welcome-main {
@@ -1002,7 +1002,7 @@ function startGuidedTour() {
 
 .persona-icon-badge {
   font-size: 3rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--semantic-color-inverse-tint);
   padding: 12px;
   border-radius: 12px;
   line-height: 1;
@@ -1034,8 +1034,8 @@ function startGuidedTour() {
 }
 
 .landing-preference-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--semantic-color-inverse-tint);
+  border: 1px solid var(--semantic-color-inverse-tint-strong);
   border-radius: 10px;
   padding: 16px;
   width: 320px;
@@ -1052,7 +1052,7 @@ function startGuidedTour() {
   gap: 8px;
   font-weight: 600;
   font-size: 0.85rem;
-  color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-inverse);
   margin-bottom: 12px;
 }
 
@@ -1077,7 +1077,7 @@ function startGuidedTour() {
 
 .toggle-text {
   font-size: 0.8rem;
-  color: var(--semantic-color-border);
+  color: var(--semantic-color-text-inverse-muted);
   line-height: 1.4;
 }
 
@@ -1087,15 +1087,15 @@ function startGuidedTour() {
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: rgba(56, 189, 248, 0.15);
-  color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: var(--semantic-badge-candidate-bg);
+  color: var(--semantic-badge-candidate-text);
+  border: 1px solid var(--semantic-badge-candidate-border);
 }
 
 .pref-status-badge.is-bypassed {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--semantic-color-warning-border);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border-color: var(--semantic-badge-queried-border);
 }
 
 .overview-plan-banner {
@@ -1109,7 +1109,7 @@ function startGuidedTour() {
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .overview-plan-main {
@@ -1208,7 +1208,7 @@ function startGuidedTour() {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
@@ -1363,7 +1363,7 @@ function startGuidedTour() {
 
 .btn-task-launch:hover {
   background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   border-color: var(--semantic-color-interactive-primary);
 }
 
@@ -1380,7 +1380,7 @@ function startGuidedTour() {
   border-radius: 8px;
   cursor: pointer;
   background: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   border: none;
   transition: background 0.2s ease;
 }
@@ -1411,7 +1411,7 @@ function startGuidedTour() {
 
 .launcher-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   border-color: var(--semantic-color-interactive-primary);
 }
 

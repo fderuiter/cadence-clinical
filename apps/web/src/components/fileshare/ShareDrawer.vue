@@ -700,7 +700,7 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   max-width: 100vw;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--semantic-color-backdrop);
   backdrop-filter: blur(2px);
   z-index: 1000;
   display: flex;
@@ -719,7 +719,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-drawer-left);
   animation: slideInRight 0.25s ease-out;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -757,7 +757,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .drawer-subtitle {
@@ -885,7 +885,7 @@ onUnmounted(() => {
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   z-index: 50;
   max-height: 200px;
   overflow-y: auto;
@@ -908,7 +908,7 @@ onUnmounted(() => {
 
 .sugg-label {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .sugg-type {
@@ -1038,7 +1038,7 @@ onUnmounted(() => {
 
 .grantee-name {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .grant-meta-line {

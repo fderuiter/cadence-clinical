@@ -3577,7 +3577,7 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 100vh;
   background: var(--semantic-color-surface-muted);
-  color: var(--primary);
+  color: var(--text-main);
   font-family: var(--font);
 }
 
@@ -4207,6 +4207,7 @@ onUnmounted(() => {
     padding: 6px 12px;
   }
 
+  .navigator-rail,
   .navigator.navigator--collapsed .navigator-rail {
     justify-content: flex-start;
   }
@@ -4218,6 +4219,7 @@ onUnmounted(() => {
 
   .canvas :deep(#canvas-inspector) {
     position: static;
+    scroll-margin-top: var(--sticky-chrome-offset, 64px);
     max-height: none;
     overflow-y: visible;
     align-self: stretch;
@@ -4239,6 +4241,7 @@ onUnmounted(() => {
   .navigator,
   .canvas :deep(#canvas-inspector) {
     position: static;
+    scroll-margin-top: 0;
     max-height: none;
     overflow-y: visible;
   }

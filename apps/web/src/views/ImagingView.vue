@@ -786,21 +786,21 @@ function handleBatchIngested(result) {
 }
 
 .badge-gxp {
-  background-color: rgba(56, 189, 248, 0.15);
-  color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background-color: var(--semantic-badge-in-progress-bg);
+  color: var(--semantic-badge-in-progress-text);
+  border: 1px solid var(--semantic-badge-in-progress-border);
 }
 
 .badge-regulatory {
-  background-color: rgba(168, 85, 247, 0.15);
-  color: var(--semantic-color-purple-inverse-text);
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-standard {
-  background-color: rgba(52, 211, 153, 0.15);
-  color: var(--semantic-color-emerald-inverse-text);
-  border: 1px solid rgba(52, 211, 153, 0.4);
+  background-color: var(--semantic-badge-verified-bg);
+  color: var(--semantic-badge-verified-text);
+  border: 1px solid var(--semantic-badge-verified-border);
 }
 
 .view-title {
@@ -811,7 +811,7 @@ function handleBatchIngested(result) {
 
 .view-subtitle {
   font-size: 0.85rem;
-  color: var(--semantic-color-text-inverse-muted);
+  color: var(--semantic-color-text-muted);
   line-height: 1.4;
 }
 
@@ -829,7 +829,7 @@ function handleBatchIngested(result) {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .view-mode-select {
@@ -848,11 +848,11 @@ function handleBatchIngested(result) {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-sync-toggle.synced {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: var(--semantic-color-success-bg-soft);
   border-color: var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
 }
@@ -979,6 +979,10 @@ function handleBatchIngested(result) {
   border-color: var(--semantic-color-accent-inverse);
 }
 
+.series-item.active .series-title {
+  color: var(--semantic-color-text-on-primary);
+}
+
 .series-thumb {
   font-size: 1.4rem;
 }
@@ -1007,7 +1011,7 @@ function handleBatchIngested(result) {
   font-weight: 600;
   padding: 1px 4px;
   border-radius: 3px;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: var(--semantic-color-surface-sunken);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1060,7 +1064,7 @@ function handleBatchIngested(result) {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .trajectory-header {
@@ -1077,7 +1081,7 @@ function handleBatchIngested(result) {
 
 .trajectory-count {
   font-size: 0.8rem;
-  color: var(--semantic-color-text-inverse-muted);
+  color: var(--semantic-color-text-muted);
   font-weight: 600;
 }
 
@@ -1132,7 +1136,7 @@ function handleBatchIngested(result) {
 .resp-sd,
 .resp-nmr {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .resp-pd,

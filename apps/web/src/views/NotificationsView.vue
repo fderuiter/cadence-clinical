@@ -205,8 +205,9 @@
             <span
               class="badge category-badge"
               style="
-                background-color: var(--semantic-color-text-muted);
-                color: var(--semantic-color-text-on-solid);
+                background-color: var(--semantic-badge-draft-bg);
+                color: var(--semantic-badge-draft-text);
+                border: 1px solid var(--semantic-badge-draft-border);
               "
               >{{ notif.category }}</span
             >
@@ -245,7 +246,7 @@
           style="
             font-size: 1.05rem;
             font-weight: 500;
-            color: var(--primary);
+            color: var(--text-main);
             word-break: break-word;
           "
         >
@@ -527,26 +528,26 @@ const resetFilters = async () => {
 const getPriorityStyle = (priority) => {
   switch (priority) {
     case "CRITICAL":
-      return "background-color: #fee2e2; border-color: #fca5a5; color: #b91c1c;";
+      return "background-color: var(--semantic-badge-error-bg); border-color: var(--semantic-badge-error-border); color: var(--semantic-badge-error-text);";
     case "HIGH":
-      return "background-color: #ffedd5; border-color: #fed7aa; color: #c2410c;";
+      return "background-color: var(--semantic-color-orange-bg); border-color: var(--semantic-color-orange-border); color: var(--semantic-color-orange-text);";
     case "MEDIUM":
-      return "background-color: #fef9c3; border-color: #fde047; color: #a16207;";
+      return "background-color: var(--semantic-badge-warning-bg); border-color: var(--semantic-badge-warning-border); color: var(--semantic-badge-warning-text);";
     case "LOW":
     default:
-      return "background-color: #f1f5f9; border-color: #cbd5e1; color: #475569;";
+      return "background-color: var(--semantic-badge-draft-bg); border-color: var(--semantic-badge-draft-border); color: var(--semantic-badge-draft-text);";
   }
 };
 
 const getStatusStyle = (status) => {
   switch (status) {
     case "RESOLVED":
-      return "background-color: #e2e8f0; border-color: #cbd5e1; color: #475569;";
+      return "background-color: var(--semantic-badge-locked-bg); border-color: var(--semantic-badge-locked-border); color: var(--semantic-badge-locked-text);";
     case "ACKNOWLEDGED":
-      return "background-color: #dcfce7; border-color: #86efac; color: #166534;";
+      return "background-color: var(--semantic-badge-verified-bg); border-color: var(--semantic-badge-verified-border); color: var(--semantic-badge-verified-text);";
     case "OPEN":
     default:
-      return "background-color: #dbeafe; border-color: #93c5fd; color: #1e40af;";
+      return "background-color: var(--semantic-badge-frozen-bg); border-color: var(--semantic-badge-frozen-border); color: var(--semantic-badge-frozen-text);";
   }
 };
 
@@ -618,7 +619,7 @@ onMounted(async () => {
   transition: all 0.2s;
 }
 .notification-card:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-sm);
   border-color: var(--accent-light) !important;
 }
 </style>

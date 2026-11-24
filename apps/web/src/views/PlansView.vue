@@ -930,7 +930,7 @@ async function handleActivateSubscription() {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 6px rgb(15 23 42 / 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .plan-card.is-active-tier {

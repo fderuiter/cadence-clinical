@@ -1358,7 +1358,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: var(--spacing-md);
   flex-wrap: wrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-main {
@@ -1385,9 +1385,9 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-purple-bg);
-  color: var(--semantic-color-purple-text);
-  border: 1px solid var(--semantic-color-purple-border);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-gxp {
@@ -1537,7 +1537,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition:
     transform 0.1s ease,
@@ -1668,7 +1668,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   overflow-x: auto;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-sm);
 }
 
 .ract-table {
@@ -1724,7 +1724,7 @@ onMounted(() => {
 
 .cat-study_conduct {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .cat-data_integrity {
@@ -1989,7 +1989,7 @@ onMounted(() => {
 
 .pill-amber {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .pill-red {
@@ -2028,7 +2028,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -2040,7 +2040,7 @@ onMounted(() => {
 .modal-card {
   background: var(--semantic-color-surface);
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   width: 100%;
   max-height: 90vh;
   display: flex;
@@ -2210,7 +2210,7 @@ onMounted(() => {
 .dossier-intro-box h4 {
   font-size: var(--font-size-sm);
   font-weight: 800;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .dossier-intro-box p {

@@ -162,7 +162,7 @@
             style="
               font-size: 1.05rem;
               font-weight: 700;
-              color: var(--semantic-color-warning-dark);
+              color: var(--semantic-color-warning-text);
               display: flex;
               align-items: center;
               gap: 8px;
@@ -175,7 +175,7 @@
             style="
               margin: 4px 0 0 0;
               font-size: 0.875rem;
-              color: var(--semantic-color-warning-dark);
+              color: var(--semantic-color-warning-text);
             "
           >
             {{ $t("ecrf.form.trainingGatedDesc") }}
@@ -189,7 +189,7 @@
               class="btn btn-primary"
               style="
                 background-color: var(--semantic-color-warning-action);
-                color: white;
+                color: var(--semantic-color-text-on-solid);
                 font-weight: bold;
                 padding: 8px 14px;
                 font-size: 0.85rem;
@@ -253,8 +253,8 @@
             type="button"
             class="btn btn-primary"
             style="
-              background-color: var(--semantic-color-error);
-              color: white;
+              background-color: var(--semantic-color-error-interactive);
+              color: var(--semantic-color-text-on-solid);
               font-weight: bold;
               padding: 8px 14px;
               font-size: 0.85rem;
@@ -311,7 +311,7 @@
             align-items: center;
             gap: 8px;
             font-size: 0.875rem;
-            color: var(--semantic-color-warning-dark);
+            color: var(--semantic-color-warning-text);
             font-weight: 600;
           "
         >
@@ -320,8 +320,8 @@
             v-if="discrepancyAlertsCount > 0"
             class="badge badge-discrepancy tabular-nums"
             style="
-              background-color: var(--semantic-color-error);
-              color: white;
+              background-color: var(--semantic-color-error-interactive);
+              color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;
@@ -338,7 +338,7 @@
             class="badge badge-warning tabular-nums"
             style="
               background-color: var(--semantic-color-warning-action);
-              color: white;
+              color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;
@@ -393,7 +393,7 @@
             class="badge badge-draft"
             style="
               background-color: var(--semantic-color-interactive-primary);
-              color: white;
+              color: var(--semantic-color-text-on-primary);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;

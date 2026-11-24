@@ -107,7 +107,7 @@ export function validateEproPayload(answers: Record<string, any>): {
   valid: boolean;
   errors: string[];
 } {
-  const issues = collectEproAnswerIssues(answers || {});
+  const issues = collectEproAnswerIssues(answers === undefined ? {} : answers);
   if (issues.length === 0) {
     return { valid: true, errors: [] };
   }

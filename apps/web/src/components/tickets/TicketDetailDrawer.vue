@@ -1369,7 +1369,7 @@ const onTicketSigned = (sigPayload) => {
   width: 100vw;
   height: 100vh;
   max-width: 100vw;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
@@ -1388,7 +1388,7 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-drawer-left);
   border-left: 1px solid var(--semantic-color-border-control);
   animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overscroll-behavior: contain;
@@ -1423,7 +1423,7 @@ const onTicketSigned = (sigPayload) => {
   font-family: monospace;
   font-size: 0.85rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--semantic-color-inverse-tint);
   padding: 3px 8px;
   border-radius: 4px;
   color: var(--semantic-color-text-inverse);
@@ -1438,50 +1438,51 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .badge-sev-critical {
-  background: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-sev-major {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-sev-minor {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .badge-status-open {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .badge-status-in_progress {
-  background: var(--semantic-color-info-bg);
-  color: var(--semantic-color-info);
-  border: 1px solid var(--semantic-color-info-border);
+  background: var(--semantic-badge-in-progress-bg);
+  color: var(--semantic-badge-in-progress-text);
+  border: 1px solid var(--semantic-badge-in-progress-border);
 }
 
 .badge-status-waiting_on_site,
 .badge-status-waiting_on_sponsor {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-text);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-status-resolved {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-status-closed {
-  background: var(--semantic-color-text-secondary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-badge-locked-bg);
+  color: var(--semantic-badge-locked-text);
+  border: 1px solid var(--semantic-badge-locked-border);
 }
 
 .badge-signed {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .drawer-title {
@@ -1510,8 +1511,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .drawer-close:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-inverse-tint);
+  color: var(--semantic-color-text-inverse);
 }
 
 .sla-banner {
@@ -1523,23 +1524,23 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .sla-banner.sla-normal {
-  background: rgba(37, 99, 235, 0.2);
-  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-divider-accent);
 }
 
 .sla-banner.sla-warning {
-  background: rgba(245, 158, 11, 0.25);
-  border: 1px solid rgba(245, 158, 11, 0.5);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-warning-action-border);
 }
 
 .sla-banner.sla-breached {
-  background: rgba(220, 38, 38, 0.3);
-  border: 1px solid rgba(220, 38, 38, 0.6);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-error-border);
 }
 
 .sla-banner.sla-paused {
-  background: rgba(148, 163, 184, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
 }
 
 .sla-banner-left {
@@ -1552,7 +1553,7 @@ const onTicketSigned = (sigPayload) => {
 
 .sla-progress-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--semantic-color-inverse-tint-strong);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -1680,7 +1681,7 @@ const onTicketSigned = (sigPayload) => {
 .rca-category-pill {
   display: inline-block;
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 8px;
@@ -1715,9 +1716,9 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .filter-chip.active {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
-  border-color: var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--semantic-color-primary);
 }
 
 .comment-stream {
@@ -2056,11 +2057,11 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .btn-primary {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-primary-dark);
 }
 .btn-secondary {
   background: var(--semantic-color-surface);
@@ -2073,25 +2074,25 @@ const onTicketSigned = (sigPayload) => {
 }
 .btn-warning {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 .btn-warning:hover:not(:disabled) {
-  background: var(--semantic-color-warning-action);
+  background: var(--semantic-color-warning-dark);
 }
 .btn-success {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 .btn-success:hover:not(:disabled) {
-  background: var(--semantic-color-success);
+  background: var(--semantic-color-success-accent);
 }
 .btn-sign {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   font-weight: 700;
 }
 .btn-sign:hover:not(:disabled) {
-  background: var(--semantic-color-success);
+  background: var(--semantic-color-success-accent);
 }
 .btn:disabled {
   opacity: 0.6;
@@ -2237,7 +2238,7 @@ const onTicketSigned = (sigPayload) => {
 .citation-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2253,7 +2254,7 @@ const onTicketSigned = (sigPayload) => {
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   border: 1px solid var(--semantic-color-border-control);
   overflow: hidden;
 }

@@ -97,7 +97,7 @@
       <div class="card" style="margin-bottom: 24px">
         <h3
           id="consent-template-title"
-          style="margin-top: 0; color: var(--semantic-color-primary)"
+          style="margin-top: 0; color: var(--semantic-color-text)"
         >
           Informed Consent Form
         </h3>

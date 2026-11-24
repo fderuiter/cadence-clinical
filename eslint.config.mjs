@@ -17,7 +17,10 @@ const portalStyleCssPath = path.join(
   "apps/subject-portal/src/style.css"
 );
 
-const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b/g;
+const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}(?![0-9a-zA-Z_-])/g;
+const colorFunctionRegex = /\b(?:rgba?|hsla?)\s*\([^)]*\)/gi;
+const namedColorDeclRegex =
+  /(?:^|[;{\s"'`])(?:background(?:-color)?|color|border(?:-(?:top|right|bottom|left))?(?:-color)?|fill|stroke|outline(?:-color)?)\s*:\s*(white|black)\b/gi;
 const cssVarDefRegex = /(--[a-zA-Z0-9_-]+)\s*:/g;
 const cssVarUseRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
 const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
@@ -110,17 +113,59 @@ const cssStubParser = {
   },
 };
 
+function findColorViolationsInCssText(text) {
+  const violations = [];
+  for (const match of text.matchAll(hexColorRegex)) {
+    violations.push({ index: match.index, literal: match[0] });
+  }
+  for (const match of text.matchAll(colorFunctionRegex)) {
+    violations.push({ index: match.index, literal: match[0] });
+  }
+  for (const match of text.matchAll(namedColorDeclRegex)) {
+    const colorWord = match[1];
+    const wordOffset = match[0]
+      .toLowerCase()
+      .lastIndexOf(colorWord.toLowerCase());
+    violations.push({
+      index: match.index + Math.max(0, wordOffset),
+      literal: colorWord,
+    });
+  }
+  return violations;
+}
+
+function collectColorLiteralsFromScriptString(rawText) {
+  const cleaned = stripUrlFragmentsPreservingLength(rawText);
+  const found = new Set();
+  for (const m of cleaned.matchAll(hexColorRegex)) found.add(m[0]);
+  for (const m of cleaned.matchAll(colorFunctionRegex)) found.add(m[0]);
+  for (const m of cleaned.matchAll(namedColorDeclRegex)) found.add(m[1]);
+  return [...found];
+}
+
+function isModuleSpecifierNode(node) {
+  const parent = node.parent;
+  if (!parent) return false;
+  return (
+    (parent.type === "ImportDeclaration" ||
+      parent.type === "ExportNamedDeclaration" ||
+      parent.type === "ExportAllDeclaration" ||
+      parent.type === "ImportExpression") &&
+    parent.source === node
+  );
+}
+
 const noInlineHexRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow hardcoded hex color codes in Vue templates, Vue <style> blocks, and CSS stylesheets outside packages/ui/tokens.css :root.",
+        "Disallow hardcoded color literals (#hex, rgb/rgba/hsl/hsla, named white/black declarations) in Vue templates, <script> blocks, <style> blocks, JS/TS modules, and CSS stylesheets outside packages/ui/tokens.css theme blocks.",
       category: "Best Practices",
     },
     messages: {
       noHexInStyle:
-        'Hardcoded hex color "{{hex}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-...)).',
+        'Hardcoded color literal "{{hex}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-...)).',
     },
   },
   create(context) {
@@ -142,67 +187,115 @@ const noInlineHexRule = {
               (rootBlock) => rootBlock.replace(/[^\r\n]/g, " ")
             );
           }
-          for (const match of masked.matchAll(hexColorRegex)) {
-            const loc = offsetToLoc(sourceText, match.index);
+          for (const v of findColorViolationsInCssText(masked)) {
+            const loc = offsetToLoc(sourceText, v.index);
             context.report({
               loc,
               messageId: "noHexInStyle",
-              data: { hex: match[0] },
+              data: { hex: v.literal },
             });
           }
         },
       };
     }
 
-    // 2. Vue SFCs: check both <template> style/presentation attributes and <style> blocks
-    const styleBlockCheck = {
-      "Program:exit"() {
-        for (const styleMatch of sourceText.matchAll(
-          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
-        )) {
-          const contentStart = styleMatch.index + styleMatch[1].length;
-          const masked = stripUrlFragmentsPreservingLength(
-            stripCssCommentsPreservingNewlines(styleMatch[2])
-          );
-          for (const match of masked.matchAll(hexColorRegex)) {
-            const loc = offsetToLoc(sourceText, contentStart + match.index);
-            context.report({
-              loc,
-              messageId: "noHexInStyle",
-              data: { hex: match[0] },
-            });
-          }
+    const scriptColorVisitors = {
+      Literal(node) {
+        if (typeof node.value !== "string" || isModuleSpecifierNode(node)) {
+          return;
+        }
+        const trimmed = node.value.trim().toLowerCase();
+        const isCanvasNamedColor =
+          (trimmed === "white" || trimmed === "black") &&
+          node.parent?.type === "AssignmentExpression" &&
+          node.parent.right === node &&
+          node.parent.left?.type === "MemberExpression" &&
+          (node.parent.left.property?.name === "fillStyle" ||
+            node.parent.left.property?.name === "strokeStyle");
+        const literals = collectColorLiteralsFromScriptString(node.value);
+        if (isCanvasNamedColor) literals.push(node.value.trim());
+        for (const hex of new Set(literals)) {
+          context.report({
+            node,
+            messageId: "noHexInStyle",
+            data: { hex },
+          });
         }
       },
+      TemplateElement(node) {
+        const raw = node.value?.raw || "";
+        if (!raw) return;
+        for (const hex of collectColorLiteralsFromScriptString(raw)) {
+          context.report({
+            node,
+            messageId: "noHexInStyle",
+            data: { hex },
+          });
+        }
+      },
+    };
+
+    // 2. Vue SFCs & JS/TS modules: check <template> style/presentation attributes, <script> AST literals, and <style> blocks
+    const scriptAndStyleCheck = {
+      ...scriptColorVisitors,
+      ...(filename.endsWith(".vue")
+        ? {
+            "Program:exit"() {
+              for (const styleMatch of sourceText.matchAll(
+                /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+              )) {
+                const contentStart = styleMatch.index + styleMatch[1].length;
+                const masked = stripUrlFragmentsPreservingLength(
+                  stripCssCommentsPreservingNewlines(styleMatch[2])
+                );
+                for (const v of findColorViolationsInCssText(masked)) {
+                  const loc = offsetToLoc(sourceText, contentStart + v.index);
+                  context.report({
+                    loc,
+                    messageId: "noHexInStyle",
+                    data: { hex: v.literal },
+                  });
+                }
+              }
+            },
+          }
+        : {}),
     };
 
     const parserServices =
       context.sourceCode?.parserServices || context.parserServices;
     if (!parserServices?.defineTemplateBodyVisitor) {
-      return filename.endsWith(".vue") ? styleBlockCheck : {};
+      return scriptAndStyleCheck;
     }
 
     return parserServices.defineTemplateBodyVisitor(
       {
         VAttribute(node) {
           if (isStyleOrColorVAttribute(node) && node.value) {
-            const text = stripUrlFragmentsPreservingLength(
-              context.sourceCode.getText(node.value)
-            );
-            const matches = text.match(hexColorRegex);
-            if (matches) {
-              for (const hex of new Set(matches)) {
-                context.report({
-                  node: node.value,
-                  messageId: "noHexInStyle",
-                  data: { hex },
-                });
-              }
+            const rawAttr = context.sourceCode.getText(node.value);
+            const literals = collectColorLiteralsFromScriptString(rawAttr);
+            const attrName = !node.directive
+              ? node.key?.name
+              : node.key?.argument?.name;
+            if (
+              (attrName === "fill" ||
+                attrName === "stroke" ||
+                attrName === "color") &&
+              /^['"]?(?:white|black)['"]?$/i.test(rawAttr.trim())
+            ) {
+              literals.push(rawAttr.replace(/['"]/g, "").trim());
+            }
+            for (const hex of new Set(literals)) {
+              context.report({
+                node: node.value,
+                messageId: "noHexInStyle",
+                data: { hex },
+              });
             }
           }
         },
       },
-      styleBlockCheck
+      scriptAndStyleCheck
     );
   },
 };
@@ -2808,7 +2901,9 @@ export default [
     files: [
       "packages/ui/index.js",
       "packages/ui/src/**/*.js",
+      "packages/ui/src/**/*.ts",
       "apps/subject-portal/src/**/*.js",
+      "apps/subject-portal/src/**/*.ts",
       "apps/web/src/**/*.js",
       "apps/web/src/**/*.ts",
     ],
@@ -2816,6 +2911,7 @@ export default [
       "custom-vue": customVuePlugin,
     },
     rules: {
+      "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
@@ -3118,6 +3214,7 @@ export default [
     rules: {
       "vue/one-component-per-file": "off",
       "vue/require-prop-types": "off",
+      "custom-vue/no-inline-hex": "off",
       "custom-vue/no-misused-ai-tokens": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",

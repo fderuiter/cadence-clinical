@@ -897,7 +897,7 @@ onUnmounted(() => {
 .onboarding-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--semantic-color-backdrop);
   z-index: 998;
 }
 
@@ -907,9 +907,7 @@ onUnmounted(() => {
   color: var(--semantic-color-text);
   border: 2px solid var(--semantic-color-interactive-primary);
   border-radius: 12px;
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.15),
-    0 8px 10px -6px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
   padding-top: 20px;
   padding-right: calc(20px + env(safe-area-inset-right, 0px));
   padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));

@@ -103,7 +103,7 @@ const formDisplayLabel = computed<string>(() => {
 <style scoped>
 .form-query-context {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 .form-query-target {
   color: var(--neutral-dark);

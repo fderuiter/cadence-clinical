@@ -894,7 +894,7 @@ onMounted(() => {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
@@ -909,7 +909,7 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
   display: flex;
   flex-direction: column;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-drawer-left);
   overflow: hidden;
   font-family:
     system-ui,
@@ -946,7 +946,7 @@ onMounted(() => {
 
 .badge-gxp {
   background: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 .badge-rtsm {
   background: var(--semantic-color-purple-bg);
@@ -954,16 +954,16 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-purple-border);
 }
 .badge-atomic {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 .badge-active {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 .badge-alert-lot {
-  background: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
   font-size: 0.65rem;
   margin-left: 6px;
 }
@@ -1050,7 +1050,7 @@ onMounted(() => {
 .scanner-label {
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1087,8 +1087,8 @@ onMounted(() => {
 }
 
 .scanner-help code {
-  background: var(--semantic-color-border-inverse);
-  color: var(--semantic-color-border);
+  background: var(--semantic-color-surface-elevated);
+  color: var(--semantic-color-text-inverse);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -1104,9 +1104,9 @@ onMounted(() => {
 }
 
 .alert-warning {
-  background: rgba(245, 158, 11, 0.15);
+  background: var(--semantic-badge-queried-bg);
   border: 1px solid var(--semantic-color-warning-border-strong);
-  color: var(--semantic-color-warning);
+  color: var(--semantic-badge-queried-text);
 }
 
 .btn-alert-dismiss {
@@ -1249,11 +1249,11 @@ onMounted(() => {
 }
 
 .row-quarantine {
-  background: rgba(245, 158, 11, 0.08);
+  background: var(--semantic-color-warning-bg-soft);
 }
 
 .row-lot-mismatch {
-  background: rgba(239, 68, 68, 0.12);
+  background: var(--semantic-color-error-bg-row);
 }
 
 .volume-inputs {
@@ -1301,16 +1301,16 @@ onMounted(() => {
 }
 
 .flag-valid {
-  color: var(--semantic-color-success);
-  background: rgba(16, 185, 129, 0.1);
+  color: var(--semantic-color-emerald-inverse-text);
+  background: var(--semantic-color-emerald-inverse-bg);
 }
 .flag-warning {
-  color: var(--semantic-color-error);
-  background: rgba(239, 68, 68, 0.15);
+  color: var(--semantic-badge-error-text);
+  background: var(--semantic-badge-error-bg);
 }
 .flag-quarantine {
-  color: var(--semantic-color-warning);
-  background: rgba(245, 158, 11, 0.15);
+  color: var(--semantic-badge-queried-text);
+  background: var(--semantic-badge-queried-bg);
 }
 
 .btn-icon {
@@ -1324,8 +1324,8 @@ onMounted(() => {
 }
 
 .btn-icon:hover:not(:disabled) {
-  color: var(--semantic-color-error);
-  background: rgba(239, 68, 68, 0.1);
+  color: var(--semantic-badge-error-text);
+  background: var(--semantic-badge-error-bg);
 }
 
 .esign-section {
@@ -1342,7 +1342,7 @@ onMounted(() => {
 .esign-title {
   margin: 0 0 14px 0;
   font-size: 0.98rem;
-  color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
   font-weight: 700;
 }
 
@@ -1417,17 +1417,17 @@ onMounted(() => {
 
 .btn-primary {
   background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--semantic-color-interactive-primary);
 }
 .btn-success {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 .btn-success:hover:not(:disabled) {
-  background: var(--semantic-color-success);
+  background: var(--semantic-color-success-interactive);
 }
 .btn-secondary {
   background: var(--semantic-color-border-inverse);
@@ -1444,7 +1444,7 @@ onMounted(() => {
   color: var(--semantic-color-success);
 }
 .btn-outline-success:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.1);
+  background: var(--semantic-color-emerald-inverse-bg);
 }
 .btn-outline-warning {
   background: transparent;
@@ -1452,7 +1452,7 @@ onMounted(() => {
   color: var(--semantic-color-warning);
 }
 .btn-outline-warning:hover:not(:disabled) {
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--semantic-badge-queried-bg);
 }
 .btn-outline-primary {
   background: transparent;
@@ -1460,7 +1460,7 @@ onMounted(() => {
   color: var(--semantic-color-interactive-primary);
 }
 .btn-outline-primary:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--semantic-badge-in-progress-bg);
 }
 
 .btn-ghost-danger {
@@ -1469,7 +1469,7 @@ onMounted(() => {
   border: 1px solid transparent;
 }
 .btn-ghost-danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--semantic-badge-error-bg);
   border-color: var(--semantic-color-error);
 }
 

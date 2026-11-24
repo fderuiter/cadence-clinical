@@ -260,7 +260,7 @@
         padding: 2px 6px;
         z-index: 10;
         font-size: 0.72rem;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--shadow-sm);
       "
     >
       <button
@@ -416,12 +416,12 @@ function selectField() {
 
 .canvas-field-widget:hover {
   border-color: var(--semantic-color-divider-accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .canvas-field-widget.is-selected {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 3px rgba(2, 101, 151, 0.15);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .field-widget-top {

@@ -1099,9 +1099,10 @@ async function handleExecuteBulkSignOff() {
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
   font-weight: 600;
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-locked {
@@ -1281,7 +1282,7 @@ async function handleExecuteBulkSignOff() {
 
 .module-num {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .module-meta {
@@ -1302,7 +1303,7 @@ async function handleExecuteBulkSignOff() {
 
 .badge-mod-procedure_delta {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-mod-protocol_overview {
@@ -1466,7 +1467,7 @@ async function handleExecuteBulkSignOff() {
   border: 2px solid var(--semantic-color-border-control);
   padding: 32px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
   max-width: 100%;
   box-sizing: border-box;
   overflow-x: auto;
@@ -1559,7 +1560,7 @@ async function handleExecuteBulkSignOff() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1572,7 +1573,7 @@ async function handleExecuteBulkSignOff() {
   max-width: 90vw;
   border-radius: 8px;
   padding: 24px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
@@ -1821,7 +1822,7 @@ async function handleExecuteBulkSignOff() {
 }
 .warning-pill {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .info-pill {
   background: var(--semantic-color-primary-light);
@@ -1864,7 +1865,7 @@ async function handleExecuteBulkSignOff() {
 
 .seal-hash {
   background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;

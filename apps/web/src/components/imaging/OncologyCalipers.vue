@@ -559,9 +559,9 @@ function getTimepointClass(tp) {
 }
 
 .badge-gxp {
-  background-color: rgba(56, 189, 248, 0.15);
-  color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background-color: var(--semantic-badge-candidate-bg);
+  color: var(--semantic-badge-candidate-text);
+  border: 1px solid var(--semantic-badge-candidate-border);
   font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -606,8 +606,8 @@ function getTimepointClass(tp) {
 .tool-select-btn.active {
   background-color: var(--semantic-color-primary);
   border-color: var(--semantic-color-accent-inverse);
-  color: var(--semantic-color-text-inverse);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+  color: var(--semantic-color-text-on-primary);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .form-row {
@@ -713,17 +713,17 @@ function getTimepointClass(tp) {
 }
 
 .tp-baseline {
-  background-color: rgba(56, 189, 248, 0.15);
-  color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background-color: var(--semantic-badge-candidate-bg);
+  color: var(--semantic-badge-candidate-text);
+  border: 1px solid var(--semantic-badge-candidate-border);
 }
 
 .tp-c2d1,
 .tp-c4d1,
 .tp-followup {
-  background-color: rgba(168, 85, 247, 0.15);
-  color: var(--semantic-color-purple-inverse-text);
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .type-pill {
@@ -734,18 +734,18 @@ function getTimepointClass(tp) {
 }
 
 .type-pill.target {
-  background-color: rgba(52, 211, 153, 0.15);
+  background-color: var(--semantic-color-emerald-inverse-bg);
   color: var(--semantic-color-emerald-inverse-text);
 }
 
 .type-pill.non_target {
-  background-color: rgba(148, 163, 184, 0.15);
+  background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
 }
 
 .type-pill.new_lesion {
-  background-color: rgba(239, 68, 68, 0.2);
-  color: var(--semantic-color-error);
+  background-color: var(--semantic-badge-error-bg);
+  color: var(--semantic-badge-error-text);
 }
 
 .btn-delete-annot {
@@ -801,23 +801,23 @@ function getTimepointClass(tp) {
 }
 
 .resp-cr {
-  background-color: var(--semantic-color-success);
-  color: var(--semantic-color-text-inverse);
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .resp-pr {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .resp-sd {
   background-color: var(--semantic-color-warning-action);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .resp-pd {
-  background-color: var(--semantic-color-error);
-  color: var(--semantic-color-text-inverse);
+  background-color: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .metrics-grid {
@@ -857,7 +857,7 @@ function getTimepointClass(tp) {
     var(--semantic-color-primary) 0%,
     var(--semantic-color-interactive-primary) 100%
   );
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
   border: none;
   border-radius: 6px;
   padding: 10px 14px;
@@ -868,16 +868,13 @@ function getTimepointClass(tp) {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.4);
+  box-shadow: var(--shadow-md);
 }
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background-color: var(--semantic-color-backdrop-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -938,19 +935,19 @@ function getTimepointClass(tp) {
 
 .tool-select-btn.btn-ai-segment {
   border-color: var(--semantic-color-accent-inverse);
-  background-color: rgba(56, 189, 248, 0.1);
+  background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-accent-inverse);
 }
 
 .tool-select-btn.btn-ai-segment:hover {
-  background-color: rgba(56, 189, 248, 0.25);
+  background-color: var(--semantic-color-border-inverse);
   color: var(--semantic-color-text-inverse);
 }
 
 .ai-badge {
-  background-color: rgba(56, 189, 248, 0.2);
-  color: var(--semantic-color-accent-inverse);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background-color: var(--semantic-badge-candidate-bg);
+  color: var(--semantic-badge-candidate-text);
+  border: 1px solid var(--semantic-badge-candidate-border);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -958,9 +955,9 @@ function getTimepointClass(tp) {
 }
 
 .ai-edited-badge {
-  background-color: rgba(251, 191, 36, 0.2);
-  color: var(--semantic-color-warning);
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  background-color: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border: 1px solid var(--semantic-badge-queried-border);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -968,7 +965,7 @@ function getTimepointClass(tp) {
 }
 
 .manual-badge {
-  background-color: rgba(148, 163, 184, 0.15);
+  background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
   font-size: 0.68rem;
   padding: 2px 6px;
@@ -1000,9 +997,9 @@ function getTimepointClass(tp) {
   justify-content: center;
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
-  background-color: rgba(251, 191, 36, 0.15);
-  color: var(--semantic-color-warning);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  background-color: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border: 1px solid var(--semantic-badge-queried-border);
   font-size: 0.68rem;
   font-weight: 600;
   padding: 2px 6px;
@@ -1012,7 +1009,7 @@ function getTimepointClass(tp) {
 }
 
 .btn-convert-manual:hover {
-  background-color: rgba(251, 191, 36, 0.3);
+  background-color: var(--semantic-color-warning-bg-badge);
 }
 
 .btn-secondary {
@@ -1026,7 +1023,7 @@ function getTimepointClass(tp) {
 
 .btn-confirm-sign {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
   border: none;
   padding: 8px 14px;
   border-radius: 4px;

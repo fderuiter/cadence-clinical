@@ -1034,7 +1034,7 @@ defineExpose({
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   box-sizing: border-box;
 }
 
@@ -1044,7 +1044,7 @@ defineExpose({
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1115,7 +1115,7 @@ defineExpose({
   border-left: 4px solid var(--semantic-color-warning-border-strong);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 #etmf-workspace-panel-binder,
@@ -1196,7 +1196,7 @@ defineExpose({
 .qc-role-note {
   margin: 0;
   font-size: 11px;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
@@ -1220,7 +1220,7 @@ defineExpose({
   right: 0;
   bottom: 0;
   max-width: 100vw;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--semantic-color-backdrop-soft);
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
@@ -1238,7 +1238,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-drawer-left);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }

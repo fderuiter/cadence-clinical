@@ -1578,7 +1578,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.45);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   justify-content: flex-end;
   z-index: 1050;
@@ -1593,7 +1593,7 @@ onUnmounted(() => {
   );
   max-width: 100vw;
   height: 100vh;
-  box-shadow: var(--semantic-shadow-xl);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1605,7 +1605,7 @@ onUnmounted(() => {
     Roboto,
     sans-serif
   );
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 @keyframes slideInRight {
@@ -1650,7 +1650,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .context-badges {
@@ -1771,7 +1771,7 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 1rem;
   background-color: var(--semantic-color-surface);
-  color: var(--primary);
+  color: var(--text-main);
   box-sizing: border-box;
 }
 
@@ -1819,7 +1819,7 @@ onUnmounted(() => {
 
 .empty-state h4 {
   margin: 0;
-  color: var(--primary);
+  color: var(--text-main);
   font-size: 0.98rem;
 }
 
@@ -1940,7 +1940,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.08rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   line-height: 1.35;
 }
 
@@ -1973,7 +1973,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.78rem;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .anchor-icon {
@@ -1990,7 +1990,7 @@ onUnmounted(() => {
 .anchor-jump-btn {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-warning-border);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.78rem;
@@ -2044,7 +2044,7 @@ onUnmounted(() => {
 .sop-body :deep(h2),
 .sop-body :deep(h3),
 .sop-body :deep(h4) {
-  color: var(--primary);
+  color: var(--text-main);
   margin: 12px 0 6px 0;
   font-weight: 700;
   scroll-margin-top: 12px;
@@ -2155,7 +2155,7 @@ onUnmounted(() => {
 .related-card-title {
   font-size: 0.84rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .badge-version-sm {
@@ -2236,7 +2236,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .empty-search {

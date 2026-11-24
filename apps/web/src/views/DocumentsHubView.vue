@@ -765,7 +765,7 @@ async function handleDeleteFile(file) {
   background-color: var(--semantic-color-surface);
   height: 100%;
   overflow: hidden;
-  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Main Workspace */
@@ -792,7 +792,7 @@ async function handleDeleteFile(file) {
   margin: 0;
   font-size: 1.3rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .hub-page-subtitle {

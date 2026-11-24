@@ -94,7 +94,7 @@
               style="
                 font-weight: 800;
                 margin: 0;
-                color: var(--primary);
+                color: var(--text-main);
                 font-size: 1.15rem;
                 display: flex;
                 align-items: center;
@@ -122,8 +122,8 @@
               v-if="isPromoted"
               class="badge"
               style="
-                background-color: var(--success);
-                color: white;
+                background-color: var(--semantic-color-success-interactive);
+                color: var(--semantic-color-text-on-solid);
                 font-weight: 600;
               "
             >
@@ -175,7 +175,7 @@
               <strong
                 style="
                   font-size: 0.95rem;
-                  color: var(--primary);
+                  color: var(--text-main);
                   font-family: monospace;
                 "
                 >{{ synthesisResult.studyId }}</strong
@@ -261,7 +261,7 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: var(--primary);
+                color: var(--text-main);
                 margin-bottom: 6px;
               "
             >
@@ -326,7 +326,7 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: var(--semantic-color-primary);
+                color: var(--text-main);
                 margin-bottom: 6px;
               "
             >
@@ -388,7 +388,7 @@
               style="
                 font-size: 1.4rem;
                 font-weight: 800;
-                color: var(--semantic-color-primary);
+                color: var(--text-main);
                 margin-bottom: 6px;
               "
             >
@@ -687,14 +687,14 @@
                   class="autocomplete-dropdown"
                   style="
                     position: absolute;
-                    background: white;
+                    background: var(--semantic-color-surface);
                     border: 1px solid var(--border);
                     border-radius: 4px;
                     width: 100%;
                     z-index: 100;
                     max-height: 150px;
                     overflow-y: auto;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: var(--shadow-sm);
                   "
                 >
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -705,7 +705,8 @@
                     style="
                       padding: 6px;
                       cursor: pointer;
-                      border-bottom: 1px solid rgba(241, 245, 249, 1);
+                      border-bottom: 1px solid
+                        var(--semantic-color-surface-header);
                     "
                     @click="selectArmConcept(sug)"
                   >
@@ -849,14 +850,14 @@
                   class="autocomplete-dropdown"
                   style="
                     position: absolute;
-                    background: white;
+                    background: var(--semantic-color-surface);
                     border: 1px solid var(--border);
                     border-radius: 4px;
                     width: 100%;
                     z-index: 100;
                     max-height: 150px;
                     overflow-y: auto;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    box-shadow: var(--shadow-sm);
                   "
                 >
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -867,7 +868,8 @@
                     style="
                       padding: 6px;
                       cursor: pointer;
-                      border-bottom: 1px solid rgba(241, 245, 249, 1);
+                      border-bottom: 1px solid
+                        var(--semantic-color-surface-header);
                     "
                     @click="selectEncConcept(sug)"
                   >
@@ -1014,7 +1016,10 @@
             >
               <button
                 class="btn"
-                style="background-color: var(--error); color: white"
+                style="
+                  background-color: var(--semantic-color-error-interactive);
+                  color: var(--semantic-color-text-on-solid);
+                "
                 @click="handleToggleApplicability(false)"
               >
                 Remove Applicability
@@ -1148,7 +1153,7 @@
             style="
               cursor: pointer;
               background-color: var(--accent);
-              color: white;
+              color: var(--semantic-color-text-on-accent);
               border: none;
               padding: 4px 8px;
             "
@@ -1237,7 +1242,7 @@
               font-weight: bold;
               font-size: 1rem;
               margin-bottom: 12px;
-              color: var(--primary);
+              color: var(--text-main);
             "
           >
             Search Concept Codes
@@ -1341,7 +1346,7 @@
               font-weight: bold;
               font-size: 1rem;
               margin-bottom: 12px;
-              color: var(--primary);
+              color: var(--text-main);
             "
           >
             {{
@@ -1487,7 +1492,7 @@
               style="
                 font-size: 1.5rem;
                 font-weight: bold;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               2
@@ -1506,7 +1511,7 @@
               style="
                 font-size: 1.5rem;
                 font-weight: bold;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               3
@@ -1522,7 +1527,7 @@
               style="
                 font-size: 1.5rem;
                 font-weight: bold;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               4
@@ -1541,7 +1546,7 @@
               style="
                 font-size: 1.5rem;
                 font-weight: bold;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               4
@@ -1555,7 +1560,7 @@
           font-weight: bold;
           font-size: 1.1rem;
           margin-bottom: 12px;
-          color: var(--primary);
+          color: var(--text-main);
         "
       >
         Detected Structural Differences / Amendments
@@ -1584,7 +1589,7 @@
             padding: 12px;
             border: 1px solid var(--border);
             border-radius: 8px;
-            background-color: white;
+            background-color: var(--semantic-color-surface);
           "
         >
           <div>
@@ -3589,9 +3594,7 @@ function navigateToSoa() {
 
 <style scoped>
 .synthesis-metrics-card {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .dropzone-area:hover,
@@ -3613,13 +3616,13 @@ function navigateToSoa() {
 
 .metric-panel:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;

@@ -510,7 +510,7 @@ select {
 
 .btn-primary {
   background: var(--semantic-color-primary);
-  color: var(--semantic-color-text-on-solid);
+  color: var(--semantic-color-text-on-primary);
   border: 1px solid var(--semantic-color-primary-dark);
 }
 

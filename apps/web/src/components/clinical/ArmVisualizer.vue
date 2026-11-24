@@ -150,7 +150,7 @@ const formatArmType = (type) => {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .subtitle {
@@ -214,7 +214,7 @@ const formatArmType = (type) => {
 }
 .type-active_comparator {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .type-placebo_comparator {
   background-color: var(--semantic-color-surface-header);
@@ -361,7 +361,7 @@ const formatArmType = (type) => {
 }
 .step-washout {
   background-color: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 .step-follow_up {
   background-color: var(--semantic-color-purple-text);
