@@ -113,7 +113,7 @@ The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and `/api/v1/execution
 
 ## Security
 
-`AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md): every route not marked anonymous requires the gateway-signed caller identity, and `GATEWAY_SECRET` is required at startup ([ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)). The tenant and the actor come only from the verified claims. Authorization is the kernel's own `KernelAuthorization` (K-AUTH-7); dry runs go to the authorization access log, not the audit chain (ADR-2483).
+`AddCadenceSecurity()`, `AddCadenceBiometricLiveness()`, and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md): every route not marked anonymous requires the gateway-signed caller identity, and both `GATEWAY_SECRET` ([ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)) and `CADENCE_BIOMETRIC_LIVENESS_KEY` (base64 of 32 bytes, shared with `econsent` for `POST /api/v1/ai/biometrics/verify-liveness`, [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)) are required at startup. The tenant and the actor come only from the verified claims. Authorization is the kernel's own `KernelAuthorization` (K-AUTH-7); dry runs go to the authorization access log, not the audit chain (ADR-2483).
 
 ## Persistence
 
@@ -137,6 +137,7 @@ The gateway forwards `/api/v1/kernel/**`, `/api/v1/ai/**` and `/api/v1/execution
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export CADENCE_BIOMETRIC_LIVENESS_KEY="$(openssl rand -base64 32)"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 export Database__MigrateOnStartup=true
 dotnet run --project apps/kernel-api/src/Cadence.Kernel.Host.csproj --urls http://localhost:8018

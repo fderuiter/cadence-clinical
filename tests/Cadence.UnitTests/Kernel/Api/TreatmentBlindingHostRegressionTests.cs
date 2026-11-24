@@ -935,7 +935,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment(IntelligenceModuleEnvironment);
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 // Remove background DB-polling hosted services so the Kestrel host runs purely in-memory.

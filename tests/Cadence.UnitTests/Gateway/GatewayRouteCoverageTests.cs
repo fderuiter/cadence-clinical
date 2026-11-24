@@ -108,7 +108,8 @@ public sealed class GatewayRouteCoverageTests
             .UseTestDemographicsKey().UseTestRandomizationKey()
             .UseTestFieldProtectionKeys()
             .UseTestSceSigningKey()
-            .UseTestImagingDeidentificationKeys());
+            .UseTestImagingDeidentificationKeys()
+            .UseTestBiometricLivenessKey());
         return PathsOf(factory.Services);
     }
 

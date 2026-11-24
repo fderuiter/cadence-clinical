@@ -6,6 +6,7 @@ using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
+using Cadence.Security.Authentication;
 using Cadence.Security.FieldProtection;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -51,7 +52,7 @@ public class FieldProtectionHostWiringTests
         }
 
         using var econsent = new WebApplicationFactory<Cadence.Apps.Econsent.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestBiometricLivenessKey());
         using (var scope = econsent.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<EconsentDbContext>();
@@ -91,12 +92,24 @@ public class FieldProtectionHostWiringTests
         using var payments = new WebApplicationFactory<Cadence.Apps.Payments.Program>()
             .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
         using var econsent = new WebApplicationFactory<Cadence.Apps.Econsent.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestBiometricLivenessKey());
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
             .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
+        using var kernel = new WebApplicationFactory<Cadence.Kernel.Host.Program>()
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestBiometricLivenessKey());
 
         AssertRejectsMissingKey<FieldEncryptionOptions>(payments.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });
         AssertRejectsMissingKey<FieldEncryptionOptions>(econsent.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });
+        AssertRejectsMissingKey<BiometricLivenessOptions>(
+            econsent.Services,
+            new BiometricLivenessOptions(),
+            new BiometricLivenessOptions { KeyBase64 = " " },
+            new BiometricLivenessOptions { KeyBase64 = Convert.ToBase64String(new byte[16]) });
+        AssertRejectsMissingKey<BiometricLivenessOptions>(
+            kernel.Services,
+            new BiometricLivenessOptions(),
+            new BiometricLivenessOptions { KeyBase64 = " " },
+            new BiometricLivenessOptions { KeyBase64 = Convert.ToBase64String(new byte[16]) });
         AssertRejectsMissingKey<LookupHashOptions>(interop.Services, new LookupHashOptions(), new LookupHashOptions { KeyBase64 = " " });
     }
 
