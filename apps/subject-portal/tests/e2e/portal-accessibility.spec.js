@@ -1740,11 +1740,30 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
         expect(iconCheck.fontSizePx).toBeGreaterThanOrEqual(12);
       }
 
-      // Click the 6th tab on narrow phone to confirm horizontal scroll + activation
-      const lastTab = page.locator("#btn-tab-btn-lay-summaries");
-      await lastTab.scrollIntoViewIfNeeded();
-      await lastTab.click();
+      // Activate later tabs via hash navigation and confirm selected tab settles inside visible .nav-tabs bounds BEFORE scrollIntoViewIfNeeded()
+      await page.evaluate(() => {
+        window.location.hash = "#/lay-summaries";
+      });
       await expect(page.locator("#view-lay-summaries")).toBeVisible();
+      await expect
+        .poll(async () => {
+          const b = await page.evaluate(() => {
+            const nav = document.querySelector(".nav-tabs");
+            const active = nav?.querySelector(
+              '[role="tab"][aria-selected="true"]'
+            );
+            if (!nav || !active) return null;
+            const navRect = nav.getBoundingClientRect();
+            const itemRect = active.getBoundingClientRect();
+            return {
+              left: itemRect.left - navRect.left,
+              right: itemRect.right - navRect.left,
+              clientWidth: nav.clientWidth,
+            };
+          });
+          return Boolean(b && b.left >= -1 && b.right <= b.clientWidth + 1);
+        })
+        .toBe(true);
 
       const firstTab = page.locator("#btn-tab-btn-tasks");
       await firstTab.scrollIntoViewIfNeeded();
@@ -1757,12 +1776,32 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(docScrollWidth).toBeLessThanOrEqual(mobileWidth);
     }
 
-    // Verify 200% text zoom at 320x640 keeps all 6 tabs scrollable without page horizontal overflow
+    // Verify 200% text zoom at 320x640 automatically aligns selected tab inside visible .nav-tabs bounds without page horizontal overflow
     await page.setViewportSize({ width: 320, height: 640 });
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "32px";
+      window.location.hash = "#/lay-summaries";
     });
-    await page.locator("#btn-tab-btn-lay-summaries").scrollIntoViewIfNeeded();
+    await expect(page.locator("#view-lay-summaries")).toBeVisible();
+    await expect
+      .poll(async () => {
+        const b = await page.evaluate(() => {
+          const nav = document.querySelector(".nav-tabs");
+          const active = nav?.querySelector(
+            '[role="tab"][aria-selected="true"]'
+          );
+          if (!nav || !active) return null;
+          const navRect = nav.getBoundingClientRect();
+          const itemRect = active.getBoundingClientRect();
+          return {
+            left: itemRect.left - navRect.left,
+            right: itemRect.right - navRect.left,
+            clientWidth: nav.clientWidth,
+          };
+        });
+        return Boolean(b && b.left >= -1 && b.right <= b.clientWidth + 1);
+      })
+      .toBe(true);
     const zoomedLastTabBox = await page
       .locator("#btn-tab-btn-lay-summaries")
       .boundingBox();
@@ -1956,5 +1995,355 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .withTags(WCAG_AA_TAGS)
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
+  });
+
+  test("should align selected tabs inside visible .nav-tabs bounds BEFORE scrollIntoViewIfNeeded on cold loads, hash changes, and 200% zoom, toggle overflow cues, and keep .portal-navigation sticky on ConsentView", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+    const captureScreenshots = process.env.CAPTURE_NAV_SCREENSHOTS === "1";
+
+    await page.route(
+      "**/api/v1/econsent/templates/template-icf/approved-content**",
+      async (route) => {
+        const clauses = Array.from({ length: 12 }, (_, idx) => ({
+          clause_id: `clause_${idx + 1}`,
+          title: `Study Information Section ${idx + 1}`,
+          text: "This plain-language study section explains what visits, health checks, privacy protections, voluntary participation rights, and reimbursement support you can expect throughout your study visits.",
+          version_index: 1,
+        }));
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            template_name: "Participant Informed Consent Document",
+            version_number: "1.0",
+            language_code: "en",
+            clauses,
+          }),
+        });
+      }
+    );
+
+    await page.route(
+      "**/api/v1/econsent/templates/template-icf/versions/1/comprehension-checks",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              question_id: "q_voluntary",
+              question_text: "Can you leave the study at any time?",
+              options: [
+                "Yes, participation is completely voluntary",
+                "No, I must finish every visit",
+              ],
+            },
+          ]),
+        });
+      }
+    );
+
+    const readSelectedTabBounds = () =>
+      page.evaluate(() => {
+        const nav = document.querySelector(".nav-tabs");
+        const container = document.querySelector(".nav-tabs-container");
+        const active = nav?.querySelector('[role="tab"][aria-selected="true"]');
+        const startCue = container?.querySelector(
+          ".nav-tabs-overflow-cue--start"
+        );
+        const endCue = container?.querySelector(".nav-tabs-overflow-cue--end");
+        if (!nav || !container || !active) return null;
+        const navRect = nav.getBoundingClientRect();
+        const itemRect = active.getBoundingClientRect();
+        return {
+          activeId: active.id,
+          left: itemRect.left - navRect.left,
+          right: itemRect.right - navRect.left,
+          clientWidth: nav.clientWidth,
+          scrollWidth: nav.scrollWidth,
+          scrollLeft: nav.scrollLeft,
+          overflowStart: container.getAttribute("data-overflow-start"),
+          overflowEnd: container.getAttribute("data-overflow-end"),
+          startCuePointerEvents: startCue
+            ? getComputedStyle(startCue).pointerEvents
+            : null,
+          endCuePointerEvents: endCue
+            ? getComputedStyle(endCue).pointerEvents
+            : null,
+          docScrollWidth: document.documentElement.scrollWidth,
+          innerWidth: window.innerWidth,
+        };
+      });
+
+    const routeSpecs = [
+      {
+        slug: "consent",
+        tabId: "btn-tab-btn-consent",
+        viewId: "view-consent",
+        headingId: "consent-view-heading",
+      },
+      {
+        slug: "wallet",
+        tabId: "btn-tab-btn-wallet",
+        viewId: "view-wallet",
+        headingId: "wallet-view-heading",
+      },
+      {
+        slug: "lay-summaries",
+        tabId: "btn-tab-btn-lay-summaries",
+        viewId: "view-lay-summaries",
+        headingId: "lay-summaries-view-heading",
+      },
+    ];
+
+    // 1. True cold loads on 320x640 and 390x844 phones place [aria-selected="true"] inside visible .nav-tabs bounds BEFORE scrollIntoViewIfNeeded()
+    for (const phoneVp of [
+      { width: 320, height: 640 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(phoneVp);
+
+      for (const spec of routeSpecs) {
+        await page.goto("about:blank");
+        await page.goto(`${DEMO_PORTAL_URL}#/${spec.slug}`);
+        await completeInitialPinSetupIfOpen(page);
+        await expect(page.locator(`#${spec.viewId}`)).toBeVisible();
+
+        const coldBounds = await readSelectedTabBounds();
+        expect(coldBounds).not.toBeNull();
+        expect(coldBounds.activeId).toBe(spec.tabId);
+        expect(coldBounds.left).toBeGreaterThanOrEqual(-1);
+        expect(coldBounds.right).toBeLessThanOrEqual(
+          coldBounds.clientWidth + 1
+        );
+        expect(coldBounds.startCuePointerEvents).toBe("none");
+        expect(coldBounds.endCuePointerEvents).toBe("none");
+        expect(coldBounds.docScrollWidth).toBeLessThanOrEqual(
+          coldBounds.innerWidth
+        );
+      }
+
+      // Hash navigation changes from #/tasks -> #/consent -> #/wallet -> #/lay-summaries align BEFORE scrollIntoViewIfNeeded() & preserve heading focus handoff
+      await page.evaluate(() => {
+        window.location.hash = "#/tasks";
+      });
+      await expect(page.locator("#view-tasks")).toBeVisible();
+
+      for (const spec of routeSpecs) {
+        await page.evaluate((slug) => {
+          window.location.hash = `#/${slug}`;
+        }, spec.slug);
+        await expect(page.locator(`#${spec.viewId}`)).toBeVisible();
+
+        await expect
+          .poll(async () => {
+            const b = await readSelectedTabBounds();
+            return Boolean(
+              b &&
+              b.activeId === spec.tabId &&
+              b.left >= -1 &&
+              b.right <= b.clientWidth + 1
+            );
+          })
+          .toBe(true);
+
+        const focusedHeadingId = await page.evaluate(
+          () => document.activeElement?.id || ""
+        );
+        expect(focusedHeadingId).toBe(spec.headingId);
+      }
+
+      if (captureScreenshots && phoneVp.width === 320) {
+        await page.evaluate(() => {
+          window.location.hash = "#/wallet";
+        });
+        await expect(page.locator("#view-wallet")).toBeVisible();
+        await expect
+          .poll(async () => {
+            const b = await readSelectedTabBounds();
+            return Boolean(
+              b &&
+              b.activeId === "btn-tab-btn-wallet" &&
+              b.left >= -1 &&
+              b.right <= b.clientWidth + 1
+            );
+          })
+          .toBe(true);
+        await page.screenshot({
+          path: "/tmp/mobile-portal-tabs-wallet-320.png",
+        });
+      }
+
+      // Verify overflow cues clear at start and end scroll boundaries on narrow mobile
+      await page.locator(".nav-tabs").evaluate((el) => {
+        el.scrollTo({ left: 0, behavior: "auto" });
+        el.dispatchEvent(new Event("scroll"));
+      });
+      await expect(page.locator(".nav-tabs-container")).not.toHaveAttribute(
+        "data-overflow-start",
+        "true"
+      );
+      await expect(page.locator(".nav-tabs-container")).toHaveAttribute(
+        "data-overflow-end",
+        "true"
+      );
+
+      await page.locator(".nav-tabs").evaluate((el) => {
+        el.scrollTo({
+          left: el.scrollWidth - el.clientWidth,
+          behavior: "auto",
+        });
+        el.dispatchEvent(new Event("scroll"));
+      });
+      await expect(page.locator(".nav-tabs-container")).toHaveAttribute(
+        "data-overflow-start",
+        "true"
+      );
+      await expect(page.locator(".nav-tabs-container")).not.toHaveAttribute(
+        "data-overflow-end",
+        "true"
+      );
+    }
+
+    // 2. 200% browser zoom aligns #/consent, #/wallet, and #/lay-summaries inside visible .nav-tabs bounds BEFORE scrollIntoViewIfNeeded()
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "32px";
+    });
+    for (const spec of routeSpecs) {
+      await page.evaluate((slug) => {
+        window.location.hash = `#/${slug}`;
+      }, spec.slug);
+      await expect(page.locator(`#${spec.viewId}`)).toBeVisible();
+      await expect
+        .poll(async () => {
+          const b = await readSelectedTabBounds();
+          return Boolean(
+            b &&
+            b.activeId === spec.tabId &&
+            b.left >= -1 &&
+            b.right <= b.clientWidth + 1
+          );
+        })
+        .toBe(true);
+    }
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+  });
+
+  test("should keep .portal-navigation and .nav-tabs sticky within the visible viewport when scrolling ConsentView by 1000px on 768x1024 and 1024x768 tablets", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_NAV_SCREENSHOTS === "1";
+
+    await page.route(
+      "**/api/v1/econsent/templates/template-icf/approved-content**",
+      async (route) => {
+        const clauses = Array.from({ length: 12 }, (_, idx) => ({
+          clause_id: `clause_${idx + 1}`,
+          title: `Study Information Section ${idx + 1}`,
+          text: "This plain-language study section explains what visits, health checks, privacy protections, voluntary participation rights, and reimbursement support you can expect throughout your study visits.",
+          version_index: 1,
+        }));
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            template_name: "Participant Informed Consent Document",
+            version_number: "1.0",
+            language_code: "en",
+            clauses,
+          }),
+        });
+      }
+    );
+
+    await page.route(
+      "**/api/v1/econsent/templates/template-icf/versions/1/comprehension-checks",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              question_id: "q_voluntary",
+              question_text: "Can you leave the study at any time?",
+              options: [
+                "Yes, participation is completely voluntary",
+                "No, I must finish every visit",
+              ],
+            },
+          ]),
+        });
+      }
+    );
+
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto(`${DEMO_PORTAL_URL}#/consent`);
+    await completeInitialPinSetupIfOpen(page);
+    await expect(page.locator("#view-consent")).toBeVisible();
+    await expect(page.locator("#consent-content-wrapper")).toBeVisible();
+
+    for (const tabletVp of [
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ]) {
+      await page.setViewportSize(tabletVp);
+      await page.evaluate(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        window.scrollTo({ top: 1000, behavior: "auto" });
+        window.dispatchEvent(new Event("scroll"));
+      });
+
+      const stickyPortalNav = await page.evaluate(() => {
+        const navAside = document.querySelector(".portal-navigation");
+        const navTabs = document.querySelector(".nav-tabs");
+        if (!navAside || !navTabs) return null;
+        const asideRect = navAside.getBoundingClientRect();
+        const tabsRect = navTabs.getBoundingClientRect();
+        const asideStyle = getComputedStyle(navAside);
+        return {
+          scrollY: window.scrollY,
+          position: asideStyle.position,
+          alignSelf: asideStyle.alignSelf,
+          asideTop: asideRect.top,
+          asideBottom: asideRect.bottom,
+          tabsTop: tabsRect.top,
+          tabsBottom: tabsRect.bottom,
+          innerHeight: window.innerHeight,
+          docScrollWidth: document.documentElement.scrollWidth,
+          innerWidth: window.innerWidth,
+        };
+      });
+
+      expect(stickyPortalNav).not.toBeNull();
+      expect(stickyPortalNav.scrollY).toBeGreaterThanOrEqual(999);
+      expect(stickyPortalNav.position).toBe("sticky");
+      expect(stickyPortalNav.alignSelf).toBe("flex-start");
+      expect(stickyPortalNav.asideTop).toBeGreaterThanOrEqual(0);
+      expect(stickyPortalNav.tabsTop).toBeGreaterThanOrEqual(0);
+      expect(stickyPortalNav.tabsBottom).toBeLessThanOrEqual(
+        stickyPortalNav.innerHeight
+      );
+      expect(stickyPortalNav.docScrollWidth).toBeLessThanOrEqual(
+        stickyPortalNav.innerWidth
+      );
+
+      if (captureScreenshots && tabletVp.width === 768) {
+        await page.screenshot({
+          path: "/tmp/tablet-portal-sticky-consent-768.png",
+        });
+      }
+
+      const consentStickyAudit = await new AxeBuilder({ page })
+        .withTags(WCAG_AA_TAGS)
+        .analyze();
+      expect(consentStickyAudit.violations).toEqual([]);
+    }
   });
 });

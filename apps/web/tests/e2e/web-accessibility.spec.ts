@@ -557,8 +557,24 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(toggleBox!.width).toBeGreaterThanOrEqual(43.9);
     expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
 
+    const openChecklistTrigger = async () => {
+      if (
+        !(await page
+          .locator("#btn-onboarding-checklist-trigger")
+          .isVisible()
+          .catch(() => false)) &&
+        (await compactActionsBtn.isVisible().catch(() => false))
+      ) {
+        await compactActionsBtn.click();
+        await expect(
+          page.locator("#header-secondary-menu.is-open")
+        ).toBeVisible();
+      }
+      await page.locator("#btn-onboarding-checklist-trigger").click();
+    };
+
     await gotoHashRoute(page, "/overview");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openChecklistTrigger();
     await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
@@ -591,7 +607,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
     await page.locator("#persona-select").selectOption("site_crc");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openChecklistTrigger();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -2867,6 +2883,257 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
       await page.keyboard.press("Escape");
     }
+  });
+
+  test("ClinicalContextBar aligns [aria-current=page] into visible bounds with overflow cues and condensed mobile pills, and AppShell keeps #shell-context-bar sticky with <= 52px tablet chrome", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_NAV_SCREENSHOTS === "1";
+    const mobileViewports = [
+      { width: 320, height: 640 },
+      { width: 390, height: 844 },
+      { width: 480, height: 800 },
+    ];
+    const scopedRoutes = [
+      {
+        url: "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001",
+        expectedCurrent: "Data collection",
+      },
+      {
+        url: "/etmf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001",
+        expectedCurrent: "Regulatory documents",
+      },
+      {
+        url: "/tickets?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001",
+        expectedCurrent: "Support",
+      },
+    ];
+
+    const readContextBarMetrics = (
+      contextBar: ReturnType<typeof page.locator>
+    ) =>
+      contextBar.evaluate((navEl) => {
+        const list = navEl.querySelector(
+          "ol.clinical-context-list"
+        ) as HTMLElement | null;
+        const active = navEl.querySelector(
+          '[aria-current="page"]'
+        ) as HTMLElement | null;
+        const studiesLink = navEl.querySelector(
+          "#context-studies"
+        ) as HTMLElement | null;
+        const siteLink = navEl.querySelector(
+          "#context-site"
+        ) as HTMLElement | null;
+        const studiesLabel = studiesLink?.querySelector(
+          ".clinical-context-label"
+        ) as HTMLElement | null;
+        const sitePrefix = siteLink?.querySelector(
+          ".clinical-context-prefix"
+        ) as HTMLElement | null;
+        const startCue = navEl.querySelector(
+          ".clinical-context-overflow-cue--start"
+        ) as HTMLElement | null;
+        const endCue = navEl.querySelector(
+          ".clinical-context-overflow-cue--end"
+        ) as HTMLElement | null;
+
+        if (!list || !active || !studiesLink || !siteLink) return null;
+        const listRect = list.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        const studiesRect = studiesLink.getBoundingClientRect();
+        const siteRect = siteLink.getBoundingClientRect();
+
+        return {
+          left: activeRect.left - listRect.left,
+          right: activeRect.right - listRect.left,
+          clientWidth: list.clientWidth,
+          scrollWidth: list.scrollWidth,
+          scrollLeft: list.scrollLeft,
+          studiesWidth: studiesRect.width,
+          studiesHeight: studiesRect.height,
+          studiesText: studiesLink.textContent?.trim(),
+          studiesLabelWidth: studiesLabel?.getBoundingClientRect().width ?? 0,
+          siteWidth: siteRect.width,
+          siteHeight: siteRect.height,
+          siteText: siteLink.textContent?.replace(/\s+/g, " ").trim(),
+          sitePrefixWidth: sitePrefix?.getBoundingClientRect().width ?? 0,
+          startCuePointerEvents: startCue
+            ? getComputedStyle(startCue).pointerEvents
+            : null,
+          endCuePointerEvents: endCue
+            ? getComputedStyle(endCue).pointerEvents
+            : null,
+          overflowStartAttr: navEl.getAttribute("data-overflow-start"),
+          overflowEndAttr: navEl.getAttribute("data-overflow-end"),
+          docScrollWidth: document.documentElement.scrollWidth,
+          innerWidth: window.innerWidth,
+        };
+      });
+
+    for (const vp of mobileViewports) {
+      await page.setViewportSize(vp);
+
+      for (const routeSpec of scopedRoutes) {
+        await gotoHashRoute(page, routeSpec.url);
+        const contextBar = page.locator("#shell-context-bar");
+        await expect(contextBar).toBeVisible();
+        await expect(contextBar.locator('[aria-current="page"]')).toContainText(
+          routeSpec.expectedCurrent
+        );
+
+        // Verify [aria-current="page"] settles inside visible #shell-context-bar bounds BEFORE any manual scroll
+        await expect
+          .poll(async () => {
+            const m = await readContextBarMetrics(contextBar);
+            return Boolean(m && m.left >= -1 && m.right <= m.clientWidth + 1);
+          })
+          .toBe(true);
+
+        const metrics = await readContextBarMetrics(contextBar);
+
+        expect(metrics).not.toBeNull();
+        expect(metrics!.left).toBeGreaterThanOrEqual(-1);
+        expect(metrics!.right).toBeLessThanOrEqual(metrics!.clientWidth + 1);
+        expect(metrics!.studiesHeight).toBeGreaterThanOrEqual(44);
+        expect(metrics!.studiesWidth).toBeGreaterThanOrEqual(44);
+        expect(metrics!.studiesText).toBe("Studies");
+        expect(metrics!.studiesLabelWidth).toBeLessThanOrEqual(1.5);
+        expect(metrics!.siteHeight).toBeGreaterThanOrEqual(44);
+        expect(metrics!.siteWidth).toBeGreaterThanOrEqual(44);
+        expect(metrics!.siteText).toBe("Site SITE-101");
+        expect(metrics!.sitePrefixWidth).toBeLessThanOrEqual(1.5);
+        expect(metrics!.startCuePointerEvents).toBe("none");
+        expect(metrics!.endCuePointerEvents).toBe("none");
+        expect(metrics!.docScrollWidth).toBeLessThanOrEqual(
+          metrics!.innerWidth
+        );
+
+        if (metrics!.scrollWidth > metrics!.clientWidth + 2) {
+          // Active crumb is at the end, so start cue is visible and end cue is cleared at the end boundary
+          expect(metrics!.overflowStartAttr).toBe("true");
+          expect(metrics!.overflowEndAttr).toBeNull();
+
+          // Scroll to start boundary (scrollLeft = 0): start cue clears and end cue appears
+          await contextBar
+            .locator("ol.clinical-context-list")
+            .evaluate((el) => {
+              el.scrollTo({ left: 0, behavior: "auto" });
+              el.dispatchEvent(new Event("scroll"));
+            });
+          await expect(contextBar).not.toHaveAttribute(
+            "data-overflow-start",
+            "true"
+          );
+          await expect(contextBar).toHaveAttribute("data-overflow-end", "true");
+        }
+      }
+
+      if (captureScreenshots && vp.width === 320) {
+        await gotoHashRoute(
+          page,
+          "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+        );
+        await expect(page.locator("#shell-context-bar")).toBeVisible();
+        await page.screenshot({ path: "/tmp/mobile-context-bar-320.png" });
+      }
+    }
+
+    await expectNoWcagViolations(
+      page,
+      "Scoped ClinicalContextBar on mobile viewport"
+    );
+
+    // Tablet sticky #shell-context-bar & <= 52px collapsed persistent chrome on 768x1024 and 1024x768
+    for (const tabletVp of [
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ]) {
+      await page.setViewportSize(tabletVp);
+      await gotoHashRoute(
+        page,
+        "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+      );
+      await expect(page.locator("#shell-context-bar")).toBeVisible();
+
+      // Ensure page has sufficient vertical height to scroll by 400px on 1024px-tall tablet
+      await page.evaluate(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        const mainEl = document.getElementById("main-content");
+        if (mainEl && document.documentElement.scrollHeight < 1800) {
+          mainEl.style.minHeight = "1800px";
+        }
+      });
+
+      await page.evaluate(() => {
+        window.scrollTo({ top: 400, behavior: "auto" });
+        window.dispatchEvent(new Event("scroll"));
+      });
+      await expect(page.locator(".app-header")).toHaveClass(/is-collapsed/);
+
+      const stickyState = await page.evaluate(() => {
+        const headerRect = document
+          .querySelector(".app-header")!
+          .getBoundingClientRect();
+        const barRect = document
+          .getElementById("shell-context-bar")!
+          .getBoundingClientRect();
+        const visibleHeaderBottom = Math.max(0, headerRect.bottom);
+        const persistentTopChrome = Math.max(
+          visibleHeaderBottom,
+          barRect.bottom
+        );
+        return {
+          scrollY: window.scrollY,
+          headerBottom: headerRect.bottom,
+          barTop: barRect.top,
+          barBottom: barRect.bottom,
+          barHeight: barRect.height,
+          persistentTopChrome,
+        };
+      });
+
+      expect(stickyState.scrollY).toBeGreaterThanOrEqual(399);
+      expect(stickyState.headerBottom).toBeLessThanOrEqual(1);
+      expect(stickyState.barTop).toBeGreaterThanOrEqual(-1);
+      expect(stickyState.barTop).toBeLessThanOrEqual(2);
+      expect(stickyState.barHeight).toBeLessThanOrEqual(52);
+      expect(stickyState.persistentTopChrome).toBeLessThanOrEqual(52);
+
+      if (captureScreenshots && tabletVp.width === 768) {
+        await page.screenshot({ path: "/tmp/tablet-collapsed-header-768.png" });
+      }
+    }
+
+    // Desktop 1280x720: both .app-header and #shell-context-bar stay sticky on downward scroll
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.evaluate(() => {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      window.dispatchEvent(new Event("scroll"));
+    });
+    await page.evaluate(() => {
+      window.scrollTo({ top: 400, behavior: "auto" });
+      window.dispatchEvent(new Event("scroll"));
+    });
+    await expect(page.locator(".app-header")).not.toHaveClass(/is-collapsed/);
+    const desktopSticky = await page.evaluate(() => {
+      const headerRect = document
+        .querySelector(".app-header")!
+        .getBoundingClientRect();
+      const barRect = document
+        .getElementById("shell-context-bar")!
+        .getBoundingClientRect();
+      return {
+        headerTop: headerRect.top,
+        barTop: barRect.top,
+        headerBottom: headerRect.bottom,
+      };
+    });
+    expect(desktopSticky.headerTop).toBeGreaterThanOrEqual(-1);
+    expect(desktopSticky.headerTop).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(desktopSticky.barTop - desktopSticky.headerBottom)
+    ).toBeLessThanOrEqual(2);
   });
 
   test("Dual collapsible Clinical Canvas rails, single-row compact shell header, contained clinical tables, and store-driven inspector focus/scroll pass layout and WCAG 2.2 AA gates across light and dark themes", async ({

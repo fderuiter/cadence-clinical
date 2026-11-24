@@ -166,6 +166,10 @@ import {
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
   useSignOutGuard,
+  alignActiveScrollItem,
+  computeScrollOverflowState,
+  prefersReducedMotion,
+  useActiveScrollAlignment,
 } from "./src/index.js";
 
 export {
@@ -212,6 +216,10 @@ export {
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
   useSignOutGuard,
+  alignActiveScrollItem,
+  computeScrollOverflowState,
+  prefersReducedMotion,
+  useActiveScrollAlignment,
 };
 
 // Dynamic Hover Pointer Capability Detection
