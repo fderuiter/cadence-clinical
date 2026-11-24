@@ -1116,6 +1116,9 @@ jobs:
                [[ "$file" == docs/.vitepress/* ]] || \
                [[ "$file" == docs/SDLC/* ]] || \
                [[ "$file" == docs/openapi/* ]] || \
+               [[ "$file" == docs/schema/* ]] || \
+               [[ "$file" == docs/api/* ]] || \
+               [[ "$file" == docs/CDISC/* ]] || \
                [[ "$file" == docs/kernel/* ]] || \
                [[ "$file" == docs/adr/* ]] || \
                [[ "$file" == .agents/* ]] || \
@@ -1126,9 +1129,9 @@ jobs:
               echo "Unsafe file: $file"
               SAFE=false
             elif [[ "$file" =~ ^(README|ARCHITECTURE|CONTEXT|CONTRIBUTING|SUPPORT)\.md$ ]] || \
-                 [[ "$file" =~ ^(apps|packages)/[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)?/README\.md$ ]] || \
+                 [[ "$file" =~ ^(apps|packages|tests)/([A-Za-z0-9][A-Za-z0-9._-]*/)*README\.md$ ]] || \
                  [[ "$file" =~ ^docs/(BACKLOG_INSIGHTS_ARCHIVE|CI|COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY|DATA_LIFECYCLE|DOCUMENTATION_INDEX|ENVIRONMENT_VARIABLES|FEATURE_MATRIX|GOALS_AND_PRIORITIES|ISSUE_MANAGEMENT|LOCAL_DEV_ENVIRONMENT|MIGRATION_WORKFLOW|OPERATIONAL_DATABASE|OPERATIONAL_INBOUND_EMAIL|OPERATIONAL_LAB_RANGES|PROJECT_PLAN|PYTHON_REFERENCE_INVENTORY|TESTING|cli)\.md$ ]] || \
-                 [[ "$file" =~ ^docs/(architecture|components|migration|strategy|ux|web)/([A-Za-z0-9][A-Za-z0-9._-]*/)*[A-Za-z0-9][A-Za-z0-9._-]*\.md$ ]]; then
+                 [[ "$file" =~ ^docs/(agents|ai|architecture|blog|components|migration|specs|strategy|ux|web)/([A-Za-z0-9][A-Za-z0-9._-]*/)*[A-Za-z0-9][A-Za-z0-9._-]*\.md$ ]]; then
               echo "Safe prose Markdown file: $file"
             else
               echo "Unsafe file: $file"
@@ -1147,35 +1150,12 @@ jobs:
           echo "container_scan=$CONTAINER_SCAN" >> "$GITHUB_OUTPUT"
 
       - name: Apply label
-        if: steps.classify.outputs.is_safe == 'true'
+        if: steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
-
-  automerge:
-    name: Enable Automerge
-    needs: [classify, ci-gate]
-    if: >-
-      always() &&
-      !cancelled() &&
-      github.event_name == 'pull_request' &&
-      needs.classify.outputs.is_safe == 'true' &&
-      needs.ci-gate.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Enable Automerge
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr merge "$PR_NUMBER" \
-            --repo "${{ github.repository }}" \
-            --auto \
-            --squash || echo "::warning::Automerge enablement skipped or failed."
 
   release-and-archive:
     name: Call Production Pipeline

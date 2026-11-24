@@ -30,6 +30,7 @@ K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.StudyI
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsentOptionSelection.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog.TenantId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId

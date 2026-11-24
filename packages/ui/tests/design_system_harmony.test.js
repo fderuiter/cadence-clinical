@@ -18,8 +18,10 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalDataTable",
   "ClinicalDrawer",
   "ClinicalDropzone",
+  "ClinicalExplanation",
   "ClinicalFieldLayout",
   "ClinicalFormField",
+  "ClinicalGatedAction",
   "ClinicalIcon",
   "ClinicalIconButton",
   "ClinicalInput",
@@ -199,7 +201,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 28 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 30 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -209,7 +211,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(28);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(30);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -229,7 +231,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 28 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 30 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -1414,7 +1416,7 @@ const thresholdAmount = ref(600);
         .map((file) => path.relative(repoRoot, file));
       expect(violatingFiles).toEqual([]);
 
-      // ADR-2672: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
+      // ADR-2673: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
       const rawAnyOverlayRe =
         /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop|[a-z0-9-]+-drawer-overlay|[a-z0-9-]+-modal-backdrop)\b/i;
       const rawDialogElementRe =
@@ -2093,6 +2095,50 @@ const open = () => {};
         );
         expect(aiErrors).toEqual([]);
       }
+    });
+
+    it("enforces minmax(0, 1fr) responsive grid tracks, nested fieldset span resets, relative scroll wrappers, and clinical-input shrink safety (ADR-2665)", () => {
+      const responsiveCss = fs.readFileSync(
+        path.join(uiDir, "responsive.css"),
+        "utf8"
+      );
+      const cleanResponsive = responsiveCss.replace(/\/\*[\s\S]*?\*\//g, "");
+
+      expect(cleanResponsive).toMatch(
+        /\.responsive-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-layout-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-layout-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*2fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-2-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-asymmetric-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-asymmetric-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1\.2fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /@media\s*\(max-width:\s*1023px\)\s*\{\s*\.responsive-grid\s*>\s*\*,\s*\.responsive-grid\s+fieldset\s*>\s*\*\s*\{\s*grid-column:\s*span\s+1\s*\/\s*span\s+1\s*!important;/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.scrollable-table-wrapper\s*\{[^}]*position:\s*relative;/
+      );
+
+      expect(tokensCss).toMatch(
+        /\.clinical-input,\s*\.clinical-radio-grid\s*\{[^}]*min-width:\s*0;/
+      );
+      expect(tokensCss).toMatch(
+        /\.clinical-input\s+\.input-wrapper\s*\{[^}]*min-width:\s*0;/
+      );
+      expect(tokensCss).toMatch(/\.query-flag\s*\{\s*flex-shrink:\s*0;\s*\}/);
+      expect(tokensCss).toMatch(
+        /\.clinical-input\s+\.clinical-input-control\s*\{[^}]*min-width:\s*0;/
+      );
     });
 
     it("enforces custom-vue/no-unscoped-clinical-tabs-css against unscoped list-class, tab-class, and active-tab-class selectors while permitting :deep(...) and variants", async () => {

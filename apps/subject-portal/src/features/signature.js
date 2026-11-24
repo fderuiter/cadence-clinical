@@ -2,7 +2,6 @@
 import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
-  buildStepUpVerificationPayload,
   decryptAESGCM,
   deriveKeyFromPIN,
   getFocusableElements,
@@ -13,6 +12,7 @@ import {
   trapTabFocus,
 } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
+import { requestStepUpSignature } from "../api/signatureVerification.js";
 import { state } from "../stores/state.js";
 import {
   createNonExtractableCryptoKey,
@@ -387,26 +387,13 @@ export async function verifyAndSubmitSignature() {
 
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
-        const verificationBody = buildStepUpVerificationPayload({
+        const tokenResponse = await requestStepUpSignature({
           username: cleanUsername,
           password: cleanPassword,
           action: captureActionPath,
           semanticAction: SEMANTIC_ACTIONS.ECONSENT_CAPTURE,
         });
-        const tokenResponse = await dispatchApi(
-          "api/v1/auth/signature-verification",
-          {
-            method: "POST",
-            body: JSON.stringify(verificationBody),
-          }
-        );
-
-        const sigToken = tokenResponse?.sig_token;
-        if (!sigToken || typeof sigToken !== "string") {
-          throw new Error(
-            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
-          );
-        }
+        const sigToken = tokenResponse.sig_token;
 
         // Re-check liveness freshness immediately before posting to capture-consent
         if (isConsentLivenessExpired() || !state.consentLivenessToken) {
@@ -541,25 +528,12 @@ export async function verifyAndSubmitSignature() {
     if (isAuthenticatedSession() && checkOnline()) {
       try {
         const eproActionPath = "/api/v1/interop/epro/submit";
-        const verificationBody = buildStepUpVerificationPayload({
+        await requestStepUpSignature({
           username: cleanUsername,
           password: cleanPassword,
           action: eproActionPath,
           semanticAction: SEMANTIC_ACTIONS.COLLECTION_SIGN,
         });
-        const tokenResponse = await dispatchApi(
-          "api/v1/auth/signature-verification",
-          {
-            method: "POST",
-            body: JSON.stringify(verificationBody),
-          }
-        );
-        const sigToken = tokenResponse?.sig_token;
-        if (!sigToken || typeof sigToken !== "string") {
-          throw new Error(
-            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
-          );
-        }
       } catch (err) {
         displayModalOrToastError(
           errorBanner,

@@ -31,6 +31,7 @@ K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalAlert.TenantI
 K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalDetectionRun.StudyId
 K-MOD-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SafetySignalDetectionRun.TenantId
 K-MOD-1|Cadence.Apps.Safety|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Safety|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2Transmission.StudyId
 K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2TransmissionAuditLog
 K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DeviceSafetyInvestigation.SiteId

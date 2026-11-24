@@ -509,6 +509,45 @@ public sealed class KernelApiHostTests : IDisposable
         rows.Should().OnlyContain(r => r.GetProperty("decision").GetProperty("explanation").GetProperty("claim").GetString()!.Length > 0);
     }
 
+    /// <summary>
+    /// K-EXP-2: CanI and GetCommands apply INodeVisibility masking to Explanation evidence, Subject, and NextAction
+    /// targets so hidden or blinded NodeRefs are formatted as masked:&lt;kind&gt;:&lt;Reason&gt; without leaking UUIDs or dropping
+    /// conditions.
+    /// </summary>
+    [Fact]
+    [KernelRule("K-EXP-2")]
+    public async Task CanI_And_Commands_MaskRestrictedExplanationEvidenceWithoutLeakingUuids()
+    {
+        var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
+        var hiddenResource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var hiddenGrant = Grant.Issue(
+            GrantId.New(), Tenant, Reader, entry.Capability.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
+            withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
+        _authority.Grants.Add(hiddenGrant);
+        _visibility.Hidden[hiddenResource] = MaskReason.NotPermitted;
+        _visibility.Hidden[NodeRef.For(hiddenGrant.Id)] = MaskReason.Blinded;
+
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var canI = await ReadJsonAsync(
+            client, $"/api/v1/kernel/authorization/can-i?capability={entry.Capability.Token}&resource={hiddenResource}", ct);
+        string canIRaw = canI.RootElement.GetProperty("explanation").GetRawText();
+        canIRaw.Should().NotContain(hiddenResource.Id.ToString("D"));
+        canIRaw.Should().NotContain(hiddenGrant.Id.Value.ToString("D"));
+        canI.RootElement.GetProperty("explanation").GetProperty("subject").GetString()
+            .Should().Be($"masked:{entry.ResourceKind}:NotPermitted");
+        canI.RootElement.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("evidence")
+            .EnumerateArray().Select(e => e.GetString())
+            .Should().Equal($"masked:{entry.ResourceKind}:NotPermitted", $"masked:{NodeKinds.Grant}:Blinded");
+
+        using var commands = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{hiddenResource}/commands", ct);
+        string commandsRaw = commands.RootElement.GetRawText();
+        commandsRaw.Should().NotContain(hiddenGrant.Id.Value.ToString("D"));
+        commands.RootElement[0].GetProperty("decision").GetProperty("explanation").GetProperty("subject").GetString()
+            .Should().Be($"masked:{entry.ResourceKind}:NotPermitted");
+    }
+
     /// <summary>Search passes the text, kinds and limit to kernel search in the caller's tenant and returns its hits.</summary>
     [Fact]
     public async Task Search_PassesTheQueryAndReturnsHits()

@@ -11,6 +11,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Templating;
@@ -60,7 +61,8 @@ public static class LetterTemplateEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature("ctms.letter.compile", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapGet("/letters/{letterId}/pdf", GetLetterPdfAsync)
             .WithName("GetSiteVisitLetterPdf")

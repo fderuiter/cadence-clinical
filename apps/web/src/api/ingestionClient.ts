@@ -1,7 +1,13 @@
 import { encodeChangeReason } from "./changeReason";
-import { openApiClient, unwrapResponse, getBaseUrl } from "./client";
-import { getBearerToken } from "./authorization.js";
+import { ApiError, openApiClient, unwrapResponse, getBaseUrl } from "./client";
+import {
+  applyDemoIdentityHeaders,
+  fetchWithSingleFlightRetry,
+  getBearerToken,
+  notifySubscriptionExpiredIfNeeded,
+} from "./authorization.js";
 import type { paths } from "./types";
+import { isDemoBuild } from "../utils/demoMode";
 
 export interface IngestionOptions {
   changeReason?: string;
@@ -27,22 +33,34 @@ export const ingestionClient = {
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
+    if (isDemoBuild()) {
+      applyDemoIdentityHeaders(headers);
+    }
     if (changeReason) {
       headers["X-Change-Reason"] = encodeChangeReason(changeReason);
     }
 
-    const response = await fetch(url, {
+    const response = await fetchWithSingleFlightRetry(url, {
       method: "POST",
       headers,
       body: formData,
     });
 
     if (!response.ok) {
-      const data = (await response.json().catch(() => ({}))) as Record<
+      const data = (await response.json().catch(() => null)) as Record<
         string,
         unknown
-      >;
-      throw new Error((data?.detail as string) || "Upload failed");
+      > | null;
+      const expiredGuidance = notifySubscriptionExpiredIfNeeded(
+        response.status,
+        data
+      );
+      throw new ApiError(
+        expiredGuidance || (data?.detail as string) || "Upload failed",
+        response.status,
+        response.statusText,
+        data
+      );
     }
     return response.json();
   },

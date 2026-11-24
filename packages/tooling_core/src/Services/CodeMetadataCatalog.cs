@@ -111,11 +111,17 @@ public static partial class CodeMetadataCatalog
     [GeneratedRegex(@"\b(?:var|RouteGroupBuilder)\s+([A-Za-z0-9_]+)\s*=\s*([A-Za-z0-9_]+)\.MapGroup\s*\(\s*([^)]+?)\s*\)")]
     private static partial Regex MapGroupRegex();
 
-    [GeneratedRegex(@"(?:([A-Za-z0-9_]+)\.MapGroup\s*\(\s*""([^""]+)""\s*\)(?:(?![;{])[\s\S]){0,120}?|([A-Za-z0-9_]+))\s*\.Map(Post|Put|Patch|Delete)\s*\(\s*(?:""([^""]*)""|(string\.Empty))(?:""[^""]*""|[^;])*?;")]
-    private static partial Regex MapEndpointStatementRegex();
+    [GeneratedRegex(@"(?:([A-Za-z0-9_]+)\.MapGroup\s*\(\s*""([^""]+)""\s*\)(?:(?![;{])[\s\S]){0,120}?|([A-Za-z0-9_]+))\s*\.Map(Get|Post|Put|Patch|Delete)\s*\(\s*(?:""([^""]*)""|(string\.Empty))")]
+    private static partial Regex MapEndpointHeaderRegex();
 
-    [GeneratedRegex(@"\.RequireElectronicSignature\s*\(\s*([A-Za-z0-9_]+)\s*(?:,\s*([\s\S]*?))?\)\s*(?:;|\.)")]
-    private static partial Regex RequireElectronicSignatureRegex();
+    [GeneratedRegex(@"\.RequireElectronicSignature\s*\(")]
+    private static partial Regex RequireElectronicSignatureCallRegex();
+
+    [GeneratedRegex(@"\.RequireElectronicSignatureWhen\s*\(")]
+    private static partial Regex RequireElectronicSignatureWhenCallRegex();
+
+    [GeneratedRegex(@"return\s+(""[^""]+""|[A-Za-z0-9_]+)\s*;")]
+    private static partial Regex ReturnValueRegex();
 
     [GeneratedRegex(@"new\s+SigTokenBinding\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*,")]
     private static partial Regex SigTokenBindingCtorRegex();
@@ -280,6 +286,9 @@ public static partial class CodeMetadataCatalog
     {
         var dbModules = GetDatabaseModules(repoRoot);
         var results = new List<AuditHostMetadata>();
+        string dbExtPath = Path.Combine(repoRoot, "packages", "database", "src", "CadenceDatabaseExtensions.cs");
+        bool defaultPostgresAuditEnabled = File.Exists(dbExtPath) &&
+            NewGxpAuditInterceptorRegex().IsMatch(File.ReadAllText(dbExtPath));
 
         foreach (string file in EnumerateProductionCSharpFiles(repoRoot))
         {
@@ -290,13 +299,17 @@ public static partial class CodeMetadataCatalog
             }
 
             string source = File.ReadAllText(file);
-            if (!NewGxpAuditInterceptorRegex().IsMatch(source))
+            var dbMatch = AddPostgresDbContextRegex().Match(source);
+            bool hasDefaultAudit = defaultPostgresAuditEnabled &&
+                dbMatch.Success &&
+                !source.Contains("enableDefaultGxPAudit: false", StringComparison.Ordinal);
+            if (!hasDefaultAudit && !NewGxpAuditInterceptorRegex().IsMatch(source))
             {
                 continue;
             }
 
             string host = ResolveHostFromRelativePath(rel);
-            string dbContext = AddPostgresDbContextRegex().Match(source) is { Success: true } dbMatch
+            string dbContext = dbMatch.Success
                 ? dbMatch.Groups[1].Value
                 : $"{char.ToUpperInvariant(host[0])}{host[1..]}DbContext";
             string schema = ResolveSchemaForDbContext(repoRoot, dbContext, host, dbModules);
@@ -319,7 +332,7 @@ public static partial class CodeMetadataCatalog
             }
 
             string source = File.ReadAllText(file).ReplaceLineEndings("\n");
-            if (!source.Contains(".RequireElectronicSignature(", StringComparison.Ordinal))
+            if (!source.Contains(".RequireElectronicSignature", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -418,19 +431,24 @@ public static partial class CodeMetadataCatalog
             }
         }
 
-        // Case B: direct fluent `.MapPost(...).RequireElectronicSignature(...)` chains
-        foreach (Match stmt in MapEndpointStatementRegex().Matches(source))
+        // Case B: direct fluent `.Map*(...).RequireElectronicSignature(...)` or `.RequireElectronicSignatureWhen(...)` chains
+        foreach (Match stmt in MapEndpointHeaderRegex().Matches(source))
         {
-            string statementText = stmt.Value;
-            if (wrapperName is not null && statementText.Contains(wrapperName + "(", StringComparison.Ordinal))
+            string fluentTail = ExtractFluentTailAfterMapCall(source, stmt.Index + stmt.Length);
+            if (fluentTail.Length == 0)
             {
                 continue;
             }
 
-            var sigMatch = RequireElectronicSignatureRegex().Match(statementText);
-            if (!sigMatch.Success)
+            bool isConditionalWhen = false;
+            if (!TryExtractInvocationArgs(fluentTail, RequireElectronicSignatureCallRegex(), out IReadOnlyList<string> sigArgs))
             {
-                continue;
+                if (!TryExtractInvocationArgs(fluentTail, RequireElectronicSignatureWhenCallRegex(), out sigArgs))
+                {
+                    continue;
+                }
+
+                isConditionalWhen = true;
             }
 
             string basePrefix = stmt.Groups[1].Success
@@ -440,15 +458,22 @@ public static partial class CodeMetadataCatalog
             string subPath = stmt.Groups[6].Success ? string.Empty : stmt.Groups[5].Value;
             string fullRoute = NormalizeRouteParameters(CombineRoute(basePrefix, subPath));
 
-            string firstArg = sigMatch.Groups[1].Value.Trim();
-            string? secondArg = sigMatch.Groups[2].Success ? sigMatch.Groups[2].Value.Trim() : null;
-
             string semanticAction;
             string actionTemplate;
             bool usesBatch = false;
 
-            if (secondArg is null)
+            if (isConditionalWhen)
             {
+                string semArg = sigArgs.Count >= 2 ? sigArgs[1].Trim() : string.Empty;
+                string? actArg = sigArgs.Count >= 3 ? sigArgs[2].Trim() : null;
+                semanticAction = ResolveSemanticActionsFromHelper(source, semArg, constants);
+                actionTemplate = actArg is not null
+                    ? ResolveSecondArgAction(source, actArg, fullRoute, constants, actionMethods)
+                    : fullRoute;
+            }
+            else if (sigArgs.Count == 1)
+            {
+                string firstArg = sigArgs[0].Trim();
                 // Overload `RequireElectronicSignature(DelegationSignOffBinding)` returning `new SigTokenBinding(action, semanticAction, batchId)`
                 var bindingMatch = SigTokenBindingCtorRegex().Match(source);
                 if (bindingMatch.Success)
@@ -459,13 +484,15 @@ public static partial class CodeMetadataCatalog
                 }
                 else
                 {
-                    semanticAction = constants.GetValueOrDefault(firstArg, firstArg);
+                    semanticAction = StripQuotesAndInterpolation(firstArg, constants);
                     actionTemplate = fullRoute;
                 }
             }
             else
             {
-                semanticAction = constants.GetValueOrDefault(firstArg, StripQuotesAndInterpolation(firstArg, constants));
+                string firstArg = sigArgs[0].Trim();
+                string secondArg = sigArgs[1].Trim();
+                semanticAction = StripQuotesAndInterpolation(firstArg, constants);
                 actionTemplate = ResolveSecondArgAction(source, secondArg, fullRoute, constants, actionMethods);
             }
 
@@ -481,6 +508,280 @@ public static partial class CodeMetadataCatalog
         }
 
         return list;
+    }
+
+    private static string ExtractFluentTailAfterMapCall(string source, int posInsideMapCall)
+    {
+        int mapCallEnd = ScanBalancedCode(source, posInsideMapCall, initialParenDepth: 1, initialBraceDepth: 0, stopAtParenZero: true);
+        if (mapCallEnd < 0 || mapCallEnd >= source.Length)
+        {
+            return string.Empty;
+        }
+
+        int stmtEnd = ScanBalancedCode(source, mapCallEnd, initialParenDepth: 0, initialBraceDepth: 0, stopAtParenZero: false);
+        return stmtEnd >= mapCallEnd ? source[mapCallEnd..(stmtEnd + 1)] : string.Empty;
+    }
+
+    private static int ScanBalancedCode(
+        string source,
+        int startIndex,
+        int initialParenDepth,
+        int initialBraceDepth,
+        bool stopAtParenZero)
+    {
+        int parenDepth = initialParenDepth;
+        int braceDepth = initialBraceDepth;
+        int i = startIndex;
+
+        while (i < source.Length)
+        {
+            int skipped = SkipCommentOrLiteral(source, i);
+            if (skipped < 0)
+            {
+                return -1;
+            }
+
+            if (skipped > i)
+            {
+                i = skipped;
+                continue;
+            }
+
+            char c = source[i];
+            if (c == '(')
+            {
+                parenDepth++;
+            }
+            else if (c == ')')
+            {
+                if (parenDepth > 0)
+                {
+                    parenDepth--;
+                }
+
+                if (stopAtParenZero && parenDepth == 0 && braceDepth == 0)
+                {
+                    return i + 1;
+                }
+            }
+            else if (c == '{')
+            {
+                braceDepth++;
+            }
+            else if (c == '}' && braceDepth > 0)
+            {
+                braceDepth--;
+            }
+            else if (!stopAtParenZero && c == ';' && parenDepth == 0 && braceDepth == 0)
+            {
+                return i;
+            }
+
+            i++;
+        }
+
+        return -1;
+    }
+
+    private static int SkipCommentOrLiteral(string source, int index)
+    {
+        char c = source[index];
+        char next = index + 1 < source.Length ? source[index + 1] : '\0';
+
+        if (c == '/' && next == '/')
+        {
+            int nl = source.IndexOf('\n', index + 2);
+            return nl < 0 ? -1 : nl + 1;
+        }
+
+        if (c == '/' && next == '*')
+        {
+            int close = source.IndexOf("*/", index + 2, StringComparison.Ordinal);
+            return close < 0 ? -1 : close + 2;
+        }
+
+        if (c == '@' && next == '"')
+        {
+            return SkipVerbatimString(source, index + 2);
+        }
+
+        if (c is '"' or '\'')
+        {
+            return SkipEscapedQuote(source, index + 1, c);
+        }
+
+        return index;
+    }
+
+    private static int SkipVerbatimString(string source, int cursor)
+    {
+        while (cursor < source.Length)
+        {
+            if (source[cursor] == '"')
+            {
+                if (cursor + 1 < source.Length && source[cursor + 1] == '"')
+                {
+                    cursor += 2;
+                    continue;
+                }
+
+                return cursor + 1;
+            }
+
+            cursor++;
+        }
+
+        return source.Length;
+    }
+
+    private static int SkipEscapedQuote(string source, int cursor, char quote)
+    {
+        while (cursor < source.Length)
+        {
+            if (source[cursor] == '\\')
+            {
+                cursor += 2;
+                continue;
+            }
+
+            if (source[cursor] == quote)
+            {
+                return cursor + 1;
+            }
+
+            cursor++;
+        }
+
+        return source.Length;
+    }
+
+    private static bool TryExtractInvocationArgs(
+        string fluentTail,
+        Regex callPrefixRegex,
+        out IReadOnlyList<string> args)
+    {
+        var match = callPrefixRegex.Match(fluentTail);
+        if (!match.Success)
+        {
+            args = [];
+            return false;
+        }
+
+        int argStart = match.Index + match.Length;
+        int parenDepth = 1;
+        int braceDepth = 0;
+        var parsed = new List<string>();
+        int i = argStart;
+
+        while (i < fluentTail.Length)
+        {
+            char c = fluentTail[i];
+            if (c == '"')
+            {
+                i = SkipEscapedQuote(fluentTail, i + 1, '"');
+                continue;
+            }
+
+            if (c == '(')
+            {
+                parenDepth++;
+            }
+            else if (c == ')')
+            {
+                parenDepth--;
+                if (parenDepth == 0)
+                {
+                    string last = fluentTail[argStart..i].Trim();
+                    if (last.Length > 0)
+                    {
+                        parsed.Add(last);
+                    }
+
+                    args = parsed;
+                    return parsed.Count > 0;
+                }
+            }
+            else if (c == '{')
+            {
+                braceDepth++;
+            }
+            else if (c == '}' && braceDepth > 0)
+            {
+                braceDepth--;
+            }
+            else if (c == ',' && parenDepth == 1 && braceDepth == 0)
+            {
+                parsed.Add(fluentTail[argStart..i].Trim());
+                argStart = i + 1;
+            }
+
+            i++;
+        }
+
+        args = [];
+        return false;
+    }
+
+    private static string ResolveSemanticActionsFromHelper(
+        string source,
+        string semArg,
+        Dictionary<string, string> constants)
+    {
+        if (Regex.IsMatch(semArg, "^[A-Za-z0-9_]+$", RegexOptions.CultureInvariant))
+        {
+            var headerRegex = new Regex(
+                $@"private\s+static\s+string\s+{Regex.Escape(semArg)}\s*\([^)]*\)\s*\{{",
+                RegexOptions.CultureInvariant);
+            var headerMatch = headerRegex.Match(source);
+            if (headerMatch.Success)
+            {
+                int bodyStart = headerMatch.Index + headerMatch.Length;
+                int cursor = bodyStart;
+                int braceDepth = 1;
+                while (cursor < source.Length && braceDepth > 0)
+                {
+                    int skipped = SkipCommentOrLiteral(source, cursor);
+                    if (skipped < 0)
+                    {
+                        break;
+                    }
+
+                    if (skipped > cursor)
+                    {
+                        cursor = skipped;
+                        continue;
+                    }
+
+                    if (source[cursor] == '{')
+                    {
+                        braceDepth++;
+                    }
+                    else if (source[cursor] == '}')
+                    {
+                        braceDepth--;
+                        if (braceDepth == 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    cursor++;
+                }
+
+                string body = source[bodyStart..cursor];
+                var values = ReturnValueRegex().Matches(body)
+                    .Select(m => StripQuotesAndInterpolation(m.Groups[1].Value, constants))
+                    .Where(v => v.Length > 0)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+                if (values.Count > 0)
+                {
+                    return string.Join(" / ", values);
+                }
+            }
+        }
+
+        return StripQuotesAndInterpolation(semArg, constants);
     }
 
     private static string ResolveSecondArgAction(
@@ -628,6 +929,11 @@ public static partial class CodeMetadataCatalog
 
     private static string ResolveDefaultGroupPrefix(string relativePath)
     {
+        if (relativePath.StartsWith("apps/ctms/", StringComparison.Ordinal))
+        {
+            return "/api/v1/ctms";
+        }
+
         if (relativePath.StartsWith("apps/safety/", StringComparison.Ordinal))
         {
             return "/api/v1/safety";

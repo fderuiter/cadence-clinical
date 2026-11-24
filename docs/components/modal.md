@@ -77,7 +77,7 @@ const handleConfirm = () => {
 </template>
 ```
 
-## Three-Tier Responsive Overlay Architecture (ADR-2672)
+## Three-Tier Responsive Overlay Architecture (ADR-2673)
 
 Both `ClinicalModal` and `ClinicalDrawer` pair `vh` fallbacks with `dvh` dynamic viewport units, enforce `>= 16px` (`1rem`) font sizing on touch form controls to prevent Safari auto-zoom, and adapt across three clinical viewport tiers:
 

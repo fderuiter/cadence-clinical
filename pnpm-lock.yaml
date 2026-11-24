@@ -295,6 +295,10 @@ importers:
         version: 6.0.3
 
   packages/ui:
+    dependencies:
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

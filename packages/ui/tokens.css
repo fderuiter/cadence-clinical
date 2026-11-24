@@ -714,6 +714,7 @@ td select,
 .clinical-radio-grid {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   margin-bottom: var(--semantic-spacing-md, 16px);
   font-family: var(--semantic-font-family, sans-serif);
 }
@@ -732,6 +733,11 @@ td select,
   gap: var(--semantic-spacing-xs, 8px);
   position: relative;
   align-items: center;
+  min-width: 0;
+}
+
+.query-flag {
+  flex-shrink: 0;
 }
 
 /* WCAG 2.2 SC 2.5.8 Target Size (Minimum) (24x24px via Technique C42).
@@ -780,6 +786,7 @@ td select,
 .clinical-input textarea,
 .clinical-input .clinical-input-control {
   flex: 1;
+  min-width: 0;
   padding: 12px 14px;
   min-height: var(--semantic-touch-target-min, 48px);
   border: 1px solid var(--semantic-color-border-control);

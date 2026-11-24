@@ -333,8 +333,17 @@ public static class KernelProtocolGovernanceEndpoints
                 && context.RequestServices.GetService<IKernelUnitOfWorkFactory>() is { } unitOfWorkFactory
                 && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
             {
+                var resolvedActor = context.RequestServices.GetService<ICurrentActor>()?.Actor
+                    ?? (!string.IsNullOrWhiteSpace(sigToken.Subject) ? Actor.Person(sigToken.Subject) : (Actor?)null);
+                if (resolvedActor is not { } actor)
+                {
+                    return TypedResults.Problem(
+                        title: "Authenticated actor required",
+                        detail: "Cannot verify protocol approval simulation attestation without an authenticated actor.",
+                        statusCode: StatusCodes.Status401Unauthorized);
+                }
+
                 var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
-                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor ?? Actor.Person(sigToken.Subject ?? "system");
                 var precheck = await ProtocolApprovalSimulationGate.CheckAsync(
                     tenant,
                     unitOfWorkFactory,

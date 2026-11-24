@@ -20,6 +20,7 @@ K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCertificate
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCurriculum.StudyId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.TrainingCurriculum.TenantId
 K-MOD-1|Cadence.Apps.Knowledge|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Knowledge|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.SiteId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.DelegationRecord.StudyId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeArticleAuditLog

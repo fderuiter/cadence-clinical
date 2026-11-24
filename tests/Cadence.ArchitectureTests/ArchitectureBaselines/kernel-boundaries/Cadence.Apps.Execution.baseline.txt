@@ -66,6 +66,7 @@ K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Supply.IpKitReconci
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Supply.IpKitReconciliationCertificate.TenantId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Toxicity.StagedAdverseEventReview.TenantId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Abstractions.AuthenticatedCaller.TenantId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApheresisCreateRequest.CollectionSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApheresisCreateRequest.StudyId

@@ -16,11 +16,11 @@
     v-else-if="isDemoBuild()"
     id="btn-reset-demo"
     type="button"
-    class="btn btn-sm btn-secondary"
+    class="btn btn-sm btn-secondary demo-reset-shell-btn"
     title="Reset offline demo data, notifications, documents, and local drafts"
     @click="handleReset"
   >
-    Reset Demo Sandbox
+    Reset<span class="demo-reset-shell-suffix"> Demo Sandbox</span>
   </button>
 </template>
 
@@ -84,5 +84,23 @@ async function handleReset() {
   font-size: 0.82rem;
   color: var(--semantic-color-success);
   font-weight: 600;
+}
+
+.demo-reset-shell-btn {
+  position: relative;
+}
+
+@media (min-width: 768px) and (max-width: 1400px) {
+  .demo-reset-shell-suffix {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 </style>

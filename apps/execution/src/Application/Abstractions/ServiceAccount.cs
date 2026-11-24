@@ -34,4 +34,8 @@ public static class ServiceAccounts
     /// <summary>The eConsent-completed consumer that auto-enrolls subjects and backfills consent records.</summary>
     public static readonly ServiceAccount EConsentConsumer =
         new("svc:econsent-consumer", "Automated consent-completion enrollment");
+
+    /// <summary>The CLI database seeder that populates baseline execution reference data.</summary>
+    public static readonly ServiceAccount DbSeeder =
+        new("svc:execution-db-seeder", "Initial clinical execution baseline seed");
 }

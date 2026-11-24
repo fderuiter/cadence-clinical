@@ -47,7 +47,7 @@ internal static class CaptureConditions
         var evidence = NodeRef.For(enrollment.Id, enrollment.VersionIndex);
         var condition = EvaluatedCondition.Unsatisfied(
             NotWithdrawn,
-            $"The participant takes part in the study; enrollment {enrollment.Id} was withdrawn at {enrollment.StatusSince:O}.",
+            $"The participant takes part in the study; enrollment for subject {enrollment.SubjectCode} was withdrawn at {enrollment.StatusSince:O}.",
             evidence);
         var reason = ObservationErrors.ParticipantWithdrawn.Message;
         return ObservationErrors.ParticipantWithdrawn with
@@ -58,7 +58,7 @@ internal static class CaptureConditions
                 ExplanationProducer,
                 [new ExplanationStep(reason, [evidence])],
                 [condition],
-                [new NextAction("Correct a value captured before the withdrawal, or capture data for an enrollment that is not withdrawn.")]),
+                [new NextAction("Correct a value captured before the withdrawal, or capture data for an enrollment that is not withdrawn.", Target: evidence)]),
         };
     }
 }

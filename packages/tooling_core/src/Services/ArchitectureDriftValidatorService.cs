@@ -348,7 +348,8 @@ public static partial class ArchitectureDriftValidatorService
             }
 
             string endpointCell = cells[2].Trim();
-            if (!endpointCell.StartsWith("`POST /", StringComparison.Ordinal) &&
+            if (!endpointCell.StartsWith("`GET /", StringComparison.Ordinal) &&
+                !endpointCell.StartsWith("`POST /", StringComparison.Ordinal) &&
                 !endpointCell.StartsWith("`PUT /", StringComparison.Ordinal) &&
                 !endpointCell.StartsWith("`PATCH /", StringComparison.Ordinal) &&
                 !endpointCell.StartsWith("`DELETE /", StringComparison.Ordinal))

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Database.Audit;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -198,6 +199,7 @@ public sealed class SceUnblindingAuthorizationTests(InteropPostgresApiFactory fa
     private async Task<string> SeedProgramAsync(string study)
     {
         await using var scope = factory.Services.CreateAsyncScope();
+        using var _ = scope.ServiceProvider.GetRequiredService<IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
         var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
         var program = new StatisticalProgram
         {
@@ -224,6 +226,7 @@ public sealed class SceUnblindingAuthorizationTests(InteropPostgresApiFactory fa
         string signature = Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes("CADENCE_SCE_SIGNING_KEY"), Encoding.UTF8.GetBytes(payload)));
 
         await using var scope = factory.Services.CreateAsyncScope();
+        using var _ = scope.ServiceProvider.GetRequiredService<IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
         var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
         db.DatabaseLockAuthTokens.Add(new DatabaseLockAuthToken
         {

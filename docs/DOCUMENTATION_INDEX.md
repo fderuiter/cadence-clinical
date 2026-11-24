@@ -302,7 +302,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings](adr/2026-08-17-centralized-permission-auth.md) | Historical | Also known as: ADR-097 (former number) |
 | [ADR-2381: Fast Version-Check with Immediate Quarantine and Client Alerting](adr/2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md) | Current | Also known as: ADR-2179 (former number) |
 | [ADR-2382: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](adr/2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md) | Historical | Also known as: ADR-097 (former number) |
-| [ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls](adr/2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md) | Historical | Also known as: ADR-097 (former number) |
+| [ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls](adr/2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md) | Current | Also known as: ADR-097 (former number) |
 | [ADR-2384: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers](adr/2026-08-17-standardized-postgresql-write-verification-and-etmf-immutability-triggers.md) | Historical | - Status: Accepted |
 | [ADR-2385: Unified Database Schema Introspection and Automated Type Synchronization Gating](adr/2026-08-17-unified-database-introspection-and-type-gating.md) | Historical | Also known as: ADR-2174 (former number) |
 | [ADR-2386: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](adr/2026-08-17-unified-deid-compliance-scan-cli.md) | Historical | Also known as: ADR-097 (former number) |
@@ -630,10 +630,14 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2553: Unify Root ESLint Gates, Explicit Runtime Globals, and Demo-Fixtures Typechecking](adr/2026-11-23-unify-root-eslint-gates-globals-and-demo-fixtures-typecheck.md) | Current | - Status: Accepted |
 | [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
 | [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
+| [ADR-2665: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](adr/2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) | Current | - Status: Accepted |
 | [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](adr/2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) | Current | - Status: Accepted |
+| [ADR-2664: Enforce Default GxP Audits, Step-Up Electronic Signatures, and Attribution Sentinels Across Standalone Services](adr/2026-11-23-enforce-default-gxp-audits-signatures-and-sentinels.md) | Current | - Status: Accepted |
+| [ADR-2663: Inline Explanation Primitives and RBAC Problem Details](adr/2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md) | Current | - Status: Accepted |
 | [ADR-2626: Observation Assertion Audit Coverage, SDV Precondition Guards, and CRA Modification Alerts](adr/2026-11-23-observation-assertions-sdv-guards-and-cra-alerts.md) | Current | - Status: Accepted |
 | [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](adr/2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) | Current | - Status: Accepted |
-| [ADR-2672: Three-Tier Shared Overlay Architecture and Raw Dialog Migration](adr/2026-11-23-three-tier-shared-overlays-and-raw-dialog-migration.md) | Current | - Status: Accepted |
+| [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](adr/2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) | Current | - Status: Accepted |
+| [ADR-2673: Three-Tier Shared Overlay Architecture and Raw Dialog Migration](adr/2026-11-23-three-tier-shared-overlays-and-raw-dialog-migration.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

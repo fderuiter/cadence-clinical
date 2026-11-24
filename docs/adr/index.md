@@ -34,7 +34,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
-| 2660–2669 | Security (continued)                                                              |
+| 2660–2669 | Security and GxP compliance (continued)                                           |
 | 2670–2679 | Web and design system (continued)                                                 |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
@@ -420,6 +420,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
 - [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
+- [ADR-2664: Enforce Default GxP Audits, Step-Up Electronic Signatures, and Attribution Sentinels Across Standalone Services](2026-11-23-enforce-default-gxp-audits-signatures-and-sentinels.md) (2026-11-23)
 
 ### 6. Frontend & Design System
 
@@ -467,9 +468,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
+- [ADR-2665: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) (2026-11-23)
 - [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
 - [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
-- [ADR-2672: Three-Tier Shared Overlay Architecture and Raw Dialog Migration](2026-11-23-three-tier-shared-overlays-and-raw-dialog-migration.md) (2026-11-23)
+- [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
+- [ADR-2673: Three-Tier Shared Overlay Architecture and Raw Dialog Migration](2026-11-23-three-tier-shared-overlays-and-raw-dialog-migration.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -617,6 +620,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) (2026-11-23)
 - [ADR-2661: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) (2026-11-22)
 - [ADR-2662: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist](2026-11-23-enforce-trial-tenant-writes-and-sponsor-comment-allowlist.md) (2026-11-23)
+- [ADR-2663: Inline Explanation Primitives and RBAC Problem Details](2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md) (2026-11-22)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

@@ -7,6 +7,7 @@ using Cadence.Apps.Notifications.Domain;
 using Cadence.Apps.Notifications.Endpoints;
 using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database.Audit;
 using Cadence.Kernel.Time;
 using Cadence.Templating;
 
@@ -129,6 +130,9 @@ public sealed class EconsentReconsentConsumer(
             });
         }
 
+        using var _ = AmbientAuditActorScope.BeginScope(
+            "svc:econsent-outbox",
+            $"Re-consent required notification for study {msg.StudyId}, template {msg.TemplateId} v{msg.VersionIndex}");
         await dbContext.SaveChangesAsync(context.CancellationToken);
 
         logger?.LogInformation("Successfully processed EconsentReconsentRequired event for {EventKeyPrefix} across {Count} subject(s).", eventKeyPrefix, enrolledSubjects.Count);

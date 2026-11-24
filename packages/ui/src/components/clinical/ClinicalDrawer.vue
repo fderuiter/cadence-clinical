@@ -67,6 +67,10 @@ const props = defineProps({
     type: Boolean,
     default: undefined,
   },
+  docked: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -148,7 +152,9 @@ watch(
   () => bindMediaQuery()
 );
 
-const isDocked = computed(() => Boolean(props.dockable && isWideDesktop.value));
+const isDocked = computed(() =>
+  Boolean(props.docked || (props.dockable && isWideDesktop.value))
+);
 
 const {
   isOpen: drawerOpen,
@@ -625,9 +631,16 @@ defineExpose({
 }
 
 @media (max-width: 480px) {
-  .clinical-drawer-backdrop {
+  .clinical-drawer-backdrop,
+  .clinical-drawer-backdrop.is-docked {
+    left: 0;
+    right: 0;
+    width: 100vw;
     align-items: flex-end;
     justify-content: stretch;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
   }
 
   .clinical-drawer-panel,
@@ -648,6 +661,18 @@ defineExpose({
 
   .clinical-drawer-footer {
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 1280px) {
+  .clinical-drawer-backdrop.is-docked {
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .clinical-drawer-panel.is-docked {
+    pointer-events: auto;
   }
 }
 </style>

@@ -9,6 +9,7 @@ K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.GuestLink.TenantId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.PlaybackAuditLog.TenantId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.ShareGrant.TenantId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Fileshare|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileAuditLog
 K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.SiteId
 K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.StudyId

@@ -40,11 +40,11 @@ describe("vite.config.js manualChunks split", () => {
     "/repo/apps/web/src/api/soaClient.ts",
     "/repo/apps/web/src/api/statisticalComputing.ts",
     "/repo/apps/web/src/api/terminologyClient.ts",
-    "/repo/apps/web/src/services/api.js",
+    "/repo/apps/web/src/api/apiClient.js",
   ];
 
   const liveClients = [
-    "/repo/apps/web/src/api/apiClient.js",
+    "/repo/apps/web/src/api/signatureVerification.ts",
     "/repo/apps/web/src/api/authorization.js",
     "/repo/apps/web/src/api/changeReason.ts",
     "/repo/apps/web/src/api/client.ts",

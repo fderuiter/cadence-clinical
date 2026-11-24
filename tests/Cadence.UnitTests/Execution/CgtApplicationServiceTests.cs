@@ -89,6 +89,21 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InitializeApheresisAsync_WithoutCustodianOrAuditActor_ThrowsAuditActorUnresolvedException()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new CgtApplicationService(_dbContext, _clock);
+
+        var request = new CgtApheresisCreateRequest(
+            StudyId: "STUDY-CGT-001",
+            CollectionSiteId: "SITE-101",
+            SubjectId: "SUB-1001");
+
+        await Assert.ThrowsAsync<Cadence.Apps.Execution.Application.Abstractions.AuditActorUnresolvedException>(
+            () => service.InitializeApheresisAsync(request, ct));
+    }
+
+    [Fact]
     public async Task RecordMilestoneAsync_DetectsTemperatureExcursion()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -97,7 +112,8 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
         var cocResponse = await service.InitializeApheresisAsync(new CgtApheresisCreateRequest(
             StudyId: "STUDY-CGT-001",
             CollectionSiteId: "SITE-101",
-            SubjectId: "SUB-1001"), ct);
+            SubjectId: "SUB-1001",
+            CustodianId: "USR-A"), ct);
 
         var milestoneReq = new CgtMilestoneCreateRequest(
             StudyId: "STUDY-CGT-001",
@@ -147,7 +163,8 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
         var cocResponse = await service.InitializeApheresisAsync(new CgtApheresisCreateRequest(
             StudyId: "STUDY-CGT-001",
             CollectionSiteId: "SITE-101",
-            SubjectId: "SUB-1001"), ct);
+            SubjectId: "SUB-1001",
+            CustodianId: "USR-APHERESIS"), ct);
 
         string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STUDY-CGT-001",
@@ -189,7 +206,8 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
         var cocResponse = await service.InitializeApheresisAsync(new CgtApheresisCreateRequest(
             StudyId: "STUDY-CGT-001",
             CollectionSiteId: "SITE-101",
-            SubjectId: "SUB-1001"), ct);
+            SubjectId: "SUB-1001",
+            CustodianId: "USR-APHERESIS"), ct);
 
         string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STUDY-CGT-001",

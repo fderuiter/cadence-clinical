@@ -23,8 +23,10 @@ import {
   isValidStepUpAction,
   peekAuthReturnUrl,
   registerDraftSource,
+  requestStepUpSignature,
   requiresCustomSignatureReason,
   resetDraftSourcesForTests,
+  resolveDefaultSemanticAction,
   resolveOidcRedirectUri,
   resolveSignatureReason,
   sanitizeReturnUrl,
@@ -491,5 +493,102 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
     expect(deriveSignerRoleFromClaims(["auditor"])).toBe("Auditor");
     expect(deriveSignerRoleFromClaims(["Subject"])).toBe("Subject");
     expect(deriveSignerRoleFromClaims(null)).toBe("Subject");
+  });
+
+  it("resolves default semantic_action values from gateway action paths", () => {
+    expect(
+      resolveDefaultSemanticAction("/api/v1/execution/amendments/reconsent")
+    ).toBe(SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN);
+    expect(
+      resolveDefaultSemanticAction(
+        "/api/v1/econsent/templates/tpl-1/versions/1/capture-consent"
+      )
+    ).toBe(SEMANTIC_ACTIONS.ECONSENT_CAPTURE);
+    expect(resolveDefaultSemanticAction("/api/v1/ctms/doa/sign-off")).toBe(
+      SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF
+    );
+    expect(
+      resolveDefaultSemanticAction("/api/v1/etmf/documents/doc-1/sign-off")
+    ).toBe(SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF);
+    expect(
+      resolveDefaultSemanticAction(
+        "/api/v1/execution/cec/dossiers/DOS-1/chair-adjudicate"
+      )
+    ).toBe(SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE);
+    expect(
+      resolveDefaultSemanticAction("/api/v1/execution/forms/f-1/signatures")
+    ).toBe(SEMANTIC_ACTIONS.COLLECTION_SIGN);
+    expect(
+      resolveDefaultSemanticAction("/api/v1/designer/soa/studies/s-1/approve")
+    ).toBe(SEMANTIC_ACTIONS.SOA_APPROVE);
+    expect(resolveDefaultSemanticAction("/api/v1/kernel/locks/sign")).toBe(
+      "execution.signature.verify"
+    );
+    expect(resolveDefaultSemanticAction(null)).toBe(
+      "execution.signature.verify"
+    );
+  });
+
+  it("dispatches step-up verification via requestStepUpSignature, enforces sig_token by default, and supports raw pass-through", async () => {
+    const post = vi.fn().mockResolvedValue({
+      sig_token: "sig-tok-123",
+      expires_in: 60,
+    });
+
+    const result = await requestStepUpSignature(
+      {
+        username: "pi.site101",
+        password: "ValidPassword123!", // pragma: allowlist secret
+        totp: "654321",
+        action: "/api/v1/etmf/documents/doc-9/sign-off",
+        batchId: "batch-abc",
+      },
+      { post }
+    );
+
+    expect(post).toHaveBeenCalledWith("/api/v1/auth/signature-verification", {
+      username: "pi.site101",
+      password: "ValidPassword123!", // pragma: allowlist secret
+      totp: "654321",
+      action: "/api/v1/etmf/documents/doc-9/sign-off",
+      semantic_action: "etmf.document.sign_off",
+      batch_id: "batch-abc",
+    });
+    expect(result).toEqual({ sig_token: "sig-tok-123", expires_in: 60 });
+
+    post.mockResolvedValueOnce({});
+    await expect(
+      requestStepUpSignature(
+        {
+          username: "participant.101",
+          password: "ValidPassword123!", // pragma: allowlist secret
+          action: "/api/v1/execution/amendments/reconsent",
+        },
+        {
+          post,
+          missingTokenMessage:
+            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved.",
+        }
+      )
+    ).rejects.toThrow("Nothing was saved.");
+
+    post.mockResolvedValueOnce({ signature_token: "ticket-raw-token" });
+    const rawTicketRes = await requestStepUpSignature(
+      {
+        username: "support.lead",
+        password: "ValidPassword123!", // pragma: allowlist secret
+        action: "/api/v1/tickets/TKT-1/sign",
+        semanticAction: "tickets.ticket.sign",
+      },
+      { post, requireSigToken: false }
+    );
+    expect(rawTicketRes).toEqual({ signature_token: "ticket-raw-token" });
+
+    await expect(
+      requestStepUpSignature({
+        password: "ValidPassword123!", // pragma: allowlist secret
+        action: "/api/v1/ctms/doa/sign-off",
+      })
+    ).rejects.toThrow(/options\.post/i);
   });
 });

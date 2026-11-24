@@ -107,7 +107,9 @@ const shownStates = computed(
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-width: 8rem;
+  min-width: min(100%, 8rem);
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;

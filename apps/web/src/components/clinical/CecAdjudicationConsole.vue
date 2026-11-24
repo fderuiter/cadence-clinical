@@ -1411,14 +1411,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import {
-  buildStepUpVerificationPayload,
-  ClinicalModal,
-  SEMANTIC_ACTIONS,
-} from "ui";
+import { ClinicalModal, SEMANTIC_ACTIONS } from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { useErrorPresenter } from "../../composables/useErrorPresenter";
 import { useToastStore } from "../../stores/toasts";
 
@@ -1949,22 +1946,20 @@ async function submitChairAdjudication() {
   try {
     const dossierId = activeDossier.value?.dossier_id || "DOSSIER-101";
     const actionUrl = `/api/v1/execution/cec/dossiers/${dossierId}/chair-adjudicate`;
-    const verificationPayload = buildStepUpVerificationPayload({
-      username: chairForm.value.signer_name || "chair_adjudicator",
-      password: enteredPassword,
-      action: actionUrl,
-      semanticAction: SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE,
-    });
-
-    const reauthRes = await apiClient.post(
-      "/api/v1/auth/signature-verification",
-      verificationPayload
+    const reauthRes = await requestStepUpSignature(
+      {
+        username: chairForm.value.signer_name || "chair_adjudicator",
+        password: enteredPassword,
+        action: actionUrl,
+        semanticAction: SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE,
+      },
+      {
+        missingTokenMessage:
+          "Re-authentication failed: missing signature token",
+      }
     );
 
-    const sigToken = reauthRes?.sig_token;
-    if (!sigToken) {
-      throw new Error("Re-authentication failed: missing signature token");
-    }
+    const sigToken = reauthRes.sig_token;
 
     const payload = {
       final_classification: chairForm.value.final_classification,

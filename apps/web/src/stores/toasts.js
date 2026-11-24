@@ -4,7 +4,10 @@ import {
   getActivePinia,
   setActivePinia,
 } from "pinia";
-import { describeApiError } from "../utils/apiErrors.js";
+import {
+  describeApiError,
+  extractProblemExplanation,
+} from "../utils/apiErrors.js";
 
 let nextId = 1;
 const toastTimers = new Map();
@@ -34,6 +37,7 @@ const rawUseToastStore = defineStore("toasts", {
      *   title?: string;
      *   message?: string;
      *   action?: { label: string; to: string } | null;
+     *   targets?: Array<{ target: string; description?: string }> | null;
      *   timeoutMs?: number;
      * }} [options]
      */
@@ -42,6 +46,7 @@ const rawUseToastStore = defineStore("toasts", {
       title = "",
       message = "",
       action = null,
+      targets = null,
       timeoutMs = undefined,
     } = {}) {
       const id = nextId++;
@@ -65,13 +70,22 @@ const rawUseToastStore = defineStore("toasts", {
         action.to.trim()
           ? { label: action.label.trim(), to: action.to.trim() }
           : null;
-
+      const normalizedTargets = Array.isArray(targets)
+        ? targets
+            .filter((t) => t && typeof t.target === "string" && t.target.trim())
+            .map((t) => ({
+              target: t.target.trim(),
+              description:
+                typeof t.description === "string" ? t.description.trim() : "",
+            }))
+        : [];
       this.toasts.push({
         id,
         tone: normalizedTone,
         title: normalizedTitle,
         message: message ?? "",
         action: normalizedAction,
+        targets: normalizedTargets,
         timeoutMs: effectiveTimeoutMs,
       });
 
@@ -96,10 +110,12 @@ const rawUseToastStore = defineStore("toasts", {
     /** Reports a failed API call: `title` says what failed, the message comes from the error. */
     apiError(title, err) {
       console.error(`${title}:`, err);
+      const exp = extractProblemExplanation(err);
       return this.push({
         tone: "error",
         title,
         message: describeApiError(err),
+        targets: exp?.nextActions ?? [],
         timeoutMs: 0,
       });
     },
