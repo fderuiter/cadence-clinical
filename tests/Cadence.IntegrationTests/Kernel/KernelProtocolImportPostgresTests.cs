@@ -111,6 +111,8 @@ public sealed class KernelProtocolImportPostgresTests(KernelPostgresFixture fixt
                 "Protocol Importer",
                 [
                     "concept.define",
+                    "code_system.register",
+                    "code_system.import_version",
                     "protocol.draft",
                     "protocol.revise_draft",
                     "protocol.submit_for_review",
@@ -293,6 +295,7 @@ public sealed class KernelProtocolImportPostgresTests(KernelPostgresFixture fixt
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }

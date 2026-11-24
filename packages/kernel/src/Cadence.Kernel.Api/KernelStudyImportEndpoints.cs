@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -183,6 +184,8 @@ public static class KernelStudyImportEndpoints
                 .. KernelErrors.CommandPipeline,
                 KernelErrors.AlreadyExists,
                 KernelErrors.NotFound,
+                IdentityErrors.NameRequired,
+                IdentityErrors.TenantUnknown,
                 ProtocolErrors.StudyUnknown,
                 ProtocolErrors.FirstVersionExists,
                 ProtocolErrors.InvalidTransition,
@@ -190,8 +193,15 @@ public static class KernelStudyImportEndpoints
                 ProtocolErrors.ContentInvalid,
                 ProtocolErrors.AmendmentInvalid,
                 ProtocolErrors.AmendmentNotAllowed,
+                KnowledgeErrors.CodeSystemUnknown,
+                KnowledgeErrors.CodeSystemUriInvalid,
                 KnowledgeErrors.ConceptLabelRequired,
+                KnowledgeErrors.DuplicateEntry,
+                KnowledgeErrors.EntriesInvalid,
                 KnowledgeErrors.ExternalCodeMismatch,
+                KnowledgeErrors.LicenseMismatch,
+                KnowledgeErrors.PackageInvalid,
+                KnowledgeErrors.VersionRequired,
                 StandardsErrors.LibraryItemInvalid,
                 StandardsErrors.StandardVersionUnknown,
             ]);
@@ -950,6 +960,9 @@ public static class KernelStudyImportEndpoints
         var stagedBiomedicalByCode = new Dictionary<string, ConceptRef>(StringComparer.Ordinal);
         var stagedByConceptId = new Dictionary<ConceptId, ConceptRef>();
         var stagedLabelsByRef = new Dictionary<ConceptRef, string>();
+        var resolvedTerminologyByKey = new Dictionary<string, ProtocolTerminologyResolution>(StringComparer.Ordinal);
+        var stagedCodeSystemsById = new Dictionary<CodeSystemId, StagedCodeSystem>();
+        var stagedCodeSystemVersionsById = new Dictionary<CodeSystemVersionId, StagedCodeSystemVersion>();
 
         async ValueTask<ProtocolConceptResolution> ResolveOrDefineConceptAsync(
             ProtocolConceptCandidate candidate,
@@ -1054,6 +1067,115 @@ public static class KernelStudyImportEndpoints
             return created;
         }
 
+        async ValueTask<ProtocolTerminologyResolution> ResolveOrRegisterTerminologyAsync(
+            ProtocolTerminologyCandidate candidate,
+            CancellationToken ct)
+        {
+            var boundedGroup = BoundTerminologyToken(candidate.CodelistCode);
+            var normalizedEntries = NormalizeTerminologyEntries(candidate.Entries, boundedGroup);
+
+            if (!string.IsNullOrWhiteSpace(candidate.CodeSystemUri) && !string.IsNullOrWhiteSpace(candidate.CodeSystemVersion))
+            {
+                foreach (var candidateUri in CandidateCodeSystemUris(candidate.CodeSystemUri))
+                {
+                    var preExisting = await concepts.FindCodeSystemVersionAsync(tenant, candidateUri, candidate.CodeSystemVersion.Trim(), ct).ConfigureAwait(false);
+                    if (preExisting is null)
+                    {
+                        continue;
+                    }
+
+                    if (normalizedEntries.Count == 0)
+                    {
+                        if (boundedGroup is not null)
+                        {
+                            var emptyCheckGroup = await concepts.GetGroupAsync(tenant, preExisting.Id, boundedGroup, ct).ConfigureAwait(false);
+                            if (emptyCheckGroup.Count > 0)
+                            {
+                                return new ProtocolTerminologyResolution(new TerminologyBinding(preExisting.Id, boundedGroup));
+                            }
+                        }
+
+                        return new ProtocolTerminologyResolution(new TerminologyBinding(preExisting.Id));
+                    }
+
+                    if (boundedGroup is not null)
+                    {
+                        var existingGroup = await concepts.GetGroupAsync(tenant, preExisting.Id, boundedGroup, ct).ConfigureAwait(false);
+                        var groupCodes = existingGroup.Select(e => e.Code).ToHashSet(StringComparer.Ordinal);
+                        if (existingGroup.Count == normalizedEntries.Count
+                            && normalizedEntries.All(e => groupCodes.Contains(e.Code)))
+                        {
+                            return new ProtocolTerminologyResolution(new TerminologyBinding(preExisting.Id, boundedGroup));
+                        }
+                    }
+                }
+            }
+
+            if (normalizedEntries.Count == 0)
+            {
+                return new ProtocolTerminologyResolution(null);
+            }
+
+            var effectiveGroup = boundedGroup ?? BoundTerminologyToken(candidate.SourceKey) ?? "codelist";
+            var groupedEntries = normalizedEntries
+                .Select(e => e.GroupCode == effectiveGroup ? e : e with { GroupCode = effectiveGroup })
+                .ToList();
+
+            var licence = InferLicenceClass(candidate.CodeSystemUri);
+            var systemUri = licence switch
+            {
+                LicenseClass.Licensed => "urn:cadence:terminology:protocol-codelists:licensed",
+                LicenseClass.AcceptedTerms => "urn:cadence:terminology:protocol-codelists:accepted-terms",
+                _ => "urn:cadence:terminology:protocol-codelists",
+            };
+
+            var packageBytes = SerializeTerminologyEntries(groupedEntries);
+            var digest = Convert.ToHexStringLower(SHA256.HashData(packageBytes));
+            var versionPrefix = SanitizeVersionPrefix(effectiveGroup);
+            var versionLabel = $"{versionPrefix}-{digest[..16]}";
+            var cacheKey = $"{systemUri}|{versionLabel}|{effectiveGroup}";
+            if (resolvedTerminologyByKey.TryGetValue(cacheKey, out var cachedTerminology))
+            {
+                return cachedTerminology;
+            }
+
+            var existingPinned = await concepts.FindCodeSystemVersionAsync(tenant, systemUri, versionLabel, ct).ConfigureAwait(false);
+            if (existingPinned is not null)
+            {
+                var reusedBinding = new ProtocolTerminologyResolution(new TerminologyBinding(existingPinned.Id, effectiveGroup));
+                resolvedTerminologyByKey[cacheKey] = reusedBinding;
+                return reusedBinding;
+            }
+
+            var codeSystemId = CodeSystemId.FromGuid(DeriveGuid(tenant, "import-codesystem", systemUri));
+            stagedCodeSystemsById.TryAdd(codeSystemId, new StagedCodeSystem(codeSystemId, systemUri, licence));
+
+            var versionId = CodeSystemVersionId.FromGuid(DeriveGuid(tenant, "import-codesystem-version", $"{systemUri}:{versionLabel}"));
+            var releasedOn = !string.IsNullOrWhiteSpace(candidate.CodeSystemVersion)
+                && DateOnly.TryParseExact(candidate.CodeSystemVersion.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedRelease)
+                    ? parsedRelease
+                    : new DateOnly(2026, 1, 1);
+            stagedCodeSystemVersionsById.TryAdd(
+                versionId,
+                new StagedCodeSystemVersion(
+                    versionId,
+                    codeSystemId,
+                    systemUri,
+                    versionLabel,
+                    releasedOn,
+                    new TerminologyPackage(
+                        digest,
+                        $"{versionPrefix}.json",
+                        systemUri,
+                        packageBytes.LongLength,
+                        "application/vnd.cadence.codelist+json"),
+                    groupedEntries));
+
+            var createdBinding = new ProtocolTerminologyResolution(new TerminologyBinding(versionId, effectiveGroup));
+            resolvedTerminologyByKey[cacheKey] = createdBinding;
+            return createdBinding;
+        }
+
         var importOutcome = await importer.ImportAsync(
             new ProtocolDesignImportRequest(
                 RawBytes: parsedPayload.RawBytes,
@@ -1064,7 +1186,8 @@ public static class KernelStudyImportEndpoints
                 FallbackTitle: study.Title,
                 ReplaceForms: parsedPayload.ReplaceForms),
             ResolveOrDefineConceptAsync,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            ResolveOrRegisterTerminologyAsync).ConfigureAwait(false);
 
         if (importOutcome.PayloadTooLarge)
         {
@@ -1082,10 +1205,63 @@ public static class KernelStudyImportEndpoints
             return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
         }
 
+        if (stagedCodeSystemsById.Count > 0
+            && !await IsPermittedAsync(tenant, typeof(RegisterCodeSystem), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+        }
+
+        foreach (var targetCodeSystemId in stagedCodeSystemVersionsById.Values.Select(v => v.CodeSystemId).Distinct())
+        {
+            if (!await IsPermittedAsync(tenant, typeof(ImportCodeSystemVersion), NodeRef.For(targetCodeSystemId), probe, catalog, cancellationToken).ConfigureAwait(false))
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+            }
+        }
+
         if (importOutcome.RulePack is not null
             && !await IsPermittedAsync(tenant, typeof(DraftLibraryItem), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
         {
             return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+        }
+
+        foreach (var stagedCodeSystem in stagedCodeSystemsById.Values)
+        {
+            var registered = await sender.SendAsync(
+                new RegisterCodeSystem(
+                    tenant,
+                    stagedCodeSystem.CodeSystemId,
+                    stagedCodeSystem.SystemUri,
+                    "Protocol Imported Codelists",
+                    "Cadence Protocol Import",
+                    stagedCodeSystem.License,
+                    DeriveSubIdempotencyKey(idempotencyKey, "codesystem", stagedCodeSystem.CodeSystemId.Value),
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!registered.IsSuccess && !string.Equals(registered.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
+            {
+                return KernelErrorEndpoints.Problem(registered.Error!);
+            }
+        }
+
+        foreach (var stagedVersion in stagedCodeSystemVersionsById.Values)
+        {
+            var imported = await sender.SendAsync(
+                new ImportCodeSystemVersion(
+                    tenant,
+                    stagedVersion.VersionId,
+                    stagedVersion.CodeSystemId,
+                    stagedVersion.VersionLabel,
+                    stagedVersion.ReleasedOn,
+                    stagedVersion.Package,
+                    stagedVersion.Entries,
+                    DeriveSubIdempotencyKey(idempotencyKey, "codesystem-version", stagedVersion.VersionId.Value),
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!imported.IsSuccess && !string.Equals(imported.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
+            {
+                return KernelErrorEndpoints.Problem(imported.Error!);
+            }
         }
 
         var serializedDesign = ProtocolDesignDocument.Write(importOutcome.Design);
@@ -2237,6 +2413,208 @@ public static class KernelStudyImportEndpoints
         return new Guid(bytes, bigEndian: true);
     }
 
+    private static string DeriveSubIdempotencyKey(string requestIdempotencyKey, string scope, Guid entityId)
+    {
+        var hash = Convert.ToHexStringLower(
+            SHA256.HashData(Encoding.UTF8.GetBytes($"{requestIdempotencyKey}:{scope}:{entityId:D}")));
+        return $"imp-{scope}:{hash[..32]}";
+    }
+
+    private static IReadOnlyList<string> CandidateCodeSystemUris(string rawCodeSystem)
+    {
+        var trimmed = rawCodeSystem.Trim();
+        var candidates = new List<string>();
+        if (KnownCodeSystems.UriFor(trimmed) is { } canonical)
+        {
+            candidates.Add(canonical);
+        }
+
+        if (!candidates.Contains(trimmed, StringComparer.Ordinal))
+        {
+            candidates.Add(trimmed);
+        }
+
+        if (string.Equals(trimmed, "http://www.cdisc.org", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "https://www.cdisc.org", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "NCI", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "CDISC", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var fallback in (string[])[KnownCodeSystems.NciThesaurus, KnownCodeSystems.SdtmCt, KnownCodeSystems.CdashCt, KnownCodeSystems.ProtocolCt])
+            {
+                if (!candidates.Contains(fallback, StringComparer.Ordinal))
+                {
+                    candidates.Add(fallback);
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    private static LicenseClass InferLicenceClass(string? rawCodeSystem)
+    {
+        if (string.IsNullOrWhiteSpace(rawCodeSystem))
+        {
+            return LicenseClass.Open;
+        }
+
+        var trimmed = rawCodeSystem.Trim();
+        if (KnownCodeSystems.UriFor(trimmed) is { } canonical && KnownCodeSystems.RequiredLicence(canonical) is { } knownLicence)
+        {
+            return knownLicence;
+        }
+
+        if (trimmed.Contains("snomed", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains("meddra", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains("whodrug", StringComparison.OrdinalIgnoreCase))
+        {
+            return LicenseClass.Licensed;
+        }
+
+        if (trimmed.Contains("loinc", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains("rxnorm", StringComparison.OrdinalIgnoreCase))
+        {
+            return LicenseClass.AcceptedTerms;
+        }
+
+        return LicenseClass.Open;
+    }
+
+    private static string? BoundTerminologyToken(string? rawToken)
+    {
+        if (string.IsNullOrWhiteSpace(rawToken))
+        {
+            return null;
+        }
+
+        var trimmed = rawToken.Trim();
+        if (trimmed.Length <= 64)
+        {
+            return trimmed;
+        }
+
+        var suffix = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(trimmed)))[..8];
+        return $"{trimmed[..55]}-{suffix}";
+    }
+
+    private static List<CodeSystemEntryData> NormalizeTerminologyEntries(
+        IReadOnlyList<CodeSystemEntryData>? rawEntries,
+        string? defaultGroup)
+    {
+        if (rawEntries is null || rawEntries.Count == 0)
+        {
+            return [];
+        }
+
+        var normalized = new List<CodeSystemEntryData>(rawEntries.Count);
+        var seen = new HashSet<(string? Group, string Code)>();
+        foreach (var entry in rawEntries)
+        {
+            if (entry is null || string.IsNullOrWhiteSpace(entry.Code))
+            {
+                continue;
+            }
+
+            var rawCode = entry.Code.Trim();
+            var boundedCode = BoundTerminologyToken(rawCode)!;
+            var group = BoundTerminologyToken(entry.GroupCode) ?? defaultGroup;
+            if (!seen.Add((group, boundedCode)))
+            {
+                continue;
+            }
+
+            var display = string.IsNullOrWhiteSpace(entry.Display) ? rawCode : entry.Display.Trim();
+            if (display.Length > 1000)
+            {
+                display = display[..1000];
+            }
+
+            string? submission = null;
+            if (!string.IsNullOrWhiteSpace(entry.SubmissionValue))
+            {
+                submission = entry.SubmissionValue.Trim();
+            }
+            else if (!string.Equals(boundedCode, rawCode, StringComparison.Ordinal))
+            {
+                submission = rawCode;
+            }
+
+            if (submission is { Length: > 255 })
+            {
+                submission = submission[..255];
+            }
+
+            normalized.Add(new CodeSystemEntryData(
+                boundedCode,
+                display,
+                GroupCode: group,
+                SubmissionValue: submission,
+                Definition: string.IsNullOrWhiteSpace(entry.Definition) ? null : entry.Definition.Trim(),
+                Synonyms: entry.Synonyms));
+        }
+
+        return normalized;
+    }
+
+    private static byte[] SerializeTerminologyEntries(IReadOnlyList<CodeSystemEntryData> entries)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartArray();
+            foreach (var entry in entries)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("code", entry.Code);
+                writer.WriteString("display", entry.Display);
+                if (entry.GroupCode is not null)
+                {
+                    writer.WriteString("group", entry.GroupCode);
+                }
+
+                if (entry.SubmissionValue is not null)
+                {
+                    writer.WriteString("submissionValue", entry.SubmissionValue);
+                }
+
+                if (entry.Definition is not null)
+                {
+                    writer.WriteString("definition", entry.Definition);
+                }
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        return stream.ToArray();
+    }
+
+    private static string SanitizeVersionPrefix(string raw)
+    {
+        var sb = new StringBuilder();
+        foreach (var ch in raw)
+        {
+            if (char.IsAsciiLetterOrDigit(ch) || ch is '.' or '_' or '-')
+            {
+                sb.Append(ch);
+            }
+            else if (sb.Length > 0 && sb[^1] != '-')
+            {
+                sb.Append('-');
+            }
+
+            if (sb.Length >= 32)
+            {
+                break;
+            }
+        }
+
+        var prefix = sb.ToString().Trim('-', '.', '_');
+        return string.IsNullOrEmpty(prefix) ? "codelist" : prefix;
+    }
+
     private static string ComputeImportRequestFingerprint(StudyId studyId, ParsedImportInput input)
     {
         using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -2313,6 +2691,20 @@ public static class KernelStudyImportEndpoints
         public static ParsedImportInput Fail(ProblemHttpResult problem) =>
             new(null, null, ProtocolImportFormat.Auto, null, false, null, null, problem);
     }
+
+    private sealed record StagedCodeSystem(
+        CodeSystemId CodeSystemId,
+        string SystemUri,
+        LicenseClass License);
+
+    private sealed record StagedCodeSystemVersion(
+        CodeSystemVersionId VersionId,
+        CodeSystemId CodeSystemId,
+        string SystemUri,
+        string VersionLabel,
+        DateOnly ReleasedOn,
+        TerminologyPackage Package,
+        IReadOnlyList<CodeSystemEntryData> Entries);
 
     private sealed record DraftMutationPlan(
         ProtocolDraftImportMode Mode,

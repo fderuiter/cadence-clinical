@@ -698,6 +698,14 @@ internal sealed class KernelCommandTransaction(
             return;
         }
 
+        if (type == typeof(FormVersionSnapshot)
+            && _claimed.All(c => c.Type == typeof(ProtocolVersion) || c.Type == typeof(FormVersionSnapshot))
+            && _claimed.Count(c => c.Type == typeof(ProtocolVersion)) == 1)
+        {
+            _claimed.Add((type, key));
+            return;
+        }
+
         if (_claimed.Count > 0 && !_claimed.Contains((type, key)))
         {
             var claimed = _claimed.First();
@@ -726,7 +734,18 @@ internal sealed class KernelCommandTransaction(
         }
         else if (changed.Count > 1)
         {
-            changed = _scopeLocked ? OrderSignedLockAssertion(changed) : OrderFormSave(changed);
+            if (_scopeLocked)
+            {
+                changed = OrderSignedLockAssertion(changed);
+            }
+            else if (_collection is not null)
+            {
+                changed = OrderFormSave(changed);
+            }
+            else
+            {
+                changed = OrderProtocolApprovalSnapshots(changed);
+            }
         }
 
         return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
@@ -832,6 +851,30 @@ internal sealed class KernelCommandTransaction(
         }
 
         return [changed.Single(c => ReferenceEquals(c.Entry.Entity, instance)), .. observations.OrderBy(o => ((Observation)o.Entry.Entity).Id)];
+    }
+
+    /// <summary>
+    /// The aggregates of an approved protocol version and its bound immutable <see cref="FormVersionSnapshot"/>s (ADR-2809).
+    /// </summary>
+    private static List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderProtocolApprovalSnapshots(
+        List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed)
+    {
+        var protocolEntry = changed.SingleOrDefault(c => c.Module is null && c.Entry.State == EntityState.Modified && c.Entry.Entity is ProtocolVersion);
+        if (protocolEntry.Entry?.Entity is ProtocolVersion protocol)
+        {
+            var snapshots = changed.Where(c => c.Entry.Entity is FormVersionSnapshot).ToList();
+            if (snapshots.Count == changed.Count - 1
+                && snapshots.All(s => s.Module is null
+                    && s.Entry.State == EntityState.Added
+                    && ((FormVersionSnapshot)s.Entry.Entity).ProtocolVersionId == protocol.Id
+                    && ((FormVersionSnapshot)s.Entry.Entity).TenantId == protocol.TenantId
+                    && ((FormVersionSnapshot)s.Entry.Entity).StudyId == protocol.StudyId))
+            {
+                return [protocolEntry, .. snapshots.OrderBy(s => ((FormVersionSnapshot)s.Entry.Entity).Id)];
+            }
+        }
+
+        throw new InvalidOperationException($"K-TX-1: changed {changed.Count} aggregates.");
     }
 
     private ChangedAggregate Stamp(EntityEntry<AggregateRootBase> entry, string? module)
@@ -984,7 +1027,7 @@ internal sealed class KernelCommandTransaction(
             inbound.Add((subject.AtVersion(version - 1), LineageEdgeKind.Supersedes, null));
         }
 
-        if (_proposal is { } proposal && proposal.Unversioned() != subject.Unversioned())
+        if (isPrimary && _proposal is { } proposal && proposal.Unversioned() != subject.Unversioned())
         {
             inbound.Add((proposal, LineageEdgeKind.ExecutedUnder, null));
         }

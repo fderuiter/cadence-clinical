@@ -2634,7 +2634,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Protocol.StudyUnknown\u0060, \u0060K.Standards.StandardVersionUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Identity.TenantUnknown\u0060, \u0060K.Knowledge.CodeSystemUnknown\u0060, \u0060K.Protocol.StudyUnknown\u0060, \u0060K.Standards.StandardVersionUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2674,7 +2674,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Knowledge.ConceptLabelRequired\u0060, \u0060K.Knowledge.ExternalCodeMismatch\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060, \u0060K.Standards.LibraryItemInvalid\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Identity.NameRequired\u0060, \u0060K.Knowledge.CodeSystemUriInvalid\u0060, \u0060K.Knowledge.ConceptLabelRequired\u0060, \u0060K.Knowledge.DuplicateEntry\u0060, \u0060K.Knowledge.EntriesInvalid\u0060, \u0060K.Knowledge.ExternalCodeMismatch\u0060, \u0060K.Knowledge.LicenseMismatch\u0060, \u0060K.Knowledge.PackageInvalid\u0060, \u0060K.Knowledge.VersionRequired\u0060, \u0060K.Protocol.AmendmentInvalid\u0060, \u0060K.Protocol.AmendmentNotAllowed\u0060, \u0060K.Protocol.ContentInvalid\u0060, \u0060K.Protocol.ContentRequired\u0060, \u0060K.Standards.LibraryItemInvalid\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -2699,6 +2699,14 @@
           },
           {
             "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Identity.TenantUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Knowledge.CodeSystemUnknown",
             "status": 404
           },
           {
@@ -2746,11 +2754,39 @@
             "status": 422
           },
           {
+            "code": "K.Identity.NameRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.CodeSystemUriInvalid",
+            "status": 422
+          },
+          {
             "code": "K.Knowledge.ConceptLabelRequired",
             "status": 422
           },
           {
+            "code": "K.Knowledge.DuplicateEntry",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.EntriesInvalid",
+            "status": 422
+          },
+          {
             "code": "K.Knowledge.ExternalCodeMismatch",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.LicenseMismatch",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.PackageInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Knowledge.VersionRequired",
             "status": 422
           },
           {

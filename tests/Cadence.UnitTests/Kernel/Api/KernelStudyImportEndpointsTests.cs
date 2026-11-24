@@ -97,7 +97,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         _world.GrantRole(
             Actor.Person(DesignerIdentity.UserId),
             "DESIGNER",
-            ["organization.register", "study.register", "site.register", "study_site.link", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"],
+            ["organization.register", "study.register", "site.register", "study_site.link", "concept.define", "code_system.register", "code_system.import_version", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.amend"],
             AuthorityScope.Tenant());
 
         _world.GrantRole(
@@ -594,7 +594,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         var ct = TestContext.Current.CancellationToken;
         using var designerClient = CreateClient(DesignerIdentity);
 
-        // 1. Invalid ODM referencing an undefined ItemGroupOID after an ItemDef with C25298 -> 422 with zero Concept rows committed.
+        // 1. Invalid ODM referencing an undefined ItemGroupOID alongside an ItemDef with C25298 and a CodeList -> 422 with zero Concept or CodeSystem rows committed.
         const string invalidOdmWithConcept = """
             <?xml version="1.0" encoding="UTF-8"?>
             <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.BAD" FileType="Snapshot" ODMVersion="1.3.2">
@@ -605,12 +605,26 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                   <ProtocolName>BAD-101</ProtocolName>
                 </GlobalVariables>
                 <MetaDataVersion OID="MDV.BAD" Name="v1">
+                  <FormDef OID="F.OK" Name="Valid First Form" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.OK" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
                   <FormDef OID="F.BAD" Name="Broken Form" Repeating="No">
                     <ItemGroupRef ItemGroupOID="IG.MISSING" OrderNumber="1" Mandatory="Yes"/>
                   </FormDef>
+                  <ItemGroupDef OID="IG.OK" Name="Valid Group" Repeating="No">
+                    <ItemRef ItemOID="IT.SYS" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.POS" OrderNumber="2" Mandatory="No"/>
+                  </ItemGroupDef>
                   <ItemDef OID="IT.SYS" Name="SYSBP" DataType="integer">
                     <Alias Context="CDASH" Name="extCodeID: C25298"/>
                   </ItemDef>
+                  <ItemDef OID="IT.POS" Name="VSPOS" DataType="text">
+                    <Question><TranslatedText>Position</TranslatedText></Question>
+                    <CodeListRef CodeListOID="CL.POS"/>
+                  </ItemDef>
+                  <CodeList OID="CL.POS" Name="Position" DataType="text">
+                    <CodeListItem CodedValue="SITTING"><Decode><TranslatedText>Sitting</TranslatedText></Decode></CodeListItem>
+                  </CodeList>
                 </MetaDataVersion>
               </Study>
             </ODM>
@@ -623,6 +637,8 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         }
 
         _world.Concepts.Should().BeEmpty();
+        _world.CodeSystems.Should().BeEmpty();
+        _world.CodeSystemVersions.Should().BeEmpty();
         _world.Versions.Should().BeEmpty();
 
         // 2. Valid ODM with C25298 defines one CdiscBiomedicalConcept with ExternalCode == "C25298".
@@ -777,11 +793,88 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         v2Revised.Amendment.ImpactedElements.Should().Equal(expectedRevDiff);
     }
 
+    [Fact]
+    public async Task ImportProtocolDraft_RegistersCodeSystemVersionsIdempotently_ForOdmAndUsdmCodelists()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        const string odmWithCodelist = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.CL.1" FileType="Snapshot" ODMVersion="1.3.2" CreationDateTime="2026-02-01T00:00:00Z">
+              <Study OID="S.CL">
+                <GlobalVariables>
+                  <StudyName>Codelist Study</StudyName>
+                  <StudyDescription>Test</StudyDescription>
+                  <ProtocolName>CL-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.1" Name="v1">
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vital Signs" Repeating="No">
+                    <ItemRef ItemOID="IT.SBP" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.POS" OrderNumber="2" Mandatory="Yes"/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.SBP" Name="SYSBP" DataType="float">
+                    <Question><TranslatedText>Systolic Blood Pressure</TranslatedText></Question>
+                    <MeasurementUnitRef MeasurementUnitOID="MU.MMHG"/>
+                  </ItemDef>
+                  <ItemDef OID="IT.POS" Name="VSPOS" DataType="text">
+                    <Question><TranslatedText>Position</TranslatedText></Question>
+                    <CodeListRef CodeListOID="CL.POS"/>
+                  </ItemDef>
+                  <CodeList OID="CL.POS" Name="Position" DataType="text">
+                    <CodeListItem CodedValue="SITTING"><Decode><TranslatedText>Sitting</TranslatedText></Decode></CodeListItem>
+                    <CodeListItem CodedValue="SUPINE"><Decode><TranslatedText>Supine</TranslatedText></Decode></CodeListItem>
+                  </CodeList>
+                </MetaDataVersion>
+                <BasicDefinitions>
+                  <MeasurementUnit OID="MU.MMHG" Name="mmHg">
+                    <Symbol><TranslatedText>mm[Hg]</TranslatedText></Symbol>
+                  </MeasurementUnit>
+                </BasicDefinitions>
+              </Study>
+            </ODM>
+            """;
+
+        using (var firstOdm = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", odmWithCodelist, "vs_cl.xml", "cl-odm-1", "Import ODM with codelist"))
+        {
+            using var res = await designerClient.SendAsync(firstOdm, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync(ct));
+        }
+
+        _world.CodeSystems.Should().ContainSingle();
+        _world.CodeSystemVersions.Should().ContainSingle();
+        var firstVersionId = _world.CodeSystemVersions.Single().Id;
+
+        var parsedAfterOdm = Cadence.Kernel.Protocol.Design.ProtocolDesignDocument.Read(_world.Versions.Single().Content).Design!;
+        var sbpItem = parsedAfterOdm.CollectionSpecs.Single().Items[0];
+        sbpItem.ValueKind.Should().Be(Cadence.Kernel.Evidence.ObservationValueKind.Quantity);
+        sbpItem.Unit.Should().Be("mm[Hg]");
+        sbpItem.Required.Should().BeTrue();
+
+        var posItem = parsedAfterOdm.CollectionSpecs.Single().Items[1];
+        posItem.ValueKind.Should().Be(Cadence.Kernel.Evidence.ObservationValueKind.Coded);
+        posItem.Terminology.Should().NotBeNull();
+        posItem.Terminology!.CodeSystemVersionId.Should().Be(firstVersionId);
+
+        // Re-importing the same codelist reuses the registered CodeSystemVersion rather than creating duplicates.
+        using (var secondOdm = MultipartOdmPost("/api/v1/kernel/studies/CADENCE-101/protocol-imports", odmWithCodelist, "vs_cl.xml", "cl-odm-2", "Re-import same codelist"))
+        {
+            using var res = await designerClient.SendAsync(secondOdm, ct);
+            res.StatusCode.Should().Be(HttpStatusCode.OK, await res.Content.ReadAsStringAsync(ct));
+        }
+
+        _world.CodeSystems.Should().ContainSingle();
+        _world.CodeSystemVersions.Should().ContainSingle();
+    }
+
     private HttpClient CreateClient(GatewayIdentity identity)
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<ITenantDirectory>();
@@ -882,6 +975,12 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         public List<StudySiteDirectoryEntry> StudySites { get; } = [];
 
         public List<ConceptVersionView> Concepts { get; } = [];
+
+        public List<(CodeSystemId Id, string Uri, LicenseClass License)> CodeSystems { get; } = [];
+
+        public List<CodeSystemVersionView> CodeSystemVersions { get; } = [];
+
+        public List<CodeSystemEntryView> CodeSystemEntries { get; } = [];
 
         public List<StoredVersion> Versions { get; } = [];
 
@@ -1061,13 +1160,23 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             Task.FromResult(Concepts.FirstOrDefault(c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode == cdiscConceptCode));
 
         public Task<CodeSystemVersionView?> FindCodeSystemVersionAsync(TenantId tenant, string codeSystemUri, string version, CancellationToken cancellationToken = default) =>
-            Task.FromResult<CodeSystemVersionView?>(null);
+            Task.FromResult(CodeSystemVersions.FirstOrDefault(v =>
+                string.Equals(v.CodeSystemUri, codeSystemUri, StringComparison.Ordinal)
+                && string.Equals(v.Version, version, StringComparison.Ordinal)));
 
         public Task<IReadOnlyList<CodeSystemEntryView>> LookupAsync(TenantId tenant, Coding coding, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([]);
+            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([
+                .. CodeSystemEntries.Where(e =>
+                    e.CodeSystemVersionId == coding.CodeSystemVersionId
+                    && string.Equals(e.Code, coding.Code, StringComparison.Ordinal)),
+            ]);
 
         public Task<IReadOnlyList<CodeSystemEntryView>> GetGroupAsync(TenantId tenant, CodeSystemVersionId version, string groupCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([]);
+            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([
+                .. CodeSystemEntries.Where(e =>
+                    e.CodeSystemVersionId == version
+                    && string.Equals(e.GroupCode, groupCode, StringComparison.Ordinal)),
+            ]);
 
         public Task<IReadOnlyList<ConceptMappingView>> ResolveCodingAsync(TenantId tenant, Coding coding, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ConceptMappingView>>([]);
@@ -1119,6 +1228,8 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 RegisterSite regSite => ExecuteRegisterSite(regSite),
                 LinkSiteToStudy linkSite => ExecuteLinkSiteToStudy(linkSite),
                 DefineConcept defConcept => ExecuteDefineConcept(defConcept),
+                RegisterCodeSystem regCodeSystem => ExecuteRegisterCodeSystem(regCodeSystem),
+                ImportCodeSystemVersion importVersion => ExecuteImportCodeSystemVersion(importVersion),
                 CreateProtocolDraft createDraft => ExecuteCreateDraft(createDraft),
                 ReviseProtocolDraft reviseDraft => ExecuteReviseDraft(reviseDraft),
                 ForkProtocolVersion forkVersion => ExecuteForkVersion(forkVersion),
@@ -1249,6 +1360,57 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 ConceptMappingState.Unmapped,
                 Epoch));
             return conceptRef;
+        }
+
+        private object ExecuteRegisterCodeSystem(RegisterCodeSystem cmd)
+        {
+            if (world.CodeSystems.Any(cs => cs.Id == cmd.CodeSystemId || string.Equals(cs.Uri, cmd.Uri, StringComparison.Ordinal)))
+            {
+                return KernelErrors.AlreadyExists;
+            }
+
+            world.CodeSystems.Add((cmd.CodeSystemId, cmd.Uri, cmd.License));
+            return cmd.CodeSystemId;
+        }
+
+        private object ExecuteImportCodeSystemVersion(ImportCodeSystemVersion cmd)
+        {
+            var cs = world.CodeSystems.FirstOrDefault(x => x.Id == cmd.CodeSystemId);
+            if (cs == default)
+            {
+                return KernelErrors.NotFound;
+            }
+
+            if (world.CodeSystemVersions.Any(v =>
+                    v.Id == cmd.CodeSystemVersionId
+                    || (v.CodeSystemId == cmd.CodeSystemId && string.Equals(v.Version, cmd.Version, StringComparison.Ordinal))))
+            {
+                return KernelErrors.AlreadyExists;
+            }
+
+            world.CodeSystemVersions.Add(new CodeSystemVersionView(
+                cmd.CodeSystemVersionId,
+                cmd.CodeSystemId,
+                cs.Uri,
+                cmd.Version,
+                cmd.ReleasedOn,
+                cs.License,
+                cmd.Package.Sha256,
+                cmd.Entries.Count));
+
+            foreach (var entry in cmd.Entries)
+            {
+                world.CodeSystemEntries.Add(new CodeSystemEntryView(
+                    cmd.CodeSystemVersionId,
+                    entry.Code,
+                    entry.Display,
+                    entry.GroupCode,
+                    entry.SubmissionValue,
+                    entry.Definition,
+                    entry.Synonyms ?? []));
+            }
+
+            return cmd.CodeSystemVersionId;
         }
 
         private object ExecuteCreateDraft(CreateProtocolDraft cmd)

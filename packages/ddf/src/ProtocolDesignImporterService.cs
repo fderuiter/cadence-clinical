@@ -35,7 +35,8 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
     public async Task<ProtocolDesignImportResult> ImportAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ProtocolTerminologyResolver? resolveTerminology = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(resolveConcept);
@@ -63,7 +64,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         if (hasBytes)
         {
             var payloadRequest = hasTemplates ? request with { TemplateIds = null } : request;
-            var payloadOutcome = await ImportPayloadBytesAsync(payloadRequest, resolveConcept, cancellationToken).ConfigureAwait(false);
+            var payloadOutcome = await ImportPayloadBytesAsync(payloadRequest, resolveConcept, resolveTerminology, cancellationToken).ConfigureAwait(false);
             if (!hasTemplates || !payloadOutcome.IsSuccess || payloadOutcome.Design is null)
             {
                 return payloadOutcome;
@@ -77,6 +78,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
                     ReplaceForms = false,
                 },
                 resolveConcept,
+                resolveTerminology,
                 cancellationToken).ConfigureAwait(false);
             if (!templateOutcome.IsSuccess || templateOutcome.Design is null)
             {
@@ -96,19 +98,20 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return templateOutcome with { RulePack = mergedPack };
         }
 
-        return await ImportTemplatesAsync(request, resolveConcept, cancellationToken).ConfigureAwait(false);
+        return await ImportTemplatesAsync(request, resolveConcept, resolveTerminology, cancellationToken).ConfigureAwait(false);
     }
 
     private static Task<ProtocolDesignImportResult> ImportPayloadBytesAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
+        ProtocolTerminologyResolver? resolveTerminology,
         CancellationToken cancellationToken)
     {
         var detected = DetectFormat(request.RawBytes!, request.FileName, request.Format);
         return detected switch
         {
-            ProtocolImportFormat.OdmXml => ImportOdmPayloadAsync(request, resolveConcept, cancellationToken),
-            ProtocolImportFormat.UsdmJson => ImportUsdmPayloadAsync(request, resolveConcept, cancellationToken),
+            ProtocolImportFormat.OdmXml => ImportOdmPayloadAsync(request, resolveConcept, resolveTerminology, cancellationToken),
+            ProtocolImportFormat.UsdmJson => ImportUsdmPayloadAsync(request, resolveConcept, resolveTerminology, cancellationToken),
             _ => Task.FromResult(new ProtocolDesignImportResult(
                 null,
                 ["Unsupported file format. Synchronous protocol import accepts CDISC ODM v1.3.2 XML (.xml) or CDISC USDM v4 JSON (.json) files."],
@@ -119,6 +122,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
     private async Task<ProtocolDesignImportResult> ImportTemplatesAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
+        ProtocolTerminologyResolver? resolveTerminology,
         CancellationToken cancellationToken)
     {
         var problems = new List<string>();
@@ -142,7 +146,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
                 continue;
             }
 
-            var odm = await OdmDesignImporter.ImportAsync(templateBytes, resolveConcept, batchUsedIds, cancellationToken).ConfigureAwait(false);
+            var odm = await OdmDesignImporter.ImportAsync(templateBytes, resolveConcept, batchUsedIds, cancellationToken, resolveTerminology).ConfigureAwait(false);
             firstTemplateTitle ??= odm.Title;
             firstStudyOid ??= odm.StudyOid;
             notes.AddRange(odm.Notes);
@@ -189,12 +193,13 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
     private static async Task<ProtocolDesignImportResult> ImportOdmPayloadAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
+        ProtocolTerminologyResolver? resolveTerminology,
         CancellationToken cancellationToken)
     {
         var reservedIds = request.ReplaceForms
             ? NonCollectionElementIds(request.BaseDesign)
             : NonScheduleAndNonCollectionElementIds(request.BaseDesign);
-        var odm = await OdmDesignImporter.ImportAsync(request.RawBytes!, resolveConcept, reservedIds, cancellationToken).ConfigureAwait(false);
+        var odm = await OdmDesignImporter.ImportAsync(request.RawBytes!, resolveConcept, reservedIds, cancellationToken, resolveTerminology).ConfigureAwait(false);
         if (odm.PayloadTooLarge)
         {
             return new ProtocolDesignImportResult(null, odm.Problems, odm.Notes, PayloadTooLarge: true);
@@ -221,6 +226,7 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
     private static async Task<ProtocolDesignImportResult> ImportUsdmPayloadAsync(
         ProtocolDesignImportRequest request,
         ProtocolConceptResolver resolveConcept,
+        ProtocolTerminologyResolver? resolveTerminology,
         CancellationToken cancellationToken)
     {
         string json;
@@ -261,7 +267,12 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             return resolved;
         }
 
-        var staged = await UsdmDesignImporter.StageAsync(json, ResolveBcAsync, options: null, cancellationToken).ConfigureAwait(false);
+        var staged = await UsdmDesignImporter.StageAsync(
+            json,
+            ResolveBcAsync,
+            options: null,
+            cancellationToken,
+            resolveTerminology).ConfigureAwait(false);
         var combinedNotes = staged.Notes
             .Select(n => new ProtocolImportNote(n.Source, n.Message))
             .Concat(unmappedConceptNotes)

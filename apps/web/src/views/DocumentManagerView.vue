@@ -24,10 +24,10 @@
           <ClinicalTabs
             v-model="activeWorkspaceTab"
             :tabs="etmfWorkspaceTabs"
+            variant="pills"
+            overflow="wrap"
             aria-label="eTMF workspace views"
             id-prefix="etmf-workspace"
-            list-class="etmf-tab-group"
-            tab-class="etmf-tab-btn"
           />
 
           <!-- Standalone /etmf Study & Site Scope Selector -->
@@ -1105,30 +1105,6 @@ defineExpose({
   color: var(--semantic-color-warning-dark);
 }
 
-.etmf-tab-group,
-:deep(.etmf-tab-group) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.etmf-tab-btn,
-:deep(.etmf-tab-btn) {
-  padding: 6px 12px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  background: var(--semantic-color-surface);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
 #etmf-workspace-panel-binder,
 #etmf-workspace-panel-qc-queue {
   min-width: 0;
@@ -1165,11 +1141,6 @@ defineExpose({
     gap: 10px;
   }
 
-  .etmf-tab-group,
-  :deep(.etmf-tab-group) {
-    width: 100%;
-  }
-
   .etmf-scope-form {
     width: 100%;
   }
@@ -1184,13 +1155,6 @@ defineExpose({
   .etmf-scope-apply-btn {
     width: 100%;
   }
-}
-
-.etmf-tab-btn.active,
-:deep(.etmf-tab-btn.active) {
-  background: var(--semantic-color-primary-dark);
-  border-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-text-on-solid);
 }
 
 .etmf-study-chip {
