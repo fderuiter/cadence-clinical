@@ -144,7 +144,7 @@
 
         <!-- Bulk Selection Action Ribbon -->
         <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
-          <span class="selection-count-badge">
+          <span class="selection-count-badge tabular-nums">
             {{ selectedFiles.length }} Selected
           </span>
           <button

@@ -60,7 +60,11 @@
                     !!formState.entries[item.item_id]?.missing
                   "
                   :aria-invalid="!!formState.itemErrors[item.item_id]"
-                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  :aria-describedby="
+                    formState.comparingBaseline && formState.isEdited(item)
+                      ? `ecrf-committed-baseline-${item.item_id} ecrf-item-${item.item_id}-error`
+                      : `ecrf-item-${item.item_id}-error`
+                  "
                   @change="
                     emit(
                       'entry-text',
@@ -100,13 +104,20 @@
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
+                  :data-tabular-nums="
+                    item.value_kind !== 'text' ? 'true' : undefined
+                  "
                   :disabled="
                     formState.locked ||
                     formState.saving ||
                     !!formState.entries[item.item_id]?.missing
                   "
                   :aria-invalid="!!formState.itemErrors[item.item_id]"
-                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  :aria-describedby="
+                    formState.comparingBaseline && formState.isEdited(item)
+                      ? `ecrf-committed-baseline-${item.item_id} ecrf-item-${item.item_id}-error`
+                      : `ecrf-item-${item.item_id}-error`
+                  "
                   @input="
                     emit(
                       'entry-text',
@@ -118,6 +129,19 @@
                 <span v-if="item.unit" class="ecrf-item-unit">{{
                   item.unit
                 }}</span>
+                <div
+                  v-if="formState.comparingBaseline && formState.isEdited(item)"
+                  :id="`ecrf-committed-baseline-${item.item_id}`"
+                  :data-testid="`ecrf-committed-baseline-${item.item_id}`"
+                  class="ecrf-committed-baseline"
+                >
+                  <span class="ecrf-committed-baseline-label"
+                    >Committed:{{ " " }}</span
+                  >
+                  <span class="ecrf-committed-baseline-value">{{
+                    formState.formatCommittedBaseline(item)
+                  }}</span>
+                </div>
                 <p
                   :id="`ecrf-item-${item.item_id}-error`"
                   class="ecrf-form-error"
@@ -186,34 +210,43 @@
               </td>
               <td>
                 <div class="ecrf-item-sdv">
-                  <span
-                    v-if="sdv.activeVerification(item)"
-                    class="clinical-badge clinical-badge--verified ecrf-sdv-badge ecrf-sdv-badge--verified"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Verified (rev {{ item.revision }})
-                  </span>
-                  <span
-                    v-else-if="sdv.needsReverification(item)"
-                    class="clinical-badge clinical-badge--warning ecrf-sdv-badge ecrf-sdv-badge--reverify"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Needs re-verification
-                  </span>
-                  <span
-                    v-else-if="hasRecordedValue(item)"
-                    class="clinical-badge clinical-badge--draft ecrf-sdv-badge ecrf-sdv-badge--unverified"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    Unverified
-                  </span>
-                  <span
-                    v-else
-                    class="ecrf-sdv-none"
-                    :data-testid="`ecrf-sdv-status-${item.item_id}`"
-                  >
-                    No value
-                  </span>
+                  <div class="ecrf-sdv-badges">
+                    <span
+                      v-if="formState.isEdited(item)"
+                      class="clinical-badge clinical-badge--unsaved ecrf-unsaved-badge"
+                      :data-testid="`ecrf-unsaved-badge-${item.item_id}`"
+                    >
+                      Unsaved
+                    </span>
+                    <span
+                      v-if="sdv.activeVerification(item)"
+                      class="clinical-badge clinical-badge--verified ecrf-sdv-badge ecrf-sdv-badge--verified"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Verified (rev {{ item.revision }})
+                    </span>
+                    <span
+                      v-else-if="sdv.needsReverification(item)"
+                      class="clinical-badge clinical-badge--warning ecrf-sdv-badge ecrf-sdv-badge--reverify"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Needs re-verification
+                    </span>
+                    <span
+                      v-else-if="hasRecordedValue(item)"
+                      class="clinical-badge clinical-badge--draft ecrf-sdv-badge ecrf-sdv-badge--unverified"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      Unverified
+                    </span>
+                    <span
+                      v-else
+                      class="ecrf-sdv-none"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      No value
+                    </span>
+                  </div>
                   <div
                     v-if="canVerifySource && hasRecordedValue(item)"
                     class="ecrf-sdv-actions"
@@ -383,6 +416,14 @@
                     <option value="high">High</option>
                     <option value="low">Low</option>
                   </select>
+                  <label for="ecrf-raise-assignee">Assignee (optional)</label>
+                  <input
+                    id="ecrf-raise-assignee"
+                    v-model="raiseAssignee"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Actor ID (optional)"
+                  />
                   <button
                     id="ecrf-raise-confirm"
                     class="btn btn-primary"
@@ -590,6 +631,7 @@ const raiseText = ref("");
 const raiseReason = ref("");
 const raiseOwnerRole = ref<FormQueryOwnerRole>("site");
 const raisePriority = ref<FormQueryPriority>("normal");
+const raiseAssignee = ref("");
 
 watch(
   () =>
@@ -639,6 +681,7 @@ function beginRaise(item: EcrfFormItem) {
   raiseReason.value = "";
   raiseOwnerRole.value = "site";
   raisePriority.value = "normal";
+  raiseAssignee.value = "";
   void handoffFocus("#ecrf-raise-text", { scrollIfOffscreen: true });
 }
 
@@ -647,6 +690,7 @@ function cancelRaise() {
   raising.value = null;
   raiseText.value = "";
   raiseReason.value = "";
+  raiseAssignee.value = "";
   void handoffFocus([
     itemId ? `#ecrf-raise-${itemId}` : null,
     itemId ? `#ecrf-item-${itemId}` : null,
@@ -659,6 +703,7 @@ async function confirmRaise() {
   const target = raising.value;
   const text = raiseText.value.trim();
   const changeReason = raiseReason.value.trim();
+  const assignee = raiseAssignee.value.trim();
   if (!props.formState.form || !target || !text || !changeReason) return;
   const wasUnasked = !target.observation_id;
   const options = {
@@ -668,6 +713,7 @@ async function confirmRaise() {
     ...(raisePriority.value !== "normal"
       ? { priority: raisePriority.value }
       : {}),
+    ...(assignee ? { assignee } : {}),
   };
   const raised = await props.queries.raise(
     {
@@ -804,8 +850,31 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   font-size: 0.75rem;
   font-weight: 600;
 }
+.ecrf-item-edited,
+.ecrf-item-edited > th,
+.ecrf-item-edited > td {
+  background-color: var(--semantic-color-edited-row-bg);
+  color: var(--semantic-color-text);
+}
 .ecrf-item-edited {
-  background-color: var(--semantic-color-warning-bg-soft);
+  border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-item-edited > th:first-child,
+.ecrf-item-edited > td:first-child {
+  border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-committed-baseline {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+  color: var(--semantic-color-text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ecrf-committed-baseline-label {
+  font-weight: 600;
+  color: var(--semantic-color-text);
 }
 .ecrf-item-highlighted {
   background-color: var(--semantic-color-info-bg);
@@ -816,6 +885,12 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+.ecrf-sdv-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .ecrf-sdv-actions {
   display: flex;

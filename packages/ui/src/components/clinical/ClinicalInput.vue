@@ -31,6 +31,7 @@
         :value="modelValue"
         :disabled="effectiveDisabled || undefined"
         :required="required || undefined"
+        :data-tabular-nums="resolvedTabularNums"
         :aria-describedby="mergeDescribedBy(describedBy)"
         :aria-invalid="hasError ? 'true' : undefined"
         @change="onSelectChange"
@@ -65,6 +66,7 @@
         :readonly="effectiveReadonly || undefined"
         :required="required || undefined"
         :maxlength="maxlength ?? undefined"
+        :data-tabular-nums="resolvedTabularNums"
         :aria-describedby="mergeDescribedBy(describedBy)"
         :aria-invalid="hasError ? 'true' : undefined"
         @input="onInput"
@@ -78,7 +80,7 @@
         v-else
         v-bind="resolvedControlAttributes"
         :id="slotId"
-        :type="type"
+        :type="resolvedType"
         :class="['clinical-input-control', controlClass]"
         :name="name || slotId"
         :value="modelValue"
@@ -91,7 +93,8 @@
         :step="step ?? undefined"
         :maxlength="maxlength ?? undefined"
         :autocomplete="autocomplete || undefined"
-        :inputmode="inputmode || undefined"
+        :inputmode="resolvedInputMode"
+        :data-tabular-nums="resolvedTabularNums"
         :list="list || undefined"
         :aria-describedby="mergeDescribedBy(describedBy)"
         :aria-invalid="hasError ? 'true' : undefined"
@@ -114,6 +117,27 @@ import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
 import { clinicalFieldBaseProps } from "./sharedProps.js";
 
 const CONTAINER_ONLY_ATTR_KEYS = new Set(["data-cdash"]);
+const CONTROL_STRIPPED_ATTR_KEYS = new Set([
+  "type",
+  "inputmode",
+  "data-tabular-nums",
+  "placeholder",
+  "disabled",
+  "readonly",
+]);
+
+const NUMERIC_OR_DATE_INPUT_TYPES = new Set([
+  "number",
+  "date",
+  "datetime-local",
+  "time",
+  "month",
+  "week",
+  "tel",
+  "range",
+]);
+
+const NUMERIC_INPUT_MODES = new Set(["numeric", "decimal"]);
 
 const props = defineProps({
   ...clinicalFieldBaseProps,
@@ -123,7 +147,7 @@ const props = defineProps({
   },
   type: {
     type: String,
-    default: "text",
+    default: "",
   },
   as: {
     type: String,
@@ -173,6 +197,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  tabularNums: {
+    type: Boolean,
+    default: undefined,
+  },
   list: {
     type: String,
     default: "",
@@ -221,11 +249,50 @@ const emit = defineEmits([
 ]);
 
 const isSelect = computed(
-  () => props.as === "select" || props.type === "select"
+  () =>
+    props.as === "select" ||
+    props.type === "select" ||
+    props.attributes?.type === "select"
 );
 const isTextarea = computed(
-  () => props.as === "textarea" || props.type === "textarea"
+  () =>
+    props.as === "textarea" ||
+    props.type === "textarea" ||
+    props.attributes?.type === "textarea"
 );
+
+const resolvedType = computed(() => {
+  const rawType = props.type || props.attributes?.type || "text";
+  return rawType === "numeric" ? "number" : rawType;
+});
+
+const resolvedInputMode = computed(() => {
+  const rawMode = props.inputmode || props.attributes?.inputmode || "";
+  if (rawMode) return rawMode;
+  const rawType = props.type || props.attributes?.type || "";
+  return rawType === "numeric" ? "numeric" : undefined;
+});
+
+const resolvedTabularNums = computed(() => {
+  const attrVal = props.attributes?.["data-tabular-nums"];
+  if (props.tabularNums === false || attrVal === false || attrVal === "false") {
+    return undefined;
+  }
+  if (props.tabularNums === true) {
+    return "true";
+  }
+  if (attrVal !== undefined && attrVal !== null) {
+    return attrVal === "" ? "true" : String(attrVal);
+  }
+  if (
+    !isTextarea.value &&
+    (NUMERIC_OR_DATE_INPUT_TYPES.has(resolvedType.value) ||
+      NUMERIC_INPUT_MODES.has(resolvedInputMode.value || ""))
+  ) {
+    return "true";
+  }
+  return undefined;
+});
 
 const containerAttributes = computed(() => {
   const out = {};
@@ -245,9 +312,7 @@ const resolvedControlAttributes = computed(() => {
     for (const [key, value] of Object.entries(props.attributes)) {
       if (
         !CONTAINER_ONLY_ATTR_KEYS.has(key) &&
-        key !== "placeholder" &&
-        key !== "disabled" &&
-        key !== "readonly"
+        !CONTROL_STRIPPED_ATTR_KEYS.has(key)
       ) {
         out[key] = value;
       }
@@ -255,7 +320,7 @@ const resolvedControlAttributes = computed(() => {
   }
   if (props.controlAttrs && typeof props.controlAttrs === "object") {
     for (const [key, value] of Object.entries(props.controlAttrs)) {
-      if (key !== "placeholder" && key !== "disabled" && key !== "readonly") {
+      if (!CONTROL_STRIPPED_ATTR_KEYS.has(key)) {
         out[key] = value;
       }
     }

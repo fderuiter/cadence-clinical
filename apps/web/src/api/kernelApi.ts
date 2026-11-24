@@ -15,7 +15,10 @@
  * Add new capability methods and types in the matching `src/api/kernel/<slice>.ts` module rather than growing this
  * barrel directly.
  */
-import { kernelEntitlementsApi } from "./kernel/entitlements";
+import {
+  bindKernelEntitlementsFacade,
+  kernelEntitlementsApi,
+} from "./kernel/entitlements";
 import { kernelLocksApi } from "./kernel/locks";
 import { kernelNavigationApi } from "./kernel/navigation";
 import { kernelObservationsApi } from "./kernel/observations";
@@ -27,7 +30,9 @@ import { kernelWorkQueuesApi } from "./kernel/workQueues";
 export {
   ASSERTION_ALREADY_LOCKED,
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_VERIFIED,
   ASSERTION_LOCKED,
+  ASSERTION_QUERY_OPEN,
   ASSERTION_REVISION_STALE,
   ASSERTION_SCOPE_NOT_READY,
   assertionErrorCode,
@@ -45,6 +50,7 @@ export {
   KERNEL_SUBSCRIPTION_EXPIRED,
   SUBSCRIPTION_EXPIRED_GUIDANCE,
   triggerBrowserDownload,
+  type KernelHiddenContent,
   type KernelLineageWindow,
   type KernelStreamedArtifact,
 } from "./kernel/shared";
@@ -68,3 +74,5 @@ export const kernelApi = {
   ...kernelValidationApi,
   ...kernelWorkQueuesApi,
 };
+
+bindKernelEntitlementsFacade(kernelApi);

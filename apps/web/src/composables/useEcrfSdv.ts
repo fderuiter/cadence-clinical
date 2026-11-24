@@ -8,6 +8,8 @@ import type {
 } from "../api/ecrfFormsApi";
 import {
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_VERIFIED,
+  ASSERTION_QUERY_OPEN,
   ASSERTION_REVISION_STALE,
   assertionErrorCode,
   describeAssertionError,
@@ -275,7 +277,8 @@ export function useEcrfSdv(options: {
       const isStale =
         code === ASSERTION_REVISION_STALE ||
         code === ASSERTION_ALREADY_RETRACTED ||
-        status === 409;
+        code === ASSERTION_ALREADY_VERIFIED ||
+        (status === 409 && code !== ASSERTION_QUERY_OPEN);
       sdvOutcome.value = {
         kind: isStale ? "stale" : "failed",
         message: describeAssertionError(error),

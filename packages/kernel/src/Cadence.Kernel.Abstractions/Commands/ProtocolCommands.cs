@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 
 namespace Cadence.Kernel.Commands;
@@ -54,7 +57,9 @@ public sealed record ReturnProtocolVersionToDraft(
 
 /// <summary>
 /// Approves a version in review. <c>AttestationId</c> must name an attestation with meaning
-/// <c>Approved</c> bound to this version's content hash.
+/// <c>Approved</c> bound to this version's content hash. For a forked amendment (K-PROT-2), approval also requires a
+/// verified <c>Reviewed</c> attestation over a saved <c>SimulationReport</c> artifact matching both parent and amended
+/// protocol versions (either named by <c>ReviewAttestationId</c> or recorded in the tenant).
 /// </summary>
 [KernelCapability("protocol.approve", VerbClass.Approve, Resource = nameof(ApproveProtocolVersion.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
@@ -63,7 +68,8 @@ public sealed record ApproveProtocolVersion(
     ProtocolVersionId ProtocolVersionId,
     AttestationId AttestationId,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<ProtocolVersionState>;
+    string ReasonForChange,
+    AttestationId? ReviewAttestationId = null) : ICommand<ProtocolVersionState>;
 
 /// <summary>
 /// Withdraws a version in review or approved; terminal. The reason for change is the withdrawal reason, and
@@ -92,6 +98,66 @@ public sealed record ForkProtocolVersion(
     ProtocolAmendment Amendment,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ProtocolVersionState>;
+
+/// <summary>Mutation mode executed by <see cref="ImportProtocolDraft"/>.</summary>
+public enum ProtocolDraftImportMode
+{
+    /// <summary>Creates version 1 for an empty study, or a recovery draft numbered after terminal versions.</summary>
+    CreateDraft,
+
+    /// <summary>Revises an existing draft (or reopens an in-review version to draft and revises it).</summary>
+    UpdateExisting,
+
+    /// <summary>Explicitly reopens an in-review version to draft and revises its content.</summary>
+    ReopenInReview,
+
+    /// <summary>Forks an approved parent version and writes the imported draft content and amendment.</summary>
+    ForkApproved,
+}
+
+/// <summary>A new tenant concept staged in memory during protocol design import for atomic persistence.</summary>
+public sealed record StagedProtocolConcept(
+    ConceptId ConceptId,
+    ConceptOrigin Origin,
+    string? ExternalCode,
+    ConceptKind Kind,
+    string PreferredLabel,
+    string Definition);
+
+/// <summary>
+/// Atomically commits newly staged <see cref="StagedProtocolConcept"/> records and creates, forks, or revises a
+/// study's draft <c>ProtocolVersion</c> under the study's scope lock after structural import validation completes.
+/// </summary>
+[KernelCapability("protocol.import_draft", VerbClass.Propose, Resource = nameof(ImportProtocolDraft.StudyId), InCatalogue = false)]
+[RaisesKernelErrors(
+    typeof(KernelErrors),
+    nameof(KernelErrors.AlreadyExists),
+    nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(ProtocolErrors),
+    nameof(ProtocolErrors.StudyUnknown),
+    nameof(ProtocolErrors.FirstVersionExists),
+    nameof(ProtocolErrors.InvalidTransition),
+    nameof(ProtocolErrors.ContentRequired),
+    nameof(ProtocolErrors.ContentInvalid),
+    nameof(ProtocolErrors.AmendmentInvalid),
+    nameof(ProtocolErrors.AmendmentNotAllowed))]
+[RaisesKernelErrors(
+    typeof(KnowledgeErrors),
+    nameof(KnowledgeErrors.ConceptLabelRequired),
+    nameof(KnowledgeErrors.ExternalCodeMismatch))]
+public sealed record ImportProtocolDraft(
+    TenantId TenantId,
+    StudyId StudyId,
+    ProtocolDraftImportMode Mode,
+    ProtocolVersionId TargetVersionId,
+    ProtocolVersionId? ParentVersionId,
+    string Content,
+    ProtocolAmendment? Amendment,
+    IReadOnlyList<StagedProtocolConcept> StagedConcepts,
+    string IdempotencyKey,
+    string ReasonForChange,
+    string? RequestFingerprint = null) : ICommand<ProtocolVersionState>;
 
 /// <summary>A protocol version's identity and lifecycle position after a command.</summary>
 /// <remarks>
@@ -133,4 +199,10 @@ public static class ProtocolErrors
 
     public static readonly KernelError AttestationRejected =
         new("K.Protocol.AttestationRejected", 422, "The attestation does not approve or withdraw this exact content.");
+
+    public static readonly KernelError UndeclaredImpactedElements =
+        new("K.Protocol.UndeclaredImpactedElements", 422, "The amendment changes schedule or eligibility elements that are not listed in ImpactedElements (ADR-2475).");
+
+    public static readonly KernelError SimulationReviewRequired =
+        new("K.Protocol.SimulationReviewRequired", 409, "Approving a forked protocol amendment requires a verified Reviewed attestation over a saved SimulationReport artifact matching both the parent and amended protocol versions (K-PROT-2).");
 }

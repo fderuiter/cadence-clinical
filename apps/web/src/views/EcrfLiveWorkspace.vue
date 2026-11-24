@@ -180,6 +180,10 @@ import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
+import {
   canManageParticipants,
   canManageQueries,
   canVerifySource,
@@ -201,7 +205,7 @@ const emit = defineEmits(["dirty-change", "form-loaded", "closed"]);
 const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
-const route = useRoute();
+const route = typeof useRoute === "function" ? useRoute() : null;
 const router = typeof useRouter === "function" ? useRouter() : null;
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const instance = getCurrentInstance();
@@ -617,8 +621,16 @@ watch(
     if (nextStudy) {
       setActiveStudyCode(nextStudy);
       scopeStore.activeStudyId = nextStudy;
+      syncWorkspaceScope({
+        studyId: nextStudy,
+        siteId: nextSite,
+      });
     } else if (prevStudy && !activeStudyCode.value) {
       scopeStore.activeStudyId = "";
+    } else if (nextSite) {
+      syncWorkspaceScope({
+        siteId: nextSite,
+      });
     }
     scopeStore.activeSubjectId = nextSubject;
     selectedSubjectId.value = nextSubject;
@@ -633,28 +645,41 @@ watch(
 );
 
 onMounted(async () => {
-  if (route && route.query) {
-    if (route.query.studyId) {
-      const incomingStudy = String(route.query.studyId).trim();
-      if (incomingStudy) {
-        setActiveStudyCode(incomingStudy);
-        scopeStore.activeStudyId = incomingStudy;
-      }
-    } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-      scopeStore.activeStudyId = activeStudyCode.value;
+  const incomingStudy = routeQuery("studyId")?.trim() ?? "";
+  const incomingSite = routeQuery("siteId") ?? routeQuery("site") ?? "";
+  const incomingSubject =
+    routeQuery("subjectId") ?? routeQuery("participant") ?? "";
+
+  if (incomingStudy || incomingSite) {
+    if (incomingStudy) {
+      setActiveStudyCode(incomingStudy);
+      scopeStore.activeStudyId = incomingStudy;
     }
-    const incomingSite = routeQuery("siteId") ?? routeQuery("site");
     if (incomingSite) {
       scopeStore.activeSiteId = incomingSite;
     }
-    const incomingSubject =
-      routeQuery("subjectId") ?? routeQuery("participant");
-    if (incomingSubject) {
-      scopeStore.activeSubjectId = incomingSubject;
-      selectedSubjectId.value = incomingSubject;
+    syncWorkspaceScope({
+      ...(incomingStudy ? { studyId: incomingStudy } : {}),
+      ...(incomingSite ? { siteId: incomingSite } : {}),
+    });
+  } else {
+    const hydrated = resolveHydratedWorkspaceScope(route);
+    if (hydrated.studyId || hydrated.siteId) {
+      syncWorkspaceScope({
+        ...(hydrated.studyId ? { studyId: hydrated.studyId } : {}),
+        ...(hydrated.siteId ? { siteId: hydrated.siteId } : {}),
+        router,
+        route,
+        syncRouteQuery: true,
+      });
+    } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+      scopeStore.activeStudyId = activeStudyCode.value;
     }
-  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-    scopeStore.activeStudyId = activeStudyCode.value;
+  }
+
+  if (incomingSubject) {
+    scopeStore.activeSubjectId = incomingSubject;
+    selectedSubjectId.value = incomingSubject;
   }
   if (scopeStore.activeStudyId) {
     await scopeStore.loadSubjects(scopeStore.activeStudyId);

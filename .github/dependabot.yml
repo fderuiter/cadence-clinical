@@ -38,6 +38,18 @@ updates:
       fluentvalidation:
         patterns:
           - "FluentValidation*"
+      dotnet-testing:
+        patterns:
+          - "xunit*"
+          - "Microsoft.NET.Test.Sdk"
+          - "TngTech.ArchUnitNET*"
+      analyzers:
+        patterns:
+          - "Microsoft.CodeAnalysis.*"
+          - "SonarAnalyzer.CSharp"
+      anthropic:
+        patterns:
+          - "Anthropic*"
     ignore:
       # MassTransit 9 is commercial and needs a license key; 8.x stays under Apache 2.0 (#5520, ADR-2524).
       - dependency-name: "MassTransit*"
@@ -57,7 +69,18 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Aspire.*"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+      # Test frameworks, analyzers, and AI provider SDKs upgrade majors only as locally verified lockstep migrations.
+      - dependency-name: "xunit*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.NET.Test.Sdk"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "TngTech.ArchUnitNET*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.CodeAnalysis.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "SonarAnalyzer.CSharp"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Anthropic*"
         update-types: ["version-update:semver-major"]
       # SonarAnalyzer.CSharp >= 10.7.0 adds rules (S5332, S8969, S6444, S3267, S4036) on HL7/FHIR canonical URIs and existing suites requiring solution-wide triage under TreatWarningsAsErrors (#6030).
       - dependency-name: "SonarAnalyzer.CSharp"
@@ -102,6 +125,7 @@ updates:
         patterns:
           - "vue"
           - "vue-*"
+          - "vue-tsc"
           - "@vue/*"
           - "pinia"
           - "vite"
@@ -176,9 +200,9 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # PostgreSQL major version is locked across PostgresTestImage, CI, AppHost, and compose (ADR-2533); allow 18-alpine digest updates only.
+      # PostgreSQL image tag and @sha256 digest are locked across PostgresTestImage.cs, CI, AppHost, and compose (ADR-2533);
+      # block standalone compose bumps until all four locations are updated in lockstep.
       - dependency-name: "postgres"
-        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

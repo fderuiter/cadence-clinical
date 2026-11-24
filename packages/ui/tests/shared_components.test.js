@@ -8,6 +8,7 @@ import {
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
+  ClinicalFormField,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalModal,
@@ -406,7 +407,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(fieldsetHtml).toContain("<legend");
     });
 
-    it("supports compact staff density, required markers, hints, and select/textarea rendering in ClinicalFieldLayout and ClinicalInput (ADR-2661)", async () => {
+    it("supports compact staff density, required markers, hints, and select/textarea rendering in ClinicalFieldLayout and ClinicalInput (ADR-2672)", async () => {
       const defaultInputHtml = await renderToString(
         createSSRApp(ClinicalInput, {
           id: "portal-given-name",
@@ -869,6 +870,129 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe("ClinicalInput & ClinicalFormField Tabular Numeral Propagation (ADR-2670)", () => {
+    it("resolves ClinicalInput type, inputmode, data-tabular-nums opt-in/opt-out, error aria attributes, and input/change events", async () => {
+      const textHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "AE.TERM",
+          label: "Adverse Event Term",
+          modelValue: "Mild headache",
+        })
+      );
+      expect(textHtml).toContain('type="text"');
+      expect(textHtml).not.toContain("data-tabular-nums");
+
+      const numericHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "VS.HR",
+          label: "Heart Rate (bpm)",
+          type: "numeric",
+          modelValue: 72,
+          error: "Out of reference range",
+        })
+      );
+      expect(numericHtml).toContain('type="number"');
+      expect(numericHtml).toContain('inputmode="numeric"');
+      expect(numericHtml).toContain('data-tabular-nums="true"');
+      expect(numericHtml).toContain('aria-invalid="true"');
+
+      const decimalHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "VS.TEMP",
+          label: "Temperature",
+          inputmode: "decimal",
+          modelValue: "36.8",
+        })
+      );
+      expect(decimalHtml).toContain('inputmode="decimal"');
+      expect(decimalHtml).toContain('data-tabular-nums="true"');
+
+      const explicitOptInHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "LB.CUSTOM",
+          label: "Formatted Titer",
+          tabularNums: true,
+          modelValue: "1:128",
+        })
+      );
+      expect(explicitOptInHtml).toContain('data-tabular-nums="true"');
+
+      const attrEmptyStringHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "LB.ATTR",
+          label: "Attribute Opt-In",
+          attributes: { "data-tabular-nums": "", "data-cdash": "--ORRES" },
+          modelValue: "4.5",
+        })
+      );
+      expect(attrEmptyStringHtml).toContain('data-tabular-nums="true"');
+      expect(attrEmptyStringHtml).toContain('data-cdash="--ORRES"');
+
+      const explicitOptOutHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "SUBJ.NOTES_NUM",
+          label: "Opted-Out Numeric",
+          type: "number",
+          tabularNums: false,
+          modelValue: 1,
+        })
+      );
+      expect(explicitOptOutHtml).not.toContain("data-tabular-nums");
+
+      const attrOptOutHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "SUBJ.ATTR_OFF",
+          label: "Attr Opted-Out",
+          attributes: { type: "date", "data-tabular-nums": "false" },
+          modelValue: "2026-11-22",
+        })
+      );
+      expect(attrOptOutHtml).toContain('type="date"');
+      expect(attrOptOutHtml).not.toContain('data-tabular-nums="true"');
+    });
+
+    it("propagates data-tabular-nums from ClinicalFormField for numeric/date CDASH fields while leaving text fields proportional", async () => {
+      const numberFieldHtml = await renderToString(
+        createSSRApp(ClinicalFormField, {
+          field: {
+            id: "VS.SYSBP",
+            label: "Systolic Blood Pressure",
+            type: "number",
+            cdash: "--ORRES",
+          },
+          modelValue: 120,
+        })
+      );
+      expect(numberFieldHtml).toContain('data-cdash="--ORRES"');
+      expect(numberFieldHtml).toContain('data-tabular-nums="true"');
+
+      const textFieldHtml = await renderToString(
+        createSSRApp(ClinicalFormField, {
+          field: {
+            id: "CM.NOTE",
+            label: "Concomitant Medication Notes",
+            type: "text",
+          },
+          modelValue: "Taken with meals",
+        })
+      );
+      expect(textFieldHtml).not.toContain("data-tabular-nums");
+
+      const explicitFieldHtml = await renderToString(
+        createSSRApp(ClinicalFormField, {
+          field: {
+            id: "LB.RATIO",
+            label: "Dilution Ratio",
+            type: "text",
+            tabularNums: true,
+          },
+          modelValue: "1:64",
+        })
+      );
+      expect(explicitFieldHtml).toContain('data-tabular-nums="true"');
     });
   });
 });

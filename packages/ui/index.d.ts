@@ -121,6 +121,7 @@ export const ClinicalInput: DefineSlotsComponent<
     maxlength?: number | string | null;
     autocomplete?: string;
     inputmode?: string;
+    tabularNums?: boolean;
     list?: string;
     name?: string;
     ariaLabel?: string;

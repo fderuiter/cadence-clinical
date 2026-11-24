@@ -512,113 +512,141 @@
         </p>
         <SupportDetails :detail="locksError" />
       </div>
-      <p
-        v-else-if="locks.length === 0"
-        id="study-locks-empty"
-        class="status-line"
-      >
-        No locks recorded on {{ studyCode }} at this point in time.
-      </p>
-      <ClinicalDataTable
-        v-else
-        title="Study locks"
-        aria-label="Study locks"
-        labelled-by="study-locks-title"
-        hide-header
-        plain
-        wrapper-class="locks-table-scroll scrollable-table-wrapper"
-        wrapper-test-id="study-locks-table-scroll"
-        table-class="locks-table"
-        table-test-id="study-locks-table"
-        :columns="lockColumns"
-        :data="locks"
-        :row-key="(entry, idx) => entry.ref ?? `masked-${idx}`"
-        :row-attrs="
-          (entry) => (entry.masked ? { 'data-masked': 'true' } : undefined)
-        "
-        external-pagination
-      >
-        <template #cell-kind="{ row: entry }">
-          <span
-            :class="[
-              'clinical-badge',
-              'lock-badge',
-              entry.kind.toLowerCase() === 'locked'
-                ? 'clinical-badge--locked'
-                : 'clinical-badge--frozen',
-              `lock-badge--${entry.kind.toLowerCase()}`,
-            ]"
-          >
-            {{ entry.kind }}
-          </span>
-        </template>
-        <template #cell-scope="{ row: entry }">
-          <template v-if="entry.masked">
-            <span class="masked-pill" data-testid="study-lock-masked">
-              Masked ({{ entry.mask ?? "Restricted" }}):
-              {{ scopeLabel(entry.scope_kind) }}
+      <template v-else>
+        <p v-if="locks.length === 0" id="study-locks-empty" class="status-line">
+          No locks recorded on {{ studyCode }} within your visible scope at this
+          point in time.
+        </p>
+        <ClinicalDataTable
+          v-else
+          title="Study locks"
+          aria-label="Study locks"
+          labelled-by="study-locks-title"
+          hide-header
+          plain
+          wrapper-class="locks-table-scroll scrollable-table-wrapper"
+          wrapper-test-id="study-locks-table-scroll"
+          table-class="locks-table"
+          table-test-id="study-locks-table"
+          :columns="lockColumns"
+          :data="locks"
+          :row-key="(entry, idx) => entry.ref ?? `masked-${idx}`"
+          :row-attrs="
+            (entry) => (entry.masked ? { 'data-masked': 'true' } : undefined)
+          "
+          external-pagination
+        >
+          <template #cell-kind="{ row: entry }">
+            <span v-if="entry.masked || !entry.kind" class="masked-pill">
+              Masked ({{ entry.mask ?? "Restricted" }})
             </span>
-          </template>
-          <template v-else>
-            <NodeRefChip
-              v-if="entry.scope_ref"
-              :node-ref="entry.scope_ref"
-              :fallback-title="entry.subject_code"
-              include-kind
-            />
-            <span v-else>—</span>
-          </template>
-        </template>
-        <template #cell-participant="{ row: entry }">
-          {{ entry.masked ? "masked" : (entry.subject_code ?? "—") }}
-        </template>
-        <template #cell-signed_by="{ row: entry }">
-          <template v-if="entry.masked"> masked </template>
-          <template v-else>
-            <NodeRefChip
-              v-if="entry.locked_by && normalizeLookupNodeRef(entry.locked_by)"
-              :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
-            />
-            <template v-else>{{ entry.locked_by ?? "—" }}</template>
-            <span v-if="entry.attestation_meaning" class="meaning-note">
-              ({{ entry.attestation_meaning }})
-            </span>
-          </template>
-        </template>
-        <template #cell-locked_at="{ row: entry }">
-          {{ entry.masked ? "—" : (entry.locked_at ?? "—") }}
-        </template>
-        <template #cell-reason="{ row: entry }">
-          {{ entry.masked ? "masked" : (entry.reason_for_change ?? "—") }}
-        </template>
-        <template #cell-state="{ row: entry }">
-          <template v-if="entry.released">
-            Released
             <span
-              v-if="!entry.masked && entry.released_at"
-              class="meaning-note"
+              v-else
+              :class="[
+                'clinical-badge',
+                'lock-badge',
+                entry.kind.toLowerCase() === 'locked'
+                  ? 'clinical-badge--locked'
+                  : 'clinical-badge--frozen',
+                `lock-badge--${entry.kind.toLowerCase()}`,
+              ]"
             >
-              at {{ entry.released_at }}
+              {{ entry.kind }}
             </span>
           </template>
-          <template v-else> Active </template>
-        </template>
-        <template #cell-action="{ row: entry }">
-          <button
-            v-if="!entry.masked && !entry.released && entry.ref"
-            :data-testid="`release-lock-${entry.ref}`"
-            type="button"
-            class="btn btn-secondary btn-mini-unlock"
-            :disabled="busy"
-            @click="openReleaseModal(entry.ref, entry.kind)"
-          >
-            Release<span class="sr-only">
-              lock for
-              {{ entry.subject_code ?? entry.scope_ref ?? entry.ref }}</span
+          <template #cell-scope="{ row: entry }">
+            <template v-if="entry.masked">
+              <span class="masked-pill" data-testid="study-lock-masked">
+                <template v-if="entry.scope_kind">
+                  Masked ({{ entry.mask ?? "Restricted" }}):
+                  {{ scopeLabel(entry.scope_kind) }}
+                </template>
+                <template v-else>
+                  Masked ({{ entry.mask ?? "Restricted" }})
+                </template>
+              </span>
+            </template>
+            <template v-else>
+              <NodeRefChip
+                v-if="entry.scope_ref"
+                :node-ref="entry.scope_ref"
+                :fallback-title="entry.subject_code"
+                include-kind
+              />
+              <span v-else>—</span>
+            </template>
+          </template>
+          <template #cell-participant="{ row: entry }">
+            {{ entry.masked ? "masked" : (entry.subject_code ?? "—") }}
+          </template>
+          <template #cell-signed_by="{ row: entry }">
+            <template v-if="entry.masked"> masked </template>
+            <template v-else>
+              <NodeRefChip
+                v-if="
+                  entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                "
+                :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
+              />
+              <template v-else>{{ entry.locked_by ?? "—" }}</template>
+              <span v-if="entry.attestation_meaning" class="meaning-note">
+                ({{ entry.attestation_meaning }})
+              </span>
+            </template>
+          </template>
+          <template #cell-locked_at="{ row: entry }">
+            {{ entry.masked ? "—" : (entry.locked_at ?? "—") }}
+          </template>
+          <template #cell-reason="{ row: entry }">
+            {{ entry.masked ? "masked" : (entry.reason_for_change ?? "—") }}
+          </template>
+          <template #cell-state="{ row: entry }">
+            <template
+              v-if="
+                entry.masked ||
+                entry.released === null ||
+                entry.released === undefined
+              "
             >
-          </button>
-        </template>
-      </ClinicalDataTable>
+              masked
+            </template>
+            <template v-else-if="entry.released">
+              Released
+              <span v-if="entry.released_at" class="meaning-note">
+                at {{ entry.released_at }}
+              </span>
+            </template>
+            <template v-else> Active </template>
+          </template>
+          <template #cell-action="{ row: entry }">
+            <button
+              v-if="!entry.masked && !entry.released && entry.ref && entry.kind"
+              :data-testid="`release-lock-${entry.ref}`"
+              type="button"
+              class="btn btn-secondary btn-mini-unlock"
+              :disabled="busy"
+              @click="openReleaseModal(entry.ref, entry.kind)"
+            >
+              Release<span class="sr-only">
+                lock for
+                {{ entry.subject_code ?? entry.scope_ref ?? entry.ref }}</span
+              >
+            </button>
+          </template>
+        </ClinicalDataTable>
+        <p
+          v-if="hiddenLocks.more_exist"
+          data-testid="study-locks-hidden-notice"
+          class="status-line hidden-scope-notice"
+          role="status"
+        >
+          Additional locks exist outside your visible scope{{
+            hiddenLocks.reasons.length > 0
+              ? ` (${hiddenLocks.reasons.join(", ")})`
+              : ""
+          }}.
+        </p>
+      </template>
 
       <p
         v-if="!canApply && !canRelease"
@@ -700,7 +728,7 @@ import {
   type KernelLock,
   type KernelLockKind,
 } from "../../api/kernelApi";
-import { fetchStudyLocks } from "../../canvas/kernelLocks";
+import { fetchStudyLocksResult } from "../../canvas/kernelLocks";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   getNodeDisplay,
@@ -744,6 +772,10 @@ const props = defineProps<{
 }>();
 
 const locks = ref<KernelLock[]>([]);
+const hiddenLocks = ref<{ more_exist: boolean; reasons: string[] }>({
+  more_exist: false,
+  reasons: [],
+});
 const locksLoading = ref(false);
 const locksError = ref<string | null>(null);
 const activeOnly = ref(false);
@@ -819,10 +851,12 @@ async function reloadLocks() {
   locksLoading.value = true;
   locksError.value = null;
   try {
-    locks.value = await fetchStudyLocks(studyRef.value, {
+    const result = await fetchStudyLocksResult(studyRef.value, {
       activeOnly: activeOnly.value || undefined,
       asOf: asOfInput.value.trim() || undefined,
     });
+    locks.value = result.locks;
+    hiddenLocks.value = result.hidden;
   } catch (err) {
     locksError.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -872,6 +906,7 @@ const {
     enrollmentSeq++;
     formSeq++;
     locks.value = [];
+    hiddenLocks.value = { more_exist: false, reasons: [] };
     locksError.value = null;
     studyChildren.value = [];
     siteEnrollments.value = null;
@@ -1586,6 +1621,16 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 .meaning-note {
   color: var(--semantic-color-text-muted);
   font-size: 0.8rem;
+}
+
+.hidden-scope-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-muted);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-body);
+  font-size: 0.82rem;
 }
 </style>
 

@@ -338,6 +338,17 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => [props.defaultStudyId, props.defaultSiteId, props.defaultSubjectId],
+  ([nextStudy, nextSite, nextSubject]) => {
+    if (!props.isOpen) {
+      form.study_id = nextStudy || "";
+      form.site_id = nextSite || "";
+      form.subject_id = nextSubject || "";
+    }
+  }
+);
+
 const isFormValid = computed(() => {
   return (
     form.title.trim().length > 0 &&

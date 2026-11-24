@@ -2,9 +2,13 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
+import { hasRegisteredUnsavedDrafts } from "ui";
+import ConfirmationDialogHost from "@/components/ConfirmationDialogHost.vue";
 import ObservationView from "@/views/ObservationView.vue";
 import { ApiError } from "@/api/client";
 import { kernelApi } from "@/api/kernelApi";
+import { useAuthStore } from "@/stores/auth";
+import { useConfirmStore } from "@/stores/confirm";
 
 const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
@@ -556,13 +560,13 @@ describe("ObservationView (ADR-2620)", () => {
       {
         level: "study",
         ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
-        label: "CAD-101",
+        label: "Phase III Cardiology Study",
         mask: null,
       },
       {
         level: "study_site",
         ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
-        label: "017",
+        label: "Boston Medical Center",
         mask: null,
       },
       {
@@ -572,13 +576,25 @@ describe("ObservationView (ADR-2620)", () => {
         mask: null,
       },
     ]);
-    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
-      ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
-      kind: "study",
-      title: "CAD-101",
-      code: "CAD-101",
-      status: "Active",
-      mask: null,
+    vi.spyOn(kernelApi, "getNode").mockImplementation(async (nodeRef) => {
+      if (nodeRef === "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80") {
+        return {
+          ref: nodeRef,
+          kind: "study",
+          code: "CAD-101",
+          title: "Phase III Cardiology Study",
+          status: "ACTIVE",
+          mask: null,
+        };
+      }
+      return {
+        ref: nodeRef,
+        kind: "study_site",
+        code: "017",
+        title: "Boston Medical Center",
+        status: "ACTIVE",
+        mask: null,
+      };
     });
 
     const router = createRouter({
@@ -658,5 +674,580 @@ describe("ObservationView (ADR-2620)", () => {
     expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
     expect(backLink.attributes("href")).toBe(returnUrl);
     standaloneWrapper.unmount();
+  });
+
+  it("populates studyStep.ref for ScopeLockControls authority checks and stays on standalone view when study has no canonical code", async () => {
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80";
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
+      {
+        level: "study",
+        ref: STUDY_REF,
+        label: "Untitled Draft Study",
+        mask: null,
+      },
+      {
+        level: "enrollment",
+        ref: ENROLLMENT,
+        label: "017-0001",
+        mask: null,
+      },
+    ]);
+    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: STUDY_REF,
+      kind: "study",
+      code: null,
+      title: "Untitled Draft Study",
+      status: "DRAFT",
+      mask: null,
+    });
+    const canISpy = vi
+      .spyOn(kernelApi, "canI")
+      .mockImplementation(async (capability, resource) => ({
+        capability,
+        verb_class: "Execute",
+        resource,
+        permitted: false,
+        reason: "no lock permission",
+        explanation: {
+          subject: resource,
+          claim: "You may not manage locks on this study.",
+          producer: "kernel.authorization",
+          steps: [],
+          conditions: [],
+          next_actions: [],
+        },
+      }));
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div id='canvas-stub'>Canvas</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push(`/observations/${OBSERVATION}`);
+    await router.isReady();
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Data Manager"];
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("observation");
+    expect(canISpy).toHaveBeenCalledWith("lock.apply", STUDY_REF);
+    expect(canISpy).toHaveBeenCalledWith("lock.release", STUDY_REF);
+    wrapper.unmount();
+  });
+
+  it("tracks memory-only dirty state on changed or incomplete input without writing browser storage, and clears after commit", async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+
+    const corrected = observation({
+      ref: `${OBSERVATION}@2`,
+      value: mmhg(128),
+      version: 2,
+    });
+    vi.spyOn(kernelApi, "getObservation")
+      .mockResolvedValueOnce(observation())
+      .mockResolvedValueOnce(corrected);
+    vi.spyOn(kernelApi, "correctObservation").mockResolvedValue({
+      ref: `${OBSERVATION}@2`,
+      enrollment_ref: ENROLLMENT,
+      value: mmhg(128),
+      version: 2,
+      revision: 2,
+    });
+
+    const wrapper = await mountView();
+    const input = wrapper.find("#observation-new-value");
+
+    // Blank and equivalent values remain clean.
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    await input.setValue("   ");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    await input.setValue("182");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    await input.setValue("182.0");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+
+    // Invalid/incomplete non-blank text is dirty, with zero browser storage keys.
+    await input.setValue("not-a-number");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(true);
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([true]);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+
+    // Valid changed value remains dirty in memory only until committed.
+    await input.setValue("128");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(true);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+
+    await correctTo(wrapper, "128", "Source chart verification");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+
+    wrapper.unmount();
+  });
+
+  it("guards dirty standalone exits, beforeunload, and sign-out via accessible modals while allowing query updates and session expiry", async () => {
+    const FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+    const SECOND_OBS = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d99";
+    vi.spyOn(kernelApi, "getObservation").mockImplementation(async (refArg) =>
+      observation({
+        ref: `${String(refArg).split("@")[0]}@1`,
+      })
+    );
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='ecrf-dest'>eCRF</div>" },
+        },
+        {
+          path: "/forbidden",
+          name: "forbidden",
+          component: { template: "<div id='forbidden-dest'>Forbidden</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    const returnUrl = `/ecrf?studyId=CAD-101&formId=${FORM_ID}&itemId=SYSBP`;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        studyId: "CAD-101",
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+        returnTo: returnUrl,
+      },
+    });
+    await router.isReady();
+
+    const wrapper = mount(
+      {
+        components: { ConfirmationDialogHost },
+        template: "<div><router-view /><ConfirmationDialogHost /></div>",
+      },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    const confirmStore = useConfirmStore();
+    const activeConfirmTitle = () =>
+      (confirmStore.activeRequest as { title?: string } | null)?.title;
+    const authStore = useAuthStore();
+
+    await wrapper.find("#observation-new-value").setValue("134");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+
+    // beforeunload is prevented while dirty.
+    const unloadEvt = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unloadEvt);
+    expect(unloadEvt.defaultPrevented).toBe(true);
+
+    // Query parameter updates on the same observationRef do not prompt.
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        ...router.currentRoute.value.query,
+        node: "concept:systolic@1",
+      },
+    });
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    // Clicking back opens accessible ConfirmationDialogHost (never window.confirm); cancel preserves input.
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
+    const alertDialog = document.body.querySelector('[role="alertdialog"]');
+    expect(alertDialog).not.toBeNull();
+    await expect(alertDialog!).toBeAccessible();
+
+    confirmStore.cancelConfirm();
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("observation");
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("134");
+
+    // Switching to another observationRef also prompts and cancels when rejected.
+    const switchObsPromise = router.push({
+      name: "observation",
+      params: { observationRef: SECOND_OBS },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
+    confirmStore.cancelConfirm();
+    await switchObsPromise.catch(() => {});
+    await flushPromises();
+    expect(router.currentRoute.value.params.observationRef).toBe(OBSERVATION);
+
+    // Confirming discard clears memory state and navigates without duplicate prompts.
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
+    confirmStore.resolveConfirm();
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("ecrf");
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    // Session expiry suppresses exit prompts automatically.
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    await wrapper.find("#observation-new-value").setValue("140");
+    authStore.sessionExpired = true;
+    const expiredUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(expiredUnload);
+    expect(expiredUnload.defaultPrevented).toBe(false);
+    await router.push("/ecrf");
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.name).toBe("ecrf");
+
+    // cadence:demo-reset clears unsaved text, and RBAC /forbidden redirects suppress prompts.
+    authStore.sessionExpired = false;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    await wrapper.find("#observation-new-value").setValue("145");
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+    window.dispatchEvent(new CustomEvent("cadence:demo-reset"));
+    await flushPromises();
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("");
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    await wrapper.find("#observation-new-value").setValue("150");
+    await router.push("/forbidden");
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.name).toBe("forbidden");
+
+    wrapper.unmount();
+  });
+
+  it("renders SDV badges, warns before superseding an active Verified revision (PRD-QRY-006), and shows open/answered query threads and workspace links", async () => {
+    const FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f009";
+    const VERIFIED_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a101";
+    const OPEN_Q_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a102";
+    const ANSWERED_Q_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a103";
+    const ANSWER_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a104";
+    const CLOSED_Q_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000a105";
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push("/studies/CAD-101?stage=conduct&site=017");
+    await router.isReady();
+
+    // 1. Unverified state: no warning, Unverified badge, empty open queries & assertions
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValueOnce(observation());
+    const unverifiedWrapper = mount(ObservationView, {
+      props: {
+        observationRef: OBSERVATION,
+        studyCode: "CAD-101",
+        embedded: true,
+      },
+      global: { plugins: [router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(
+      unverifiedWrapper.find('[data-testid="observation-sdv-badge"]').text()
+    ).toBe("Unverified");
+    expect(
+      unverifiedWrapper
+        .find('[data-testid="observation-sdv-edit-warning"]')
+        .exists()
+    ).toBe(false);
+    expect(
+      unverifiedWrapper
+        .find('[data-testid="observation-no-open-queries"]')
+        .exists()
+    ).toBe(true);
+    expect(
+      unverifiedWrapper
+        .find('[data-testid="observation-no-assertions"]')
+        .exists()
+    ).toBe(true);
+    unverifiedWrapper.unmount();
+
+    // 2. Active Verified revision 1: Verified (rev 1) badge, pre-save inline warning + modal warning before saving, and form/queries links
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValueOnce(
+      observation({
+        form_ref: `collection_instance:${FORM_ID}`,
+        item_id: "SYSBP",
+        assertions: [
+          {
+            assertion_id: VERIFIED_ID,
+            kind: "Verified",
+            target: OBSERVATION,
+            revision: 1,
+            text: null,
+            asserted_at: "2026-10-15T10:00:00Z",
+            asserted_by: "cra@sponsor.test",
+            reason_for_change: "Verified against nursing chart",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+        ],
+      })
+    );
+    const correctSpy = vi.spyOn(kernelApi, "correctObservation");
+
+    const verifiedWrapper = mount(ObservationView, {
+      props: {
+        observationRef: OBSERVATION,
+        studyCode: "CAD-101",
+        embedded: true,
+      },
+      global: { plugins: [router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(
+      verifiedWrapper.find('[data-testid="observation-sdv-badge"]').text()
+    ).toBe("Verified (rev 1)");
+    expect(
+      verifiedWrapper.find('[data-testid="observation-sdv"]').text()
+    ).toContain("by cra@sponsor.test at 2026-10-15T10:00:00Z");
+
+    const inlineWarning = verifiedWrapper.find(
+      '[data-testid="observation-sdv-edit-warning"]'
+    );
+    expect(inlineWarning.exists()).toBe(true);
+    expect(inlineWarning.attributes("role")).toBe("status");
+    expect(inlineWarning.text()).toContain("Needs re-verification");
+    expect(inlineWarning.text()).toContain("alerts the CRA");
+
+    const openFormLink = verifiedWrapper.find("#observation-open-form");
+    expect(openFormLink.exists()).toBe(true);
+    expect(openFormLink.text()).toBe("Open form (SYSBP)");
+    expect(openFormLink.attributes("href")).toBe(
+      `/studies/CAD-101?stage=conduct&site=017&form=collection_instance:${FORM_ID}&item=SYSBP`
+    );
+    const openQueriesLink = verifiedWrapper.find("#observation-open-queries");
+    expect(openQueriesLink.exists()).toBe(true);
+    expect(openQueriesLink.attributes("href")).toBe(
+      "/studies/CAD-101?stage=data&section=queries&site=017"
+    );
+
+    // Submitting correction opens ReasonForChangeModal with SDV warning BEFORE calling correctObservation
+    await verifiedWrapper.find("#observation-new-value").setValue("176");
+    await verifiedWrapper.find("form.observation-correction").trigger("submit");
+    expect(correctSpy).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain(
+      "This value was source data verified at revision 1. Saving this correction supersedes the verified revision, marks the item as Needs re-verification, and sends a modification alert to the CRA."
+    );
+    await expect(verifiedWrapper.element).toBeAccessible();
+    verifiedWrapper.unmount();
+
+    // 3. Superseded Verified revision (rev 2 supersedes rev 1) + open, answered, and closed query threads
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValueOnce(
+      observation({
+        ref: `${OBSERVATION}@2`,
+        value: mmhg(176),
+        version: 2,
+        form_ref: `collection_instance:${FORM_ID}`,
+        item_id: "SYSBP",
+        revisions: [
+          {
+            number: 1,
+            value: mmhg(182),
+            reason_for_change: "Initial entry",
+            recorded_by: "crc@site.test",
+            recorded_at: "2026-10-15T09:05:00Z",
+            recorded_until: "2026-10-15T11:00:00Z",
+          },
+          {
+            number: 2,
+            value: mmhg(176),
+            reason_for_change: "Corrected against triage vital sheet",
+            recorded_by: "crc@site.test",
+            recorded_at: "2026-10-15T11:00:00Z",
+            recorded_until: null,
+          },
+        ],
+        assertions: [
+          {
+            assertion_id: VERIFIED_ID,
+            kind: "Verified",
+            target: OBSERVATION,
+            revision: 1,
+            text: null,
+            asserted_at: "2026-10-15T10:00:00Z",
+            asserted_by: "cra@sponsor.test",
+            reason_for_change: "Verified against nursing chart",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+          {
+            assertion_id: OPEN_Q_ID,
+            kind: "Queried",
+            target: OBSERVATION,
+            revision: 1,
+            text: "Confirm resting cuff position.",
+            asserted_at: "2026-10-15T10:15:00Z",
+            asserted_by: "cra@sponsor.test",
+            reason_for_change: "Manual monitor query",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+          {
+            assertion_id: ANSWERED_Q_ID,
+            kind: "Queried",
+            target: OBSERVATION,
+            revision: 2,
+            text: "Confirm seated rest duration.",
+            asserted_at: "2026-10-15T11:05:00Z",
+            asserted_by: "dm@sponsor.test",
+            reason_for_change: "Data review",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+          {
+            assertion_id: ANSWER_ID,
+            kind: "QueryAnswered",
+            target: `assertion:${ANSWERED_Q_ID}`,
+            revision: 2,
+            text: "Patient rested 5 minutes seated.",
+            asserted_at: "2026-10-15T11:20:00Z",
+            asserted_by: "crc@site.test",
+            reason_for_change: "Site response",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+          {
+            assertion_id: CLOSED_Q_ID,
+            kind: "Queried",
+            target: OBSERVATION,
+            revision: 1,
+            text: "Duplicate earlier question.",
+            asserted_at: "2026-10-15T09:30:00Z",
+            asserted_by: "cra@sponsor.test",
+            reason_for_change: "Raised in error",
+            retracted_at: "2026-10-15T09:45:00Z",
+            retracted_by: "cra@sponsor.test",
+            masked: false,
+          },
+        ],
+      })
+    );
+
+    const supersededWrapper = mount(ObservationView, {
+      props: {
+        observationRef: OBSERVATION,
+        studyCode: "CAD-101",
+        embedded: true,
+      },
+      global: { plugins: [router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(
+      supersededWrapper.find('[data-testid="observation-sdv-badge"]').text()
+    ).toBe("Needs re-verification");
+    expect(
+      supersededWrapper.find('[data-testid="observation-sdv"]').text()
+    ).toContain("(verified at rev 1 by cra@sponsor.test)");
+    expect(
+      supersededWrapper
+        .find('[data-testid="observation-sdv-edit-warning"]')
+        .exists()
+    ).toBe(false);
+
+    const queryItems = supersededWrapper.findAll(
+      '[data-testid="observation-queries"] > li'
+    );
+    expect(queryItems).toHaveLength(2);
+    const openThread = supersededWrapper.find(
+      `[data-testid="observation-query-${OPEN_Q_ID}"]`
+    );
+    expect(openThread.text()).toContain("Open");
+    expect(openThread.text()).toContain("Value changed (now rev 2)");
+    expect(openThread.text()).toContain("Confirm resting cuff position.");
+
+    const answeredThread = supersededWrapper.find(
+      `[data-testid="observation-query-${ANSWERED_Q_ID}"]`
+    );
+    expect(answeredThread.text()).toContain("Answered");
+    expect(answeredThread.text()).toContain("Patient rested 5 minutes seated.");
+
+    expect(
+      supersededWrapper
+        .find(`[data-testid="observation-query-${CLOSED_Q_ID}"]`)
+        .exists()
+    ).toBe(false);
+    expect(
+      supersededWrapper.find('[data-testid="observation-assertions"]').text()
+    ).toContain("retracted 2026-10-15T09:45:00Z");
+
+    await expect(supersededWrapper.element).toBeAccessible();
+    supersededWrapper.unmount();
   });
 });

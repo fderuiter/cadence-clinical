@@ -36,6 +36,130 @@
         @reload-stale="reloadAfterSdvStale"
       />
 
+      <div
+        v-if="formState.draftRestored"
+        class="ecrf-draft-banner ecrf-draft-banner--restored"
+        data-testid="ecrf-draft-restored-banner"
+        role="status"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong>Unsaved browser draft restored</strong>
+          <span>
+            Restored unsaved draft
+            {{
+              formState.restoredDraftItemIds.length === 1
+                ? `value for ${formState.restoredDraftItemIds[0]}`
+                : `values for ${formState.restoredDraftItemIds.join(", ")}`
+            }}
+            over committed server entries. Compare against committed values or
+            save when ready.
+          </span>
+        </div>
+        <div class="ecrf-draft-banner-actions">
+          <button
+            id="ecrf-draft-compare-toggle"
+            type="button"
+            class="btn btn-secondary"
+            :aria-pressed="formState.comparingBaseline"
+            @click="formState.toggleBaselineComparison()"
+          >
+            {{
+              formState.comparingBaseline
+                ? "Hide committed values"
+                : "Compare committed values"
+            }}
+          </button>
+          <button
+            id="ecrf-draft-discard"
+            type="button"
+            class="btn btn-secondary"
+            @click="onDiscardDraft"
+          >
+            Discard draft
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="formState.staleDraftItems.length > 0"
+        class="ecrf-draft-banner ecrf-draft-banner--stale"
+        data-testid="ecrf-draft-stale-banner"
+        role="alert"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong>Stale draft entries skipped</strong>
+          <span>
+            Skipped saved draft
+            {{ formState.staleDraftItems.length === 1 ? "entry" : "entries" }}
+            because committed server revisions advanced:
+          </span>
+          <ul class="ecrf-draft-banner-list">
+            <li
+              v-for="skipped in formState.staleDraftItems"
+              :key="skipped.item_id"
+            >
+              <strong>{{ skipped.item_id }}:</strong> draft
+              {{ skipped.draft_display }} (saved at rev
+              {{ skipped.draft_revision
+              }}<template v-if="skipped.current_revision !== null"
+                >, server now at rev {{ skipped.current_revision }}</template
+              >)
+            </li>
+          </ul>
+        </div>
+        <div class="ecrf-draft-banner-actions">
+          <button
+            id="ecrf-draft-stale-dismiss"
+            type="button"
+            class="btn btn-secondary"
+            @click="onDismissStaleDraftNotice"
+          >
+            Dismiss notice
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-if="formState.lockedDraftItems.length > 0"
+        class="ecrf-draft-banner ecrf-draft-banner--locked"
+        data-testid="ecrf-draft-locked-banner"
+        role="status"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong
+            >Unapplied browser draft ({{
+              formState.lockSummaryLabel
+            }}
+            form)</strong
+          >
+          <span>
+            This form is read-only, so your saved browser draft was not applied
+            to the record. Unapplied draft values are preserved below until you
+            clear them:
+          </span>
+          <ul class="ecrf-draft-banner-list">
+            <li
+              v-for="unapplied in formState.lockedDraftItems"
+              :key="unapplied.item_id"
+            >
+              <strong>{{ unapplied.item_id }}:</strong> draft
+              {{ unapplied.draft_display }} (committed:
+              {{ unapplied.committed_display }})
+            </li>
+          </ul>
+        </div>
+        <div class="ecrf-draft-banner-actions">
+          <button
+            id="ecrf-draft-locked-clear"
+            type="button"
+            class="btn btn-secondary"
+            @click="onClearLockedDraft"
+          >
+            Clear saved draft
+          </button>
+        </div>
+      </div>
+
       <EcrfItemTable
         :form-state="formState"
         :sdv="sdv"
@@ -59,6 +183,7 @@
         :can-answer-queries="effectiveCanAnswerQueries"
         :assertions-locked="formState.assertionsLocked"
         :act-query="queries.act"
+        :reassign-query="queries.reassign"
         :act-many-queries="queries.actMany"
         :current-form-titles="currentFormTitles"
         :query-form-link="queryFormLink"
@@ -179,6 +304,43 @@ function setEntryText(itemId: string, text: string) {
 }
 function setEntryMissing(itemId: string, missing: string) {
   if (formState.entries[itemId]) formState.entries[itemId].missing = missing;
+}
+
+function onDiscardDraft() {
+  const firstRestoredId = formState.restoredDraftItemIds[0] ?? null;
+  formState.discardDraft();
+  void handoffFocus([
+    ...(firstRestoredId ? [`#ecrf-item-${firstRestoredId}`] : []),
+    "#ecrf-draft-stale-dismiss",
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+      ),
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+function onDismissStaleDraftNotice() {
+  formState.dismissStaleDraftNotice();
+  void handoffFocus([
+    "#ecrf-draft-compare-toggle",
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+      ),
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+function onClearLockedDraft() {
+  formState.clearLockedDraft();
+  void handoffFocus([
+    "#ecrf-form-close",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 function handoffAfterFormOpen() {
@@ -345,7 +507,17 @@ watch(
   { immediate: true }
 );
 
+function handleDemoReset() {
+  const openId = form.value?.form_id;
+  if (!openId) return;
+  formState.clearDraft(openId);
+  void formState.load(openId);
+}
+
 onMounted(() => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("cadence:demo-reset", handleDemoReset);
+  }
   if (props.formId) void formState.load(props.formId);
 });
 watch(
@@ -359,6 +531,9 @@ watch(
 defineExpose({ dirty, form });
 watch(dirty, (value) => emit("dirty-change", value));
 onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("cadence:demo-reset", handleDemoReset);
+  }
   if (dirty.value) emit("dirty-change", false);
 });
 </script>
@@ -407,5 +582,58 @@ onUnmounted(() => {
 .ecrf-form-panel :deep(button:not(.sr-only):not(.visually-hidden)) {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
+}
+.ecrf-draft-banner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.875rem;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+  color: var(--semantic-color-text);
+}
+.ecrf-draft-banner--restored {
+  background-color: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  border-left: 4px solid var(--semantic-color-interactive-primary);
+}
+.ecrf-draft-banner--stale {
+  background-color: var(--semantic-color-edited-row-bg);
+  border: 1px solid var(--semantic-color-edited-row-border);
+  border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-draft-banner--locked {
+  background-color: var(--semantic-color-surface-subtle);
+  border: 1px solid var(--semantic-color-border-control);
+  border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-draft-banner-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+.ecrf-draft-banner-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.ecrf-draft-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ecrf-draft-banner-actions .btn-secondary {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>

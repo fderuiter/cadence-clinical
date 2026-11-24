@@ -182,11 +182,11 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (normalizedId.includes("vite/preload-helper")) {
+                return "preload-helper";
+              }
               if (
-                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard|useInlineFocusHandoff)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
-                  normalizedId
-                ) ||
-                /\/apps\/web\/src\/(?:utils\/(?:demoMode|apiErrors|unbackedActions)\.js|stores\/(?:toasts\.js|clinicalScope\.ts)|canvas\/(?:generated\/(?:nodeKinds|participantContracts)|stages\/[^/]+|nodeRef|lifecycle)\.ts)(?:$|\?)/.test(
+                /\/packages\/ui\/(?:session|callerScope)\.js(?:$|\?)/.test(
                   normalizedId
                 )
               ) {
@@ -205,10 +205,7 @@ export default defineConfig({
                 pkgPath.startsWith("vue/") ||
                 pkgPath.startsWith("@vue/") ||
                 pkgPath.startsWith("vue-router/") ||
-                pkgPath.startsWith("pinia/") ||
-                pkgPath.startsWith("vue-i18n/") ||
-                pkgPath.startsWith("@intlify/") ||
-                pkgPath.startsWith("openapi-fetch/")
+                pkgPath.startsWith("pinia/")
               ) {
                 return "vendor-vue";
               }

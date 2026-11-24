@@ -71,7 +71,7 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
 - **Separation of duties.** Approval and remittance signing share the finance role, so the handler refuses (`409`) a
   remittance signature from the user who approved the invoice. Expense submission and expense review likewise share site
   clinical roles (`crc`, `investigator`), so `POST /participant/expenses/{claimId}/review` and `ParticipantExpenseClaim.Approve`
-  refuse (`409`) an approval from the user who submitted the claim (`CreatedBy == caller.UserId`), bound `AdjustedAmount`
+  refuse (`409`) an approval from the user who submitted the claim (`CreatedBy == userId`), bound `AdjustedAmount`
   between `$0.01` and `claim.GrossAmount`, and recompute `TaxDeduction` and `NetAmount` on the server. Form W-9
   submission and verification also share site clinical roles (`crc`, `investigator`): `POST /participant/wallets/{walletId}/submit-w9`
   requires a non-empty `FullLegalName` and a four-digit `TaxIdLastFour` (`422`), and `POST /participant/wallets/{walletId}/verify-w9`
@@ -81,9 +81,9 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   `TaxableYtd` verified W-9 holds (`409`), deduplicates per wallet on `ParticipantTransaction.IdempotencyKey`, and records
   `ParticipantTransaction` stipend credits and `TaxableYtd` without inflating `LifetimeDisbursements`. Compiling with
   `auto_approve` also needs `payments_invoice:approve`.
-- **Identity in records.** Handlers take the actor from the signed principal (`PaymentsCaller`): the `sub` claim as the
-  user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`) as
-  `UserRoles`. Audit rows, `CreatedBy`, `ApprovedBy`, `ReviewedBy`,
+- **Identity in records.** Handlers take the actor from the signed principal (`CallerScope`): the `sub` claim as the
+  user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`, truncated to
+  255 characters via `CallerScope.Roles(httpContext, 255)`) as `UserRoles`. Audit rows, `CreatedBy`, `ApprovedBy`, `ReviewedBy`,
   `ReconciledBy`, `SignedBy` and `SignerRole` all come from it. Request bodies carry no actor: the remittance signature
   takes only `signature_reason`, and the visit-verified event has no `verified_by`. Two system identities remain:
   `svc:payments` on the demonstration stipend rules the service seeds on first read, and `svc:system_auto_approval` on
@@ -93,7 +93,7 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   The `subject` role holds only the five `payments_self_*` capabilities mapped to `/api/v1/payments/participant/me/*`
   and never reaches staff directory, card-issuance, W-9 verification, claim-review, or invoice routes (`403` with zero
   database mutations). Every `/participant/me/*` handler resolves the wallet through `ResolveOwnWalletAsync` bound to
-  `PaymentsCaller.UserId`, refuses (`403`) any cross-participant `subjectId` or `walletId`, masks card/routing/account
+  `CallerScope.VerifiedUserId`, refuses (`403`) any cross-participant `subjectId` or `walletId`, masks card/routing/account
   identifiers before serialization, enforces the server-computed `<= $100.00` (`<= $75.00` server meal per-diem cap) /
   `>= 0.90` server-bound OCR confidence (from verified image/document bytes or a single-use HMAC token minted exclusively from readable image/document bytes when `rawText` is absent, with plain-text uploads,
   manual field edits, and duplicate receipt SHA-256 digests held in `PENDING_REVIEW`) / IRS `$600.00` verified W-9
@@ -107,10 +107,11 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   `POST /participant/expenses` applies the same server-computed OCR confidence, receipt deduplication, and `$75.00` meal
   per-diem cap rules without trusting client `OcrConfidence`, `ReceiptOcrData`, or `PerDiemCap`.
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
-- **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).**
+- **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md), [ADR-2661](../../docs/adr/2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md)).**
   Every handler reaches only the studies in the caller's signed `study_ids` and, for a site-scoped role (CRC,
-  investigators, monitors) or a caller with site assignments, only their signed sites (`PaymentsCaller.Reaches` and
-  `InScope`, the same rules as `StudyAccessEvaluator` and `SiteAccessEvaluator`). Scope fails closed: a caller with no
+  investigators, monitors) or a caller with site assignments, only their signed sites (`ClinicalScopeGuard.CanAccessStudy`,
+  `ClinicalScopeGuard.CanAccessSite`, `ClinicalScopeGuard.NarrowToScope`, and `ClinicalScopeGuard.NarrowToStudyScope`,
+  backed by `StudyAccessEvaluator` and `SiteAccessEvaluator`). Scope fails closed: a caller with no
   study, or a site-scoped role with no site, reaches nothing.
   - Lists (wallets, claims, invoices, stipend rules) are narrowed in the query. Transactions and disbursements carry no
     site, so they are narrowed through their wallet. The audit log shows a restricted caller only the rows about the

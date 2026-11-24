@@ -50,6 +50,21 @@ export interface RaiseQueryOptions {
   assignee?: string | null;
 }
 
+/** Optional metadata when reassigning an open or answered query. */
+export interface ReassignQueryOptions {
+  ownerRole?: FormQueryOwnerRole | null;
+  text?: string;
+  note?: string;
+}
+
+export type ReassignQueryInput =
+  string | null | ({ assignee?: string | null } & ReassignQueryOptions);
+
+/** Optional metadata when answering or reopening a query. */
+export interface TransitionQueryOptions {
+  assignee?: string | null;
+}
+
 const DONE: Record<FormQueryAction, string> = {
   answer: "Query answered.",
   reopen: "Query reopened.",
@@ -383,19 +398,72 @@ export function useFormQueries() {
     query: FormQueryResponse,
     action: FormQueryAction,
     text: string,
-    reason: string
+    reason: string,
+    options?: TransitionQueryOptions
   ): Promise<boolean> {
+    const trimmedAssignee = options?.assignee?.trim() || undefined;
     return write(
-      { action, query: query.query_id, version: query.version, text, reason },
+      {
+        action,
+        query: query.query_id,
+        version: query.version,
+        text,
+        reason,
+        ...(trimmedAssignee ? { assignee: trimmedAssignee } : {}),
+      },
       ({ key }) =>
         ecrfQueriesApi.transition(action, {
           formId: query.form_id,
           queryId: query.query_id,
           text,
+          ...(trimmedAssignee ? { assignee: trimmedAssignee } : {}),
           reason,
           idempotencyKey: key,
         }),
       DONE[action]
+    );
+  }
+
+  /** Reassigns or unassigns an open or answered query with audited bitemporal history and explicit `X-Change-Reason`. */
+  function reassign(
+    query: FormQueryResponse,
+    assigneeOrInput: ReassignQueryInput,
+    reason: string,
+    options?: ReassignQueryOptions
+  ): Promise<boolean> {
+    const inputIsObject =
+      assigneeOrInput !== null && typeof assigneeOrInput === "object";
+    const rawAssignee = inputIsObject
+      ? (assigneeOrInput.assignee ?? null)
+      : assigneeOrInput;
+    const mergedOptions = inputIsObject ? assigneeOrInput : options;
+    const trimmedAssignee = rawAssignee?.trim() || null;
+    const trimmedNote =
+      (mergedOptions?.text ?? mergedOptions?.note)?.trim() || undefined;
+    const ownerRole = mergedOptions?.ownerRole ?? undefined;
+    const doneMessage = trimmedAssignee
+      ? "Query reassigned."
+      : "Query unassigned.";
+    return write(
+      {
+        reassign: query.query_id,
+        version: query.version,
+        assignee: trimmedAssignee,
+        ownerRole: ownerRole ?? null,
+        text: trimmedNote ?? null,
+        reason,
+      },
+      ({ key }) =>
+        ecrfQueriesApi.reassign({
+          formId: query.form_id,
+          queryId: query.query_id,
+          assignee: trimmedAssignee,
+          ...(ownerRole ? { ownerRole } : {}),
+          ...(trimmedNote ? { text: trimmedNote } : {}),
+          reason,
+          idempotencyKey: key,
+        }),
+      doneMessage
     );
   }
 
@@ -477,6 +545,7 @@ export function useFormQueries() {
     applySavedValues,
     raise,
     act,
+    reassign,
     actMany,
   };
 }

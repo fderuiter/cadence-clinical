@@ -124,7 +124,7 @@
           <span class="node-name">{{ zone.name }}</span>
           <span
             v-if="getDocumentCount(zone) > 0"
-            class="doc-count-badge zone-badge"
+            class="doc-count-badge zone-badge tabular-nums"
           >
             {{ getDocumentCount(zone) }}
           </span>
@@ -166,7 +166,7 @@
               <span class="node-name">{{ section.name }}</span>
               <span
                 v-if="getDocumentCount(section) > 0"
-                class="doc-count-badge section-badge"
+                class="doc-count-badge section-badge tabular-nums"
               >
                 {{ getDocumentCount(section) }}
               </span>
@@ -198,7 +198,7 @@
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
                     v-if="getDocumentCount(artifact) > 0"
-                    class="doc-count-badge artifact-badge"
+                    class="doc-count-badge artifact-badge tabular-nums"
                   >
                     {{ getDocumentCount(artifact) }}
                   </span>

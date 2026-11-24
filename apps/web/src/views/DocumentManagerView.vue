@@ -513,7 +513,9 @@ import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   extractAssignedSites,
   extractAssignedStudies,
@@ -537,6 +539,7 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
+const canvasStore = useStudyCanvasStore();
 const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
@@ -590,6 +593,7 @@ const effectiveStudyId = computed(
   () =>
     props.studyId ||
     etmfStore.currentStudyId ||
+    canvasStore.studyCode ||
     activeStudyCode.value ||
     clinicalStore.activeStudyId
 );
@@ -634,6 +638,10 @@ function syncScope(study, site) {
     clinicalStore.activeStudyId = normalizedStudy;
   }
   clinicalStore.activeSiteId = normalizedSite;
+  syncWorkspaceScope({
+    ...(normalizedStudy ? { studyId: normalizedStudy } : {}),
+    siteId: normalizedSite,
+  });
   standaloneStudyInput.value = normalizedStudy;
   standaloneSiteInput.value = normalizedSite;
 }
@@ -933,6 +941,7 @@ onMounted(async () => {
   const initialStudy =
     props.studyId ||
     queryStudy ||
+    canvasStore.studyCode ||
     activeStudyCode.value ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
