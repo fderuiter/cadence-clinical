@@ -63,19 +63,17 @@ if [ "$SDK_FOUND" = false ]; then
       printf '  %s[ERROR] Environment setup failed. Aborting onboarding wizard.%s\n' "$YELLOW" "$RESET" >&2
       exit 1
     fi
-    CADENCE_RESOLVE_REPO_ROOT="$REPO_ROOT"
-    # shellcheck source=scripts/resolve_dotnet_env.sh
+    export CADENCE_RESOLVE_REPO_ROOT="$REPO_ROOT"
+    # shellcheck source=scripts/resolve_dotnet_env.sh disable=SC1091
     . "$SCRIPT_DIR/resolve_dotnet_env.sh"
     unset CADENCE_RESOLVE_REPO_ROOT
   fi
 fi
 
-# Stage 2: Global Tools
-stage "Global Developer Tools" "Ensuring required dotnet CLI tools are installed..."
-for tool in dotnet-ef dotnet-format; do
-  dotnet tool update --global "$tool" 2>/dev/null || dotnet tool install --global "$tool" 2>/dev/null || true
-  printf '  %s[SUCCESS] %s is configured.%s\n' "$GREEN" "$tool" "$RESET"
-done
+# Stage 2: Local Tools
+stage "Local Developer Tools" "Restoring pinned local .NET CLI tools from .config/dotnet-tools.json..."
+(cd "$REPO_ROOT" && dotnet tool restore)
+printf '  %s[SUCCESS] Local .NET tools restored.%s\n' "$GREEN" "$RESET"
 
 # Stage 3: HTTPS Dev Certs
 stage "HTTPS Dev Certificates" "Configuring local development certificates..."
