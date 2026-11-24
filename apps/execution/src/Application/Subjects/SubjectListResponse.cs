@@ -16,11 +16,12 @@ public sealed record SubjectSummaryResponse(
     SiteCode? SiteId,
     string Status,
     string ActiveProtocolVersion,
-    int EnrollmentIndex)
+    int EnrollmentIndex,
+    string? EnrollmentRef = null)
 {
     public static SubjectSummaryResponse FromAggregate(ClinicalSubject subject) => new(
         subject.Id, subject.SubjectCode, subject.StudyCode, subject.SiteCode, SubjectStateCodec.ToCode(subject.Status),
-        subject.ActiveProtocolVersion, subject.EnrollmentIndex);
+        subject.ActiveProtocolVersion, subject.EnrollmentIndex, subject.EnrollmentRef);
 }
 
 /// <summary>One page of a study's subjects. <see cref="Total"/> counts every subject that matches the filters.</summary>

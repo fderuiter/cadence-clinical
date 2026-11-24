@@ -6,6 +6,7 @@ import { router } from "../src/router/index.js";
 import {
   AVAILABLE_SCREENS,
   DEMO_AVAILABLE_SCREENS,
+  DEMO_MODULE_CATALOG,
 } from "../src/router/availability.js";
 import { STAGES } from "../src/canvas/lifecycle";
 import { useAuthStore, PERSONA_PRESETS } from "../src/stores/auth.js";
@@ -14,9 +15,17 @@ import {
   sanitizePseudonymousSubjectCode,
   useKnowledgeStore,
 } from "../src/stores/knowledge.js";
+import { useClinicalScopeStore } from "../src/stores/clinicalScope";
+import {
+  clearActiveStudyScope,
+  syncActiveStudyScope,
+} from "../src/stores/studyScopeBridge";
 import { useStudyCanvasStore } from "../src/stores/studyCanvas";
 import { useToastStore } from "../src/stores/toasts.js";
 import {
+  compileSopMarkdownToHtml,
+  DEFAULT_CONTEXTUAL_SOPS,
+  DEFAULT_MOCK_ARTICLES,
   knowledgeService,
   getFallbackContextualHelp,
 } from "../src/api/knowledge.js";
@@ -25,13 +34,6 @@ import ContextualHelpDrawer from "../src/components/ContextualHelpDrawer.vue";
 import TicketCreateModal from "../src/components/tickets/TicketCreateModal.vue";
 import AppShell from "../src/components/AppShell.vue";
 import App from "../src/App.vue";
-
-// These tests cover screens that are hidden until their .NET backend exists
-// (#4829), so they treat every screen as available.
-vi.mock("../src/router/availability", async (importOriginal) => ({
-  ...(await importOriginal()),
-  isScreenAvailable: () => true,
-}));
 
 describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () => {
   let pinia;
@@ -59,7 +61,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       category_name: "Clinical Operations",
       body_markdown: "## Purpose & Scope\n\nSubject enrollment guidelines.",
       body_html:
-        "<h2>Purpose & Scope</h2><p>Subject enrollment guidelines.</p>",
+        '<h2 id="subject-enrollment-and-visit-entry">Purpose &amp; Scope</h2><p>Subject enrollment guidelines.</p>',
     },
     primary_version: {
       id: "ver-test-01",
@@ -279,7 +281,10 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
         "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture"
       );
       expect(wrapper.text()).toContain("v2.1");
-      expect(wrapper.text()).toContain("#subject-enrollment-and-visit-entry");
+      expect(wrapper.text()).toContain("Subject Enrollment and Visit Entry");
+      expect(
+        wrapper.find(".anchor-callout").attributes("data-anchor-target")
+      ).toBe("subject-enrollment-and-visit-entry");
       expect(wrapper.text()).toContain("Subject enrollment guidelines.");
     });
 
@@ -730,7 +735,15 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       expect(wrapper.find("#ticket-escalation-refusal").exists()).toBe(false);
       expect(knowledgeStore.isEscalating).toBe(false);
-      expect(knowledgeStore.isOpen).toBe(false);
+      expect(knowledgeStore.isOpen).toBe(true);
+      expect(knowledgeStore.activeDrawerTab).toBe("tickets");
+      expect(wrapper.find("#drawer-ticket-detail-card").exists()).toBe(true);
+      expect(wrapper.find("#drawer-ticket-detail-card").text()).toContain(
+        "DEV-2026-0104"
+      );
+      expect(wrapper.find("#drawer-ticket-detail-card").text()).toContain(
+        "DATA_CAPTURE_ECRF"
+      );
 
       const toasts = useToastStore(pinia).toasts;
       expect(toasts.length).toBeGreaterThan(0);
@@ -886,7 +899,198 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     });
   });
 
-  describe("6. Clinical Canvas Query-Aware SOP Scoring & Full Route Coverage", () => {
+  describe("6. Complete SOP HTML Steps, Formatted Spotlight Headings & Anchor Scrolling", () => {
+    it("renders all 13 ordered procedural steps across /studies, /studies/:studyCode, /ecrf, /ctms, and /ssu", () => {
+      const routeExpectedCounts = [
+        ["/studies", 3],
+        ["/studies/DEMO-01", 3],
+        ["/ecrf", 3],
+        ["/ctms", 2],
+        ["/ssu", 2],
+      ];
+
+      let totalProceduralSteps = 0;
+      for (const [routePath, expectedSteps] of routeExpectedCounts) {
+        const resolved = getFallbackContextualHelp(routePath, "site_crc");
+        const container = document.createElement("div");
+        container.innerHTML = resolved.primary_article.body_html;
+        const stepElements = container.querySelectorAll("ol li");
+        expect(
+          stepElements.length,
+          `Expected ${expectedSteps} procedural steps on ${routePath}`
+        ).toBe(expectedSteps);
+        const anchorId = resolved.section_anchor.replace(/^#+/, "");
+        expect(
+          container.querySelector(`[id="${anchorId}"]`),
+          `Expected matching element id="${anchorId}" in ${routePath} SOP HTML`
+        ).not.toBeNull();
+        totalProceduralSteps += stepElements.length;
+      }
+
+      expect(totalProceduralSteps).toBe(13);
+    });
+
+    it("formats clinical acronyms in section anchors and scrolls matching HTML heading id into view", async () => {
+      const sdvSop = {
+        ...mockResolvedSop,
+        section_anchor: "#ecrf-sdv-and-soa-review",
+        primary_article: {
+          ...mockResolvedSop.primary_article,
+          body_html:
+            '<h2 id="overview">Overview</h2><ol><li>Step 1</li></ol><h3 id="ecrf-sdv-and-soa-review">eCRF SDV and SoA Review</h3><p>Verify source charts.</p>',
+        },
+      };
+
+      const scrollSpy = vi.fn();
+      const origScrollIntoView = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scrollSpy;
+
+      try {
+        vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+          sdvSop
+        );
+        await knowledgeStore.fetchContextualHelp("/ecrf", "cra_monitor");
+        knowledgeStore.openDrawer();
+
+        const wrapper = mount(ContextualHelpDrawer, {
+          global: { plugins: [pinia, router] },
+        });
+        await wrapper.vm.$nextTick();
+
+        const jumpBtn = wrapper.find("#btn-jump-spotlight-section");
+        expect(jumpBtn.exists()).toBe(true);
+        expect(jumpBtn.text()).toBe("eCRF SDV and SoA Review");
+
+        const targetHeading = wrapper.find("#ecrf-sdv-and-soa-review");
+        expect(targetHeading.exists()).toBe(true);
+        expect(targetHeading.classes()).toContain("spotlight-target-heading");
+        expect(scrollSpy).toHaveBeenCalled();
+
+        // Collapse body, then click jump button to auto-expand and scroll again
+        scrollSpy.mockClear();
+        await wrapper.find(".btn-toggle-body").trigger("click");
+        expect(knowledgeStore.isArticleBodyExpanded).toBe(false);
+
+        await jumpBtn.trigger("click");
+        await wrapper.vm.$nextTick();
+        expect(knowledgeStore.isArticleBodyExpanded).toBe(true);
+        expect(scrollSpy).toHaveBeenCalledTimes(1);
+        wrapper.unmount();
+      } finally {
+        Element.prototype.scrollIntoView = origScrollIntoView;
+      }
+    });
+  });
+
+  describe("7. Full Route Query Watching Across /studies/:studyCode Canvas Sections & Zoom", () => {
+    it("watches route.fullPath and resolves distinct guidance across all 9 Clinical Canvas query states", async () => {
+      const localRouter = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          { path: "/studies/:studyCode", component: { template: "<div />" } },
+        ],
+      });
+      await localRouter.push("/studies/DEMO-01");
+      await localRouter.isReady();
+
+      knowledgeStore.$reset();
+      const resolveSpy = vi
+        .spyOn(knowledgeService, "resolveContextualHelp")
+        .mockImplementation(({ route: r, persona: p }) =>
+          Promise.resolve(getFallbackContextualHelp(r, p))
+        );
+
+      knowledgeStore.openDrawer();
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, localRouter] },
+      });
+      await vi.waitFor(() => expect(resolveSpy).toHaveBeenCalledTimes(1));
+
+      const queryTransitions = [
+        [
+          "/studies/DEMO-01?stage=design&section=protocol-versions",
+          "/studies/DEMO-01?stage=design&section=protocol-versions",
+          "SOP-CAN-110",
+          "Canvas Protocol Versions",
+        ],
+        [
+          "/studies/DEMO-01?stage=startup&section=site-activation",
+          "/studies/DEMO-01?stage=start&section=site-activation",
+          "SOP-CAN-112",
+          "Canvas Site Activation",
+        ],
+        [
+          "/studies/DEMO-01?stage=conduct&section=participants",
+          "/studies/DEMO-01?stage=conduct&section=participants",
+          "SOP-CAN-118",
+          "Canvas Participants Execution",
+        ],
+        [
+          "/studies/DEMO-01?stage=conduct&section=queries",
+          "/studies/DEMO-01?stage=data&section=queries",
+          "SOP-CAN-121",
+          "Canvas Discrepancy Queries",
+        ],
+        [
+          "/studies/DEMO-01?stage=closeout&section=locks",
+          "/studies/DEMO-01?stage=data&section=locks",
+          "SOP-CAN-122",
+          "Canvas Scoped Data Locks",
+        ],
+        [
+          "/studies/DEMO-01?stage=closeout&section=exports",
+          "/studies/DEMO-01?stage=submit&section=exports",
+          "SOP-CAN-124",
+          "Canvas Regulated Exports",
+        ],
+        [
+          "/studies/DEMO-01?stage=conduct&participant=SUBJ-1001",
+          "/studies/DEMO-01?stage=conduct&participant=SUBJ-1001",
+          "SOP-STD-102",
+          "Participant Timeline and Visit Record",
+        ],
+        [
+          "/studies/DEMO-01?stage=conduct&form=FORM-101",
+          "/studies/DEMO-01?stage=conduct&form=FORM-101",
+          "SOP-ECRF-201",
+          "eCRF Form Capture and Change Reason",
+        ],
+        [
+          "/studies/DEMO-01?stage=conduct&observation=OBS-101",
+          "/studies/DEMO-01?stage=conduct&observation=OBS-101",
+          "SOP-OBS-210",
+          "Clinical Observation Provenance Review",
+        ],
+      ];
+
+      for (const [
+        pushedRoute,
+        expectedCanonicalRoute,
+        expectedSopCode,
+        expectedFormattedAnchor,
+      ] of queryTransitions) {
+        await localRouter.push(pushedRoute);
+        await vi.waitFor(() => {
+          expect(knowledgeStore.currentRoute).toBe(expectedCanonicalRoute);
+          expect(knowledgeStore.loading).toBe(false);
+        });
+        await wrapper.vm.$nextTick();
+
+        expect(resolveSpy).toHaveBeenLastCalledWith({
+          route: expectedCanonicalRoute,
+          persona: "site_crc",
+        });
+        expect(wrapper.text()).toContain(expectedSopCode);
+        expect(wrapper.find("#btn-jump-spotlight-section").text()).toBe(
+          expectedFormattedAnchor
+        );
+      }
+
+      wrapper.unmount();
+    });
+  });
+
+  describe("8. Clinical Canvas Query-Aware SOP Scoring & Full Route Coverage", () => {
     it("resolves distinct section-specific SOPs and #canvas-* anchors for all 15 Clinical Canvas sections and stage=analyze", () => {
       const bareHelp = getFallbackContextualHelp(
         "/studies/CADENCE-101",
@@ -1070,7 +1274,204 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     });
   });
 
-  describe("7. Clinical Canvas Escalation Fidelity & Scope Hygiene", () => {
+  describe("9. Inline Support Tickets Tab, Scope Pre-Fill, Queue Routing & Auditor Read-Only UX", () => {
+    it("pre-fills study_id, site_id, and pseudonymous subject_id from route queries while excluding raw participant UUIDs and SOP article IDs", async () => {
+      knowledgeStore.activePersona = "site_crc";
+      knowledgeStore.primaryArticle = mockResolvedSop.primary_article;
+
+      const ecrfPayload = knowledgeStore.prepareEscalation(
+        "/ecrf?studyId=STUDY-A&siteId=SITE-101&subjectId=SUBJ-1001"
+      );
+      expect(ecrfPayload.study_id).toBe("STUDY-A");
+      expect(ecrfPayload.site_id).toBe("SITE-101");
+      expect(ecrfPayload.subject_id).toBe("SUBJ-1001");
+      expect(ecrfPayload.entity_type).toBe("SUBJECT");
+      expect(ecrfPayload.entity_id).toBe("SUBJ-1001");
+
+      // Raw participant:<uuid> NodeRefs must NOT populate subject_id
+      const uuidNodeRoute =
+        "/studies/STUDY-A?stage=conduct&site=SITE-101&participant=participant:00000000-0000-4000-8000-000000000101"; // deid-ignore: synthetic NodeRef UUID fixture
+      const canvasPayload = knowledgeStore.prepareEscalation(uuidNodeRoute);
+      expect(canvasPayload.study_id).toBe("STUDY-A");
+      expect(canvasPayload.site_id).toBe("SITE-101");
+      expect(canvasPayload.subject_id).toBe("");
+      expect(canvasPayload.entity_type).toBe("");
+      expect(canvasPayload.entity_id).toBe("");
+
+      // Escalating from /overview with SYSTEM_SUPPORT routes to PLATFORM_ADMIN_ACCESS instead of DATA_CAPTURE_ECRF
+      knowledgeStore.activePersona = "super_admin";
+      const overviewPayload = knowledgeStore.prepareEscalation("/overview");
+      expect(overviewPayload.category).toBe("SYSTEM_SUPPORT");
+      expect(overviewPayload.entity_type).toBe("");
+      expect(overviewPayload.entity_id).toBe("");
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.reject(new TypeError("Offline demo fallback")))
+      );
+      const createdOverviewTicket = await ticketsApi.createTicket(
+        overviewPayload,
+        overviewPayload.reason_for_change
+      );
+      expect(createdOverviewTicket.assigned_queue).toBe(
+        "PLATFORM_ADMIN_ACCESS"
+      );
+    });
+
+    it("loads scoped tickets in the Support Tickets tab, opens ticket detail via getTicket, and refreshes persisted records", async () => {
+      const scopedTicketSummary = {
+        id: "b2c3d4e5-0000-4000-8000-000000000109", // deid-ignore: synthetic ticket UUID fixture
+        reference: "TKT-2026-000109",
+        title: "Cycle 2 lab unit query on STUDY-A",
+        description: "Verify SI unit mapping for SUBJ-1001.",
+        category: "DATA_QUERY",
+        priority: "HIGH",
+        gxp_severity: "MAJOR",
+        status: "OPEN",
+        assigned_queue: "DATA_CAPTURE_ECRF",
+        study_id: "STUDY-A",
+        site_id: "SITE-101",
+        subject_id: "SUBJ-1001",
+        acknowledge_target_at: "2026-11-20T15:00:00Z", // deid-ignore: synthetic SLA timestamp fixture
+        sla_target_at: "2026-11-20T22:00:00Z", // deid-ignore: synthetic SLA timestamp fixture
+      };
+
+      const listSpy = vi
+        .spyOn(ticketsApi, "listTickets")
+        .mockResolvedValue([scopedTicketSummary]);
+      const getSpy = vi.spyOn(ticketsApi, "getTicket").mockResolvedValue({
+        ...scopedTicketSummary,
+        description:
+          "Detailed chemistry SI unit verification for SUBJ-1001 at SITE-101.",
+      });
+
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      await knowledgeStore.fetchContextualHelp(
+        "/ecrf?studyId=STUDY-A&siteId=SITE-101&subjectId=SUBJ-1001",
+        "site_crc"
+      );
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, router] },
+      });
+
+      await wrapper.find("#tab-contextual-tickets").trigger("click");
+      await vi.waitFor(() =>
+        expect(listSpy).toHaveBeenCalledWith({
+          study_id: "STUDY-A",
+          site_id: "SITE-101",
+        })
+      );
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#drawer-tickets-list").exists()).toBe(true);
+      expect(wrapper.text()).toContain("TKT-2026-000109");
+      expect(wrapper.text()).toContain("Cycle 2 lab unit query on STUDY-A");
+
+      await wrapper.find(".drawer-ticket-card").trigger("click");
+      await vi.waitFor(() =>
+        expect(getSpy).toHaveBeenCalledWith(scopedTicketSummary.id)
+      );
+      await wrapper.vm.$nextTick();
+
+      const detailCard = wrapper.find("#drawer-ticket-detail-card");
+      expect(detailCard.exists()).toBe(true);
+      expect(detailCard.text()).toContain("TKT-2026-000109");
+      expect(detailCard.text()).toContain("DATA_CAPTURE_ECRF");
+      expect(detailCard.text()).toContain("STUDY-A / SITE-101");
+      expect(detailCard.text()).toContain("SUBJ-1001");
+      expect(detailCard.text()).toContain("2026-11-20 15:00 UTC"); // deid-ignore: synthetic SLA display assertion
+      expect(detailCard.text()).toContain("2026-11-20 22:00 UTC"); // deid-ignore: synthetic SLA display assertion
+      expect(detailCard.text()).toContain(
+        "Detailed chemistry SI unit verification"
+      );
+
+      await wrapper.find("#btn-back-to-ticket-list").trigger("click");
+      expect(wrapper.find("#drawer-ticket-detail-card").exists()).toBe(false);
+      expect(wrapper.find("#drawer-tickets-list").exists()).toBe(true);
+
+      await wrapper.find("#btn-refresh-drawer-tickets").trigger("click");
+      await vi.waitFor(() => expect(listSpy).toHaveBeenCalledTimes(2));
+      wrapper.unmount();
+    });
+
+    it("disables ticket escalation for read-only auditor roles with a visible explanation while allowing SOP and ticket inspection", async () => {
+      authStore.currentPersona = "auditor";
+      authStore.rawRoles = ["Auditor"];
+
+      const auditorTicket = {
+        id: "c3d4e5f6-0000-4000-8000-000000000201", // deid-ignore: synthetic ticket UUID fixture
+        reference: "TKT-2026-000201",
+        title: "Audit inspection review of STUDY-A",
+        description: "Read-only ticket visible to auditor.",
+        category: "REGULATORY_QUERY",
+        priority: "MEDIUM",
+        gxp_severity: "MINOR",
+        status: "OPEN",
+        assigned_queue: "REGULATORY_COMPLIANCE",
+        study_id: "STUDY-A",
+        site_id: null,
+        subject_id: null,
+        acknowledge_target_at: "2026-11-20T18:00:00Z", // deid-ignore: synthetic SLA timestamp fixture
+        sla_target_at: "2026-11-21T14:00:00Z", // deid-ignore: synthetic SLA timestamp fixture
+      };
+
+      const createSpy = vi.spyOn(ticketsApi, "createTicket");
+      const listSpy = vi
+        .spyOn(ticketsApi, "listTickets")
+        .mockResolvedValue([auditorTicket]);
+      vi.spyOn(ticketsApi, "getTicket").mockResolvedValue(auditorTicket);
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        getFallbackContextualHelp("/audit", "auditor")
+      );
+
+      await knowledgeStore.fetchContextualHelp("/audit", "auditor");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, router] },
+      });
+      await wrapper.vm.$nextTick();
+
+      // Auditor can read the SOP
+      expect(wrapper.text()).toContain("SOP-AUD-401");
+
+      // Escalate button is disabled and accompanied by visible read-only explanation
+      const escalateBtn = wrapper.find("#btn-escalate-support-ticket");
+      expect(escalateBtn.exists()).toBe(true);
+      expect(escalateBtn.attributes("disabled")).toBeDefined();
+      expect(escalateBtn.attributes("aria-disabled")).toBe("true");
+
+      const readonlyNote = wrapper.find("#auditor-escalation-readonly-note");
+      expect(readonlyNote.exists()).toBe(true);
+      expect(readonlyNote.text()).toContain("Read-only auditor access");
+
+      // Attempting to click escalate does not open TicketCreateModal or issue POST
+      await escalateBtn.trigger("click");
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(wrapper.find(".ticket-create-modal").exists()).toBe(false);
+      expect(createSpy).not.toHaveBeenCalled();
+
+      // Auditor can still switch to Support Tickets tab and inspect scoped tickets
+      await wrapper.find("#tab-contextual-tickets").trigger("click");
+      await vi.waitFor(() => expect(listSpy).toHaveBeenCalledTimes(1));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.text()).toContain("TKT-2026-000201");
+      await wrapper.find(".drawer-ticket-card").trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#drawer-ticket-detail-card").text()).toContain(
+        "REGULATORY_COMPLIANCE"
+      );
+      wrapper.unmount();
+    });
+  });
+
+  describe("10. Clinical Canvas Escalation Fidelity & Scope Hygiene", () => {
     it("populates real study, site, pseudonymous subject, category, and entity on Canvas escalation without writing SOP articleId as CRF_FORM", async () => {
       const canvasStore = useStudyCanvasStore();
       canvasStore.openStudy("CADENCE-101");
@@ -1166,7 +1567,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     });
   });
 
-  describe("8. Auth Gating, Shortcut Guards & WCAG 2.2 AA Drawer Controls", () => {
+  describe("11. Auth Gating, Shortcut Guards & WCAG 2.2 AA Drawer Controls", () => {
     it("leaves ContextualHelpDrawer unmounted when unauthenticated or on /login", async () => {
       authStore.isAuthenticated = false;
       await router.push("/login");
@@ -1320,6 +1721,273 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       wrapper.unmount();
       mountNode.remove();
+    });
+
+    it("resolves PUBLISHED SOP guidance with /cadence-clinical/ portal link across /overview and all 35 DEMO_AVAILABLE_SCREENS", () => {
+      const overviewHelp = getFallbackContextualHelp(
+        "/overview",
+        "super_admin"
+      );
+      expect(overviewHelp.primary_article?.status).toBe("PUBLISHED");
+      expect(overviewHelp.primary_article?.body_html).toContain(
+        "/cadence-clinical/"
+      );
+
+      expect(Object.keys(DEMO_MODULE_CATALOG)).toHaveLength(
+        DEMO_AVAILABLE_SCREENS.size
+      );
+      for (const routeName of DEMO_AVAILABLE_SCREENS) {
+        const mod = DEMO_MODULE_CATALOG[routeName];
+        expect(mod, `catalog entry for ${routeName}`).toBeDefined();
+        const help = getFallbackContextualHelp(mod.defaultPath, "super_admin");
+        expect(help.primary_article, `SOP for ${mod.defaultPath}`).toBeTruthy();
+        expect(help.primary_article.status).toBe("PUBLISHED");
+        expect(help.primary_article.body_html).toContain("/cadence-clinical/");
+      }
+    });
+
+    it("suspends ClinicalDrawer backdrop and inert trap while TicketCreateModal is open, restores drawer on cancel, and opens tickets tab on submit", async () => {
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      vi.spyOn(ticketsApi, "createTicket").mockResolvedValue({
+        id: "tkt-demo-9001",
+        reference: "TKT-9001",
+        title: "Escalated Clinical Issue",
+        status: "OPEN",
+        priority: "MEDIUM",
+        gxp_severity: "MINOR",
+        category: "PROTOCOL_DEVIATION",
+      });
+      vi.spyOn(ticketsApi, "getTicket").mockResolvedValue({
+        id: "tkt-demo-9001",
+        reference: "TKT-9001",
+        title: "Escalated Clinical Issue",
+        status: "OPEN",
+        priority: "MEDIUM",
+        gxp_severity: "MINOR",
+        category: "PROTOCOL_DEVIATION",
+      });
+      vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+      const wrapper = mount(ContextualHelpDrawer, {
+        attachTo: mountNode,
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        true
+      );
+
+      // Escalate to ticket modal -> drawer overlay unmounts and modal is interactive (not inert)
+      await wrapper.find(".btn-escalate").trigger("click");
+      await flushPromises();
+
+      expect(knowledgeStore.isEscalating).toBe(true);
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        false
+      );
+      const modalDialog = wrapper.find(".ticket-create-modal");
+      expect(modalDialog.exists()).toBe(true);
+      expect(modalDialog.element.closest("[inert]")).toBeNull();
+      expect(modalDialog.element.closest('[aria-hidden="true"]')).toBeNull();
+
+      // Cancel modal -> drawer reopens on guidance tab
+      await wrapper
+        .find(".ticket-create-modal .modal-footer .btn-secondary")
+        .trigger("click");
+      await flushPromises();
+
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.isOpen).toBe(true);
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        true
+      );
+
+      // Escalate again and submit -> drawer reopens on tickets tab with created ticket
+      await wrapper.find(".btn-escalate").trigger("click");
+      await flushPromises();
+      await wrapper.find("#btn-submit-ticket").trigger("click");
+      await flushPromises();
+
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.isOpen).toBe(true);
+      expect(knowledgeStore.activeDrawerTab).toBe("tickets");
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        true
+      );
+
+      wrapper.unmount();
+      mountNode.remove();
+    });
+  });
+
+  describe("12. Compiled SOP Steps, Readable Spotlight Titles, Standalone Scope Sync & Hub Forwarding", () => {
+    it("compiles >= 65 ordered steps across bundled SOPs, escapes raw HTML, and formats readable spotlight section labels", async () => {
+      const escaped = compileSopMarkdownToHtml(
+        "## Safety & Scope\nCheck <script>alert(1)</script> safely.\n\n1. Verify `SAE` timeline."
+      );
+      expect(escaped).not.toContain("<script>");
+      expect(escaped).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+      expect(escaped).toContain('<h2 id="safety-and-scope">');
+      expect(escaped).toContain(
+        "<ol><li>Verify <code>SAE</code> timeline.</li></ol>"
+      );
+
+      // Verify bundled offline SOP catalog renders >= 65 <ol><li> steps across procedural SOPs and matches every section_anchor
+      let bundledStepCount = 0;
+      for (const article of DEFAULT_MOCK_ARTICLES) {
+        expect(article.body_html).toContain("<ol>");
+        const matches = String(article.body_html || "").match(/<li>/g) || [];
+        expect(matches.length).toBeGreaterThan(0);
+        bundledStepCount += matches.length;
+      }
+      expect(bundledStepCount).toBeGreaterThanOrEqual(65);
+
+      for (const sop of Object.values(DEFAULT_CONTEXTUAL_SOPS)) {
+        const anchor = String(sop.section_anchor || "").replace(/^#/, "");
+        if (anchor) {
+          expect(sop.primary_article.body_html).toContain(`id="${anchor}"`);
+        }
+      }
+
+      // Mount drawer with an acronym-rich spotlight anchor and verify plain human-readable button label + scroll target
+      const piEcrfSop = {
+        ...mockResolvedSop,
+        section_anchor: "#pi-ecrf-oversight-and-signature",
+        primary_article: {
+          ...mockResolvedSop.primary_article,
+          body_html: compileSopMarkdownToHtml(
+            "## Purpose & Scope\n1. Review casebook.\n\n### Investigator Sign-Off\n1. Apply Part 11 signature."
+          ).replace(
+            'id="investigator-sign-off"',
+            'id="pi-ecrf-oversight-and-signature"'
+          ),
+        },
+      };
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        piEcrfSop
+      );
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_investigator");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, router] },
+      });
+      await wrapper.vm.$nextTick();
+
+      const jumpBtn = wrapper.find("#btn-jump-spotlight-section");
+      expect(jumpBtn.exists()).toBe(true);
+      expect(jumpBtn.text()).toContain("PI eCRF Oversight and Signature");
+      expect(jumpBtn.text()).not.toContain("#pi-ecrf");
+      expect(jumpBtn.text()).not.toContain("pi-ecrf-oversight");
+
+      wrapper.unmount();
+    });
+
+    it("reads standalone clinicalScope and studyScopeBridge within caller authorization and pseudonym hygiene", () => {
+      const scopeStore = useClinicalScopeStore();
+      authStore.currentPersona = "site_crc";
+      authStore.assignedStudies = ["STUDY-ONC-202"];
+      authStore.assignedSites = ["SITE-101"];
+
+      // Authorized standalone scope pre-fills study_id, site_id, and pseudonymous subject_id on /ecrf
+      scopeStore.$patch({
+        activeStudyId: "STUDY-ONC-202",
+        activeSiteId: "SITE-101",
+        activeSubjectId: "SUBJ-8812",
+      });
+      knowledgeStore.currentRoute = "/ecrf";
+      knowledgeStore.rawRoute = "/ecrf";
+
+      expect(knowledgeStore.activeRouteScope).toEqual({
+        pathname: "/ecrf",
+        study_id: "STUDY-ONC-202",
+        site_id: "SITE-101",
+        subject_id: "SUBJ-8812",
+      });
+
+      const payload = knowledgeStore.prepareEscalation("/ecrf");
+      expect(payload.study_id).toBe("STUDY-ONC-202");
+      expect(payload.site_id).toBe("SITE-101");
+      expect(payload.subject_id).toBe("SUBJ-8812");
+      expect(payload.entity_type).toBe("SUBJECT");
+      expect(payload.entity_id).toBe("SUBJ-8812");
+
+      // Non-pseudonymous subject strings in clinicalScope are stripped while preserving study & site
+      scopeStore.$patch({
+        activeStudyId: "STUDY-ONC-202",
+        activeSiteId: "SITE-101",
+        activeSubjectId: "Jane Participant",
+      });
+      const redactedSubjectPayload = knowledgeStore.prepareEscalation("/ecrf");
+      expect(redactedSubjectPayload.study_id).toBe("STUDY-ONC-202");
+      expect(redactedSubjectPayload.site_id).toBe("SITE-101");
+      expect(redactedSubjectPayload.subject_id).toBe("");
+
+      // Unauthorized study in clinicalScope is rejected for restricted site_crc caller
+      scopeStore.$patch({
+        activeStudyId: "STUDY-UNAUTH-999",
+        activeSiteId: "SITE-999",
+        activeSubjectId: "SUBJ-9999",
+      });
+      const unauthPayload = knowledgeStore.prepareEscalation("/ecrf");
+      expect(unauthPayload.study_id).toBe("");
+      expect(unauthPayload.site_id).toBe("");
+      expect(unauthPayload.subject_id).toBe("");
+
+      // studyScopeBridge fallback populates study_id when clinicalScope is not holding a study
+      clearActiveStudyScope();
+      syncActiveStudyScope("STUDY-ONC-202");
+      scopeStore.activeStudyId = "";
+      const bridgedPayload = knowledgeStore.prepareEscalation("/ctms");
+      expect(bridgedPayload.study_id).toBe("STUDY-ONC-202");
+      clearActiveStudyScope();
+    });
+
+    it("forwards active studyId, siteId, and pseudonymous subjectId when navigating to /knowledge and /tickets from ContextualHelpDrawer", async () => {
+      const scopeStore = useClinicalScopeStore();
+      authStore.currentPersona = "site_crc";
+      authStore.assignedStudies = ["STUDY-ONC-202"];
+      authStore.assignedSites = ["SITE-101"];
+      scopeStore.$patch({
+        activeStudyId: "STUDY-ONC-202",
+        activeSiteId: "SITE-101",
+        activeSubjectId: "SUBJ-8812",
+      });
+
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const pushSpy = vi.spyOn(router, "push");
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, router] },
+      });
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#btn-open-knowledge-hub").trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith(
+        "/knowledge?studyId=STUDY-ONC-202&siteId=SITE-101&subjectId=SUBJ-8812"
+      );
+
+      knowledgeStore.openDrawer();
+      await wrapper.vm.$nextTick();
+      await wrapper.find("#btn-open-tickets-hub").trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith(
+        "/tickets?studyId=STUDY-ONC-202&siteId=SITE-101&subjectId=SUBJ-8812"
+      );
+
+      clearActiveStudyScope();
+      wrapper.unmount();
     });
   });
 });

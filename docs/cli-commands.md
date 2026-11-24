@@ -11,7 +11,7 @@ Generated from `packages/cli/src/Program.cs` by `pnpm cadence generate-cli-docs`
 | `cadence rulesets` | Command | Validates CI Gate coverage and .github/rulesets/*.json (when present) and syncs rulesets via gh api |
 | `cadence dev` | Command | Starts the .NET Aspire AppHost with all local services and datastores |
 | `cadence fix` | Command | Executes self-healing formatting, index sync, schema and OpenAPI pipeline |
-| `cadence detect-duplication` | Command | Finds duplicated C# and TypeScript code blocks |
+| `cadence detect-duplication` | Command | Finds duplicated C#, JavaScript, TypeScript, Vue and CSS code blocks |
 | `cadence validate-imports` | Command | Checks cross-service import boundaries |
 | `cadence validate-dependencies` | Command | Checks project and package dependency rules |
 | `cadence validate-path-patterns` | Command | Checks file path and directory conventions |

@@ -80,9 +80,9 @@
     <SignOutConfirmModal
       id="portal-signout-confirm-modal"
       :open="isSignOutConfirmOpen"
-      title="Log Out With Unsaved Survey Progress?"
-      description="You have unsaved questionnaire answers on this device. Your latest entries have been saved locally as a draft, but logging out now will close your active survey."
-      stay-label="Stay & Keep Answering"
+      title="Log Out With Unsaved or Unsent Survey Entries?"
+      description="You have unsaved questionnaire drafts or unsent offline survey submissions on this device. Logging out now will close your session before pending entries are sent."
+      stay-label="Stay & Keep Entries"
       confirm-label="Log Out Anyway"
       @confirm="confirmSignOut"
       @cancel="cancelSignOut"
@@ -95,11 +95,12 @@ import { DEFAULT_DEMO_PARTICIPANT } from "demo-fixtures";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { computed } from "vue";
 
-import { login, logout } from "../features/auth.js";
 import {
-  flushActiveQuestionnaireDraft,
-  hasUnsavedQuestionnaireDrafts,
-} from "../features/questionnaire.js";
+  hasUnsavedOrUnsyncedLocalData,
+  login,
+  logout,
+  prepareSignOutGuardState,
+} from "../features/auth.js";
 import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
 import { useWalletStore } from "../stores/wallet.js";
@@ -132,9 +133,9 @@ const {
   confirmSignOut,
   cancelSignOut,
 } = useSignOutGuard({
-  flushExternalDrafts: flushActiveQuestionnaireDraft,
-  hasExternalDrafts: hasUnsavedQuestionnaireDrafts,
-  onConfirmSignOut: () => logout(),
+  flushExternalDrafts: prepareSignOutGuardState,
+  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+  onConfirmSignOut: () => logout({ confirmed: true }),
 });
 
 const isDemo = computed(() => {

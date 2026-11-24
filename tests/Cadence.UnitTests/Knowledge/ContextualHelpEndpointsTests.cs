@@ -429,6 +429,466 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    [GxPRequirement("PRD-KNB-002")]
+    public async Task SeededSops_RenderAllThirteenProceduralStepsAndValidSectionAnchorIdsAcrossAllMappings()
+    {
+        await EnsureDbCreatedAsync();
+        using var client = CreateStaffClient("usr-crc-html", "CRC");
+
+        var expectedRouteSteps = new (string Route, int ExpectedSteps)[]
+        {
+            ("/studies", 3),
+            ("/studies/DEMO-01", 3),
+            ("/ecrf", 3),
+            ("/ctms", 2),
+            ("/ssu", 2),
+        };
+
+        int totalSteps = 0;
+        foreach ((string route, int expectedSteps) in expectedRouteSteps)
+        {
+            var payload = await client.GetFromJsonAsync<ContextualHelpResponseDto>(
+                $"/api/v1/knowledge/contextual-help?route={Uri.EscapeDataString(route)}&persona=site_crc",
+                Ct);
+            payload.Should().NotBeNull();
+            string html = payload!.PrimaryArticle!.BodyHtml ?? string.Empty;
+            html.Should().Contain("<ol>");
+            int liCount = CountOccurrences(html, "<li>");
+            liCount.Should().Be(expectedSteps, $"SOP for {route} must render all {expectedSteps} procedural steps");
+            payload.PrimaryVersion!.BodyHtml.Should().Be(html);
+            totalSteps += liCount;
+        }
+
+        totalSteps.Should().Be(13);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+        var versionsById = await db.KnowledgeArticleVersions
+            .AsNoTracking()
+            .ToDictionaryAsync(v => v.Id, StringComparer.Ordinal, Ct);
+        var articlesById = await db.KnowledgeArticles
+            .AsNoTracking()
+            .ToDictionaryAsync(a => a.Id, StringComparer.Ordinal, Ct);
+        var mappings = await db.ContextualHelpMappings
+            .AsNoTracking()
+            .ToListAsync(Ct);
+
+        mappings.Should().NotBeEmpty();
+        foreach (var mapping in mappings.Where(m => !string.IsNullOrWhiteSpace(m.SectionAnchor)))
+        {
+            string anchorId = mapping.SectionAnchor!.TrimStart('#');
+            var article = articlesById[mapping.ArticleId];
+            var version = versionsById[article.CurrentPublishedVersionId!];
+            version.BodyHtml.Should().Contain(
+                $"id=\"{anchorId}\"",
+                $"mapping {mapping.Id} ({mapping.RoutePattern}) must target an existing heading id in {article.Slug}");
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task EnsureSeededAsync_AppendsNewLockedSnapshotWithoutMutatingExistingLockedV1Snapshot()
+    {
+        using var legacyConn = new SqliteConnection("DataSource=:memory:");
+        await legacyConn.OpenAsync(Ct);
+
+        var t0 = _clock.UtcNow.AddDays(-10);
+        var options = new DbContextOptionsBuilder<KnowledgeDbContext>()
+            .UseSqlite(legacyConn)
+            .AddInterceptors(new GxPAuditInterceptor(() => "svc:knowledge-sop-catalog", _clock))
+            .Options;
+
+        const string truncatedV1Html = "<h2>Purpose &amp; Scope</h2><p>Legacy truncated summary without ordered steps.</p>";
+
+        await using (var setupDb = new KnowledgeDbContext(options))
+        {
+            await setupDb.Database.EnsureCreatedAsync(Ct);
+
+            setupDb.KnowledgeCategories.Add(new KnowledgeCategory
+            {
+                Id = "cat-clinical-ops",
+                Name = "Clinical Operations",
+                Slug = "clinical-operations",
+                PersonaVisibility = "[\"site_crc\"]",
+                CreatedAt = t0,
+                CreatedBy = "svc:knowledge-sop-catalog",
+                ReasonForChange = "Legacy seed",
+                VersionIndex = 1,
+            });
+
+            setupDb.KnowledgeArticles.Add(new KnowledgeArticle
+            {
+                Id = "art-ecrf-sop",
+                Slug = "sop-ecrf-201-subject-enrollment",
+                Title = "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture",
+                CategoryId = "cat-clinical-ops",
+                Status = "PUBLISHED",
+                VersionLabel = "1.0",
+                CurrentPublishedVersionId = "ver-ecrf-201-v1",
+                AuthorUserId = "lead_clinical_ops",
+                CreatedAt = t0,
+                CreatedBy = "svc:knowledge-sop-catalog",
+                ReasonForChange = "Legacy seed",
+                VersionIndex = 1,
+            });
+
+            setupDb.KnowledgeArticleVersions.Add(new KnowledgeArticleVersion
+            {
+                Id = "ver-ecrf-201-v1",
+                ArticleId = "art-ecrf-sop",
+                VersionIndex = 1,
+                VersionLabel = "1.0",
+                BodyMarkdown = "## Purpose & Scope\n1. Confirm informed consent.",
+                BodyHtml = truncatedV1Html,
+                StatusAtSnapshot = "PUBLISHED",
+                IsLocked = true,
+                CreatedAt = t0,
+                CreatedBy = "svc:knowledge-sop-catalog",
+                ReasonForChange = "Legacy seed",
+            });
+
+            AuditActions.Record(setupDb, new AuditAction(
+                EntityName: nameof(KnowledgeArticle),
+                EntityId: "art-ecrf-sop",
+                Action: "SOP_PUBLISHED",
+                UserId: "svc:knowledge-sop-catalog",
+                ReasonForChange: "Legacy seed",
+                ChangesJson: "{\"version_id\":\"ver-ecrf-201-v1\"}"));
+
+            await setupDb.SaveChangesAsync(Ct);
+        }
+
+        await using (var upgradeDb = new KnowledgeDbContext(options))
+        {
+            await KnowledgeCatalogSeeder.EnsureSeededAsync(upgradeDb, _clock, Ct);
+            // Calling EnsureSeededAsync a second time must be a no-op
+            await KnowledgeCatalogSeeder.EnsureSeededAsync(upgradeDb, _clock, Ct);
+        }
+
+        await using var verifyDb = new KnowledgeDbContext(options);
+        var ecrfVersions = await verifyDb.KnowledgeArticleVersions
+            .AsNoTracking()
+            .Where(v => v.ArticleId == "art-ecrf-sop")
+            .OrderBy(v => v.VersionIndex)
+            .ToListAsync(Ct);
+
+        ecrfVersions.Should().HaveCount(2);
+
+        // Locked v1 snapshot must never be mutated
+        ecrfVersions[0].Id.Should().Be("ver-ecrf-201-v1");
+        ecrfVersions[0].IsLocked.Should().BeTrue();
+        ecrfVersions[0].VersionIndex.Should().Be(1);
+        ecrfVersions[0].BodyHtml.Should().Be(truncatedV1Html);
+
+        // New locked v2 snapshot contains full procedural steps and heading IDs
+        ecrfVersions[1].Id.Should().Be("ver-ecrf-201-v2");
+        ecrfVersions[1].IsLocked.Should().BeTrue();
+        ecrfVersions[1].VersionIndex.Should().Be(2);
+        ecrfVersions[1].BodyHtml.Should().Contain("<ol>");
+        CountOccurrences(ecrfVersions[1].BodyHtml ?? string.Empty, "<li>").Should().Be(3);
+
+        var article = await verifyDb.KnowledgeArticles
+            .AsNoTracking()
+            .SingleAsync(a => a.Id == "art-ecrf-sop", Ct);
+        article.CurrentPublishedVersionId.Should().Be("ver-ecrf-201-v2");
+        article.VersionIndex.Should().Be(2);
+
+        var auditEntries = await verifyDb.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
+        VerifyMerkleChain(auditEntries);
+    }
+
+    [Theory]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-002")]
+    [InlineData("/studies/DEMO-01?stage=design&section=protocol-versions", "/studies/:studyCode?stage=design&section=protocol-versions", "art-can-prot-sop", "#canvas-protocol-versions")]
+    [InlineData("/studies/DEMO-01?stage=conduct&section=sites", "/studies/:studyCode?stage=conduct&section=sites", "art-can-sites-sop", "#canvas-study-sites")]
+    [InlineData("/studies/DEMO-01?stage=startup&section=site-activation", "/studies/:studyCode?section=site-activation", "art-can-actv-sop", "#canvas-site-activation")]
+    [InlineData("/studies/DEMO-01?stage=conduct&section=participants", "/studies/:studyCode?stage=conduct&section=participants", "art-can-part-sop", "#canvas-participants-execution")]
+    [InlineData("/studies/DEMO-01?stage=conduct&section=queries", "/studies/:studyCode?section=queries", "art-can-qrys-sop", "#canvas-discrepancy-queries")]
+    [InlineData("/studies/DEMO-01?stage=closeout&section=locks", "/studies/:studyCode?section=locks", "art-can-lock-sop", "#canvas-scoped-data-locks")]
+    [InlineData("/studies/DEMO-01?stage=closeout&section=exports", "/studies/:studyCode?section=exports", "art-can-expt-sop", "#canvas-regulated-exports")]
+    [InlineData("/studies/DEMO-01?stage=conduct&section=participants&participant=SUBJ-1001", "/studies/:studyCode?participant=*", "art-study-canvas-sop", "#participant-timeline-and-visit-record")]
+    [InlineData("/studies/DEMO-01?stage=conduct&participant=SUBJ-1001&form=FORM-101", "/studies/:studyCode?form=*", "art-ecrf-sop", "#ecrf-form-capture-and-change-reason")]
+    [InlineData("/studies/DEMO-01?stage=conduct&form=FORM-101&observation=OBS-101", "/studies/:studyCode?observation=*", "art-observations-sop", "#clinical-observation-provenance-review")]
+    [InlineData("/studies/DEMO-01?stage=design&section=protocol-versions&proposal=PROP-101", "/studies/:studyCode?proposal=*", "art-mdr-sop", "#amendment-proposal-review")]
+    public async Task ResolveContextualHelp_QueryFilteredStudyCanvasRoutesOutrankPathOnlyMappingsWithFallback(
+        string route,
+        string expectedPattern,
+        string expectedArticleId,
+        string expectedAnchor)
+    {
+        await EnsureDbCreatedAsync();
+        using var client = CreateStaffClient("usr-crc-canvas", "CRC");
+
+        var payload = await client.GetFromJsonAsync<ContextualHelpResponseDto>(
+            $"/api/v1/knowledge/contextual-help?route={Uri.EscapeDataString(route)}&persona=site_crc",
+            Ct);
+
+        payload.Should().NotBeNull();
+        payload!.MatchedMapping!.RoutePattern.Should().Be(expectedPattern);
+        payload.PrimaryArticle!.Id.Should().Be(expectedArticleId);
+        payload.SectionAnchor.Should().Be(expectedAnchor);
+
+        // Unmatched query keys must fall back cleanly to path-level /studies/:studyCode persona mapping
+        var fallback = await client.GetFromJsonAsync<ContextualHelpResponseDto>(
+            $"/api/v1/knowledge/contextual-help?route={Uri.EscapeDataString("/studies/DEMO-01?filter=open")}&persona=site_crc",
+            Ct);
+        fallback!.MatchedMapping!.RoutePattern.Should().Be("/studies/:studyCode");
+        fallback.MatchedMapping.Persona.Should().Be("site_crc");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    public void SopHtmlCompiler_EscapesRawHtmlAndCompilesHeadingIdsAndNumberedSteps()
+    {
+        const string markdown = """
+            ## Purpose & Regulatory Scope
+            Review <script>alert('xss')</script> and <img src=x onerror=alert(1)> safely.
+
+            ### Coordinator Spotlight
+            1. Verify `SUBJ-8812` consent & **source** *provenance*.
+            2. Escalate unresolved discrepancies.
+
+            ## Purpose & Regulatory Scope
+            Collision-safe duplicate heading check.
+            """;
+
+        string html = SopHtmlCompiler.Compile(markdown);
+
+        html.Should().NotContain("<script");
+        html.Should().NotContain("<img");
+        html.Should().Contain("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;");
+        html.Should().Contain("&lt;img src=x onerror=alert(1)&gt;");
+        html.Should().Contain("<h2 id=\"purpose-and-regulatory-scope\">Purpose &amp; Regulatory Scope</h2>");
+        html.Should().Contain("<h3 id=\"coordinator-spotlight\">Coordinator Spotlight</h3>");
+        html.Should().Contain("<h2 id=\"purpose-and-regulatory-scope-2\">Purpose &amp; Regulatory Scope</h2>");
+        html.Should().Contain(
+            "<ol>\n  <li>Verify <code>SUBJ-8812</code> consent &amp; <strong>source</strong> <em>provenance</em>.</li>\n  <li>Escalate unresolved discrepancies.</li>\n</ol>");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    [GxPRequirement("PRD-KNB-002")]
+    public async Task SeededCatalog_RendersAllSixtyFiveClinicalStepsAcrossThirtyOneSopsAndMatchesAllSeventyEightAnchors()
+    {
+        await EnsureDbCreatedAsync();
+        using var client = CreateStaffClient("usr-dm-catalog", "Data Manager");
+        var httpArticles = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=PUBLISHED",
+            Ct);
+        httpArticles.Should().NotBeNull().And.HaveCount(33);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+
+        var articles = await db.KnowledgeArticles.AsNoTracking().ToListAsync(Ct);
+        var versionsById = await db.KnowledgeArticleVersions
+            .AsNoTracking()
+            .ToDictionaryAsync(v => v.Id, StringComparer.Ordinal, Ct);
+        var mappings = await db.ContextualHelpMappings.AsNoTracking().ToListAsync(Ct);
+
+        articles.Should().HaveCount(33);
+
+        var utilityDiagnosticIds = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "art-forbidden-sop",
+            "art-unavailable-sop",
+        };
+        var clinicalProceduralArticles = articles.Where(a => !utilityDiagnosticIds.Contains(a.Id)).ToList();
+        clinicalProceduralArticles.Should().HaveCount(31);
+
+        int clinicalStepCount = 0;
+        int totalStepCount = 0;
+        foreach (var article in articles)
+        {
+            var version = versionsById[article.CurrentPublishedVersionId!];
+            string html = version.BodyHtml ?? string.Empty;
+            html.Should().Contain("<ol>", $"article {article.Slug} must compile numbered procedural steps");
+            int liCount = CountOccurrences(html, "<li>");
+            liCount.Should().BeGreaterThan(0);
+            SopHtmlCompiler.HasCompleteHeadingIdsAndSteps(version.BodyMarkdown, html).Should().BeTrue(
+                $"article {article.Slug} must render id attributes on every heading and all ordered steps");
+
+            totalStepCount += liCount;
+            if (!utilityDiagnosticIds.Contains(article.Id))
+            {
+                clinicalStepCount += liCount;
+            }
+        }
+
+        clinicalStepCount.Should().Be(65);
+        totalStepCount.Should().Be(69);
+
+        var distinctAnchors = mappings
+            .Where(m => !string.IsNullOrWhiteSpace(m.SectionAnchor))
+            .Select(m => m.SectionAnchor!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        distinctAnchors.Count.Should().BeGreaterThanOrEqualTo(78);
+
+        var articlesById = articles.ToDictionary(a => a.Id, StringComparer.Ordinal);
+        foreach (var mapping in mappings.Where(m => !string.IsNullOrWhiteSpace(m.SectionAnchor)))
+        {
+            string anchorId = mapping.SectionAnchor!.TrimStart('#');
+            var article = articlesById[mapping.ArticleId];
+            var version = versionsById[article.CurrentPublishedVersionId!];
+            version.BodyHtml.Should().Contain(
+                $"id=\"{anchorId}\"",
+                $"mapping {mapping.Id} ({mapping.RoutePattern}, persona={mapping.Persona ?? "*"}) must match an HTML id in {article.Slug}");
+        }
+
+        // Verify KnowledgeEndpoints compiles complete HTML on read when a historical snapshot had incomplete HTML
+        string? fallbackHtml = SopHtmlCompiler.EnsureCompiledHtml(
+            "## Legacy Heading\n1. First step.\n2. Second step.",
+            "<h2>Legacy Heading</h2><p>Truncated summary</p>");
+        fallbackHtml.Should().NotBeNull();
+        fallbackHtml!.Should().Contain("<h2 id=\"legacy-heading\">Legacy Heading</h2>");
+        fallbackHtml.Should().Contain("<ol>\n  <li>First step.</li>\n  <li>Second step.</li>\n</ol>");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task EnsureSeededAsync_UpgradesIncompleteV2SnapshotToLockedV3WithoutMutatingV2()
+    {
+        using var upgradeConn = new SqliteConnection("DataSource=:memory:");
+        await upgradeConn.OpenAsync(Ct);
+
+        var t0 = _clock.UtcNow.AddDays(-5);
+        var options = new DbContextOptionsBuilder<KnowledgeDbContext>()
+            .UseSqlite(upgradeConn)
+            .AddInterceptors(new GxPAuditInterceptor(() => "svc:knowledge-sop-catalog", _clock))
+            .Options;
+
+        const string truncatedV1Html = "<h2>Purpose &amp; Scope</h2><p>Legacy v1 summary.</p>";
+        const string incompleteV2Html = "<h2 id=\"subject-enrollment-and-visit-entry\">Purpose &amp; Scope</h2><h3>Key Controls</h3><p>Missing subsection IDs and ordered list.</p>";
+
+        await using (var setupDb = new KnowledgeDbContext(options))
+        {
+            await setupDb.Database.EnsureCreatedAsync(Ct);
+
+            setupDb.KnowledgeCategories.Add(new KnowledgeCategory
+            {
+                Id = "cat-clinical-ops",
+                Name = "Clinical Operations",
+                Slug = "clinical-operations",
+                PersonaVisibility = "[\"site_crc\"]",
+                CreatedAt = t0.AddDays(-1),
+                CreatedBy = "svc:knowledge-sop-catalog",
+                ReasonForChange = "Legacy seed",
+                VersionIndex = 1,
+            });
+
+            setupDb.KnowledgeArticles.Add(new KnowledgeArticle
+            {
+                Id = "art-ecrf-sop",
+                Slug = "sop-ecrf-201-subject-enrollment",
+                Title = "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture",
+                CategoryId = "cat-clinical-ops",
+                Status = "PUBLISHED",
+                VersionLabel = "2.0",
+                CurrentPublishedVersionId = "ver-ecrf-201-v2",
+                AuthorUserId = "lead_clinical_ops",
+                CreatedAt = t0.AddDays(-1),
+                CreatedBy = "svc:knowledge-sop-catalog",
+                ReasonForChange = "Prior v2 seed",
+                VersionIndex = 2,
+            });
+
+            setupDb.KnowledgeArticleVersions.AddRange(
+                new KnowledgeArticleVersion
+                {
+                    Id = "ver-ecrf-201-v1",
+                    ArticleId = "art-ecrf-sop",
+                    VersionIndex = 1,
+                    VersionLabel = "1.0",
+                    BodyMarkdown = "## Purpose & Scope\n1. Step one.",
+                    BodyHtml = truncatedV1Html,
+                    StatusAtSnapshot = "PUBLISHED",
+                    IsLocked = true,
+                    CreatedAt = t0.AddDays(-1),
+                    CreatedBy = "svc:knowledge-sop-catalog",
+                    ReasonForChange = "Legacy v1 seed",
+                },
+                new KnowledgeArticleVersion
+                {
+                    Id = "ver-ecrf-201-v2",
+                    ArticleId = "art-ecrf-sop",
+                    VersionIndex = 2,
+                    VersionLabel = "2.0",
+                    BodyMarkdown = "## Purpose & Scope\n1. Step one.",
+                    BodyHtml = incompleteV2Html,
+                    StatusAtSnapshot = "PUBLISHED",
+                    IsLocked = true,
+                    CreatedAt = t0,
+                    CreatedBy = "svc:knowledge-sop-catalog",
+                    ReasonForChange = "Prior v2 seed",
+                });
+
+            AuditActions.Record(setupDb, new AuditAction(
+                EntityName: nameof(KnowledgeArticle),
+                EntityId: "art-ecrf-sop",
+                Action: "SOP_PUBLISHED",
+                UserId: "svc:knowledge-sop-catalog",
+                ReasonForChange: "Prior v2 seed",
+                ChangesJson: "{\"version_id\":\"ver-ecrf-201-v2\"}"));
+
+            await setupDb.SaveChangesAsync(Ct);
+        }
+
+        await using (var runDb = new KnowledgeDbContext(options))
+        {
+            await KnowledgeCatalogSeeder.EnsureSeededAsync(runDb, _clock, Ct);
+            // Second call verifies fast-path idempotency after v3 reconciliation
+            await KnowledgeCatalogSeeder.EnsureSeededAsync(runDb, _clock, Ct);
+        }
+
+        await using var verifyDb = new KnowledgeDbContext(options);
+        var versions = await verifyDb.KnowledgeArticleVersions
+            .AsNoTracking()
+            .Where(v => v.ArticleId == "art-ecrf-sop")
+            .OrderBy(v => v.VersionIndex)
+            .ToListAsync(Ct);
+
+        versions.Select(v => v.Id).Should().Equal("ver-ecrf-201-v1", "ver-ecrf-201-v2", "ver-ecrf-201-v3");
+        versions[1].BodyHtml.Should().Be(incompleteV2Html);
+        versions[1].IsLocked.Should().BeTrue();
+
+        versions[2].IsLocked.Should().BeTrue();
+        versions[2].VersionIndex.Should().Be(3);
+        versions[2].BodyHtml.Should().Contain("id=\"ecrf-sdv-and-query-verification\"");
+        versions[2].BodyHtml.Should().Contain("id=\"ecrf-audit-trail-review\"");
+        versions[2].BodyHtml.Should().Contain("<ol>");
+        CountOccurrences(versions[2].BodyHtml ?? string.Empty, "<li>").Should().Be(3);
+
+        var updatedArticle = await verifyDb.KnowledgeArticles.AsNoTracking().SingleAsync(a => a.Id == "art-ecrf-sop", Ct);
+        updatedArticle.CurrentPublishedVersionId.Should().Be("ver-ecrf-201-v3");
+
+        var auditEntries = await verifyDb.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
+        VerifyMerkleChain(auditEntries);
+    }
+
+    private static int CountOccurrences(string text, string token)
+    {
+        int count = 0;
+        int idx = 0;
+        while ((idx = text.IndexOf(token, idx, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            idx += token.Length;
+        }
+
+        return count;
+    }
+
     private static ContextualHelpMapping BuildMapping(
         string id,
         string routePattern,

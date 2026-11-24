@@ -309,4 +309,141 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
       })
     ).rejects.toThrow(/400|amount/i);
   });
+
+  it("forwards syncVerificationToken from confirmed epro/sync and isolated epro/submit responses to diary-stipend", async () => {
+    await queueSubmission({
+      subject_id: mockUserId,
+      diary_id: "inst_daily_diary",
+      assignment_id: "assign_sync_tok_01",
+      answers: { vssbp: 118, vsdpb: 76, vshr: 68, pain_scale: 3 },
+      change_reason: "Offline diary with sync token",
+      username: mockUserId,
+    });
+
+    const firstBatch = await getQueuedSubmissions();
+    expect(firstBatch).toHaveLength(1);
+
+    const capturedStipendPayloads = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation((url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes("epro/sync")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              results: [
+                {
+                  sequence_number: firstBatch[0].sequence_number,
+                  client_id: firstBatch[0].client_id,
+                  status: "SYNCED",
+                  syncVerificationToken: "hmac-sync-token-batch-01",
+                },
+              ],
+            }),
+        });
+      }
+      if (urlStr.includes("payments/participant/me/diary-stipend")) {
+        capturedStipendPayloads.push(JSON.parse(options.body));
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "CREDITED",
+              creditedAmount: 25.0,
+              currentBalance: 25.0,
+              lifetimeStipends: 25.0,
+              walletId: "wallet_vas_001",
+              transactionId: "tx_sync_tok_01",
+              idempotencyKey: `seq_${firstBatch[0].sequence_number}_${mockUserId}`,
+              subjectId: mockUserId,
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: "ok" }),
+      });
+    });
+
+    await syncOfflineQueue(false, { autoDisburse: true });
+
+    expect(capturedStipendPayloads).toHaveLength(1);
+    expect(capturedStipendPayloads[0]).toMatchObject({
+      diaryId: "inst_daily_diary",
+      assignmentId: "assign_sync_tok_01",
+      sequenceNumber: firstBatch[0].sequence_number,
+      syncVerificationToken: "hmac-sync-token-batch-01",
+    });
+
+    // Now exercise isolated epro/submit fallback with snake_case sync_verification_token
+    vi.restoreAllMocks();
+    await clearAllSubmissions();
+    await queueSubmission({
+      subject_id: mockUserId,
+      diary_id: "inst_daily_diary",
+      assignment_id: "assign_submit_tok_02",
+      answers: { vssbp: 122, vsdpb: 79, vshr: 70, pain_scale: 4 },
+      change_reason: "Isolated fallback diary with sync token",
+      username: mockUserId,
+    });
+
+    const secondBatch = await getQueuedSubmissions();
+    expect(secondBatch).toHaveLength(1);
+
+    const isolatedStipendPayloads = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation((url, options) => {
+      const urlStr = String(url);
+      if (urlStr.includes("epro/sync")) {
+        return Promise.resolve({
+          ok: false,
+          status: 422,
+          json: () =>
+            Promise.resolve({
+              detail: "Batch schema validation fallback trigger",
+            }),
+        });
+      }
+      if (urlStr.includes("epro/submit")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "CREATED",
+              sync_verification_token: "hmac-sync-token-isolated-02",
+            }),
+        });
+      }
+      if (urlStr.includes("payments/participant/me/diary-stipend")) {
+        isolatedStipendPayloads.push(JSON.parse(options.body));
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "CREDITED",
+              creditedAmount: 25.0,
+              currentBalance: 50.0,
+              lifetimeStipends: 50.0,
+              walletId: "wallet_vas_001",
+              transactionId: "tx_sync_tok_02",
+              idempotencyKey: `seq_${secondBatch[0].sequence_number}_${mockUserId}`,
+              subjectId: mockUserId,
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: "ok" }),
+      });
+    });
+
+    await syncOfflineQueue(false, { autoDisburse: true });
+
+    expect(isolatedStipendPayloads).toHaveLength(1);
+    expect(isolatedStipendPayloads[0]).toMatchObject({
+      diaryId: "inst_daily_diary",
+      assignmentId: "assign_submit_tok_02",
+      sequenceNumber: secondBatch[0].sequence_number,
+      syncVerificationToken: "hmac-sync-token-isolated-02",
+    });
+  });
 });

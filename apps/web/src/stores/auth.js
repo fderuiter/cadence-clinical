@@ -188,7 +188,7 @@ export const ROLE_ALIASES = {
   ],
   cra: ["cra", "monitor"],
   monitor: ["cra", "monitor"],
-  safety_reviewer: ["safety_reviewer"],
+  safety_reviewer: ["safety_reviewer", "safety_officer"],
   auditor: ["auditor", "tmf_auditor"],
   tmf_auditor: ["auditor", "tmf_auditor"],
   designer: ["sponsor_designer"],
@@ -375,6 +375,7 @@ function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
  * @property {string} lastName
  * @property {string} id - `sub` claim
  * @property {string} tenantId - `tenant_id` claim; blank when the token has none
+ * @property {string} [siteId] - Optional assigned site code for site-scoped personas
  */
 
 /** Milliseconds per UTC calendar day for trial countdown calculation. */

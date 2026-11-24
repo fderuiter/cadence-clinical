@@ -185,7 +185,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2321: Implement class-based touch target optimization for dense layouts](adr/2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md) | Current | Also known as: ADR-254 (former number) |
 | [ADR-2322: Implement native uv workspaces with service-specific Dockerfiles](adr/2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md) | Historical | Also known as: ADR-255 (former number) |
 | [ADR-253: Lightweight Path Pattern Boundary Linter](adr/2026-08-03-lightweight-path-pattern-boundary-linter.md) | Historical | - Status: Accepted |
-| [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](adr/2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) | Current | Also known as: ADR-254 (former number) |
+| [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](adr/2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) | Historical | Also known as: ADR-254 (former number) |
 | [ADR-256: Native Interval Filtering and Custom Name Matching](adr/2026-08-03-native-interval-filtering-and-custom-name-matching.md) | Historical | - Status: Accepted |
 | [ADR-2324: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](adr/2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md) | Current | Also known as: ADR-254 (former number) |
 | [ADR-135: Resolve RBAC Duplicate Key Static Lint Failures](adr/2026-08-03-resolve-rbac-duplicate-key-static-lint-failures.md) | Historical | - Status: Accepted |
@@ -595,6 +595,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](adr/2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) | Current | - Status: Accepted |
 | [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](adr/2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) | Current | - Status: Accepted |
 | [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
+| [ADR-2539: Enforce Strict Workspace TypeScript and Vue SFC Typechecking](adr/2026-11-22-enforce-workspace-vue-tsc-typecheck.md) | Current | - Status: Accepted |
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
 | [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
 | [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](adr/2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) | Current | - Status: Accepted |
@@ -616,7 +617,13 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) | Current | - Status: Accepted |
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
-| [ADR-2539: Retire OpenAPI Aggregate, Isolate Generated CLI Reference Pages, and Parse ci.yml at Runtime](adr/2026-11-23-retire-openapi-aggregate-isolate-cli-docs-and-parse-ci-workflow.md) | Current | - Status: Accepted (amends ADR-2534) |
+| [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](adr/2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) | Current | - Status: Accepted |
+| [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
+| [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) | Current | - Status: Accepted |
+| [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
+| [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
+| [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
+| [ADR-2498: Retire OpenAPI Aggregate, Isolate Generated CLI Reference Pages, and Parse ci.yml at Runtime](adr/2026-11-23-retire-openapi-aggregate-isolate-cli-docs-and-parse-ci-workflow.md) | Current | - Status: Accepted (amends ADR-2534) |
 
 ## Developing and running
 
@@ -630,7 +637,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
-| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/` |
+| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm cadence sync-openapi-spec`); legacy aggregate snapshot in `openapi/legacy/cdisc_openapi.json` |
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
 | [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |

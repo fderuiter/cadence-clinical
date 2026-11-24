@@ -459,10 +459,366 @@ export function normalizeRow(
   return result;
 }
 
+function extractRawUsdmEnvelope(
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const wrapperStudy =
+    typeof data.study === "object" && data.study !== null
+      ? (data.study as Record<string, unknown>)
+      : null;
+  if (wrapperStudy) {
+    const versions = Array.isArray(wrapperStudy.versions)
+      ? wrapperStudy.versions
+      : [];
+    const version = (
+      typeof versions[0] === "object" && versions[0] !== null ? versions[0] : {}
+    ) as Record<string, unknown>;
+    const studyDesigns = Array.isArray(version.studyDesigns)
+      ? version.studyDesigns
+      : [];
+    const design = (
+      typeof studyDesigns[0] === "object" && studyDesigns[0] !== null
+        ? studyDesigns[0]
+        : {}
+    ) as Record<string, unknown>;
+    const titles = Array.isArray(version.titles) ? version.titles : [];
+    const officialTitleObj = titles.find((t) => {
+      if (!t || typeof t !== "object") return false;
+      const typeObj = (t as Record<string, unknown>).type as
+        Record<string, unknown> | undefined;
+      const decode =
+        typeof typeObj?.decode === "string"
+          ? typeObj.decode
+          : typeof (
+                typeObj?.standardCode as Record<string, unknown> | undefined
+              )?.decode === "string"
+            ? ((typeObj?.standardCode as Record<string, unknown>)
+                .decode as string)
+            : "";
+      return decode.toLowerCase().includes("official");
+    }) as Record<string, unknown> | undefined;
+    const fallbackTitleObj =
+      typeof titles[0] === "object" && titles[0] !== null
+        ? (titles[0] as Record<string, unknown>)
+        : undefined;
+    const resolvedTitle =
+      (typeof officialTitleObj?.text === "string"
+        ? officialTitleObj.text
+        : "") ||
+      (typeof fallbackTitleObj?.text === "string"
+        ? fallbackTitleObj.text
+        : "") ||
+      (typeof wrapperStudy.label === "string" ? wrapperStudy.label : "") ||
+      (typeof wrapperStudy.name === "string" ? wrapperStudy.name : "");
+
+    const rawEncounters = Array.isArray(design.encounters)
+      ? design.encounters
+      : [];
+    const rawEpochs = Array.isArray(design.epochs) ? design.epochs : [];
+    const rawArms = Array.isArray(design.arms) ? design.arms : [];
+    const rawActivities = Array.isArray(design.activities)
+      ? design.activities
+      : [];
+    const timelines = Array.isArray(design.scheduleTimelines)
+      ? design.scheduleTimelines
+      : [];
+    const mainTimeline = (timelines.find(
+      (tl) =>
+        typeof tl === "object" &&
+        tl !== null &&
+        (tl as Record<string, unknown>).mainTimeline === true
+    ) ||
+      timelines[0] ||
+      {}) as Record<string, unknown>;
+    const instances = Array.isArray(mainTimeline.instances)
+      ? mainTimeline.instances
+      : [];
+
+    const encounterEpochMap = new Map<string, string>();
+    const activityEncountersMap = new Map<string, Set<string>>();
+    for (const inst of instances) {
+      if (!inst || typeof inst !== "object") continue;
+      const sai = inst as Record<string, unknown>;
+      const encId = typeof sai.encounterId === "string" ? sai.encounterId : "";
+      const epId = typeof sai.epochId === "string" ? sai.epochId : "";
+      if (encId && epId && !encounterEpochMap.has(encId)) {
+        encounterEpochMap.set(encId, epId);
+      }
+      const actIds = Array.isArray(sai.activityIds) ? sai.activityIds : [];
+      for (const aId of actIds) {
+        if (typeof aId === "string" && encId) {
+          if (!activityEncountersMap.has(aId)) {
+            activityEncountersMap.set(aId, new Set());
+          }
+          activityEncountersMap.get(aId)!.add(encId);
+        }
+      }
+    }
+
+    const mappedEpochs = rawEpochs.map((ep, idx) => {
+      const e = (typeof ep === "object" && ep !== null ? ep : {}) as Record<
+        string,
+        unknown
+      >;
+      return {
+        epoch_id:
+          (typeof e.epoch_id === "string" ? e.epoch_id : "") ||
+          (typeof e.id === "string" ? e.id : `EP-${idx + 1}`),
+        epoch_name:
+          (typeof e.epoch_name === "string" ? e.epoch_name : "") ||
+          (typeof e.label === "string" && e.label ? e.label : "") ||
+          (typeof e.name === "string" ? e.name : `Epoch ${idx + 1}`),
+        sequence:
+          typeof e.sequence === "number"
+            ? e.sequence
+            : typeof e.sequenceNumber === "number"
+              ? e.sequenceNumber
+              : idx + 1,
+      };
+    });
+
+    const mappedEncounters = rawEncounters.map((enc, idx) => {
+      const en = (typeof enc === "object" && enc !== null ? enc : {}) as Record<
+        string,
+        unknown
+      >;
+      const encId =
+        (typeof en.encounter_id === "string" ? en.encounter_id : "") ||
+        (typeof en.id === "string" ? en.id : `V-${idx + 1}`);
+      return {
+        encounter_id: encId,
+        encounter_name:
+          (typeof en.encounter_name === "string" ? en.encounter_name : "") ||
+          (typeof en.label === "string" && en.label ? en.label : "") ||
+          (typeof en.name === "string" ? en.name : `Visit ${idx + 1}`),
+        epoch_id:
+          (typeof en.epoch_id === "string" ? en.epoch_id : "") ||
+          (typeof en.epochId === "string" ? en.epochId : "") ||
+          encounterEpochMap.get(encId) ||
+          mappedEpochs[0]?.epoch_id ||
+          "",
+        sequence: typeof en.sequence === "number" ? en.sequence : idx + 1,
+      };
+    });
+
+    const mappedArms = rawArms.map((arm, idx) => {
+      const a = (typeof arm === "object" && arm !== null ? arm : {}) as Record<
+        string,
+        unknown
+      >;
+      return {
+        arm_id:
+          (typeof a.arm_id === "string" ? a.arm_id : "") ||
+          (typeof a.id === "string" ? a.id : `ARM-${idx + 1}`),
+        arm_name:
+          (typeof a.arm_name === "string" ? a.arm_name : "") ||
+          (typeof a.label === "string" && a.label ? a.label : "") ||
+          (typeof a.name === "string" ? a.name : `Arm ${idx + 1}`),
+        sequence: typeof a.sequence === "number" ? a.sequence : idx + 1,
+      };
+    });
+
+    const mappedRows = rawActivities.map((act, idx) => {
+      const ac = (typeof act === "object" && act !== null ? act : {}) as Record<
+        string,
+        unknown
+      >;
+      const actId =
+        (typeof ac.activity_id === "string" ? ac.activity_id : "") ||
+        (typeof ac.id === "string" ? ac.id : `ACT-${idx + 1}`);
+      const scheduledEncs = activityEncountersMap.get(actId);
+      const assignedEncs = Array.isArray(ac.assignedEncounterIds)
+        ? new Set(ac.assignedEncounterIds.filter((x) => typeof x === "string"))
+        : null;
+      const cells = Array.isArray(ac.cells)
+        ? ac.cells
+        : mappedEncounters.map((en) => ({
+            activity_id: actId,
+            encounter_id: en.encounter_id,
+            epoch_id: en.epoch_id,
+            is_applicable: scheduledEncs
+              ? scheduledEncs.has(en.encounter_id)
+              : assignedEncs
+                ? assignedEncs.has(en.encounter_id)
+                : true,
+          }));
+      return {
+        activity_id: actId,
+        activity_name:
+          (typeof ac.activity_name === "string" ? ac.activity_name : "") ||
+          (typeof ac.label === "string" && ac.label ? ac.label : "") ||
+          (typeof ac.name === "string" ? ac.name : `Activity ${idx + 1}`),
+        cells,
+      };
+    });
+
+    const rawDesignObjectives = Array.isArray(design.objectives)
+      ? design.objectives
+      : [];
+    const mappedObjectives = rawDesignObjectives.map((obj, idx) => {
+      const o = (typeof obj === "object" && obj !== null ? obj : {}) as Record<
+        string,
+        unknown
+      >;
+      const levelObj = o.level as Record<string, unknown> | undefined;
+      return {
+        id: typeof o.id === "string" ? o.id : `OBJ-${idx + 1}`,
+        type:
+          (typeof o.type === "string" ? o.type : "") ||
+          (typeof levelObj?.decode === "string" ? levelObj.decode : "Primary"),
+        description:
+          (typeof o.description === "string" && o.description
+            ? o.description
+            : "") || (typeof o.text === "string" ? o.text : ""),
+      };
+    });
+
+    return {
+      studyId:
+        (typeof wrapperStudy.id === "string" && wrapperStudy.id
+          ? wrapperStudy.id
+          : "") ||
+        (typeof wrapperStudy.name === "string" ? wrapperStudy.name : ""),
+      studyTitle: resolvedTitle,
+      objectives: mappedObjectives,
+      epochs: mappedEpochs,
+      encounters: mappedEncounters,
+      arms: mappedArms,
+      rows: mappedRows,
+      forms: Array.isArray(data.forms) ? data.forms : [],
+      crossovers: Array.isArray(data.crossovers) ? data.crossovers : [],
+    };
+  }
+
+  if (
+    !Array.isArray(data.rows) &&
+    ((Array.isArray(data.studyDesigns) && data.studyDesigns.length > 0) ||
+      typeof data.id === "string" ||
+      Array.isArray(data.activities))
+  ) {
+    const design = (
+      Array.isArray(data.studyDesigns) &&
+      data.studyDesigns.length > 0 &&
+      typeof data.studyDesigns[0] === "object" &&
+      data.studyDesigns[0] !== null
+        ? data.studyDesigns[0]
+        : data
+    ) as Record<string, unknown>;
+    const rawEpochs = Array.isArray(design.epochs) ? design.epochs : [];
+    const rawEncounters = Array.isArray(design.encounters)
+      ? design.encounters
+      : [];
+    const rawArms = Array.isArray(design.arms) ? design.arms : [];
+    const rawActivities = Array.isArray(design.activities)
+      ? design.activities
+      : [];
+
+    const mappedEpochs = rawEpochs.map((ep, idx) => {
+      const e = (typeof ep === "object" && ep !== null ? ep : {}) as Record<
+        string,
+        unknown
+      >;
+      return {
+        epoch_id:
+          (typeof e.epoch_id === "string" ? e.epoch_id : "") ||
+          (typeof e.id === "string" ? e.id : `EP-${idx + 1}`),
+        epoch_name:
+          (typeof e.epoch_name === "string" ? e.epoch_name : "") ||
+          (typeof e.name === "string" ? e.name : `Epoch ${idx + 1}`),
+        sequence:
+          typeof e.sequenceNumber === "number" ? e.sequenceNumber : idx + 1,
+      };
+    });
+
+    const mappedEncounters = rawEncounters.map((enc, idx) => {
+      const en = (typeof enc === "object" && enc !== null ? enc : {}) as Record<
+        string,
+        unknown
+      >;
+      return {
+        encounter_id:
+          (typeof en.encounter_id === "string" ? en.encounter_id : "") ||
+          (typeof en.id === "string" ? en.id : `V-${idx + 1}`),
+        encounter_name:
+          (typeof en.encounter_name === "string" ? en.encounter_name : "") ||
+          (typeof en.name === "string" ? en.name : `Visit ${idx + 1}`),
+        epoch_id:
+          (typeof en.epochId === "string" ? en.epochId : "") ||
+          mappedEpochs[0]?.epoch_id ||
+          "",
+        sequence: idx + 1,
+      };
+    });
+
+    const mappedArms = rawArms.map((arm, idx) => {
+      const a = (typeof arm === "object" && arm !== null ? arm : {}) as Record<
+        string,
+        unknown
+      >;
+      return {
+        arm_id:
+          (typeof a.arm_id === "string" ? a.arm_id : "") ||
+          (typeof a.id === "string" ? a.id : `ARM-${idx + 1}`),
+        arm_name:
+          (typeof a.arm_name === "string" ? a.arm_name : "") ||
+          (typeof a.name === "string" ? a.name : `Arm ${idx + 1}`),
+        sequence: idx + 1,
+      };
+    });
+
+    const mappedRows = rawActivities.map((act, idx) => {
+      const ac = (typeof act === "object" && act !== null ? act : {}) as Record<
+        string,
+        unknown
+      >;
+      const actId = typeof ac.id === "string" ? ac.id : `ACT-${idx + 1}`;
+      const assignedEncs = Array.isArray(ac.assignedEncounterIds)
+        ? new Set(ac.assignedEncounterIds.filter((x) => typeof x === "string"))
+        : null;
+      return {
+        activity_id: actId,
+        activity_name:
+          typeof ac.name === "string" ? ac.name : `Activity ${idx + 1}`,
+        cells: mappedEncounters.map((en) => ({
+          activity_id: actId,
+          encounter_id: en.encounter_id,
+          epoch_id: en.epoch_id,
+          is_applicable: assignedEncs
+            ? assignedEncs.has(en.encounter_id)
+            : true,
+        })),
+      };
+    });
+
+    return {
+      studyId:
+        (typeof data.studyId === "string" ? data.studyId : "") ||
+        (typeof data.id === "string" ? data.id : "") ||
+        (typeof data.name === "string" ? data.name : ""),
+      studyTitle:
+        (typeof data.studyTitle === "string" ? data.studyTitle : "") ||
+        (typeof data.protocolTitle === "string" ? data.protocolTitle : "") ||
+        (typeof data.name === "string" ? data.name : ""),
+      objectives: Array.isArray(data.objectives) ? data.objectives : [],
+      epochs: mappedEpochs,
+      encounters: mappedEncounters,
+      arms: mappedArms,
+      rows: mappedRows,
+      forms: Array.isArray(data.forms) ? data.forms : [],
+      crossovers: Array.isArray(data.crossovers) ? data.crossovers : [],
+    };
+  }
+
+  return data;
+}
+
 export function normalizeUsdm(rawData: unknown): NormalizedUsdm {
-  const data = (
-    typeof rawData === "object" && rawData !== null ? rawData : {}
-  ) as Record<string, unknown>;
+  const data = extractRawUsdmEnvelope(
+    (typeof rawData === "object" && rawData !== null ? rawData : {}) as Record<
+      string,
+      unknown
+    >
+  );
 
   const rawStudyId = data.studyId ?? data.study_id;
   const fallbackStudyId =

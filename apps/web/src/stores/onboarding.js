@@ -1,6 +1,12 @@
 import { defineStore } from "pinia";
+import {
+  buildDataCollectionPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
+  resolveSiteReadinessPath,
+} from "../canvas/palette";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
-import { isScreenAvailable } from "../router/availability";
+import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
@@ -63,58 +69,95 @@ function normalizeTaskRouteName(task) {
   if (task?.routeName) return task.routeName;
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
-  if (rawRoute === "/studies" || rawRoute.startsWith("/studies/")) {
+  const cleanPath = rawRoute.split("?")[0];
+  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
     return "study";
   }
-  if (rawRoute === "/overview") return "overview";
-  if (rawRoute === "/ecrf") return "ecrf";
-  if (rawRoute === "/ctms") return "ctms";
-  if (rawRoute === "/ssu") return "ssu";
-  return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
+  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
+    return "observation";
+  }
+  if (cleanPath === "/overview") return "overview";
+  if (cleanPath === "/ecrf") return "ecrf";
+  if (cleanPath === "/ctms") return "ctms";
+  if (cleanPath === "/ssu") return "ssu";
+  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles) {
+export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
 
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  const explicitSiteId =
+    scope?.explicitSiteId !== undefined ? scope.explicitSiteId.trim() : siteId;
+  const subjectCode = scope?.subjectCode?.trim() || "";
+  const participantRef = scope?.participantRef?.trim() || "";
+  const enrollmentId = scope?.enrollmentId?.trim() || "";
+
   if (routeName === "study") {
-    return isScreenAvailable("study") ? "/studies" : null;
+    return isScreenAvailable("study")
+      ? buildStudiesWorkspacePath({
+          studyCode,
+          siteId,
+          subjectCode,
+          participantRef,
+        })
+      : null;
   }
   if (routeName === "overview") {
-    return isScreenAvailable("overview") ? "/overview" : null;
+    return isScreenAvailable("overview")
+      ? buildScopedWorkflowPath("/overview", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
+      : null;
   }
   if (routeName === "ecrf") {
     if (isDemoBuild()) {
       return isScreenAvailable("ecrf") &&
         hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-        ? "/ecrf"
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
-    return isScreenAvailable("study") &&
-      hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/studies"
-      : null;
+    if (
+      !isScreenAvailable("study") ||
+      !hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+    ) {
+      return null;
+    }
+    return studyCode || explicitSiteId || participantRef || subjectCode
+      ? buildDataCollectionPath({
+          studyCode,
+          siteId: explicitSiteId,
+          participantRef,
+          subjectCode,
+          enrollmentId,
+        })
+      : "/studies";
   }
   if (routeName === "site-readiness") {
-    if (
-      isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-    ) {
-      return "/ctms";
-    }
-    if (
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
-    ) {
-      return "/ssu";
-    }
-    return null;
+    return resolveSiteReadinessPath(userRoles, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   if (routeName === "ctms") {
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-      ? "/ctms"
+      ? buildScopedWorkflowPath("/ctms", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "ssu") {
@@ -123,8 +166,23 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
         ...SITE_READINESS_SPONSOR_ROLES,
         ...SITE_READINESS_SITE_ROLES,
       ])
-      ? "/ssu"
+      ? buildScopedWorkflowPath("/ssu", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(routeName)) return null;
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    ) {
+      return null;
+    }
+    return catalogEntry.defaultPath;
   }
   return null;
 }
@@ -138,11 +196,12 @@ export function isTourRouteAuthorized(routeName, userRoles) {
     return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
   }
   if (routeName === "observation") {
-    return hasRequiredRole(userRoles, [
+    const obsRoles = DEMO_MODULE_CATALOG.observation?.requiresRole || [
       "site_investigator",
       "crc",
       "data_manager",
-    ]);
+    ];
+    return hasRequiredRole(userRoles, obsRoles);
   }
   if (routeName === "ctms") {
     return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
@@ -152,6 +211,13 @@ export function isTourRouteAuthorized(routeName, userRoles) {
       ...SITE_READINESS_SPONSOR_ROLES,
       ...SITE_READINESS_SITE_ROLES,
     ]);
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    return (
+      catalogEntry.requiresRole.length === 0 ||
+      hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    );
   }
   return false;
 }
@@ -322,7 +388,11 @@ function readStorageForPersona(personaKey) {
   let bypassOverview = false;
   let completedTasks = [];
   let events = [];
-  let tasks = JSON.parse(JSON.stringify(DEFAULT_SETUP_TASKS));
+  /** @type {typeof DEFAULT_SETUP_TASKS} */
+  let tasks = DEFAULT_SETUP_TASKS.map((t) => ({
+    ...t,
+    keywords: [...t.keywords],
+  }));
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -874,12 +944,15 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
-      return (state.tasks || [])
-        .map((task) => {
-          const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
-          return resolvedRoute ? { ...task, route: resolvedRoute } : null;
-        })
-        .filter(Boolean);
+      /** @type {typeof DEFAULT_SETUP_TASKS} */
+      const visible = [];
+      for (const task of state.tasks || []) {
+        const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+        if (resolvedRoute) {
+          visible.push({ ...task, route: resolvedRoute });
+        }
+      }
+      return visible;
     },
     completedTasksCount() {
       return this.visibleTasks.filter((t) => t.completed).length;

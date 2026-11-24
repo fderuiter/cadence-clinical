@@ -226,7 +226,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       server = setupServer(
         ...buildWebGatewayHandlers({ forceDemo: true, store })
       );
-      server.listen({ onUnhandledRequest: "error" });
+      server.listen({ onUnhandledFrame: "error" });
       installAuthorizedFetch(globalThis);
     });
 
@@ -453,6 +453,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
     it("applies K-AUTH-4 blinding and PX-20 site masking for site_crc while leaving super_admin unmasked", async () => {
       const authStore = useAuthStore();
       const site101Participant = DEMO_PARTICIPANTS[0];
+      const site102Participant = DEMO_PARTICIPANTS[2];
       const site102Ref = DEMO_SITES.find(
         (s) => s.code === "SITE-102"
       )!.studySiteRef;
@@ -473,6 +474,22 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       const allocNode = await allocNodeRes.json();
       expect(allocNode.mask).toBe("Blinded");
 
+      const ownEnrollmentNodeRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site101Participant.enrollmentRef)}`
+      );
+      expect(ownEnrollmentNodeRes.status).toBe(200);
+      const ownEnrollmentNode = await ownEnrollmentNodeRes.json();
+      expect(ownEnrollmentNode.mask).toBeNull();
+      expect(ownEnrollmentNode.code).toBe(site101Participant.subjectCode);
+
+      const otherSiteEnrollmentNodeRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Participant.enrollmentRef)}`
+      );
+      expect(otherSiteEnrollmentNodeRes.status).toBe(200);
+      const otherSiteEnrollmentNode = await otherSiteEnrollmentNodeRes.json();
+      expect(otherSiteEnrollmentNode.mask).toBe("NotPermitted");
+      expect(otherSiteEnrollmentNode.title).toBeNull();
+
       const otherSiteNodeRes = await fetch(
         `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Ref)}`
       );
@@ -492,6 +509,13 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
         `${origin}/api/v1/kernel/nodes/${encodeURIComponent(`allocation:${site101Participant.enrollmentUuid}`)}`
       );
       expect((await unmaskedAllocRes.json()).mask).toBeNull();
+
+      const unmaskedOtherEnrollmentRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Participant.enrollmentRef)}`
+      );
+      const unmaskedOtherEnrollment = await unmaskedOtherEnrollmentRes.json();
+      expect(unmaskedOtherEnrollment.mask).toBeNull();
+      expect(unmaskedOtherEnrollment.code).toBe(site102Participant.subjectCode);
 
       const unmaskedSiteRes = await fetch(
         `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Ref)}`
@@ -585,15 +609,16 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       });
       webDemoStore.saveFormValues(
         opened.form_id,
-        [
-          {
-            item_id: "item-sysbp",
-            expected_revision: 1,
-            value: { type: "quantity", value: "165", unit: "mmHg" },
-          },
-        ],
-        "Mutated vitals",
-        "idem-mut-1"
+        {
+          values: [
+            {
+              item_id: "item-sysbp",
+              expected_revision: 1,
+              value: { type: "quantity", value: "165", unit: "mmHg" },
+            },
+          ],
+        },
+        "Mutated vitals"
       );
       window.localStorage.setItem(
         "demo_notifications_super_admin",

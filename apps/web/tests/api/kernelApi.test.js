@@ -696,9 +696,13 @@ describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", 
     const readiness = {
       study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e",
       scope_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
-      ready: false,
+      ready_for_lock: false,
       open_query_count: 1,
-      missing_required_count: 0,
+      missing_required_item_count: 0,
+      unverified_value_count: 2,
+      unsigned_form_count: 1,
+      unopened_visit_count: 0,
+      open_error_finding_count: 0,
       blockers: [],
     };
     fetchSpy.mockResolvedValueOnce(jsonResponse(200, readiness));
@@ -745,6 +749,7 @@ describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", 
         headers: {
           "Content-Type": "application/zip",
           "X-Content-Sha256": "abc123",
+          "X-Cadence-Hidden-Scopes": "more_exist=true;reasons=NotPermitted",
         },
       })
     );
@@ -755,6 +760,10 @@ describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", 
     });
     expect(archive.filename).toBe("study-export.study_archive.zip");
     expect(archive.contentSha256).toBe("abc123");
+    expect(archive.hiddenScopes).toEqual({
+      moreExist: true,
+      reasons: ["NotPermitted"],
+    });
 
     fetchSpy.mockResolvedValueOnce(
       new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
