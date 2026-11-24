@@ -22,6 +22,10 @@ const studyHomeWorkspace: CanvasWorkspaceDescriptor = {
     props: {
       studyCode: ctx.studyCode,
       canManageSites: ctx.canManageSites,
+      manageSitesLocation: ctx.sectionLocationForStage("conduct", "sites"),
+      activeSite: ctx.sectionContext.activeSite,
+      activeParticipant: ctx.sectionContext.activeParticipantScopeParam,
+      activeNode: ctx.sectionContext.activeInspectorParticipantNodeParam,
     },
     listeners: {
       drill: ctx.onDrillToParticipants as (...args: never[]) => unknown,

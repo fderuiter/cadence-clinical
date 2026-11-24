@@ -12,7 +12,7 @@ export default {
     order: 40,
     label: "Trial documents",
     detail: "Study binder, document classification, and clinical review",
-    scopeMode: "study",
+    scopeMode: "workflow",
   },
   catalog: {
     title: "eTMF Document Vault",

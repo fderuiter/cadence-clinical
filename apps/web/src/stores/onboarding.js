@@ -1,15 +1,19 @@
 import { defineStore } from "pinia";
+import {
+  buildDataCollectionPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
+  resolveSiteReadinessPath,
+} from "../canvas/palette";
 import { PERSONA_PRESETS, useAuthStore } from "./auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router/helpers.js";
 import {
   findRouteDescriptorBySpec,
   getRouteDescriptor,
-  getRouteRequiredRoles,
   isRouteRoleAuthorized,
   isRouteTourRoleAuthorized,
   NON_ONBOARDING_ROUTE_NAMES,
-  SITE_READINESS_DESCRIPTORS,
 } from "../router/registry.js";
 import {
   demoNowIso,
@@ -48,45 +52,81 @@ function normalizeTaskRouteName(task) {
   return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles) {
+export function resolveAuthorizedTaskRoute(task, userRoles, scope) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTE_NAMES.has(routeName)) return null;
 
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  const explicitSiteId =
+    scope?.explicitSiteId !== undefined ? scope.explicitSiteId.trim() : siteId;
+  const subjectCode = scope?.subjectCode?.trim() || "";
+  const participantRef = scope?.participantRef?.trim() || "";
+  const enrollmentId = scope?.enrollmentId?.trim() || "";
+
   if (routeName === "site-readiness") {
-    for (const descriptor of SITE_READINESS_DESCRIPTORS) {
-      const targetName = descriptor.route.name;
-      const roles =
-        descriptor.siteReadinessRoles || getRouteRequiredRoles(targetName);
-      if (isScreenAvailable(targetName) && hasRequiredRole(userRoles, roles)) {
-        return descriptor.onboardingTaskPath || descriptor.route.path;
-      }
-    }
-    return null;
+    return resolveSiteReadinessPath(userRoles, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
 
   const descriptor = getRouteDescriptor(routeName);
   if (!descriptor) return null;
 
+  if (routeName === "study") {
+    return isScreenAvailable("study") &&
+      isRouteRoleAuthorized("study", userRoles)
+      ? buildStudiesWorkspacePath({
+          studyCode,
+          siteId,
+          subjectCode,
+          participantRef,
+        })
+      : null;
+  }
+
   if (descriptor.dataCollectionHub) {
     if (isDemoBuild()) {
       return isScreenAvailable(routeName) &&
         isRouteRoleAuthorized(routeName, userRoles)
-        ? descriptor.onboardingTaskPath || descriptor.route.path
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
-    const studyPath =
+    if (
+      !isScreenAvailable("study") ||
+      !isRouteRoleAuthorized(routeName, userRoles)
+    ) {
+      return null;
+    }
+    const fallbackStudyPath =
       getRouteDescriptor("study")?.onboardingTaskPath || "/studies";
-    return isScreenAvailable("study") &&
-      isRouteRoleAuthorized(routeName, userRoles)
-      ? studyPath
-      : null;
+    return studyCode || explicitSiteId || participantRef || subjectCode
+      ? buildDataCollectionPath({
+          studyCode,
+          siteId: explicitSiteId,
+          participantRef,
+          subjectCode,
+          enrollmentId,
+        })
+      : fallbackStudyPath;
   }
 
   if (!descriptor.onboardingTaskPath) return null;
   return isScreenAvailable(routeName) &&
     isRouteRoleAuthorized(routeName, userRoles)
-    ? descriptor.onboardingTaskPath
+    ? buildScopedWorkflowPath(descriptor.onboardingTaskPath, {
+        studyCode,
+        siteId,
+        subjectCode,
+      })
     : null;
 }
 

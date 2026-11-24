@@ -16,6 +16,9 @@ const validationSection: CanvasSectionDescriptor = {
     props: {
       studyCode: ctx.studyCode,
       canManageRules: ctx.canManageRules,
+      site: ctx.activeSite,
+      participant: ctx.activeParticipantScopeParam,
+      node: ctx.activeInspectorParticipantNodeParam,
     },
   }),
 };

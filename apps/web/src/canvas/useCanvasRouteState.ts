@@ -716,6 +716,8 @@ export function useCanvasRouteState(options: {
     zoomFormLabel,
     zoomObservationLabel,
     isDataWorklistSection,
+    activeParticipantScopeParam,
+    activeInspectorParticipantNodeParam,
     studyLocation,
     scopedStudyLocation,
     recordLocationFor,

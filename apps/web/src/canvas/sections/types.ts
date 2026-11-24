@@ -17,6 +17,9 @@ export interface StudyQueriesFilterState {
 export interface CanvasSectionContext {
   studyCode: string;
   siteFilter: string;
+  activeSite: string;
+  activeParticipantScopeParam: string;
+  activeInspectorParticipantNodeParam: string;
   statusFilter: string;
   participantSearchFilter: string;
   selectedParticipantOrRecordId: string;

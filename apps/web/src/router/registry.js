@@ -28,13 +28,16 @@ export function findRouteDescriptorBySpec(routeSpec) {
   if (!spec) return null;
   const direct = descriptorByName.get(spec);
   if (direct) return direct;
+  const specPath = spec.split(/[?#]/, 1)[0] || spec;
+  const directByCleanSpec = descriptorByName.get(specPath);
+  if (directByCleanSpec) return directByCleanSpec;
   return (
     webRouteDescriptors.find(
       (descriptor) =>
-        descriptor.onboardingTaskPath === spec ||
-        descriptor.route.path === spec ||
+        descriptor.onboardingTaskPath === specPath ||
+        descriptor.route.path === specPath ||
         (descriptor.onboardingTaskPath &&
-          spec.startsWith(`${descriptor.onboardingTaskPath}/`))
+          specPath.startsWith(`${descriptor.onboardingTaskPath}/`))
     ) || null
   );
 }

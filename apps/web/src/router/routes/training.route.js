@@ -12,7 +12,7 @@ export default {
     order: 50,
     label: "Study training",
     detail: "Protocol curricula, staff assignments, and delegation sign-off",
-    scopeMode: "study",
+    scopeMode: "workflow",
   },
   catalog: {
     title: "Study Training & Gating",

@@ -5,6 +5,10 @@
     :key="`home-sites-${studyCode}`"
     :study-code="studyCode"
     :can-manage-sites="canManageSites"
+    :manage-sites-location="manageSitesLocation"
+    :active-site="activeSite"
+    :active-participant="activeParticipant"
+    :active-node="activeNode"
     compact
     @open-participants="emit('open-participants', $event)"
   />
@@ -15,6 +19,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import type { RouteLocationRaw } from "vue-router";
 import { kernelApi } from "../../api/kernelApi";
 import NeedsAttention from "../ai/NeedsAttention.vue";
 import StudyActivity from "./StudyActivity.vue";
@@ -25,6 +30,10 @@ import WorkQueuesPanel from "./WorkQueuesPanel.vue";
 defineProps<{
   studyCode: string;
   canManageSites: boolean;
+  manageSitesLocation?: RouteLocationRaw | null;
+  activeSite?: string;
+  activeParticipant?: string;
+  activeNode?: string;
 }>();
 
 const emit = defineEmits<{

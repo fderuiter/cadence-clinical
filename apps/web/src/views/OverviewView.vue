@@ -236,18 +236,22 @@
 
 <script setup>
 import { computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { getActivePinia } from "pinia";
+import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
   buildDataCollectionPath,
-  buildStudyScopedPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
   resolveSiteReadinessPath,
+  resolveWorkspaceNavigationScope,
 } from "../canvas/palette";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
-import { hasRequiredRole } from "../router";
+import { hasRequiredRole } from "../router/helpers.js";
 import {
   findRouteDescriptorBySpec,
   isRouteRoleAuthorized,
@@ -255,9 +259,27 @@ import {
 import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
+let activeRoute = null;
+try {
+  activeRoute = useRoute();
+} catch {
+  activeRoute = null;
+}
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
 const { activeStudyCode } = useActiveStudyScope();
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 onMounted(() => {
   if (
@@ -297,9 +319,21 @@ const effectiveRoles = computed(() => {
 
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
-  const studyCode = activeStudyCode.value;
+  const scope = workspaceScope.value;
+  const studyCode = scope.studyCode || activeStudyCode.value;
+  const siteId = scope.siteId;
+  const explicitSiteId =
+    scope.explicitSiteId !== undefined ? scope.explicitSiteId : siteId;
+  const subjectCode = scope.subjectCode;
+  const participantRef = scope.participantRef;
+  const enrollmentId = scope.enrollmentId;
+
   if (routeSpec === "site-readiness") {
-    return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
+    return resolveSiteReadinessPath(effectiveRoles.value, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   const descriptor = findRouteDescriptorBySpec(routeSpec);
   if (!descriptor) return null;
@@ -307,21 +341,36 @@ function resolveAuthorizedRoute(routeSpec) {
 
   if (routeName === "study") {
     if (!isScreenAvailable("study")) return null;
-    const base = descriptor.onboardingTaskPath || "/studies";
-    return studyCode ? `${base}/${encodeURIComponent(studyCode)}` : base;
+    return buildStudiesWorkspacePath({
+      studyCode,
+      siteId,
+      subjectCode,
+      participantRef,
+    });
   }
 
   if (descriptor.dataCollectionHub) {
     if (isDemoBuild()) {
       return isScreenAvailable(routeName) &&
         isRouteRoleAuthorized(routeName, effectiveRoles.value)
-        ? descriptor.route.path
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
     return isScreenAvailable("study") &&
       isRouteRoleAuthorized(routeName, effectiveRoles.value)
-      ? studyCode
-        ? buildDataCollectionPath({ studyCode })
+      ? studyCode || explicitSiteId || participantRef || subjectCode
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            participantRef,
+            subjectCode,
+            enrollmentId,
+          })
         : "/studies"
       : null;
   }
@@ -329,7 +378,11 @@ function resolveAuthorizedRoute(routeSpec) {
   if (descriptor.siteReadinessTier || descriptor.studyScopedLaunch) {
     return isScreenAvailable(routeName) &&
       isRouteRoleAuthorized(routeName, effectiveRoles.value)
-      ? buildStudyScopedPath(descriptor.route.path, studyCode)
+      ? buildScopedWorkflowPath(descriptor.route.path, {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
 

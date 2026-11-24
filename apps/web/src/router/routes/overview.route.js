@@ -9,7 +9,7 @@ export default {
     order: 80,
     label: "Orientation",
     detail: "Role-tailored workspace orientation and setup",
-    scopeMode: "study",
+    scopeMode: "workflow",
   },
   catalog: {
     title: "Overview & Orientation Hub",
