@@ -82,7 +82,7 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Anthropic*"
         update-types: ["version-update:semver-major"]
-      # SonarAnalyzer.CSharp >= 10.7.0 adds rules (S8969, S6444, S3267, S4036) requiring solution-wide triage under TreatWarningsAsErrors (#6030).
+      # SonarAnalyzer.CSharp >= 10.7.0 adds rules (S5332, S8969, S6444, S3267, S4036) on HL7/FHIR canonical URIs and existing suites requiring solution-wide triage under TreatWarningsAsErrors (#6030).
       - dependency-name: "SonarAnalyzer.CSharp"
         versions: [">= 10.7.0"]
       # Fluid.Core 3.x makes TemplateOptions/MemberAccessStrategy read-only after Build(); stay on 2.41.x until migrated.
