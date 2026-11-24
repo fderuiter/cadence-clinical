@@ -2,7 +2,7 @@
   <CanvasPalette
     v-if="isOpen"
     :study-code="activeStudyCode"
-    :participants="canvasStore.paletteParticipants"
+    :participants="canvasStore?.paletteParticipants ?? []"
     :workspace-items="workspaceItems"
     @close="emit('close')"
     @go="handleGo"
@@ -23,7 +23,10 @@ import {
 import { useAuthStore } from "../stores/auth";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import {
+  getLoadedStudyCanvasStore,
+  loadStudyCanvasStore,
+} from "../stores/studyScopeBridge";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 
 const props = defineProps<{
@@ -39,11 +42,11 @@ const router = useRouter();
 const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
-const canvasStore = useStudyCanvasStore();
+const canvasStore = computed(() => getLoadedStudyCanvasStore());
 const { activeStudyCode: syncedStudyCode, setActiveStudyCode } =
   useActiveStudyScope();
 const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore)
+  resolveActiveWorkspaceScope(route, canvasStore.value ?? undefined)
 );
 const activeStudyCode = computed(
   () => workspaceScope.value.studyCode || syncedStudyCode.value
@@ -53,7 +56,14 @@ watch(
   [() => props.isOpen, activeStudyCode],
   ([open, code]) => {
     if (open && code) {
-      canvasStore.ensurePaletteParticipants(code);
+      const loaded = getLoadedStudyCanvasStore();
+      if (loaded) {
+        loaded.ensurePaletteParticipants(code);
+      } else {
+        void loadStudyCanvasStore().then((store) =>
+          store?.ensurePaletteParticipants(code)
+        );
+      }
     }
   },
   { immediate: true }
@@ -95,10 +105,13 @@ async function handleGo(target: PaletteTarget) {
     setActiveStudyCode(target.studyCode);
   }
   if (target.participant) {
-    if (target.studyCode && target.studyCode !== canvasStore.studyCode) {
-      canvasStore.openStudy(target.studyCode);
+    const store = getLoadedStudyCanvasStore() ?? (await loadStudyCanvasStore());
+    if (store) {
+      if (target.studyCode && target.studyCode !== store.studyCode) {
+        store.openStudy(target.studyCode);
+      }
+      store.rememberParticipants([target.participant]);
     }
-    canvasStore.rememberParticipants([target.participant]);
   }
   emit("close");
   await nextTick();
@@ -120,11 +133,22 @@ async function handleGo(target: PaletteTarget) {
     activeStudyCode: priorStudyCode,
     workspaceScope: priorScope,
     onAction: handleAction,
-    onFocusInspector: (nodeRef) =>
-      canvasStore.requestInspectorFocus({
-        nodeRef,
-        scrollIntoView: true,
-      }),
+    onFocusInspector: (nodeRef) => {
+      const store = getLoadedStudyCanvasStore();
+      if (store) {
+        store.requestInspectorFocus({
+          nodeRef,
+          scrollIntoView: true,
+        });
+      } else {
+        void loadStudyCanvasStore().then((loaded) =>
+          loaded?.requestInspectorFocus({
+            nodeRef,
+            scrollIntoView: true,
+          })
+        );
+      }
+    },
   });
 }
 </script>

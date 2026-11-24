@@ -11,24 +11,21 @@ import {
 } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { OptionalTeleport } from "./OptionalTeleport.js";
-import { clinicalOverlayProps } from "./sharedProps.js";
+import {
+  clinicalOverlayProps,
+  useClinicalOverlayState,
+} from "./sharedProps.js";
 
 defineOptions({
   inheritAttrs: false,
 });
 
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: undefined,
-  },
-  isOpen: {
-    type: Boolean,
-    default: false,
-  },
-  open: {
-    type: Boolean,
-    default: undefined,
+  ...clinicalOverlayProps,
+  role: {
+    ...clinicalOverlayProps.role,
+    type: String,
+    default: "dialog",
   },
   title: {
     type: String,
@@ -38,43 +35,11 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  ariaLabel: {
-    type: String,
-    default: undefined,
-  },
-  ariaLabelledby: {
-    type: String,
-    default: undefined,
-  },
-  ariaDescribedby: {
-    type: String,
-    default: undefined,
-  },
-  id: {
-    type: String,
-    default: undefined,
-  },
-  overlayId: {
-    type: String,
-    default: undefined,
-  },
   overlayClass: {
     type: [String, Array, Object],
     default: "",
   },
   panelClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  headerClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  bodyClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  footerClass: {
     type: [String, Array, Object],
     default: "",
   },
@@ -86,22 +51,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  role: {
-    type: String,
-    default: "dialog",
-  },
-  ...clinicalOverlayProps,
   closeLabel: {
     type: String,
     default: "Close drawer",
-  },
-  showHeader: {
-    type: Boolean,
-    default: true,
-  },
-  showClose: {
-    type: Boolean,
-    default: true,
   },
   dockable: {
     type: Boolean,
@@ -196,86 +148,35 @@ watch(
   () => bindMediaQuery()
 );
 
-const drawerOpen = computed(() => {
-  if (props.modelValue !== undefined) return props.modelValue;
-  if (props.open !== undefined) return props.open;
-  return props.isOpen;
+const isDocked = computed(() => Boolean(props.dockable && isWideDesktop.value));
+
+const {
+  isOpen: drawerOpen,
+  shouldRender,
+  computedAriaModal,
+  teleportTarget,
+  computedLabelledby,
+  computedAriaLabel,
+  computedDescribedby,
+  closeOverlay: closeDrawer,
+  onBackdropClick,
+  trapOptions,
+} = useClinicalOverlayState({
+  props,
+  attrs,
+  slots,
+  emit,
+  headingId,
+  defaultAriaLabel: "Clinical Drawer",
+  resolveModal: () =>
+    props.modal !== undefined ? Boolean(props.modal) : !isDocked.value,
 });
 
 watch(drawerOpen, (open) => {
   if (open) syncWideDesktop();
 });
 
-const shouldRender = computed(() => props.keepMounted || drawerOpen.value);
-
-const isDocked = computed(() => Boolean(props.dockable && isWideDesktop.value));
-
-const isModal = computed(() => {
-  if (props.modal !== undefined) return Boolean(props.modal);
-  if (attrs["aria-modal"] === "true") return true;
-  if (attrs["aria-modal"] === "false") return false;
-  return !isDocked.value;
-});
-
-const computedAriaModal = computed(() =>
-  drawerOpen.value && isModal.value ? "true" : undefined
-);
-
-const teleportTarget = computed(() =>
-  typeof props.teleport === "string" ? props.teleport : "body"
-);
-
-const computedLabelledby = computed(() => {
-  if (props.ariaLabelledby) return props.ariaLabelledby;
-  if (props.ariaLabel || attrs["aria-label"]) return undefined;
-  if (props.showHeader && (props.title || slots.header)) return headingId.value;
-  return undefined;
-});
-
-const computedAriaLabel = computed(() => {
-  if (props.ariaLabel) return props.ariaLabel;
-  if (attrs["aria-label"]) return String(attrs["aria-label"]);
-  if (!computedLabelledby.value) return "Clinical Drawer";
-  return undefined;
-});
-
-const computedDescribedby = computed(() => {
-  if (props.ariaDescribedby) return props.ariaDescribedby;
-  if (attrs["aria-describedby"]) return String(attrs["aria-describedby"]);
-  return undefined;
-});
-
-const closeDrawer = () => {
-  if (!props.dismissible) return;
-  emit("update:modelValue", false);
-  emit("update:isOpen", false);
-  emit("update:open", false);
-  emit("close");
-};
-
-const onBackdropClick = () => {
-  if (!isModal.value || !props.dismissible || !props.closeOnBackdrop) return;
-  closeDrawer();
-};
-
-useFocusTrap(drawerRef, {
-  isOpen: drawerOpen,
-  modal: isModal,
-  escapeDeactivates: () => props.dismissible,
-  initialFocus: () => props.initialFocus,
-  restoreFocus:
-    typeof props.restoreFocus === "boolean"
-      ? props.restoreFocus
-      : () =>
-          typeof props.restoreFocus === "function"
-            ? props.restoreFocus()
-            : props.restoreFocus,
-  fallbackFocus: () =>
-    typeof props.fallbackFocus === "function"
-      ? props.fallbackFocus()
-      : props.fallbackFocus,
-  onEscape: closeDrawer,
-});
+useFocusTrap(drawerRef, trapOptions);
 
 defineExpose({
   drawerEl: drawerRef,

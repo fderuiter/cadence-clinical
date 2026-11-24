@@ -64,23 +64,23 @@ export async function prepareSignOutGuardState() {
   } catch (err) {
     console.warn("Could not flush active draft before sign-out check:", err);
   }
-  try {
-    const draftIds = await getDraftAssignmentIds(state.session.userId);
-    lastInspectedSignOutState.draftCount = Array.isArray(draftIds)
-      ? draftIds.length
+  const [draftsResult, subsResult] = await Promise.allSettled([
+    getDraftAssignmentIds(state.session.userId),
+    getAllSubmissions(),
+  ]);
+  if (draftsResult.status === "fulfilled") {
+    lastInspectedSignOutState.draftCount = Array.isArray(draftsResult.value)
+      ? draftsResult.value.length
       : 0;
-  } catch {
+  } else {
     lastInspectedSignOutState.draftCount = 0;
   }
-  try {
-    const allSubs = await getAllSubmissions();
-    if (Array.isArray(allSubs)) {
-      state.submissions = allSubs;
-      lastInspectedSignOutState.unsyncedCount = allSubs.filter(
-        isUnsyncedOrLockedSubmission
-      ).length;
-    }
-  } catch {
+  if (subsResult.status === "fulfilled" && Array.isArray(subsResult.value)) {
+    state.submissions = subsResult.value;
+    lastInspectedSignOutState.unsyncedCount = subsResult.value.filter(
+      isUnsyncedOrLockedSubmission
+    ).length;
+  } else {
     lastInspectedSignOutState.unsyncedCount = 0;
   }
   const hasPersistedPending =

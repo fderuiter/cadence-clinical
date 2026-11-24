@@ -180,16 +180,15 @@ import {
   useOnboardingStore,
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { getLoadedStudyCanvasStore } from "../stores/studyScopeBridge";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
-const activeCanvasStore = computed(() => {
-  const pinia = getActivePinia();
-  return pinia ? useStudyCanvasStore(pinia) : null;
-});
+const activeCanvasStore = computed(() =>
+  getLoadedStudyCanvasStore(getActivePinia())
+);
 const router = useRouter();
 let activeRoute = null;
 try {

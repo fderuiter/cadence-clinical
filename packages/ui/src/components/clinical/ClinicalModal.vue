@@ -2,7 +2,10 @@
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { OptionalTeleport } from "./OptionalTeleport.js";
-import { clinicalOverlayProps } from "./sharedProps.js";
+import {
+  clinicalOverlayProps,
+  useClinicalOverlayState,
+} from "./sharedProps.js";
 
 defineOptions({
   inheritAttrs: false,
@@ -10,45 +13,9 @@ defineOptions({
 
 const props = defineProps({
   ...clinicalOverlayProps,
-  role: {
-    type: String,
-    default: "dialog",
-  },
-  modelValue: {
-    type: Boolean,
-    default: undefined,
-  },
-  isOpen: {
-    type: Boolean,
-    default: false,
-  },
-  open: {
-    type: Boolean,
-    default: undefined,
-  },
   title: {
     type: String,
     default: "Clinical Action Dialog",
-  },
-  ariaLabel: {
-    type: String,
-    default: undefined,
-  },
-  ariaLabelledby: {
-    type: String,
-    default: undefined,
-  },
-  ariaDescribedby: {
-    type: String,
-    default: undefined,
-  },
-  id: {
-    type: String,
-    default: undefined,
-  },
-  overlayId: {
-    type: String,
-    default: undefined,
   },
   dialogClass: {
     type: [String, Array, Object],
@@ -58,29 +25,9 @@ const props = defineProps({
     type: [String, Array, Object],
     default: "",
   },
-  headerClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  bodyClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  footerClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
   closeLabel: {
     type: String,
     default: "Close dialog",
-  },
-  showHeader: {
-    type: Boolean,
-    default: true,
-  },
-  showClose: {
-    type: Boolean,
-    default: true,
   },
   showFooter: {
     type: Boolean,
@@ -108,81 +55,28 @@ const titleId = computed(
   () => props.ariaLabelledby || `clinical-modal-title-${instanceId}`
 );
 
-const modalOpen = computed(() => {
-  if (props.modelValue !== undefined) return props.modelValue;
-  if (props.open !== undefined) return props.open;
-  return props.isOpen;
-});
-
-const shouldRender = computed(() => props.keepMounted || modalOpen.value);
-
-const isModal = computed(() => {
-  if (attrs["aria-modal"] === "false") return false;
-  if (attrs["aria-modal"] === "true") return true;
-  return Boolean(props.modal);
-});
-
-const computedAriaModal = computed(() =>
-  modalOpen.value && isModal.value ? "true" : undefined
-);
-
-const teleportTarget = computed(() =>
-  typeof props.teleport === "string" ? props.teleport : "body"
-);
-
-const computedLabelledby = computed(() => {
-  if (props.ariaLabelledby) return props.ariaLabelledby;
-  if (props.ariaLabel || attrs["aria-label"]) return undefined;
-  if (props.showHeader && (props.title || slots.header)) return titleId.value;
-  return undefined;
-});
-
-const computedAriaLabel = computed(() => {
-  if (props.ariaLabel) return props.ariaLabel;
-  if (attrs["aria-label"]) return String(attrs["aria-label"]);
-  if (!computedLabelledby.value) {
-    return props.title || "Clinical Action Dialog";
-  }
-  return undefined;
-});
-
-const computedDescribedby = computed(() => {
-  if (props.ariaDescribedby) return props.ariaDescribedby;
-  if (attrs["aria-describedby"]) return String(attrs["aria-describedby"]);
-  return undefined;
-});
-
-const closeModal = () => {
-  if (!props.dismissible) return;
-  emit("update:modelValue", false);
-  emit("update:isOpen", false);
-  emit("update:open", false);
-  emit("close");
-};
-
-const onBackdropClick = () => {
-  if (!isModal.value || !props.dismissible || !props.closeOnBackdrop) return;
-  closeModal();
-};
-
-useFocusTrap(dialogRef, {
+const {
   isOpen: modalOpen,
-  modal: isModal,
-  escapeDeactivates: () => props.dismissible,
-  initialFocus: () => props.initialFocus,
-  restoreFocus:
-    typeof props.restoreFocus === "boolean"
-      ? props.restoreFocus
-      : () =>
-          typeof props.restoreFocus === "function"
-            ? props.restoreFocus()
-            : props.restoreFocus,
-  fallbackFocus: () =>
-    typeof props.fallbackFocus === "function"
-      ? props.fallbackFocus()
-      : props.fallbackFocus,
-  onEscape: closeModal,
+  shouldRender,
+  isModal,
+  computedAriaModal,
+  teleportTarget,
+  computedLabelledby,
+  computedAriaLabel,
+  computedDescribedby,
+  closeOverlay: closeModal,
+  onBackdropClick,
+  trapOptions,
+} = useClinicalOverlayState({
+  props,
+  attrs,
+  slots,
+  emit,
+  headingId: titleId,
+  defaultAriaLabel: () => props.title || "Clinical Action Dialog",
 });
+
+useFocusTrap(dialogRef, trapOptions);
 
 defineExpose({
   dialogEl: dialogRef,

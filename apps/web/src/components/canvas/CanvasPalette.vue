@@ -107,7 +107,11 @@ import type {
   WorkspacePaletteOption,
 } from "../../canvas/palette";
 import { useAiAssistance } from "../../ai/aiAssistance";
-import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import {
+  getLoadedStudyCanvasStore,
+  loadStudyCanvasStore,
+  type StudyCanvasStoreInstance,
+} from "../../stores/studyScopeBridge";
 
 /**
  * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
@@ -165,10 +169,9 @@ const remoteParticipants = ref<SubjectSummary[]>([]);
 const resolvedParticipant = ref<SubjectSummary | null>(null);
 const isDebouncePending = ref(false);
 const pendingSearchCount = ref(0);
-const activeCanvasStore = computed(() => {
-  const activePinia = getActivePinia();
-  return activePinia ? useStudyCanvasStore(activePinia) : null;
-});
+const activeCanvasStore = computed(() =>
+  getLoadedStudyCanvasStore(getActivePinia())
+);
 const isSearching = computed(
   () =>
     isDebouncePending.value ||
@@ -198,7 +201,7 @@ let latestParticipantLookup = 0;
 async function searchKernel(text: string, study: string, request: number) {
   isDebouncePending.value = false;
   const activePinia = getActivePinia();
-  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
+  const canvasStore = getLoadedStudyCanvasStore(activePinia);
   const shouldQueryRemoteParticipants = Boolean(
     study &&
     typeof executionApi.listSubjects === "function" &&
@@ -271,9 +274,8 @@ watch([query, () => props.studyCode], ([value, study]) => {
   );
 
   const activePinia = getActivePinia();
-  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
   if (
-    canvasStore &&
+    activePinia &&
     study &&
     !/\s/.test(text) &&
     text !== study &&
@@ -282,23 +284,34 @@ watch([query, () => props.studyCode], ([value, study]) => {
         participant.subject_id.toLowerCase() === text.toLowerCase()
     )
   ) {
-    pendingSearchCount.value += 1;
-    void canvasStore
-      .resolveParticipantByCode(text, study)
-      .then((matched) => {
-        if (lookupRequest === latestParticipantLookup && matched) {
-          resolvedParticipant.value = matched;
-        }
-      })
-      .catch((err) => {
-        if (lookupRequest !== latestParticipantLookup) return;
-        if (!isNotFoundStatus(err)) {
-          subjectNote.value = `Participants can't be searched right now: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      })
-      .finally(() => {
-        pendingSearchCount.value = Math.max(0, pendingSearchCount.value - 1);
-      });
+    const runParticipantLookup = (
+      canvasStore: StudyCanvasStoreInstance | null
+    ) => {
+      if (!canvasStore || lookupRequest !== latestParticipantLookup) return;
+      pendingSearchCount.value += 1;
+      void canvasStore
+        .resolveParticipantByCode(text, study)
+        .then((matched) => {
+          if (lookupRequest === latestParticipantLookup && matched) {
+            resolvedParticipant.value = matched;
+          }
+        })
+        .catch((err) => {
+          if (lookupRequest !== latestParticipantLookup) return;
+          if (!isNotFoundStatus(err)) {
+            subjectNote.value = `Participants can't be searched right now: ${err instanceof Error ? err.message : String(err)}`;
+          }
+        })
+        .finally(() => {
+          pendingSearchCount.value = Math.max(0, pendingSearchCount.value - 1);
+        });
+    };
+    const loadedStore = getLoadedStudyCanvasStore(activePinia);
+    if (loadedStore) {
+      runParticipantLookup(loadedStore);
+    } else {
+      void loadStudyCanvasStore(activePinia).then(runParticipantLookup);
+    }
   }
 });
 
