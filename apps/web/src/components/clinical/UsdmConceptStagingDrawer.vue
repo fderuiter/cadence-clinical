@@ -478,64 +478,12 @@ const confirmAndApply = () => {
 };
 </script>
 
+<style scoped src="../shared/drawerHeaderChrome.css"></style>
+
 <style scoped>
-.drawer-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-}
-
-.header-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.header-icon {
-  flex-shrink: 0;
-  color: var(--semantic-color-primary);
-}
-
+.header-icon,
 .drawer-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
   color: var(--semantic-color-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.btn-close-drawer {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md, 6px);
-  cursor: pointer;
-  color: var(--semantic-color-text-secondary);
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.btn-close-drawer:hover {
-  background-color: var(--semantic-color-surface-muted);
-  color: var(--semantic-color-text);
-}
-
-@media (max-height: 540px) {
-  .btn-close-drawer {
-    min-width: 36px;
-    min-height: 36px;
-  }
 }
 
 .usdm-drawer-content {

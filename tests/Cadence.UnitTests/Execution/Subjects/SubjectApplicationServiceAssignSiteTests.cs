@@ -85,10 +85,13 @@ public sealed class SubjectApplicationServiceAssignSiteTests
 
         assigned.IsSuccess.Should().BeTrue();
         assigned.Value!.SiteId.Should().Be(new SiteCode("SITE-101"));
+        assigned.Value.EnrollmentRef.Should().StartWith("enrollment:");
 
         var persisted = await harness.Subjects.GetByCodeAsync("SUBJ-201", ct);
         persisted.Should().NotBeNull();
         persisted!.SiteCode.Should().Be(new SiteCode("SITE-101"));
+        persisted.KernelEnrollmentId.Should().NotBeNull();
+        persisted.EnrollmentRef.Should().Be(assigned.Value.EnrollmentRef);
         persisted.ReasonForChange.Should().Be(reason);
 
         harness.Synchronizer.Calls.Should().ContainSingle().Which.Should().Match<(Guid ParticipantId, string StudyCode, string SiteCode, string SubjectCode, DateTimeOffset ScreenedAt, string ChangeReason)>(call =>

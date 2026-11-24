@@ -1,4 +1,4 @@
-# ADR-2659: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow
+# ADR-2661: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

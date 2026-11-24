@@ -275,6 +275,7 @@
       <ClinicalTabs
         v-model="activeTab"
         :tabs="drawerTabs"
+        variant="underline"
         aria-label="Ticket detail sections"
         id-prefix="ticket-drawer"
         list-class="drawer-tabs"
@@ -1646,34 +1647,6 @@ const onTicketSigned = (sigPayload) => {
   gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
-}
-
-:deep(.drawer-tabs) {
-  display: flex;
-  flex-wrap: wrap;
-  background: var(--semantic-color-surface);
-  border-bottom: 1px solid var(--semantic-color-border);
-  padding: 0 4px;
-}
-
-:deep(.tab-item) {
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-}
-
-:deep(.tab-item.active),
-:deep(.tab-item[aria-selected="true"]) {
-  color: var(--semantic-color-interactive-primary);
-  border-bottom-color: var(--semantic-color-interactive-primary);
 }
 
 .tab-pane {

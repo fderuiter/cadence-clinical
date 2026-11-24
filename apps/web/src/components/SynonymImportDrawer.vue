@@ -675,62 +675,11 @@ onMounted(() => {
 });
 </script>
 
+<style scoped src="./shared/drawerHeaderChrome.css"></style>
+
 <style scoped>
-.drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-}
-
-.header-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 .header-icon {
-  flex-shrink: 0;
   color: var(--semantic-color-primary);
-}
-
-.drawer-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--semantic-color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.close-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--semantic-color-text-secondary);
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.close-btn:hover:not(:disabled) {
-  background-color: var(--semantic-color-surface-muted);
-  color: var(--semantic-color-text);
-}
-
-.close-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 @media (max-height: 540px) {

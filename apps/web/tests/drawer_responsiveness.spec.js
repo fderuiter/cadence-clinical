@@ -243,7 +243,7 @@ describe("Drawer Responsiveness & Viewport Tokens", () => {
     });
   });
 
-  describe("Requirement 6 & ADR-2659: Bounded ClinicalDrawer Adoption Across All 13 Web Drawers", () => {
+  describe("Requirement 6 & ADR-2661: Bounded ClinicalDrawer Adoption Across All 13 Web Drawers", () => {
     it("renders all 13 *Drawer.vue components in apps/web/src/components through ClinicalDrawer with bounded body scroll", () => {
       const drawerPaths = [
         "components/ContextualHelpDrawer.vue",

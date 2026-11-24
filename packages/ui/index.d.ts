@@ -163,6 +163,8 @@ export const ClinicalTabs: DefineComponent<
   {
     modelValue: string | number;
     tabs: ClinicalTabItem[];
+    variant?: "underline" | "pills" | "segmented";
+    overflow?: "scroll" | "wrap";
     ariaLabel?: string;
     ariaLabelledby?: string;
     orientation?: "horizontal" | "vertical";

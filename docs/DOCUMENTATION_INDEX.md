@@ -617,10 +617,13 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) | Current | - Status: Accepted |
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
+| [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](adr/2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) | Current | - Status: Accepted |
 | [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
-| [ADR-2659: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow](adr/2026-11-23-migrate-web-drawers-to-bounded-clinical-drawer.md) | Current | - Status: Accepted |
+| [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) | Current | - Status: Accepted |
 | [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
 | [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
+| [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
+| [ADR-2661: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow](adr/2026-11-23-migrate-web-drawers-to-bounded-clinical-drawer.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
