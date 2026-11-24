@@ -468,6 +468,31 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     pushSpy.mockRestore();
   });
 
+  it("navigates off /forbidden to the initial authorized tour route when Start Tour is clicked", async () => {
+    await router.push("/forbidden");
+    await flushPromises();
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["CRC"];
+    authStore.currentPersona = "site_crc";
+
+    const onboardingStore = useOnboardingStore();
+    onboardingStore.loadPersonaState("site_crc");
+    onboardingStore.openDrawer();
+
+    const wrapper = mount(OnboardingChecklistDrawer, {
+      global: { plugins: [router] },
+    });
+
+    await wrapper.find("#btn-drawer-start-tour").trigger("click");
+    await flushPromises();
+
+    expect(onboardingStore.isActive).toBe(true);
+    expect(onboardingStore.isDrawerOpen).toBe(false);
+    expect(router.currentRoute.value.path).toBe("/ecrf");
+    wrapper.unmount();
+  });
+
   it("unlocks authorized DEMO_MODULE_CATALOG task and guided-tour routes in demo builds while blocking unauthorized routes", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     try {

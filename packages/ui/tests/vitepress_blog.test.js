@@ -14,12 +14,15 @@ import {
   normalizeSiteLink,
   parseBlogFrontmatter,
   resolveBaseHref,
+  resolveBlogLinkRel,
+  resolveBlogLinkTarget,
   transformContentLoaderPosts,
   writeRssFeed,
 } from "../../../docs/.vitepress/blog.mjs";
 import {
   assertThemeLinksExist,
   repoLinksPlugin,
+  toRepoUrl,
 } from "../../../docs/.vitepress/repoLinks.mjs";
 
 describe("VitePress Engineering Blog Engine", () => {
@@ -137,7 +140,43 @@ describe("VitePress Engineering Blog Engine", () => {
     ).toBeNull();
   });
 
-  it("escapes XML special characters and excludes drafts from generated RSS 2.0 XML", () => {
+  it("parses YAML folded and literal block scalars including nested related fields", () => {
+    const raw = [
+      "---",
+      "title: >-",
+      "  Folded Title",
+      "  Across Lines",
+      'date: "2026-11-20T16:00:00Z"',
+      "summary: |-",
+      "  Line one.",
+      "  Line two.",
+      "notes: |+",
+      "  Keep trailing newline.",
+      "",
+      "related:",
+      "  - text: >",
+      "      Companion",
+      "      Decision",
+      '    link: "../adr/index.md"',
+      "draft: false",
+      "---",
+      "",
+      "# Body",
+    ].join("\n");
+
+    const { frontmatter } = parseBlogFrontmatter(raw);
+    expect(frontmatter.title).toBe("Folded Title Across Lines");
+    expect(frontmatter.summary).toBe("Line one.\nLine two.");
+    expect(frontmatter.notes).toBe("Keep trailing newline.\n\n");
+    expect(frontmatter.related).toEqual([
+      {
+        text: "Companion Decision",
+        link: "../adr/index.md",
+      },
+    ]);
+  });
+
+  it("escapes XML special characters, emits full-content CDATA RSS 2.0 with absolutized URLs, and preserves ISO-8601 timestamps", () => {
     expect(escapeXml(`R&D <Kernel> "v0.2" 'quote'`)).toBe(
       "R&amp;D &lt;Kernel&gt; &quot;v0.2&quot; &apos;quote&apos;"
     );
@@ -149,9 +188,30 @@ describe("VitePress Engineering Blog Engine", () => {
           slug: "2026-10-20-governed-ai",
           url: "/blog/2026-10-20-governed-ai.html",
           date: "2026-10-20",
+          publishedAt: "2026-10-20T14:30:00Z",
           authors: ["@fderuiter"],
           summary: " human-attested & 'grounded' proposals <100%>.",
+          body: [
+            "# Governed AI",
+            "",
+            "Read [ADR-2603](../adr/2026-11-19-keep-cadence-in-one-repository.md), jump to [Details](#details), or inspect `]]>` safely.",
+            "",
+            "## Details",
+            "",
+            "- Item one with **bold** and `inline code`",
+          ].join("\n"),
           tags: ["ai", "gxp&audit"],
+          draft: false,
+        },
+        {
+          title: "Pre-Rendered HTML Item",
+          slug: "2026-10-19-prerendered",
+          url: "/blog/2026-10-19-prerendered.html",
+          date: "2026-10-19",
+          authors: ["@fderuiter"],
+          summary: "Exercises CDATA splitting.",
+          html: "<p>Raw ]]> sequence</p>",
+          tags: ["rss"],
           draft: false,
         },
         {
@@ -166,16 +226,28 @@ describe("VitePress Engineering Blog Engine", () => {
         },
       ],
       {
-        siteOrigin: "https://fderuiter.github.io",
+        siteOrigin: "https://docs.example.org/",
         base: "/cadence-clinical/",
       }
     );
 
     expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
-    expect(xml).toContain('<rss version="2.0"');
     expect(xml).toContain(
-      '<atom:link href="https://fderuiter.github.io/cadence-clinical/feed.xml" rel="self" type="application/rss+xml" />'
+      'xmlns:content="http://purl.org/rss/1.0/modules/content/"'
     );
+    expect(xml).toContain(
+      '<atom:link href="https://docs.example.org/cadence-clinical/feed.xml" rel="self" type="application/rss+xml" />'
+    );
+    expect(xml).toContain("<pubDate>Tue, 20 Oct 2026 14:30:00 GMT</pubDate>");
+    expect(xml).toContain("<content:encoded><![CDATA[");
+    expect(xml).toContain(
+      'href="https://docs.example.org/cadence-clinical/adr/2026-11-19-keep-cadence-in-one-repository.html"'
+    );
+    expect(xml).toContain(
+      'href="https://docs.example.org/cadence-clinical/blog/2026-10-20-governed-ai.html#details"'
+    );
+    expect(xml).toContain("<code>]]&gt;</code>");
+    expect(xml).toContain("]]]]><![CDATA[>");
     expect(xml).toContain(
       "<title>Governed AI &amp; &quot;Proposals&quot; &lt;K037&gt;</title>"
     );
@@ -183,7 +255,7 @@ describe("VitePress Engineering Blog Engine", () => {
     expect(xml).not.toContain("Secret Draft Post");
   });
 
-  it("scans disk posts, computes srcExclude draft globs, and writes feed.xml", () => {
+  it("scans disk posts, computes srcExclude draft globs, and honors VITEPRESS_SITE_ORIGIN in writeRssFeed", () => {
     const repoRoot = makeTempDocsDir();
     const docsDir = path.join(repoRoot, "docs");
     const outDir = path.join(docsDir, ".vitepress", "dist");
@@ -194,7 +266,7 @@ describe("VitePress Engineering Blog Engine", () => {
     );
     fs.writeFileSync(
       path.join(docsDir, "blog", "2026-10-01-published.md"),
-      '---\ntitle: "Published Story"\ndate: "2026-10-01"\nsummary: "Live post"\ntags: ["kernel"]\ndraft: false\n---\n\n# Published Story\n'
+      '---\ntitle: "Published Story"\ndate: "2026-10-01T09:15:00Z"\nsummary: "Live post"\ntags: ["kernel"]\ndraft: false\n---\n\n# Published Story\n\nBody with [Index](./index.md).\n'
     );
     const draftPath = path.join(docsDir, "blog", "2026-10-02-draft.md");
     fs.writeFileSync(
@@ -217,20 +289,47 @@ describe("VitePress Engineering Blog Engine", () => {
       "/blog/2026-10-01-published",
     ]);
 
-    const feedPath = writeRssFeed({
-      srcDir: docsDir,
-      outDir,
-      site: { base: "/cadence-clinical/" },
-    });
-    const feedXml = fs.readFileSync(feedPath, "utf-8");
-    expect(feedXml).toContain("Published Story");
-    expect(feedXml).not.toContain("Hidden Draft");
+    const previousOrigin = process.env.VITEPRESS_SITE_ORIGIN;
+    process.env.VITEPRESS_SITE_ORIGIN = "https://preview.example.com/";
+    try {
+      const feedPath = writeRssFeed({
+        srcDir: docsDir,
+        outDir,
+        site: { base: "/cadence-clinical/" },
+      });
+      const feedXml = fs.readFileSync(feedPath, "utf-8");
+      expect(feedXml).toContain(
+        "https://preview.example.com/cadence-clinical/feed.xml"
+      );
+      expect(feedXml).toContain("Thu, 01 Oct 2026 09:15:00 GMT");
+      expect(feedXml).toContain("<content:encoded><![CDATA[");
+      expect(feedXml).toContain(
+        'href="https://preview.example.com/cadence-clinical/blog/"'
+      );
+      expect(feedXml).not.toContain("Hidden Draft");
+    } finally {
+      if (previousOrigin === undefined) {
+        delete process.env.VITEPRESS_SITE_ORIGIN;
+      } else {
+        process.env.VITEPRESS_SITE_ORIGIN = previousOrigin;
+      }
+    }
   });
 
-  it("allows /feed.xml in assertThemeLinksExist and rewrites draft post links in repoLinksPlugin", () => {
+  it("accepts base-prefixed /feed.xml in assertThemeLinksExist and rejects draft or broken frontmatter.related links in repoLinksPlugin", () => {
     const repoRoot = makeTempDocsDir();
     const docsDir = path.join(repoRoot, "docs");
+    fs.mkdirSync(path.join(docsDir, "adr"), { recursive: true });
+    fs.mkdirSync(path.join(docsDir, "SDLC"), { recursive: true });
     fs.writeFileSync(path.join(docsDir, "blog", "index.md"), "# Blog\n");
+    fs.writeFileSync(
+      path.join(docsDir, "SDLC", "03_API_Integration_Specification.md"),
+      "# API Integration Spec\n\n## Endpoints\n"
+    );
+    fs.writeFileSync(
+      path.join(docsDir, "adr", "2026-10-01-sample.md"),
+      "# ADR-1: Sample\n\n## Known Anchor\n"
+    );
     fs.writeFileSync(
       path.join(docsDir, "blog", "2026-10-01-live.md"),
       "---\ntitle: Live\ndraft: false\n---\n# Live\n"
@@ -245,22 +344,28 @@ describe("VitePress Engineering Blog Engine", () => {
         {
           nav: [
             { text: "Blog", link: "/blog/index" },
-            { text: "RSS", link: "/feed.xml" },
+            { text: "RSS", link: "/cadence-clinical/feed.xml" },
           ],
           sidebar: [],
         },
-        docsDir
+        docsDir,
+        { base: "/cadence-clinical/" }
       )
     ).not.toThrow();
 
     expect(() =>
       assertThemeLinksExist(
         {
-          nav: [{ text: "Broken", link: "/does-not-exist" }],
+          sidebar: [{ text: "Draft", link: "/blog/2026-10-02-draft" }],
         },
-        docsDir
+        docsDir,
+        { base: "/cadence-clinical/" }
       )
     ).toThrow(/missing pages/);
+
+    expect(
+      toRepoUrl("blog/2026-10-02-draft.md", docsDir, docsDir, repoRoot)
+    ).toBeNull();
 
     const rules = [];
     const fakeMd = {
@@ -272,7 +377,7 @@ describe("VitePress Engineering Blog Engine", () => {
         },
       },
     };
-    repoLinksPlugin(fakeMd, { docsDir, repoRoot });
+    repoLinksPlugin(fakeMd, { docsDir, repoRoot, isDevServer: false });
 
     const makeLinkToken = (initialHref) => {
       let currentHref = initialHref;
@@ -287,23 +392,72 @@ describe("VitePress Engineering Blog Engine", () => {
     };
 
     const liveToken = makeLinkToken("blog/2026-10-01-live.md");
-    const draftToken = makeLinkToken("blog/2026-10-02-draft.md");
+    const excludedToken = makeLinkToken(
+      "SDLC/03_API_Integration_Specification.md#endpoints"
+    );
     rules[0].fn({
       env: { relativePath: "DOCUMENTATION_INDEX.md" },
-      tokens: [{ children: [liveToken, draftToken] }],
+      tokens: [{ children: [liveToken, excludedToken] }],
     });
-
     expect(liveToken.getHref()).toBe("blog/2026-10-01-live.md");
-    expect(draftToken.getHref()).toBe(
-      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/blog/2026-10-02-draft.md"
+    expect(excludedToken.getHref()).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md#endpoints"
     );
+
+    const draftToken = makeLinkToken("blog/2026-10-02-draft.md");
+    expect(() =>
+      rules[0].fn({
+        env: { relativePath: "DOCUMENTATION_INDEX.md" },
+        tokens: [{ children: [draftToken] }],
+      })
+    ).toThrow(/targets draft blog post/);
+
+    expect(() =>
+      rules[0].fn({
+        env: {
+          relativePath: "blog/2026-10-01-live.md",
+          frontmatter: {
+            related: [{ text: "Draft", link: "./2026-10-02-draft.md" }],
+          },
+        },
+        tokens: [],
+      })
+    ).toThrow(/Draft blog post referenced in frontmatter\.related/);
+
+    expect(() =>
+      rules[0].fn({
+        env: {
+          relativePath: "blog/2026-10-01-live.md",
+          frontmatter: {
+            related: [
+              {
+                text: "Bad Anchor",
+                link: "../adr/2026-10-01-sample.md#missing",
+              },
+            ],
+          },
+        },
+        tokens: [],
+      })
+    ).toThrow(/Broken heading anchor in frontmatter\.related/);
   });
 
-  it("loads the repository founding blog posts with complete metadata and related decisions", () => {
+  it("keeps docs/.vitepress/blogShared.mjs free of Node-only imports and loads all published milestone posts including 2026-11-20 ADRs", () => {
+    const blogSharedSource = fs.readFileSync(
+      path.resolve(__dirname, "../../../docs/.vitepress/blogShared.mjs"),
+      "utf-8"
+    );
+    expect(blogSharedSource).not.toMatch(
+      /\bfrom\s+["'](?:node:)?(?:fs|path|process|url)["']/
+    );
+    expect(blogSharedSource).not.toMatch(
+      /\brequire\(\s*["'](?:node:)?(?:fs|path|process|url)["']\s*\)/
+    );
+
     const repoDocsDir = path.resolve(__dirname, "../../../docs");
     const posts = loadPublishedBlogPosts(repoDocsDir);
 
-    expect(posts.length).toBeGreaterThanOrEqual(4);
+    expect(posts.length).toBeGreaterThanOrEqual(6);
     expect(posts.map((p) => p.date)).toEqual(
       [...posts.map((p) => p.date)].sort((a, b) => b.localeCompare(a))
     );
@@ -315,15 +469,47 @@ describe("VitePress Engineering Blog Engine", () => {
       expect(post.tags.length).toBeGreaterThan(0);
       expect(post.related.length).toBeGreaterThan(0);
     }
+
+    const allRelatedLinks = posts.flatMap((p) => p.related.map((r) => r.link));
+    for (const adrSlug of [
+      "/adr/2026-11-20-synchronous-odm-usdm-protocol-draft-import.html",
+      "/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.html",
+      "/adr/2026-11-20-export-canonical-demo-manifest-from-kernel-seed.html",
+      "/adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.html",
+      "/adr/2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.html",
+      "/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.html",
+      "/adr/2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.html",
+      "/adr/2026-11-20-share-session-logout-and-signature-primitives.html",
+      "/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.html",
+      "/adr/2026-11-20-forward-verified-ci-gxp-evidence-and-sync-service-migrations.html",
+    ]) {
+      expect(allRelatedLinks).toContain(adrSlug);
+    }
   });
 
-  it("normalizes staged root guide links and co-hosted demo subpaths cleanly", () => {
-    expect(normalizeSiteLink("../../ARCHITECTURE.md#system-topology")).toBe(
-      "/ARCHITECTURE.html#system-topology"
-    );
+  it("normalizes sibling blog posts, staged root guides, portal pages, and GitHub repo files cleanly", () => {
+    expect(
+      normalizeSiteLink("./2026-11-19-keeping-cadence-in-one-repository.md")
+    ).toBe("/blog/2026-11-19-keeping-cadence-in-one-repository.html");
+    expect(
+      normalizeSiteLink("2026-11-19-keeping-cadence-in-one-repository.md")
+    ).toBe("/blog/2026-11-19-keeping-cadence-in-one-repository.html");
+    expect(
+      normalizeSiteLink("../../ARCHITECTURE.md#1-target-architecture")
+    ).toBe("/ARCHITECTURE.html#1-target-architecture");
+    expect(normalizeSiteLink("../../LICENSE")).toBe("/LICENSE.html");
     expect(normalizeSiteLink("../adr/index.md")).toBe("/adr/");
+    expect(normalizeSiteLink("../PROJECT_PLAN.md")).toBe("/PROJECT_PLAN.html");
+    expect(
+      normalizeSiteLink("../SDLC/03_API_Integration_Specification.md#endpoints")
+    ).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md#endpoints"
+    );
     expect(normalizeSiteLink("/demo/")).toBe("/demo/");
     expect(normalizeSiteLink("/subject-portal/")).toBe("/subject-portal/");
+    expect(normalizeSiteLink("../../packages/kernel/README.md")).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md"
+    );
     expect(
       resolveBaseHref(
         normalizeSiteLink("../../ARCHITECTURE.md"),
@@ -333,5 +519,15 @@ describe("VitePress Engineering Blog Engine", () => {
     expect(resolveBaseHref("/demo/", "/cadence-clinical/")).toBe(
       "/cadence-clinical/demo/"
     );
+    expect(resolveBlogLinkTarget("/demo/")).toBe("_self");
+    expect(resolveBlogLinkTarget("/subject-portal/")).toBe("_self");
+    expect(
+      resolveBlogLinkTarget("https://github.com/fderuiter/cadence-clinical")
+    ).toBe("_blank");
+    expect(resolveBlogLinkTarget("/blog/index.html")).toBeUndefined();
+    expect(
+      resolveBlogLinkRel("https://github.com/fderuiter/cadence-clinical")
+    ).toBe("noopener");
+    expect(resolveBlogLinkRel("/demo/")).toBeUndefined();
   });
 });

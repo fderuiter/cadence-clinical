@@ -304,6 +304,7 @@ function resolveItemId(index) {
         <span v-if="toast.message" class="toast-message">{{
           toast.message
         }}</span>
+        <slot name="extra" :toast="toast.raw" />
         <button
           v-if="toast.action"
           type="button"

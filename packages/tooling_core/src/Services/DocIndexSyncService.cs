@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
+
+using Cadence.ToolingCore.Markdown;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -52,8 +53,11 @@ public static partial class DocIndexSyncService
     [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
     private static partial Regex TableRow3ColRegex();
 
-    [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
-    private static partial Regex TableRow2ColRegex();
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2})")]
+    private static partial Regex IsoDatePrefixRegex();
 
     [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?:\*\*)?Status:?(?:\*\*)?:?\s*(?:\*\*)?Superseded\b|^\s*>\s*(?:\[!(?:WARNING|IMPORTANT|NOTE)\]\s*)?(?:\*\*)?Superseded\b|^\s*Superseded\s+by\b|^\s*##\s+Status\s*\r?\n+\s*Superseded\b", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex AdrSupersededRegex();
@@ -100,15 +104,15 @@ public static partial class DocIndexSyncService
             return 1;
         }
 
-        string originalContent = File.ReadAllText(indexPath);
+        string originalContent = File.ReadAllText(indexPath).Replace("\r\n", "\n", StringComparison.Ordinal);
 
-        // 1. Scan filesystem for all valid markdown files in docs/
+        // 1. Scan filesystem for all valid non-draft markdown files in docs/
         var diskFiles = ScanMarkdownFiles(docsDir);
 
         // 2. Extract existing links and index mappings from DOCUMENTATION_INDEX.md
         var indexedTargets = ExtractIndexedTargets(originalContent);
 
-        // 3. Find unindexed markdown files
+        // 3. Find unindexed markdown files (non-blog sections + blog/index.md if missing)
         var unindexedFiles = diskFiles
             .Where(file => !indexedTargets.Contains(NormalizePath(file.RelativePath)))
             .Select(file => file.RelativePath)
@@ -117,9 +121,14 @@ public static partial class DocIndexSyncService
         // 4. Reconcile status drift on existing ADR entries in DOCUMENTATION_INDEX.md
         string reconciledContent = ReconcileAdrRowStatuses(originalContent, docsDir, out var staleAdrStatuses);
 
+        // 5. Compute canonical updated index (adds unindexed files AND refreshes/prunes ## Engineering blog rows)
+        string blogOnlyUpdatedContent = GenerateUpdatedIndex(reconciledContent, diskFiles, [], docsDir);
+        string normalizedReconciled = reconciledContent.TrimEnd() + "\n";
+        bool hasBlogSectionDrift = !string.Equals(normalizedReconciled, blogOnlyUpdatedContent, StringComparison.Ordinal);
+
         if (check)
         {
-            if (unindexedFiles.Count > 0 || staleAdrStatuses.Count > 0)
+            if (unindexedFiles.Count > 0 || staleAdrStatuses.Count > 0 || hasBlogSectionDrift)
             {
                 if (unindexedFiles.Count > 0)
                 {
@@ -147,6 +156,11 @@ public static partial class DocIndexSyncService
                     }
                 }
 
+                if (hasBlogSectionDrift)
+                {
+                    Console.WriteLine("[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' has stale or draft '## Engineering blog' entries.");
+                }
+
                 Console.WriteLine("\nRun 'pnpm cadence generate-doc-index' to update 'docs/DOCUMENTATION_INDEX.md'.");
                 return 1;
             }
@@ -155,16 +169,15 @@ public static partial class DocIndexSyncService
             return 0;
         }
 
-        if (unindexedFiles.Count == 0 && staleAdrStatuses.Count == 0)
+        if (unindexedFiles.Count == 0 && staleAdrStatuses.Count == 0 && !hasBlogSectionDrift)
         {
             Console.WriteLine("✔ Documentation index is already up to date.");
             return 0;
         }
 
-        // 5. Update DOCUMENTATION_INDEX.md with reconciled ADR statuses and any unindexed files
         string updatedContent = unindexedFiles.Count > 0
-            ? GenerateUpdatedIndex(reconciledContent, diskFiles.Where(f => unindexedFiles.Contains(f.RelativePath)).ToList())
-            : reconciledContent;
+            ? GenerateUpdatedIndex(reconciledContent, diskFiles, unindexedFiles, docsDir)
+            : blogOnlyUpdatedContent;
 
         File.WriteAllText(indexPath, updatedContent);
         Console.WriteLine($"✔ Successfully synchronized documentation index in 'docs/DOCUMENTATION_INDEX.md' ({unindexedFiles.Count} new documents indexed, {staleAdrStatuses.Count} ADR statuses updated).");
@@ -172,6 +185,25 @@ public static partial class DocIndexSyncService
     }
 
     public record MarkdownDocInfo(string RelativePath, string FullPath);
+
+    public static bool IsDraftMarkdownFile(string fullPath)
+    {
+        if (!File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            string[] lines = File.ReadAllLines(fullPath);
+            var parsed = YamlFrontmatterParser.Parse(lines);
+            return parsed.HasFrontmatter && parsed.IsDraft;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
 
     public static List<MarkdownDocInfo> ScanMarkdownFiles(string docsDir)
     {
@@ -203,6 +235,11 @@ public static partial class DocIndexSyncService
                 continue;
             }
 
+            if (IsDatedBlogPostPath(relPath) && IsDraftMarkdownFile(file))
+            {
+                continue;
+            }
+
             result.Add(new MarkdownDocInfo(relPath, file));
         }
 
@@ -214,6 +251,18 @@ public static partial class DocIndexSyncService
                 ScanDirRecursive(subDir, docsDir, result);
             }
         }
+    }
+
+    private static bool IsDatedBlogPostPath(string relPath)
+    {
+        string normalized = NormalizePath(relPath);
+        if (normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[5..];
+        }
+
+        return normalized.StartsWith("blog/", StringComparison.OrdinalIgnoreCase) &&
+               !normalized.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase);
     }
 
     public static HashSet<string> ExtractIndexedTargets(string content)
@@ -294,6 +343,36 @@ public static partial class DocIndexSyncService
             return "Current";
         }
         return "Current";
+    }
+
+    public static string ExtractBlogPostDate(string fullPath, string relPath)
+    {
+        try
+        {
+            if (File.Exists(fullPath))
+            {
+                string[] lines = File.ReadAllLines(fullPath);
+                var parsed = YamlFrontmatterParser.Parse(lines);
+                if (parsed.HasFrontmatter &&
+                    parsed.Scalars.TryGetValue("date", out string? rawDate) &&
+                    !string.IsNullOrWhiteSpace(rawDate))
+                {
+                    Match dm = IsoDatePrefixRegex().Match(rawDate.Trim());
+                    if (dm.Success)
+                    {
+                        return dm.Groups[1].Value;
+                    }
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // Fall through to filename fallback
+        }
+
+        string fileName = Path.GetFileNameWithoutExtension(relPath);
+        Match slugMatch = IsoDatePrefixRegex().Match(fileName);
+        return slugMatch.Success ? slugMatch.Groups[1].Value : string.Empty;
     }
 
     private static bool IsHistoricalAdr(string relPath, string fileContent)
@@ -415,37 +494,34 @@ public static partial class DocIndexSyncService
         try
         {
             string[] lines = File.ReadAllLines(fullPath);
-            int startIndex = 0;
-            if (lines.Length > 0 && lines[0].Trim() == "---")
-            {
-                for (int i = 1; i < lines.Length; i++)
-                {
-                    string fmLine = lines[i].Trim();
-                    if (fmLine is "---" or "...")
-                    {
-                        startIndex = i + 1;
-                        break;
-                    }
+            var parsedFm = YamlFrontmatterParser.Parse(lines);
+            int startIndex = parsedFm.HasFrontmatter ? parsedFm.BodyStartLineIndex : 0;
 
-                    if (fmLine.StartsWith("title:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        frontmatterTitle = UnquoteYamlScalar(fmLine[6..]);
-                    }
-                    else if (fmLine.StartsWith("summary:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        frontmatterSummary = UnquoteYamlScalar(fmLine[8..]);
-                    }
-                    else if (string.IsNullOrEmpty(frontmatterSummary) &&
-                             fmLine.StartsWith("description:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        frontmatterSummary = UnquoteYamlScalar(fmLine[12..]);
-                    }
+            if (parsedFm.HasFrontmatter)
+            {
+                if (parsedFm.Scalars.TryGetValue("title", out string? rawTitle) && !string.IsNullOrWhiteSpace(rawTitle))
+                {
+                    frontmatterTitle = CollapseWhitespace(rawTitle);
                 }
+
+                if (parsedFm.Scalars.TryGetValue("summary", out string? rawSummary) && !string.IsNullOrWhiteSpace(rawSummary))
+                {
+                    frontmatterSummary = CollapseWhitespace(rawSummary);
+                }
+                else if (parsedFm.Scalars.TryGetValue("description", out string? rawDesc) && !string.IsNullOrWhiteSpace(rawDesc))
+                {
+                    frontmatterSummary = CollapseWhitespace(rawDesc);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(frontmatterTitle))
+            {
+                title = frontmatterTitle;
             }
 
             if (!string.IsNullOrWhiteSpace(frontmatterSummary))
             {
-                string cleanedFm = InlineLinkRegex().Replace(frontmatterSummary, "$1").Trim();
+                string cleanedFm = CollapseWhitespace(InlineLinkRegex().Replace(frontmatterSummary, "$1"));
                 if (!string.IsNullOrWhiteSpace(cleanedFm))
                 {
                     description = cleanedFm.Length > 120 ? cleanedFm[..117] + "..." : cleanedFm;
@@ -490,11 +566,6 @@ public static partial class DocIndexSyncService
             // Fallback
         }
 
-        if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(frontmatterTitle))
-        {
-            title = frontmatterTitle;
-        }
-
         if (string.IsNullOrEmpty(title))
         {
             title = Path.GetFileNameWithoutExtension(fullPath).Replace('-', ' ').Replace('_', ' ');
@@ -512,25 +583,37 @@ public static partial class DocIndexSyncService
         return (title, description);
     }
 
-    private static string UnquoteYamlScalar(string raw)
-    {
-        string value = raw.Trim();
-        if (value.Length >= 2 &&
-            ((value[0] == '"' && value[^1] == '"') || (value[0] == '\'' && value[^1] == '\'')))
-        {
-            value = value[1..^1].Replace("\\\"", "\"").Replace("\\\\", "\\");
-        }
+    private static string CollapseWhitespace(string input) =>
+        WhitespaceRegex().Replace(input, " ").Trim();
 
-        return value.Trim();
-    }
-
-    private static string GenerateUpdatedIndex(string originalContent, List<MarkdownDocInfo> unindexedDocs)
+    private static string GenerateUpdatedIndex(
+        string originalContent,
+        List<MarkdownDocInfo> allDiskDocs,
+        List<string> unindexedPaths,
+        string docsDir)
     {
+        var unindexedSet = new HashSet<string>(unindexedPaths, StringComparer.OrdinalIgnoreCase);
+        var unindexedDocs = allDiskDocs.Where(d => unindexedSet.Contains(d.RelativePath)).ToList();
+        var publishedBlogPosts = allDiskDocs
+            .Where(d => IsDatedBlogPostPath(d.RelativePath))
+            .Select(doc => (Doc: doc, Date: ExtractBlogPostDate(doc.FullPath, doc.RelativePath)))
+            .OrderByDescending(entry => entry.Date, StringComparer.Ordinal)
+            .ThenByDescending(entry => entry.Doc.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .Select(entry => entry.Doc)
+            .ToList();
+        var blogIndexDoc = allDiskDocs.FirstOrDefault(d =>
+            d.RelativePath.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase));
+
         var categoryGroups = new Dictionary<string, List<MarkdownDocInfo>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var doc in unindexedDocs)
         {
             string category = DetermineCategory(doc.RelativePath);
+            if (string.Equals(category, "## Engineering blog", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             if (!categoryGroups.TryGetValue(category, out var list))
             {
                 list = new List<MarkdownDocInfo>();
@@ -551,6 +634,8 @@ public static partial class DocIndexSyncService
             }
         }
 
+        bool sawBlogSection = false;
+
         // Process sections from bottom to top so insertions don't invalidate earlier section indices
         for (int s = sectionIndices.Count - 1; s >= 0; s--)
         {
@@ -558,9 +643,15 @@ public static partial class DocIndexSyncService
             int end = (s + 1 < sectionIndices.Count) ? sectionIndices[s + 1] : lines.Count;
             string categoryHeader = lines[start].Trim();
 
+            if (string.Equals(categoryHeader, "## Engineering blog", StringComparison.OrdinalIgnoreCase))
+            {
+                sawBlogSection = true;
+                RebuildEngineeringBlogSection(lines, start, end, blogIndexDoc, publishedBlogPosts, docsDir);
+                continue;
+            }
+
             if (categoryGroups.TryGetValue(categoryHeader, out var pendingDocs) && pendingDocs.Count > 0)
             {
-                // Find last line starting with '|' in this section
                 int lastTableLine = -1;
                 bool hasStatusCol = true;
                 for (int i = start; i < end; i++)
@@ -597,6 +688,23 @@ public static partial class DocIndexSyncService
             }
         }
 
+        if (!sawBlogSection && (blogIndexDoc is not null || publishedBlogPosts.Count > 0))
+        {
+            lines.Add("");
+            lines.Add("## Engineering blog");
+            lines.Add("");
+            lines.Add("| Document | Status | What it is |");
+            lines.Add("| --- | --- | --- |");
+            if (blogIndexDoc is not null)
+            {
+                lines.Add(RenderSingleDocRow(blogIndexDoc, hasStatusCol: true, includeBlogDate: false));
+            }
+            foreach (var post in publishedBlogPosts)
+            {
+                lines.Add(RenderSingleDocRow(post, hasStatusCol: true, includeBlogDate: true));
+            }
+        }
+
         // Flush any remaining category groups at end of file
         foreach (var (cat, docs) in categoryGroups)
         {
@@ -614,28 +722,150 @@ public static partial class DocIndexSyncService
         return string.Join('\n', lines).TrimEnd() + "\n";
     }
 
+    private static void RebuildEngineeringBlogSection(
+        List<string> lines,
+        int start,
+        int end,
+        MarkdownDocInfo? blogIndexDoc,
+        List<MarkdownDocInfo> publishedBlogPosts,
+        string docsDir)
+    {
+        int firstTableLine = -1;
+        int lastTableLine = -1;
+        bool hasStatusCol = true;
+        var headerAndSepLines = new List<string>();
+        string? existingBlogIndexRow = null;
+        var preservedNonBlogRows = new List<string>();
+
+        for (int i = start + 1; i < end; i++)
+        {
+            string rawLine = lines[i];
+            string trimmed = rawLine.Trim();
+            if (!trimmed.StartsWith('|'))
+            {
+                continue;
+            }
+
+            if (firstTableLine < 0)
+            {
+                firstTableLine = i;
+            }
+            lastTableLine = i;
+
+            if (trimmed.StartsWith("| Document |", StringComparison.Ordinal) ||
+                trimmed.StartsWith("| Location |", StringComparison.Ordinal))
+            {
+                hasStatusCol = trimmed.Contains("Status", StringComparison.Ordinal);
+                headerAndSepLines.Add(rawLine);
+                continue;
+            }
+
+            if (trimmed.StartsWith("| ---", StringComparison.Ordinal) ||
+                trimmed.StartsWith("|---", StringComparison.Ordinal) ||
+                trimmed.StartsWith("| :---", StringComparison.Ordinal))
+            {
+                headerAndSepLines.Add(rawLine);
+                continue;
+            }
+
+            Match linkMatch = MarkdownLinkRegex().Match(trimmed);
+            if (!linkMatch.Success)
+            {
+                preservedNonBlogRows.Add(rawLine);
+                continue;
+            }
+
+            string rowTarget = NormalizePath(linkMatch.Groups[1].Value.Split('#')[0]);
+            if (rowTarget.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase))
+            {
+                existingBlogIndexRow ??= rawLine;
+                continue;
+            }
+
+            if (IsDatedBlogPostPath(rowTarget))
+            {
+                // Rebuilt from published disk posts below; draft or deleted posts are excluded.
+                continue;
+            }
+
+            string candidateFull = Path.Combine(docsDir, rowTarget);
+            if (!IsDraftMarkdownFile(candidateFull))
+            {
+                preservedNonBlogRows.Add(rawLine);
+            }
+        }
+
+        var rebuiltTable = new List<string>();
+        if (headerAndSepLines.Count > 0)
+        {
+            rebuiltTable.AddRange(headerAndSepLines);
+        }
+        else
+        {
+            rebuiltTable.Add("| Document | Status | What it is |");
+            rebuiltTable.Add("| --- | --- | --- |");
+        }
+
+        if (existingBlogIndexRow is not null)
+        {
+            rebuiltTable.Add(existingBlogIndexRow);
+        }
+        else if (blogIndexDoc is not null)
+        {
+            rebuiltTable.Add(RenderSingleDocRow(blogIndexDoc, hasStatusCol, includeBlogDate: false));
+        }
+
+        rebuiltTable.AddRange(preservedNonBlogRows);
+
+        foreach (var post in publishedBlogPosts)
+        {
+            rebuiltTable.Add(RenderSingleDocRow(post, hasStatusCol, includeBlogDate: true));
+        }
+
+        if (firstTableLine >= 0 && lastTableLine >= firstTableLine)
+        {
+            lines.RemoveRange(firstTableLine, lastTableLine - firstTableLine + 1);
+            lines.InsertRange(firstTableLine, rebuiltTable);
+        }
+        else if (blogIndexDoc is not null || publishedBlogPosts.Count > 0)
+        {
+            var newBlock = new List<string> { "" };
+            newBlock.AddRange(rebuiltTable);
+            lines.InsertRange(end, newBlock);
+        }
+    }
+
     private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, bool hasStatusCol)
     {
         var result = new List<string>();
         foreach (var doc in docs.OrderBy(d => d.RelativePath, StringComparer.OrdinalIgnoreCase))
         {
-            string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
-            var (title, desc) = ExtractDocMetadata(doc.FullPath, doc.RelativePath);
-            string status = DetermineStatus(doc.RelativePath, fileContent);
-
-            // Escape pipe chars in title or desc
-            title = title.Replace("|", "\\|");
-            desc = desc.Replace("|", "\\|");
-
-            if (hasStatusCol)
-            {
-                result.Add($"| [{title}]({doc.RelativePath}) | {status} | {desc} |");
-            }
-            else
-            {
-                result.Add($"| [{title}]({doc.RelativePath}) | {desc} |");
-            }
+            result.Add(RenderSingleDocRow(doc, hasStatusCol, includeBlogDate: IsDatedBlogPostPath(doc.RelativePath)));
         }
         return result;
+    }
+
+    private static string RenderSingleDocRow(MarkdownDocInfo doc, bool hasStatusCol, bool includeBlogDate)
+    {
+        string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
+        var (title, desc) = ExtractDocMetadata(doc.FullPath, doc.RelativePath);
+        string status = DetermineStatus(doc.RelativePath, fileContent);
+
+        if (includeBlogDate)
+        {
+            string isoDate = ExtractBlogPostDate(doc.FullPath, doc.RelativePath);
+            if (!string.IsNullOrEmpty(isoDate) && !desc.StartsWith(isoDate, StringComparison.Ordinal))
+            {
+                desc = $"{isoDate} — {desc}";
+            }
+        }
+
+        // Escape pipe chars in title or desc
+        title = title.Replace("|", "\\|", StringComparison.Ordinal);
+        desc = desc.Replace("|", "\\|", StringComparison.Ordinal);
+
+        return hasStatusCol
+            ? $"| [{title}]({doc.RelativePath}) | {status} | {desc} |"
+            : $"| [{title}]({doc.RelativePath}) | {desc} |";
     }
 }

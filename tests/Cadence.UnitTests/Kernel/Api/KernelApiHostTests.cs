@@ -16,10 +16,13 @@ using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Intelligence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
@@ -28,8 +31,11 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 using Cadence.Kernel.Simulation;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
+using Cadence.Kernel.WorkQueues;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -116,7 +122,12 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeLineage _lineage = new();
     private readonly FakeActivityStore _activity = new();
     private readonly FakeEnrollmentDirectory _enrollments = new();
+    private readonly FakeStudyDirectory _studies = new();
+    private readonly FakeValidationFindings _findings = new();
     private readonly FakeSimulationInputs _simulationInputs = new();
+    private readonly FakeWorkQueues _workQueues = new();
+    private readonly FakeWorkItemTargetResolver _workItemTargets = new();
+    private readonly FakeLockRecords _locks = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -292,7 +303,8 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/studies/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/proposals", HttpStatusCode.NotFound)]
     [InlineData("/api/v1/kernel/proposals/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/proposals/proposal:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
-    [InlineData("/api/v1/kernel/activity?scope=nonsense", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?scope=nonsense:bad", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?scope=nonsense", HttpStatusCode.NotFound)]
     [InlineData("/api/v1/kernel/activity?family=Nope", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/activity?family=2", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/activity?limit=0", HttpStatusCode.BadRequest)]
@@ -319,7 +331,9 @@ public sealed class KernelApiHostTests : IDisposable
     public async Task CanI_WithoutAGrant_Denies_AndExplainsWhy()
     {
         var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
-        var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var resource = entry.ResourceKind == NodeKinds.ValidationFinding
+            ? FakeValidationFindings.OpenFinding
+            : new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
         using var client = Client();
         var ct = TestContext.Current.CancellationToken;
 
@@ -350,7 +364,9 @@ public sealed class KernelApiHostTests : IDisposable
     public async Task CanI_WithAGrantInEffect_Permits()
     {
         var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
-        var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var resource = entry.ResourceKind == NodeKinds.ValidationFinding
+            ? FakeValidationFindings.OpenFinding
+            : new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
         var grant = Grant.Issue(
             GrantId.New(), Tenant, Reader, entry.Capability.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
             withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
@@ -491,6 +507,45 @@ public sealed class KernelApiHostTests : IDisposable
         rows.Select(r => r.GetProperty("command").GetString()).Should().Equal(expected);
         rows.Should().OnlyContain(r => !r.GetProperty("decision").GetProperty("permitted").GetBoolean());
         rows.Should().OnlyContain(r => r.GetProperty("decision").GetProperty("explanation").GetProperty("claim").GetString()!.Length > 0);
+    }
+
+    /// <summary>
+    /// K-EXP-2: CanI and GetCommands apply INodeVisibility masking to Explanation evidence, Subject, and NextAction
+    /// targets so hidden or blinded NodeRefs are formatted as masked:&lt;kind&gt;:&lt;Reason&gt; without leaking UUIDs or dropping
+    /// conditions.
+    /// </summary>
+    [Fact]
+    [KernelRule("K-EXP-2")]
+    public async Task CanI_And_Commands_MaskRestrictedExplanationEvidenceWithoutLeakingUuids()
+    {
+        var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
+        var hiddenResource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var hiddenGrant = Grant.Issue(
+            GrantId.New(), Tenant, Reader, entry.Capability.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
+            withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
+        _authority.Grants.Add(hiddenGrant);
+        _visibility.Hidden[hiddenResource] = MaskReason.NotPermitted;
+        _visibility.Hidden[NodeRef.For(hiddenGrant.Id)] = MaskReason.Blinded;
+
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var canI = await ReadJsonAsync(
+            client, $"/api/v1/kernel/authorization/can-i?capability={entry.Capability.Token}&resource={hiddenResource}", ct);
+        string canIRaw = canI.RootElement.GetProperty("explanation").GetRawText();
+        canIRaw.Should().NotContain(hiddenResource.Id.ToString("D"));
+        canIRaw.Should().NotContain(hiddenGrant.Id.Value.ToString("D"));
+        canI.RootElement.GetProperty("explanation").GetProperty("subject").GetString()
+            .Should().Be($"masked:{entry.ResourceKind}:NotPermitted");
+        canI.RootElement.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("evidence")
+            .EnumerateArray().Select(e => e.GetString())
+            .Should().Equal($"masked:{entry.ResourceKind}:NotPermitted", $"masked:{NodeKinds.Grant}:Blinded");
+
+        using var commands = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{hiddenResource}/commands", ct);
+        string commandsRaw = commands.RootElement.GetRawText();
+        commandsRaw.Should().NotContain(hiddenGrant.Id.Value.ToString("D"));
+        commands.RootElement[0].GetProperty("decision").GetProperty("explanation").GetProperty("subject").GetString()
+            .Should().Be($"masked:{entry.ResourceKind}:NotPermitted");
     }
 
     /// <summary>Search passes the text, kinds and limit to kernel search in the caller's tenant and returns its hits.</summary>
@@ -1135,6 +1190,98 @@ public sealed class KernelApiHostTests : IDisposable
         _enrollments.Lookups.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Batch node resolution resolves up to 100 NodeRefs in one request, masks hidden objects in place keyed by the
+    /// requested ref, omits non-existent objects, and rejects batches exceeding 100 refs with 400.
+    /// </summary>
+    [Fact]
+    public async Task BatchNodes_ResolvesKnownNodes_MasksHiddenInPlace_OmitsUnknown_AndCapsAt100()
+    {
+        _visibility.Hidden[Enrollment.AtVersion(1)] = MaskReason.Blinded;
+        var missing = NodeRef.For(SiteId.New());
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var batch = await ReadJsonAsync(
+            client,
+            $"/api/v1/kernel/nodes?ref={Study}&ref={Enrollment}&ref={missing}",
+            ct);
+        var nodes = batch.RootElement.GetProperty("nodes");
+        nodes.TryGetProperty(Study.ToString(), out var studyNode).Should().BeTrue();
+        studyNode.GetProperty("ref").GetString().Should().Be(Study.AtVersion(3).ToString());
+        studyNode.GetProperty("code").GetString().Should().Be("CAD-101");
+        studyNode.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+
+        nodes.TryGetProperty(Enrollment.ToString(), out var maskedNode).Should().BeTrue();
+        maskedNode.GetProperty("ref").ValueKind.Should().Be(JsonValueKind.Null);
+        maskedNode.GetProperty("kind").GetString().Should().Be(NodeKinds.Enrollment);
+        maskedNode.GetProperty("mask").GetString().Should().Be("Blinded");
+
+        nodes.TryGetProperty(missing.ToString(), out _).Should().BeFalse();
+
+        var tooManyQuery = string.Join("&", Enumerable.Range(0, 101).Select(_ => $"ref={Study}"));
+        var tooMany = await client.GetAsync(new Uri($"/api/v1/kernel/nodes?{tooManyQuery}", UriKind.Relative), ct);
+        tooMany.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    /// <summary>
+    /// Study-scoped read endpoints accept a study code directly without a prior search round-trip, repeatable status
+    /// filters narrow validation findings, unified attention returns open proposals plus Open/Investigating findings,
+    /// and activity include_nodes embeds unmasked subject summaries while keeping masked subjects hidden.
+    /// </summary>
+    [Fact]
+    public async Task StudyCodeReads_SupportProposalsRepeatableFindingStatusesAttentionAndActivityNodes()
+    {
+        _visibility.Hidden[FakeActivityStore.HiddenSubject] = MaskReason.Blinded;
+        _visibility.Hidden[HiddenAffected] = MaskReason.Blinded;
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var proposalsByCode = await ReadJsonAsync(client, "/api/v1/kernel/studies/CAD-101/proposals?status=Open&limit=5", ct);
+        proposalsByCode.RootElement.EnumerateArray().Should().HaveCount(2);
+
+        using var findingsByStatus = await ReadJsonAsync(
+            client,
+            "/api/v1/kernel/studies/CAD-101/validation/findings?status=Open&status=Investigating&limit=10",
+            ct);
+        findingsByStatus.RootElement.GetProperty("total").GetInt32().Should().Be(2);
+        findingsByStatus.RootElement.GetProperty("findings").EnumerateArray()
+            .Select(f => f.GetProperty("status").GetString())
+            .Should().Equal("Open", "Investigating");
+
+        using var attention = await ReadJsonAsync(client, "/api/v1/kernel/studies/CAD-101/attention?limit=1", ct);
+        attention.RootElement.GetProperty("study_ref").GetString().Should().Be(Study.AtVersion(3).ToString());
+        attention.RootElement.GetProperty("proposals").EnumerateArray().Should().HaveCount(2);
+        attention.RootElement.GetProperty("findings").EnumerateArray().Should().ContainSingle()
+            .Which.GetProperty("status").GetString().Should().Be("Open");
+
+        using var activityPage = await ReadJsonAsync(client, "/api/v1/kernel/activity?scope=CAD-101&include_nodes=true", ct);
+        var entries = activityPage.RootElement.GetProperty("entries").EnumerateArray().ToList();
+        entries.Should().HaveCount(3);
+        entries[1].GetProperty("subject").ValueKind.Should().Be(JsonValueKind.Null);
+        entries[1].GetProperty("mask").GetString().Should().Be("Blinded");
+
+        var activityNodes = activityPage.RootElement.GetProperty("nodes");
+        activityNodes.TryGetProperty(FakeActivityStore.VisibleSubject.ToString(), out var visNode).Should().BeTrue();
+        visNode.GetProperty("code").GetString().Should().Be("017-010");
+        activityNodes.TryGetProperty(FakeActivityStore.HiddenSubject.ToString(), out _).Should().BeFalse();
+        activityNodes.TryGetProperty(NodeRef.For(FirstVersion.Id, 3).ToString(), out var pvNode).Should().BeTrue();
+        pvNode.GetProperty("code").GetString().Should().Be("v1");
+
+        using var workQueuesByCode = await ReadJsonAsync(client, "/api/v1/kernel/work-queues?within=CAD-101", ct);
+        workQueuesByCode.RootElement.GetProperty("queues").EnumerateArray().Should().ContainSingle()
+            .Which.GetProperty("code").GetString().Should().Be("ecrf.verify");
+        _workQueues.Queries.Should().ContainSingle().Which.Within.Should().Be(Study);
+
+        using var locksByCode = await ReadJsonAsync(client, "/api/v1/kernel/studies/CAD-101/locks", ct);
+        locksByCode.RootElement.GetProperty("study_ref").GetString().Should().Be(Study.ToString());
+        locksByCode.RootElement.GetProperty("study_code").GetString().Should().Be("CAD-101");
+
+        using var readinessByCode = await ReadJsonAsync(client, "/api/v1/kernel/studies/CAD-101/locks/readiness", ct);
+        readinessByCode.RootElement.GetProperty("study_ref").GetString().Should().Be(Study.ToString());
+        readinessByCode.RootElement.GetProperty("ready_for_lock").GetBoolean().Should().BeTrue();
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> Factory(
         bool knownTenant = true, string? dropClaim = null, bool hostVisibility = false)
     {
@@ -1168,8 +1315,18 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IActivityStore>(_activity);
                 services.RemoveAll<IEnrollmentDirectory>();
                 services.AddSingleton<IEnrollmentDirectory>(_enrollments);
+                services.RemoveAll<IStudyDirectory>();
+                services.AddSingleton<IStudyDirectory>(_studies);
+                services.RemoveAll<IValidationFindings>();
+                services.AddSingleton<IValidationFindings>(_findings);
                 services.RemoveAll<ISimulationInputs>();
                 services.AddSingleton<ISimulationInputs>(_simulationInputs);
+                services.RemoveAll<IWorkQueues>();
+                services.AddSingleton<IWorkQueues>(_workQueues);
+                services.RemoveAll<IWorkItemTargetResolver>();
+                services.AddSingleton<IWorkItemTargetResolver>(_workItemTargets);
+                services.RemoveAll<ILockRecords>();
+                services.AddSingleton<ILockRecords>(_locks);
 
                 // The activity projector reads the database the host is configured with, which these tests never open.
                 var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
@@ -1406,6 +1563,8 @@ public sealed class KernelApiHostTests : IDisposable
         private static readonly NodeSummary ConceptSummary = new(Concept.AtVersion(1), "Systolic Blood Pressure", "C25298", "Active");
         private static readonly NodeSummary FormSummary = new(FormInstance.AtVersion(1), "Vital Signs (Screening)");
         private static readonly NodeSummary ObservationSummary = new(RecordedObservation.AtVersion(1), "Systolic Blood Pressure: 120 mm[Hg]");
+        private static readonly NodeSummary ActivityEnrollmentSummary = new(FakeActivityStore.VisibleSubject, "017-010", "017-010", "Enrolled");
+        private static readonly NodeSummary FirstVersionSummary = new(NodeRef.For(FirstVersion.Id, 3), "Protocol version 1", "v1", "Approved");
 
         public List<TenantId> Tenants { get; } = [];
 
@@ -1489,6 +1648,16 @@ public sealed class KernelApiHostTests : IDisposable
             if (unversioned == FormInstance)
             {
                 return FormSummary;
+            }
+
+            if (unversioned == FakeActivityStore.VisibleSubject.Unversioned())
+            {
+                return ActivityEnrollmentSummary;
+            }
+
+            if (unversioned == NodeRef.For(FirstVersion.Id))
+            {
+                return FirstVersionSummary;
             }
 
             return unversioned == RecordedObservation ? ObservationSummary : null;
@@ -1593,5 +1762,201 @@ public sealed class KernelApiHostTests : IDisposable
             CancellationToken cancellationToken) =>
             Task.FromResult(new DependentsReport(
                 NodeRef.For(baseVersion).ToString(), LineageQuery.DefaultDepth, asOf.ValidAt, asOf.KnownAt, [], 0, false));
+    }
+
+    private sealed class FakeStudyDirectory : IStudyDirectory
+    {
+        private static readonly StudyDirectoryEntry KnownStudy = new(
+            StudyId.FromGuid(Study.Id),
+            3,
+            "CAD-101",
+            "Cadence 101",
+            "Phase II",
+            OrganizationId.New(),
+            1,
+            "SPONSOR-1",
+            "Cadence Sponsor",
+            1);
+
+        public Task<IReadOnlyList<StudyDirectoryEntry>> ListStudiesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudyDirectoryEntry>>([KnownStudy]);
+
+        public Task<StudyDirectoryEntry?> FindStudyAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(studyId == KnownStudy.StudyId ? KnownStudy : null);
+
+        public Task<StudyDirectoryEntry?> FindStudyByCodeAsync(TenantId tenant, string studyCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(string.Equals(studyCode, KnownStudy.StudyCode, StringComparison.OrdinalIgnoreCase) ? KnownStudy : null);
+
+        public Task<IReadOnlyList<OrganizationDirectoryEntry>> ListOrganizationsAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<OrganizationDirectoryEntry>>([]);
+
+        public Task<OrganizationDirectoryEntry?> FindOrganizationAsync(TenantId tenant, OrganizationId organizationId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<OrganizationDirectoryEntry?>(null);
+
+        public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
+            Task.FromResult<OrganizationDirectoryEntry?>(null);
+
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>([]);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<SiteDirectoryEntry?>(null);
+
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, OrganizationId? institutionId = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult<SiteDirectoryEntry?>(null);
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([]);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudySiteDirectoryEntry?>(null);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(TenantId tenant, StudyId studyId, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudySiteDirectoryEntry?>(null);
+    }
+
+    private sealed class FakeValidationFindings : IValidationFindings
+    {
+        private static readonly ValidationRunId Run = ValidationRunId.New();
+        private static readonly LibraryItemId Pack = LibraryItemId.New();
+        private static readonly ValidationFindingView[] AllFindings =
+        [
+            MakeFinding(ValidationSeverity.Error, FindingStatus.Open, "VS-001"),
+            MakeFinding(ValidationSeverity.Warning, FindingStatus.Investigating, "VS-002"),
+            MakeFinding(ValidationSeverity.Notice, FindingStatus.Resolved, "VS-003"),
+        ];
+
+        public static NodeRef OpenFinding => NodeRef.For(AllFindings[0].Id);
+
+        public Task<ValidationFindingView?> FindAsync(TenantId tenant, ValidationFindingId finding, CancellationToken cancellationToken) =>
+            Task.FromResult(AllFindings.FirstOrDefault(f => f.Id == finding));
+
+        public Task<FindingPage> ListAsync(TenantId tenant, FindingQuery query, CancellationToken cancellationToken)
+        {
+            if (query.Study != StudyId.FromGuid(Study.Id))
+            {
+                return Task.FromResult(new FindingPage([], 0));
+            }
+
+            var matching = AllFindings
+                .Where(f => query.Statuses is null || query.Statuses.Contains(f.Status))
+                .ToList();
+            return Task.FromResult(new FindingPage([.. matching.Take(query.Take)], matching.Count));
+        }
+
+        public Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken) =>
+            Task.FromResult<ValidationRunSummary?>(null);
+
+        private static ValidationFindingView MakeFinding(ValidationSeverity severity, FindingStatus status, string ruleId) =>
+            new(
+                ValidationFindingId.New(),
+                StudyId.FromGuid(Study.Id),
+                ValidationStage.Collection,
+                "core-vitals",
+                Pack,
+                ruleId,
+                1,
+                severity,
+                new FindingTarget(FindingTargetKind.DesignElement, "protocol", NodeRef.For(FirstVersion.Id).ToString()),
+                $"{ruleId} finding",
+                null,
+                [],
+                null,
+                null,
+                null,
+                status,
+                Run,
+                Run,
+                status == FindingStatus.Resolved ? Run : null,
+                null,
+                null);
+    }
+
+    private sealed class FakeWorkQueues : IWorkQueues
+    {
+        private static readonly NodeRef Definition = NodeRef.For(WorkQueueDefinitionId.New(), 1);
+        private static readonly DateTimeOffset DueSince = new(2026, 9, 30, 8, 0, 0, TimeSpan.Zero);
+
+        public List<WorkQueueQuery> Queries { get; } = [];
+
+        public Task<CommandResult<IReadOnlyList<WorkQueue>>> ReadAsync(TenantId tenant, WorkQueueQuery query, CancellationToken cancellationToken)
+        {
+            Queries.Add(query);
+            IReadOnlyList<WorkQueue> queues =
+            [
+                new WorkQueue(
+                    Definition,
+                    "ecrf.verify",
+                    1,
+                    "Source Data Verification",
+                    "observation.verify",
+                    [new WorkItem(RecordedObservation.AtVersion(1), NodeKinds.Observation, "Vital Signs SDV", DueSince, null)],
+                    Truncated: false),
+            ];
+            return Task.FromResult(CommandResult<IReadOnlyList<WorkQueue>>.Success(queues));
+        }
+    }
+
+    private sealed class FakeWorkItemTargetResolver : IWorkItemTargetResolver
+    {
+        public Task<IReadOnlyDictionary<NodeRef, WorkItemTargetContext>> ResolveAsync(
+            TenantId tenant,
+            IReadOnlyCollection<NodeRef> subjects,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<NodeRef, WorkItemTargetContext>>(
+                new Dictionary<NodeRef, WorkItemTargetContext>());
+    }
+
+    private sealed class FakeLockRecords : ILockRecords
+    {
+        public Task<StudyLockEntry?> FindAsync(TenantId tenant, AssertionId lockId, CancellationToken cancellationToken) =>
+            Task.FromResult<StudyLockEntry?>(null);
+
+        public Task<StudyLockList?> ListByStudyAsync(
+            TenantId tenant,
+            StudyId study,
+            DateTimeOffset validAt,
+            DateTimeOffset knownAt,
+            bool activeOnly,
+            CancellationToken cancellationToken)
+        {
+            if (study != StudyId.FromGuid(Study.Id))
+            {
+                return Task.FromResult<StudyLockList?>(null);
+            }
+
+            return Task.FromResult<StudyLockList?>(new StudyLockList(study, "CAD-101", validAt, knownAt, []));
+        }
+
+        public Task<LockReadinessSnapshot?> ReadReadinessAsync(
+            TenantId tenant,
+            StudyId study,
+            NodeRef scope,
+            CancellationToken cancellationToken)
+        {
+            if (study != StudyId.FromGuid(Study.Id))
+            {
+                return Task.FromResult<LockReadinessSnapshot?>(null);
+            }
+
+            var explanation = new Explanation(
+                scope,
+                "Scope is ready for lock.",
+                "kernel.locks",
+                [new ExplanationStep("Zero open blockers.", [scope])],
+                [EvaluatedCondition.Satisfied("lock.ready", "No open queries, missing items, or error findings.", scope)],
+                []);
+            return Task.FromResult<LockReadinessSnapshot?>(new LockReadinessSnapshot(
+                study,
+                "CAD-101",
+                scope,
+                ReadyForLock: true,
+                CanFreeze: true,
+                OpenQueryCount: 0,
+                MissingRequiredItemCount: 0,
+                Blockers: [],
+                Explanation: explanation,
+                OpenErrorFindingCount: 0));
+        }
     }
 }
