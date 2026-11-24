@@ -521,6 +521,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Imaging_ProblemDetails"];
         };
       };
+      /** @description Payload Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Imaging_ProblemDetails"];
+        };
+      };
     };
   };
   BatchIngestStudyFolder: {
@@ -642,6 +651,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Imaging_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };
