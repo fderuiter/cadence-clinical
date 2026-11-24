@@ -99,7 +99,7 @@
               Jurisdiction: {{ activeCountry }}
             </span>
           </div>
-          <h2 class="console-title">
+          <h2 class="console-title" tabindex="-1">
             Country-Level Multi-Site Activation Matrix
           </h2>
           <p class="console-subtitle">
@@ -296,7 +296,7 @@
             class="btn-icon-only"
             label="Dismiss batch greenlight certification banner"
             title="Dismiss"
-            @click="batchSuccessData = null"
+            @click="dismissBatchSuccess"
           >
             ✖
           </ClinicalIconButton>
@@ -514,6 +514,7 @@
 
               <td class="col-action">
                 <button
+                  :id="`btn-inspect-site-${site.site_id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   title="Inspect 6-Facet Scorecard and Essential Documents"
@@ -678,7 +679,7 @@
               {{ greenlightStatusBadgeText }}
             </span>
           </div>
-          <h2 class="console-title">
+          <h2 class="console-title" tabindex="-1">
             Site Greenlight Console: {{ activeSiteId }}
           </h2>
           <p class="console-subtitle">
@@ -1065,7 +1066,13 @@
 </template>
 
 <script setup>
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+  handoffFocus,
+  useInlineFocusHandoff,
+} from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";
@@ -1405,14 +1412,46 @@ function openBatchCertifyModal() {
   showBatchCertifyModal.value = true;
 }
 
-function inspectSiteDetail(site) {
-  activeSiteId.value = site.site_id;
-  switchToSingleView();
+const siteInspectHandoff = useInlineFocusHandoff({
+  closeFallback: ".matrix-view-container .console-title",
+});
+
+function dismissBatchSuccess() {
+  batchSuccessData.value = null;
+  void handoffFocus(".matrix-view-container .console-title");
 }
 
-function switchToMatrixView() {
+function inspectSiteDetail(site) {
+  siteInspectHandoff.rememberTrigger(`[id="btn-inspect-site-${site.site_id}"]`);
+  activeSiteId.value = site.site_id;
+  switchToSingleView();
+  void siteInspectHandoff.handoff(".single-view-container .console-title");
+}
+
+async function switchToMatrixView() {
+  const startedInSingleView =
+    typeof document !== "undefined" &&
+    Boolean(
+      document
+        .querySelector(".single-view-container")
+        ?.contains(document.activeElement)
+    );
+  const returnCandidates = [
+    activeSiteId.value ? `[id="btn-inspect-site-${activeSiteId.value}"]` : null,
+    ".matrix-view-container .console-title",
+  ];
   viewMode.value = "matrix";
-  fetchCountryMatrix();
+  if (startedInSingleView) {
+    void siteInspectHandoff.restoreTrigger(returnCandidates);
+  }
+  await fetchCountryMatrix();
+  if (
+    startedInSingleView &&
+    typeof document !== "undefined" &&
+    (!document.activeElement || document.activeElement === document.body)
+  ) {
+    void siteInspectHandoff.restoreTrigger(returnCandidates);
+  }
 }
 
 function switchToSingleView() {

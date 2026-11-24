@@ -558,16 +558,10 @@
             tabindex="0"
           >
             <div
-              v-if="selectedArticle.body_html"
+              v-if="selectedArticleRenderedHtml"
               class="prose-content"
-              v-html="selectedArticle.body_html"
+              v-html="selectedArticleRenderedHtml"
             />
-            <div
-              v-else-if="selectedArticle.body_markdown"
-              class="prose-content markdown-fallback"
-            >
-              <pre>{{ selectedArticle.body_markdown }}</pre>
-            </div>
             <div v-else class="prose-empty">
               <p>No content has been authored for this SOP draft.</p>
             </div>
@@ -1110,6 +1104,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
 import {
   knowledgeService,
+  compileSopMarkdownToHtml,
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
 } from "../api/knowledge.js";
@@ -1413,19 +1408,19 @@ export default {
 
     function renderPreviewHtml(markdown) {
       if (!markdown) return "<p>No content to preview.</p>";
-      let html = markdown
-        .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-        .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-        .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-        .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
-        .replace(/\*(.*)\*/gim, "<em>$1</em>")
-        .replace(/`([^`]+)`/gim, "<code>$1</code>")
-        .replace(/^\* (.*$)/gim, "<li>$1</li>")
-        .replace(/^\d+\. (.*$)/gim, "<li>$1</li>")
-        .replace(/\n\n+/g, "</p><p>")
-        .replace(/\n/g, "<br>");
-      return `<p>${html}</p>`;
+      return compileSopMarkdownToHtml(markdown);
     }
+
+    const selectedArticleRenderedHtml = computed(() => {
+      if (!selectedArticle.value) return "";
+      if (selectedArticle.value.body_html) {
+        return selectedArticle.value.body_html;
+      }
+      if (selectedArticle.value.body_markdown) {
+        return compileSopMarkdownToHtml(selectedArticle.value.body_markdown);
+      }
+      return "";
+    });
 
     // Actions & Selection
     function selectCategory(catId) {
@@ -1932,6 +1927,7 @@ export default {
       draftArticlesCount,
       availableTags,
       readerTabs,
+      selectedArticleRenderedHtml,
 
       // Methods
       getTagList,
