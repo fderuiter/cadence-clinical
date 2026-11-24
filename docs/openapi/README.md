@@ -8,8 +8,8 @@ The top-level `*_openapi.json` files are the OpenAPI documents the .NET services
 
 ## `legacy/`
 
-`legacy/` holds the specs of the Python services this platform was ported from. The .NET services don't serve them: the legacy aggregate lists 878 paths, and the .NET services serve 53. They stay because the web app is still typed against them:
+`legacy/` retains only `legacy/cdisc_openapi.json`, the aggregated 878-path Python-era OpenAPI snapshot (the 19 per-service Python `*_openapi.json` snapshots were retired per [ADR-2816](../adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md)). Across the 19 exported `.NET` service and module specs in `docs/openapi/*_openapi.json`, the platform currently serves **342 total operations** (**310 non-probe operations** alongside 32 `GET /healthz` and `GET /api/v1/<service>/status` probes; **297 paths** and **326 operations** in the aggregated `docs/openapi/cdisc_openapi.json`).
 
-- `apps/web/src/api/types.ts` was generated from `legacy/cdisc_openapi.json` with `openapi-typescript`.
+- `apps/web/src/api/types.ts` was originally generated from `legacy/cdisc_openapi.json` with `openapi-typescript` and is pruned in place to the **69 reachable paths** and **175 transitive schemas** still referenced by unmigrated web clients, while migrated clients bind directly to `apps/web/src/api/generated/<contract>.ts`.
 
-Most web API calls therefore target endpoints that no .NET service implements yet; [`docs/web/API_MIGRATION.md`](../web/API_MIGRATION.md) tracks moving the web onto these specs. Once the web clients move to the specs above, `legacy/` can be deleted. No gate checks the legacy specs.
+[`docs/web/API_MIGRATION.md`](../web/API_MIGRATION.md) tracks moving the remaining web clients onto the `.NET` specs above. Once the remaining web calls migrate, `legacy/cdisc_openapi.json` and `apps/web/src/api/types.ts` can be deleted. No gate checks `legacy/cdisc_openapi.json`.

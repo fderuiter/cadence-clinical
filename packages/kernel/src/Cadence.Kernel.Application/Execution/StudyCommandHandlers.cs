@@ -2,10 +2,12 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -133,6 +135,15 @@ internal sealed class LinkSiteToStudyHandler : ICommandHandler<LinkSiteToStudy, 
         var study = command.StudyId;
         var site = command.SiteId;
         await context.Work.LockAsync<Study>(study, cancellationToken).ConfigureAwait(false);
+        if (await LocksInForce.AnyAsync(
+                context.Work,
+                [NodeRef.For(study)],
+                LocksInForce.DenyingWrites,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
+        }
+
         if ((await context.Work.ReadAllAsync<StudySite>(s => s.StudyId == study && s.SiteId == site, cancellationToken).ConfigureAwait(false)).Count > 0)
         {
             return StudyErrors.AlreadyLinked;
