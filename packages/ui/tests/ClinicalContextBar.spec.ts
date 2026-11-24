@@ -117,7 +117,7 @@ describe("ClinicalContextBar", () => {
         return () =>
           h(
             "a",
-            { ...attrs, href, "data-router-link": "true" },
+            { href, ...attrs, "data-router-link": "true" },
             slots.default?.()
           );
       },
@@ -139,6 +139,7 @@ describe("ClinicalContextBar", () => {
       host.querySelectorAll<HTMLAnchorElement>('a[data-router-link="true"]')
     );
     expect(links).toHaveLength(4);
+    expect(links.every((l) => Boolean(l.getAttribute("href")))).toBe(true);
     expect(links[3].getAttribute("aria-current")).toBe("page");
     expect(links[0].getAttribute("aria-current")).toBeNull();
 
@@ -184,5 +185,109 @@ describe("ClinicalContextBar", () => {
     expect(source).toContain("min-height: 44px;");
     expect(source).toContain("min-width: 44px;");
     expect(source).not.toMatch(/\p{Extended_Pictographic}/u);
+    expect(source).toContain("@media (max-width: 767px)");
+    expect(source).toContain(
+      ".clinical-context-step.is-ancestor .clinical-context-prefix"
+    );
+  });
+
+  it("aligns off-screen [aria-current='page'] into view and toggles non-blocking start/end overflow chevron cues", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const app = createApp(ClinicalContextBar, {
+      studyCode: "CADENCE-101",
+      siteCode: "SITE-101",
+      participantCode: "017-0001",
+      currentLabel: "Data collection",
+    });
+    app.mount(host);
+
+    const nav = host.querySelector("nav.clinical-context-bar") as HTMLElement;
+    const list = host.querySelector("ol.clinical-context-list") as HTMLElement;
+    const current = host.querySelector('[aria-current="page"]') as HTMLElement;
+
+    let scrollLeftValue = 0;
+    Object.defineProperty(list, "clientWidth", {
+      configurable: true,
+      get: () => 320,
+    });
+    Object.defineProperty(list, "scrollWidth", {
+      configurable: true,
+      get: () => 680,
+    });
+    Object.defineProperty(list, "scrollLeft", {
+      configurable: true,
+      get: () => scrollLeftValue,
+      set: (val: number) => {
+        scrollLeftValue = val;
+      },
+    });
+    list.scrollTo = ((arg: ScrollToOptions | number) => {
+      if (typeof arg === "number") scrollLeftValue = arg;
+      else if (arg && typeof arg.left === "number") scrollLeftValue = arg.left;
+    }) as typeof list.scrollTo;
+
+    list.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 320,
+        bottom: 44,
+        width: 320,
+        height: 44,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    current.getBoundingClientRect = () => {
+      const visibleLeft = 510 - scrollLeftValue;
+      return {
+        left: visibleLeft,
+        top: 0,
+        right: visibleLeft + 140,
+        bottom: 44,
+        width: 140,
+        height: 44,
+        x: visibleLeft,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    };
+
+    // Wait for post-mount watch alignment: active crumb at end aligns scrollLeft to maxScrollLeft (360)
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(list.scrollLeft).toBe(360);
+    expect(nav.getAttribute("data-overflow-start")).toBe("true");
+    expect(nav.getAttribute("data-overflow-end")).toBeNull();
+
+    const startCue = host.querySelector(
+      ".clinical-context-overflow-cue--start"
+    ) as HTMLElement;
+    const endCue = host.querySelector(
+      ".clinical-context-overflow-cue--end"
+    ) as HTMLElement;
+    expect(startCue.getAttribute("aria-hidden")).toBe("true");
+    expect(endCue.getAttribute("aria-hidden")).toBe("true");
+    expect(startCue.style.display).toBe("");
+    expect(endCue.style.display).toBe("none");
+    expect(endCue.querySelector("svg")?.getAttribute("stroke-width")).toBe(
+      "1.75"
+    );
+
+    // Scroll back to start boundary (scrollLeft = 0): start cue clears, end cue appears
+    list.scrollLeft = 0;
+    list.dispatchEvent(new Event("scroll"));
+    await Promise.resolve();
+    expect(nav.getAttribute("data-overflow-start")).toBeNull();
+    expect(nav.getAttribute("data-overflow-end")).toBe("true");
+    expect(startCue.style.display).toBe("none");
+    expect(endCue.style.display).toBe("");
+
+    const a11y = await toBeAccessible({ element: nav });
+    expect(a11y.pass).toBe(true);
+
+    app.unmount();
+    host.remove();
   });
 });

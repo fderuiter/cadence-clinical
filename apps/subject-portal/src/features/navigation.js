@@ -1,7 +1,11 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
-import { handoffFocus } from "ui";
+import {
+  alignActiveScrollItem,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+} from "ui";
 import {
   defaultPortalViewId,
   isScreenAvailable,
@@ -35,12 +39,17 @@ function escapeSelectorId(id) {
 
 function hasActiveModalOrDrawer() {
   return Boolean(
+    (typeof hasActiveModalFocusTrap === "function" &&
+      hasActiveModalFocusTrap()) ||
     state.signatureModalOpen ||
     state.reconsentModalOpen ||
     state.isSyncDrawerOpen ||
     state.disburseModalOpen ||
     state.questionnaireCancelConfirmOpen ||
+    state.peekRecord ||
+    state.pinSetup?.isOpen ||
     state.session?.pinSetup?.isOpen ||
+    state.pinUnlock?.isOpen ||
     state.session?.pinUnlock?.isOpen
   );
 }
@@ -133,6 +142,14 @@ export function showView(viewId, options = {}) {
           );
         }
       }
+    }
+
+    const navTabsList = document.querySelector(".nav-tabs");
+    if (navTabsList) {
+      alignActiveScrollItem(navTabsList, {
+        selector: '[role="tab"][aria-selected="true"], .nav-item.active button',
+        immediate: Boolean(options.immediateScroll),
+      });
     }
 
     if (!options.preserveTabFocus && !hasActiveModalOrDrawer()) {

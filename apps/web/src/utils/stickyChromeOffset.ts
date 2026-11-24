@@ -15,6 +15,8 @@ export interface CanvasTopbarUpdateOptions {
 
 let shellMounted = false;
 let shellHeaderHeightPx = 0;
+let shellContextBarMounted = false;
+let shellContextBarHeightPx = 0;
 let canvasMounted = false;
 let canvasTopbarHeightPx = 0;
 let canvasInShell = true;
@@ -41,6 +43,60 @@ const INTERACTIVE_ROLES = new Set([
   "gridcell",
   "treeitem",
 ]);
+
+function isShortViewportHeight(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (
+    typeof window.innerHeight === "number" &&
+    window.innerHeight > 0 &&
+    window.innerHeight <= SHORT_VIEWPORT_MAX_HEIGHT
+  ) {
+    return true;
+  }
+  if (typeof window.matchMedia === "function") {
+    try {
+      const mql = window.matchMedia(
+        `(max-height: ${SHORT_VIEWPORT_MAX_HEIGHT}px)`
+      );
+      if (mql && mql.matches) {
+        return true;
+      }
+    } catch {
+      // Ignore matchMedia errors in test stubs
+    }
+  }
+  return false;
+}
+
+function resolveActiveContextBarHeightPx(
+  shortViewport: boolean,
+  inShellScope: boolean
+): number {
+  if (shortViewport || !inShellScope) {
+    return 0;
+  }
+  if (shellContextBarMounted && shellContextBarHeightPx > 0) {
+    return Math.max(0, Math.round(shellContextBarHeightPx));
+  }
+  if (typeof document !== "undefined") {
+    const domBar = document.getElementById("shell-context-bar");
+    if (domBar && typeof domBar.getBoundingClientRect === "function") {
+      const sticky =
+        typeof window === "undefined" ||
+        typeof window.getComputedStyle !== "function" ||
+        window.getComputedStyle(domBar).position === "sticky";
+      if (sticky) {
+        const measured = Math.round(domBar.getBoundingClientRect().height);
+        if (measured > 0) {
+          return measured;
+        }
+      }
+    }
+  }
+  return 0;
+}
 
 export function isStickyChromeReleased(): boolean {
   if (typeof window === "undefined") {
@@ -76,31 +132,43 @@ export function isStickyChromeReleased(): boolean {
 }
 
 export function getActiveStickyChromeHeightPx(): number {
-  if (isStickyChromeReleased()) {
-    return 0;
-  }
+  const released = isStickyChromeReleased();
+  const shortViewport = isShortViewportHeight();
+  const inShellScope = !canvasMounted || canvasInShell;
   const activeShell =
-    shellMounted && (!canvasMounted || canvasInShell)
+    !released && shellMounted && inShellScope
       ? Math.max(0, Math.round(shellHeaderHeightPx))
       : 0;
-  const activeTopbar = canvasMounted
-    ? Math.max(0, Math.round(canvasTopbarHeightPx))
-    : 0;
-  return activeShell + activeTopbar;
+  const activeContextBar = resolveActiveContextBarHeightPx(
+    shortViewport,
+    inShellScope
+  );
+  const activeTopbar =
+    !released && canvasMounted
+      ? Math.max(0, Math.round(canvasTopbarHeightPx))
+      : 0;
+  return activeShell + activeContextBar + activeTopbar;
 }
 
 export function syncRootStickyChromeOffset(): StickyChromeSyncResult {
   const released = isStickyChromeReleased();
+  const shortViewport = isShortViewportHeight();
+  const inShellScope = !canvasMounted || canvasInShell;
   const effectiveShell =
     !released && shellMounted
       ? Math.max(0, Math.round(shellHeaderHeightPx))
       : 0;
+  const effectiveContextBar = resolveActiveContextBarHeightPx(
+    shortViewport,
+    inShellScope
+  );
   const effectiveTopbar =
     !released && canvasMounted
       ? Math.max(0, Math.round(canvasTopbarHeightPx))
       : 0;
   const activeChrome =
-    (effectiveShell && (!canvasMounted || canvasInShell) ? effectiveShell : 0) +
+    (effectiveShell && inShellScope ? effectiveShell : 0) +
+    effectiveContextBar +
     effectiveTopbar;
   const stickyChromeOffset = activeChrome + FOCUS_RING_CLEARANCE_PX;
 
@@ -112,6 +180,10 @@ export function syncRootStickyChromeOffset(): StickyChromeSyncResult {
     document.documentElement.style.setProperty(
       "--shell-header-height",
       `${effectiveShell}px`
+    );
+    document.documentElement.style.setProperty(
+      "--shell-context-bar-height",
+      `${effectiveContextBar}px`
     );
     document.documentElement.style.setProperty(
       "--canvas-topbar-height",
@@ -143,6 +215,23 @@ export function updateShellStickyHeaderHeight(
 export function clearShellStickyHeaderHeight(): StickyChromeSyncResult {
   shellMounted = false;
   shellHeaderHeightPx = 0;
+  shellContextBarMounted = false;
+  shellContextBarHeightPx = 0;
+  return syncRootStickyChromeOffset();
+}
+
+export function updateShellStickyContextBarHeight(
+  heightPx: number
+): StickyChromeSyncResult {
+  shellContextBarMounted = true;
+  shellContextBarHeightPx =
+    Number.isFinite(heightPx) && heightPx > 0 ? Math.round(heightPx) : 0;
+  return syncRootStickyChromeOffset();
+}
+
+export function clearShellStickyContextBarHeight(): StickyChromeSyncResult {
+  shellContextBarMounted = false;
+  shellContextBarHeightPx = 0;
   return syncRootStickyChromeOffset();
 }
 
@@ -182,7 +271,7 @@ function isInsideStickyOrModalOverlay(el: Element): boolean {
   if (typeof el.closest !== "function") return true;
   if (
     el.closest(
-      '.app-header, .topbar, .skip-link, [role="dialog"], [role="alertdialog"], .navigator, #canvas-inspector'
+      '.app-header, #shell-context-bar, .topbar, .skip-link, [role="dialog"], [role="alertdialog"], .navigator, #canvas-inspector'
     )
   ) {
     return true;

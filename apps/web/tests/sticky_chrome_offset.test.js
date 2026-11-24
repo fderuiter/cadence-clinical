@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FOCUS_RING_CLEARANCE_PX,
   clearCanvasStickyTopbarHeight,
+  clearShellStickyContextBarHeight,
   clearShellStickyHeaderHeight,
   ensureFocusedElementClearsStickyChrome,
   getActiveStickyChromeHeightPx,
@@ -9,6 +10,7 @@ import {
   recordStickyChromePointerDown,
   syncRootStickyChromeOffset,
   updateCanvasStickyTopbarHeight,
+  updateShellStickyContextBarHeight,
   updateShellStickyHeaderHeight,
 } from "../src/utils/stickyChromeOffset";
 
@@ -33,11 +35,13 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
       value: 0,
     });
     clearCanvasStickyTopbarHeight();
+    clearShellStickyContextBarHeight();
     clearShellStickyHeaderHeight();
   });
 
   afterEach(() => {
     clearCanvasStickyTopbarHeight();
+    clearShellStickyContextBarHeight();
     clearShellStickyHeaderHeight();
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
@@ -167,6 +171,86 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
 
     btn.remove();
     header.remove();
+    scrollBySpy.mockRestore();
+  });
+
+  it("includes sticky #shell-context-bar height across desktop, collapsed-header tablet, and narrow mobile while releasing below 500px height", () => {
+    updateShellStickyHeaderHeight(48);
+    const withContextBar = updateShellStickyContextBarHeight(44);
+    expect(withContextBar).toEqual({
+      released: false,
+      shellHeight: 48,
+      topbarHeight: 0,
+      stickyChromeOffset: 48 + 44 + FOCUS_RING_CLEARANCE_PX,
+    });
+    expect(getActiveStickyChromeHeightPx()).toBe(92);
+
+    // Tablet (< 1280px) downward scroll collapses .app-header (0px) while #shell-context-bar (44px) remains sticky
+    window.innerWidth = 768;
+    const tabletCollapsed = updateShellStickyHeaderHeight(0);
+    expect(tabletCollapsed).toEqual({
+      released: false,
+      shellHeight: 0,
+      topbarHeight: 0,
+      stickyChromeOffset: 44 + FOCUS_RING_CLEARANCE_PX,
+    });
+    expect(getActiveStickyChromeHeightPx()).toBe(44);
+
+    // Narrow mobile portrait (320x667) releases .app-header while keeping #shell-context-bar sticky until < 500px height
+    window.innerWidth = 320;
+    window.innerHeight = 667;
+    const mobilePortrait = syncRootStickyChromeOffset();
+    expect(mobilePortrait).toEqual({
+      released: true,
+      shellHeight: 0,
+      topbarHeight: 0,
+      stickyChromeOffset: 44 + FOCUS_RING_CLEARANCE_PX,
+    });
+
+    // Short viewport height (<= 499px) releases #shell-context-bar as well
+    window.innerHeight = 400;
+    const shortViewport = syncRootStickyChromeOffset();
+    expect(shortViewport).toEqual({
+      released: true,
+      shellHeight: 0,
+      topbarHeight: 0,
+      stickyChromeOffset: FOCUS_RING_CLEARANCE_PX,
+    });
+    expect(getActiveStickyChromeHeightPx()).toBe(0);
+
+    // Controls inside #shell-context-bar are treated as sticky chrome and never trigger scrollBy
+    window.innerWidth = 1280;
+    window.innerHeight = 800;
+    window.scrollY = 200;
+    updateShellStickyHeaderHeight(48);
+    const scrollBySpy = vi
+      .spyOn(window, "scrollBy")
+      .mockImplementation(() => {});
+    const contextNav = document.createElement("nav");
+    contextNav.id = "shell-context-bar";
+    const crumbLink = document.createElement("a");
+    crumbLink.href = "#/studies";
+    crumbLink.getBoundingClientRect = () => ({
+      x: 16,
+      y: 52,
+      top: 52,
+      bottom: 96,
+      left: 16,
+      right: 96,
+      width: 80,
+      height: 44,
+      toJSON: () => ({}),
+    });
+    contextNav.appendChild(crumbLink);
+    document.body.appendChild(contextNav);
+
+    ensureFocusedElementClearsStickyChrome(crumbLink);
+    expect(scrollBySpy).not.toHaveBeenCalled();
+
+    clearShellStickyContextBarHeight();
+    expect(getActiveStickyChromeHeightPx()).toBe(48);
+
+    contextNav.remove();
     scrollBySpy.mockRestore();
   });
 });

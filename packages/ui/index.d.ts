@@ -744,6 +744,66 @@ export function useInlineFocusHandoff(
   options?: InlineFocusHandoffOptions
 ): InlineFocusHandoffControls;
 
+export interface ScrollOverflowState {
+  canScrollStart: boolean;
+  canScrollEnd: boolean;
+  scrollLeft: number;
+  maxScrollLeft: number;
+}
+
+export interface AlignActiveScrollOptions {
+  selector?: string;
+  immediate?: boolean;
+  behavior?: "auto" | "smooth";
+  threshold?: number;
+}
+
+export interface AlignActiveScrollResult {
+  aligned: boolean;
+  targetScrollLeft: number;
+  behavior: "auto" | "smooth";
+  canScrollStart: boolean;
+  canScrollEnd: boolean;
+}
+
+export function prefersReducedMotion(): boolean;
+
+export function computeScrollOverflowState(
+  container:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null,
+  threshold?: number
+): ScrollOverflowState;
+
+export function alignActiveScrollItem(
+  container:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null,
+  options?: AlignActiveScrollOptions
+): AlignActiveScrollResult;
+
+export function useActiveScrollAlignment(
+  containerRef:
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined),
+  options?: {
+    activeKey?: any;
+    selector?: string;
+    threshold?: number;
+  }
+): {
+  canScrollStart: import("vue").Ref<boolean>;
+  canScrollEnd: import("vue").Ref<boolean>;
+  alignActiveItem: (
+    options?: AlignActiveScrollOptions
+  ) => AlignActiveScrollResult;
+  updateOverflowState: () => ScrollOverflowState;
+};
+
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,
   options?: {
