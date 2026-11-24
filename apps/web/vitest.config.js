@@ -44,6 +44,7 @@ export default mergeConfig(
       exclude: [
         "**/node_modules/**",
         "**/dist/**",
+        "**/dist-demo/**",
         "**/tests/e2e/**",
         "**/tests/browser/**",
       ],

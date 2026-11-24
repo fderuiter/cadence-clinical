@@ -20,7 +20,7 @@ public static class CliLinterGateService
 
     private static readonly string[] ExcludedDirectories =
     [
-        ".git", ".venv", ".cadence", "node_modules", "bin", "obj", "dist", "coverage", "playwright-report", "test-results"
+        ".git", ".venv", ".cadence", "node_modules", "bin", "obj", "dist", "dist-demo", "coverage", "playwright-report", "test-results"
     ];
 
     public sealed record ResolvedLinterTool(

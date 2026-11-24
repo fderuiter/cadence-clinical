@@ -301,6 +301,7 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
+      "**/dist-demo/**",
       "**/tests/e2e/**",
       "**/tests/browser/**",
     ],

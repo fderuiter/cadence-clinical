@@ -1,6 +1,9 @@
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createDemoFixturesPlugin } from "../../../scripts/vite-strip-demo-fixtures.mjs";
+import {
+  createConstantFoldDemoModePlugin,
+  createDemoFixturesPlugin,
+} from "../../../scripts/vite-strip-demo-fixtures.mjs";
 
 const webAppDir = path.resolve(process.cwd());
 const viewsImporter = path.join(webAppDir, "src/views/CtmsView.vue");
@@ -97,5 +100,60 @@ describe("vite-strip-demo-fixtures plugin", () => {
       devServeResolve("./demo/EcrfDemoWorkspace.vue", viewsImporter)
     ).toBeNull();
     expect(devServeResolve("./demo/clinicalUsdm", storesImporter)).toBeNull();
+  });
+
+  it("constant-folds bare and Vue-compiled zero-argument isDemoBuild() calls during vite build", () => {
+    delete process.env.VITE_DEMO_MODE;
+    const appShellPath = path.join(webAppDir, "src/components/AppShell.vue");
+    const sampleCompiled = [
+      "const flag = isDemoBuild();",
+      "const tplSetup = $setup.isDemoBuild() ? 'demo' : 'prod';",
+      "const tplCtx = _ctx.isDemoBuild() ? 'demo' : 'prod';",
+      "const parameterized = isDemoBuild(env);",
+    ].join("\n");
+
+    const prodPlugin = createConstantFoldDemoModePlugin(webAppDir);
+    prodPlugin.configResolved?.({
+      command: "build",
+      mode: "production",
+      env: {},
+    } as never);
+    const prodTransform = prodPlugin.transform as (
+      code: string,
+      id: string
+    ) => { code: string } | null;
+    const foldedProd = prodTransform(sampleCompiled, appShellPath);
+    expect(foldedProd?.code).toContain("const flag = (false);");
+    expect(foldedProd?.code).toContain(
+      "const tplSetup = (false) ? 'demo' : 'prod';"
+    );
+    expect(foldedProd?.code).toContain(
+      "const tplCtx = (false) ? 'demo' : 'prod';"
+    );
+    expect(foldedProd?.code).toContain(
+      "const parameterized = isDemoBuild(env);"
+    );
+
+    const demoPlugin = createConstantFoldDemoModePlugin(webAppDir);
+    demoPlugin.configResolved?.({
+      command: "build",
+      mode: "demo",
+      env: {},
+    } as never);
+    const demoTransform = demoPlugin.transform as (
+      code: string,
+      id: string
+    ) => { code: string } | null;
+    const foldedDemo = demoTransform(sampleCompiled, appShellPath);
+    expect(foldedDemo?.code).toContain("const flag = (true);");
+    expect(foldedDemo?.code).toContain(
+      "const tplSetup = (true) ? 'demo' : 'prod';"
+    );
+    expect(foldedDemo?.code).toContain(
+      "const tplCtx = (true) ? 'demo' : 'prod';"
+    );
+    expect(foldedDemo?.code).toContain(
+      "const parameterized = isDemoBuild(env);"
+    );
   });
 });

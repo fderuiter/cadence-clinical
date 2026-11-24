@@ -9,8 +9,8 @@ import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 // Where the portal sends API calls. In the Vite dev server this is the portal's own origin, and its /api proxy forwards
-// to the gateway, which sends no CORS headers (#5451); demo builds resolve to same-origin for MSW interception, while
-// standard builds and tests default to the gateway's published port.
+// to the gateway, which sends no CORS headers (#5451); demo and unconfigured production builds resolve to same-origin,
+// while local non-production builds and tests default to the gateway's published port.
 export function getApiBaseUrl() {
   const configured = import.meta.env?.VITE_API_BASE_URL;
   if (configured) {
@@ -29,7 +29,13 @@ export function getApiBaseUrl() {
   ) {
     return globalThis.location.origin.replace(/\/+$/, "");
   }
-  return "http://localhost:8000";
+  if (!import.meta.env.PROD) {
+    return "http://localhost:8000";
+  }
+  return typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+    ? globalThis.location.origin.replace(/\/+$/, "")
+    : "";
 }
 
 // Auth Fetch Helpers

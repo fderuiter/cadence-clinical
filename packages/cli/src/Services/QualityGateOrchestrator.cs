@@ -93,13 +93,23 @@ public static class QualityGateOrchestrator
                 continue;
             }
 
-            if (!context.PreCommit && gate.PostBuild && !PublicBundleValidatorService.AnyDefaultBundleExists(context.RepoRoot))
+            var gateContext = context;
+            if (!context.PreCommit && gate.PostBuild)
             {
-                AnsiConsole.MarkupLine($"Skipped: {Markup.Escape(gate.PostBuildSkipNote ?? "post-build output directories do not exist")}.");
-                continue;
+                var existingBundles = PublicBundleValidatorService.GetExistingDefaultBundles(context.RepoRoot);
+                if (existingBundles.Count == 0)
+                {
+                    AnsiConsole.MarkupLine($"Skipped: {Markup.Escape(gate.PostBuildSkipNote ?? "post-build output directories do not exist")}.");
+                    continue;
+                }
+
+                if (context.TargetFiles is null)
+                {
+                    gateContext = context with { TargetFiles = [.. existingBundles] };
+                }
             }
 
-            if (!gate.Run(context))
+            if (!gate.Run(gateContext))
             {
                 AnsiConsole.MarkupLine($"[red]Gate {i + 1} ({Markup.Escape(gate.Name)}) failed![/]");
                 failed++;

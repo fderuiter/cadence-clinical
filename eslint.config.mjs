@@ -2811,6 +2811,7 @@ export default [
   {
     ignores: [
       "**/dist/**",
+      "**/dist-demo/**",
       "**/node_modules/**",
       "**/.venv/**",
       "**/.cadence/**",

@@ -71,7 +71,7 @@ jobs:
       - name: Verify Public Bundles
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
-        run: node scripts/run-cli.js check public-bundle
+        run: node scripts/run-cli.js check public-bundle docs/.vitepress/dist
 
       - name: Generate Documentation Artifact SHA256 Checksums
         run: |

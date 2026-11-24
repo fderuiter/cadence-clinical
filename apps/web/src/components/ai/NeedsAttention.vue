@@ -104,6 +104,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfQueriesApi,
@@ -125,6 +126,8 @@ import {
   parseNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useAuthStore } from "../../stores/auth";
+import { isDemoBuild } from "../../utils/demoMode.js";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -255,24 +258,33 @@ async function loadAttention(rawCode: string): Promise<void> {
           : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
       ]);
     if (!isCurrent()) return;
-    proposals.value = openProposals;
+    const safeProposals = Array.isArray(openProposals) ? openProposals : [];
+    proposals.value = safeProposals;
+    const pinia = getActivePinia();
+    const authStore = pinia ? useAuthStore(pinia) : null;
+    const canHydrateSdvAlerts =
+      typeof ecrfQueriesApi?.listSdvAlerts === "function" &&
+      (!authStore ||
+        Boolean(authStore.user || authStore.isAuthenticated || isDemoBuild()));
     const hintedStudyRef =
-      openProposals.find((p) => p.study)?.study ??
+      safeProposals.find((p) => p.study)?.study ??
       openFindingsPage?.findings?.[0]?.study_ref ??
       investigatingFindingsPage?.findings?.[0]?.study_ref ??
-      (typeof kernelApi.search === "function"
+      (canHydrateSdvAlerts && typeof kernelApi.search === "function"
         ? await findKernelStudyRef(code).catch(() => null)
         : null);
     if (!isCurrent()) return;
     if (hintedStudyRef) {
       seedKernelStudyRef(code, hintedStudyRef);
     }
-    seedProposalSummaries(openProposals);
+    seedProposalSummaries(safeProposals);
     findings.value = dedupeCappedFindings([
       ...(openFindingsPage?.findings ?? []),
       ...(investigatingFindingsPage?.findings ?? []),
     ]);
-    await hydrateStudySdvAlerts(hintedStudyRef, isCurrent);
+    if (canHydrateSdvAlerts) {
+      await hydrateStudySdvAlerts(hintedStudyRef, isCurrent);
+    }
   } catch (err) {
     if (seq !== requestSeq) return;
     if ((err as { status?: number | null } | null)?.status === 404) {

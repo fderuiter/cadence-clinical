@@ -43,6 +43,7 @@ public static class ExporterBinaryResolver
         "obj",
         "node_modules",
         "dist",
+        "dist-demo",
         "build",
         "coverage",
         "TestResults",

@@ -376,6 +376,11 @@ public static class CiPlan
                 ToolHint = "install bash (Git for Windows includes it)",
                 Commands = [new CiCommand("bash", ["scripts/test_installer_checksums.sh"])],
             },
+            new("lint-and-static", "Verify frontend production bundles")
+            {
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands = [NodeCli("check", "public-bundle", "apps/web/dist", "apps/subject-portal/dist")],
+            },
             new("lint-and-static", "Run Markdown validation")
             {
                 EnvironmentIfPassed = NativeAotCacheHit,
@@ -425,7 +430,7 @@ public static class CiPlan
             new("docs-build", "Verify public bundles")
             {
                 EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "public-bundle")],
+                Commands = [NodeCli("check", "public-bundle", "docs/.vitepress/dist")],
             },
         ])
         {

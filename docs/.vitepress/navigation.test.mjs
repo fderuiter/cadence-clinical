@@ -20,6 +20,7 @@ import {
 } from "./repoLinks.mjs";
 import { createRequire } from "module";
 import rootDocsModule from "./rootDocs.cjs";
+import stagePortalDemosModule from "../../scripts/stage-portal-demos.js";
 import {
   buildPortalSearchCatalog,
   parseDocumentationIndex,
@@ -29,6 +30,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const { STAGED_ROOT_DOCS } = rootDocsModule;
+const { stagePortalDemos } = stagePortalDemosModule;
 const {
   extractMermaidBlocks,
   validatePortalMermaidDiagrams,
@@ -590,6 +592,91 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         "adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md"
       )
     ).toBeGreaterThan(catalog.getSearchBoostMultiplier("CI.md"));
+  });
+
+  it("stages demo subpaths from apps/*/dist-demo without mutating production apps/*/dist outputs", () => {
+    const tmpRepo = makeTempWorkspace();
+    const docsDist = path.join(tmpRepo, "docs", ".vitepress", "dist");
+    const webProdDist = path.join(tmpRepo, "apps", "web", "dist");
+    const portalProdDist = path.join(tmpRepo, "apps", "subject-portal", "dist");
+
+    fs.mkdirSync(docsDist, { recursive: true });
+    fs.writeFileSync(path.join(docsDist, "index.html"), "<html>docs</html>\n");
+    fs.mkdirSync(webProdDist, { recursive: true });
+    fs.writeFileSync(
+      path.join(webProdDist, "index.html"),
+      "<html>web-prod</html>\n"
+    );
+    fs.mkdirSync(portalProdDist, { recursive: true });
+    fs.writeFileSync(
+      path.join(portalProdDist, "index.html"),
+      "<html>portal-prod</html>\n"
+    );
+
+    const invokedCommands = [];
+    stagePortalDemos({
+      rootDir: tmpRepo,
+      portalBase: "/cadence-clinical/",
+      runCommand: (cmd, opts) => {
+        invokedCommands.push({ cmd, basePath: opts.env.VITE_BASE_PATH });
+        if (cmd.includes("--filter web")) {
+          const outDir = path.join(tmpRepo, "apps", "web", "dist-demo");
+          fs.mkdirSync(outDir, { recursive: true });
+          fs.writeFileSync(
+            path.join(outDir, "index.html"),
+            "<html>web-demo</html>\n"
+          );
+          fs.writeFileSync(
+            path.join(outDir, "mockServiceWorker.js"),
+            "// msw\n"
+          );
+        } else {
+          const outDir = path.join(
+            tmpRepo,
+            "apps",
+            "subject-portal",
+            "dist-demo"
+          );
+          fs.mkdirSync(outDir, { recursive: true });
+          fs.writeFileSync(
+            path.join(outDir, "index.html"),
+            "<html>portal-demo</html>\n"
+          );
+          fs.writeFileSync(path.join(outDir, "manifest.json"), "{}\n");
+          fs.writeFileSync(
+            path.join(outDir, "mockServiceWorker.js"),
+            "// msw\n"
+          );
+          fs.writeFileSync(path.join(outDir, "sw.js"), "// sw\n");
+        }
+      },
+    });
+
+    expect(invokedCommands).toEqual([
+      {
+        cmd: "pnpm --filter web build:demo",
+        basePath: "/cadence-clinical/demo/",
+      },
+      {
+        cmd: "pnpm --filter subject-portal build:demo",
+        basePath: "/cadence-clinical/subject-portal/",
+      },
+    ]);
+    expect(
+      fs.readFileSync(path.join(docsDist, "demo", "index.html"), "utf8")
+    ).toBe("<html>web-demo</html>\n");
+    expect(
+      fs.readFileSync(
+        path.join(docsDist, "subject-portal", "index.html"),
+        "utf8"
+      )
+    ).toBe("<html>portal-demo</html>\n");
+    expect(fs.readFileSync(path.join(webProdDist, "index.html"), "utf8")).toBe(
+      "<html>web-prod</html>\n"
+    );
+    expect(
+      fs.readFileSync(path.join(portalProdDist, "index.html"), "utf8")
+    ).toBe("<html>portal-prod</html>\n");
   });
 
   it("parses all 41 Mermaid diagrams across 20 portal pages cleanly via JSDOM and preserves inline code v-pre", async () => {

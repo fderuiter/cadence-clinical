@@ -35,6 +35,7 @@ public static class MarkdownValidatorService
                 $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
                 $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
                 $"{Path.DirectorySeparatorChar}dist{Path.DirectorySeparatorChar}",
+                $"{Path.DirectorySeparatorChar}dist-demo{Path.DirectorySeparatorChar}",
                 $"{Path.DirectorySeparatorChar}.system_generated{Path.DirectorySeparatorChar}",
                 $"{Path.DirectorySeparatorChar}.tmp{Path.DirectorySeparatorChar}"
             ];

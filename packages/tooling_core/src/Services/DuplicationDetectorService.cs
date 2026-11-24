@@ -28,7 +28,7 @@ public static class DuplicationDetectorService
 
     private static readonly string[] IgnoredPathKeywords =
     [
-        "node_modules", "tests", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "coverage", "Migrations", "migrations", ".git", "mockServiceWorker.js"
+        "node_modules", "tests", ".venv", ".cadence", "__pycache__", "dist", "dist-demo", "build", "bin", "obj", "coverage", "Migrations", "migrations", ".git", "mockServiceWorker.js"
     ];
 
     public static int DetectDuplication(

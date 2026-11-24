@@ -49,11 +49,33 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
     expect(keycloakCalls).toEqual([]);
   });
 
-  it("resolves same-origin API base URL in demo builds and localhost:8000 in standard builds", () => {
+  it("resolves same-origin API base URL in demo and unconfigured production builds, and localhost:8000 only in non-production builds", () => {
     vi.stubEnv("VITE_API_BASE_URL", "");
     vi.stubEnv("VITE_DEMO_MODE", "false");
+    vi.stubEnv("PROD", false);
     expect(getApiBaseUrl()).toBe("http://localhost:8000");
 
+    vi.stubEnv("PROD", true);
+    expect(getApiBaseUrl()).toBe(window.location.origin);
+    expect(getApiBaseUrl()).not.toContain("localhost:8000");
+
+    const originalLocation = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "location"
+    );
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: { origin: "null" },
+    });
+    try {
+      expect(getApiBaseUrl()).toBe("");
+    } finally {
+      if (originalLocation) {
+        Object.defineProperty(globalThis, "location", originalLocation);
+      }
+    }
+
+    vi.stubEnv("PROD", false);
     vi.stubEnv("VITE_DEMO_MODE", "true");
     expect(getApiBaseUrl()).toBe(window.location.origin);
     expect(getApiBaseUrl()).not.toContain("localhost:8000");

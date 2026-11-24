@@ -268,17 +268,57 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
         PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1,
             "staged /demo/ cold-boot raw bytes over 1.35 MiB must fail closed");
 
-        Directory.Delete(Path.Combine(_dir, "docs/.vitepress/dist/demo"), recursive: true);
+        File.Delete(Path.Combine(_dir, "docs/.vitepress/dist/demo/assets/vendor-big.js"));
+        Write("docs/.vitepress/dist/demo/index.html", CleanHtml());
         Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
         Write("docs/.vitepress/dist/subject-portal/assets/index.js", new string('b', (int)PublicBundleValidatorService.MaxSubjectPortalAssetsRawBytes));
 
         PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1,
-            "staged /subject-portal/assets/ volume over 920 KiB must fail closed");
+            "staged /subject-portal/assets/ volume over 992 KiB must fail closed");
+    }
+
+    [Fact]
+    public void ValidatePublicBundles_FailsClosed_WhenDocsBundleIsMissingStagedDemoOrSubjectPortalEntrypoints()
+    {
+        Write("docs/.vitepress/dist/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir, ["docs/.vitepress/dist"]).Should().Be(1,
+            "docs/.vitepress/dist must fail closed when staged demo/index.html is missing");
+
+        Write("docs/.vitepress/dist/demo/index.html", CleanHtml());
+        File.Delete(Path.Combine(_dir, "docs/.vitepress/dist/subject-portal/index.html"));
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir, ["docs/.vitepress/dist"]).Should().Be(1,
+            "docs/.vitepress/dist must fail closed when staged subject-portal/index.html is missing");
+
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
+        PublicBundleValidatorService.ValidatePublicBundles(_dir, ["docs/.vitepress/dist"]).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidatePublicBundles_ScopesToExplicitTargetBundles_AndTreatsDistDemoAsDemoBundle()
+    {
+        Write("apps/web/dist/index.html", CleanHtml());
+        Write("apps/subject-portal/dist/index.html", CleanHtml());
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir, ["apps/web/dist", "apps/subject-portal/dist"]).Should().Be(0,
+            "explicit app bundle targets should pass without requiring docs/.vitepress/dist");
+
+        PublicBundleValidatorService.ValidatePublicBundles(_dir, ["apps/web/dist", "docs/.vitepress/dist"]).Should().Be(1,
+            "missing explicit target bundle directory must fail closed");
+
+        Write("apps/web/dist-demo/index.html", CleanHtml());
+        Write("apps/web/dist-demo/assets/vendor-auth-abc123.js", "export const kc = 1;\n");
+        PublicBundleValidatorService.ValidatePublicBundles(_dir, ["apps/web/dist-demo"]).Should().Be(1,
+            "isolated dist-demo directories must enforce standalone demo bundle contamination checks");
     }
 
     private void SeedCleanBundles()
     {
         Write("docs/.vitepress/dist/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/demo/index.html", CleanHtml());
+        Write("docs/.vitepress/dist/subject-portal/index.html", CleanHtml());
         Write("apps/web/dist/index.html", CleanHtml());
         Write("apps/subject-portal/dist/index.html", CleanHtml());
     }
