@@ -1,4 +1,4 @@
-# ADR-2832: Adopt Microsoft.Testing.Platform and Isolate Unit WebApplicationFactory Hosts
+# ADR-2833: Adopt Microsoft.Testing.Platform and Isolate Unit WebApplicationFactory Hosts
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -22,7 +22,7 @@ Cadence Clinical's five `.NET 10` test projects (`Cadence.UnitTests`, `Cadence.I
 - **Native `.NET 10` Test Execution:** Eliminate the legacy VSTest shim and `<IsTestingPlatformApplication>false</IsTestingPlatformApplication>` override so all five `xunit.v3` projects execute as first-class `Microsoft.Testing.Platform` applications.
 - **Fail-Closed GxP Database Evidence (`PRD-SYS-053`, ADR-2531):** `scripts/check-database-test-results.sh` and `DatabaseTestEvidence.FindSkipped` must reject any `NotExecuted` database test outside `DatabaseTestEvidence.OptInTests` and preserve skip reasons across both multi-line VSTest TRX and single-line `xunit.v3` MTP TRX formats.
 - **Hermetic, Zero-Dependency Unit & Architecture Suites:** `Cadence.ArchitectureTests` and `Cadence.UnitTests` must pass in clean `.NET` checkouts without `node_modules` or a local PostgreSQL server on `127.0.0.1:5432`, while keeping `FrontendQualityGateService.EnsureNodeModules` fail-closed and keeping `SigTokenUseStoreStartupCheck` active in unit hosts (ADR-2515).
-- **CI / Local Runner Parity:** `.github/workflows/ci.yml`, `CiPlan.cs` (`LocalCiPlanTests`), `QualityGates.cs` (all 43 gates), `TestCommand.cs`, and `SyncGxPService.cs` must stay strictly synchronized.
+- **CI / Local Runner Parity:** `.github/workflows/ci.yml`, `CiPlan.cs` (`LocalCiPlanTests`), `QualityGates.cs` (all 45 gates), `TestCommand.cs`, and `SyncGxPService.cs` must stay strictly synchronized.
 
 ## 3. Options Considered
 

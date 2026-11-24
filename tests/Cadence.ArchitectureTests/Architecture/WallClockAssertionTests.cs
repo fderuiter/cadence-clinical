@@ -59,10 +59,16 @@ public partial class WallClockAssertionTests
     [InlineData("expect(elapsedMs).toBeLessThanOrEqual(500);", 1)]
     [InlineData("expect(performance.now() - start).toBeLessThan(50);", 1)]
     [InlineData("expect(latency).toBeLessThan(20)", 1)]
+    [InlineData("expect(Date.now() - startedAt).toBeLessThanOrEqual(250);", 1)]
     [InlineData("expect(result.length).toBeLessThan(3);", 0)]
     [InlineData("expect(queued.length).toBe(0);", 0)]
     [InlineData("expect(motionStyles.animationDurationSec).toBeLessThanOrEqual(0.001);", 0)]
     [InlineData("expect(motionStyles.transitionDurationSec).toBeLessThanOrEqual(0.001);", 0)]
+    [InlineData("expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);", 0)]
+    [InlineData("expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);", 0)]
+    [InlineData("expect(motionStyles.drawerTransitionDuration).toBeLessThanOrEqual(0.001);", 0)]
+    [InlineData("expect(reducedMotionDuration).toBeLessThanOrEqual(0.001);", 0)]
+    [InlineData("expect(parseFloat(btnStyle.animationDuration)).toBeLessThanOrEqual(0.001);", 0)]
     public void FrontendWallClockAssertions_FindsLatencyCeilings(string source, int expected)
     {
         FrontendWallClockAssertions(source).Should().HaveCount(expected);
@@ -114,6 +120,6 @@ public partial class WallClockAssertionTests
     [GeneratedRegex(@"(?i)(elapsed|latency)\w*(\.\w+)*\.Should\(\)\.BeLess")]
     private static partial Regex WallClockAssertionRegex();
 
-    [GeneratedRegex(@"(?i)expect\(.*?((?<!animation|transition)duration|elapsed|latency|performance\.now|Date\.now).*?\)\.toBeLess")]
+    [GeneratedRegex(@"(?i)expect\(.*?((?<!(?:animation|transition|motion)\w*)duration|elapsed|latency|performance\.now|Date\.now).*?\)\.toBeLess")]
     private static partial Regex FrontendWallClockAssertionRegex();
 }

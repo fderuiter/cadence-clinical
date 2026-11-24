@@ -37,9 +37,10 @@ Publishing a template needs `econsent_template:publish` (sponsor data management
 
 ## Configuration and secrets at rest
 
-| Setting                | Purpose                                                                                                                                                                    |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default. |
+| Setting                          | Purpose                                                                                                                                                                                                                                                                                                                |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FIELD_ENCRYPTION_KEY`           | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default.                                                                                                                                             |
+| `CADENCE_BIOMETRIC_LIVENESS_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) shared with `kernel` to verify 15-minute biometric liveness tokens and consume `liveness:{jti}` once in `econsent.consumed_signature_tokens` ([ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)). |
 
 Consent signatures (`consent_signatures`, #4770):
 
@@ -61,6 +62,8 @@ Consent signatures (`consent_signatures`, #4770):
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export FIELD_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+export CADENCE_BIOMETRIC_LIVENESS_KEY="$(openssl rand -base64 32)"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/econsent/src/Cadence.Apps.Econsent.csproj
 ```

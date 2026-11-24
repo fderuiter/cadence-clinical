@@ -63,7 +63,8 @@ internal static class ServiceHosts
                 .UseTestDemographicsKey().UseTestRandomizationKey()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
-                .UseTestImagingDeidentificationKeys();
+                .UseTestImagingDeidentificationKeys()
+                .UseTestBiometricLivenessKey();
             host.ConfigureTestServices(services =>
             {
                 services.RemoveBackgroundHostedServices();

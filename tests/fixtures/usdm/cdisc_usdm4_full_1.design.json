@@ -322,7 +322,8 @@
               "conceptId": "00000000-0000-7000-8000-000000069260",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Quantity"
           },
           {
             "id": "Activity_1.BiomedicalConcept_2",
@@ -330,7 +331,8 @@
               "conceptId": "00000000-0000-7000-8000-000000028421",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Text"
           },
           {
             "id": "Activity_1.BiomedicalConcept_3",
@@ -338,7 +340,8 @@
               "conceptId": "00000000-0000-7000-8000-000000017049",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Text"
           },
           {
             "id": "Activity_1.BiomedicalConcept_4",
@@ -346,7 +349,8 @@
               "conceptId": "00000000-0000-7000-8000-000000025208",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Quantity"
           }
         ]
       },
@@ -365,7 +369,8 @@
               "conceptId": "00000000-0000-7000-8000-000000025208",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Quantity"
           }
         ]
       },
@@ -379,7 +384,8 @@
               "conceptId": "00000000-0000-7000-8000-000000025298",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Quantity"
           },
           {
             "id": "Activity_4.BiomedicalConcept_7",
@@ -387,7 +393,8 @@
               "conceptId": "00000000-0000-7000-8000-000000025299",
               "version": 1
             },
-            "required": false
+            "required": true,
+            "valueKind": "Quantity"
           }
         ]
       }
@@ -445,12 +452,48 @@
       "message": "decisions and other non-activity instances are not carried."
     },
     {
+      "source": "Activity_1.BiomedicalConcept_1",
+      "message": "qualifier properties (Age Unit, Collection Date Time) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
+      "source": "Activity_1.BiomedicalConcept_2",
+      "message": "responseCodes (2) on 'Sex' were not bound to a code-system version because no terminology resolver was supplied."
+    },
+    {
+      "source": "Activity_1.BiomedicalConcept_2",
+      "message": "qualifier properties (Collection Date Time) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
+      "source": "Activity_1.BiomedicalConcept_3",
+      "message": "qualifier properties (Collection Date Time) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
+      "source": "Activity_1.BiomedicalConcept_4",
+      "message": "qualifier properties (VSTESTCD, VSORRESU, VSDTC) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
+      "source": "Activity_3.BiomedicalConcept_5",
+      "message": "qualifier properties (VSTESTCD, VSORRESU, VSDTC) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
+      "source": "Activity_4.BiomedicalConcept_6",
+      "message": "qualifier properties (VSTESTCD, VSORRESU, VSPOS, VSLOC, VSLAT, VSDTC) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
+      "source": "Activity_4.BiomedicalConcept_7",
+      "message": "qualifier properties (VSTESTCD, VSORRESU, VSPOS, VSLOC, VSLAT, VSDTC) are not carried; ADR-2473 keeps one item per Biomedical Concept."
+    },
+    {
       "source": "activities",
       "message": "USDM does not say why data is collected; items have no purpose until an author adds one (K-PROT-3)."
     },
     {
       "source": "indications",
       "message": "indications are not carried by the protocol design."
+    },
+    {
+      "source": "conditions",
+      "message": "conditions and conditional collection rules are not carried by the protocol design."
     }
   ]
 }

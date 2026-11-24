@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical";
@@ -284,5 +286,78 @@ describe("M5: USDM Ingestion & Synthesis Workspace Experience (MdrView.vue)", ()
     await wrapper.find("#btn-inspect-crf").trigger("click");
     // Tab changes to canvas
     expect(wrapper.find(".tab-btn-canvas").classes()).toContain("btn-primary");
+  });
+
+  it("validates and synthesizes both official USDM v4 Wrapper JSON and legacy USDM v3 JSON while rejecting malformed wrappers", async () => {
+    const cdiscV4Json = readFileSync(
+      resolve(
+        __dirname,
+        "../../../tests/fixtures/usdm/cdisc_usdm4_full_1.json"
+      ),
+      "utf8"
+    );
+    const sampleV3Json = readFileSync(
+      resolve(__dirname, "../../../tests/fixtures/sample_usdm_v3.json"),
+      "utf8"
+    );
+
+    const wrapper = mount(MdrView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          ClinicalSoAMatrix: true,
+          ClinicalGanttVisualizer: true,
+          CrfAuthoringCanvas: true,
+          OnboardingTour: true,
+          ReasonModal: true,
+        },
+      },
+    });
+
+    await wrapper.find("#btn-open-usdm-modal").trigger("click");
+    const textarea = wrapper.find("#usdm-payload-input");
+
+    // 1. Reject version/wrapper mismatch accepted by neither USDMStudySchema nor UsdmDesignReader.Select
+    await textarea.setValue(
+      JSON.stringify({ usdmVersion: "3.0.0", study: {} })
+    );
+    await textarea.trigger("input");
+    expect(wrapper.find("#usdm-ingestion-modal").html()).toContain(
+      "Schema Validation Issue"
+    );
+    expect(
+      wrapper.find("#btn-synthesize-usdm").attributes("disabled")
+    ).toBeDefined();
+
+    // 2. Validate and synthesize official CDISC USDM v4 Wrapper fixture
+    await textarea.setValue(cdiscV4Json);
+    await textarea.trigger("input");
+    expect(wrapper.find("#usdm-ingestion-modal").html()).toContain(
+      "Valid USDM Schema (v4.0 Compliant)"
+    );
+    expect(
+      wrapper.find("#btn-synthesize-usdm").attributes("disabled")
+    ).toBeUndefined();
+    await wrapper.find("#btn-synthesize-usdm").trigger("click");
+    expect(wrapper.find(".synthesis-metrics-card").text()).toContain("SCOPE1");
+
+    // 3. Re-open modal and verify USDM v3 root-study payload remains supported
+    await wrapper.find("#btn-open-usdm-modal").trigger("click");
+    const v3Textarea = wrapper.find("#usdm-payload-input");
+    await v3Textarea.setValue(sampleV3Json);
+    await v3Textarea.trigger("input");
+    expect(wrapper.find("#usdm-ingestion-modal").html()).toContain(
+      "Valid USDM Schema"
+    );
+    expect(wrapper.find("#usdm-ingestion-modal").html()).toContain(
+      "study_usdm_benchmark_v3"
+    );
+    expect(
+      wrapper.find("#btn-synthesize-usdm").attributes("disabled")
+    ).toBeUndefined();
+    await wrapper.find("#btn-synthesize-usdm").trigger("click");
+    expect(wrapper.find(".synthesis-metrics-card").text()).toContain(
+      "study_usdm_benchmark_v3"
+    );
   });
 });

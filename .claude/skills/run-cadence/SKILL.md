@@ -139,10 +139,6 @@ The first takes about a minute (mostly the build), the second about 4 s. The ful
   tenant" means the kernel was not started in Development.
 - **Stop the stack before `pnpm cadence ci`.** `KernelObservationHostPostgresTests.BrowserCorrection_ReachesTheDatabaseWithItsReason`
   binds the gateway's port 8000 and fails with "address already in use" while the stack runs.
-- **`ui` must be built.** `apps/web/vite.config.js` aliases `ui` to `packages/ui/dist/index.js`, which `pnpm install`
-  does not create; Vite shows "Failed to resolve import "ui" from "src/main.js"". `scripts/local_stack_nodocker.sh up` runs
-  `pnpm --filter ui build`. If Vite already started without it, restart the AppHost: Vite keeps the failed
-  resolution.
 - **Only gateway, execution and kernel run** (`core` profile). Knowledge calls answer 502 or 503 and the first one 401;
   those console errors are expected noise. Every other service's route answers as down.
 - **Data persists** across `down`/`up` in the 5433 cluster: a participant added in an earlier run is still there, so
@@ -158,7 +154,6 @@ down` stops Keycloak by its pid file.
 
 - **`scripts/local_stack_nodocker.sh up` prints `timed out waiting for …`**: read `/opt/cadence-dev/apphost.log` or
   `tmux capture-pane -t apphost -p`.
-- **`login` fails with `Timeout … exceeded`**: the sign-in page never rendered; `ss` and look. A Vite error overlay
-  means the `ui` gotcha above.
+- **`login` fails with `Timeout … exceeded`**: the sign-in page never rendered; `ss` and inspect any Vite error overlay or console errors.
 - **Start over from nothing**: `scripts/local_stack_nodocker.sh down && rm -rf /opt/cadence-dev`, then `scripts/local_stack_nodocker.sh up` (it downloads Keycloak
   again, about 200 MB).

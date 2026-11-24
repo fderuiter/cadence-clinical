@@ -47,4 +47,21 @@ public class RuleBenchmarkTests
         // B12 reads a variable no record has: an ordering comparison with null is false, so it never fires.
         fired.Should().Equal(pack.Rules.Select(r => r.Id).Where(id => id != "B12").Order());
     }
+
+    [Theory(DisplayName = "RuleBenchmark_DatasetAndStreamingRun_ProduceIdenticalViolationCountsAndHashes")]
+    [Trait("Category", "Unit")]
+    [InlineData(7)]
+    [InlineData(20260930)]
+    public void RuleBenchmarkDatasetAndStreamingRunProduceIdenticalViolationCountsAndHashes(int seed)
+    {
+        var evaluator = new DotNetRuleEvaluator();
+        var pack = RuleBenchmark.Pack();
+        var context = new RuleEvaluationContext(ValidationStage.Collection, RuleBenchmark.AsOf);
+
+        var bufferedViolations = evaluator.Evaluate(pack, context, RuleBenchmark.Dataset(10_000, seed));
+        var streamingRun = RuleBenchmark.Run(evaluator, 10_000, seed);
+
+        streamingRun.Violations.Should().Be(bufferedViolations.Count);
+        streamingRun.ResultHash.Should().Be(RuleBenchmark.Hash(bufferedViolations));
+    }
 }

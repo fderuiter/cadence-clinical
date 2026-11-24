@@ -20,8 +20,9 @@ requirement as qualified.
 | `docs/.vitepress/navigation.test.mjs`                                                             | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                                                                       |
 
 `dotnet test --solution Cadence.sln` runs all five .NET test projects on `Microsoft.Testing.Platform`. `pnpm cadence test --fast` applies
-`Category!=Integration` (`--ignore-exit-code 8`) across the solution. `make verify` runs the quality gates and the .NET suites.
-Use `pnpm test` (`pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [CI and local verification](CI.md#workflows) for the full workflow.
+`Category!=Integration` (`--ignore-exit-code 8`) across the solution. `make verify` runs the quality gates (`pnpm cadence check`),
+the frontend and VitePress Vitest suites (`pnpm test`), and the .NET suites (`pnpm cadence test`).
+Use `pnpm test` (`pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests without pre-building `packages/ui/dist/` ([ADR-2658](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md)), and see [CI and local verification](CI.md#workflows) for the full workflow.
 
 Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
 Fakes and fixtures that both the unit and integration projects need live in `tests/Cadence.TestSupport`, a class
@@ -33,9 +34,12 @@ pushing so failures are caught before opening or updating a pull request.
 
 ## Ratchet baselines
 
-Some checks record pre-existing debt in checked-in per-owner baseline shards instead of failing on it: the kernel boundary rules
+Some checks record pre-existing debt in checked-in per-owner baseline shards or shrink-only baseline files instead of failing on it: the kernel boundary rules
 (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`), the kernel rule coverage ratchet
-(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`), the `deid` gate
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`), the direct state-write IL sentinel
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt`), the static RBAC role-permission grant inventory
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt`), the cross-service isolation sentinel
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt`), the `deid` gate
 (`baselines/deid/<unit>.baseline.txt`), and the detect-secrets allowlist (`baselines/secrets/config.json` plus
 `baselines/secrets/<unit>.secrets.baseline.json`). Any other `*.baseline.txt` or `*-baseline.txt` file is treated the same way.
 Empty shards are deleted automatically, and each baseline gate may only shrink:
@@ -48,12 +52,12 @@ Empty shards are deleted automatically, and each baseline gate may only shrink:
   `<sha>..HEAD` with `--push-before <sha>`), and fails when any commit adds an entry without authorization. Shard entries
   for each gate (`kernel-boundaries`, `kernel-rule-coverage`, `baselines/deid`, `baselines/secrets`, or standalone baseline
   files) are aggregated as one multiset, so reordering, splitting across shards, comment lines, and removed entries pass.
-- When debt really must be accepted, say why in the exact commit that adds it, with a trailer naming the gate prefix or
-  grown shard path: `git commit --trailer "Baseline-Growth: <path> - <reason>"` (for example
-  `Baseline-Growth: baselines/deid - legacy fixture pending #1234`). A trailer on an earlier commit never covers
+- When debt really must be accepted, say why in the exact commit that adds it, with a file-and-count-scoped trailer naming the gate prefix or
+  grown shard path and exact added entry count: `git commit --trailer "Baseline-Growth: <path> +<count> - <reason>"` (for example
+  `Baseline-Growth: baselines/deid +2 - legacy fixture pending #1234`). Unscoped or count-less trailers are rejected, and a trailer on an earlier commit never covers
   later commits or other baseline gates. In `--pre-commit`, staged baseline shards are compared against `HEAD` before the
-  commit message exists, so for that commit also set `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only
-  in `--pre-commit`, and `pnpm cadence check` and CI still require the `Baseline-Growth: <path> - <reason>`
+  commit message exists, so for that commit also set `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` (semicolon- or newline-delimited when multiple gates grow); the variable is honoured only
+  in `--pre-commit`, and `pnpm cadence check` and CI still require the `Baseline-Growth: <path> +<count> - <reason>`
   trailer on every commit that grew a baseline gate.
 - When `--base` defaults to `origin/main` and `origin/main` is absent locally, `baseline-ratchet` falls back to local
   `refs/heads/main`, and fails closed (exit code `1`) with fetch instructions when neither ref exists or shares history
