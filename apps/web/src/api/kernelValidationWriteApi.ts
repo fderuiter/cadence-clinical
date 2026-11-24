@@ -1,44 +1,53 @@
-import { encodeChangeReason } from "./changeReason";
 import { unwrapResponse } from "./client";
 import type { KernelLockMeaning } from "./kernel/locks";
-import { kernelClient, unversioned, type KernelSchemas } from "./kernel/shared";
-import type {
-  KernelRulePack,
-  KernelValidationFinding,
+import {
+  kernelClient,
+  mutationHeaders,
+  signedMutationHeaders,
+  unversioned,
+  type KernelSchemas,
+} from "./kernel/shared";
+import {
+  FINDING_ACCEPT_SEMANTIC_ACTION,
+  FINDING_EXPLAIN_SEMANTIC_ACTION,
+  findingAcceptAction,
+  findingExplainAction,
+  type KernelAcceptValidationFindingInput,
+  type KernelClassifyValidationFindingInput,
+  type KernelExplainValidationFindingInput,
+  type KernelFindingClassification,
+  type KernelRulePack,
+  type KernelValidationFinding,
+  type KernelValidationFindingReasonInput,
 } from "./kernel/validation";
 import { kernelApi } from "./kernelApi";
 
+export {
+  FINDING_ACCEPT_SEMANTIC_ACTION,
+  FINDING_EXPLAIN_SEMANTIC_ACTION,
+  findingAcceptAction,
+  findingExplainAction,
+  type KernelFindingClassification,
+};
+export type KernelUnsignedFindingDecisionInput =
+  KernelValidationFindingReasonInput;
+export type KernelClassifyFindingInput = KernelClassifyValidationFindingInput;
+export type KernelAcceptFindingInput = KernelAcceptValidationFindingInput;
+export type KernelExplainFindingInput = KernelExplainValidationFindingInput;
+
 export type KernelStudyValidationRun =
   KernelSchemas["Kernel_KernelStudyValidationRunResponse"];
-export type KernelFindingClassification =
-  "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 export type KernelRulePackAuthority =
   "Study" | "Sponsor" | "CDISC" | "FDA" | "EMA" | "PMDA" | "NMPA";
 
-/** Gateway step-up semantic actions for library item deprecation and validation finding decisions. */
+/** Gateway step-up semantic action for library item deprecation. */
 export const RULE_PACK_DEPRECATE_SEMANTIC_ACTION =
   "kernel.library_item.deprecate";
-export const FINDING_ACCEPT_SEMANTIC_ACTION =
-  "kernel.validation_finding.accept";
-export const FINDING_EXPLAIN_SEMANTIC_ACTION =
-  "kernel.validation_finding.explain";
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/library-items/{itemRef}/deprecate`. */
 export function rulePackDeprecateAction(itemRef: string): string {
   const clean = unversioned(itemRef);
   return `/api/v1/kernel/library-items/${clean}/deprecate`;
-}
-
-/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/accept`. */
-export function findingAcceptAction(findingRef: string): string {
-  const clean = unversioned(findingRef);
-  return `/api/v1/kernel/validation/findings/${clean}/accept`;
-}
-
-/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/explain`. */
-export function findingExplainAction(findingRef: string): string {
-  const clean = unversioned(findingRef);
-  return `/api/v1/kernel/validation/findings/${clean}/explain`;
 }
 
 export interface KernelDraftStudyRulePackInput {
@@ -66,57 +75,6 @@ export interface KernelRunStudyValidationInput {
   asOf?: string | null;
   reason: string;
   idempotencyKey: string;
-}
-
-export interface KernelUnsignedFindingDecisionInput {
-  findingRef: string;
-  reason: string;
-  idempotencyKey: string;
-}
-
-export interface KernelClassifyFindingInput {
-  findingRef: string;
-  classification: KernelFindingClassification;
-  reason: string;
-  idempotencyKey: string;
-}
-
-export interface KernelAcceptFindingInput {
-  findingRef: string;
-  rationale: string;
-  lastDetectedRunRef?: string | null;
-  attestationId?: string | null;
-  sigToken: string;
-  reason: string;
-  idempotencyKey: string;
-}
-
-export interface KernelExplainFindingInput {
-  findingRef: string;
-  explanation: string;
-  lastDetectedRunRef?: string | null;
-  attestationId?: string | null;
-  sigToken: string;
-  reason: string;
-  idempotencyKey: string;
-}
-
-function writeHeaders(reason: string, idempotencyKey: string) {
-  return {
-    "X-Change-Reason": encodeChangeReason(reason),
-    "Idempotency-Key": idempotencyKey,
-  };
-}
-
-function signedWriteHeaders(
-  reason: string,
-  idempotencyKey: string,
-  sigToken: string
-) {
-  return {
-    ...writeHeaders(reason, idempotencyKey),
-    "X-Sig-Token": sigToken,
-  };
 }
 
 /**
@@ -147,7 +105,7 @@ export const kernelValidationWriteApi = {
             ? { standard_version_refs: standardVersionRefs }
             : {}),
         },
-        headers: writeHeaders(reason, idempotencyKey),
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -168,7 +126,7 @@ export const kernelValidationWriteApi = {
           meaning,
           ...(attestationId ? { attestation_id: attestationId } : {}),
         },
-        headers: signedWriteHeaders(reason, idempotencyKey, sigToken),
+        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
       })
     );
   },
@@ -184,7 +142,7 @@ export const kernelValidationWriteApi = {
       kernelClient.POST("/api/v1/kernel/studies/{studyRef}/validation/runs", {
         params: { path: { studyRef: unversioned(studyRef) } },
         body: asOf ? { as_of: asOf } : {},
-        headers: writeHeaders(reason, idempotencyKey),
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },

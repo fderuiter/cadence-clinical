@@ -460,12 +460,19 @@ in `Commands/AssertionCommands.cs`:
 - A lock's signer attests the canonical `LockStatement.Apply` (or `.Release`) for the assertion id first, meaning
   `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
   decision is signed (K-FIND-2), and the command recomputes the hash from its own inputs.
-- Both lock kinds refuse `RecordObservation` and `CorrectObservation` in their scope; `Locked` also refuses new
-  assertions about the observations there, while `Frozen` still allows review. `ApplyLock` with `LockKind.Locked`
-  evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409 `K.Assertion.ScopeNotReady` (carrying a
-  structured `Explanation` naming each blocker owner, target `NodeRef` and next action) when any open `Queried`
-  assertion or missing required `CollectionItem` remains in the target scope; `Frozen` skips this gate so sites can
-  answer and monitors can close queries first.
+- Both lock kinds refuse `RecordObservation`, `CorrectObservation`, `OpenCollectionInstance`, `RecordCollectedValues`,
+  `RecordUnaskedCollectionItem`, `ScreenParticipant`, `ChangeEnrollmentStatus`, `WithdrawParticipant`, `LinkSiteToStudy`,
+  `ActivateStudySite`, `DeclareEffectivity`, and `ChangeEffectivityStatus` in their covering scope (`423 K.Observation.Locked`);
+  `Locked` also refuses new assertions (`423 K.Assertion.Locked`) and form signatures (`SignCollectionInstance`), while
+  `Frozen` still allows queries, SDV verifications, retractions, and investigator form signing (`collection.sign`).
+  `ApplyLock` with `LockKind.Locked` evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409
+  `K.Assertion.ScopeNotReady` (carrying a structured `Explanation` naming each blocker owner, target `NodeRef` and next
+  action) when any of the six readiness gates has unresolved blockers in the target scope: open queries (`OpenQuery`),
+  missing required items (`MissingRequiredItem`), unverified observation revisions (`UnverifiedValue`), unsigned or
+  signature-superseded forms (`UnsignedForm`), due/overdue scheduled visits without opened forms (`UnopenedVisit`,
+  excluding `ScreenFailed` enrollments and post-withdrawal visits), or active `Error`-severity validation findings
+  (`ErrorFinding`). `Frozen` skips these gates (`can_freeze = true`) so review, SDV, query closure, and signing can
+  proceed before hard lock.
 - Concurrency: a write that a lock can cover takes shared advisory locks on its covering scopes, widest first
   (`IKernelUnitOfWork.ShareScopesAsync`, `LockScopes.Covering`), then reads the locks in force; `ApplyLock` and
   `ReleaseLock` take the exclusive lock on their own scope (`LockScopeAsync`). Either the write commits before the lock
@@ -473,7 +480,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), and signed scoped locks with readiness checks and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592).
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), signed scoped locks with `K-AUTH-4`-masked readiness checks (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`), synchronous covering write-lock queries for standalone services (`GET /api/v1/kernel/locks/in-force`, #5376), and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592).
 
 ## Form instances and page saves (ADR-2622)
 
@@ -518,7 +525,9 @@ the enrollment:
 - The form is a lock scope (spec §10.5): a lock on it refuses saves, and corrections and assertions of its values made
   one at a time. `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in the governing version's
   order) with hydrated codelist options, its values with their revisions, the assertions about them, the signatures over the form and the locks in
-  force in one call.
+  force in one call (`FindAsync`), enrollment summaries with active/answered query assertion ids (`ListForEnrollmentAsync`),
+  and narrow projections for headers (`FindHeaderAsync`, `FindHeadersAsync`), query targets (`FindQueryTargetsAsync`),
+  lock/revision scope state (`FindScopeStateAsync`), and rule inputs (`ListRuleInputsForEnrollmentAsync`).
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
   or `ObservationCorrected`. Nothing consumes `CollectedValuesSaved` yet; edit checks will (#5368).
 - `KernelCollectionPostgresTests` covers atomicity at every commit stage, per-value 409, concurrent saves, the
@@ -671,8 +680,12 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   delegation under the grant stops counting.
 - **Evaluation.** `AuthorityEvaluator` permits when a grant held by the actor carries the capability (directly or
   through its role), covers the resource's scope path and is in effect at `(at, known_at)` with every grant above
-  it. Automation agents are denied Execute and Approve. Platform operators (`svc:` accounts) hold only
-  `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through the pipeline.
+  it; when `ResolveVisibilityBatchAsync` classifies an `observation`, `validation_finding`, `assertion`, or `form_query`
+  resource as blinded treatment data (K-AUTH-4), non-unblinding capabilities also require an in-effect
+  `enrollment.unblind` grant and current K-AUTH-5 qualifications over the evidence scope, denying with the uniform
+  `grant.active` condition otherwise. Automation agents are denied Execute and Approve. Platform operators (`svc:`
+  accounts) hold only `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through
+  the pipeline.
 - **Recording.** Each decision names its conditions (`grant.active`, `grant.delegable`, `grant.delegator`,
   `actor.platform_operator`, `actor.agent_verb`). The command's provenance activity stores them in
   `authorization`.

@@ -118,18 +118,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             await AutoAnswerOpenManualQueriesAsync(tenant, corrected, delivery.Envelope.Actor, metadata, cancellationToken).ConfigureAwait(false);
 
             var obs = await observations.FindAsync(tenant, corrected.ObservationId, cancellationToken).ConfigureAwait(false);
-            if (obs?.CollectionInstanceId is not { } formId)
+            if (obs?.CollectionInstanceId is null || obs.StudyId.IsEmpty)
             {
                 return;
             }
 
-            var formRecord = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
-            if (formRecord is null)
-            {
-                return;
-            }
-
-            studyId = formRecord.StudyId;
+            studyId = obs.StudyId;
         }
 
         var evaluatedAt = delivery.Envelope.Recorded;
@@ -212,14 +206,24 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             return;
         }
 
-        var record = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
-        if (record is null)
+        var scope = await forms.FindScopeStateAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
+        if (scope is null)
         {
             return;
         }
 
-        var enrollmentForms = await forms.ListRecordsForEnrollmentAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
-        if (!AreObservedValuesUnchanged(finding, record, enrollmentForms))
+        var enrollmentForms = await forms.ListRuleInputsForEnrollmentAsync(tenant, scope.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var targetInput = enrollmentForms.FirstOrDefault(f => f.CollectionInstanceId == formId)
+            ?? new CollectionRuleInput(
+                scope.CollectionInstanceId,
+                scope.EnrollmentId,
+                scope.StudyId,
+                scope.ProtocolVersionId,
+                scope.CollectionSpecId,
+                DateTimeOffset.MinValue,
+                [],
+                [.. scope.Values.Select(v => new CollectionRuleValue(v.ItemId, v.ObservationId, v.Value))]);
+        if (!AreObservedValuesUnchanged(finding, targetInput, enrollmentForms))
         {
             return;
         }
@@ -233,10 +237,11 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 .ConfigureAwait(false);
         }
 
+        var currentRevisions = scope.Values.ToDictionary(v => v.ObservationId, v => v.Revision);
         await CloseConcludedAutoQueriesOnUnchangedValuesAsync(
             tenant,
             finding,
-            record,
+            currentRevisions,
             formQueries,
             detectedBy,
             decisionStatus,
@@ -330,6 +335,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         var formRecordCache = new Dictionary<CollectionInstanceId, CollectionInstanceRecord?>();
+        var ruleInputsByEnrollment = new Dictionary<EnrollmentId, IReadOnlyList<CollectionRuleInput>>();
         foreach (var finding in candidateFindings)
         {
             if (!Guid.TryParse(finding.Target.Key, out var formGuid) || formGuid == Guid.Empty)
@@ -361,13 +367,18 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 {
                     if (finding.Decision?.DecidedOnRun == finding.LastDetectedRun)
                     {
-                        var enrollmentForms = await forms.ListRecordsForEnrollmentAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
-                        if (AreObservedValuesUnchanged(finding, record, enrollmentForms))
+                        if (!ruleInputsByEnrollment.TryGetValue(record.EnrollmentId, out var enrollmentForms))
+                        {
+                            enrollmentForms = await forms.ListRuleInputsForEnrollmentAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+                            ruleInputsByEnrollment[record.EnrollmentId] = enrollmentForms;
+                        }
+
+                        if (AreObservedValuesUnchanged(finding, CollectionRuleInput.From(record), enrollmentForms))
                         {
                             await CloseConcludedAutoQueriesOnUnchangedValuesAsync(
                                 tenant,
                                 finding,
-                                record,
+                                record.Values.ToDictionary(v => v.ObservationId, v => v.Revision),
                                 formQueries,
                                 finding.Decision?.DecidedOnRun ?? finding.LastDetectedRun,
                                 finding.Status,
@@ -564,7 +575,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     private async Task CloseConcludedAutoQueriesOnUnchangedValuesAsync(
         TenantId tenant,
         ValidationFindingView finding,
-        CollectionInstanceRecord record,
+        IReadOnlyDictionary<ObservationId, int> currentRevisions,
         List<FormQuery> formQueries,
         ValidationRunId decidedOnRun,
         FindingStatus decisionStatus,
@@ -582,7 +593,6 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             autoIds.Add(DeriveAutoQueryId(tenant, finding.Id, episode));
         }
 
-        var currentRevisions = record.Values.ToDictionary(v => v.ObservationId, v => v.Revision);
         var activeAutoQueries = formQueries
             .Where(q => autoIds.Contains(q.Id)
                 && q.Origin == FormQueryOrigin.System
@@ -621,8 +631,8 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
     private static bool AreObservedValuesUnchanged(
         ValidationFindingView finding,
-        CollectionInstanceRecord target,
-        IReadOnlyList<CollectionInstanceRecord> enrollmentForms)
+        CollectionRuleInput target,
+        IReadOnlyList<CollectionRuleInput> enrollmentForms)
     {
         if (finding.Observed.Count == 0)
         {
@@ -644,8 +654,8 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     }
 
     private static Dictionary<string, string?> BuildComparableValues(
-        CollectionInstanceRecord target,
-        IReadOnlyList<CollectionInstanceRecord> enrollmentForms)
+        CollectionRuleInput target,
+        IReadOnlyList<CollectionRuleInput> enrollmentForms)
     {
         var values = new Dictionary<string, string?>(StringComparer.Ordinal);
         var recordedByItem = target.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
