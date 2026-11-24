@@ -192,17 +192,44 @@ function onFormPanelClosed() {
   }
   loadedFormId.value = null;
   loadedFormTitle.value = "";
-  if (!routeQuery("formId") && !routeQuery("itemId")) return;
+  if (
+    !routeQuery("formId") &&
+    !routeQuery("itemId") &&
+    !routeQuery("collectionSpecId") &&
+    !routeQuery("plannedActivityId") &&
+    !routeQuery("visitId")
+  ) {
+    return;
+  }
   if (typeof router?.replace === "function") {
     const nextQuery = { ...(route?.query || {}) };
     delete nextQuery.formId;
     delete nextQuery.itemId;
+    delete nextQuery.collectionSpecId;
+    delete nextQuery.plannedActivityId;
+    delete nextQuery.visitId;
     void router.replace({ query: nextQuery });
   }
 }
 
-function shouldSuppressUnsavedGuard() {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function shouldSuppressUnsavedGuard(to) {
+  if (
+    !authStore.isAuthenticated ||
+    authStore.sessionExpired ||
+    authStore.isLoggingOut
+  ) {
+    return true;
+  }
+  if (
+    to &&
+    (to.name === "forbidden" ||
+      to.path === "/forbidden" ||
+      to.name === "login" ||
+      to.path === "/login")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function handleBeforeUnload(event) {
@@ -233,8 +260,8 @@ onUnmounted(() => {
 });
 
 if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (workspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  onBeforeRouteLeave((to) => {
+    if (workspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmLeaveDirtyDraft().then((confirmLeave) =>
         confirmLeave ? undefined : false
       );
@@ -244,7 +271,7 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to, from) => {
-    if (!formPanelDirty.value || shouldSuppressUnsavedGuard()) return;
+    if (!formPanelDirty.value || shouldSuppressUnsavedGuard(to)) return;
     const nextFormId = routeQuery("formId", to);
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);

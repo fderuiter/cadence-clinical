@@ -657,15 +657,15 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         // 4. Multi-kind HTTP simulation works across ProtocolVersion, MappingSpecification, and RulePack.
         var httpJsonOptions = factory.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
-        SimulationResult protocolSimulation;
+        KernelSimulationResponse protocolSimulation;
         using (var simProtRes = await designer.PostAsJsonAsync(
             "/api/v1/kernel/simulation/simulate",
             new { stored_version_ref = v2Ref, valid_at = T0, known_at = T0 },
             ct))
         {
             simProtRes.StatusCode.Should().Be(HttpStatusCode.OK, await simProtRes.Content.ReadAsStringAsync(ct));
-            protocolSimulation = (await simProtRes.Content.ReadFromJsonAsync<SimulationResult>(httpJsonOptions, ct))!;
-            protocolSimulation.Candidate.Kind.Should().Be(CandidateKind.ProtocolVersion);
+            protocolSimulation = (await simProtRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
+            protocolSimulation.Candidate.Kind.Should().Be("ProtocolVersion");
             protocolSimulation.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "visit.week4");
         }
 
@@ -677,8 +677,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             ct))
         {
             simMapRes.StatusCode.Should().Be(HttpStatusCode.OK, await simMapRes.Content.ReadAsStringAsync(ct));
-            var mapSim = (await simMapRes.Content.ReadFromJsonAsync<SimulationResult>(httpJsonOptions, ct))!;
-            mapSim.Candidate.Kind.Should().Be(CandidateKind.MappingSpecification);
+            var mapSim = (await simMapRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
+            mapSim.Candidate.Kind.Should().Be("MappingSpecification");
         }
 
         var rulePackJson = RulePackJson.ToJson(SampleRulePacks.Sample()).GetRawText();
@@ -688,8 +688,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             ct))
         {
             simRuleRes.StatusCode.Should().Be(HttpStatusCode.OK, await simRuleRes.Content.ReadAsStringAsync(ct));
-            var ruleSim = (await simRuleRes.Content.ReadFromJsonAsync<SimulationResult>(httpJsonOptions, ct))!;
-            ruleSim.Candidate.Kind.Should().Be(CandidateKind.RulePack);
+            var ruleSim = (await simRuleRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
+            ruleSim.Candidate.Kind.Should().Be("RulePack");
         }
 
         // 5. Approving v2 without an attested SimulationReport fails with 409 K.Protocol.SimulationReviewRequired and writes zero Approved attestations for v2!
@@ -716,7 +716,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         // 6. Saving a masked SimulationResult is refused (K-SIM-5); saving the unmasked SimulationResult registers a SimulationReport artifact.
         var maskedSimulation = protocolSimulation with
         {
-            Masked = [new MaskedPart(SimulationSnapshotMasking.SitesPart, MaskReason.NotPermitted)],
+            Masked = [new KernelMaskedPartResponse(SimulationSnapshotMasking.SitesPart, MaskReason.NotPermitted.ToString())],
         };
         using (var saveMaskedRes = await designer.SendAsync(
             BuildPost($"/api/v1/kernel/studies/{studyRef}/simulation-reports", "fork-v2-save-masked", "Attempt to save masked simulation", null, new
@@ -1060,8 +1060,15 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(Find<Site>(siteId) is { } site ? ToSiteDirectoryEntry(site) : null);
 
-        Task<SiteDirectoryEntry?> IStudyDirectory.FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken) =>
-            Task.FromResult(ReadAll<Site>().FirstOrDefault(s => string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)) is { } site
+        Task<SiteDirectoryEntry?> IStudyDirectory.FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(ReadAll<Site>()
+                .FirstOrDefault(s =>
+                    string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)
+                    && (institutionId is null || s.InstitutionId == institutionId.Value)) is { } site
                 ? ToSiteDirectoryEntry(site)
                 : null);
 
@@ -1075,6 +1082,16 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(Find<StudySite>(studySiteId) is { } ss ? ToStudySiteDirectoryEntry(ss) : null);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ReadAll<StudySite>()
+                .FirstOrDefault(ss => ss.StudyId == studyId && ss.SiteId == siteId) is { } ss
+                ? ToStudySiteDirectoryEntry(ss)
+                : null);
 
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([
@@ -1350,7 +1367,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             {
             }
 
-            public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
+            public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
             {
             }
 

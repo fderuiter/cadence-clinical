@@ -155,7 +155,11 @@ public sealed class SimulationTests
             parent.ContentHash));
         changed.StructuralDiff.Should().ContainSingle().Which.ElementId.Should().Be("arm.A");
         changed.ScheduleChanges.Should().BeEmpty("renaming an arm moves no visit");
-        changed.EngineVersions.Should().Equal(SimulationEngine.DependentsEngine, SimulationEngine.ScheduleEngine, ProtocolStructuralDiff.Engine);
+        changed.EngineVersions.Should().Equal(
+            SimulationEngine.DependentsEngine,
+            SimulationEngine.ScheduleEngine,
+            SimulationEngine.MatrixGapEngine,
+            ProtocolStructuralDiff.Engine);
         changed.AsOf.Should().Be(new SimulationAsOf(Now, Now));
         changed.Dependents!.Total.Should().Be(1);
         var asked = inputs.DependentsAsked.Should().ContainSingle().Subject;
@@ -209,8 +213,10 @@ public sealed class SimulationTests
         var hiddenAfterChange = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
 
         hidden.StructuralDiff.Should().BeEmpty();
+        hidden.MatrixGaps.Should().BeEmpty();
         hidden.Masked.Should().Equal(
             new MaskedPart(SimulationEngine.DependentsPart, MaskReason.Blinded),
+            new MaskedPart(SimulationEngine.MatrixGapsPart, MaskReason.Blinded),
             new MaskedPart(SimulationEngine.ScheduleChangesPart, MaskReason.Blinded),
             new MaskedPart(SimulationEngine.StructuralDiffPart, MaskReason.Blinded));
         hidden.ScheduleChanges.Should().BeEmpty();
@@ -258,6 +264,31 @@ public sealed class SimulationTests
         result.StructuralDiff.Should().Contain(c => c.ElementId == "act.screening", "a renamed visit is a structural change");
         dayLater.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "act.week12").Which.After!.StudyDay.Should().Be(85);
         dayLater.ResultHash.Should().NotBe(result.ResultHash);
+    }
+
+    /// <summary>
+    /// Normalized SDTM study days treat Day 0 and Day 1 as the same study day on <see cref="SimulationResult.ScheduleChanges"/>
+    /// while <see cref="ProtocolStructuralDiff"/> preserves raw JSON property changes.
+    /// </summary>
+    [Fact]
+    public async Task Simulate_NormalizesDayZeroAndDayOneOnScheduleChangesWhilePreservingStructuralDiff()
+    {
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(Scheduled(Visit("act.baseline", "Baseline", "ep.treatment", 0, 0, 1))));
+        var dayOneCandidate = Scheduled(Visit("act.baseline", "Baseline", "ep.treatment", 1, 0, 1));
+        var addedDayZeroCandidate = Scheduled(
+            Visit("act.baseline", "Baseline", "ep.treatment", 0, 0, 1),
+            Visit("act.day0_extra", "Extra Day 0", "ep.treatment", 0, 0, 0));
+        var engine = Engine(inputs);
+
+        var normalized = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, dayOneCandidate));
+        var added = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, addedDayZeroCandidate));
+
+        normalized.ScheduleChanges.Should().BeEmpty("Day 0 and Day 1 resolve to the same SDTM study day");
+        normalized.StructuralDiff.Should().ContainSingle(c => c.ElementId == "act.baseline")
+            .Which.Properties.Should().Equal("/timing/day");
+        added.ScheduleChanges.Should().ContainSingle().Which.Should().Be(
+            new ScheduleChange("act.day0_extra", ElementChangeKind.Added, null, new PlannedVisit("act.day0_extra", "Extra Day 0", "ep.treatment", 2, 1, 0, 0)));
     }
 
     [Fact]
@@ -632,6 +663,98 @@ public sealed class SimulationTests
 
         afterHiddenMutation.InputHash.Should().Be(first.InputHash, "mutating hidden site or blinded arm data must not alter input_hash (K-SIM-4)");
         afterHiddenMutation.ResultHash.Should().Be(first.ResultHash, "mutating hidden site or blinded arm data must not alter result_hash (K-SIM-4)");
+    }
+
+    [Fact]
+    public async Task Simulate_EnforcesVersionPinsAndAllowsUnversionedLatestReads()
+    {
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(Design));
+        var draft = inputs.Add(Draft(parent, Renamed("arm.A", "Low dose")));
+        var probe = new Probe(permitted: true);
+        var visibility = new Hide(null, MaskReason.NotPermitted);
+        var engine = Engine(inputs, visibility, probe);
+        var ct = TestContext.Current.CancellationToken;
+
+        var matchingStored = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id, draft.VersionIndex));
+        matchingStored.Candidate.Version.Should().Be(NodeRef.For(draft.Id, draft.VersionIndex));
+
+        var matchingUnsaved = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, Design, parent.VersionIndex));
+        matchingUnsaved.Candidate.BaseVersion.Should().Be(NodeRef.For(parent.Id, parent.VersionIndex));
+
+        probe.Asked.Clear();
+        visibility.Asked.Clear();
+        inputs.DependentsAsked.Clear();
+
+        var staleStored = await engine.SimulateAsync(
+            Tenant, new SimulationRequest(SimulationCandidate.StoredProtocolVersion(draft.Id, draft.VersionIndex + 1)), ct);
+        var staleBase = await engine.SimulateAsync(
+            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, Design, parent.VersionIndex - 1)), ct);
+
+        staleStored.Error!.Code.Should().Be(SimulationErrors.VersionStale.Code);
+        staleStored.Error.HttpStatus.Should().Be(409);
+        staleBase.Error!.Code.Should().Be(SimulationErrors.VersionStale.Code);
+        staleBase.Error.HttpStatus.Should().Be(409);
+        probe.Asked.Should().BeEmpty("stale @version pins fail fast before authorization or evaluation");
+        visibility.Asked.Should().BeEmpty();
+        inputs.DependentsAsked.Should().BeEmpty();
+
+        // Advancing VersionIndex keeps unversioned SimulationCandidates evaluating the latest snapshot.
+        inputs.Replace(draft with { VersionIndex = 7 });
+        inputs.Replace(parent with { VersionIndex = 9 });
+        var latestStored = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
+        var latestUnsaved = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, Design));
+
+        latestStored.Candidate.Version.Should().Be(NodeRef.For(draft.Id, 7));
+        latestStored.Candidate.BaseVersion.Should().Be(NodeRef.For(parent.Id, 9));
+        latestUnsaved.Candidate.BaseVersion.Should().Be(NodeRef.For(parent.Id, 9));
+    }
+
+    [Fact]
+    [KernelRule("K-SIM-3")]
+    public async Task Simulate_RecordsMatrixGapEngineAndSealsIchM11ViolationsInHashes()
+    {
+        var concept = new ConceptRef(ConceptId.New(), 1);
+        var codeSystem = CodeSystemVersionId.New();
+        var complete = ProtocolDesignSamples.Complete(concept, codeSystem) with
+        {
+            Estimands = [],
+            EligibilityCriteria =
+            [
+                new EligibilityCriterion("ic.1", CriterionCategory.Inclusion, "SBP >= 140 mmHg.", [concept], "sbp >= 140"),
+                new EligibilityCriterion("ec.1", CriterionCategory.Exclusion, "Recent MI.", [concept]),
+            ],
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity(
+                    "act.week12",
+                    "Week 12 visit",
+                    "ep.treatment",
+                    [ActivityLocation.Site, ActivityLocation.Home],
+                    ["cs.vitals"],
+                    new ActivityTiming(84, 3, 3),
+                    Purpose: new DataPurpose { EndpointIds = ["ep.1"], SafetyRuleIds = ["safety.1"] }),
+            ],
+        };
+        var completeJson = ProtocolDesignDocument.Write(complete);
+        var ichViolationOnlyJson = ProtocolDesignDocument.Write(complete with { Populations = [] });
+
+        var inputs = new Inputs();
+        var cleanParent = inputs.Add(Approved(completeJson));
+        var violationParent = inputs.Add(Approved(ichViolationOnlyJson));
+        var engine = Engine(inputs);
+
+        var cleanRun = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(cleanParent.Id));
+        var ichOnlyRun = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(violationParent.Id));
+
+        cleanRun.MatrixGaps.Should().BeEmpty();
+        cleanRun.EngineVersions.Should().Contain(SimulationEngine.MatrixGapEngine);
+
+        ichOnlyRun.MatrixGaps.Should().NotBeEmpty()
+            .And.OnlyContain(g => g.Kind == MatrixGapKind.IchM11Violation);
+        ichOnlyRun.EngineVersions.Should().Equal(cleanRun.EngineVersions);
+        ichOnlyRun.ResultHash.Should().NotBe(cleanRun.ResultHash);
     }
 
     private static SimulationEngine Engine(Inputs inputs, INodeVisibility? visibility = null, IAuthorizationProbe? probe = null) =>

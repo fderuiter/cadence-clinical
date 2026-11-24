@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -35,10 +36,10 @@ public record SimulateProtocolRequest(
     string? BaseLibraryItemRef = null,
     string? StandardVersionRef = null);
 
-/// <summary>DTO request for saving an unmasked <see cref="SimulationResult"/> as an attestable <c>SimulationReport</c> artifact (K-SIM-5).</summary>
+/// <summary>DTO request for saving an unmasked <see cref="KernelSimulationResponse"/> as an attestable <c>SimulationReport</c> artifact (K-SIM-5).</summary>
 public sealed record SaveSimulationReportRequest(
     string? Title,
-    SimulationResult? Result,
+    KernelSimulationResponse? Result,
     Guid? ArtifactId = null,
     Guid? ArtifactVersionId = null);
 
@@ -64,6 +65,7 @@ public static class KernelSimulationEndpoints
                 KernelErrors.ActorUnresolved,
                 KernelErrors.AuthorizationDenied,
                 SimulationErrors.VersionUnknown,
+                SimulationErrors.VersionStale,
                 SimulationErrors.StudyUnknown,
                 SimulationErrors.LibraryItemUnknown,
                 SimulationErrors.BaseNotFrozen,
@@ -87,7 +89,7 @@ public static class KernelSimulationEndpoints
         return kernel;
     }
 
-    internal static async Task<Results<Ok<SimulationResult>, ProblemHttpResult>> SimulateAsync(
+    internal static async Task<Results<Ok<KernelSimulationResponse>, ProblemHttpResult>> SimulateAsync(
         SimulateProtocolRequest request,
         HttpContext context,
         ISimulationEngine simulationEngine,
@@ -122,7 +124,7 @@ public static class KernelSimulationEndpoints
                             return KernelProblems.InvalidNodeRef(request.StoredVersionRef);
                         }
 
-                        candidate = SimulationCandidate.StoredProtocolVersion(ProtocolVersionId.FromGuid(storedNode.Id));
+                        candidate = SimulationCandidate.StoredProtocolVersion(ProtocolVersionId.FromGuid(storedNode.Id), storedNode.Version);
                         visibleRefs.Add(storedNode);
                     }
                     else if (!string.IsNullOrWhiteSpace(request.BaseVersionRef) && request.CandidateContent is not null)
@@ -132,7 +134,10 @@ public static class KernelSimulationEndpoints
                             return KernelProblems.InvalidNodeRef(request.BaseVersionRef);
                         }
 
-                        candidate = SimulationCandidate.UnsavedProtocolVersion(ProtocolVersionId.FromGuid(baseNode.Id), request.CandidateContent);
+                        candidate = SimulationCandidate.UnsavedProtocolVersion(
+                            ProtocolVersionId.FromGuid(baseNode.Id),
+                            request.CandidateContent,
+                            baseNode.Version);
                         visibleRefs.Add(baseNode);
                     }
                     else
@@ -231,10 +236,14 @@ public static class KernelSimulationEndpoints
         }
 
         // The simulation reads the referenced target/scope, so the caller must be able to see it (ADR-2457, ADR-2516).
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, visibleRefs, cancellationToken).ConfigureAwait(false);
+        var refsToCheck = visibleRefs
+            .SelectMany(r => new[] { r, r.Unversioned() })
+            .Distinct()
+            .ToArray();
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, refsToCheck, cancellationToken).ConfigureAwait(false);
         foreach (var visibleRef in visibleRefs)
         {
-            if (masks.For(visibleRef) is { } mask)
+            if ((masks.For(visibleRef) ?? masks.For(visibleRef.Unversioned())) is { } mask)
             {
                 return KernelProblems.NotVisible($"You can't see this {visibleRef.Kind} ({mask}), so it can't be simulated.");
             }
@@ -248,7 +257,7 @@ public static class KernelSimulationEndpoints
             return KernelErrorEndpoints.Problem(result.Error!);
         }
 
-        return TypedResults.Ok(result.Value!);
+        return TypedResults.Ok(KernelSimulationResponse.From(result.Value!));
     }
 
     internal static async Task<Results<Created<KernelArtifactResponse>, ProblemHttpResult>> SaveSimulationReportAsync(
@@ -263,6 +272,12 @@ public static class KernelSimulationEndpoints
         if (request?.Result is null)
         {
             return KernelProblems.BadRequest("Invalid simulation report", "Supply a title and an unmasked SimulationResult.");
+        }
+
+        if (!request.Result.TryToDomain(out var domainResult, out var parseError) || domainResult is null)
+        {
+            return KernelErrorEndpoints.Problem(
+                EvidenceErrors.SimulationReportInvalid.WithMessage($"{EvidenceErrors.SimulationReportInvalid.Message} {parseError}"));
         }
 
         var (idempotencyKey, reason, headerProblem) = KernelProtocolGovernanceEndpoints.ReadMutationHeaders(context, changeReason);
@@ -292,7 +307,7 @@ public static class KernelSimulationEndpoints
                 artifactId,
                 versionId,
                 request.Title ?? string.Empty,
-                request.Result,
+                domainResult,
                 idempotencyKey,
                 reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -301,14 +316,14 @@ public static class KernelSimulationEndpoints
             return KernelErrorEndpoints.Problem(sent.Error!);
         }
 
-        var content = SimulationArtifactBinding.ToArtifactContent(request.Result)!;
+        var content = SimulationArtifactBinding.ToArtifactContent(domainResult)!;
         var response = KernelArtifactResponse.From(sent.Value!, content.SizeBytes, content.MediaType, content.StorageRef, clock.UtcNow);
         return TypedResults.Created(
             $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/nodes/{NodeRef.For(sent.Value!.ArtifactId)}",
             response);
     }
 
-    internal static Results<Ok<IReadOnlyList<MatrixGapFinding>>, ProblemHttpResult> CheckMatrixGapsAsync(MatrixGapCheckRequest request)
+    internal static Results<Ok<IReadOnlyList<KernelMatrixGapFindingResponse>>, ProblemHttpResult> CheckMatrixGapsAsync(MatrixGapCheckRequest request)
     {
         if (string.IsNullOrWhiteSpace(request?.ProtocolContent))
         {
@@ -322,7 +337,8 @@ public static class KernelSimulationEndpoints
         }
 
         var findings = MatrixGapAnalyzer.Analyze(read.Design!);
-        return TypedResults.Ok(findings);
+        return TypedResults.Ok<IReadOnlyList<KernelMatrixGapFindingResponse>>(
+            [.. findings.Select(KernelMatrixGapFindingResponse.From)]);
     }
 
     private static bool TryParseOptionalLibraryItem(

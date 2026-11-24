@@ -303,7 +303,7 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         }
 
         version.Approve(command.AttestationId);
-        var plan = ProtocolElementLineage.Plan(version.StudyId, await ChainAsync(version, context, cancellationToken).ConfigureAwait(false));
+        var plan = ProtocolElementLineage.Plan(version.StudyId, await ProtocolElementLineage.ChainAsync(context.Work, version, cancellationToken).ConfigureAwait(false));
         foreach (var part in plan.Parts)
         {
             context.Work.IncludePart(part.Node, part.NewVersion);
@@ -553,24 +553,6 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         var formId = string.IsNullOrWhiteSpace(studyIdProp) ? fallbackStudyId : studyIdProp;
 
         return (formHash, openRosaXml, ddfIrJson, formId, odmXml);
-    }
-
-    /// <summary>The version and its ancestors, first version first, as (number, content).</summary>
-    private static async Task<IReadOnlyList<(int Number, string Content)>> ChainAsync(
-        ProtocolVersion version, ICommandContext context, CancellationToken cancellationToken)
-    {
-        var chain = new List<(int Number, string Content)> { (version.Number, version.Content) };
-        var parentId = version.ParentVersionId;
-        while (parentId is { } id)
-        {
-            var parent = await context.Work.ReadAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Protocol version {id} names a parent the tenant does not have.");
-            chain.Add((parent.Number, parent.Content));
-            parentId = parent.ParentVersionId;
-        }
-
-        chain.Reverse();
-        return chain;
     }
 }
 

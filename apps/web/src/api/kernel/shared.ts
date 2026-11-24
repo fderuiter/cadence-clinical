@@ -3,6 +3,7 @@ import {
   notifySubscriptionExpiredIfNeeded,
   SUBSCRIPTION_EXPIRED_GUIDANCE,
 } from "../authorization.js";
+import { encodeChangeReason } from "../changeReason";
 import { ApiError, createOpenApiClient, getBaseUrl } from "../client";
 import type { components, paths } from "../generated/kernel";
 
@@ -39,11 +40,17 @@ export interface KernelLineageWindow {
   knownAt?: string;
 }
 
+export interface KernelHiddenScopesHeader {
+  moreExist: boolean;
+  reasons: string[];
+}
+
 export interface KernelStreamedArtifact {
   blob: Blob;
   filename: string;
   contentType: string;
   contentSha256: string | null;
+  hiddenScopes?: KernelHiddenScopesHeader | null;
 }
 
 /** Extracts the kernel error code (`K.Assertion.Locked`, …) from a failed call, or null. */
@@ -150,6 +157,24 @@ export function unversioned(nodeRef: string): string {
   return at < 0 ? nodeRef : nodeRef.slice(0, at);
 }
 
+export function mutationHeaders(reason: string, idempotencyKey: string) {
+  return {
+    "X-Change-Reason": encodeChangeReason(reason),
+    "Idempotency-Key": idempotencyKey,
+  };
+}
+
+export function signedMutationHeaders(
+  reason: string,
+  idempotencyKey: string,
+  sigToken: string
+) {
+  return {
+    ...mutationHeaders(reason, idempotencyKey),
+    "X-Sig-Token": sigToken,
+  };
+}
+
 export function windowQuery({
   depth,
   edgeKinds,
@@ -171,6 +196,26 @@ function parseDispositionFilename(
   if (!disposition) return fallback;
   const match = disposition.match(/filename="?([^";]+)"?/i);
   return match?.[1]?.trim() || fallback;
+}
+
+function parseHiddenScopesHeader(
+  raw: string | null
+): KernelHiddenScopesHeader | null {
+  if (!raw) return null;
+  let moreExist = false;
+  let reasons: string[] = [];
+  for (const part of raw.split(";")) {
+    const [key, val] = part.split("=").map((s) => s.trim());
+    if (key === "more_exist") {
+      moreExist = val === "true";
+    } else if (key === "reasons" && val) {
+      reasons = val
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+    }
+  }
+  return { moreExist, reasons };
 }
 
 export async function streamKernelDownload(
@@ -215,7 +260,10 @@ export async function streamKernelDownload(
     fallbackFilename
   );
   const contentSha256 = response.headers.get("x-content-sha256");
-  return { blob, filename, contentType, contentSha256 };
+  const hiddenScopes = parseHiddenScopesHeader(
+    response.headers.get("x-cadence-hidden-scopes")
+  );
+  return { blob, filename, contentType, contentSha256, hiddenScopes };
 }
 
 /** Triggers a browser file download from an in-memory streamed Blob. */

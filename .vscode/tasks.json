@@ -46,9 +46,16 @@
     },
     {
       "label": "Sync GxP Compliance",
-      "command": "python",
+      "command": "pnpm",
       "type": "process",
-      "args": ["scripts/sync_gxp.py"],
+      "args": ["cadence", "gxp", "sync"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Validate ADRs",
+      "command": "pnpm",
+      "type": "process",
+      "args": ["cadence", "check", "adrs"],
       "problemMatcher": []
     },
     {

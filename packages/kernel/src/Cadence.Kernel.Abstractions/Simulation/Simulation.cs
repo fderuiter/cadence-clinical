@@ -69,7 +69,9 @@ public sealed record SimulationCandidate
         CandidateKind kind,
         StudyId? studyId,
         ProtocolVersionId? versionId,
+        long? version,
         ProtocolVersionId? baseVersionId,
+        long? baseVersion,
         LibraryItemId? libraryItemId,
         LibraryItemId? baseLibraryItemId,
         StandardVersionId? standardVersionId,
@@ -78,7 +80,9 @@ public sealed record SimulationCandidate
         Kind = kind;
         StudyId = studyId;
         VersionId = versionId;
+        Version = version;
         BaseVersionId = baseVersionId;
+        BaseVersion = baseVersion;
         LibraryItemId = libraryItemId;
         BaseLibraryItemId = baseLibraryItemId;
         StandardVersionId = standardVersionId;
@@ -94,8 +98,14 @@ public sealed record SimulationCandidate
     /// <summary>A stored candidate protocol version; null for unsaved content or library-item candidates.</summary>
     public ProtocolVersionId? VersionId { get; }
 
+    /// <summary>Optional audit version pin for <see cref="VersionId"/>; null evaluates the latest stored version.</summary>
+    public long? Version { get; }
+
     /// <summary>The base protocol version of unsaved protocol content; null for stored protocol candidates or library-item candidates.</summary>
     public ProtocolVersionId? BaseVersionId { get; }
+
+    /// <summary>Optional audit version pin for <see cref="BaseVersionId"/>; null evaluates the latest stored base version.</summary>
+    public long? BaseVersion { get; }
 
     /// <summary>A stored library-item candidate (mapping specification or rule pack); null for unsaved content or protocol candidates.</summary>
     public LibraryItemId? LibraryItemId { get; }
@@ -113,14 +123,19 @@ public sealed record SimulationCandidate
     /// A stored protocol version, usually a draft, compared with the version it was forked from. A study's first
     /// version has no parent, so all of its elements are added.
     /// </summary>
-    public static SimulationCandidate StoredProtocolVersion(ProtocolVersionId version)
+    public static SimulationCandidate StoredProtocolVersion(ProtocolVersionId version, long? expectedVersion = null)
     {
         if (version.IsEmpty)
         {
             throw new ArgumentException("Name the protocol version to simulate.", nameof(version));
         }
 
-        return new SimulationCandidate(CandidateKind.ProtocolVersion, null, version, null, null, null, null, null);
+        if (expectedVersion is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(expectedVersion), expectedVersion, "A pinned version must be at least 1.");
+        }
+
+        return new SimulationCandidate(CandidateKind.ProtocolVersion, null, version, expectedVersion, null, null, null, null, null, null);
     }
 
     /// <summary>
@@ -128,15 +143,20 @@ public sealed record SimulationCandidate
     /// frozen content (in review or later) so the comparison is reproducible. The content must read as a protocol
     /// design, as a stored draft's must (ADR-2472).
     /// </summary>
-    public static SimulationCandidate UnsavedProtocolVersion(ProtocolVersionId baseVersion, string content)
+    public static SimulationCandidate UnsavedProtocolVersion(ProtocolVersionId baseVersion, string content, long? expectedBaseVersion = null)
     {
         if (baseVersion.IsEmpty)
         {
             throw new ArgumentException("Name the protocol version the content is compared with.", nameof(baseVersion));
         }
 
+        if (expectedBaseVersion is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(expectedBaseVersion), expectedBaseVersion, "A pinned version must be at least 1.");
+        }
+
         ArgumentNullException.ThrowIfNull(content);
-        return new SimulationCandidate(CandidateKind.ProtocolVersion, null, null, baseVersion, null, null, null, content);
+        return new SimulationCandidate(CandidateKind.ProtocolVersion, null, null, null, baseVersion, expectedBaseVersion, null, null, null, content);
     }
 
     /// <summary>
@@ -163,7 +183,7 @@ public sealed record SimulationCandidate
             throw new ArgumentException("The base library item cannot be empty.", nameof(baseLibraryItem));
         }
 
-        return new SimulationCandidate(CandidateKind.MappingSpecification, studyId, null, null, libraryItem, baseLibraryItem, null, null);
+        return new SimulationCandidate(CandidateKind.MappingSpecification, studyId, null, null, null, null, libraryItem, baseLibraryItem, null, null);
     }
 
     /// <summary>
@@ -192,7 +212,7 @@ public sealed record SimulationCandidate
             throw new ArgumentException("The standard version cannot be empty.", nameof(standardVersion));
         }
 
-        return new SimulationCandidate(CandidateKind.MappingSpecification, studyId, null, null, null, baseLibraryItem, standardVersion, content);
+        return new SimulationCandidate(CandidateKind.MappingSpecification, studyId, null, null, null, null, null, baseLibraryItem, standardVersion, content);
     }
 
     /// <summary>
@@ -219,7 +239,7 @@ public sealed record SimulationCandidate
             throw new ArgumentException("The base library item cannot be empty.", nameof(baseLibraryItem));
         }
 
-        return new SimulationCandidate(CandidateKind.RulePack, studyId, null, null, libraryItem, baseLibraryItem, null, null);
+        return new SimulationCandidate(CandidateKind.RulePack, studyId, null, null, null, null, libraryItem, baseLibraryItem, null, null);
     }
 
     /// <summary>
@@ -242,7 +262,7 @@ public sealed record SimulationCandidate
             throw new ArgumentException("The base library item cannot be empty.", nameof(baseLibraryItem));
         }
 
-        return new SimulationCandidate(CandidateKind.RulePack, studyId, null, null, null, baseLibraryItem, null, content);
+        return new SimulationCandidate(CandidateKind.RulePack, studyId, null, null, null, null, null, baseLibraryItem, null, content);
     }
 }
 
@@ -580,7 +600,7 @@ public static class SimulationResultHashing
         : new JsonObject
         {
             ["epochId"] = visit.EpochId,
-            ["studyDay"] = visit.StudyDay,
+            ["studyDay"] = ExpectedSchedule.NormalizeStudyDay(visit.StudyDay),
             ["windowBefore"] = visit.WindowBefore,
             ["windowAfter"] = visit.WindowAfter,
         };
@@ -909,6 +929,9 @@ public static class SimulationErrors
 {
     public static readonly KernelError VersionUnknown =
         new("K.Simulation.VersionUnknown", 404, "The protocol version does not exist.");
+
+    public static readonly KernelError VersionStale =
+        new("K.Simulation.VersionStale", 409, "The protocol version is not at the pinned version; reload and simulate the current version.");
 
     public static readonly KernelError StudyUnknown =
         new("K.Simulation.StudyUnknown", 404, "The study does not exist.");

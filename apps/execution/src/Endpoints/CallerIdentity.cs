@@ -20,6 +20,7 @@ internal static class CallerIdentity
         }
 
         var roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-        return new AuthenticatedCaller(userId, roles);
+        string? tenantId = user.FindFirst(CadenceClaimTypes.TenantId)?.Value;
+        return new AuthenticatedCaller(userId, roles, tenantId);
     }
 }

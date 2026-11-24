@@ -1,10 +1,12 @@
 using System;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
@@ -14,6 +16,8 @@ using Cadence.Kernel.Trust;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
+
+using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.IntegrationTests.Kernel;
 
@@ -129,7 +133,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     /// Approves a version whose design collects systolic and diastolic pressure in mm[Hg] and a free-text comment, and makes
     /// it effective study-wide on an ethics approval. Returns the version.
     /// </summary>
-    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct, bool requireDiastolic = true)
     {
         var systolic = await DefineAsync(tenant, "Systolic blood pressure", ct);
         var diastolic = await DefineAsync(tenant, "Diastolic blood pressure", ct);
@@ -147,7 +151,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                     "Vital signs",
                     [
                         new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
-                        new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: true),
+                        new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: requireDiastolic),
                         new CollectionItem(Comment, systolic, ValueKind: ObservationValueKind.Text),
                     ]),
             ],
@@ -183,6 +187,74 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     public static QuantityValue Mmhg(decimal value) => KernelObservationScenario.Mmhg(value);
 
     public DateTimeOffset Tick() => Observations.Tick();
+
+    /// <summary>
+    /// Source-verifies every recorded member observation on <paramref name="form"/> at its current revision (if not
+    /// already verified) and signs the form's current content hash with <see cref="AttestationMeaning.Approved"/>.
+    /// </summary>
+    public async Task VerifyAndSignAsync(Form form, CancellationToken ct)
+    {
+        var tenant = form.Subject.Tenant;
+        var enrollment = form.Subject.Enrollment;
+        System.Collections.Generic.List<Observation> memberObservations;
+        System.Collections.Generic.HashSet<(ObservationId, int)> alreadyVerified;
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var memberIds = await db.CollectionInstances.AsNoTracking()
+                .Where(c => c.Id == form.Instance)
+                .SelectMany(c => c.Members.Select(m => m.ObservationId))
+                .ToListAsync(ct);
+            memberObservations = await db.Observations.AsNoTracking()
+                .Where(o => memberIds.Contains(o.Id))
+                .ToListAsync(ct);
+            var obsGuids = memberObservations.Select(o => o.Id.Value).ToList();
+            var verifiedRows = await db.Assertions.AsNoTracking()
+                .Where(a => a.Kind == AssertionKind.Verified && a.RetractsId == null && a.TargetKind == NodeKinds.Observation && obsGuids.Contains(a.TargetId))
+                .ToListAsync(ct);
+            var verifiedIds = verifiedRows.Select(a => a.Id).ToList();
+            var retractedIds = verifiedIds.Count == 0
+                ? []
+                : await db.Assertions.AsNoTracking()
+                    .Where(a => a.RetractsId != null && verifiedIds.Contains(a.RetractsId.Value))
+                    .Select(a => a.RetractsId!.Value)
+                    .ToListAsync(ct);
+            var retractedSet = retractedIds.ToHashSet();
+            alreadyVerified = verifiedRows
+                .Where(a => !retractedSet.Contains(a.Id) && a.TargetRevision is not null)
+                .Select(a => (ObservationId.FromGuid(a.TargetId), a.TargetRevision!.Value))
+                .ToHashSet();
+        }
+
+        foreach (var obs in memberObservations.Where(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked }))
+        {
+            if (!alreadyVerified.Contains((obs.Id, obs.Revision)))
+            {
+                await Protocol.OkAsync(
+                    new VerifyObservation(tenant, AssertionId.New(), enrollment, obs.Id, obs.Revision, KernelProtocolScenario.Key(), "Verified against source chart"),
+                    ct);
+            }
+        }
+
+        if (memberObservations.Any(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked }))
+        {
+            var hash = CollectionInstance.ContentHashOf(
+                memberObservations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+            await Protocol.OkAsync(
+                new SignCollectionInstance(
+                    tenant,
+                    AttestationId.New(),
+                    form.Instance,
+                    enrollment,
+                    AttestationMeaning.Approved,
+                    hash,
+                    Tick(),
+                    "pwd+otp",
+                    KernelProtocolScenario.Key(),
+                    "Investigator approved form"),
+                ct);
+        }
+    }
 
     private async Task<ConceptRef> DefineAsync(TenantId tenant, string label, CancellationToken ct) =>
         await Protocol.OkAsync(

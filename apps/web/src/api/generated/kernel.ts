@@ -799,6 +799,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/locks/in-force": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. */
+    get: operations["KernelGetScopeWriteLock"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/locks": {
     parameters: {
       query?: never;
@@ -823,7 +840,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries and missing required items) for a study or child lock scope. */
+    /** Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -989,6 +1006,112 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/validation/findings/{findingRef}/investigate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Marks an open validation finding as under investigation (validation_finding.investigate). */
+    post: operations["KernelInvestigateValidationFinding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/validation/findings/{findingRef}/classify": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Classifies a detected validation finding (validation_finding.classify). */
+    post: operations["KernelClassifyValidationFinding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/validation/findings/{findingRef}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Accepts an open or investigating validation finding with a Responsibility electronic signature (validation_finding.accept). */
+    post: operations["KernelAcceptValidationFinding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/validation/findings/{findingRef}/explain": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Explains an open or investigating validation finding with an Approved electronic signature (validation_finding.explain). */
+    post: operations["KernelExplainValidationFinding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/validation/findings/{findingRef}/reopen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Withdraws an investigation, acceptance or explanation on a validation finding (validation_finding.reopen). */
+    post: operations["KernelReopenValidationFinding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/work-queues": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Reads the caller's capability-keyed work queues in the current tenant or within a scope.
+     * @description within is an optional NodeRef (for example study:<uuid> or study_site:<uuid>); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.
+     */
+    get: operations["KernelReadWorkQueues"];
+    put?: never;
+    /** Defines the next version of a capability-keyed work queue in the caller's tenant (work_queue.define). */
+    post: operations["KernelDefineWorkQueue"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/entitlements": {
     parameters: {
       query?: never;
@@ -1122,16 +1245,10 @@ export interface components {
       retracted_by: null | components["schemas"]["Kernel_AssertionId"];
       /** Format: date-time */
       retracted_at: null | string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_AttestationId: unknown;
-    Kernel_CandidateKind: number;
-    Kernel_CandidateSummary: {
-      kind: components["schemas"]["Kernel_CandidateKind"];
-      version: null | components["schemas"]["Kernel_NodeRef"];
-      base_version: null | components["schemas"]["Kernel_NodeRef"];
-      content_hash: null | string;
-      base_content_hash: null | string;
-    };
     Kernel_CodelistOptionView: {
       code: string;
       display: string;
@@ -1141,37 +1258,6 @@ export interface components {
     /** @enum {unknown} */
     Kernel_DateTimePrecision:
       "Year" | "Month" | "Day" | "Minute" | "Second" | null;
-    Kernel_DependentGroup: {
-      kind: string;
-      /** Format: int32 */
-      count: number | string;
-      objects: components["schemas"]["Kernel_LineageNode"][];
-    };
-    Kernel_DependentsReport: {
-      start: string;
-      /** Format: int32 */
-      depth: number | string;
-      /** Format: date-time */
-      valid_at: string;
-      /** Format: date-time */
-      known_at: string;
-      groups: components["schemas"]["Kernel_DependentGroup"][];
-      /** Format: int32 */
-      total: number | string;
-      truncated: boolean;
-    };
-    Kernel_ElementChange: {
-      element_id: string;
-      instance_type: null | string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      properties: string[];
-    };
-    Kernel_ElementChangeKind: number;
-    Kernel_EngineVersion: {
-      name: string;
-      version: string;
-    };
-    Kernel_EnrollmentStatus: number;
     Kernel_EvaluatedCondition: {
       code: string;
       description: string;
@@ -1195,6 +1281,11 @@ export interface components {
     Kernel_HiddenObjects: {
       more_exist: boolean;
       reasons: components["schemas"]["Kernel_MaskReason"][];
+    };
+    Kernel_KernelAcceptFindingRequest: {
+      rationale: string;
+      /** Format: uuid */
+      attestation_id?: null | string;
     };
     Kernel_KernelActivateSubscriptionRequest: {
       tier: string;
@@ -1318,6 +1409,13 @@ export interface components {
       asserted_at: string;
       asserted_by: string;
     };
+    Kernel_KernelCandidateSummaryResponse: {
+      kind: string;
+      version: null | string;
+      base_version: null | string;
+      content_hash: null | string;
+      base_content_hash: null | string;
+    };
     Kernel_KernelChangeEffectivityStatusRequest: {
       status: null | string;
       evidence_artifact_version_refs?: null | string[];
@@ -1329,6 +1427,9 @@ export interface components {
       /** Format: int32 */
       child_count: null | number | string;
       group: null | string;
+    };
+    Kernel_KernelClassifyFindingRequest: {
+      classification: string;
     };
     Kernel_KernelCommandResponse: {
       command: string;
@@ -1391,6 +1492,15 @@ export interface components {
     Kernel_KernelDeclareStudyRulePacksRequest: {
       rule_pack_refs: string[];
     };
+    Kernel_KernelDefineWorkQueueRequest: {
+      code: null | string;
+      title: null | string;
+      capability: null | string;
+      verb_class: null | string;
+      source: null | string;
+      /** Format: uuid */
+      work_queue_definition_id?: null | string;
+    };
     Kernel_KernelDependentGroupResponse: {
       kind: string;
       /** Format: int32 */
@@ -1438,6 +1548,10 @@ export interface components {
       instance_type: null | string;
       change: string;
       properties: string[];
+    };
+    Kernel_KernelEngineVersionResponse: {
+      name: string;
+      version: string;
     };
     Kernel_KernelEnrollmentLookupResponse: {
       study_ref: string;
@@ -1493,6 +1607,11 @@ export interface components {
         | null
         | components["schemas"]["Kernel_KernelSubscriptionScopingResponse"];
     };
+    Kernel_KernelExplainFindingRequest: {
+      explanation: string;
+      /** Format: uuid */
+      attestation_id?: null | string;
+    };
     Kernel_KernelExplanationResponse: {
       subject: null | string;
       claim: string;
@@ -1505,9 +1624,22 @@ export interface components {
       claim: string;
       evidence: string[];
     };
+    Kernel_KernelFindingDecisionResponse: {
+      status: string;
+      decided_by: string;
+      /** Format: date-time */
+      decided_at: string;
+      text: null | string;
+      decided_on_run_ref: null | string;
+      attestation_ref: null | string;
+    };
     Kernel_KernelFindingObservedValueResponse: {
       variable: string;
       value: null | string;
+    };
+    Kernel_KernelHiddenObjectsResponse: {
+      more_exist: boolean;
+      reasons: string[];
     };
     Kernel_KernelImportedRulePackSummaryResponse: {
       ref: string;
@@ -1565,6 +1697,7 @@ export interface components {
       site_name?: null | string;
       country?: null | string;
       institution_ref?: null | string;
+      institution_code?: null | string;
       /** Format: uuid */
       site_id?: null | string;
       /** Format: uuid */
@@ -1587,6 +1720,19 @@ export interface components {
       next_capability: string;
       masked: boolean;
       mask: null | string;
+      finding_ref?: null | string;
+      rule_id?: null | string;
+      detail?: null | string;
+      /** Format: int32 */
+      current_revision?: null | number | string;
+      /** @default false */
+      signature_superseded: boolean;
+      planned_activity_id?: null | string;
+      planned_activity_name?: null | string;
+      /** Format: date */
+      planned_date?: null | string;
+      /** Format: date */
+      window_end?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1600,9 +1746,26 @@ export interface components {
       /** Format: int32 */
       missing_required_item_count: number | string;
       /** Format: int32 */
+      open_error_finding_count: number | string;
+      /** Format: int32 */
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
       explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unverified_value_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unsigned_form_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unopened_visit_count: number | string;
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
@@ -1627,6 +1790,18 @@ export interface components {
       release_reason: null | string;
       masked: boolean;
       mask: null | string;
+    };
+    Kernel_KernelMaskedPartResponse: {
+      part: string;
+      reason: string;
+    };
+    Kernel_KernelMatrixGapFindingResponse: {
+      element_id: string;
+      kind: string;
+      severity: string;
+      json_pointer_path: string;
+      description: string;
+      recommendation: null | string;
     };
     Kernel_KernelNextActionResponse: {
       description: string;
@@ -1673,11 +1848,65 @@ export interface components {
       /** Format: int32 */
       revision: number | string;
     };
+    Kernel_KernelOperationalImpactResponse: {
+      /** Format: int32 */
+      active_site_count: number | string;
+      /** Format: int32 */
+      pending_site_count: number | string;
+      /** Format: int32 */
+      total_participant_count: number | string;
+      /** Format: int32 */
+      affected_participant_count: number | string;
+      /** Format: int32 */
+      reconsent_participant_count: number | string;
+      participant_impacts: components["schemas"]["Kernel_KernelParticipantSimulationImpactResponse"][];
+      hidden: components["schemas"]["Kernel_KernelHiddenObjectsResponse"];
+    };
     Kernel_KernelOrganizationSummaryResponse: {
       ref: string;
       code: string;
       name: string;
       kind: string;
+    };
+    Kernel_KernelParticipantPlannedVisitResponse: {
+      visit_id: string;
+      /** Format: date */
+      target_date: string;
+      /** Format: date */
+      window_start: string;
+      /** Format: date */
+      window_end: string;
+    };
+    Kernel_KernelParticipantScheduleShiftResponse: {
+      activity_id: string;
+      change: string;
+      before:
+        | null
+        | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+      after:
+        | null
+        | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+    };
+    Kernel_KernelParticipantSimulationImpactResponse: {
+      enrollment: string;
+      subject_code: string;
+      status: string;
+      cohort: string;
+      requires_reconsent: boolean;
+      schedule_shifts: components["schemas"]["Kernel_KernelParticipantScheduleShiftResponse"][];
+    };
+    Kernel_KernelPlannedVisitResponse: {
+      activity_id: string;
+      name: string;
+      epoch_id: string;
+      /** Format: int32 */
+      epoch_order: number | string;
+      /** Format: int32 */
+      study_day: number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
     };
     Kernel_KernelPostureScopingResponse: {
       study_phase: string;
@@ -1690,6 +1919,26 @@ export interface components {
       participant_count: number | string;
       /** Format: int32 */
       active_study_count: number | string;
+    };
+    Kernel_KernelProjectionDatasetChangeResponse: {
+      dataset: string;
+      /** Format: int32 */
+      added_count: number | string;
+      /** Format: int32 */
+      removed_count: number | string;
+      /** Format: int32 */
+      changed_count: number | string;
+      samples: components["schemas"]["Kernel_KernelProjectionRecordChangeSampleResponse"][];
+    };
+    Kernel_KernelProjectionRecordChangeSampleResponse: {
+      record_key: string;
+      change: string;
+      before: null | {
+        [key: string]: string;
+      };
+      after: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelProposalAffectedResponse: {
       ref: string;
@@ -1886,6 +2135,12 @@ export interface components {
       remediation_guidance: null | string;
       condition?: null | string;
     };
+    Kernel_KernelScheduleChangeResponse: {
+      activity_id: string;
+      change: string;
+      before: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+      after: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+    };
     Kernel_KernelScheduleOfActivitiesResponse: {
       version: string;
       content_hash: null | string;
@@ -1895,6 +2150,12 @@ export interface components {
       columns: components["schemas"]["Kernel_KernelSoaColumnResponse"][];
       rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
       footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
+    };
+    Kernel_KernelScopeWriteLockResponse: {
+      study_exists: boolean;
+      locked: boolean;
+      lock_kind: null | string;
+      scope_kind: null | string;
     };
     Kernel_KernelScreenEnrollmentRequest: {
       /** Format: uuid */
@@ -1917,6 +2178,44 @@ export interface components {
       /** Format: double */
       rank: number | string;
     };
+    Kernel_KernelSimulatedValidationFindingResponse: {
+      rule_id: string;
+      /** Format: int32 */
+      rule_version: number | string;
+      severity: string;
+      stage: string;
+      dataset: string;
+      subject: string;
+      explanation: string;
+    };
+    Kernel_KernelSimulationAsOfResponse: {
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+    };
+    Kernel_KernelSimulationResponse: {
+      scope: string;
+      as_of: components["schemas"]["Kernel_KernelSimulationAsOfResponse"];
+      candidate: components["schemas"]["Kernel_KernelCandidateSummaryResponse"];
+      engine_versions: components["schemas"]["Kernel_KernelEngineVersionResponse"][];
+      input_hash: string;
+      result_hash: string;
+      structural_diff: components["schemas"]["Kernel_KernelElementChangeResponse"][];
+      schedule_changes: components["schemas"]["Kernel_KernelScheduleChangeResponse"][];
+      masked: components["schemas"]["Kernel_KernelMaskedPartResponse"][];
+      dependents:
+        null | components["schemas"]["Kernel_KernelDependentsResponse"];
+      matrix_gaps: components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
+      is_empty: boolean;
+      operational_impact?:
+        null | components["schemas"]["Kernel_KernelOperationalImpactResponse"];
+      projection_changes?:
+        | null
+        | components["schemas"]["Kernel_KernelProjectionDatasetChangeResponse"][];
+      validation_delta?:
+        null | components["schemas"]["Kernel_KernelValidationDeltaResponse"];
+    };
     Kernel_KernelSiteSummaryResponse: {
       ref: string;
       code: string;
@@ -1925,6 +2224,13 @@ export interface components {
       institution_ref: string;
       institution_code: string;
       institution_name: string;
+      /** @default true */
+      is_active: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      linked_study_count: number | string;
     };
     Kernel_KernelSoaAmendmentDiffResponse: {
       directives: components["schemas"]["Kernel_KernelSoaDirectiveResponse"][];
@@ -2039,6 +2345,10 @@ export interface components {
       institution_name: string;
       status: string;
       effective_versions: components["schemas"]["Kernel_KernelEffectiveVersionResponse"][];
+      /** @default  */
+      study_code: string;
+      /** @default true */
+      is_active: boolean;
     };
     Kernel_KernelStudySummaryResponse: {
       ref: string;
@@ -2094,6 +2404,12 @@ export interface components {
     Kernel_KernelUpgradeSubscriptionRequest: {
       tier: string;
     };
+    Kernel_KernelValidationDeltaResponse: {
+      opening: components["schemas"]["Kernel_KernelSimulatedValidationFindingResponse"][];
+      resolving: components["schemas"]["Kernel_KernelSimulatedValidationFindingResponse"][];
+      /** Format: int32 */
+      unchanged_count: number | string;
+    };
     Kernel_KernelValidationFindingDetailResponse: {
       finding: components["schemas"]["Kernel_KernelValidationFindingResponse"];
       explanation: components["schemas"]["Kernel_Explanation"];
@@ -2126,6 +2442,8 @@ export interface components {
       last_detected_run_ref: string;
       resolved_by_run_ref: null | string;
       classification: null | string;
+      decision?:
+        null | components["schemas"]["Kernel_KernelFindingDecisionResponse"];
     };
     Kernel_KernelVerifyObservationRequest: {
       enrollment_ref: string;
@@ -2134,20 +2452,57 @@ export interface components {
       /** Format: uuid */
       assertion_id?: null | string;
     };
+    Kernel_KernelWorkItemResponse: {
+      subject: null | string;
+      subject_kind: string;
+      title: null | string;
+      /** Format: date-time */
+      since: string;
+      masked: null | string;
+      target:
+        null | components["schemas"]["Kernel_KernelWorkItemTargetResponse"];
+    };
+    Kernel_KernelWorkItemTargetResponse: {
+      study_ref: null | string;
+      /** Format: uuid */
+      study_id: null | string;
+      /** Format: uuid */
+      enrollment_id: null | string;
+      /** Format: uuid */
+      form_id: null | string;
+      observation_ref: null | string;
+      finding_ref: null | string;
+      protocol_version_ref: null | string;
+      proposal_ref?: null | string;
+    };
+    Kernel_KernelWorkQueueDefinitionResponse: {
+      definition: string;
+      code: string;
+      /** Format: int32 */
+      version: number | string;
+      title: string;
+      capability: string;
+      verb_class: string;
+      source: string;
+    };
+    Kernel_KernelWorkQueueResponse: {
+      definition: string;
+      code: string;
+      /** Format: int32 */
+      version: number | string;
+      title: string;
+      capability: string;
+      items: components["schemas"]["Kernel_KernelWorkItemResponse"][];
+      truncated: boolean;
+    };
+    Kernel_KernelWorkQueuesResponse: {
+      queues: components["schemas"]["Kernel_KernelWorkQueueResponse"][];
+    };
     Kernel_KernelZoomStepResponse: {
       level: string;
       label: null | string;
       ref: null | string;
       mask: null | string;
-    };
-    Kernel_LineageNode: {
-      handle: string;
-      kind: string;
-      ref: null | components["schemas"]["Kernel_NodeRef"];
-      mask: null | components["schemas"]["Kernel_MaskReason"];
-      /** Format: int32 */
-      distance: number | string;
-      is_masked?: boolean;
     };
     /** @enum {unknown} */
     Kernel_LockKind: "Frozen" | "Locked";
@@ -2160,25 +2515,13 @@ export interface components {
       locked_at: string;
       locked_by: string;
       reason_for_change: string;
-    };
-    Kernel_MaskedPart: {
-      part: string;
-      reason: components["schemas"]["Kernel_MaskReason"];
+      /** @default false */
+      masked: boolean;
     };
     Kernel_MaskReason: number;
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
     };
-    Kernel_MatrixGapFinding: {
-      element_id: string;
-      kind: components["schemas"]["Kernel_MatrixGapKind"];
-      severity: components["schemas"]["Kernel_MatrixGapSeverity"];
-      json_pointer_path: string;
-      description: string;
-      recommendation?: null | string;
-    };
-    Kernel_MatrixGapKind: number;
-    Kernel_MatrixGapSeverity: number;
     Kernel_NextAction: {
       description: string;
       capability?: null | string;
@@ -2259,57 +2602,6 @@ export interface components {
       type?: "text";
       value: string;
     };
-    Kernel_OperationalImpactSummary: {
-      /** Format: int32 */
-      active_site_count: number | string;
-      /** Format: int32 */
-      pending_site_count: number | string;
-      /** Format: int32 */
-      total_participant_count: number | string;
-      /** Format: int32 */
-      affected_participant_count: number | string;
-      /** Format: int32 */
-      reconsent_participant_count: number | string;
-      participant_impacts: components["schemas"]["Kernel_ParticipantSimulationImpact"][];
-      hidden: components["schemas"]["Kernel_HiddenObjects"];
-    };
-    Kernel_ParticipantImpactCohort: number;
-    Kernel_ParticipantPlannedVisit: {
-      visit_id: string;
-      /** Format: date */
-      target_date: string;
-      /** Format: date */
-      window_start: string;
-      /** Format: date */
-      window_end: string;
-    };
-    Kernel_ParticipantScheduleShift: {
-      activity_id: string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      before: null | components["schemas"]["Kernel_ParticipantPlannedVisit"];
-      after: null | components["schemas"]["Kernel_ParticipantPlannedVisit"];
-    };
-    Kernel_ParticipantSimulationImpact: {
-      enrollment: components["schemas"]["Kernel_NodeRef"];
-      subject_code: string;
-      status: components["schemas"]["Kernel_EnrollmentStatus"];
-      cohort: components["schemas"]["Kernel_ParticipantImpactCohort"];
-      requires_reconsent: boolean;
-      schedule_shifts: components["schemas"]["Kernel_ParticipantScheduleShift"][];
-    };
-    Kernel_PlannedVisit: {
-      activity_id: string;
-      name: string;
-      epoch_id: string;
-      /** Format: int32 */
-      epoch_order: number | string;
-      /** Format: int32 */
-      study_day: number | string;
-      /** Format: int32 */
-      window_before: number | string;
-      /** Format: int32 */
-      window_after: number | string;
-    };
     Kernel_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -2318,51 +2610,15 @@ export interface components {
       detail?: null | string;
       instance?: null | string;
     };
-    Kernel_ProjectionDatasetChange: {
-      dataset: string;
-      /** Format: int32 */
-      added_count: number | string;
-      /** Format: int32 */
-      removed_count: number | string;
-      /** Format: int32 */
-      changed_count: number | string;
-      samples: components["schemas"]["Kernel_ProjectionRecordChangeSample"][];
-    };
-    Kernel_ProjectionRecordChangeSample: {
-      record_key: string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      before: null | {
-        [key: string]: string;
-      };
-      after: null | {
-        [key: string]: string;
-      };
-    };
     /** @enum {unknown} */
     Kernel_QuantityComparator: "<" | "<=" | ">" | ">=" | null;
     Kernel_SaveSimulationReportRequest: {
       title: null | string;
-      result: null | components["schemas"]["Kernel_SimulationResult"];
+      result: null | components["schemas"]["Kernel_KernelSimulationResponse"];
       /** Format: uuid */
       artifact_id?: null | string;
       /** Format: uuid */
       artifact_version_id?: null | string;
-    };
-    Kernel_ScheduleChange: {
-      activity_id: string;
-      change: components["schemas"]["Kernel_ElementChangeKind"];
-      before: null | components["schemas"]["Kernel_PlannedVisit"];
-      after: null | components["schemas"]["Kernel_PlannedVisit"];
-    };
-    Kernel_SimulatedValidationFinding: {
-      rule_id: string;
-      /** Format: int32 */
-      rule_version: number | string;
-      severity: components["schemas"]["Kernel_ValidationSeverity"];
-      stage: components["schemas"]["Kernel_ValidationStage"];
-      dataset: string;
-      subject: string;
-      explanation: string;
     };
     Kernel_SimulateProtocolRequest: {
       base_version_ref: null | string;
@@ -2378,40 +2634,6 @@ export interface components {
       base_library_item_ref?: null | string;
       standard_version_ref?: null | string;
     };
-    Kernel_SimulationAsOf: {
-      /** Format: date-time */
-      valid_at: string;
-      /** Format: date-time */
-      known_at: string;
-    };
-    Kernel_SimulationResult: {
-      scope: components["schemas"]["Kernel_NodeRef"];
-      as_of: components["schemas"]["Kernel_SimulationAsOf"];
-      candidate: components["schemas"]["Kernel_CandidateSummary"];
-      engine_versions: components["schemas"]["Kernel_EngineVersion"][];
-      input_hash: string;
-      result_hash: string;
-      structural_diff: components["schemas"]["Kernel_ElementChange"][];
-      schedule_changes: components["schemas"]["Kernel_ScheduleChange"][];
-      masked: components["schemas"]["Kernel_MaskedPart"][];
-      dependents?: null | components["schemas"]["Kernel_DependentsReport"];
-      matrix_gaps?: null | components["schemas"]["Kernel_MatrixGapFinding"][];
-      operational_impact?:
-        null | components["schemas"]["Kernel_OperationalImpactSummary"];
-      projection_changes?:
-        null | components["schemas"]["Kernel_ProjectionDatasetChange"][];
-      validation_delta?:
-        null | components["schemas"]["Kernel_ValidationDeltaSummary"];
-      is_empty?: boolean;
-    };
-    Kernel_ValidationDeltaSummary: {
-      opening: components["schemas"]["Kernel_SimulatedValidationFinding"][];
-      resolving: components["schemas"]["Kernel_SimulatedValidationFinding"][];
-      /** Format: int32 */
-      unchanged_count: number | string;
-    };
-    Kernel_ValidationSeverity: number;
-    Kernel_ValidationStage: number;
   };
   responses: never;
   parameters: never;
@@ -3377,7 +3599,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_SimulationResult"];
+          "application/json": components["schemas"]["Kernel_KernelSimulationResponse"];
         };
       };
       /** @description Bad Request */
@@ -3409,6 +3631,15 @@ export interface operations {
       };
       /** @description Not Found. Kernel errors: `K.Simulation.LibraryItemUnknown`, `K.Simulation.StudyUnknown`, `K.Simulation.VersionUnknown`. */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Simulation.VersionStale`. */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -3527,7 +3758,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Kernel_MatrixGapFinding"][];
+          "application/json": components["schemas"]["Kernel_KernelMatrixGapFindingResponse"][];
         };
       };
       /** @description Bad Request */
@@ -3771,7 +4002,10 @@ export interface operations {
   };
   KernelListSites: {
     parameters: {
-      query?: never;
+      query?: {
+        institutionRef?: string;
+        country?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -3785,6 +4019,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelSiteSummaryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
       /** @description Forbidden */
@@ -5328,6 +5571,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Observation.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
     };
   };
   KernelApplyLock: {
@@ -5480,6 +5732,40 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetScopeWriteLock: {
+    parameters: {
+      query?: {
+        study_code?: string;
+        site_code?: string;
+        subject_code?: string;
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelScopeWriteLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -6139,6 +6425,531 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelInvestigateValidationFinding: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        findingRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelValidationFindingResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Validation.FindingUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Validation.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelClassifyValidationFinding: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        findingRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_KernelClassifyFindingRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelValidationFindingResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Validation.FindingUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Validation.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelAcceptValidationFinding: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        findingRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_KernelAcceptFindingRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelValidationFindingResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`, `K.Validation.AttestationRejected`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Trust.TargetUnknown`, `K.Validation.FindingUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`, `K.Validation.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`, `K.Trust.TargetKindUnsupported`, `K.Validation.DecisionTextInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelExplainValidationFinding: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        findingRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_KernelExplainFindingRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelValidationFindingResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`, `K.Validation.AttestationRejected`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Trust.TargetUnknown`, `K.Validation.FindingUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`, `K.Validation.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`, `K.Trust.TargetKindUnsupported`, `K.Validation.DecisionTextInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelReopenValidationFinding: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        findingRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelValidationFindingResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Validation.FindingUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Validation.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelReadWorkQueues: {
+    parameters: {
+      query?: {
+        within?: string;
+        code?: string[];
+        limit?: number | string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelWorkQueuesResponse"];
+        };
+      };
+      /** @description Bad Request. Kernel errors: `K.WorkQueue.QueryInvalid`. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelDefineWorkQueue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          null | components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelWorkQueueDefinitionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.WorkQueue.CapabilityInvalid`, `K.WorkQueue.CodeInvalid`, `K.WorkQueue.SourceUnknown`, `K.WorkQueue.TitleInvalid`. */
+      422: {
         headers: {
           [name: string]: unknown;
         };

@@ -42,7 +42,7 @@ export interface KernelApproveProtocolVersionInput {
 export interface KernelSaveSimulationReportInput {
   studyRef: string;
   title: string;
-  result: Schemas["Kernel_SimulationResult"];
+  result: Schemas["Kernel_KernelSimulationResponse"];
   artifactId?: string | null;
   artifactVersionId?: string | null;
   reason: string;
