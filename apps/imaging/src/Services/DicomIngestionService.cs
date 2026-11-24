@@ -170,9 +170,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 $"DICOM instance payload ({dicomBytes.Length} bytes) exceeds maximum {_quotas.MaxEntryUncompressedBytes} byte limit.");
         }
 
-        subjectId = string.IsNullOrWhiteSpace(subjectId) ? "SUBJ-001" : subjectId;
-        siteId = string.IsNullOrWhiteSpace(siteId) ? "SITE-001" : siteId;
-        studyId = string.IsNullOrWhiteSpace(studyId) ? "STUDY-001" : studyId;
+        ValidateScopeIdentifiers(subjectId, siteId, studyId);
         string opIdentity = string.IsNullOrWhiteSpace(operatorIdentity) ? "cadence.imaging.pipeline" : operatorIdentity;
 
         DateTimeOffset now = _clock.UtcNow;
@@ -188,6 +186,31 @@ public sealed class DicomIngestionService : IDicomIngestionService
             operatorIdentity: opIdentity);
 
         ValidateFrameDimensions(deidResult.Rows, deidResult.Columns, deidResult.BitsAllocated);
+
+        // Fetch or create Study Envelope and verify ownership against (studyId, siteId, subjectId)
+        var studyEnvelope = await _dbContext.ImagingStudyEnvelopes
+            .FirstOrDefaultAsync(s => s.StudyInstanceUid == deidResult.AnonymizedStudyUid, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (studyEnvelope != null)
+        {
+            EnsureStudyEnvelopeOwnership(studyEnvelope, studyId, siteId, subjectId);
+        }
+
+        var existingSopStudyOwner = await (
+                from inst in _dbContext.ImagingInstanceEnvelopes
+                join series in _dbContext.ImagingSeriesEnvelopes on inst.SeriesEnvelopeId equals series.Id
+                join study in _dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
+                where inst.SopInstanceUid == deidResult.AnonymizedSopUid
+                select new { study.StudyId, study.SiteId, study.SubjectId })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existingSopStudyOwner != null
+            && !IsMatchingScope(existingSopStudyOwner.StudyId, existingSopStudyOwner.SiteId, existingSopStudyOwner.SubjectId, studyId, siteId, subjectId))
+        {
+            throw new InvalidOperationException("Existing imaging instance envelope ownership does not match the requested study, site, and subject.");
+        }
 
         var certEntity = new DeidentificationCertificate
         {
@@ -214,11 +237,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
         _dbContext.DeidentificationCertificates.Add(certEntity);
 
-        // Fetch or create Study Envelope
-        var studyEnvelope = await _dbContext.ImagingStudyEnvelopes
-            .FirstOrDefaultAsync(s => s.StudyInstanceUid == deidResult.AnonymizedStudyUid, cancellationToken)
-            .ConfigureAwait(false);
-
+        bool isNewStudyEnvelope = studyEnvelope == null;
         if (studyEnvelope == null)
         {
             studyEnvelope = new ImagingStudyEnvelope
@@ -245,6 +264,16 @@ public sealed class DicomIngestionService : IDicomIngestionService
         else
         {
             studyEnvelope.InstanceCount++;
+            if (!string.IsNullOrEmpty(deidResult.Modality))
+            {
+                var existingModalities = JsonSerializer.Deserialize<List<string>>(studyEnvelope.ModalitiesJson) ?? [];
+                if (!existingModalities.Contains(deidResult.Modality, StringComparer.Ordinal))
+                {
+                    existingModalities.Add(deidResult.Modality);
+                    studyEnvelope.ModalitiesJson = JsonSerializer.Serialize(existingModalities);
+                }
+            }
+
             studyEnvelope.UpdatedAt = now;
         }
 
@@ -257,12 +286,17 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
         if (seriesEnvelope == null)
         {
+            if (!isNewStudyEnvelope)
+            {
+                studyEnvelope.SeriesCount++;
+            }
+
             seriesEnvelope = new ImagingSeriesEnvelope
             {
                 Id = Guid.NewGuid().ToString(),
                 StudyEnvelopeId = studyEnvelope.Id,
                 SeriesInstanceUid = deidResult.AnonymizedSeriesUid,
-                SeriesNumber = 1,
+                SeriesNumber = studyEnvelope.SeriesCount,
                 Modality = deidResult.Modality,
                 SeriesDescription = $"{deidResult.Modality} Series",
                 InstanceCount = 1
@@ -320,10 +354,11 @@ public sealed class DicomIngestionService : IDicomIngestionService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        ValidateScopeIdentifiers(request.SubjectId, request.SiteId, request.StudyId);
 
-        string subjectId = string.IsNullOrWhiteSpace(request.SubjectId) ? "SUBJ-001" : request.SubjectId;
-        string siteId = string.IsNullOrWhiteSpace(request.SiteId) ? "SITE-001" : request.SiteId;
-        string studyId = string.IsNullOrWhiteSpace(request.StudyId) ? "STUDY-001" : request.StudyId;
+        string subjectId = request.SubjectId;
+        string siteId = request.SiteId;
+        string studyId = request.StudyId;
         string opIdentity = string.IsNullOrWhiteSpace(request.OperatorIdentity) ? "cadence.imaging.pipeline" : request.OperatorIdentity;
 
         DateTimeOffset now = _clock.UtcNow;
@@ -372,111 +407,170 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 Signature: emptyManifest.Signature);
         }
 
-        string mainAnonymizedStudyUid = validList[0].DeidResult.AnonymizedStudyUid;
+        var studyGroups = validList
+            .GroupBy(x => x.DeidResult.AnonymizedStudyUid, StringComparer.Ordinal)
+            .ToList();
 
-        var studyEnvelope = await _dbContext.ImagingStudyEnvelopes
-            .FirstOrDefaultAsync(s => s.StudyInstanceUid == mainAnonymizedStudyUid, cancellationToken)
+        var existingEnvelopesByUid = new Dictionary<string, ImagingStudyEnvelope?>(studyGroups.Count, StringComparer.Ordinal);
+        foreach (var studyGroup in studyGroups)
+        {
+            var existingStudy = await _dbContext.ImagingStudyEnvelopes
+                .FirstOrDefaultAsync(s => s.StudyInstanceUid == studyGroup.Key, cancellationToken)
+                .ConfigureAwait(false);
+            if (existingStudy != null)
+            {
+                EnsureStudyEnvelopeOwnership(existingStudy, studyId, siteId, subjectId);
+            }
+
+            existingEnvelopesByUid[studyGroup.Key] = existingStudy;
+        }
+
+        var candidateSopUids = validList
+            .Select(x => x.DeidResult.AnonymizedSopUid)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var existingSopOwners = await (
+                from inst in _dbContext.ImagingInstanceEnvelopes
+                join series in _dbContext.ImagingSeriesEnvelopes on inst.SeriesEnvelopeId equals series.Id
+                join study in _dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
+                where candidateSopUids.Contains(inst.SopInstanceUid)
+                select new { study.StudyId, study.SiteId, study.SubjectId })
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var allModalities = validList.Select(x => x.DeidResult.Modality).Where(m => !string.IsNullOrEmpty(m)).Distinct().ToList();
-        var seriesGroups = validList.GroupBy(x => x.DeidResult.AnonymizedSeriesUid).ToList();
-
-        if (studyEnvelope == null)
+        if (existingSopOwners.Any(owner => !IsMatchingScope(owner.StudyId, owner.SiteId, owner.SubjectId, studyId, siteId, subjectId)))
         {
-            studyEnvelope = new ImagingStudyEnvelope
-            {
-                Id = Guid.NewGuid().ToString(),
-                StudyInstanceUid = mainAnonymizedStudyUid,
-                StudyId = studyId,
-                SiteId = siteId,
-                SubjectId = subjectId,
-                ModalitiesJson = JsonSerializer.Serialize(allModalities),
-                StudyDate = now.ToString("yyyyMMdd"),
-                StudyDescription = "Anonymized Clinical Trial DICOM Study",
-                SeriesCount = seriesGroups.Count,
-                InstanceCount = validList.Count,
-                Status = "STORED",
-                AdjudicationStatus = "UNASSIGNED",
-                CreatedAt = now,
-                CreatedBy = opIdentity,
-                UpdatedAt = now,
-                VersionIndex = 1
-            };
-            _dbContext.ImagingStudyEnvelopes.Add(studyEnvelope);
-        }
-        else
-        {
-            studyEnvelope.InstanceCount += validList.Count;
-            studyEnvelope.SeriesCount = Math.Max(studyEnvelope.SeriesCount, seriesGroups.Count);
-            var existingModalities = JsonSerializer.Deserialize<List<string>>(studyEnvelope.ModalitiesJson) ?? [];
-            var mergedModalities = existingModalities.Union(allModalities).Distinct().ToList();
-            studyEnvelope.ModalitiesJson = JsonSerializer.Serialize(mergedModalities);
-            studyEnvelope.UpdatedAt = now;
+            throw new InvalidOperationException("Existing imaging instance envelope ownership does not match the requested study, site, and subject.");
         }
 
         var seriesSummaries = new List<SeriesIngestionSummary>();
-        int seriesIndex = 1;
+        ImagingStudyEnvelope? primaryStudyEnvelope = null;
+        string mainAnonymizedStudyUid = studyGroups[0].Key;
 
-        foreach (var seriesGroup in seriesGroups)
+        foreach (var studyGroup in studyGroups)
         {
-            string seriesUid = seriesGroup.Key;
-            var firstInstance = seriesGroup.First().DeidResult;
+            string studyUid = studyGroup.Key;
+            var studySlices = studyGroup.ToList();
+            var studyModalities = studySlices
+                .Select(x => x.DeidResult.Modality)
+                .Where(m => !string.IsNullOrEmpty(m))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var seriesGroups = studySlices
+                .GroupBy(x => x.DeidResult.AnonymizedSeriesUid, StringComparer.Ordinal)
+                .ToList();
 
-            var seriesEnvelope = await _dbContext.ImagingSeriesEnvelopes
-                .FirstOrDefaultAsync(s => s.StudyEnvelopeId == studyEnvelope.Id && s.SeriesInstanceUid == seriesUid, cancellationToken)
-                .ConfigureAwait(false);
+            var studyEnvelope = existingEnvelopesByUid[studyUid];
+            bool isNewStudyEnvelope = studyEnvelope == null;
 
-            if (seriesEnvelope == null)
+            if (studyEnvelope == null)
             {
-                seriesEnvelope = new ImagingSeriesEnvelope
+                studyEnvelope = new ImagingStudyEnvelope
                 {
                     Id = Guid.NewGuid().ToString(),
-                    StudyEnvelopeId = studyEnvelope.Id,
-                    SeriesInstanceUid = seriesUid,
-                    SeriesNumber = seriesIndex++,
-                    Modality = firstInstance.Modality,
-                    SeriesDescription = $"{firstInstance.Modality} Series",
-                    InstanceCount = seriesGroup.Count()
+                    StudyInstanceUid = studyUid,
+                    StudyId = studyId,
+                    SiteId = siteId,
+                    SubjectId = subjectId,
+                    ModalitiesJson = JsonSerializer.Serialize(studyModalities),
+                    StudyDate = now.ToString("yyyyMMdd"),
+                    StudyDescription = "Anonymized Clinical Trial DICOM Study",
+                    SeriesCount = seriesGroups.Count,
+                    InstanceCount = studySlices.Count,
+                    Status = "STORED",
+                    AdjudicationStatus = "UNASSIGNED",
+                    CreatedAt = now,
+                    CreatedBy = opIdentity,
+                    UpdatedAt = now,
+                    VersionIndex = 1
                 };
-                _dbContext.ImagingSeriesEnvelopes.Add(seriesEnvelope);
+                _dbContext.ImagingStudyEnvelopes.Add(studyEnvelope);
             }
             else
             {
-                seriesEnvelope.InstanceCount += seriesGroup.Count();
+                studyEnvelope.InstanceCount += studySlices.Count;
+                var existingModalities = JsonSerializer.Deserialize<List<string>>(studyEnvelope.ModalitiesJson) ?? [];
+                var mergedModalities = existingModalities.Union(studyModalities, StringComparer.Ordinal).ToList();
+                studyEnvelope.ModalitiesJson = JsonSerializer.Serialize(mergedModalities);
+                studyEnvelope.UpdatedAt = now;
             }
 
-            seriesSummaries.Add(new SeriesIngestionSummary(
-                SeriesEnvelopeId: seriesEnvelope.Id,
-                AnonymizedSeriesUid: seriesUid,
-                Modality: firstInstance.Modality,
-                InstanceCount: seriesEnvelope.InstanceCount));
+            primaryStudyEnvelope ??= studyEnvelope;
 
-            int instNum = 1;
-            foreach (var (_, deidResult) in seriesGroup)
+            int seriesIndex = isNewStudyEnvelope ? 1 : studyEnvelope.SeriesCount + 1;
+
+            foreach (var seriesGroup in seriesGroups)
             {
-                var instEnvelope = new ImagingInstanceEnvelope
+                string seriesUid = seriesGroup.Key;
+                var seriesSlices = seriesGroup.ToList();
+                var firstInstance = seriesSlices[0].DeidResult;
+
+                var seriesEnvelope = await _dbContext.ImagingSeriesEnvelopes
+                    .FirstOrDefaultAsync(s => s.StudyEnvelopeId == studyEnvelope.Id && s.SeriesInstanceUid == seriesUid, cancellationToken)
+                    .ConfigureAwait(false);
+
+                int startingInstanceNumber;
+                if (seriesEnvelope == null)
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    SeriesEnvelopeId = seriesEnvelope.Id,
-                    SopInstanceUid = deidResult.AnonymizedSopUid,
-                    SopClassUid = "1.2.840.10008.5.1.4.1.1.2", // deid-ignore
-                    InstanceNumber = instNum++,
-                    Rows = deidResult.Rows,
-                    Columns = deidResult.Columns,
-                    BitsAllocated = deidResult.BitsAllocated,
-                    PixelSpacingJson = JsonSerializer.Serialize(deidResult.PixelSpacing),
-                    SliceThickness = deidResult.SliceThickness,
-                    SliceLocation = deidResult.SliceLocation,
-                    WindowCenter = deidResult.WindowCenter,
-                    WindowWidth = deidResult.WindowWidth,
-                    ObjectKey = $"dicom/{studyEnvelope.Id}/{seriesEnvelope.Id}/{deidResult.AnonymizedSopUid}.dcm",
-                    ChecksumSha256 = deidResult.TargetSha256,
-                    SizeBytes = deidResult.DeidentifiedSizeBytes,
-                    BurnedInPhiMasked = deidResult.PixelMaskApplied
-                };
-                _dbContext.ImagingInstanceEnvelopes.Add(instEnvelope);
+                    if (!isNewStudyEnvelope)
+                    {
+                        studyEnvelope.SeriesCount++;
+                    }
+
+                    seriesEnvelope = new ImagingSeriesEnvelope
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        StudyEnvelopeId = studyEnvelope.Id,
+                        SeriesInstanceUid = seriesUid,
+                        SeriesNumber = seriesIndex++,
+                        Modality = firstInstance.Modality,
+                        SeriesDescription = $"{firstInstance.Modality} Series",
+                        InstanceCount = seriesSlices.Count
+                    };
+                    _dbContext.ImagingSeriesEnvelopes.Add(seriesEnvelope);
+                    startingInstanceNumber = 1;
+                }
+                else
+                {
+                    startingInstanceNumber = seriesEnvelope.InstanceCount + 1;
+                    seriesEnvelope.InstanceCount += seriesSlices.Count;
+                }
+
+                seriesSummaries.Add(new SeriesIngestionSummary(
+                    SeriesEnvelopeId: seriesEnvelope.Id,
+                    AnonymizedSeriesUid: seriesUid,
+                    Modality: firstInstance.Modality,
+                    InstanceCount: seriesEnvelope.InstanceCount));
+
+                int instNum = startingInstanceNumber;
+                foreach (var (_, deidResult) in seriesSlices)
+                {
+                    var instEnvelope = new ImagingInstanceEnvelope
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        SeriesEnvelopeId = seriesEnvelope.Id,
+                        SopInstanceUid = deidResult.AnonymizedSopUid,
+                        SopClassUid = "1.2.840.10008.5.1.4.1.1.2", // deid-ignore
+                        InstanceNumber = instNum++,
+                        Rows = deidResult.Rows,
+                        Columns = deidResult.Columns,
+                        BitsAllocated = deidResult.BitsAllocated,
+                        PixelSpacingJson = JsonSerializer.Serialize(deidResult.PixelSpacing),
+                        SliceThickness = deidResult.SliceThickness,
+                        SliceLocation = deidResult.SliceLocation,
+                        WindowCenter = deidResult.WindowCenter,
+                        WindowWidth = deidResult.WindowWidth,
+                        ObjectKey = $"dicom/{studyEnvelope.Id}/{seriesEnvelope.Id}/{deidResult.AnonymizedSopUid}.dcm",
+                        ChecksumSha256 = deidResult.TargetSha256,
+                        SizeBytes = deidResult.DeidentifiedSizeBytes,
+                        BurnedInPhiMasked = deidResult.PixelMaskApplied
+                    };
+                    _dbContext.ImagingInstanceEnvelopes.Add(instEnvelope);
+                }
             }
         }
+
+        var primaryEnvelope = primaryStudyEnvelope!;
 
         var distinctScrubbedTags = validList
             .SelectMany(x => x.DeidResult.ScrubbedTags)
@@ -494,7 +588,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         var manifest = new BatchDeidentificationManifest
         {
             ManifestId = Guid.NewGuid().ToString(),
-            StudyEnvelopeId = studyEnvelope.Id,
+            StudyEnvelopeId = primaryEnvelope.Id,
             StudyId = studyId,
             SiteId = siteId,
             SubjectId = subjectId,
@@ -517,7 +611,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         var certEntity = new DeidentificationCertificate
         {
             Id = manifest.ManifestId,
-            StudyEnvelopeId = studyEnvelope.Id,
+            StudyEnvelopeId = primaryEnvelope.Id,
             SourceSha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(signature))),
             TargetSha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(manifest.ManifestId))),
             StudyId = studyId,
@@ -542,7 +636,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return new BatchIngestionResult(
-            StudyEnvelopeId: studyEnvelope.Id,
+            StudyEnvelopeId: primaryEnvelope.Id,
             CertificateId: certEntity.Id,
             AnonymizedStudyUid: mainAnonymizedStudyUid,
             TotalFilesReceived: totalFilesProcessed,
@@ -608,7 +702,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
                             successfulSlices.Add(new SliceIngestionMetadata(workItem.FileName, sliceResult));
                         }
-                        catch (Exception ex) when (ex is DicomPixelDeidException or DicomInvalidDimensionsException)
+                        catch (Exception ex) when (ex is DicomPixelDeidException or DicomInvalidDimensionsException or ArgumentException)
                         {
                             Interlocked.CompareExchange(ref fatalDeidException, ExceptionDispatchInfo.Capture(ex), null);
                             await linkedCts.CancelAsync().ConfigureAwait(false);
@@ -941,6 +1035,36 @@ public sealed class DicomIngestionService : IDicomIngestionService
             && headerBytes[1] == 0x4B
             && ((headerBytes[2] == 0x03 && headerBytes[3] == 0x04)
                 || (headerBytes[2] == 0x05 && headerBytes[3] == 0x06));
+    }
+
+    private static void ValidateScopeIdentifiers(string subjectId, string siteId, string studyId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(siteId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(studyId);
+    }
+
+    private static bool IsMatchingScope(
+        string storedStudy,
+        string storedSite,
+        string storedSubject,
+        string expectedStudy,
+        string expectedSite,
+        string expectedSubject) =>
+        string.Equals(storedStudy, expectedStudy, StringComparison.Ordinal)
+        && string.Equals(storedSite, expectedSite, StringComparison.Ordinal)
+        && string.Equals(storedSubject, expectedSubject, StringComparison.Ordinal);
+
+    private static void EnsureStudyEnvelopeOwnership(
+        ImagingStudyEnvelope studyEnvelope,
+        string studyId,
+        string siteId,
+        string subjectId)
+    {
+        if (!IsMatchingScope(studyEnvelope.StudyId, studyEnvelope.SiteId, studyEnvelope.SubjectId, studyId, siteId, subjectId))
+        {
+            throw new InvalidOperationException("Existing imaging study envelope ownership does not match the requested study, site, and subject.");
+        }
     }
 
     private sealed record QueuedSliceWorkItem(

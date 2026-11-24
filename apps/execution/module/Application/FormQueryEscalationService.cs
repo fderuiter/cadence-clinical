@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -149,21 +150,36 @@ internal sealed class FormQueryEscalationService(
             return CommandResult<FormQueryEscalationPassResult>.Success(new FormQueryEscalationPassResult(newlyEscalated, []));
         }
 
-        // Ensure site/subject codes are resolved via batch-loaded form records if any enrollment lacked a site header.
-        var distinctFormIds = escalatedOpenQueries.Select(q => q.FormId).Distinct().ToList();
-        var recordsById = distinctFormIds.Count > 0
-            ? await forms.FindManyAsync(tenantId, distinctFormIds, cancellationToken).ConfigureAwait(false)
-            : new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
-        foreach (var record in recordsById.Values)
+        // Ensure site/subject codes are resolved via narrow form headers if any enrollment lacked a site header.
+        var unresolvedFormIds = escalatedOpenQueries
+            .Where(q => !enrollmentMeta.TryGetValue(q.EnrollmentId, out var existing) || existing.SiteId is null)
+            .Select(q => q.FormId)
+            .Distinct()
+            .ToList();
+        if (unresolvedFormIds.Count > 0)
         {
-            if (!enrollmentMeta.TryGetValue(record.EnrollmentId, out var existing) || existing.SiteId is null)
+            var headers = await forms.FindHeadersAsync(tenantId, unresolvedFormIds, cancellationToken).ConfigureAwait(false);
+            var nodesToResolve = headers.Values
+                .SelectMany(h => h.StudySiteId.IsEmpty
+                    ? new[] { NodeRef.For(h.EnrollmentId) }
+                    : new[] { NodeRef.For(h.StudySiteId), NodeRef.For(h.EnrollmentId) })
+                .Distinct()
+                .ToList();
+            var summaries = nodesToResolve.Count > 0
+                ? await navigator.ResolveManyAsync(tenantId, nodesToResolve, cancellationToken).ConfigureAwait(false)
+                : new Dictionary<NodeRef, NodeSummary>();
+            foreach (var header in headers.Values)
             {
-                var siteSummary = await navigator.ResolveAsync(tenantId, NodeRef.For(record.StudySiteId), cancellationToken).ConfigureAwait(false);
-                var enrSummary = await navigator.ResolveAsync(tenantId, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false);
-                enrollmentMeta[record.EnrollmentId] = (
-                    record.StudySiteId,
-                    siteSummary?.Code ?? siteSummary?.Title ?? record.StudySiteId.ToString(),
-                    enrSummary?.Code ?? enrSummary?.Title ?? record.EnrollmentId.ToString());
+                if (!enrollmentMeta.TryGetValue(header.EnrollmentId, out var existing) || existing.SiteId is null)
+                {
+                    var siteSummary = header.StudySiteId.IsEmpty ? null : summaries.GetValueOrDefault(NodeRef.For(header.StudySiteId));
+                    var enrSummary = summaries.GetValueOrDefault(NodeRef.For(header.EnrollmentId));
+                    StudySiteId? resolvedSiteId = header.StudySiteId.IsEmpty ? null : header.StudySiteId;
+                    enrollmentMeta[header.EnrollmentId] = (
+                        resolvedSiteId,
+                        siteSummary?.Code ?? siteSummary?.Title ?? header.StudySiteId.ToString(),
+                        enrSummary?.Code ?? enrSummary?.Title ?? header.EnrollmentId.ToString());
+                }
             }
         }
 
@@ -302,40 +318,59 @@ internal static class FormQueryDigestBlinding
             .Select(static e => CollectionInstanceId.FromGuid(e.FormId))
             .Distinct()
             .ToList();
-        var recordsByFormId = distinctFormIds.Count > 0
-            ? await forms.FindManyAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false)
-            : new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
-
-        var distinctQueryIds = allEntries
-            .Where(static e => e.QueryId != Guid.Empty)
-            .Select(static e => FormQueryId.FromGuid(e.QueryId))
-            .Distinct()
-            .ToList();
-        Dictionary<Guid, ObservationId> observationByQueryId;
-        if (distinctQueryIds.Count > 0)
+        IReadOnlySet<EnrollmentId> unblindedEnrollments = FrozenSet<EnrollmentId>.Empty;
+        var targetFormIds = distinctFormIds;
+        if (!alwaysMaskBlinded && access is not null && distinctFormIds.Count > 0)
         {
-            await using var db = contexts.Create(tenant);
-            observationByQueryId = await db.FormQueries
-                .AsNoTracking()
-                .Where(q => distinctQueryIds.Contains(q.Id))
-                .Select(q => new { q.Id, q.ObservationId })
-                .ToDictionaryAsync(x => x.Id.Value, x => x.ObservationId, cancellationToken)
-                .ConfigureAwait(false);
+            var headersByFormId = await forms.FindHeadersAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false);
+            var unblinded = new HashSet<EnrollmentId>();
+            foreach (var enrollmentId in headersByFormId.Values.Select(static h => h.EnrollmentId).Distinct())
+            {
+                if (await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false))
+                {
+                    unblinded.Add(enrollmentId);
+                }
+            }
+
+            unblindedEnrollments = unblinded;
+            targetFormIds = [
+                .. distinctFormIds.Where(id =>
+                    !headersByFormId.TryGetValue(id, out var header)
+                    || !unblinded.Contains(header.EnrollmentId)),
+            ];
+        }
+
+        var targetsByFormId = targetFormIds.Count > 0
+            ? await forms.FindQueryTargetsAsync(tenant, targetFormIds, unblindedEnrollments, cancellationToken).ConfigureAwait(false)
+            : new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>();
+
+        Dictionary<Guid, ObservationId> observationByQueryId;
+        if (targetsByFormId.Values.Any(static t => t.BlindedObservationIds is { Count: > 0 }))
+        {
+            var distinctQueryIds = allEntries
+                .Where(static e => e.QueryId != Guid.Empty)
+                .Select(static e => FormQueryId.FromGuid(e.QueryId))
+                .Distinct()
+                .ToList();
+            if (distinctQueryIds.Count > 0)
+            {
+                await using var db = contexts.Create(tenant);
+                observationByQueryId = await db.FormQueries
+                    .AsNoTracking()
+                    .IgnoreAutoIncludes()
+                    .Where(q => distinctQueryIds.Contains(q.Id))
+                    .Select(q => new { q.Id, q.ObservationId })
+                    .ToDictionaryAsync(x => x.Id.Value, x => x.ObservationId, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                observationByQueryId = [];
+            }
         }
         else
         {
             observationByQueryId = [];
-        }
-
-        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
-        if (!alwaysMaskBlinded && access is not null)
-        {
-            foreach (var enrollmentId in recordsByFormId.Values.Select(static r => r.EnrollmentId).Distinct())
-            {
-                canUnblindByEnrollment[enrollmentId] = await access
-                    .CanUnblindAsync(tenant, enrollmentId, cancellationToken)
-                    .ConfigureAwait(false);
-            }
         }
 
         var result = new List<IReadOnlyList<FormQueryAgingDigestEntry>>(entryLists.Count);
@@ -350,21 +385,15 @@ internal static class FormQueryDigestBlinding
                     continue;
                 }
 
-                if (!recordsByFormId.TryGetValue(CollectionInstanceId.FromGuid(entry.FormId), out var record))
+                if (!targetsByFormId.TryGetValue(CollectionInstanceId.FromGuid(entry.FormId), out var target))
                 {
                     shaped.Add(entry);
                     continue;
                 }
 
-                if (!observationByQueryId.TryGetValue(entry.QueryId, out var observationId))
-                {
-                    observationId = record.Values
-                        .FirstOrDefault(v => string.Equals(v.ItemId, entry.ItemId, StringComparison.Ordinal))?.ObservationId
-                        ?? default;
-                }
-
-                var isBlinded = record.IsQueryBlinded(entry.ItemId, observationId);
-                var canUnblind = !alwaysMaskBlinded && canUnblindByEnrollment.GetValueOrDefault(record.EnrollmentId);
+                observationByQueryId.TryGetValue(entry.QueryId, out var observationId);
+                var isBlinded = target.IsQueryBlinded(entry.ItemId, observationId);
+                var canUnblind = !alwaysMaskBlinded && unblindedEnrollments.Contains(target.EnrollmentId);
                 shaped.Add(isBlinded && !canUnblind ? entry.MaskBlinded() : entry);
             }
 
