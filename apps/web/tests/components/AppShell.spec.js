@@ -737,4 +737,91 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       wrapper.unmount();
     }
   });
+
+  it("renders #staff-demo-banner with Documentation Portal and Participant Demo links only in demo builds", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const stdWrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    expect(stdWrapper.find("#staff-demo-banner").exists()).toBe(false);
+    stdWrapper.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const demoWrapper = mount(AppShell, {
+        global: { plugins: [router] },
+      });
+      const banner = demoWrapper.find("#staff-demo-banner");
+      expect(banner.exists()).toBe(true);
+      expect(demoWrapper.find("#staff-demo-link-docs").attributes("href")).toBe(
+        "/cadence-clinical/"
+      );
+      expect(
+        demoWrapper.find("#staff-demo-link-participant").attributes("href")
+      ).toBe("/cadence-clinical/subject-portal/");
+
+      const focusable = demoWrapper.element.querySelectorAll(
+        "a, button, input, select, textarea, [tabindex]"
+      );
+      expect(focusable[0].classList.contains("skip-link")).toBe(true);
+      await expect(demoWrapper).toBeAccessible();
+
+      const originalInnerWidth = window.innerWidth;
+      const originalScrollY = window.scrollY;
+      try {
+        Object.defineProperty(window, "innerWidth", {
+          configurable: true,
+          value: 768,
+        });
+        Object.defineProperty(window, "scrollY", {
+          configurable: true,
+          value: 0,
+        });
+        window.dispatchEvent(new Event("resize"));
+        Object.defineProperty(banner.element, "offsetHeight", {
+          configurable: true,
+          value: 36,
+        });
+        const headerEl = demoWrapper.find(".app-header");
+        Object.defineProperty(headerEl.element, "offsetTop", {
+          configurable: true,
+          get: () => window.scrollY,
+        });
+
+        // Scrolling 30px (< 36 + 24) while demo banner is still visible keeps .app-header expanded
+        Object.defineProperty(window, "scrollY", {
+          configurable: true,
+          value: 30,
+        });
+        window.dispatchEvent(new Event("scroll"));
+        await demoWrapper.vm.$nextTick();
+        expect(headerEl.classes()).not.toContain("is-collapsed");
+
+        // Scrolling past banner + threshold collapses .app-header even when sticky offsetTop tracks scrollY
+        Object.defineProperty(window, "scrollY", {
+          configurable: true,
+          value: 120,
+        });
+        window.dispatchEvent(new Event("scroll"));
+        await demoWrapper.vm.$nextTick();
+        expect(headerEl.classes()).toContain("is-collapsed");
+      } finally {
+        Object.defineProperty(window, "innerWidth", {
+          configurable: true,
+          value: originalInnerWidth,
+        });
+        Object.defineProperty(window, "scrollY", {
+          configurable: true,
+          value: originalScrollY,
+        });
+      }
+
+      demoWrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
