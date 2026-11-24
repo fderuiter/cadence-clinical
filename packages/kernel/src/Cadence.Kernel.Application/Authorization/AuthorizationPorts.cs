@@ -107,6 +107,40 @@ public interface IAuthorizationProbe
     /// </summary>
     ValueTask<IReadOnlyList<CommandAvailability>> GetCommandsAsync(
         TenantId tenant, NodeRef resource, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Evaluates whether the current actor holds <paramref name="capability"/> over <paramref name="resource"/>'s scope
+    /// before a capability-keyed work queue masks restricted or blinded items in place (ADR-2471, ADR-2486).
+    /// </summary>
+    ValueTask<AuthorizationDecision> CanIWorkQueueCandidateAsync(
+        TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken) =>
+        CanIAsync(tenant, capability, resource, cancellationToken);
+
+    /// <summary>
+    /// Records a non-confirming <see cref="AuthorityEvaluator.GrantCondition"/> dry-run denial when
+    /// <paramref name="resource"/> is masked or undetected for the calling actor.
+    /// </summary>
+    ValueTask<AuthorizationDecision> DenyHiddenAsync(
+        TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken) =>
+        CanIAsync(tenant, capability, resource, cancellationToken);
+
+    /// <summary>
+    /// Returns the command catalogue for <paramref name="resource"/> with non-confirming
+    /// <see cref="AuthorityEvaluator.GrantCondition"/> dry-run denials when the resource is masked or undetected for the calling actor.
+    /// </summary>
+    async ValueTask<IReadOnlyList<CommandAvailability>> DenyHiddenCommandsAsync(
+        TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
+    {
+        var existing = await GetCommandsAsync(tenant, resource, cancellationToken).ConfigureAwait(false);
+        var denied = new List<CommandAvailability>(existing.Count);
+        foreach (var item in existing)
+        {
+            var decision = await DenyHiddenAsync(tenant, item.Capability, resource, cancellationToken).ConfigureAwait(false);
+            denied.Add(new CommandAvailability(item.Command, item.Capability, resource, decision, decision.Explain(item.Command, resource)));
+        }
+
+        return denied;
+    }
 }
 
 /// <summary>A command offered on an object, with whether the current actor may run it and why.</summary>

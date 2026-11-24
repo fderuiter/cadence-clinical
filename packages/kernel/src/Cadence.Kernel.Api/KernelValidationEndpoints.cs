@@ -648,6 +648,8 @@ public static class KernelValidationEndpoints
         IValidationFindings findings,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!TryParseFinding(findingRef, out var findingId))
@@ -661,10 +663,23 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
+        var (_, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
+            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (visibilityProblem is not null)
+        {
+            return visibilityProblem;
+        }
+
         var result = await sender.SendAsync(
             new InvestigateFinding(tenant, findingId, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, cancellationToken).ConfigureAwait(false);
+        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ClassifyFindingAsync(
@@ -674,6 +689,8 @@ public static class KernelValidationEndpoints
         IValidationFindings findings,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!TryParseFinding(findingRef, out var findingId))
@@ -697,10 +714,23 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
+        var (_, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
+            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (visibilityProblem is not null)
+        {
+            return visibilityProblem;
+        }
+
         var result = await sender.SendAsync(
             new ClassifyFinding(tenant, findingId, classification, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, cancellationToken).ConfigureAwait(false);
+        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> AcceptFindingAsync(
@@ -711,6 +741,8 @@ public static class KernelValidationEndpoints
         IKernelCommandSender sender,
         IAuthorizationProbe probe,
         IKernelChangeReason changeReason,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (context.VerifiedSigToken() is not { } sigToken)
@@ -743,6 +775,13 @@ public static class KernelValidationEndpoints
             return entitlementProblem;
         }
 
+        var (existing, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
+            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (visibilityProblem is not null)
+        {
+            return visibilityProblem;
+        }
+
         var attestationId = request?.AttestationId is { } given && given != Guid.Empty
             ? AttestationId.FromGuid(given)
             : AttestationId.FromGuid(DeriveGuid(tenant, "accept-finding-attest", idempotencyKey));
@@ -751,7 +790,7 @@ public static class KernelValidationEndpoints
         var canAccept = await probe.CanIAsync(tenant, AcceptFindingCapability, findingNode, cancellationToken).ConfigureAwait(false);
         if (canAccept.Permitted)
         {
-            var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+            existing ??= await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
             if (existing is null)
             {
                 return KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown);
@@ -782,7 +821,8 @@ public static class KernelValidationEndpoints
         var result = await sender.SendAsync(
             new AcceptFinding(tenant, findingId, rationale, attestationId, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, cancellationToken).ConfigureAwait(false);
+        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ExplainFindingAsync(
@@ -793,6 +833,8 @@ public static class KernelValidationEndpoints
         IKernelCommandSender sender,
         IAuthorizationProbe probe,
         IKernelChangeReason changeReason,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (context.VerifiedSigToken() is not { } sigToken)
@@ -825,6 +867,13 @@ public static class KernelValidationEndpoints
             return entitlementProblem;
         }
 
+        var (existing, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
+            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (visibilityProblem is not null)
+        {
+            return visibilityProblem;
+        }
+
         var attestationId = request?.AttestationId is { } given && given != Guid.Empty
             ? AttestationId.FromGuid(given)
             : AttestationId.FromGuid(DeriveGuid(tenant, "explain-finding-attest", idempotencyKey));
@@ -833,7 +882,7 @@ public static class KernelValidationEndpoints
         var canExplain = await probe.CanIAsync(tenant, ExplainFindingCapability, findingNode, cancellationToken).ConfigureAwait(false);
         if (canExplain.Permitted)
         {
-            var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+            existing ??= await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
             if (existing is null)
             {
                 return KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown);
@@ -864,7 +913,8 @@ public static class KernelValidationEndpoints
         var result = await sender.SendAsync(
             new ExplainFinding(tenant, findingId, explanation, attestationId, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, cancellationToken).ConfigureAwait(false);
+        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ReopenFindingAsync(
@@ -873,6 +923,8 @@ public static class KernelValidationEndpoints
         IValidationFindings findings,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!TryParseFinding(findingRef, out var findingId))
@@ -886,10 +938,111 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
+        var (_, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
+            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
+        if (visibilityProblem is not null)
+        {
+            return visibilityProblem;
+        }
+
         var result = await sender.SendAsync(
             new ReopenFinding(tenant, findingId, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, cancellationToken).ConfigureAwait(false);
+        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    internal static IValidationFindings? ResolveActiveValidationFindings(IServiceProvider services)
+    {
+        if (services.GetService<IValidationFindings>() is not { } findings)
+        {
+            return null;
+        }
+
+        var isPersistenceFindings = findings.GetType().Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) ?? false;
+        if (isPersistenceFindings
+            && services.GetService<IAuthorityStore>() is { } authorityStore
+            && !(authorityStore.GetType().Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) ?? false))
+        {
+            return null;
+        }
+
+        return findings;
+    }
+
+    internal static async Task<bool> IsFindingVisibleAsync(
+        TenantId tenant,
+        ValidationFindingView finding,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var studyNode = NodeRef.For(finding.Study);
+        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [studyNode], cancellationToken).ConfigureAwait(false);
+        if (studyMasks.For(studyNode) is not null)
+        {
+            return false;
+        }
+
+        var visible = await FilterVisibleFindingsAsync(tenant, finding.Study, [finding], services, visibility, actor, cancellationToken)
+            .ConfigureAwait(false);
+        return visible.Count > 0;
+    }
+
+    private static async Task<(ValidationFindingView? Existing, ProblemHttpResult? Problem)> AuthorizeDecisionVisibilityAsync(
+        TenantId tenant,
+        ValidationFindingId findingId,
+        IValidationFindings findings,
+        HttpContext context,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        if (actor.Actor is null)
+        {
+            return (null, null);
+        }
+
+        var findingNode = NodeRef.For(findingId);
+        if (ResolveActiveValidationFindings(context.RequestServices) is null)
+        {
+            var fallbackMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [findingNode], cancellationToken).ConfigureAwait(false);
+            return fallbackMasks.For(findingNode) is not null
+                ? (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied))
+                : (null, null);
+        }
+
+        var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+        if (existing is not null)
+        {
+            return await IsFindingVisibleAsync(tenant, existing, context.RequestServices, visibility, actor, cancellationToken).ConfigureAwait(false)
+                ? (existing, null)
+                : (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+        }
+
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [findingNode], cancellationToken).ConfigureAwait(false);
+        if (masks.For(findingNode) is not null)
+        {
+            return (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+        }
+
+        if (context.RequestServices.GetService<IAuthorizationProbe>() is { } probe)
+        {
+            var canUnblindTenant = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, NodeRef.For(tenant), cancellationToken)
+                .ConfigureAwait(false);
+            if (!canUnblindTenant.Permitted)
+            {
+                return (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+            }
+        }
+
+        return (null, null);
     }
 
     private static async Task<ProblemHttpResult?> CheckValidationDecisionEntitlementsAsync(
@@ -941,6 +1094,9 @@ public static class KernelValidationEndpoints
         TenantId tenant,
         ValidationFindingId findingId,
         IValidationFindings findings,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!result.IsSuccess)
@@ -949,9 +1105,17 @@ public static class KernelValidationEndpoints
         }
 
         var updated = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
-        return updated is null
-            ? KernelProblems.NotFound(NodeRef.For(findingId))
-            : TypedResults.Ok(KernelValidationFindingResponse.From(updated));
+        if (updated is null)
+        {
+            return KernelProblems.NotFound(NodeRef.For(findingId));
+        }
+
+        if (!await IsFindingVisibleAsync(tenant, updated, services, visibility, actor, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+        }
+
+        return TypedResults.Ok(KernelValidationFindingResponse.From(updated));
     }
 
     private static bool TryParseFinding(string text, out ValidationFindingId findingId)

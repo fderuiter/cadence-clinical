@@ -12,10 +12,14 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
+
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Xunit;
 
@@ -489,6 +493,209 @@ public sealed class AuthorityTests
         return evaluator.EvaluateAsync(new AuthorizationRequest(actor, Tenant, capability, resource, when, when), CancellationToken.None);
     }
 
+    /// <summary>
+    /// Blinded evidence nodes (<c>validation_finding</c>, <c>observation</c>) require both the action capability and a
+    /// qualified <c>enrollment.unblind</c> grant over the evidence scope (<c>K-AUTH-4</c>, <c>K-AUTH-5</c>), including
+    /// <see cref="Attest"/> commands even when <see cref="Attest.Scope"/> names a broader study scope; missing or
+    /// unqualified unblinding authority denies with the uniform <see cref="AuthorityEvaluator.GrantCondition"/>.
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_BlindedEvidenceNodes_RequireQualifiedEnrollmentUnblind_AndDenyUniformly")]
+    [KernelRule("K-AUTH-4")]
+    [KernelRule("K-AUTH-5")]
+    public async Task EvaluateBlindedEvidenceNodesRequireQualifiedEnrollmentUnblindAndDenyUniformly()
+    {
+        var siteB = StudySiteId.New();
+        var sitePath = new ScopePath(Sponsor, StudyA, "US", SiteA1);
+        var blindedFinding = NodeRef.For(ValidationFindingId.New());
+        var undetectedFinding = NodeRef.For(ValidationFindingId.New());
+        var blindedObs = NodeRef.For(ObservationId.New());
+        var pharmacist = Actor.Person("pharmacist@site.test");
+        var lapsedPharmacist = Actor.Person("pharmacist-lapsed@site.test");
+        var wrongSitePharmacist = Actor.Person("pharmacist-other-site@site.test");
+        var studyDm = Actor.Person("dm-study@sponsor.test");
+
+        Capability[] findingCapabilities =
+        [
+            new("validation_finding.investigate", VerbClass.Execute),
+            new("validation_finding.classify", VerbClass.Execute),
+            new("validation_finding.accept", VerbClass.Approve),
+            new("validation_finding.explain", VerbClass.Approve),
+            new("validation_finding.reopen", VerbClass.Execute),
+        ];
+
+        Grant[] grants =
+        [
+            .. findingCapabilities.Select(c => Issue(grantee: Crc, capability: c.Token, scope: AuthorityScope.Tenant()).Value!),
+            Issue(grantee: Crc, capability: "attestation.sign", scope: AuthorityScope.Tenant()).Value!,
+            Issue(grantee: Crc, capability: "observation.record", scope: AuthorityScope.Tenant()).Value!,
+            .. findingCapabilities.Select(c => Issue(grantee: studyDm, capability: c.Token, scope: AuthorityScope.Study(StudyA)).Value!),
+            .. findingCapabilities.Select(c => Issue(grantee: pharmacist, capability: c.Token, scope: AuthorityScope.StudySite(SiteA1)).Value!),
+            Issue(grantee: pharmacist, capability: "attestation.sign", scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            Issue(grantee: pharmacist, capability: "enrollment.unblind", scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            .. findingCapabilities.Select(c => Issue(grantee: lapsedPharmacist, capability: c.Token, scope: AuthorityScope.StudySite(SiteA1)).Value!),
+            Issue(grantee: lapsedPharmacist, capability: "attestation.sign", scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            Issue(grantee: lapsedPharmacist, capability: "enrollment.unblind", scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            .. findingCapabilities.Select(c => Issue(grantee: wrongSitePharmacist, capability: c.Token, scope: AuthorityScope.Tenant()).Value!),
+            Issue(grantee: wrongSitePharmacist, capability: "enrollment.unblind", scope: AuthorityScope.StudySite(siteB)).Value!,
+        ];
+
+        var store = new Store(grants)
+        {
+            Requirements = [Require(capability: "enrollment.unblind", code: "unblind_training", scope: AuthorityScope.Study(StudyA)).Value!],
+            Qualifications =
+            [
+                Qualification.Record(
+                    QualificationId.New(), Tenant, pharmacist, QualificationKind.Training, "unblind_training",
+                    null, ArtifactVersionId.New(), T0, T0.AddDays(30), Admin, T0).Value!,
+                Qualification.Record(
+                    QualificationId.New(), Tenant, lapsedPharmacist, QualificationKind.Training, "unblind_training",
+                    null, ArtifactVersionId.New(), T0.AddDays(-30), T0.AddMinutes(-1), Admin, T0.AddDays(-30)).Value!,
+                Qualification.Record(
+                    QualificationId.New(), Tenant, wrongSitePharmacist, QualificationKind.Training, "unblind_training",
+                    null, ArtifactVersionId.New(), T0, T0.AddDays(30), Admin, T0).Value!,
+            ],
+            Evidence = new Dictionary<NodeRef, EvidenceNodeClassification>
+            {
+                [blindedFinding] = new(sitePath, IsBlinded: true),
+                [blindedObs] = new(sitePath, IsBlinded: true),
+            },
+        };
+
+        foreach (var cap in findingCapabilities)
+        {
+            var crcDenied = await Evaluate(store, Crc, cap, blindedFinding);
+            crcDenied.Permitted.Should().BeFalse();
+            crcDenied.Reason.Should().Be($"{Crc.Id} holds no grant of {cap.Token} in effect for this {NodeKinds.ValidationFinding}.");
+            crcDenied.Conditions.Should().ContainSingle(c => c.Code == AuthorityEvaluator.GrantCondition && !c.Met);
+
+            // Study-scoped DM gets identical denial reason and condition on blinded vs undetected finding.
+            var dmBlinded = await Evaluate(store, studyDm, cap, blindedFinding);
+            var dmUndetected = await Evaluate(store, studyDm, cap, undetectedFinding);
+            dmBlinded.Permitted.Should().BeFalse();
+            dmUndetected.Permitted.Should().BeFalse();
+            dmBlinded.Reason.Should().Be(dmUndetected.Reason);
+            dmBlinded.Conditions.Single().Code.Should().Be(AuthorityEvaluator.GrantCondition);
+            dmBlinded.Conditions.Single().Description.Should().Be(dmUndetected.Conditions.Single().Description);
+
+            // Lapsed K-AUTH-5 qualification and wrong-site enrollment.unblind both deny uniformly.
+            var lapsedDenied = await Evaluate(store, lapsedPharmacist, cap, blindedFinding);
+            lapsedDenied.Permitted.Should().BeFalse();
+            lapsedDenied.Conditions.Should().ContainSingle(c => c.Code == AuthorityEvaluator.GrantCondition && !c.Met);
+
+            var wrongSiteDenied = await Evaluate(store, wrongSitePharmacist, cap, blindedFinding);
+            wrongSiteDenied.Permitted.Should().BeFalse();
+
+            // Qualified pharmacist with site-scoped enrollment.unblind is permitted.
+            var permitted = await Evaluate(store, pharmacist, cap, blindedFinding);
+            permitted.Permitted.Should().BeTrue();
+        }
+
+        // Blinded observation also denies observation.record without qualified enrollment.unblind.
+        (await Evaluate(store, Crc, Record, blindedObs)).Permitted.Should().BeFalse();
+
+        // KernelAuthorization.AuthorizeAsync denies Attest on a blinded validation_finding (even if Scope names StudyA)
+        // for blinded and lapsed callers, and permits for the qualified pharmacist.
+        var evaluator = new AuthorityEvaluator(store, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+        var batchNodes = new[] { blindedFinding, undetectedFinding };
+        foreach (var actor in new[] { Crc, studyDm, lapsedPharmacist, wrongSitePharmacist, pharmacist })
+        {
+            var batchDecisions = await evaluator.EvaluateManyAsync(actor, Tenant, findingCapabilities[0], batchNodes, T0, T0, CancellationToken.None);
+            foreach (var node in batchNodes)
+            {
+                var single = await Evaluate(store, actor, findingCapabilities[0], node);
+                batchDecisions[node].Permitted.Should().Be(single.Permitted);
+                batchDecisions[node].Reason.Should().Be(single.Reason);
+                batchDecisions[node].Conditions.Should().Equal(single.Conditions);
+            }
+        }
+
+        var authorizer = new KernelAuthorization(
+            evaluator,
+            new FixedActor(Crc),
+            KernelCommandCatalog.Kernel,
+            new FakeClock(T0),
+            NullLogger<KernelAuthorization>.Instance,
+            store);
+
+        var attestWithFindingScope = new Attest(
+            Tenant,
+            AttestationId.New(),
+            AttestationMeaning.Responsibility,
+            new AttestationTarget(NodeKinds.ValidationFinding, blindedFinding.Id, "sha256:decision"),
+            T0,
+            "oidc-stepup",
+            "idem-attest-1",
+            "Accept finding",
+            blindedFinding);
+        var attestWithBroaderStudyScope = attestWithFindingScope with { Scope = NodeRef.For(StudyA) };
+
+        (await authorizer.AuthorizeAsync(Crc, attestWithFindingScope, CancellationToken.None)).Permitted.Should().BeFalse();
+        (await authorizer.AuthorizeAsync(Crc, attestWithBroaderStudyScope, CancellationToken.None)).Permitted.Should().BeFalse();
+        (await authorizer.AuthorizeAsync(lapsedPharmacist, attestWithFindingScope, CancellationToken.None)).Permitted.Should().BeFalse();
+        (await authorizer.AuthorizeAsync(pharmacist, attestWithFindingScope, CancellationToken.None)).Permitted.Should().BeTrue();
+        (await authorizer.AuthorizeAsync(pharmacist, attestWithBroaderStudyScope, CancellationToken.None)).Permitted.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Under <c>K-AI-6</c>, an automation agent probing or proposing on a blinded evidence node requires both the agent
+    /// and its requesting person to hold <c>enrollment.unblind</c> over the evidence scope, and the requesting person to
+    /// hold current <c>K-AUTH-5</c> unblinding qualifications.
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_AutomationAgentOnBlindedEvidence_EnforcesKAI6IntersectionAndUnblindQualification")]
+    [KernelRule("K-AUTH-4")]
+    [KernelRule("K-AI-6")]
+    [KernelRule("K-AUTH-5")]
+    public async Task EvaluateAutomationAgentOnBlindedEvidenceEnforcesKai6IntersectionAndUnblindQualification()
+    {
+        var sitePath = new ScopePath(Sponsor, StudyA, "US", SiteA1);
+        var blindedFinding = NodeRef.For(ValidationFindingId.New());
+        var readCapability = new Capability("simulation.run", VerbClass.Read);
+        var unblindedAgentId = Actor.AutomationAgent("triage");
+        var blindedAgentId = Actor.AutomationAgent("blinded-triage");
+        var qualifiedPharmacist = Actor.Person("pharmacist@site.test");
+        var lapsedPharmacist = Actor.Person("pharmacist-lapsed@site.test");
+
+        var store = new Store(
+            Issue(grantee: unblindedAgentId, capability: readCapability.Token, scope: AuthorityScope.Tenant()).Value!,
+            Issue(grantee: unblindedAgentId, capability: "enrollment.unblind", scope: AuthorityScope.Tenant()).Value!,
+            Issue(grantee: blindedAgentId, capability: readCapability.Token, scope: AuthorityScope.Tenant()).Value!,
+            Issue(grantee: Crc, capability: readCapability.Token, scope: AuthorityScope.Tenant()).Value!,
+            Issue(grantee: qualifiedPharmacist, capability: readCapability.Token, scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            Issue(grantee: qualifiedPharmacist, capability: "enrollment.unblind", scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            Issue(grantee: lapsedPharmacist, capability: readCapability.Token, scope: AuthorityScope.StudySite(SiteA1)).Value!,
+            Issue(grantee: lapsedPharmacist, capability: "enrollment.unblind", scope: AuthorityScope.StudySite(SiteA1)).Value!)
+        {
+            Requirements = [Require(capability: "enrollment.unblind", code: "unblind_training", scope: AuthorityScope.Study(StudyA)).Value!],
+            Qualifications =
+            [
+                Qualification.Record(
+                    QualificationId.New(), Tenant, qualifiedPharmacist, QualificationKind.Training, "unblind_training",
+                    null, ArtifactVersionId.New(), T0, T0.AddDays(30), Admin, T0).Value!,
+                Qualification.Record(
+                    QualificationId.New(), Tenant, lapsedPharmacist, QualificationKind.Training, "unblind_training",
+                    null, ArtifactVersionId.New(), T0.AddDays(-30), T0.AddMinutes(-1), Admin, T0.AddDays(-30)).Value!,
+            ],
+            Evidence = new Dictionary<NodeRef, EvidenceNodeClassification>
+            {
+                [blindedFinding] = new(sitePath, IsBlinded: true),
+            },
+        };
+
+        (await Evaluate(store, unblindedAgentId.ActingFor(Crc), readCapability, blindedFinding)).Permitted.Should().BeFalse();
+        (await Evaluate(store, unblindedAgentId.ActingFor(lapsedPharmacist), readCapability, blindedFinding)).Permitted.Should().BeFalse();
+        (await Evaluate(store, blindedAgentId.ActingFor(qualifiedPharmacist), readCapability, blindedFinding)).Permitted.Should().BeFalse();
+        (await Evaluate(store, unblindedAgentId.ActingFor(qualifiedPharmacist), readCapability, blindedFinding)).Permitted.Should().BeTrue();
+
+        var evaluator = new AuthorityEvaluator(store, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+        (await evaluator.EvaluateManyAsync(unblindedAgentId.ActingFor(Crc), Tenant, readCapability, [blindedFinding], T0, T0, CancellationToken.None))[blindedFinding].Permitted.Should().BeFalse();
+        (await evaluator.EvaluateManyAsync(unblindedAgentId.ActingFor(qualifiedPharmacist), Tenant, readCapability, [blindedFinding], T0, T0, CancellationToken.None))[blindedFinding].Permitted.Should().BeTrue();
+    }
+
+    private sealed class FixedActor(Actor? actor) : ICurrentActor
+    {
+        public Actor? Actor => actor;
+    }
+
     private sealed class Store(params Grant[] grants) : IAuthorityStore
     {
         public IReadOnlyList<Role> Roles { get; init; } = [];
@@ -496,6 +703,9 @@ public sealed class AuthorityTests
         public IReadOnlyList<Qualification> Qualifications { get; init; } = [];
 
         public IReadOnlyList<QualificationRequirement> Requirements { get; init; } = [];
+
+        public IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> Evidence { get; init; } =
+            new Dictionary<NodeRef, EvidenceNodeClassification>();
 
         public Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Grant>>([.. grants.Where(g => g.Grantee == actor)]);
@@ -506,15 +716,31 @@ public sealed class AuthorityTests
         public Task<IReadOnlyList<Role>> RolesAsync(TenantId tenant, IReadOnlyCollection<RoleId> roles, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Role>>([.. Roles.Where(r => roles.Contains(r.Id))]);
 
-        public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken) =>
-            Task.FromResult(resource.Kind switch
+        public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
+        {
+            if (Evidence.TryGetValue(resource.Unversioned(), out var info))
             {
+                return Task.FromResult(info.Scope);
+            }
+
+            var path = resource.Kind switch
+            {
+                NodeKinds.Study => new ScopePath(Sponsor, StudyId.FromGuid(resource.Id)),
                 NodeKinds.StudySite => new ScopePath(Sponsor, StudyA, "US", StudySiteId.FromGuid(resource.Id)),
                 NodeKinds.Grant => grants.Single(g => g.Id.Value == resource.Id).Scope.Level == ScopeLevel.Study
                     ? new ScopePath(Sponsor, StudyA)
                     : ScopePath.TenantWide,
                 _ => ScopePath.TenantWide,
-            });
+            };
+            return Task.FromResult(path);
+        }
+
+        public Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
+            TenantId tenant,
+            IReadOnlyCollection<NodeRef> nodes,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>>(
+                nodes.Select(n => n.Unversioned()).Where(Evidence.ContainsKey).Distinct().ToDictionary(n => n, n => Evidence[n]));
 
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ScopePath>>([]);

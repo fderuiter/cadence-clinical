@@ -192,7 +192,7 @@ public sealed partial class WorkQueueService(
                 break;
             }
 
-            var decision = await probe.CanIAsync(tenant, capability, candidate.Subject, cancellationToken).ConfigureAwait(false);
+            var decision = await probe.CanIWorkQueueCandidateAsync(tenant, capability, candidate.Subject, cancellationToken).ConfigureAwait(false);
             if (decision.Permitted)
             {
                 permitted.Add(candidate);
