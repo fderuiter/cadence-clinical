@@ -52,7 +52,7 @@
           id="btn-unavailable-study"
           type="button"
           class="btn btn-primary"
-          @click="router.push('/studies')"
+          @click="router.push(studyWorkspacePath)"
         >
           Open study workspace
         </button>
@@ -81,12 +81,15 @@
 import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
+import { useScopedNavigation } from "../composables/useScopedNavigation";
 import { screenMetadata, screenTitle } from "../router/screenCatalog";
 import { useAuthStore } from "../stores/auth";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { scopedStudiesWorkspacePath } = useScopedNavigation();
+const studyWorkspacePath = computed(() => scopedStudiesWorkspacePath());
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
