@@ -110,15 +110,6 @@ export interface WorkspaceScopeSnapshot {
   inspectorNodeParam?: string;
 }
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
 const SITE_READINESS_SPONSOR_ROLES = [
   "cra",
   "monitor",
@@ -126,6 +117,10 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const DATA_COLLECTION_ROLES = [
+  ...SITE_READINESS_SITE_ROLES,
+  ...SITE_READINESS_SPONSOR_ROLES,
+];
 const ETMF_ROLES = [
   "cra",
   "monitor",
@@ -278,9 +273,8 @@ export function buildScopedStudyLocation(
         query.site = activeSite;
       }
     }
-    const participantNode = tryNodeRef(
-      "participant",
-      options.targetParticipant.id
+    const participantNode = canonicalParticipantNodeFromSummary(
+      options.targetParticipant
     );
     if (participantNode) {
       query.node = formatNodeRef(participantNode);
@@ -374,15 +368,35 @@ export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
   );
 }
 
-function extractParticipantIdFromQueryValue(value: unknown): string {
+function extractParticipantNodeFromQueryValue(
+  value: unknown
+): { kind: "enrollment" | "participant"; id: string } | null {
   const parsed = parseNodeRef(value);
-  if (parsed?.kind === "participant") return parsed.id;
-  if (typeof value === "string" && value.startsWith("participant:")) {
-    const rawId =
-      value.slice("participant:".length).split("@")[0]?.trim() || "";
-    return rawId;
+  if (parsed?.kind === "enrollment" || parsed?.kind === "participant") {
+    return { kind: parsed.kind, id: parsed.id };
   }
-  return "";
+  if (typeof value === "string") {
+    for (const kind of ["enrollment", "participant"] as const) {
+      const prefix = `${kind}:`;
+      if (value.startsWith(prefix)) {
+        const rawId = value.slice(prefix.length).split("@")[0]?.trim() || "";
+        if (rawId) return { kind, id: rawId };
+      }
+    }
+  }
+  return null;
+}
+
+function canonicalParticipantNodeFromSummary(
+  item: SubjectSummary | undefined
+): { kind: "enrollment" | "participant"; id: string } | null {
+  if (!item) return null;
+  const enrollment = parseNodeRef(item.enrollment_ref);
+  if (enrollment?.kind === "enrollment") {
+    return { kind: "enrollment", id: enrollment.id };
+  }
+  const fallback = tryNodeRef("participant", item.id);
+  return fallback ? { kind: "participant", id: fallback.id } : null;
 }
 
 /**
@@ -395,6 +409,7 @@ export function resolveCanvasParticipantContext(
   canvasStore: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
   }
 ): { subjectCode: string; participantRef: string; enrollmentId: string } {
@@ -404,18 +419,24 @@ export function resolveCanvasParticipantContext(
   }
   const parsedRef =
     parseNodeRef(routeQuery?.participant) ?? parseNodeRef(routeQuery?.node);
-  const participantNode = parsedRef?.kind === "participant" ? parsedRef : null;
-  const participantRefId =
-    participantNode?.id ||
-    extractParticipantIdFromQueryValue(routeQuery?.participant) ||
-    extractParticipantIdFromQueryValue(routeQuery?.node);
+  const participantNode =
+    parsedRef?.kind === "enrollment" || parsedRef?.kind === "participant"
+      ? { kind: parsedRef.kind, id: parsedRef.id }
+      : null;
+  const extractedNode =
+    participantNode ??
+    extractParticipantNodeFromQueryValue(routeQuery?.participant) ??
+    extractParticipantNodeFromQueryValue(routeQuery?.node);
   const rawParticipantParam = cleanQueryString(routeQuery?.participant);
   const rawParticipantCode =
-    !participantRefId && !rawParticipantParam.includes(":")
+    !extractedNode && !rawParticipantParam.includes(":")
       ? rawParticipantParam
       : "";
-  const knownById = participantRefId
-    ? canvasStore.knownParticipants?.[participantRefId]
+  const knownById = extractedNode
+    ? extractedNode.kind === "enrollment"
+      ? (canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
+        canvasStore.knownParticipants?.[extractedNode.id])
+      : canvasStore.knownParticipants?.[extractedNode.id]
     : undefined;
   const knownByCode =
     !knownById && rawParticipantCode
@@ -429,24 +450,33 @@ export function resolveCanvasParticipantContext(
     rawParticipantCode ||
     canvasStore.record?.subjectCode ||
     "";
-  let resolvedRefNode = participantNode
-    ? { kind: "participant" as const, id: participantNode.id }
-    : known
-      ? tryNodeRef("participant", known.id)
-      : null;
+  const persistedEnrollment = parseNodeRef(known?.enrollment_ref);
+  let resolvedRefNode: {
+    kind: "enrollment" | "participant";
+    id: string;
+  } | null =
+    persistedEnrollment?.kind === "enrollment"
+      ? { kind: "enrollment", id: persistedEnrollment.id }
+      : participantNode
+        ? participantNode
+        : canonicalParticipantNodeFromSummary(known);
   if (!resolvedRefNode && subjectCode && canvasStore.knownParticipants) {
     const matched = Object.values(canvasStore.knownParticipants).find(
       (item) => item?.subject_id === subjectCode
     );
-    resolvedRefNode = matched ? tryNodeRef("participant", matched.id) : null;
+    resolvedRefNode = canonicalParticipantNodeFromSummary(matched);
   }
   const participantRef = resolvedRefNode ? formatNodeRef(resolvedRefNode) : "";
   const enrollmentId =
-    subjectCode &&
+    (persistedEnrollment?.kind === "enrollment"
+      ? persistedEnrollment.id
+      : "") ||
+    (extractedNode?.kind === "enrollment" ? extractedNode.id : "") ||
+    (subjectCode &&
     canvasStore.record?.subjectCode === subjectCode &&
     canvasStore.record?.enrollmentId
       ? canvasStore.record.enrollmentId
-      : "";
+      : "");
   return { subjectCode, participantRef, enrollmentId };
 }
 
@@ -465,6 +495,7 @@ export function resolveActiveWorkspaceScope(
   canvasStore?: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
     participantsFilter?: { siteId?: string };
   } | null,
@@ -501,12 +532,17 @@ export function resolveActiveWorkspaceScope(
 
   let participantSite = "";
   if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
-    const participantId =
-      extractParticipantIdFromQueryValue(route?.query?.participant) ||
-      extractParticipantIdFromQueryValue(route?.query?.node);
-    if (participantId) {
+    const extractedNode =
+      extractParticipantNodeFromQueryValue(route?.query?.participant) ??
+      extractParticipantNodeFromQueryValue(route?.query?.node);
+    if (extractedNode?.kind === "enrollment") {
+      const known =
+        canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
+        canvasStore.knownParticipants?.[extractedNode.id];
+      participantSite = cleanQueryString(known?.site_id);
+    } else if (extractedNode?.kind === "participant") {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[participantId]?.site_id
+        canvasStore.knownParticipants?.[extractedNode.id]?.site_id
       );
     }
   }
@@ -558,9 +594,13 @@ export function resolveActiveWorkspaceScope(
     routeSubject && routeSubject !== canvasParticipant.subjectCode
       ? ""
       : canvasParticipant.participantRef;
-  if (!participantRef && parsedParticipantParam?.kind === "participant") {
+  if (
+    !participantRef &&
+    (parsedParticipantParam?.kind === "enrollment" ||
+      parsedParticipantParam?.kind === "participant")
+  ) {
     participantRef = formatNodeRef({
-      kind: "participant",
+      kind: parsedParticipantParam.kind,
       id: parsedParticipantParam.id,
     });
   }
@@ -574,7 +614,7 @@ export function resolveActiveWorkspaceScope(
     const matched = Object.values(canvasStore.knownParticipants).find(
       (item) => item?.subject_id === subjectCode
     );
-    const refNode = matched ? tryNodeRef("participant", matched.id) : null;
+    const refNode = canonicalParticipantNodeFromSummary(matched);
     if (refNode) {
       participantRef = formatNodeRef(refNode);
     }
@@ -586,8 +626,12 @@ export function resolveActiveWorkspaceScope(
       : routeEnrollment || canvasParticipant.enrollmentId) || "";
 
   const recordParticipantParam = routeParamStudy
-    ? parsedParticipantParam?.kind === "participant"
-      ? formatNodeRef({ kind: "participant", id: parsedParticipantParam.id })
+    ? parsedParticipantParam?.kind === "enrollment" ||
+      parsedParticipantParam?.kind === "participant"
+      ? formatNodeRef({
+          kind: parsedParticipantParam.kind,
+          id: parsedParticipantParam.id,
+        })
       : !rawParticipantParam.includes(":")
         ? rawParticipantParam
         : ""
@@ -619,6 +663,7 @@ export function resolveWorkspaceNavigationScope(
   canvasStore?: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
     participantsFilter?: { siteId?: string };
   } | null,
@@ -689,10 +734,13 @@ export function buildDataCollectionPath(context: {
   const subjectCode = context.subjectCode?.trim() || "";
   const parsedParticipant =
     parseNodeRef(participantRef) ?? tryNodeRef("participant", participantRef);
-  if (parsedParticipant?.kind === "participant") {
+  if (
+    parsedParticipant?.kind === "enrollment" ||
+    parsedParticipant?.kind === "participant"
+  ) {
     params.set(
       "participant",
-      formatNodeRef({ kind: "participant", id: parsedParticipant.id })
+      formatNodeRef({ kind: parsedParticipant.kind, id: parsedParticipant.id })
     );
   } else if (subjectCode) {
     params.set("subject", subjectCode);
