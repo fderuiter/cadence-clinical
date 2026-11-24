@@ -26,6 +26,12 @@
         :key="query.query_id"
         :query="query"
         :can-manage="canManage"
+        :can-reassign="
+          Boolean(reassign) &&
+          canManage &&
+          isLiveQuery(query) &&
+          query.raised_by !== 'masked'
+        "
         :effective-current-user-id="effectiveCurrentUserId"
         :actions="
           queryActions(
@@ -41,7 +47,13 @@
             : null
         "
         :action-text="actionText"
+        :action-assignee="actionAssignee"
         :action-reason="actionReason"
+        :active-reassign="pendingReassignId === query.query_id"
+        :reassign-assignee="reassignAssignee"
+        :reassign-owner-role="reassignOwnerRole"
+        :reassign-note="reassignNote"
+        :reassign-reason="reassignReason"
         :show-checkbox="Boolean(actMany && availableBulkActions.length > 0)"
         :selected="selectedQueryIds.includes(query.query_id)"
         :eligible-for-bulk="isEligibleForBulk(query)"
@@ -57,9 +69,17 @@
         @toggle-select="toggleQuerySelected(query.query_id, $event)"
         @begin="begin(query, $event)"
         @update:action-text="actionText = $event"
+        @update:action-assignee="actionAssignee = $event"
         @update:action-reason="actionReason = $event"
         @confirm="confirm(query)"
         @dismiss="dismiss"
+        @begin-reassign="beginReassign(query)"
+        @update:reassign-assignee="reassignAssignee = $event"
+        @update:reassign-owner-role="reassignOwnerRole = $event"
+        @update:reassign-note="reassignNote = $event"
+        @update:reassign-reason="reassignReason = $event"
+        @confirm-reassign="confirmReassign(query)"
+        @dismiss-reassign="dismissReassign"
       />
     </ul>
   </div>
@@ -73,11 +93,15 @@ import type { RouteLocationRaw } from "vue-router";
 import {
   actionTakesText,
   type FormQueryAction,
+  type FormQueryOwnerRole,
   type FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
 import {
+  isLiveQuery,
   queryActions,
   type FormQueryBatchItemResult,
+  type ReassignQueryOptions,
+  type TransitionQueryOptions,
 } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth";
 import QueryBulkToolbar from "./QueryBulkToolbar.vue";
@@ -109,7 +133,14 @@ const props = withDefaults(
       query: FormQueryResponse,
       action: FormQueryAction,
       text: string,
-      reason: string
+      reason: string,
+      options?: TransitionQueryOptions
+    ) => Promise<boolean>;
+    reassign?: (
+      query: FormQueryResponse,
+      assignee: string | null,
+      reason: string,
+      options?: ReassignQueryOptions
     ) => Promise<boolean>;
     actMany?: (
       targets: FormQueryResponse[],
@@ -152,7 +183,14 @@ const pendingAction = ref<{ queryId: string; action: FormQueryAction } | null>(
   null
 );
 const actionText = ref("");
+const actionAssignee = ref("");
 const actionReason = ref("");
+
+const pendingReassignId = ref<string | null>(null);
+const reassignAssignee = ref("");
+const reassignOwnerRole = ref<FormQueryOwnerRole>("site");
+const reassignNote = ref("");
+const reassignReason = ref("");
 
 const bulkAction = ref<FormQueryAction>("close");
 const selectedQueryIds = ref<string[]>([]);
@@ -256,7 +294,20 @@ watch(
       ) {
         pendingAction.value = null;
         actionText.value = "";
+        actionAssignee.value = "";
         actionReason.value = "";
+      }
+    }
+
+    if (pendingReassignId.value) {
+      const reassignTarget = nextQueries.find(
+        (q) => q.query_id === pendingReassignId.value
+      );
+      if (!reassignTarget || !canManage || !isLiveQuery(reassignTarget)) {
+        pendingReassignId.value = null;
+        reassignAssignee.value = "";
+        reassignNote.value = "";
+        reassignReason.value = "";
       }
     }
   }
@@ -285,10 +336,10 @@ function clearSelectedQueries() {
 
 function restoreQueryActionFocus(
   queryId: string | undefined,
-  preferredAction?: FormQueryAction
+  preferredButtonId?: string
 ) {
   void handoffFocus([
-    queryId && preferredAction ? `#btn-${preferredAction}-${queryId}` : null,
+    preferredButtonId ?? null,
     queryId
       ? () => {
           const row = document.getElementById(`query-${queryId}`);
@@ -312,8 +363,10 @@ function restoreQueryActionFocus(
 }
 
 function begin(query: FormQueryResponse, action: FormQueryAction) {
+  pendingReassignId.value = null;
   pendingAction.value = { queryId: query.query_id, action };
   actionText.value = "";
+  actionAssignee.value = "";
   actionReason.value = "";
   void handoffFocus(
     [`#query-text-${query.query_id}`, `#query-reason-${query.query_id}`],
@@ -327,17 +380,79 @@ function dismiss() {
   const previous = pendingAction.value;
   pendingAction.value = null;
   actionText.value = "";
+  actionAssignee.value = "";
   actionReason.value = "";
-  restoreQueryActionFocus(previous?.queryId, previous?.action);
+  restoreQueryActionFocus(
+    previous?.queryId,
+    previous ? `#btn-${previous.action}-${previous.queryId}` : undefined
+  );
 }
 
 async function confirm(query: FormQueryResponse) {
   const current = pendingAction.value;
   const text = actionText.value.trim();
+  const assignee = actionAssignee.value.trim();
   const reason = actionReason.value.trim();
   if (!current || !reason) return;
   if (actionTakesText(current.action) && !text) return;
-  if (await props.act(query, current.action, text, reason)) dismiss();
+  const options =
+    (current.action === "answer" || current.action === "reopen") && assignee
+      ? { assignee }
+      : undefined;
+  const ok = options
+    ? await props.act(query, current.action, text, reason, options)
+    : await props.act(query, current.action, text, reason);
+  if (ok) dismiss();
+}
+
+function beginReassign(query: FormQueryResponse) {
+  pendingAction.value = null;
+  pendingReassignId.value = query.query_id;
+  reassignAssignee.value = query.assignee ?? "";
+  reassignOwnerRole.value =
+    (query.owner_role as FormQueryOwnerRole | undefined) ?? "site";
+  reassignNote.value = "";
+  reassignReason.value = "";
+  void handoffFocus(`#reassign-assignee-${query.query_id}`, {
+    scrollIfOffscreen: true,
+  });
+}
+
+function dismissReassign() {
+  const previousId = pendingReassignId.value ?? undefined;
+  pendingReassignId.value = null;
+  reassignAssignee.value = "";
+  reassignNote.value = "";
+  reassignReason.value = "";
+  restoreQueryActionFocus(
+    previousId,
+    previousId ? `#btn-reassign-${previousId}` : undefined
+  );
+}
+
+async function confirmReassign(query: FormQueryResponse) {
+  if (!props.reassign || pendingReassignId.value !== query.query_id) return;
+  const reason = reassignReason.value.trim();
+  if (!reason) return;
+  const nextAssignee = reassignAssignee.value.trim() || null;
+  const currentRole =
+    (query.owner_role as FormQueryOwnerRole | undefined) ?? "site";
+  const nextRole =
+    reassignOwnerRole.value !== currentRole
+      ? reassignOwnerRole.value
+      : undefined;
+  const note = reassignNote.value.trim() || undefined;
+  const options: ReassignQueryOptions = {
+    ...(nextRole ? { ownerRole: nextRole } : {}),
+    ...(note ? { text: note } : {}),
+  };
+  const ok = await props.reassign(
+    query,
+    nextAssignee,
+    reason,
+    Object.keys(options).length > 0 ? options : undefined
+  );
+  if (ok) dismissReassign();
 }
 
 async function confirmBulk() {

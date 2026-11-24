@@ -1,4 +1,4 @@
-# ADR-2662: Fail-Closed Site Scope for Pharmacist and Subject Roles
+# ADR-2663: Fail-Closed Site Scope for Pharmacist and Subject Roles
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -12,33 +12,33 @@
 
 `SiteAccessEvaluator.SITE_SCOPED_ROLES` in `Cadence.Security` defines the canonical trial personas whose authorization is bound to explicit site assignments (`AssignedSites`). While `RoleNormalization` already defines `ROLE_PHARMACIST` (`"pharmacist"`, including `"unblinded_pharmacist"`) and `ROLE_SUBJECT` (`"subject"`, including `"patient"` and `"epro"`), neither role was registered in `SiteAccessEvaluator.SITE_SCOPED_ROLES`.
 
-Because `SiteAccessEvaluator.CanAccessSite`, `ClinicalScopeGuard.IsSiteBound`, `CallerStudyAndSiteScopeAuthorizationHandler`, `SiteScopeAuthorizationHandler`, `ExecutionScopeGuard`, and `PaymentsCaller.SiteFilter` all derive site-bound enforcement from `SiteAccessEvaluator.SITE_SCOPED_ROLES`:
+Because `SiteAccessEvaluator.CanAccessSite`, `ClinicalScopeGuard.IsSiteBound`, `CallerStudyAndSiteScopeAuthorizationHandler`, `SiteScopeAuthorizationHandler`, `ExecutionScopeGuard`, and `ClinicalScopeGuard.ResolveSiteFilter` / `NarrowToScope` (consumed by `PaymentEndpoints`, `ADR-2661`) all derive site-bound enforcement from `SiteAccessEvaluator.SITE_SCOPED_ROLES`:
 
-1. A `pharmacist` token provisioned without `site_id` attributes (`AssignedSites = []`) bypassed `hasSiteScopedRoles` and received unrestricted sponsor-level site access across RTSM IP kit inventory, scan validation, batch reconciliation, and unblinded subject detail routes within any assigned study.
-2. A `subject` token provisioned without `site_id` attributes (`AssignedSites = []`) similarly evaluated `SiteAccessEvaluator.CanAccessSite` as `true` and `PaymentsCaller.SiteFilter` as `null`, failing open instead of requiring an explicit site assignment on participant self-service wallet and expense routes.
+1. A `pharmacist` token provisioned without `site_id` attributes (`AssignedSites = []`) bypassed `SiteAccessEvaluator.SITE_SCOPED_ROLES` and received unrestricted sponsor-level site access across RTSM IP kit inventory, scan validation, batch reconciliation, and unblinded subject detail routes within any assigned study.
+2. A `subject` token provisioned without `site_id` attributes (`AssignedSites = []`) similarly evaluated `SiteAccessEvaluator.CanAccessSite` as `true` and `ClinicalScopeGuard.IsSiteBound` as `false`, failing open instead of requiring an explicit site assignment on participant self-service wallet and expense routes.
 3. A dual-role principal holding both a sponsor role and `pharmacist` without site assignments was not constrained to `AssignedSites`.
 
 ## 2. Decision Drivers & Constraints
 
-- **Fail-Closed Site Isolation (`PRD-SYS-192`, `PRD-CRF-013`, `ADR-2516`, `ADR-2548`):** Site-level clinical roles (`pharmacist`) and trial participants (`subject`) operate strictly at assigned clinical sites and must never default to global cross-site access when `site_id` claims are omitted.
-- **Single Source of Truth in `Cadence.Security`:** Downstream authorization handlers (`CallerStudyAndSiteScopeAuthorizationHandler`, `SiteScopeAuthorizationHandler`), shared guards (`ClinicalScopeGuard`, `ExecutionScopeGuard`), and service callers (`PaymentsCaller`) must inherit the rule automatically without bespoke per-endpoint role lists.
+- **Fail-Closed Site Isolation (`PRD-SYS-192`, `PRD-CRF-013`, `ADR-2516`, `ADR-2548`, `ADR-2661`):** Site-level clinical roles (`pharmacist`) and trial participants (`subject`) operate strictly at assigned clinical sites and must never default to global cross-site access when `site_id` claims are omitted.
+- **Single Source of Truth in `Cadence.Security`:** Downstream authorization handlers (`CallerStudyAndSiteScopeAuthorizationHandler`, `SiteScopeAuthorizationHandler`), shared guards (`ClinicalScopeGuard`, `ExecutionScopeGuard`), and standalone endpoints (`PaymentEndpoints`, `IpKitEndpoints`, `TrainingEndpoints`) must inherit the rule automatically without bespoke per-endpoint role lists.
 - **Blinding & Supply Chain Integrity (`ADR-2640`):** Unblinded site pharmacists hold `unblinded_access` for investigational product dispensing at their own site; missing site claims must fail closed with HTTP `403 Forbidden` before any allocation ciphertext or foreign site kit inventory can be accessed.
 
 ## 3. Options Considered
 
 ### Option 1: Register `ROLE_PHARMACIST` and `ROLE_SUBJECT` in `SiteAccessEvaluator.SITE_SCOPED_ROLES` (Selected)
 
-- **Overview:** Add `RoleNormalization.ROLE_PHARMACIST` and `RoleNormalization.ROLE_SUBJECT` to `SiteAccessEvaluator.SITE_SCOPED_ROLES` while preserving the existing fail-closed evaluation in `SiteAccessEvaluator.CanAccessSite` (denying `null`/whitespace `siteId` and empty `AssignedSites` whenever `hasSiteScopedRoles` is `true`, while keeping unassigned sponsor roles global).
+- **Overview:** Add `RoleNormalization.ROLE_PHARMACIST` and `RoleNormalization.ROLE_SUBJECT` to `SiteAccessEvaluator.SITE_SCOPED_ROLES` while preserving the existing fail-closed evaluation in `SiteAccessEvaluator.CanAccessSite` and `ClinicalScopeGuard.IsSiteBound` (denying `null`/whitespace `siteId` and empty `AssignedSites` whenever `isSiteBound` is `true`, while keeping unassigned sponsor roles global).
 - **Pros:**
-  - Automatically enforces fail-closed site scope across `SiteAccessEvaluator.CanAccessSite`, `ClinicalScopeGuard.IsSiteBound`, `CallerStudyAndSiteScopeAuthorizationHandler`, `SiteScopeAuthorizationHandler`, `ExecutionScopeGuard`, `IpKitEndpoints`, `TrainingEndpoints`, and `PaymentsCaller` (`Reaches`, `SiteFilter`, `InScope`, `IsUnrestricted`) with zero API signature changes.
-  - Properly constrains dual-role principals (e.g., `sponsor_dm` + `pharmacist`) to `AssignedSites`.
+  - Automatically enforces fail-closed site scope across `SiteAccessEvaluator.CanAccessSite`, `ClinicalScopeGuard` (`IsSiteBound`, `HasValidSiteScopeIfRequired`, `ResolveSiteFilter`, `NarrowToScope`, `IsUnrestricted`), `CallerStudyAndSiteScopeAuthorizationHandler`, `SiteScopeAuthorizationHandler`, `ExecutionScopeGuard`, `IpKitEndpoints`, `TrainingEndpoints`, and `PaymentEndpoints` with zero API signature changes.
+  - Properly constrains dual-role principals (e.g., `sponsor_dm` + `pharmacist` or `trial_coordinator` + `pharmacist`) to `AssignedSites`.
   - Automatically extends `RouteAuthorizationTests` site-scope probes to `rtsm_supply:read` and `rtsm_supply:write` endpoints.
 - **Cons:**
   - Participant test fixtures that previously omitted `SiteIds` on `subject` identities must supply explicit `SiteIds` when exercising site-bound self-service routes.
 
-### Option 2: Add Ad-Hoc Role Checks Inside `IpKitEndpoints` and `PaymentsCaller`
+### Option 2: Add Ad-Hoc Role Checks Inside `IpKitEndpoints` and `PaymentEndpoints`
 
-- **Overview:** Check `pharmacist` inside `IpKitEndpoints` and `subject` inside `PaymentsCaller` while leaving `SiteAccessEvaluator.SITE_SCOPED_ROLES` unchanged.
+- **Overview:** Check `pharmacist` inside `IpKitEndpoints` and `subject` inside `PaymentEndpoints` while leaving `SiteAccessEvaluator.SITE_SCOPED_ROLES` unchanged.
 - **Pros:**
   - Limits changes to two services.
 - **Cons:**

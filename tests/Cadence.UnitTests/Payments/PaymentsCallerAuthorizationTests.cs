@@ -453,9 +453,9 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         await SeedAsync();
         string before = await SnapshotAsync();
 
-        // Even alongside finance_officer, holding pharmacist or subject with SiteIds = [] binds PaymentsCaller.SiteFilter
-        // to an empty set instead of null, narrowing InScope queries to zero rows, hiding out-of-scope IDs as 404,
-        // and rejecting site-targeted writes with 403 Forbidden.
+        // Even alongside finance_officer, holding pharmacist or subject with SiteIds = [] binds ClinicalScopeGuard.ResolveSiteFilter
+        // to an empty set instead of null, narrowing NarrowToScope queries to zero rows, hiding out-of-scope IDs as 404,
+        // and rejecting site-targeted writes with 403 Forbidden (ADR-2661, ADR-2663).
         using var unassignedClient = Client($"unassigned-{siteScopedRole}", "finance_officer", siteScopedRole);
 
         (await unassignedClient.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))

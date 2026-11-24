@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Background;
+
 using Npgsql;
 
 namespace Cadence.Kernel.Persistence.Background;
@@ -15,7 +17,7 @@ namespace Cadence.Kernel.Persistence.Background;
 /// dies mid-pass loses its connection and so its lock. This keeps one outbox relay per deployment, so each tenant's
 /// events arrive in order, and one sealing pass at a time.
 /// </summary>
-internal sealed class KernelLeaderLock(KernelConnectionString connection)
+internal sealed class KernelLeaderLock(KernelConnectionString connection) : IKernelLeaderLock
 {
     /// <summary>Runs <paramref name="pass"/> if this replica takes <paramref name="job"/>'s lock; false when another holds it.</summary>
     public async Task<bool> TryRunAsync(string job, Func<CancellationToken, Task> pass, CancellationToken cancellationToken)
