@@ -291,7 +291,6 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-101: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md) (2026-08-24)
 - [ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md) (2026-08-25)
 - [ADR-2437: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md) (2026-09-08)
-- [ADR-2834: Fail-Closed Site Scope for Pharmacist and Subject Roles](2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) (2026-11-23)
 
 ### 3. Clinical Data Interoperability & Standards
 
@@ -610,6 +609,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
 - [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
 - [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) (2026-11-23)
+- [ADR-2662: Fail-Closed Site Scope for Pharmacist and Subject Roles](2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) (2026-11-23)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

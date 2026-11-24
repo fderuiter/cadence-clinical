@@ -1549,6 +1549,12 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             (await client.GetAsync("/api/v1/payments/participant/me/wallet", Ct))
                 .StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
+            (await client.GetAsync("/api/v1/payments/participant/me/wallet?walletId=wallet-scoped-subj", Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await client.GetAsync("/api/v1/payments/participant/me/wallet?studyId=STUDY-01", Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
             if (identity.SiteIds.Count == 0)
             {
                 (await client.PostAsJsonAsync(

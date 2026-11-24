@@ -1,4 +1,4 @@
-# ADR-2834: Fail-Closed Site Scope for Pharmacist and Subject Roles
+# ADR-2662: Fail-Closed Site Scope for Pharmacist and Subject Roles
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
