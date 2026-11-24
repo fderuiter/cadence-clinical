@@ -2,9 +2,13 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
+import { hasRegisteredUnsavedDrafts } from "ui";
+import ConfirmationDialogHost from "@/components/ConfirmationDialogHost.vue";
 import ObservationView from "@/views/ObservationView.vue";
 import { ApiError } from "@/api/client";
 import { kernelApi } from "@/api/kernelApi";
+import { useAuthStore } from "@/stores/auth";
+import { useConfirmStore } from "@/stores/confirm";
 
 const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
@@ -658,5 +662,222 @@ describe("ObservationView (ADR-2620)", () => {
     expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
     expect(backLink.attributes("href")).toBe(returnUrl);
     standaloneWrapper.unmount();
+  });
+
+  it("tracks memory-only dirty state on changed or incomplete input without writing browser storage, and clears after commit", async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+
+    const corrected = observation({
+      ref: `${OBSERVATION}@2`,
+      value: mmhg(128),
+      version: 2,
+    });
+    vi.spyOn(kernelApi, "getObservation")
+      .mockResolvedValueOnce(observation())
+      .mockResolvedValueOnce(corrected);
+    vi.spyOn(kernelApi, "correctObservation").mockResolvedValue({
+      ref: `${OBSERVATION}@2`,
+      enrollment_ref: ENROLLMENT,
+      value: mmhg(128),
+      version: 2,
+      revision: 2,
+    });
+
+    const wrapper = await mountView();
+    const input = wrapper.find("#observation-new-value");
+
+    // Blank and equivalent values remain clean.
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    await input.setValue("   ");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    await input.setValue("182");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    await input.setValue("182.0");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+
+    // Invalid/incomplete non-blank text is dirty, with zero browser storage keys.
+    await input.setValue("not-a-number");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(true);
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([true]);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+
+    // Valid changed value remains dirty in memory only until committed.
+    await input.setValue("128");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(true);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+
+    await correctTo(wrapper, "128", "Source chart verification");
+    expect((wrapper.vm as unknown as { dirty: boolean }).dirty).toBe(false);
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+
+    wrapper.unmount();
+  });
+
+  it("guards dirty standalone exits, beforeunload, and sign-out via accessible modals while allowing query updates and session expiry", async () => {
+    const FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+    const SECOND_OBS = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d99";
+    vi.spyOn(kernelApi, "getObservation").mockImplementation(async (refArg) =>
+      observation({
+        ref: `${String(refArg).split("@")[0]}@1`,
+      })
+    );
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='ecrf-dest'>eCRF</div>" },
+        },
+        {
+          path: "/forbidden",
+          name: "forbidden",
+          component: { template: "<div id='forbidden-dest'>Forbidden</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    const returnUrl = `/ecrf?studyId=CAD-101&formId=${FORM_ID}&itemId=SYSBP`;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        studyId: "CAD-101",
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+        returnTo: returnUrl,
+      },
+    });
+    await router.isReady();
+
+    const wrapper = mount(
+      {
+        components: { ConfirmationDialogHost },
+        template: "<div><router-view /><ConfirmationDialogHost /></div>",
+      },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    const confirmStore = useConfirmStore();
+    const activeConfirmTitle = () =>
+      (confirmStore.activeRequest as { title?: string } | null)?.title;
+    const authStore = useAuthStore();
+
+    await wrapper.find("#observation-new-value").setValue("134");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+
+    // beforeunload is prevented while dirty.
+    const unloadEvt = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unloadEvt);
+    expect(unloadEvt.defaultPrevented).toBe(true);
+
+    // Query parameter updates on the same observationRef do not prompt.
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        ...router.currentRoute.value.query,
+        node: "concept:systolic@1",
+      },
+    });
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    // Clicking back opens accessible ConfirmationDialogHost (never window.confirm); cancel preserves input.
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
+    const alertDialog = document.body.querySelector('[role="alertdialog"]');
+    expect(alertDialog).not.toBeNull();
+    await expect(alertDialog!).toBeAccessible();
+
+    confirmStore.cancelConfirm();
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("observation");
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("134");
+
+    // Switching to another observationRef also prompts and cancels when rejected.
+    const switchObsPromise = router.push({
+      name: "observation",
+      params: { observationRef: SECOND_OBS },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
+    confirmStore.cancelConfirm();
+    await switchObsPromise.catch(() => {});
+    await flushPromises();
+    expect(router.currentRoute.value.params.observationRef).toBe(OBSERVATION);
+
+    // Confirming discard clears memory state and navigates without duplicate prompts.
+    await wrapper.find("#observation-back").trigger("click");
+    await flushPromises();
+    expect(activeConfirmTitle()).toBe("Unsaved Observation Changes");
+    confirmStore.resolveConfirm();
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("ecrf");
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    // Session expiry suppresses exit prompts automatically.
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    await wrapper.find("#observation-new-value").setValue("140");
+    authStore.sessionExpired = true;
+    const expiredUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(expiredUnload);
+    expect(expiredUnload.defaultPrevented).toBe(false);
+    await router.push("/ecrf");
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.name).toBe("ecrf");
+
+    // cadence:demo-reset clears unsaved text, and RBAC /forbidden redirects suppress prompts.
+    authStore.sessionExpired = false;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: { returnTo: returnUrl },
+    });
+    await flushPromises();
+    await wrapper.find("#observation-new-value").setValue("145");
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+    window.dispatchEvent(new CustomEvent("cadence:demo-reset"));
+    await flushPromises();
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("");
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    await wrapper.find("#observation-new-value").setValue("150");
+    await router.push("/forbidden");
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.name).toBe("forbidden");
+
+    wrapper.unmount();
   });
 });

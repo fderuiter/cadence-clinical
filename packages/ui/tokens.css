@@ -170,9 +170,14 @@
   --semantic-badge-warning-bg: #fef3c7;
   --semantic-badge-warning-text: #92400e;
   --semantic-badge-warning-border: #f59e0b;
+  --semantic-badge-unsaved-bg: #fef3c7;
+  --semantic-badge-unsaved-text: #92400e;
+  --semantic-badge-unsaved-border: #b45309;
   --semantic-badge-error-bg: #fef2f2;
   --semantic-badge-error-text: #b91c1c;
   --semantic-badge-error-border: #fca5a5;
+  --semantic-color-edited-row-bg: #fefce8;
+  --semantic-color-edited-row-border: #b45309;
 
   /* Interactive Controls, Neutrals & Layout */
   --semantic-color-interactive-primary: #1d4ed8;
@@ -394,9 +399,14 @@
   --semantic-badge-warning-bg: #451a03;
   --semantic-badge-warning-text: #fcd34d;
   --semantic-badge-warning-border: #d97706;
+  --semantic-badge-unsaved-bg: #451a03;
+  --semantic-badge-unsaved-text: #fde68a;
+  --semantic-badge-unsaved-border: #fbbf24;
   --semantic-badge-error-bg: #450a0a;
   --semantic-badge-error-text: #fca5a5;
   --semantic-badge-error-border: #b91c1c;
+  --semantic-color-edited-row-bg: #3b1d06;
+  --semantic-color-edited-row-border: #fbbf24;
 
   --semantic-color-teal-text: #5eead4;
   --semantic-color-teal-bg: #134e4a;
@@ -473,7 +483,22 @@
     --color-text-muted: #cbd5e1;
     --color-border: #334155;
     --color-border-control: #94a3b8;
+    --semantic-color-primary: var(--color-primary);
+    --semantic-color-primary-dark: var(--color-primary-dark);
+    --semantic-color-primary-light: var(--color-primary-light);
+    --semantic-color-accent: var(--color-accent);
+    --semantic-color-text: var(--color-text);
+    --semantic-color-text-muted: var(--color-text-muted);
+    --semantic-color-surface: var(--color-surface);
+    --semantic-color-surface-muted: var(--color-surface-muted);
+    --semantic-color-border: var(--color-border);
     --semantic-color-border-control: var(--color-border-control);
+    --semantic-color-success: var(--color-success);
+    --semantic-color-success-bg: var(--color-success-bg);
+    --semantic-color-warning: var(--color-warning);
+    --semantic-color-warning-bg: var(--color-warning-bg);
+    --semantic-color-error: var(--color-error);
+    --semantic-color-error-bg: var(--color-error-bg);
     --semantic-color-accent-light: #1e1b4b;
     --semantic-color-accent-bg: #1e1b4b;
     --semantic-color-ai: #c4b5fd;
@@ -529,9 +554,14 @@
     --semantic-badge-warning-bg: #451a03;
     --semantic-badge-warning-text: #fcd34d;
     --semantic-badge-warning-border: #d97706;
+    --semantic-badge-unsaved-bg: #451a03;
+    --semantic-badge-unsaved-text: #fde68a;
+    --semantic-badge-unsaved-border: #fbbf24;
     --semantic-badge-error-bg: #450a0a;
     --semantic-badge-error-text: #fca5a5;
     --semantic-badge-error-border: #b91c1c;
+    --semantic-color-edited-row-bg: #3b1d06;
+    --semantic-color-edited-row-border: #fbbf24;
     --semantic-color-teal-text: #5eead4;
     --semantic-color-teal-bg: #134e4a;
     --semantic-color-teal-border: #0d9488;
@@ -929,6 +959,12 @@ textarea[aria-invalid="true"]:focus-visible {
   background-color: var(--semantic-badge-error-bg);
   color: var(--semantic-badge-error-text);
   border-color: var(--semantic-badge-error-border);
+}
+
+.clinical-badge--unsaved {
+  background-color: var(--semantic-badge-unsaved-bg);
+  color: var(--semantic-badge-unsaved-text);
+  border-color: var(--semantic-badge-unsaved-border);
 }
 
 /* Shared Clinical Visit Matrix, SoA Builder Matrix, and Terminology Lookup Styles */
