@@ -538,6 +538,9 @@ describe("TicketsView - Live API Mode (VITE_DEMO_MODE=false)", () => {
     await flushPromises();
 
     // Standalone trial_coordinator in verified trial-* workspace sees PUBLIC only and cannot select INTERNAL_SPONSOR
+    expect(
+      wrapper.find("#btn-create-ticket").attributes("disabled")
+    ).toBeUndefined();
     expect(wrapper.text()).toContain("Public site triage update.");
     expect(wrapper.text()).not.toContain(
       "Confidential sponsor escalation note."
@@ -573,6 +576,9 @@ describe("TicketsView - Live API Mode (VITE_DEMO_MODE=false)", () => {
     };
     await flushPromises();
     expect(
+      wrapper.find("#btn-create-ticket").attributes("disabled")
+    ).toBeDefined();
+    expect(
       wrapper.find("textarea[aria-label='Clinical discussion note']").exists()
     ).toBe(false);
     expect(wrapper.text()).not.toContain("Internal Sponsor Only");
@@ -585,8 +591,98 @@ describe("TicketsView - Live API Mode (VITE_DEMO_MODE=false)", () => {
     };
     await flushPromises();
 
+    expect(
+      wrapper.find("#btn-create-ticket").attributes("disabled")
+    ).toBeUndefined();
     expect(wrapper.text()).toContain("Internal Sponsor Only");
     expect(wrapper.text()).toContain("Internal Sponsor Note");
     expect(wrapper.text()).toContain("Confidential sponsor escalation note.");
+  });
+});
+
+describe("TicketsView - Auditor Read-Only Guards & Clinical Scope Pre-Fill", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("disables #btn-create-ticket with a plain-language explanation for auditor roles and triggers zero HTTP 403 mutations", async () => {
+    const { ticketsApi } = await import("../../src/api/ticketsApi");
+    const { useAuthStore } = await import("../../src/stores/auth");
+    const authStore = useAuthStore();
+    authStore.currentPersona = "auditor";
+    authStore.rawRoles = ["Auditor"];
+
+    vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
+    const createSpy = vi.spyOn(ticketsApi, "createTicket");
+
+    const wrapper = mount(TicketsView);
+    await flushPromises();
+
+    const createBtn = wrapper.find("#btn-create-ticket");
+    expect(createBtn.exists()).toBe(true);
+    expect(createBtn.attributes("disabled")).toBeDefined();
+    expect(createBtn.attributes("aria-disabled")).toBe("true");
+    expect(createBtn.attributes("aria-describedby")).toBe(
+      "tickets-auditor-readonly-note"
+    );
+
+    const readonlyNote = wrapper.find("#tickets-auditor-readonly-note");
+    expect(readonlyNote.exists()).toBe(true);
+    expect(readonlyNote.text()).toContain("Read-only auditor access");
+
+    await createBtn.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".ticket-create-modal").exists()).toBe(false);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it("binds active studyId, siteId, and pseudonymous subjectId onto TicketCreateModal when opened from /tickets", async () => {
+    const { ticketsApi } = await import("../../src/api/ticketsApi");
+    const { useAuthStore } = await import("../../src/stores/auth");
+    const { useClinicalScopeStore } =
+      await import("../../src/stores/clinicalScope");
+    const authStore = useAuthStore();
+    authStore.currentPersona = "site_crc";
+    authStore.rawRoles = ["CRC"];
+
+    const scopeStore = useClinicalScopeStore();
+    scopeStore.$patch({
+      activeStudyId: "STUDY-ONC-202",
+      activeSiteId: "SITE-101",
+      activeSubjectId: "SUBJ-8812",
+    });
+
+    vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
+
+    const wrapper = mount(TicketsView, {
+      global: {
+        mocks: {
+          $route: {
+            query: {
+              studyId: "STUDY-ONC-202",
+              siteId: "SITE-101",
+              subjectId: "SUBJ-8812",
+            },
+          },
+        },
+      },
+    });
+    await flushPromises();
+
+    const createBtn = wrapper.find("#btn-create-ticket");
+    expect(createBtn.attributes("disabled")).toBeUndefined();
+    await createBtn.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#ticket-study").element.value).toBe("STUDY-ONC-202");
+    expect(wrapper.find("#ticket-site").element.value).toBe("SITE-101");
+    expect(wrapper.find("#ticket-subject").element.value).toBe("SUBJ-8812");
   });
 });

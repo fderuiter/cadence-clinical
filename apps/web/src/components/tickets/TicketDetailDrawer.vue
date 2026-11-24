@@ -42,7 +42,7 @@
           </span>
         </div>
 
-        <h2 id="drawer-ticket-title" class="drawer-title">
+        <h2 id="drawer-ticket-title" class="drawer-title" tabindex="-1">
           {{ ticket.title }}
         </h2>
 
@@ -223,7 +223,7 @@
           <button
             type="button"
             class="btn btn-sm btn-secondary"
-            @click="isResolveModalOpen = false"
+            @click="closeResolveModal"
           >
             Cancel
           </button>
@@ -247,6 +247,7 @@
       <ClinicalTabs
         v-model="activeTab"
         :tabs="drawerTabs"
+        variant="underline"
         aria-label="Ticket detail sections"
         id-prefix="ticket-drawer"
         list-class="drawer-tabs"
@@ -842,14 +843,20 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { ClinicalTabs, EmptyState, useFocusTrap } from "ui";
+import {
+  ClinicalTabs,
+  EmptyState,
+  handoffFocus,
+  useFocusTrap,
+  useInlineFocusHandoff,
+} from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore } from "../../stores/auth";
 import { normalizeBackendRole } from "../../canvas/authority/roles";
 import { isDemoBuild } from "../../utils/demoMode.js";
+import { useTicketMutationPermission } from "../../utils/ticketPermissions";
 
-const VERIFIED_TRIAL_TENANT_RE = /^trial-[0-9a-f]{12}$/;
 const SITE_PERSONAS = new Set(["site_crc", "site_investigator"]);
 const SPONSOR_COMMENT_CAPABLE_ROLES = new Set([
   "sysadmin",
@@ -866,21 +873,6 @@ const SPONSOR_COMMENT_CAPABLE_ROLES = new Set([
   "unblinded_statistician",
   "idmc",
   "emergency_unblinder",
-]);
-const OPERATIONAL_MUTATION_ROLES = new Set([
-  "sysadmin",
-  "sponsor_designer",
-  "sponsor_dm",
-  "sponsor_mm",
-  "cra",
-  "monitor",
-  "external_monitor",
-  "crc",
-  "investigator",
-  "principal_investigator",
-  "authorized_er_physician",
-  "lead_investigator",
-  "pharmacist",
 ]);
 
 const props = defineProps({
@@ -940,10 +932,6 @@ const normalizedCallerRoles = computed(() =>
   (authStore.rawRoles || []).map(normalizeBackendRole).filter(Boolean)
 );
 
-const isVerifiedTrialTenant = computed(() =>
-  VERIFIED_TRIAL_TENANT_RE.test(authStore.user?.tenantId || "")
-);
-
 const canViewInternalSponsorNotes = computed(() => {
   if (authStore.currentPersona && SITE_PERSONAS.has(authStore.currentPersona)) {
     return false;
@@ -953,20 +941,7 @@ const canViewInternalSponsorNotes = computed(() => {
   );
 });
 
-const canMutateTicket = computed(() => {
-  if (authStore.currentPersona === "auditor") {
-    return false;
-  }
-  const roles = normalizedCallerRoles.value;
-  if (roles.length === 0) {
-    return demoBuild;
-  }
-  return roles.some(
-    (r) =>
-      OPERATIONAL_MUTATION_ROLES.has(r) ||
-      (r === "trial_coordinator" && isVerifiedTrialTenant.value)
-  );
-});
+const { canMutateTicket } = useTicketMutationPermission(authStore);
 
 const isSigned = computed(() => Boolean(props.ticket?.signature_token));
 
@@ -1142,9 +1117,19 @@ watch(
 watch(
   () => props.ticket?.id,
   () => {
+    pendingStatusHandoff = false;
     isResolveModalOpen.value = false;
     if (!demoBuild && activeTab.value === "attachments") {
       activeTab.value = "overview";
+    }
+  }
+);
+
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (!open) {
+      pendingStatusHandoff = false;
     }
   }
 );
@@ -1182,7 +1167,61 @@ const filteredComments = computed(() => {
   );
 });
 
+const resolvePanelHandoff = useInlineFocusHandoff({
+  container: drawerRef,
+  includeDefaultFallbacks: false,
+  openTarget: "#resolve-rca-category",
+  closeFallback: [
+    "#btn-open-resolve",
+    "#drawer-ticket-title",
+    "#ticket-drawer-close-btn",
+  ],
+});
+
+let pendingStatusHandoff = false;
+
+const handoffAfterDrawerStatusChange = () => {
+  if (!props.isOpen) return;
+  void handoffFocus(
+    [
+      () =>
+        drawerRef.value?.querySelector(
+          ".action-btn-group button:not([disabled])"
+        ) || null,
+      "#btn-open-part11-sign",
+      "#drawer-ticket-title",
+      "#ticket-drawer-close-btn",
+    ],
+    {
+      container: drawerRef,
+      includeDefaultFallbacks: false,
+      fallback: ["#drawer-ticket-title", "#ticket-drawer-close-btn"],
+    }
+  );
+};
+
+watch(
+  () => [props.ticket?.status, props.ticket?.signature_token],
+  () => {
+    if (!props.isOpen) return;
+    const focusEscapedDrawer =
+      typeof document !== "undefined" &&
+      !isSignModalOpen.value &&
+      !isCitationViewerOpen.value &&
+      Boolean(
+        drawerRef.value &&
+        (!document.activeElement ||
+          !drawerRef.value.contains(document.activeElement))
+      );
+    if (pendingStatusHandoff || focusEscapedDrawer) {
+      pendingStatusHandoff = false;
+      handoffAfterDrawerStatusChange();
+    }
+  }
+);
+
 const transitionTicket = (newStatus) => {
+  pendingStatusHandoff = true;
   const reason =
     transitionReason.value.trim() || `Status transition to ${newStatus}`;
   emit("transition", {
@@ -1194,6 +1233,7 @@ const transitionTicket = (newStatus) => {
 
 const openResolveModal = () => {
   if (demoBuild) {
+    pendingStatusHandoff = true;
     emit("transition", {
       ticketId: props.ticket.id,
       newStatus: "RESOLVED",
@@ -1206,7 +1246,18 @@ const openResolveModal = () => {
     });
     return;
   }
+  resolvePanelHandoff.rememberTrigger("#btn-open-resolve");
   isResolveModalOpen.value = true;
+  void resolvePanelHandoff.handoff("#resolve-rca-category");
+};
+
+const closeResolveModal = () => {
+  isResolveModalOpen.value = false;
+  void resolvePanelHandoff.restoreTrigger([
+    "#btn-open-resolve",
+    "#drawer-ticket-title",
+    "#ticket-drawer-close-btn",
+  ]);
 };
 
 const submitResolution = () => {
@@ -1216,6 +1267,7 @@ const submitResolution = () => {
   ) {
     return;
   }
+  pendingStatusHandoff = true;
   emit("transition", {
     ticketId: props.ticket.id,
     newStatus: "RESOLVED",
@@ -1226,6 +1278,7 @@ const submitResolution = () => {
     reason_for_change: resolveForm.reason_for_change.trim(),
   });
   isResolveModalOpen.value = false;
+  handoffAfterDrawerStatusChange();
 };
 
 const submitComment = () => {
@@ -1491,34 +1544,6 @@ const onTicketSigned = (sigPayload) => {
 .action-btn-group {
   display: flex;
   gap: 8px;
-}
-
-.drawer-tabs {
-  display: flex;
-  background: var(--semantic-color-surface);
-  border-bottom: 1px solid var(--semantic-color-border);
-  padding: 0 16px;
-  overflow-x: auto;
-}
-
-.tab-item {
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.tab-item.active {
-  color: var(--semantic-color-interactive-primary);
-  border-bottom-color: var(--semantic-color-interactive-primary);
 }
 
 .drawer-body {

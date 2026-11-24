@@ -1,4 +1,4 @@
-# ADR-2660: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist
+# ADR-2661: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -60,6 +60,7 @@ Self-service trial workspaces (`^trial-[0-9a-f]{12}\z`) assign the `trial_coordi
   - `packages/security/src/Rbac/SiteAccessEvaluator.cs`
   - `packages/security/src/Rbac/AuthorizationHandlers.cs`
   - `apps/tickets/src/Endpoints/TicketEndpoints.cs`
+  - `apps/web/src/utils/ticketPermissions.ts`
   - `apps/web/src/components/tickets/TicketDetailDrawer.vue`
 - **Verification:**
   - `tests/Cadence.UnitTests/Tickets/TicketEndpointsTests.cs` verifies HTTP `403` across enterprise `trial_coordinator` ticket routes, site-assigned read isolation, standalone `trial-*` `PUBLIC`-only comments and audit trails, and multi-role founder `INTERNAL_SPONSOR` retention.
