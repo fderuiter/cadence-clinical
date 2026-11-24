@@ -9,11 +9,13 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Validation;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -219,11 +221,17 @@ public static class KernelReadEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        var commands = await probe.GetCommandsAsync(tenant, node, cancellationToken).ConfigureAwait(false);
-        var masks = await KernelReadMasking.MaskExplanationsAsync(
+        var hidden = actor.Actor is not null
+            && !await IsProbedNodeVisibleAsync(tenant, node, context.RequestServices, visibility, actor, cancellationToken).ConfigureAwait(false);
+        var commands = hidden
+            ? await probe.DenyHiddenCommandsAsync(tenant, node, cancellationToken).ConfigureAwait(false)
+            : await probe.GetCommandsAsync(tenant, node, cancellationToken).ConfigureAwait(false);
+        var masks = await MaskProbedExplanationsAsync(
             visibility,
             actor,
             tenant,
+            node,
+            hidden,
             commands.Select(c => c.Explanation),
             cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelCommandResponse>>([.. commands.Select(c => KernelCommandResponse.From(c, masks))]);
@@ -251,15 +259,85 @@ public static class KernelReadEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        var decision = await probe.CanIAsync(tenant, declared, node, cancellationToken).ConfigureAwait(false);
+        var hidden = actor.Actor is not null
+            && !await IsProbedNodeVisibleAsync(tenant, node, context.RequestServices, visibility, actor, cancellationToken).ConfigureAwait(false);
+        var decision = hidden
+            ? await probe.DenyHiddenAsync(tenant, declared, node, cancellationToken).ConfigureAwait(false)
+            : await probe.CanIAsync(tenant, declared, node, cancellationToken).ConfigureAwait(false);
         var explanation = decision.Explain(declared.Token, node);
+        var masks = await MaskProbedExplanationsAsync(
+            visibility,
+            actor,
+            tenant,
+            node,
+            hidden,
+            [explanation],
+            cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(KernelDecisionResponse.From(declared, node, decision, explanation, masks));
+    }
+
+    private static async Task<IReadOnlyDictionary<NodeRef, MaskReason>> MaskProbedExplanationsAsync(
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        TenantId tenant,
+        NodeRef probedNode,
+        bool hidden,
+        IEnumerable<Explanation> explanations,
+        CancellationToken cancellationToken)
+    {
         var masks = await KernelReadMasking.MaskExplanationsAsync(
             visibility,
             actor,
             tenant,
-            [explanation],
+            explanations,
             cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelDecisionResponse.From(declared, node, decision, explanation, masks));
+        if (!hidden)
+        {
+            return masks;
+        }
+
+        // Non-confirming hidden probes always mask the probed node as NotPermitted so detected blinded
+        // and undetected findings produce identical explanation shapes (K-AUTH-4, K-EXP-2).
+        var normalized = new Dictionary<NodeRef, MaskReason>(masks)
+        {
+            [probedNode] = MaskReason.NotPermitted,
+            [probedNode.Unversioned()] = MaskReason.NotPermitted,
+        };
+        return normalized;
+    }
+
+    private static async Task<bool> IsProbedNodeVisibleAsync(
+        TenantId tenant,
+        NodeRef node,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
+        if (masks.For(node) is not null)
+        {
+            return false;
+        }
+
+        if (node.Kind == NodeKinds.ValidationFinding
+            && KernelValidationEndpoints.ResolveActiveValidationFindings(services) is { } findings)
+        {
+            var finding = await findings.FindAsync(tenant, ValidationFindingId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+            if (finding is null
+                || !await KernelValidationEndpoints.IsFindingVisibleAsync(
+                    tenant,
+                    finding,
+                    services,
+                    visibility,
+                    actor,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelSearchHitResponse>>, ProblemHttpResult>> SearchAsync(

@@ -521,8 +521,9 @@ public sealed class KernelApiHostTests : IDisposable
         canIRaw.Should().NotContain(hiddenGrant.Id.Value.ToString("D"));
         canI.RootElement.GetProperty("explanation").GetProperty("subject").GetString()
             .Should().Be($"masked:{entry.ResourceKind}:NotPermitted");
-        canI.RootElement.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("evidence")[0].GetString()
-            .Should().Be($"masked:{NodeKinds.Grant}:Blinded");
+        canI.RootElement.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("evidence")
+            .EnumerateArray().Select(e => e.GetString())
+            .Should().Equal($"masked:{entry.ResourceKind}:NotPermitted", $"masked:{NodeKinds.Grant}:Blinded");
 
         using var commands = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{hiddenResource}/commands", ct);
         string commandsRaw = commands.RootElement.GetRawText();
