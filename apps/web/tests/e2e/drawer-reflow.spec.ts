@@ -219,7 +219,7 @@ async function verifyDrawerAcrossTargetViewports(
   }
 }
 
-test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verification (ADR-2658)", () => {
+test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verification (ADR-2659)", () => {
   test("Verifies visible .clinical-drawer-body height, 320px zero horizontal overflow, 16px touch inputs, and reachable footer controls across all 13 web drawers and 5 target viewports", async ({
     page,
   }) => {
