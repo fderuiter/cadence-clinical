@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
+import globals from "globals";
 import vuePlugin from "eslint-plugin-vue";
 import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
 import vueParser from "vue-eslint-parser";
@@ -1631,9 +1632,13 @@ export default [
       "**/.pytest_cache/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      "**/TestResults/**",
       "**/coverage/**",
-      "**/.claude/**",
+      "**/bin/**",
+      "**/obj/**",
+      "**/.claude/worktrees/**",
       "scripts/**",
+      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
@@ -1720,34 +1725,6 @@ export default [
     },
   },
   {
-    files: ["**/*.cjs"],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "commonjs",
-      globals: {
-        __dirname: "readonly",
-        __filename: "readonly",
-        exports: "writable",
-        module: "readonly",
-        process: "readonly",
-        require: "readonly",
-      },
-    },
-  },
-  {
-    files: ["*.config.mjs", "docs/.vitepress/*.mjs"],
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: "module",
-      globals: {
-        Buffer: "readonly",
-        URL: "readonly",
-        console: "readonly",
-        process: "readonly",
-      },
-    },
-  },
-  {
     files: ["docs/.vitepress/theme/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
@@ -1765,6 +1742,10 @@ export default [
       "custom-vue/no-unlabeled-glyph-button": "error",
     },
   },
+  ...tseslint.configs.recommended.map((config) => ({
+    ...config,
+    files: config.files ?? ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+  })),
   {
     files: ["docs/.vitepress/**/*.mjs"],
     languageOptions: {
@@ -1772,7 +1753,6 @@ export default [
       sourceType: "module",
     },
     rules: {
-      "no-undef": "off",
       "no-control-regex": "off",
       "no-unused-vars": [
         "error",
@@ -1787,7 +1767,6 @@ export default [
       sourceType: "commonjs",
     },
     rules: {
-      "no-undef": "off",
       "no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -1795,12 +1774,16 @@ export default [
     },
   },
   {
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
         sourceType: "module",
         ecmaVersion: 2022,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
       },
     },
     plugins: {
@@ -1810,6 +1793,8 @@ export default [
       "no-alert": "error",
       "no-undef": "off",
       "no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -1817,9 +1802,69 @@ export default [
     },
   },
   {
+    files: ["**/*.js", "**/*.jsx", "**/*.mjs", "**/*.cjs"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
+    },
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
+    files: [
+      "*.config.{js,mjs,cjs}",
+      "apps/*/*.config.{js,mjs,cjs}",
+      "packages/*/*.config.{js,mjs,cjs}",
+      "apps/*/scripts/**/*.{js,mjs,cjs}",
+      "packages/*/scripts/**/*.{js,mjs,cjs}",
+      ".claude/**/*.{js,mjs,cjs}",
+      "docs/**/*.mjs",
+      "tests/**/*.{js,mjs,cjs}",
+    ],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
+    files: ["apps/web/scripts/**/*.js", "packages/ui/scripts/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
+    files: ["apps/subject-portal/public/sw.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      globals: {
+        ...globals.serviceworker,
+      },
+    },
+  },
+  {
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
     },
     rules: {
       "no-alert": "error",
@@ -1827,7 +1872,6 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "no-undef": "off",
       "vue/multi-word-component-names": "off",
       "vuejs-accessibility/label-has-for": [
         "error",
@@ -1941,7 +1985,20 @@ export default [
     },
   },
   {
-    files: ["**/tests/**", "tests/**", "**/*.test.*", "**/*.spec.*"],
+    files: [
+      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
+      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
+      "**/*.test.{js,jsx,ts,tsx,mjs,cjs}",
+      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs}",
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.commonjs,
+        ...globals.vitest,
+      },
+    },
     plugins: {
       "custom-vue": customVuePlugin,
     },

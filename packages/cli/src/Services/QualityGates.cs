@@ -98,7 +98,7 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
-        new("eslint", [], "ESLint and duplicate store identifier checks across JS, TS and Vue files",
+        new("eslint", [], "Frontend ESLint and duplicate store identifier checks across tracked JS, TS, Vue, and CSS files via root eslint.config.mjs",
             ctx => FrontendQualityGateService.CheckEslint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,

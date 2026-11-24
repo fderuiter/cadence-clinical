@@ -457,10 +457,12 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
+const OnboardingTour = defineAsyncComponent(
+  () => import("./OnboardingTour.vue")
+);
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
   : null;
