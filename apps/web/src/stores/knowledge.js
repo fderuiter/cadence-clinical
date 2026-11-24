@@ -2,7 +2,7 @@ import { defineStore, getActivePinia } from "pinia";
 import { findSection, findStage } from "../canvas/lifecycle";
 import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
 import { describeApiError } from "../utils/apiErrors.js";
-import { isDemoBuild } from "../utils/demoMode.js";
+import { demoNowIso, isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
 function getLoadedStudyCanvasStore() {
@@ -357,6 +357,8 @@ export const useKnowledgeStore = defineStore("knowledge", {
     error: null,
     lastFailedAction: null,
     isEscalating: false,
+    wasOpenBeforeEscalation: false,
+    drawerTriggerElement: null,
     escalationPayload: null,
     canvasEscalationContext: null,
     escalatedTickets: isDemoBuild() ? loadSessionEscalatedTickets() : [],
@@ -418,6 +420,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
     invalidateContextualState() {
       this.resetDrawerViewState();
       this.isEscalating = false;
+      this.wasOpenBeforeEscalation = false;
       this.escalationPayload = null;
     },
 
@@ -431,6 +434,14 @@ export const useKnowledgeStore = defineStore("knowledge", {
     },
 
     openDrawer(tab) {
+      if (
+        !this.isOpen &&
+        typeof document !== "undefined" &&
+        document.activeElement &&
+        document.activeElement !== document.body
+      ) {
+        this.drawerTriggerElement = document.activeElement;
+      }
       if (tab === "tickets" || tab === "guidance") {
         this.activeDrawerTab = tab;
       }
@@ -439,6 +450,8 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
     closeDrawer() {
       this.isOpen = false;
+      this.wasOpenBeforeEscalation = false;
+      this.drawerTriggerElement = null;
       this.activeDrawerTab = "guidance";
       this.selectedTicketId = null;
       this.selectedTicket = null;
@@ -839,7 +852,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
           `- Proposal: ${formatSafeForTicketFreeText(proposalRef)}`
         );
       }
-      contextLines.push(`- Timestamp: ${new Date().toISOString()}`);
+      const escalatedAt = isDemoBuild()
+        ? demoNowIso()
+        : new Date().toISOString();
+      contextLines.push(`- Timestamp: ${escalatedAt}`);
 
       this.escalationPayload = {
         title: `[Help Escalation] Operational Assistance on ${safeRouteLabel}`,
@@ -857,6 +873,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         reason_for_change: `Escalated to Support Ticket from Contextual Help on ${safeRouteLabel}`,
       };
 
+      this.wasOpenBeforeEscalation = Boolean(this.isOpen);
       this.isEscalating = true;
       return this.escalationPayload;
     },
@@ -977,6 +994,17 @@ export const useKnowledgeStore = defineStore("knowledge", {
     cancelEscalation() {
       this.isEscalating = false;
       this.escalationPayload = null;
+      if (this.wasOpenBeforeEscalation) {
+        if (
+          this.drawerTriggerElement &&
+          typeof this.drawerTriggerElement.focus === "function" &&
+          this.drawerTriggerElement.isConnected
+        ) {
+          this.drawerTriggerElement.focus({ preventScroll: true });
+        }
+        this.isOpen = true;
+        this.wasOpenBeforeEscalation = false;
+      }
     },
   },
 });

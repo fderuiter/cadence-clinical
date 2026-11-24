@@ -59,7 +59,7 @@ export interface UseUnsavedNavigationGuardOptions {
 }
 
 /**
- * Reusable dirty-state navigation guard across standalone views and Clinical Canvas workspaces (ADR-2658).
+ * Reusable dirty-state navigation guard across standalone views and Clinical Canvas workspaces (ADR-2659).
  *
  * Prompts via the accessible ConfirmationDialogHost modal (`role="alertdialog"`, never `window.confirm`),
  * blocks accidental browser tab unloads via `beforeunload`, integrates with `useSignOutGuard`, and stands down

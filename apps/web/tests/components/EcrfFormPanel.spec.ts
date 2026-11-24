@@ -3037,4 +3037,266 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     expect(localStorage.getItem(draftKey)).toBeNull();
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
   });
+
+  it("performs zero form.assertions reads and zero selectedSdvItems.includes scans across keystrokes and the 250 ms preview", async () => {
+    vi.useFakeTimers();
+
+    let assertionReads = 0;
+    function trackedAssertion(raw: {
+      assertion_id: string;
+      kind: string;
+      target: string;
+      revision: number | null;
+      text: string | null;
+      asserted_at: string;
+      asserted_by: string;
+      reason: string;
+      retracted_at: string | null;
+    }) {
+      const copy = { ...raw };
+      const kindValue = raw.kind;
+      Object.defineProperty(copy, "kind", {
+        enumerable: true,
+        configurable: true,
+        get() {
+          assertionReads += 1;
+          return kindValue;
+        },
+      });
+      return copy;
+    }
+
+    const rawAssertions = [
+      trackedAssertion({
+        assertion_id: "a-obs10-verified",
+        kind: "Verified",
+        target: "observation:obs-10@2",
+        revision: 2,
+        text: null,
+        asserted_at: "2027-03-14T10:00:00Z",
+        asserted_by: "cra1",
+        reason: "Verified against bedside chart",
+        retracted_at: null,
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs2-stale",
+        kind: "Verified",
+        target: "observation:obs-2",
+        revision: 1,
+        text: null,
+        asserted_at: "2027-03-14T10:01:00Z",
+        asserted_by: "cra1",
+        reason: "Initial chart check",
+        retracted_at: null,
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs3-retracted",
+        kind: "Verified",
+        target: "observation:obs-3",
+        revision: 1,
+        text: null,
+        asserted_at: "2027-03-14T10:02:00Z",
+        asserted_by: "cra1",
+        reason: "Withdrawn check",
+        retracted_at: "2027-03-14T10:05:00Z",
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs3-null-rev",
+        kind: "Verified",
+        target: "observation:obs-3",
+        revision: null,
+        text: null,
+        asserted_at: "2027-03-14T10:03:00Z",
+        asserted_by: "cra1",
+        reason: "Unversioned note",
+        retracted_at: null,
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs1-query",
+        kind: "Queried",
+        target: "observation:obs-1",
+        revision: 3,
+        text: "Confirm systolic BP",
+        asserted_at: "2027-03-14T10:04:00Z",
+        asserted_by: "dm1",
+        reason: "Out of range",
+        retracted_at: null,
+      }),
+    ];
+
+    const trackedAssertionsArray = [...rawAssertions];
+    rawAssertions.forEach((entry, index) => {
+      Object.defineProperty(trackedAssertionsArray, index, {
+        enumerable: true,
+        configurable: true,
+        get() {
+          assertionReads += 1;
+          return entry;
+        },
+      });
+    });
+
+    const loadedForm = form({
+      items: [
+        item({
+          item_id: "SYSBP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 120, unit: "mm[Hg]" },
+          observation_id: "obs-1",
+          revision: 3,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "DIABP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+          observation_id: "obs-10",
+          revision: 2,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "HR",
+          unit: "/min",
+          value_kind: "Quantity",
+          required: false,
+          value: { type: "quantity", value: 74, unit: "/min" },
+          observation_id: "obs-2",
+          revision: 2,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+        item({
+          item_id: "TEMP",
+          unit: "Cel",
+          value_kind: "Quantity",
+          required: false,
+          value: { type: "quantity", value: 36.7, unit: "Cel" },
+          observation_id: "obs-3",
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+        item({ item_id: "COMMENT", value_kind: "Text" }),
+      ],
+      assertions: trackedAssertionsArray,
+    });
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(loadedForm as never);
+
+    const apiWithPreview = ecrfFormsApi as Omit<
+      typeof ecrfFormsApi,
+      "previewValues"
+    > & {
+      previewValues?: typeof ecrfFormsApi.previewValues;
+    };
+    const origPreviewValues = apiWithPreview.previewValues;
+    const origIncludes = Array.prototype.includes;
+    let selectedIncludesCalls = 0;
+
+    apiWithPreview.previewValues = vi.fn().mockResolvedValue({
+      form_id: FORM_ID,
+      warnings: [
+        {
+          pack_key: "vs-checks",
+          rule_id: "VS_SYSBP_HIGH",
+          rule_version: 1,
+          severity: "Warning",
+          dataset: "VS",
+          item_id: "SYSBP",
+          message: "Systolic BP exceeds 220 mm[Hg].",
+          remediation_guidance: null,
+        },
+      ],
+    });
+
+    try {
+      wrapper = mount(EcrfFormPanel, {
+        props: { formId: FORM_ID, canVerifySource: true },
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]').text()).toBe(
+        "Unverified"
+      );
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-DIABP"]').text()).toBe(
+        "Verified (rev 2)"
+      );
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-HR"]').text()).toBe(
+        "Needs re-verification"
+      );
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-TEMP"]').text()).toBe(
+        "Unverified"
+      );
+      expect(
+        wrapper.find('[data-testid="ecrf-sdv-status-COMMENT"]').text()
+      ).toBe("No value");
+
+      await wrapper.find("#ecrf-sdv-select-all").trigger("click");
+      await nextTick();
+
+      expect(
+        (wrapper.find("#ecrf-sdv-select-SYSBP").element as HTMLInputElement)
+          .checked
+      ).toBe(true);
+      expect(
+        (wrapper.find("#ecrf-sdv-select-HR").element as HTMLInputElement)
+          .checked
+      ).toBe(true);
+      expect(
+        (wrapper.find("#ecrf-sdv-select-TEMP").element as HTMLInputElement)
+          .checked
+      ).toBe(true);
+      expect(wrapper.find('[data-testid="ecrf-bulk-sdv"]').text()).toContain(
+        "3 selected"
+      );
+
+      Array.prototype.includes = function <T>(
+        this: T[],
+        searchElement: T,
+        fromIndex?: number
+      ) {
+        if (
+          this.length === 3 &&
+          this[0] === "SYSBP" &&
+          this[1] === "HR" &&
+          this[2] === "TEMP"
+        ) {
+          selectedIncludesCalls += 1;
+        }
+        return origIncludes.call(this, searchElement, fromIndex);
+      } as typeof Array.prototype.includes;
+
+      assertionReads = 0;
+      selectedIncludesCalls = 0;
+
+      const sysInput = wrapper.find("#ecrf-item-SYSBP");
+      for (const typed of ["1", "13", "135", "245"]) {
+        await sysInput.setValue(typed);
+        await nextTick();
+      }
+
+      vi.advanceTimersByTime(250);
+      await flushPromises();
+
+      expect(
+        wrapper.find('[data-testid="ecrf-preview-warnings-SYSBP"]').text()
+      ).toContain("VS_SYSBP_HIGH");
+      expect(assertionReads).toBe(0);
+      expect(selectedIncludesCalls).toBe(0);
+    } finally {
+      Array.prototype.includes = origIncludes;
+      if (origPreviewValues === undefined) {
+        delete apiWithPreview.previewValues;
+      } else {
+        apiWithPreview.previewValues = origPreviewValues;
+      }
+      vi.useRealTimers();
+    }
+  });
 });
