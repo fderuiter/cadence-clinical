@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Modules.Execution.Domain;
@@ -31,7 +32,40 @@ public sealed record FormQueryAgingDigestEntry(
     string Priority,
     DateTimeOffset OpenedAt,
     DateTimeOffset DueAt,
-    int AgeDays);
+    int AgeDays)
+{
+    /// <summary>Sentinel literal substituted when an entry references a blinded treatment item (<c>K-AUTH-4</c>).</summary>
+    public const string MaskedLiteral = "masked";
+
+    /// <summary>
+    /// Redacts identifiers that could disclose a blinded treatment item while keeping operational site/subject aging counts intact.
+    /// </summary>
+    public FormQueryAgingDigestEntry MaskBlinded() =>
+        this with
+        {
+            QueryId = Guid.Empty,
+            FormId = Guid.Empty,
+            ItemId = MaskedLiteral,
+        };
+}
+
+/// <summary>
+/// Outbox event raised when an insert-only <see cref="FormQueryAgingDigest"/> commits (<c>PRD-QRY-002</c>).
+/// Strictly de-identified so downstream alert delivery never sees participant or staff PII.
+/// </summary>
+[KernelEvent("execution.FormQueryAgingDigestGenerated", 1)]
+public sealed record FormQueryAgingDigestGenerated(
+    TenantId TenantId,
+    Guid DigestId,
+    StudyId StudyId,
+    StudySiteId? StudySiteId,
+    string ScopeKey,
+    string RecipientRole,
+    DateOnly DigestDate,
+    DateTimeOffset GeneratedAt,
+    string StudyCode,
+    string? SiteCode,
+    int EscalatedCount);
 
 /// <summary>
 /// Insert-only daily query aging digest emitted for study leads (<c>study_lead</c>) and site leads (<c>site_investigator</c>)

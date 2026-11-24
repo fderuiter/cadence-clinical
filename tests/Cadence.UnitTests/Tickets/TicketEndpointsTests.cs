@@ -95,14 +95,30 @@ public sealed class TicketEndpointsTests : IAsyncDisposable
         string userId,
         IReadOnlyList<string> roles,
         IReadOnlyList<string>? studyIds = null,
-        IReadOnlyList<string>? siteIds = null)
+        IReadOnlyList<string>? siteIds = null) =>
+        CreateClient(
+            userId: userId,
+            tenantId: TestSecurityContext.TenantCode,
+            roles: roles,
+            studyIds: studyIds,
+            siteIds: siteIds);
+
+    private HttpClient CreateClient(
+        string userId,
+        string tenantId,
+        IReadOnlyList<string> roles,
+        IReadOnlyList<string>? studyIds = null,
+        IReadOnlyList<string>? siteIds = null,
+        string? sigToken = null)
     {
         var identity = new GatewayIdentity(
             UserId: userId,
             Roles: roles,
             SiteIds: siteIds ?? [],
-            TenantId: TestSecurityContext.TenantCode,
-            StudyIds: studyIds ?? TestSecurityContext.AllStudies);
+            TenantId: tenantId,
+            StudyIds: studyIds ?? TestSecurityContext.AllStudies,
+            SigToken: sigToken,
+            ProductFamilies: TestSecurityContext.AllProductFamilies);
         return _factory.CreateDefaultClient(new TestSecurityContext.GatewaySigningHandler(identity));
     }
 
@@ -384,6 +400,221 @@ public sealed class TicketEndpointsTests : IAsyncDisposable
             $"/api/v1/tickets/{created.Id}/audit-trail",
             Ct);
         crcAudit.Should().HaveCount(2);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-TCK-001")]
+    [GxPRequirement("PRD-TCK-002")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task TrialCoordinator_EnforcesVerifiedTrialTenantWrites_SiteBoundReads_AndSponsorCommentAllowlist()
+    {
+        await EnsureDbCreatedAsync();
+
+        // Seed enterprise tickets across SITE-101 and SITE-102 with both PUBLIC and INTERNAL_SPONSOR notes
+        using var enterpriseSponsorClient = CreateClient(
+            userId: "usr-ent-sponsor",
+            tenantId: "tenant-enterprise-01",
+            roles: ["Sponsor Admin"],
+            studyIds: ["STUDY-ONC-01"],
+            siteIds: []);
+
+        var createdTicket = await CreateTestTicketAsync(enterpriseSponsorClient, "STUDY-ONC-01", "SITE-101");
+        var otherSiteTicket = await CreateTestTicketAsync(enterpriseSponsorClient, "STUDY-ONC-01", "SITE-102");
+
+        using (var pubEnterpriseReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{createdTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Enterprise public triage note", "PUBLIC")),
+        })
+        {
+            pubEnterpriseReq.Headers.Add(GatewayHeaders.ChangeReason, "Enterprise public note");
+            (await enterpriseSponsorClient.SendAsync(pubEnterpriseReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        using (var intEnterpriseReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{createdTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Enterprise sponsor confidential note", "INTERNAL_SPONSOR")),
+        })
+        {
+            intEnterpriseReq.Headers.Add(GatewayHeaders.ChangeReason, "Enterprise internal note");
+            (await enterpriseSponsorClient.SendAsync(intEnterpriseReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        // 1. Enterprise trial_coordinator without site_id claims receives 403 across reads, creates, updates, comments, transitions, and signatures
+        string enterpriseSignPath = $"/api/v1/tickets/{createdTicket.Id}/sign";
+        string enterpriseSigToken = TestSecurityContext.CreateSigToken(
+            userId: "usr-trial-coord",
+            action: enterpriseSignPath,
+            semanticAction: TicketEndpoints.SignTicketSemanticAction,
+            roles: ["trial_coordinator"],
+            issuedAt: _clock.UtcNow);
+
+        using var trialCoordEnterpriseClient = CreateClient(
+            userId: "usr-trial-coord",
+            tenantId: "tenant-enterprise-01",
+            roles: ["trial_coordinator"],
+            studyIds: ["STUDY-ONC-01"],
+            siteIds: [],
+            sigToken: enterpriseSigToken);
+
+        (await trialCoordEnterpriseClient.GetAsync("/api/v1/tickets", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await trialCoordEnterpriseClient.GetAsync($"/api/v1/tickets/{createdTicket.Id}", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await trialCoordEnterpriseClient.GetAsync($"/api/v1/tickets/{createdTicket.Id}/comments", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await trialCoordEnterpriseClient.GetAsync($"/api/v1/tickets/{createdTicket.Id}/audit-trail", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var createReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/tickets")
+        {
+            Content = JsonContent.Create(new CreateTicketRequestDto(
+                Title: "Unauthorized enterprise coordinator create",
+                Description: "Attempted ticket creation outside trial-* tenant.",
+                StudyScope: "STUDY-ONC-01",
+                SiteScope: "SITE-101")),
+        })
+        {
+            createReq.Headers.Add(GatewayHeaders.ChangeReason, "Enterprise create probe");
+            (await trialCoordEnterpriseClient.SendAsync(createReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using (var patchReq = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/tickets/{createdTicket.Id}")
+        {
+            Content = JsonContent.Create(new UpdateTicketRequestDto(Title: "Unauthorized patch")),
+        })
+        {
+            patchReq.Headers.Add(GatewayHeaders.ChangeReason, "Enterprise patch probe");
+            (await trialCoordEnterpriseClient.SendAsync(patchReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using var coordPostReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{createdTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Internal probe", "INTERNAL_SPONSOR")),
+        };
+        coordPostReq.Headers.Add(GatewayHeaders.ChangeReason, "Coordinator internal post check");
+        (await trialCoordEnterpriseClient.SendAsync(coordPostReq, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var transitionReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{createdTicket.Id}/transitions")
+        {
+            Content = JsonContent.Create(new TransitionTicketRequestDto(TargetStatus: "IN_PROGRESS")),
+        })
+        {
+            transitionReq.Headers.Add(GatewayHeaders.ChangeReason, "Enterprise transition probe");
+            (await trialCoordEnterpriseClient.SendAsync(transitionReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using (var signReq = new HttpRequestMessage(HttpMethod.Post, enterpriseSignPath)
+        {
+            Content = JsonContent.Create(new SignTicketRequestDto(
+                SignatureMeaning: "Attempted closure sign-off in enterprise tenant",
+                SignatureAction: "SIGN_CLOSURE")),
+        })
+        {
+            signReq.Headers.Add(GatewayHeaders.ChangeReason, "Enterprise sign probe");
+            (await trialCoordEnterpriseClient.SendAsync(signReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 2. Enterprise trial_coordinator with explicit site assignment can read assigned-site PUBLIC data only, and still cannot mutate
+        using var siteScopedEnterpriseCoordClient = CreateClient(
+            userId: "usr-trial-coord-site",
+            tenantId: "tenant-enterprise-01",
+            roles: ["trial_coordinator"],
+            studyIds: ["STUDY-ONC-01"],
+            siteIds: ["SITE-101"]);
+
+        (await siteScopedEnterpriseCoordClient.GetAsync($"/api/v1/tickets/{createdTicket.Id}", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await siteScopedEnterpriseCoordClient.GetAsync($"/api/v1/tickets/{otherSiteTicket.Id}", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var siteScopedCoordComments = await siteScopedEnterpriseCoordClient
+            .GetFromJsonAsync<List<TicketCommentResponseDto>>($"/api/v1/tickets/{createdTicket.Id}/comments", Ct);
+        siteScopedCoordComments.Should().ContainSingle().Which.Visibility.Should().Be("PUBLIC");
+
+        using (var publicMutateReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{createdTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Public probe from non-trial coordinator", "PUBLIC")),
+        })
+        {
+            publicMutateReq.Headers.Add(GatewayHeaders.ChangeReason, "Non-trial coordinator public comment probe");
+            (await siteScopedEnterpriseCoordClient.SendAsync(publicMutateReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 3. Verified trial-<12hex> tenant: multi-role founder retains INTERNAL_SPONSOR visibility while standalone trial_coordinator sees PUBLIC only
+        const string verifiedTrialTenant = "trial-a1b2c3d4e5f6";
+        using var trialFounderClient = CreateClient(
+            userId: "usr-trial-founder",
+            tenantId: verifiedTrialTenant,
+            roles: ["Sponsor Admin", "Trial Coordinator"],
+            studyIds: ["STUDY-TRIAL-01"],
+            siteIds: []);
+
+        using var standaloneTrialCoordClient = CreateClient(
+            userId: "usr-standalone-trial-coord",
+            tenantId: verifiedTrialTenant,
+            roles: ["trial_coordinator"],
+            studyIds: ["STUDY-TRIAL-01"],
+            siteIds: []);
+
+        var trialTicket = await CreateTestTicketAsync(standaloneTrialCoordClient, "STUDY-TRIAL-01", "SITE-TRIAL-01");
+
+        using (var trialPubReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{trialTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Coordinator progress note for SUBJ-8812.", "PUBLIC")),
+        })
+        {
+            trialPubReq.Headers.Add(GatewayHeaders.ChangeReason, "Logged public trial progress note");
+            (await standaloneTrialCoordClient.SendAsync(trialPubReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        using (var founderInternalReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{trialTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Founder internal sponsor assessment.", "INTERNAL_SPONSOR")),
+        })
+        {
+            founderInternalReq.Headers.Add(GatewayHeaders.ChangeReason, "Logged founder internal sponsor note");
+            (await trialFounderClient.SendAsync(founderInternalReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        var standaloneTrialComments = await standaloneTrialCoordClient
+            .GetFromJsonAsync<List<TicketCommentResponseDto>>($"/api/v1/tickets/{trialTicket.Id}/comments", Ct);
+        standaloneTrialComments.Should().NotBeEmpty();
+        standaloneTrialComments.Should().OnlyContain(c => c.Visibility == "PUBLIC");
+
+        using (var standaloneInternalPostReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/tickets/{trialTicket.Id}/comments")
+        {
+            Content = JsonContent.Create(new CreateTicketCommentRequestDto("Standalone internal attempt", "INTERNAL_SPONSOR")),
+        })
+        {
+            standaloneInternalPostReq.Headers.Add(GatewayHeaders.ChangeReason, "Standalone internal comment attempt");
+            (await standaloneTrialCoordClient.SendAsync(standaloneInternalPostReq, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        var standaloneTrialAudit = await standaloneTrialCoordClient
+            .GetFromJsonAsync<List<TicketAuditEntryDto>>($"/api/v1/tickets/{trialTicket.Id}/audit-trail", Ct);
+        standaloneTrialAudit.Should().HaveCount(2);
+
+        var founderComments = await trialFounderClient
+            .GetFromJsonAsync<List<TicketCommentResponseDto>>($"/api/v1/tickets/{trialTicket.Id}/comments", Ct);
+        founderComments.Should().HaveCount(2);
+        founderComments.Should().Contain(c => c.Visibility == "INTERNAL_SPONSOR");
+
+        var founderAudit = await trialFounderClient
+            .GetFromJsonAsync<List<TicketAuditEntryDto>>($"/api/v1/tickets/{trialTicket.Id}/audit-trail", Ct);
+        founderAudit.Should().HaveCount(3);
     }
 
     [Fact]

@@ -23,12 +23,12 @@
           v-model="attachmentReason"
           type="text"
           aria-label="Reason for attaching evidence"
-          class="form-control"
+          class="form-control attachment-reason-input"
           placeholder="Mandatory GxP reason for attachment..."
         />
         <button
           type="button"
-          class="btn btn-primary"
+          class="btn btn-primary attach-evidence-btn"
           :disabled="
             !selectedFile || !attachmentReason.trim() || uploadSubmitting
           "
@@ -63,7 +63,10 @@
         </div>
       </div>
 
-      <div v-if="attachments.length === 0" class="empty-placeholder">
+      <div
+        v-if="attachments.length === 0"
+        class="empty-placeholder attachments-empty"
+      >
         <EmptyState
           icon="📎"
           title="No Evidence Attached"
@@ -212,44 +215,35 @@ const uploadAttachment = () => {
   color: var(--semantic-color-success-dark);
 }
 
-.empty-placeholder {
-  padding: 24px;
+.attachments-empty {
+  padding: 20px;
   text-align: center;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
 }
 
-.btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.15s ease-in-out;
+.attach-evidence-btn {
   min-height: 44px;
   min-width: 44px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-surface);
+  font-size: 0.82rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  cursor: pointer;
 }
 
-.btn-primary {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--semantic-color-interactive-primary);
-}
-
-.btn:disabled {
+.attach-evidence-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.form-control {
+.attachment-reason-input {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -258,7 +252,7 @@ const uploadAttachment = () => {
   background: var(--semantic-color-surface);
 }
 
-.form-control:focus-visible {
+.attachment-reason-input:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
 }
 </style>

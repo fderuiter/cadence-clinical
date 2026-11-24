@@ -223,6 +223,15 @@ export function cloneDefaultClinicalUsdm() {
   };
 }
 
+export function buildUsdmSoaSchedule() {
+  return {
+    arms: [],
+    epochs: [],
+    encounters: [],
+    rows: [],
+  };
+}
+
 export function formatZodIssues() {
   return [];
 }
@@ -358,7 +367,15 @@ export function getFallbackCategories() {
 }
 
 export function getFallbackContextualHelp() {
-  return { context_key: "general", title: "", steps: [], sop_links: [] };
+  return {
+    matched_mapping: null,
+    primary_article: null,
+    primary_version: null,
+    section_anchor: null,
+    related_articles: [],
+    article: null,
+    version: null,
+  };
 }
 
 export function createKnowledgeDemoState() {
@@ -640,7 +657,7 @@ function hoistDemoManifestSections(code) {
   let i = 0;
   while (i < lines.length) {
     const scalar = lines[i].match(
-      /^  (tenantCode|tenantUuid|epochIso|epochMs): ([^,\n]+),(.*)$/
+      /^ {2}(tenantCode|tenantUuid|epochIso|epochMs): ([^,\n]+),(.*)$/
     );
     if (scalar) {
       const prop = scalar[1];
@@ -651,14 +668,14 @@ function hoistDemoManifestSections(code) {
       continue;
     }
     const section = lines[i].match(
-      /^  (sponsor|study|sites|participants|roles|personas): (Object\.freeze\([{[!])$/
+      /^ {2}(sponsor|study|sites|participants|roles|personas): (Object\.freeze\([{[!])$/
     );
     if (section) {
       const prop = section[1];
       const constName = `__DEMO_MANIFEST_${prop.toUpperCase()}`;
       const block = [lines[i].replace(`  ${prop}: `, "")];
       i += 1;
-      while (i < lines.length && !/^  \}\),$|^  \]\),$/.test(lines[i])) {
+      while (i < lines.length && !/^ {2}\}\),$|^ {2}\]\),$/.test(lines[i])) {
         block.push(lines[i]);
         i += 1;
       }

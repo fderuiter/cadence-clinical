@@ -93,6 +93,11 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("Dockerfile", "FROM ubuntu:24.04\nWORKDIR relative/path\nEXPOSE 99999\n");
             return Context();
         },
+        ["shellcheck"] = () =>
+        {
+            Write("scripts/broken.sh", "#!/bin/sh\nUNUSED_VAR=1\necho $1\n");
+            return Context();
+        },
         ["yaml"] = () =>
         {
             Write(".github/workflows/broken.yml", "name: \"unclosed\njobs:\n\tbad: true\n");
@@ -234,6 +239,16 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("apps/alpha/src/Uses.cs", "using Cadence.Apps.Beta.Domain;\n\nclass Uses { }\n");
             return Context();
         },
+        ["permission-matrix"] = () =>
+        {
+            Write(
+                PermissionMatrixRatchetService.BaselineRelativePath,
+                "# Shrink-only RBAC baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+            Write(
+                "packages/security/src/Rbac/PermissionMatrix.Shadow.cs",
+                "namespace Cadence.Security.Rbac;\npublic static partial class PermissionMatrix\n{\n    static void Extra() => Grant(\"crc\", \"shadow_resource\", \"escalate\");\n}\n");
+            return Context();
+        },
         ["security"] = () =>
         {
             Write("config/service.pem", $"{PrivateKeyHeader}\nMIIB\n");
@@ -368,7 +383,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(44);
+        QualityGates.All.Should().HaveCount(46);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -382,6 +397,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         Write("scratch/notes.txt", "forbidden directory\n");
         Write(".github/workflows/broken.yml", "name: \"unclosed\n");
         Write("Dockerfile", "FROM ubuntu:latest\nWORKDIR relative/path\n");
+        Write("scripts/broken.sh", "#!/bin/sh\nUNUSED_VAR=1\necho $1\n");
         Write("config/service.pem", $"{PrivateKeyHeader}\nMIIB\n");
         Write("apps/alpha/src/Seed.cs", $"class Seed {{ string Ssn = \"000-12-3456\"; bool Check(bool f) => f {BooleanComparison}; }}\n");
         Directory.CreateDirectory(Path.Combine(_root, "docs", "openapi"));
@@ -497,7 +513,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
-    public void DuplicationGate_InPreCommitMode_IgnoresNonCSharpDuplicates()
+    public void DuplicationGate_InPreCommitMode_RejectsFrontendAndStylesheetDuplicates()
     {
         string cssAliases = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"  --alias-{i}: var(--semantic-token-{i});"));
         Write("apps/web/src/style.css", $":root {{\n{cssAliases}\n}}\n");
@@ -506,7 +522,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         var gate = QualityGates.Find("duplication")!;
         var context = Context(files: ["apps/web/src/style.css", "apps/subject-portal/src/style.css"], preCommit: true);
 
-        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# or JavaScript file, even when pre-commit passes staged files");
+        gate.Run(context).Should().BeFalse("duplication gate rejects staged CSS duplicates over 15 normalized lines without style.css exemptions");
 
         string jsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const val{i} = input + {i};"));
         Write("apps/web/src/dup.js", $"export function compute(input) {{\n{jsLines}\n  return val18;\n}}\n");
@@ -514,6 +530,89 @@ public sealed class QualityGateRegistryTests : IDisposable
 
         var jsContext = Context(files: ["apps/web/src/dup.js", "apps/subject-portal/src/dup.js"], preCommit: true);
         gate.Run(jsContext).Should().BeFalse("duplication gate rejects staged JavaScript duplicates over 15 normalized lines");
+
+        string tsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const typedVal{i}: number = seed + {i};"));
+        Write("apps/web/src/composables/dup.ts", $"export function computeTyped(seed: number): number {{\n{tsLines}\n  return typedVal18;\n}}\n");
+        Write("apps/subject-portal/src/composables/dup.ts", $"export function computeTyped(seed: number): number {{\n{tsLines}\n  return typedVal18;\n}}\n");
+
+        var tsContext = Context(files: ["apps/web/src/composables/dup.ts", "apps/subject-portal/src/composables/dup.ts"], preCommit: true);
+        gate.Run(tsContext).Should().BeFalse("duplication gate rejects staged TypeScript duplicates over 15 normalized lines");
+
+        string vueLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  <p class=\"row-{i}\">{{{{ item.label{i} }}}}</p>"));
+        Write("apps/web/src/views/DupA.vue", $"<template>\n{vueLines}\n</template>\n");
+        Write("apps/web/src/views/DupB.vue", $"<template>\n{vueLines}\n</template>\n");
+
+        var vueContext = Context(files: ["apps/web/src/views/DupA.vue", "apps/web/src/views/DupB.vue"], preCommit: true);
+        gate.Run(vueContext).Should().BeFalse("duplication gate rejects staged Vue component duplicates over 15 normalized lines");
+    }
+
+    [Fact]
+    public void DuplicationGate_EnforcesFrontendExtensions_HonorsShrinkOnlyBaseline_AndPrunesStaleEntries()
+    {
+        var gate = QualityGates.Find("duplication")!;
+
+        string dtsLines = string.Join("\n", Enumerable.Range(1, 20).Select(i => $"  readonly field{i}: string;"));
+        Write("apps/web/src/types/a.d.ts", $"export interface AlphaDto {{\n{dtsLines}\n}}\n");
+        Write("apps/web/src/types/b.d.ts", $"export interface BetaDto {{\n{dtsLines}\n}}\n");
+        gate.Run(Context(files: ["apps/web/src/types/a.d.ts", "apps/web/src/types/b.d.ts"]))
+            .Should().BeTrue("ambient .d.ts type declarations are excluded from duplication enforcement");
+
+        string tsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const step{i} = seed + {i};"));
+        Write("apps/web/src/utils/calcA.ts", $"export function calcA(seed: number): number {{\n{tsLines}\n  return step18;\n}}\n");
+        Write("apps/web/src/utils/calcB.ts", $"export function calcB(seed: number): number {{\n{tsLines}\n  return step18;\n}}\n");
+        gate.Run(Context(files: ["apps/web/src/utils/calcA.ts", "apps/web/src/utils/calcB.ts"]))
+            .Should().BeFalse("unbaselined TypeScript duplicates over 15 lines must fail");
+
+        string cssRules = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  --panel-space-{i}: {i * 4}px;"));
+        Write("apps/web/src/panelA.css", $".panel {{\n{cssRules}\n}}\n");
+        Write("apps/web/src/panelB.css", $".panel {{\n{cssRules}\n}}\n");
+        gate.Run(Context(files: ["apps/web/src/panelA.css", "apps/web/src/panelB.css"]))
+            .Should().BeFalse("non-exempt CSS duplicates over 15 lines must fail");
+
+        string vueLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const row{i} = props.offset + {i};"));
+        string vueA = $"<script setup lang=\"ts\">\nfunction renderRows(props: {{ offset: number }}) {{\n{vueLines}\n  return row18;\n}}\n</script>\n";
+        string vueB = $"<script setup lang=\"ts\">\nfunction renderRows(props: {{ offset: number }}) {{\n{vueLines}\n  return row18;\n}}\n</script>\n";
+        Write("apps/web/src/views/ViewA.vue", vueA);
+        Write("apps/web/src/views/ViewB.vue", vueB);
+
+        var vueScope = Context(files: ["apps/web/src/views/ViewA.vue", "apps/web/src/views/ViewB.vue"]);
+        gate.Run(vueScope).Should().BeFalse("unbaselined Vue duplicates over 15 lines must fail");
+
+        var summary = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(_root, "duplication_summary.json")))!;
+        string[] vueKeys = summary["duplicates"]!.AsArray()
+            .Select(n => n!["key"]!.GetValue<string>())
+            .Where(k => k.Contains("ViewA.vue", StringComparison.Ordinal))
+            .ToArray();
+        vueKeys.Should().NotBeEmpty();
+
+        Cadence.ToolingCore.Services.DuplicationDetectorService.WriteBaseline(_root, vueKeys);
+        gate.Run(vueScope).Should().BeTrue("baselined Vue clone windows pass");
+
+        // Shifting lines in ViewA.vue without changing the duplicated block body keeps the content-hash key valid.
+        Write("apps/web/src/views/ViewA.vue", "<!-- header banner -->\n\n" + vueA);
+        gate.Run(vueScope).Should().BeTrue("content-hashed baseline keys survive line-number shifts");
+
+        // Refactoring ViewB.vue removes the clone, turning the baseline entries stale until pruned.
+        Write("apps/web/src/views/ViewB.vue", "<script setup lang=\"ts\">\nconst simplified = true;\n</script>\n");
+        gate.Run(vueScope).Should().BeFalse("stale duplication baseline entries must fail closed until pruned");
+
+        string? previousUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+
+            // Unbaselined TypeScript duplicates must still fail even when CADENCE_UPDATE_BASELINE=1 is set.
+            gate.Run(Context(files: ["apps/web/src/utils/calcA.ts", "apps/web/src/utils/calcB.ts"]))
+                .Should().BeFalse("CADENCE_UPDATE_BASELINE=1 may only prune stale entries and must never baseline new duplicates");
+
+            gate.Run(vueScope).Should().BeTrue("CADENCE_UPDATE_BASELINE=1 prunes resolved baseline entries");
+            File.Exists(Path.Combine(_root, Cadence.ToolingCore.Services.DuplicationDetectorService.BaselineFileName))
+                .Should().BeFalse("emptied .duplication-baseline.txt is deleted automatically");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", previousUpdate);
+        }
     }
 
     [Fact]
@@ -534,7 +633,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     public void BranchFreshnessAndTestSuiteGates_SkipPreCommit_AndBranchFreshnessPassesWhenOriginMainIsAncestor()
     {
         QualityGates.Find("branch-freshness")!.PreCommit.Should().Be(PreCommitMode.Skipped);
-        QualityGates.Find("architecture-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+        QualityGates.Find("architecture-tests")!.PreCommit.Should().Be(PreCommitMode.Quick);
         QualityGates.Find("unit-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
 
         Write("README.md", "# Cadence\n");
@@ -639,6 +738,28 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
+    public void DotnetFormatGate_UnscopedFolderMode_SkipsExcludedDirectoriesWithoutSolutionAndFailsOnBadSource()
+    {
+        var gate = QualityGates.Find("dotnet-format")!;
+        Write(".editorconfig", "root = true\n[*.cs]\nindent_style = space\nindent_size = 4\n");
+        Write("apps/tickets/src/Clean.cs", "namespace Tickets;\n\npublic static class Clean\n{\n    public static int Value => 1;\n}\n");
+
+        const string malformed = "namespace Ignored;\n\npublic static class Bad\n{\n        public static int Value => 1;\n}\n";
+        Write("apps/tickets/src/obj/Debug/net10.0/Generated.g.cs", malformed);
+        Write("apps/tickets/src/bin/Debug/net10.0/Generated.cs", malformed);
+        Write(".cadence/cli-artifacts/Generated.cs", malformed);
+        Write("apps/web/node_modules/pkg/Generated.cs", malformed);
+
+        File.Exists(Path.Combine(_root, "Cadence.sln")).Should().BeFalse();
+        gate.Run(Context()).Should().BeTrue(
+            "unscoped dotnet-format must run in folder mode without Cadence.sln and ignore excluded build/tool directories");
+
+        Write("apps/tickets/src/Malformed.cs", malformed);
+        gate.Run(Context()).Should().BeFalse(
+            "unscoped folder-mode dotnet-format must fail when a non-excluded C# source file violates .editorconfig whitespace");
+    }
+
+    [Fact]
     public void ApiClientsAndVulnerabilitiesGates_AreQuickAndFileScopedInPreCommit()
     {
         var apiClients = QualityGates.Find("api-clients")!;
@@ -693,6 +814,58 @@ public sealed class QualityGateRegistryTests : IDisposable
                 .Should().Be(1));
         fullFailFastOutput.Should().Contain("[TRAILING WHITESPACE]")
             .And.NotContain("[PATH VIOLATION]", "explicit --fail-fast stops full cadence check on the first failure");
+    }
+
+    [Fact]
+    public void ArchitectureTestsGate_InPreCommitMode_SkipsDocsAndNonTestFrontendAssets_AndRunsWhenBackendBaselineOrTestsStaged()
+    {
+        WriteBrokenTestProject("tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+        var gate = QualityGates.Find("architecture-tests")!;
+        gate.TakesFiles.Should().BeTrue();
+        gate.PreCommit.Should().Be(PreCommitMode.Quick);
+
+        gate.Run(Context(
+                files:
+                [
+                    "docs/guide.md",
+                    "README.md",
+                    "apps/web/src/App.vue",
+                    "apps/web/src/styles/tokens.css",
+                    "apps/web/src/stores/study.js",
+                    "packages/ui/src/Button.vue",
+                ],
+                preCommit: true))
+            .Should().BeTrue("pre-commit hook must skip architecture-tests when only docs or non-test frontend assets are staged");
+
+        gate.Run(Context(files: ["apps/payments/src/Endpoints/PaymentEndpoints.cs"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when backend C# files are staged");
+
+        gate.Run(Context(files: ["tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when ratchet baselines are staged");
+
+        gate.Run(Context(files: ["apps/subject-portal/tests/e2e/portal-accessibility.spec.js"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when frontend test specs are staged");
+    }
+
+    [Fact]
+    public void ImportsAndPermissionMatrixGates_CatchReflectionStringsAndUnbaselinedRbacGrants()
+    {
+        Write(
+            "apps/ctms/src/Endpoints/ReflectionBypass.cs",
+            "namespace Cadence.Apps.Ctms.Endpoints;\npublic static class ReflectionBypass\n{\n    public static string Sibling => \"Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext\";\n}\n");
+        QualityGates.Find("imports")!.Run(Context())
+            .Should().BeFalse("cross-service reflection string literals must fail the imports gate when unbaselined");
+
+        Write(
+            PermissionMatrixRatchetService.BaselineRelativePath,
+            "# baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+        var permissionGate = QualityGates.Find("permission-matrix")!;
+        permissionGate.Run(Context()).Should().BeTrue("runtime PermissionMatrix grants matching the baseline must pass");
+
+        Write(
+            "apps/payments/src/Rbac/ShadowGrant.cs",
+            "namespace Cadence.Apps.Payments.Rbac;\npublic static class ShadowGrant\n{\n    public static void Init() => Grant(\"pi\", \"payments_shadow\", \"approve\");\n}\n");
+        permissionGate.Run(Context()).Should().BeFalse("unbaselined static Grant(...) calls in service sources must fail permission-matrix");
     }
 
     private static string CaptureConsoleOutput(Action action)

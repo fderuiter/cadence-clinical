@@ -8,16 +8,22 @@ import {
   knowledgeDemoAuthoringService,
 } from "../stores/demo/knowledgeDemo";
 import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  compileSopMarkdownToHtml,
+  slugifySopHeading,
+} from "../utils/sopMarkdown";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import type { paths as KnowledgePaths } from "./generated/knowledge";
 
 const knowledgeClient = createOpenApiClient<KnowledgePaths>();
 
 export {
+  compileSopMarkdownToHtml,
   DEFAULT_CATEGORIES,
   DEFAULT_CONTEXTUAL_SOPS,
   DEFAULT_MOCK_ARTICLES,
   getFallbackContextualHelp,
+  slugifySopHeading,
 };
 
 /**

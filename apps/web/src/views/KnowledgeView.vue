@@ -51,7 +51,7 @@
       >
         <span class="stat-icon alert-icon" aria-hidden="true">📚</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ totalArticlesCount }}
           </span>
           <span class="stat-label">Total SOPs &amp; Guides</span>
@@ -69,7 +69,7 @@
       >
         <span class="stat-icon capa-icon" aria-hidden="true">✅</span>
         <span class="stat-details">
-          <span class="stat-value text-success">
+          <span class="stat-value text-success tabular-nums">
             {{ publishedArticlesCount }}
           </span>
           <span class="stat-label">Active Published SOPs</span>
@@ -88,7 +88,7 @@
       >
         <span class="stat-icon rbqm-icon" aria-hidden="true">🔍</span>
         <span class="stat-details">
-          <span class="stat-value text-warning">
+          <span class="stat-value text-warning tabular-nums">
             {{ inReviewArticlesCount }}
           </span>
           <span class="stat-label">Under Four-Eyes Review</span>
@@ -107,7 +107,7 @@
       >
         <span class="stat-icon breach-icon" aria-hidden="true">📝</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ draftArticlesCount }}
           </span>
           <span class="stat-label">Working Draft Revisions</span>
@@ -541,9 +541,9 @@
           <ClinicalTabs
             :model-value="activeReaderTab"
             :tabs="readerTabs"
+            variant="underline"
             aria-label="SOP document inspection tabs"
             id-prefix="knowledge-reader"
-            list-class="reader-tab-nav"
             tab-class="reader-tab-btn"
             @update:model-value="handleReaderTabChange"
           />
@@ -558,16 +558,10 @@
             tabindex="0"
           >
             <div
-              v-if="selectedArticle.body_html"
+              v-if="selectedArticleRenderedHtml"
               class="prose-content"
-              v-html="selectedArticle.body_html"
+              v-html="selectedArticleRenderedHtml"
             />
-            <div
-              v-else-if="selectedArticle.body_markdown"
-              class="prose-content markdown-fallback"
-            >
-              <pre>{{ selectedArticle.body_markdown }}</pre>
-            </div>
             <div v-else class="prose-empty">
               <p>No content has been authored for this SOP draft.</p>
             </div>
@@ -747,7 +741,10 @@
 <script setup>
 import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
 import { ClinicalIconButton, ClinicalTabs } from "ui";
-import { knowledgeService } from "../api/knowledge.js";
+import {
+  compileSopMarkdownToHtml,
+  knowledgeService,
+} from "../api/knowledge.js";
 import {
   readRouteScopeQuery,
   replaceRouteQueryParams,
@@ -1176,6 +1173,22 @@ function handleCreateCategory(...args) {
   return demoWorkspaceRef.value?.handleCreateCategory?.(...args);
 }
 
+function renderPreviewHtml(markdown) {
+  if (!markdown) return "<p>No content to preview.</p>";
+  return compileSopMarkdownToHtml(markdown);
+}
+
+const selectedArticleRenderedHtml = computed(() => {
+  if (!selectedArticle.value) return "";
+  if (selectedArticle.value.body_html) {
+    return selectedArticle.value.body_html;
+  }
+  if (selectedArticle.value.body_markdown) {
+    return compileSopMarkdownToHtml(selectedArticle.value.body_markdown);
+  }
+  return "";
+});
+
 // Initial Data Fetch
 async function loadInitialData() {
   loading.value = true;
@@ -1269,6 +1282,7 @@ defineExpose({
   articles,
   selectedCategoryId,
   selectedArticle,
+  selectedArticleRenderedHtml,
   searchQuery,
   selectedTag,
   activeStatusFilter,
@@ -1281,6 +1295,7 @@ defineExpose({
   visibleCategories,
   filteredByPersonaArticles,
   displayArticles,
+  renderPreviewHtml,
   openCreateArticleModal,
   handleCreateArticle,
   openEditDraftModal,
@@ -1955,47 +1970,6 @@ defineExpose({
   color: var(--semantic-color-text-secondary);
 }
 
-/* Reader Tab Navigation */
-.reader-tab-nav,
-:deep(.reader-tab-nav) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  background-color: var(--semantic-color-surface-header);
-  border-bottom: 1px solid var(--border);
-  padding: 0 16px;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.reader-tab-btn,
-:deep(.reader-tab-btn) {
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 10px 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--neutral-dark);
-  cursor: pointer;
-  transition: all 0.15s;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.reader-tab-btn:hover,
-:deep(.reader-tab-btn:hover) {
-  color: var(--primary);
-}
-
-.reader-tab-btn.active,
-:deep(.reader-tab-btn.active) {
-  color: var(--semantic-color-primary);
-  border-bottom-color: var(--semantic-color-primary);
-  background-color: var(--semantic-color-surface);
-}
-
 .reader-body-card {
   padding: 24px;
   flex: 1;
@@ -2323,11 +2297,6 @@ defineExpose({
 
   .reader-header-card {
     padding: 14px 16px;
-  }
-
-  .reader-tab-nav,
-  :deep(.reader-tab-nav) {
-    padding: 0 12px;
   }
 
   .reader-body-card {

@@ -9,6 +9,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
@@ -28,7 +29,9 @@ public sealed partial class KernelAuthorization(
     ICurrentActor currentActor,
     KernelCommandCatalog catalog,
     IClock clock,
-    ILogger<KernelAuthorization> logger) : IAuthorizer, IAuthorizationProbe
+    ILogger<KernelAuthorization> logger,
+    IAuthorityStore? store = null,
+    IProtocolVersionReader? versionReader = null) : IAuthorizer, IAuthorizationProbe
 {
     /// <summary>Condition code reported when a command type declares no capability.</summary>
     public const string CapabilityDeclaredCondition = "capability.declared";
@@ -65,6 +68,11 @@ public sealed partial class KernelAuthorization(
                 EvaluatedCondition.Unsatisfied(ResourceNamedCondition, $"Name the {entry.ResourceKind} to act on"));
         }
 
+        if (command is ImportProtocolDraft importDraft)
+        {
+            return await AuthorizeImportProtocolDraftAsync(actor, importDraft, cancellationToken).ConfigureAwait(false);
+        }
+
         var decision = await DecideAsync(actor, command.TenantId, entry.Capability, resource, cancellationToken).ConfigureAwait(false);
         if (!decision.Permitted && command is ActivateSubscription)
         {
@@ -92,6 +100,13 @@ public sealed partial class KernelAuthorization(
 
     private static NodeRef? ResolveAttestResource(Attest attest)
     {
+        if (attest.Target is { } evidenceTarget
+            && evidenceTarget.Id != Guid.Empty
+            && evidenceTarget.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery)
+        {
+            return new NodeRef(evidenceTarget.Kind, evidenceTarget.Id);
+        }
+
         if (attest.Scope is { } scope)
         {
             return scope.Unversioned();
@@ -131,6 +146,35 @@ public sealed partial class KernelAuthorization(
         return decision;
     }
 
+    public async ValueTask<AuthorizationDecision> CanIWorkQueueCandidateAsync(
+        TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(resource);
+        if (tenant.IsEmpty)
+        {
+            throw new ArgumentException("A dry run is asked within a tenant.", nameof(tenant));
+        }
+
+        if (currentActor.Actor is not { } actor || evaluator is not AuthorityEvaluator authorityEvaluator)
+        {
+            return await CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
+        }
+
+        var now = KernelTimestamps.ToStoredPrecision(clock.UtcNow);
+        var decision = await authorityEvaluator
+            .EvaluateScopeCapabilityAsync(new AuthorizationRequest(actor, tenant, capability, resource, now, now), cancellationToken)
+            .ConfigureAwait(false);
+        if (!decision.Permitted && decision.Reason is null)
+        {
+            decision = decision with { Reason = KernelErrors.AuthorizationDenied.Message };
+        }
+
+        LogDryRun(logger, tenant, actor.ToString(), capability.Token, resource, decision.Permitted,
+            string.Join(',', decision.Conditions.Where(c => !c.Met).Select(c => c.Code)));
+        return decision;
+    }
+
     public async ValueTask<IReadOnlyList<CommandAvailability>> GetCommandsAsync(
         TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
     {
@@ -144,6 +188,145 @@ public sealed partial class KernelAuthorization(
         }
 
         return commands;
+    }
+
+    public async ValueTask<AuthorizationDecision> DenyHiddenAsync(
+        TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(resource);
+        if (tenant.IsEmpty)
+        {
+            throw new ArgumentException("A dry run is asked within a tenant.", nameof(tenant));
+        }
+
+        if (currentActor.Actor is not { } actor)
+        {
+            return await CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
+        }
+
+        var decisions = await AuthorityEvaluator
+            .DenyHiddenResourceCapabilitiesAsync(store, tenant, actor, [capability], resource, cancellationToken)
+            .ConfigureAwait(false);
+        var decision = decisions[0];
+        LogDryRun(
+            logger,
+            tenant,
+            actor.ToString(),
+            capability.Token,
+            resource,
+            false,
+            string.Join(',', decision.Conditions.Where(c => !c.Met).Select(c => c.Code)));
+        return decision;
+    }
+
+    public async ValueTask<IReadOnlyList<CommandAvailability>> DenyHiddenCommandsAsync(
+        TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resource);
+        if (currentActor.Actor is not { } actor)
+        {
+            return await GetCommandsAsync(tenant, resource, cancellationToken).ConfigureAwait(false);
+        }
+
+        var entries = catalog.ForKind(resource.Kind);
+        if (entries.Count == 0)
+        {
+            return [];
+        }
+
+        var capabilities = entries.Select(e => e.Capability).ToList();
+        var decisions = await AuthorityEvaluator
+            .DenyHiddenResourceCapabilitiesAsync(store, tenant, actor, capabilities, resource, cancellationToken)
+            .ConfigureAwait(false);
+        var commands = new List<CommandAvailability>(entries.Count);
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var entry = entries[i];
+            var decision = decisions[i];
+            LogDryRun(
+                logger,
+                tenant,
+                actor.ToString(),
+                entry.Capability.Token,
+                resource,
+                false,
+                string.Join(',', decision.Conditions.Where(c => !c.Met).Select(c => c.Code)));
+            commands.Add(new CommandAvailability(entry.Command, entry.Capability, resource, decision, decision.Explain(entry.Command, resource)));
+        }
+
+        return commands;
+    }
+
+    private async ValueTask<AuthorizationDecision> AuthorizeImportProtocolDraftAsync(
+        Actor actor,
+        ImportProtocolDraft command,
+        CancellationToken cancellationToken)
+    {
+        var required = new List<(Capability Capability, NodeRef Resource)>();
+        switch (command.Mode)
+        {
+            case ProtocolDraftImportMode.CreateDraft:
+                required.Add((new Capability("protocol.draft", VerbClass.Propose), NodeRef.For(command.StudyId)));
+                break;
+
+            case ProtocolDraftImportMode.ReopenInReview:
+                required.Add((new Capability("protocol.return_to_draft", VerbClass.Approve), NodeRef.For(command.TargetVersionId)));
+                required.Add((new Capability("protocol.revise_draft", VerbClass.Propose), NodeRef.For(command.TargetVersionId)));
+                break;
+
+            case ProtocolDraftImportMode.UpdateExisting:
+                {
+                    if (versionReader is not null)
+                    {
+                        var current = await versionReader.GetAsync(command.TenantId, command.TargetVersionId, cancellationToken).ConfigureAwait(false);
+                        if (current?.Status == ProtocolVersionStatus.InReview)
+                        {
+                            required.Add((new Capability("protocol.return_to_draft", VerbClass.Approve), NodeRef.For(command.TargetVersionId)));
+                        }
+                    }
+
+                    required.Add((new Capability("protocol.revise_draft", VerbClass.Propose), NodeRef.For(command.TargetVersionId)));
+                    break;
+                }
+
+            case ProtocolDraftImportMode.ForkApproved:
+                {
+                    var parentNode = command.ParentVersionId is { IsEmpty: false } parentId
+                        ? NodeRef.For(parentId)
+                        : NodeRef.For(command.StudyId);
+                    required.Add((new Capability("protocol.amend", VerbClass.Propose), parentNode));
+                    required.Add((new Capability("protocol.revise_draft", VerbClass.Propose), parentNode));
+                    break;
+                }
+
+            default:
+                required.Add((new Capability("protocol.draft", VerbClass.Propose), NodeRef.For(command.StudyId)));
+                break;
+        }
+
+        if (command.StagedConcepts is { Count: > 0 })
+        {
+            required.Add((new Capability("concept.define", VerbClass.Execute), NodeRef.For(command.TenantId)));
+        }
+
+        var satisfiedConditions = new List<EvaluatedCondition>();
+        AuthorizationDecision? lastPermit = null;
+        foreach (var (capability, resource) in required)
+        {
+            var step = await DecideAsync(actor, command.TenantId, capability, resource, cancellationToken).ConfigureAwait(false);
+            if (!step.Permitted)
+            {
+                return step;
+            }
+
+            lastPermit = step;
+            satisfiedConditions.AddRange(step.Conditions);
+        }
+
+        return AuthorizationDecision.Permit(
+            lastPermit?.Reason ?? "Granted.",
+            [.. satisfiedConditions.Distinct()]);
     }
 
     private async ValueTask<AuthorizationDecision> DecideAsync(

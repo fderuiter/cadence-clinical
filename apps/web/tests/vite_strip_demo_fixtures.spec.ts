@@ -90,6 +90,7 @@ describe("vite-strip-demo-fixtures plugin", () => {
 
     for (const [source, importer, expectedSuffix] of [
       ["./demo/clinicalEcrf", storesImporter, "clinicalEcrf"],
+      ["./demo/usdmSoaSchedule", storesImporter, "usdmSoaSchedule"],
       ["../stores/demo/knowledgeDemo", apiImporter, "knowledgeDemo"],
       ["./demo/ticketsDemo", storesImporter, "ticketsDemo"],
       ["./demo/etmfDemo.js", storesImporter, "etmfDemo.js"],
@@ -100,6 +101,7 @@ describe("vite-strip-demo-fixtures plugin", () => {
         `\0virtual:demo-store-prod-stub:${expectedSuffix}`
       );
       const storeStubSource = load(demoStoreId!)!;
+      expect(storeStubSource).toContain("buildUsdmSoaSchedule");
       expect(storeStubSource).toContain("createClinicalUsdmState");
       expect(storeStubSource).toContain("createClinicalEcrfState");
       expect(storeStubSource).toContain("createClinicalLedgerState");

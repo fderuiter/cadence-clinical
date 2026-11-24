@@ -378,7 +378,10 @@
 <script setup>
 import { ref } from "vue";
 import { ClinicalModal } from "ui";
-import { knowledgeService } from "../../api/knowledge.js";
+import {
+  compileSopMarkdownToHtml,
+  knowledgeService,
+} from "../../api/knowledge.js";
 import { PERSONA_PRESETS } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
 
@@ -454,18 +457,7 @@ function getTagList(tags) {
 
 function renderPreviewHtml(markdown) {
   if (!markdown) return "<p>No content to preview.</p>";
-  const html = markdown
-    .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-    .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-    .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-    .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
-    .replace(/\*(.*)\*/gim, "<em>$1</em>")
-    .replace(/`([^`]+)`/gim, "<code>$1</code>")
-    .replace(/^\* (.*$)/gim, "<li>$1</li>")
-    .replace(/^\d+\. (.*$)/gim, "<li>$1</li>")
-    .replace(/\n\n+/g, "</p><p>")
-    .replace(/\n/g, "<br>");
-  return `<p>${html}</p>`;
+  return compileSopMarkdownToHtml(markdown);
 }
 
 function openCreateArticleModal() {

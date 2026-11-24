@@ -60,6 +60,15 @@ const FORBIDDEN_BOOT_PATTERNS: ReadonlyArray<{
     pattern: /src\/canvas\/ecrfRedirect\.ts$/,
   },
   { label: "services/api.js", pattern: /src\/services\/api\.js$/ },
+  { label: "vue-i18n", pattern: /(?:^|\/)vue-i18n(?:\/|$)/ },
+  { label: "@intlify", pattern: /(?:^|\/)@intlify(?:\/|$)/ },
+  { label: "src/locales/", pattern: /src\/locales\// },
+  { label: "ContextualHelpDrawer", pattern: /ContextualHelpDrawer/ },
+  { label: "TicketCreateModal", pattern: /TicketCreateModal/ },
+  { label: "CanvasPalette", pattern: /CanvasPalette/ },
+  { label: "studyCanvas", pattern: /studyCanvas/ },
+  { label: "kernelApi", pattern: /src\/api\/kernelApi\.ts$/ },
+  { label: "keycloak-js", pattern: /(?:^|\/)keycloak-js(?:\/|$)/ },
 ];
 
 function extractInitialJsAssetsFromHtml(
@@ -174,9 +183,10 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
       }
     }
 
-    // Target baseline after #5989/#5937/#5940: <= 515 kB raw (<= 167 kB gzip); acceptance ceiling: <= 530 kB raw (<= 172 kB gzip).
-    expect(rawBytes).toBeLessThanOrEqual(Math.floor(515 * 1024));
-    expect(gzipBytes).toBeLessThanOrEqual(Math.floor(167 * 1024));
+    // Cold-boot budget after deferring i18n, closed overlays, canvas/onboarding stores, and kernelApi barrel:
+    // <= 250 kB raw JS and <= 90 kB gzip JS.
+    expect(rawBytes).toBeLessThanOrEqual(Math.floor(250 * 1024));
+    expect(gzipBytes).toBeLessThanOrEqual(Math.floor(90 * 1024));
 
     for (const { label, pattern } of FORBIDDEN_BOOT_PATTERNS) {
       const offending = bootModuleIds.filter((id) => pattern.test(id));
@@ -186,11 +196,17 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
       ).toEqual([]);
     }
 
-    // Verify preserved vendor splits and complete exclusion of demo-only route subgraphs
+    // Verify preserved vendor splits, isolated lazy auth chunk, and complete exclusion of demo-only route subgraphs
     // (DocumentsHubView -> MediaPreviewModal -> hls.js and MdrView -> CrfAuthoringCanvas -> vuedraggable/sortablejs).
     const allChunkNames = Array.from(chunksByFile.keys());
     expect(allChunkNames.some((f) => f.includes("vendor-vue"))).toBe(true);
-    expect(allChunkNames.some((f) => f.includes("vendor-auth"))).toBe(true);
+    const vendorAuthChunks = allChunkNames.filter((f) =>
+      f.includes("vendor-auth")
+    );
+    expect(vendorAuthChunks.length).toBeGreaterThan(0);
+    for (const vendorAuthChunk of vendorAuthChunks) {
+      expect(bootChunkFiles.has(vendorAuthChunk)).toBe(false);
+    }
     expect(allChunkNames.some((f) => f.includes("vendor-media"))).toBe(false);
 
     const allProdModuleIds = Array.from(chunksByFile.values()).flatMap(
