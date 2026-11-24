@@ -76,7 +76,7 @@ issuer never asks for the Keycloak admin):
   without one, ADR-2640);
 - `cgt-barcode-hmac-key`, passed to execution as `CGT_BARCODE_HMAC_KEY` (base64 of 32 bytes, a different key; it
   verifies CGT chain-of-custody bag barcodes, and execution refuses to start without one,
-  [ADR-2661](../../docs/adr/2026-11-23-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md));
+  [ADR-2663](../../docs/adr/2026-11-23-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md));
 - `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
   passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
 - `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock

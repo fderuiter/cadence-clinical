@@ -1,4 +1,4 @@
-# ADR-2661: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key
+# ADR-2663: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -19,7 +19,7 @@ Cell and Gene Therapy (CGT) chain-of-custody workflows in `Cadence.Apps.Executio
 ## 2. Decision Drivers & Constraints
 
 - **Fail-Closed Startup Keying (`PRD-SYS-001`):** Every service key must come from deployment configuration validated at host boot via `FieldProtectionKey.IsValid` and `.ValidateOnStart()`, with zero source-code fallback secrets and constant-time digest comparison (`CryptographicOperations.FixedTimeEquals`).
-- **Authenticated Caller Attribution (`ADR-2516`):** The primary bedside verifier (`primary_verifier_id`), infusion executor (`primary_verifier_id`), and primary destruction witness (`witness_1_id`) must equal the gateway-signed caller (`User.ToAuthenticatedCaller()`), returning HTTP `403 Forbidden` (`SIGNER_MISMATCH`) on mismatch.
+- **Authenticated Caller Attribution (`ADR-2516`):** The primary bedside verifier (`primary_verifier_id`), infusion executor (`primary_verifier_id`), and primary destruction witness (`witness_1_id`) must equal the gateway-signed caller (`CallerScope.UserId(httpContext)`), returning HTTP `403 Forbidden` (`SIGNER_MISMATCH`) on mismatch.
 - **All-or-Nothing Dual `jti` Consumption (`SRS-SYS-005`, `ADR-2515`):** Both `v3` step-up tokens must pass cryptographic signature, acceptance-window, non-auditor role, distinct-signer, action, semantic-action, and target-record (`batch_id`) validation before either `jti` is recorded as consumed, and multi-token persistence must succeed or roll back atomically.
 
 ## 3. Options Considered

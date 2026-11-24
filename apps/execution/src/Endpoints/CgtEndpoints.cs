@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +35,7 @@ public static class CgtEndpoints
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.CollectionSiteId) is { } denied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.CollectionSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
             {
                 return denied;
             }
@@ -47,7 +50,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
 
             try
             {
@@ -84,7 +87,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
 
             try
             {
@@ -121,7 +124,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
 
             try
             {
@@ -142,7 +145,7 @@ public static class CgtEndpoints
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
             {
                 return requestDenied;
             }
@@ -163,7 +166,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
             if (string.IsNullOrWhiteSpace(callerUserId))
             {
                 return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
@@ -202,7 +205,7 @@ public static class CgtEndpoints
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
             {
                 return requestDenied;
             }
@@ -223,7 +226,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
             if (string.IsNullOrWhiteSpace(callerUserId))
             {
                 return SignerMismatch("Authenticated caller identity is required.");
@@ -257,7 +260,7 @@ public static class CgtEndpoints
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
             {
                 return requestDenied;
             }
@@ -277,7 +280,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
 
             var result = await service.LogVialReturnAsync(request, callerUserId, ct);
             return Results.Ok(result);
@@ -291,7 +294,7 @@ public static class CgtEndpoints
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
+            if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } requestDenied)
             {
                 return requestDenied;
             }
@@ -312,7 +315,7 @@ public static class CgtEndpoints
                 return locked;
             }
 
-            string? callerUserId = httpContext.User.ToAuthenticatedCaller()?.UserId;
+            string? callerUserId = CallerScope.UserId(httpContext);
             if (string.IsNullOrWhiteSpace(callerUserId))
             {
                 return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
@@ -345,21 +348,20 @@ public static class CgtEndpoints
             HttpContext httpContext,
             ICgtApplicationService service) =>
         {
-            if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-                 ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+            if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
             {
                 return callerDenied;
             }
 
             var result = service.VerifyBarcode(request);
             if (!string.IsNullOrWhiteSpace(result.StudyId)
-                && ExecutionScopeGuard.RequireStudy(httpContext, result.StudyId) is { } studyDenied)
+                && ClinicalScopeGuard.RequireStudy(httpContext, result.StudyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } studyDenied)
             {
                 return studyDenied;
             }
 
             if (!string.IsNullOrWhiteSpace(result.SiteId)
-                && ExecutionScopeGuard.RequireSite(httpContext, result.SiteId) is { } siteDenied)
+                && ClinicalScopeGuard.RequireSite(httpContext, result.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } siteDenied)
             {
                 return siteDenied;
             }
@@ -375,8 +377,8 @@ public static class CgtEndpoints
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
-            if ((ExecutionScopeGuard.RequireStudy(httpContext, studyId)
-                 ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+            if ((ClinicalScopeGuard.RequireStudy(httpContext, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+                 ?? ClinicalScopeGuard.ResolveSingleSiteFilter(httpContext, null, out _, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)) is { } callerDenied)
             {
                 return callerDenied;
             }
@@ -385,7 +387,7 @@ public static class CgtEndpoints
             foreach (string? siteId in new[] { result.ChainOfCustody?.SiteId, result.BedsideVerification?.SiteId, result.DestructionCertificate?.SiteId })
             {
                 if (!string.IsNullOrWhiteSpace(siteId)
-                    && ExecutionScopeGuard.RequireSite(httpContext, siteId) is { } siteDenied)
+                    && ClinicalScopeGuard.RequireSite(httpContext, siteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } siteDenied)
                 {
                     return siteDenied;
                 }
@@ -402,13 +404,13 @@ public static class CgtEndpoints
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, studyId, null, out var siteFilter, out _) is { } denied)
+            if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, studyId, null, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
             {
                 return denied;
             }
 
             var result = await service.ListDestructionCertificatesAsync(studyId, ct);
-            return Results.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
+            return Results.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
         })
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
@@ -419,13 +421,13 @@ public static class CgtEndpoints
             ICgtApplicationService service,
             CancellationToken ct) =>
         {
-            if (ExecutionScopeGuard.RequireStudyAndResolveSiteFilter(httpContext, studyId, null, out var siteFilter, out _) is { } denied)
+            if (ClinicalScopeGuard.RequireStudyAndResolveSingleSiteFilter(httpContext, studyId, null, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
             {
                 return denied;
             }
 
             var result = await service.ListVialReconciliationsAsync(studyId, ct);
-            return Results.Ok(ExecutionScopeGuard.ApplyFilters(result, null, x => x.StudyId, siteFilter, x => x.SiteId));
+            return Results.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
         })
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
@@ -440,8 +442,8 @@ public static class CgtEndpoints
         Guid chainOfCustodyId,
         CancellationToken ct)
     {
-        if ((ExecutionScopeGuard.RequireStudy(httpContext, studyId)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        if ((ClinicalScopeGuard.RequireStudy(httpContext, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+             ?? ClinicalScopeGuard.ResolveSingleSiteFilter(httpContext, null, out _, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)) is { } callerDenied)
         {
             return (callerDenied, null);
         }
@@ -462,7 +464,7 @@ public static class CgtEndpoints
     }
 
     private static IResult? GuardCocScope(HttpContext httpContext, (string StudyId, string SiteId)? scope) =>
-        scope is { } s ? ExecutionScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId) : null;
+        scope is { } s ? ClinicalScopeGuard.RequireStudyAndSite(httpContext, s.StudyId, s.SiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) : null;
 
     private static IResult SignerMismatch(string detail) =>
         Results.Problem(

@@ -1,10 +1,11 @@
 import { unwrapResponse } from "../client";
 import {
   kernelClient,
-  windowQuery,
   type KernelLineageWindow,
   type KernelSchemas,
 } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelNode = KernelSchemas["Kernel_KernelNodeResponse"];
 export type KernelZoomStep = KernelSchemas["Kernel_KernelZoomStepResponse"];
@@ -71,30 +72,21 @@ export const kernelNavigationApi = {
   },
 
   /** Zoom path from the tenant down to the object; presentation only, it grants nothing (spec §9.3). */
-  getZoomPath(nodeRef: string): Promise<KernelZoomStep[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/path", {
-        params: { path: { nodeRef } },
-      })
-    );
+  async getZoomPath(nodeRef: string): Promise<KernelZoomStep[]> {
+    const { executeGetZoomPath } = await loadRouteTransport();
+    return executeGetZoomPath(nodeRef);
   },
 
   /** Zoom children of a scope node, with their own child counts. */
-  getChildren(nodeRef: string): Promise<KernelChild[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/children", {
-        params: { path: { nodeRef } },
-      })
-    );
+  async getChildren(nodeRef: string): Promise<KernelChild[]> {
+    const { executeGetChildren } = await loadRouteTransport();
+    return executeGetChildren(nodeRef);
   },
 
   /** Kernel commands offered on the object, each with the reader's dry-run decision and its explanation (ADR-2483). */
-  getCommands(nodeRef: string): Promise<KernelCommand[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/commands", {
-        params: { path: { nodeRef } },
-      })
-    );
+  async getCommands(nodeRef: string): Promise<KernelCommand[]> {
+    const { executeGetCommands } = await loadRouteTransport();
+    return executeGetCommands(nodeRef);
   },
 
   /** Whether the reader may exercise a capability on an object now, and why (ADR-2482). Executes nothing. */
@@ -148,54 +140,29 @@ export const kernelNavigationApi = {
   },
 
   /** Trace: the object's lineage walk, backward to its inputs by default. Masked objects keep their place (ADR-2471). */
-  trace(nodeRef: string, query: KernelTraceQuery = {}): Promise<KernelLineage> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/lineage", {
-        params: {
-          path: { nodeRef },
-          query: { direction: query.direction, ...windowQuery(query) },
-        },
-      })
-    );
+  async trace(
+    nodeRef: string,
+    query: KernelTraceQuery = {}
+  ): Promise<KernelLineage> {
+    const { executeTrace } = await loadRouteTransport();
+    return executeTrace(nodeRef, query);
   },
 
   /** Impact: what depends on the object, grouped by kind; masked objects are counted like any other (Canvas D2). */
-  dependents(
+  async dependents(
     nodeRef: string,
     window: KernelLineageWindow = {}
   ): Promise<KernelDependents> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}/dependents", {
-        params: { path: { nodeRef }, query: windowQuery(window) },
-      })
-    );
+    const { executeDependents } = await loadRouteTransport();
+    return executeDependents(nodeRef, window);
   },
 
   /**
    * What happened in a scope, newest first (ADR-2485). A scope the reader may not see is refused; an entry about an
    * object the reader may not see keeps its place with its kind and `mask`, and no `subject`.
    */
-  activity({
-    scope,
-    families,
-    actor,
-    from,
-    before,
-    limit,
-  }: KernelActivityQuery = {}): Promise<KernelActivityPage> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/activity", {
-        params: {
-          query: {
-            scope,
-            family: families && families.length > 0 ? families : undefined,
-            actor,
-            from,
-            before,
-            limit,
-          },
-        },
-      })
-    );
+  async activity(query: KernelActivityQuery = {}): Promise<KernelActivityPage> {
+    const { executeActivity } = await loadRouteTransport();
+    return executeActivity(query);
   },
 };
