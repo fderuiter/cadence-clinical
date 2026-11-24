@@ -33,7 +33,8 @@ public sealed class QualityGateRegistryTests : IDisposable
     {
         ["prettier"] = "runs `pnpm exec prettier` against workspace node_modules; the fixture has no node_modules",
         ["eslint"] = "runs `pnpm exec eslint` against workspace node_modules; the fixture has no node_modules",
-        ["api-clients"] = "runs `pnpm --filter web` and `tsc` over the real web workspace; the fixture has no apps/web/tsconfig.json",
+        ["typecheck"] = "runs `pnpm -r typecheck` against workspace node_modules; the fixture has no node_modules",
+        ["api-clients"] = "runs `pnpm --filter web` and `pnpm -r typecheck` over the real web workspace; the fixture has no apps/web/tsconfig.json",
         ["schema-doc"] = "builds Cadence.SchemaDocExporter and every module's EF Core model; the fixture has no exporter project " +
                          "(the rendering is covered by SchemaDocumentationTests)",
     };
@@ -80,6 +81,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["prettier"] = () => Context(),
         ["eslint"] = () => Context(),
+        ["typecheck"] = () => Context(),
         ["actionlint"] = () =>
         {
             Write(".github/workflows/broken.yml",
@@ -113,8 +115,8 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["detect-secrets"] = () =>
         {
-            Write(".secrets.baseline",
-                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n");
+            Write("baselines/secrets/config.json",
+                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": []\n}\n");
             CommitOnMainThenBranch();
             Write("config/leak.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
             Git("add", "config/leak.txt");
@@ -230,6 +232,16 @@ public sealed class QualityGateRegistryTests : IDisposable
         ["imports"] = () =>
         {
             Write("apps/alpha/src/Uses.cs", "using Cadence.Apps.Beta.Domain;\n\nclass Uses { }\n");
+            return Context();
+        },
+        ["permission-matrix"] = () =>
+        {
+            Write(
+                PermissionMatrixRatchetService.BaselineRelativePath,
+                "# Shrink-only RBAC baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+            Write(
+                "packages/security/src/Rbac/PermissionMatrix.Shadow.cs",
+                "namespace Cadence.Security.Rbac;\npublic static partial class PermissionMatrix\n{\n    static void Extra() => Grant(\"crc\", \"shadow_resource\", \"escalate\");\n}\n");
             return Context();
         },
         ["security"] = () =>
@@ -366,7 +378,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(43);
+        QualityGates.All.Should().HaveCount(45);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -532,7 +544,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     public void BranchFreshnessAndTestSuiteGates_SkipPreCommit_AndBranchFreshnessPassesWhenOriginMainIsAncestor()
     {
         QualityGates.Find("branch-freshness")!.PreCommit.Should().Be(PreCommitMode.Skipped);
-        QualityGates.Find("architecture-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+        QualityGates.Find("architecture-tests")!.PreCommit.Should().Be(PreCommitMode.Quick);
         QualityGates.Find("unit-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
 
         Write("README.md", "# Cadence\n");
@@ -691,6 +703,58 @@ public sealed class QualityGateRegistryTests : IDisposable
                 .Should().Be(1));
         fullFailFastOutput.Should().Contain("[TRAILING WHITESPACE]")
             .And.NotContain("[PATH VIOLATION]", "explicit --fail-fast stops full cadence check on the first failure");
+    }
+
+    [Fact]
+    public void ArchitectureTestsGate_InPreCommitMode_SkipsDocsAndNonTestFrontendAssets_AndRunsWhenBackendBaselineOrTestsStaged()
+    {
+        WriteBrokenTestProject("tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+        var gate = QualityGates.Find("architecture-tests")!;
+        gate.TakesFiles.Should().BeTrue();
+        gate.PreCommit.Should().Be(PreCommitMode.Quick);
+
+        gate.Run(Context(
+                files:
+                [
+                    "docs/guide.md",
+                    "README.md",
+                    "apps/web/src/App.vue",
+                    "apps/web/src/styles/tokens.css",
+                    "apps/web/src/stores/study.js",
+                    "packages/ui/src/Button.vue",
+                ],
+                preCommit: true))
+            .Should().BeTrue("pre-commit hook must skip architecture-tests when only docs or non-test frontend assets are staged");
+
+        gate.Run(Context(files: ["apps/payments/src/Endpoints/PaymentEndpoints.cs"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when backend C# files are staged");
+
+        gate.Run(Context(files: ["tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when ratchet baselines are staged");
+
+        gate.Run(Context(files: ["apps/subject-portal/tests/e2e/portal-accessibility.spec.js"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when frontend test specs are staged");
+    }
+
+    [Fact]
+    public void ImportsAndPermissionMatrixGates_CatchReflectionStringsAndUnbaselinedRbacGrants()
+    {
+        Write(
+            "apps/ctms/src/Endpoints/ReflectionBypass.cs",
+            "namespace Cadence.Apps.Ctms.Endpoints;\npublic static class ReflectionBypass\n{\n    public static string Sibling => \"Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext\";\n}\n");
+        QualityGates.Find("imports")!.Run(Context())
+            .Should().BeFalse("cross-service reflection string literals must fail the imports gate when unbaselined");
+
+        Write(
+            PermissionMatrixRatchetService.BaselineRelativePath,
+            "# baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+        var permissionGate = QualityGates.Find("permission-matrix")!;
+        permissionGate.Run(Context()).Should().BeTrue("runtime PermissionMatrix grants matching the baseline must pass");
+
+        Write(
+            "apps/payments/src/Rbac/ShadowGrant.cs",
+            "namespace Cadence.Apps.Payments.Rbac;\npublic static class ShadowGrant\n{\n    public static void Init() => Grant(\"pi\", \"payments_shadow\", \"approve\");\n}\n");
+        permissionGate.Run(Context()).Should().BeFalse("unbaselined static Grant(...) calls in service sources must fail permission-matrix");
     }
 
     private static string CaptureConsoleOutput(Action action)

@@ -131,6 +131,19 @@ internal static class KernelExportStreamer
         writer.WriteEndArray();
         writer.WriteEndObject();
 
+        writer.WritePropertyName("hiddenScopes");
+        writer.WriteStartObject();
+        writer.WriteBoolean("more_exist", export.HiddenScopes.MoreExist);
+        writer.WritePropertyName("reasons");
+        writer.WriteStartArray();
+        foreach (var reason in export.HiddenScopes.Reasons)
+        {
+            writer.WriteStringValue(reason);
+        }
+
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+
         writer.WritePropertyName("itemGroupData");
         writer.WriteStartObject();
 
@@ -206,6 +219,14 @@ internal static class KernelExportStreamer
         var (visibleAttestations, blindedSignatureAttestationIds) = FilterStudyOdmAttestations(export);
 
         await WriteOdmAdminDataAsync(xml, snapshot.StudyCode, visibleAttestations, blindedSignatureAttestationIds).ConfigureAwait(false);
+
+        if (export.HiddenScopes.MoreExist)
+        {
+            await xml.WriteStartElementAsync("cadence", "HiddenScopes", CadenceNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "MoreExist", null, "true").ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Reasons", null, string.Join(',', export.HiddenScopes.Reasons)).ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+        }
 
         await xml.WriteStartElementAsync(null, "ClinicalData", OdmNamespace).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync(null, "StudyOID", null, snapshot.StudyCode).ConfigureAwait(false);
@@ -439,6 +460,7 @@ internal static class KernelExportStreamer
         }
 
         var formsWithBlindedObservations = new HashSet<Guid>();
+        var completelyBlindedFormGuids = new HashSet<Guid>();
         var forms = snapshot.Collections
             .Select(c =>
             {
@@ -449,6 +471,11 @@ internal static class KernelExportStreamer
                 if (hasBlindedObs || isBlindedForm)
                 {
                     formsWithBlindedObservations.Add(c.CollectionInstanceId.Value);
+                }
+
+                if (isBlindedForm)
+                {
+                    completelyBlindedFormGuids.Add(c.CollectionInstanceId.Value);
                 }
 
                 return new KernelCasebookFormView(
@@ -469,7 +496,9 @@ internal static class KernelExportStreamer
 
         var blindedGuids = blindedObservationIds.Select(id => id.Value).ToHashSet();
         var blindedQueryGuids = snapshot.Assertions
-            .Where(a => a.Kind == AssertionKind.Queried && a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id))
+            .Where(a => a.Kind == AssertionKind.Queried
+                && ((a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id))
+                    || (a.Target.Kind == NodeKinds.CollectionInstance && formsWithBlindedObservations.Contains(a.Target.Id))))
             .Select(a => a.AssertionId.Value)
             .ToHashSet();
 
@@ -478,6 +507,7 @@ internal static class KernelExportStreamer
             .Select(a =>
             {
                 bool targetBlinded = (a.Target.Kind == NodeKinds.Observation && blindedGuids.Contains(a.Target.Id))
+                    || (a.Target.Kind == NodeKinds.CollectionInstance && formsWithBlindedObservations.Contains(a.Target.Id))
                     || (a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id));
                 return new KernelCasebookQueryView(
                     targetBlinded ? "masked" : NodeRef.For(a.AssertionId).ToString(),
@@ -510,9 +540,15 @@ internal static class KernelExportStreamer
             })
             .ToList();
 
+        bool IsCasebookLockBlinded(StudyLockEntry l) =>
+            !mayUnblind
+            && (l.BlindedScope
+                || (l.Scope.Kind == NodeKinds.Observation && blindedGuids.Contains(l.Scope.Id))
+                || (l.Scope.Kind == NodeKinds.CollectionInstance && formsWithBlindedObservations.Contains(l.Scope.Id)));
+
         var blindedLockTargetGuids = new HashSet<Guid>();
         var blindedLockAttestationIds = new HashSet<AttestationId>();
-        foreach (var l in snapshot.Locks.Where(l => l.BlindedScope && !mayUnblind))
+        foreach (var l in snapshot.Locks.Where(IsCasebookLockBlinded))
         {
             blindedLockTargetGuids.Add(l.LockId.Value);
             blindedLockAttestationIds.Add(l.AttestationId);
@@ -528,13 +564,13 @@ internal static class KernelExportStreamer
         }
 
         var locks = snapshot.Locks
-            .Select(l => l.BlindedScope && !mayUnblind
+            .Select(l => IsCasebookLockBlinded(l)
                 ? KernelLockResponse.FromMasked(l, MaskReason.Blinded)
                 : KernelLockResponse.FromVisible(l))
             .ToList();
 
         var blindedLockGuids = snapshot.Locks
-            .Where(l => l.BlindedScope && !mayUnblind)
+            .Where(IsCasebookLockBlinded)
             .SelectMany(l => l.ReleaseAssertionId is { } rel ? new[] { l.LockId.Value, rel.Value } : [l.LockId.Value])
             .ToHashSet();
 
@@ -543,7 +579,8 @@ internal static class KernelExportStreamer
             {
                 bool isBlindedObsOrLock = (a.TargetKind == NodeKinds.Observation && blindedGuids.Contains(a.TargetId))
                     || blindedLockTargetGuids.Contains(a.TargetId)
-                    || blindedLockAttestationIds.Contains(a.AttestationId);
+                    || blindedLockAttestationIds.Contains(a.AttestationId)
+                    || completelyBlindedFormGuids.Contains(a.TargetId);
                 bool isBlindedForm = formsWithBlindedObservations.Contains(a.TargetId);
                 if (isBlindedObsOrLock)
                 {
@@ -627,7 +664,35 @@ internal static class KernelExportStreamer
     {
         var protocols = casebook.ProtocolVersions ?? [];
         var latestProtocol = protocols.Count > 0 ? protocols[^1] : null;
-        var mdvOid = $"MDV.{(latestProtocol?.Number ?? 1).ToString(CultureInfo.InvariantCulture)}";
+        var versionNumber = latestProtocol?.Number ?? 1;
+        var mdvOid = $"MDV.{versionNumber.ToString(CultureInfo.InvariantCulture)}";
+
+        var clinicalForms = BuildCasebookOdmFormBuckets(casebook);
+        var signatureDefs = BuildCasebookSignatureDefinitions(casebook.Attestations);
+        var signaturesByFormRef = new Dictionary<string, List<(KernelCasebookAttestationView Attestation, string SignatureOid)>>(StringComparer.Ordinal);
+        var subjectLevelSignatures = new List<(KernelCasebookAttestationView Attestation, string SignatureOid)>();
+        var matchedFormRefs = clinicalForms
+            .Where(b => b.FormRepeatKey is not null)
+            .Select(b => b.FormRepeatKey!)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var sigEntry in signatureDefs)
+        {
+            var targetRef = sigEntry.Attestation.TargetRef;
+            if (!string.Equals(targetRef, "masked", StringComparison.Ordinal) && matchedFormRefs.Contains(targetRef))
+            {
+                if (!signaturesByFormRef.TryGetValue(targetRef, out var list))
+                {
+                    list = [];
+                    signaturesByFormRef[targetRef] = list;
+                }
+
+                list.Add(sigEntry);
+            }
+            else
+            {
+                subjectLevelSignatures.Add(sigEntry);
+            }
+        }
 
         var settings = new XmlWriterSettings
         {
@@ -652,12 +717,39 @@ internal static class KernelExportStreamer
         await xml.WriteAttributeStringAsync("cadence", "ValidAt", CadenceNamespace, FormatInstant(casebook.ValidAt)).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync("cadence", "KnownAt", CadenceNamespace, FormatInstant(casebook.KnownAt)).ConfigureAwait(false);
 
-        await WriteCasebookOdmStudyMetadataAsync(xml, casebook, protocols).ConfigureAwait(false);
+        var compiledOdmFallback = latestProtocol is null
+            ? null
+            : latestProtocol.CompiledOdmXml
+                ?? TryCompileUsdmOdmViaReflection(latestProtocol.RawContent, casebook.StudyCode, versionNumber.ToString(CultureInfo.InvariantCulture));
+        await WriteCasebookOdmStudyMetadataAsync(
+            xml,
+            casebook,
+            versionNumber,
+            latestProtocol?.Design,
+            compiledOdmFallback,
+            clinicalForms).ConfigureAwait(false);
 
-        var visibleAttestations = casebook.Attestations
-            .Where(a => !string.Equals(a.Ref, "masked", StringComparison.Ordinal))
-            .ToList();
-        await WriteCasebookOdmAdminDataAsync(xml, casebook.StudyCode, visibleAttestations).ConfigureAwait(false);
+        if (signatureDefs.Count > 0)
+        {
+            await xml.WriteStartElementAsync(null, "AdminData", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "StudyOID", null, casebook.StudyCode).ConfigureAwait(false);
+            foreach (var (att, sigOid) in signatureDefs)
+            {
+                await xml.WriteStartElementAsync(null, "SignatureDef", OdmNamespace).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "OID", null, sigOid).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Methodology", null, "Electronic").ConfigureAwait(false);
+                await xml.WriteElementStringAsync(null, "Meaning", OdmNamespace, att.Meaning).ConfigureAwait(false);
+                if (!string.Equals(att.Reason, "masked", StringComparison.Ordinal)
+                    && !string.Equals(att.Ref, "masked", StringComparison.Ordinal))
+                {
+                    await xml.WriteElementStringAsync(null, "LegalReason", OdmNamespace, att.Reason).ConfigureAwait(false);
+                }
+
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+        }
 
         await xml.WriteStartElementAsync(null, "ClinicalData", OdmNamespace).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync(null, "StudyOID", null, casebook.StudyCode).ConfigureAwait(false);
@@ -680,7 +772,58 @@ internal static class KernelExportStreamer
         await xml.WriteAttributeStringAsync(null, "LocationOID", null, casebook.SiteCode).ConfigureAwait(false);
         await xml.WriteEndElementAsync().ConfigureAwait(false);
 
-        await WriteCasebookOdmClinicalHierarchyAsync(xml, casebook, visibleAttestations).ConfigureAwait(false);
+        foreach (var eventGroup in clinicalForms.GroupBy(b => b.EventOid, StringComparer.Ordinal))
+        {
+            await xml.WriteStartElementAsync(null, "StudyEventData", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "StudyEventOID", null, eventGroup.Key).ConfigureAwait(false);
+
+            foreach (var bucket in eventGroup)
+            {
+                await xml.WriteStartElementAsync(null, "FormData", OdmNamespace).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "FormOID", null, bucket.FormOid).ConfigureAwait(false);
+                if (bucket.FormRepeatKey is not null)
+                {
+                    await xml.WriteAttributeStringAsync(null, "FormRepeatKey", null, bucket.FormRepeatKey).ConfigureAwait(false);
+                }
+
+                if (bucket.FormMasked)
+                {
+                    await xml.WriteAttributeStringAsync("cadence", "Masked", CadenceNamespace, "true").ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync("cadence", "MaskReason", CadenceNamespace, bucket.FormMaskReason ?? "Blinded").ConfigureAwait(false);
+                }
+
+                if (bucket.Observations.Count > 0)
+                {
+                    await xml.WriteStartElementAsync(null, "ItemGroupData", OdmNamespace).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, bucket.ItemGroupOid).ConfigureAwait(false);
+
+                    foreach (var obs in bucket.Observations)
+                    {
+                        await WriteCasebookOdmItemDataAsync(xml, obs, casebook.SiteCode).ConfigureAwait(false);
+                    }
+
+                    await xml.WriteEndElementAsync().ConfigureAwait(false);
+                }
+
+                if (bucket.FormRepeatKey is not null
+                    && signaturesByFormRef.TryGetValue(bucket.FormRepeatKey, out var formSignatures))
+                {
+                    foreach (var (att, sigOid) in formSignatures)
+                    {
+                        await WriteCasebookOdmSignatureElementAsync(xml, att, sigOid, casebook.SiteCode).ConfigureAwait(false);
+                    }
+                }
+
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+        }
+
+        foreach (var (att, sigOid) in subjectLevelSignatures)
+        {
+            await WriteCasebookOdmSignatureElementAsync(xml, att, sigOid, casebook.SiteCode).ConfigureAwait(false);
+        }
 
         await xml.WriteEndElementAsync().ConfigureAwait(false);
         await xml.WriteEndElementAsync().ConfigureAwait(false);
@@ -969,6 +1112,7 @@ internal static class KernelExportStreamer
                 GeneratedAt: FormatInstant(export.GeneratedAt),
                 RequestedBy: requestedBy,
                 Hidden: manifestHidden,
+                HiddenScopes: new BundleHiddenScopesView(manifestHidden.MoreExist, manifestHidden.Reasons),
                 Files: manifestFiles,
                 Casebooks: manifestCasebooks);
 
@@ -1249,510 +1393,6 @@ internal static class KernelExportStreamer
         await xml.WriteEndElementAsync().ConfigureAwait(false);
     }
 
-    private static async Task WriteCasebookOdmStudyMetadataAsync(
-        XmlWriter xml,
-        KernelCasebookResponse casebook,
-        IReadOnlyList<ExportProtocolSnapshot> protocols)
-    {
-        await xml.WriteStartElementAsync(null, "Study", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "OID", null, casebook.StudyCode).ConfigureAwait(false);
-
-        await xml.WriteStartElementAsync(null, "GlobalVariables", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteElementStringAsync(null, "StudyName", OdmNamespace, casebook.StudyCode).ConfigureAwait(false);
-        await xml.WriteElementStringAsync(null, "StudyDescription", OdmNamespace, casebook.StudyTitle).ConfigureAwait(false);
-        await xml.WriteElementStringAsync(null, "ProtocolName", OdmNamespace, casebook.StudyCode).ConfigureAwait(false);
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-
-        if (protocols.Count == 0)
-        {
-            await WriteCasebookSingleMetaDataVersionAsync(xml, 1, design: null, compiledOdmXml: null, casebook).ConfigureAwait(false);
-        }
-        else
-        {
-            foreach (var protocol in protocols)
-            {
-                var compiledXml = protocol.CompiledOdmXml
-                    ?? TryCompileUsdmOdmViaReflection(protocol.RawContent, casebook.StudyCode, protocol.Number.ToString(CultureInfo.InvariantCulture));
-                await WriteCasebookSingleMetaDataVersionAsync(xml, protocol.Number, protocol.Design, compiledXml, casebook).ConfigureAwait(false);
-            }
-        }
-
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-    }
-
-    private static async Task WriteCasebookSingleMetaDataVersionAsync(
-        XmlWriter xml,
-        int versionNumber,
-        ProtocolDesign? design,
-        string? compiledOdmXml,
-        KernelCasebookResponse casebook)
-    {
-        var numText = versionNumber.ToString(CultureInfo.InvariantCulture);
-        await xml.WriteStartElementAsync(null, "MetaDataVersion", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "OID", null, $"MDV.{numText}").ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "Name", null, $"Version {numText}").ConfigureAwait(false);
-
-        var writtenEventOids = new HashSet<string>(StringComparer.Ordinal);
-        var writtenFormOids = new HashSet<string>(StringComparer.Ordinal);
-        var writtenItemGroupOids = new HashSet<string>(StringComparer.Ordinal);
-        var writtenItemOids = new HashSet<string>(StringComparer.Ordinal);
-
-        if (design is not null)
-        {
-            if (design.PlannedActivities.Count > 0)
-            {
-                await xml.WriteStartElementAsync(null, "Protocol", OdmNamespace).ConfigureAwait(false);
-                foreach (var activity in design.PlannedActivities)
-                {
-                    var seOid = $"SE.{SanitizeOid(activity.Id)}";
-                    await xml.WriteStartElementAsync(null, "StudyEventRef", OdmNamespace).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "StudyEventOID", null, seOid).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Mandatory", null, "Yes").ConfigureAwait(false);
-                    await xml.WriteEndElementAsync().ConfigureAwait(false);
-                }
-
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-
-                foreach (var activity in design.PlannedActivities)
-                {
-                    var seOid = $"SE.{SanitizeOid(activity.Id)}";
-                    writtenEventOids.Add(seOid);
-                    await xml.WriteStartElementAsync(null, "StudyEventDef", OdmNamespace).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "OID", null, seOid).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Name", null, activity.Name).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Type", null, "Scheduled").ConfigureAwait(false);
-                    foreach (var specId in activity.CollectionSpecIds)
-                    {
-                        await xml.WriteStartElementAsync(null, "FormRef", OdmNamespace).ConfigureAwait(false);
-                        await xml.WriteAttributeStringAsync(null, "FormOID", null, $"FORM.{SanitizeOid(specId)}").ConfigureAwait(false);
-                        await xml.WriteAttributeStringAsync(null, "Mandatory", null, "Yes").ConfigureAwait(false);
-                        await xml.WriteEndElementAsync().ConfigureAwait(false);
-                    }
-
-                    await xml.WriteEndElementAsync().ConfigureAwait(false);
-                }
-            }
-
-            foreach (var spec in design.CollectionSpecs)
-            {
-                var sanitizedSpec = SanitizeOid(spec.Id);
-                var formOid = $"FORM.{sanitizedSpec}";
-                var igOid = $"IG.{sanitizedSpec}";
-                if (!writtenFormOids.Add(formOid))
-                {
-                    continue;
-                }
-
-                writtenItemGroupOids.Add(igOid);
-                await xml.WriteStartElementAsync(null, "FormDef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "OID", null, formOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Name", null, spec.Name).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-                await xml.WriteStartElementAsync(null, "ItemGroupRef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, igOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Mandatory", null, "Yes").ConfigureAwait(false);
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-
-                await xml.WriteStartElementAsync(null, "ItemGroupDef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "OID", null, igOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Name", null, spec.Name).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-                foreach (var item in spec.Items)
-                {
-                    var itemOid = $"IT.{SanitizeOid(item.Id)}";
-                    await xml.WriteStartElementAsync(null, "ItemRef", OdmNamespace).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "ItemOID", null, itemOid).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Mandatory", null, item.Required ? "Yes" : "No").ConfigureAwait(false);
-                    await xml.WriteEndElementAsync().ConfigureAwait(false);
-                }
-
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-
-                foreach (var item in spec.Items)
-                {
-                    var itemOid = $"IT.{SanitizeOid(item.Id)}";
-                    if (!writtenItemOids.Add(itemOid))
-                    {
-                        continue;
-                    }
-
-                    await xml.WriteStartElementAsync(null, "ItemDef", OdmNamespace).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "OID", null, itemOid).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Name", null, item.Id).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "DataType", null, item.Unit is not null ? "decimal" : "text").ConfigureAwait(false);
-                    await xml.WriteStartElementAsync(null, "Alias", OdmNamespace).ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Context", null, "Cadence.Concept").ConfigureAwait(false);
-                    await xml.WriteAttributeStringAsync(null, "Name", null, item.Concept.ToString()).ConfigureAwait(false);
-                    await xml.WriteEndElementAsync().ConfigureAwait(false);
-                    await xml.WriteEndElementAsync().ConfigureAwait(false);
-                }
-            }
-        }
-        else if (!string.IsNullOrWhiteSpace(compiledOdmXml))
-        {
-            TryCopyCompiledMetaDataChildren(xml, compiledOdmXml, writtenItemOids, writtenFormOids, writtenItemGroupOids, writtenEventOids);
-        }
-
-        // Synthesize definitions for any unscheduled or ad-hoc casebook forms/observations not declared in protocol design.
-        var obsBySpec = casebook.Observations
-            .GroupBy(o => o.CollectionSpecId ?? "unscheduled", StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
-
-        var candidateSpecs = casebook.Forms
-            .Select(f => (SpecId: f.CollectionSpecId, Title: f.Title, ActivityId: f.PlannedActivityId, ActivityName: f.PlannedActivityName))
-            .Concat(obsBySpec.Keys.Select(specId => (SpecId: specId, Title: specId, ActivityId: (string?)null, ActivityName: (string?)null)))
-            .GroupBy(x => x.SpecId, StringComparer.Ordinal)
-            .Select(g => g.First())
-            .ToList();
-
-        foreach (var candidate in candidateSpecs)
-        {
-            var rawEventKey = candidate.ActivityId ?? "unscheduled";
-            var seOid = $"SE.{SanitizeOid(rawEventKey)}";
-            var sanitizedSpec = SanitizeOid(candidate.SpecId);
-            var formOid = $"FORM.{sanitizedSpec}";
-            var igOid = $"IG.{sanitizedSpec}";
-
-            if (writtenEventOids.Add(seOid))
-            {
-                await xml.WriteStartElementAsync(null, "StudyEventDef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "OID", null, seOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Name", null, candidate.ActivityName ?? rawEventKey).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Type", null, candidate.ActivityId is not null ? "Scheduled" : "Unscheduled").ConfigureAwait(false);
-                await xml.WriteStartElementAsync(null, "FormRef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "FormOID", null, formOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Mandatory", null, "No").ConfigureAwait(false);
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-            }
-
-            if (writtenFormOids.Add(formOid))
-            {
-                await xml.WriteStartElementAsync(null, "FormDef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "OID", null, formOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Name", null, candidate.Title).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-                await xml.WriteStartElementAsync(null, "ItemGroupRef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, igOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Mandatory", null, "Yes").ConfigureAwait(false);
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-            }
-
-            if (writtenItemGroupOids.Add(igOid))
-            {
-                await xml.WriteStartElementAsync(null, "ItemGroupDef", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "OID", null, igOid).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Name", null, candidate.Title).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-
-                if (obsBySpec.TryGetValue(candidate.SpecId, out var specObs))
-                {
-                    var seenGroupItems = new HashSet<string>(StringComparer.Ordinal);
-                    foreach (var obs in specObs)
-                    {
-                        var itemOid = $"IT.{SanitizeOid(obs.ItemId ?? obs.ConceptCode)}";
-                        if (!seenGroupItems.Add(itemOid))
-                        {
-                            continue;
-                        }
-
-                        await xml.WriteStartElementAsync(null, "ItemRef", OdmNamespace).ConfigureAwait(false);
-                        await xml.WriteAttributeStringAsync(null, "ItemOID", null, itemOid).ConfigureAwait(false);
-                        await xml.WriteAttributeStringAsync(null, "Mandatory", null, "No").ConfigureAwait(false);
-                        await xml.WriteEndElementAsync().ConfigureAwait(false);
-                    }
-                }
-
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-            }
-        }
-
-        if (writtenFormOids.Count == 0)
-        {
-            await xml.WriteStartElementAsync(null, "FormDef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "OID", null, "FORM.casebook").ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Name", null, "Participant Casebook").ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-            await xml.WriteStartElementAsync(null, "ItemGroupRef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, "IG.casebook").ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Mandatory", null, "Yes").ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-
-            await xml.WriteStartElementAsync(null, "ItemGroupDef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "OID", null, "IG.casebook").ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Name", null, "Participant Casebook").ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-
-        foreach (var obs in casebook.Observations)
-        {
-            var itemOid = $"IT.{SanitizeOid(obs.ItemId ?? obs.ConceptCode)}";
-            if (!writtenItemOids.Add(itemOid))
-            {
-                continue;
-            }
-
-            await xml.WriteStartElementAsync(null, "ItemDef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "OID", null, itemOid).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Name", null, obs.ItemId ?? obs.ConceptLabel).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "DataType", null, obs.NumericValue is not null ? "decimal" : "text").ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-    }
-
-    private static async Task WriteCasebookOdmAdminDataAsync(
-        XmlWriter xml,
-        string studyCode,
-        IReadOnlyList<KernelCasebookAttestationView> attestations)
-    {
-        if (attestations.Count == 0)
-        {
-            return;
-        }
-
-        await xml.WriteStartElementAsync(null, "AdminData", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "StudyOID", null, studyCode).ConfigureAwait(false);
-        foreach (var att in attestations)
-        {
-            await xml.WriteStartElementAsync(null, "SignatureDef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "OID", null, FormatCasebookSignatureOid(att.Ref)).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "Methodology", null, "Electronic").ConfigureAwait(false);
-            await xml.WriteElementStringAsync(null, "Meaning", OdmNamespace, att.Meaning).ConfigureAwait(false);
-            if (!string.Equals(att.Reason, "masked", StringComparison.Ordinal))
-            {
-                await xml.WriteElementStringAsync(null, "LegalReason", OdmNamespace, att.Reason).ConfigureAwait(false);
-            }
-
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-    }
-
-    private static async Task WriteCasebookOdmClinicalHierarchyAsync(
-        XmlWriter xml,
-        KernelCasebookResponse casebook,
-        IReadOnlyList<KernelCasebookAttestationView> visibleAttestations)
-    {
-        var formByGroupingId = casebook.Forms
-            .Where(f => f.GroupingFormId is not null)
-            .ToDictionary(f => f.GroupingFormId!.Value, f => f);
-
-        var obsByFormId = new Dictionary<Guid, List<KernelCasebookObservationView>>();
-        var unlinkedObs = new List<KernelCasebookObservationView>();
-        foreach (var obs in casebook.Observations)
-        {
-            Guid? formGuid = obs.GroupingFormId;
-            if (formGuid is null
-                && obs.CollectionInstanceRef is { } cRef
-                && NodeRef.TryParse(cRef, out var parsedFormNode)
-                && parsedFormNode.Kind == NodeKinds.CollectionInstance)
-            {
-                formGuid = parsedFormNode.Id;
-            }
-
-            if (formGuid is { } fId && formByGroupingId.ContainsKey(fId))
-            {
-                if (!obsByFormId.TryGetValue(fId, out var list))
-                {
-                    list = [];
-                    obsByFormId[fId] = list;
-                }
-
-                list.Add(obs);
-            }
-            else
-            {
-                unlinkedObs.Add(obs);
-            }
-        }
-
-        var formAttestationsById = new Dictionary<Guid, List<KernelCasebookAttestationView>>();
-        var subjectAttestations = new List<KernelCasebookAttestationView>();
-        foreach (var att in visibleAttestations)
-        {
-            if (NodeRef.TryParse(att.TargetRef, out var targetNode)
-                && targetNode.Kind == NodeKinds.CollectionInstance
-                && formByGroupingId.ContainsKey(targetNode.Id))
-            {
-                if (!formAttestationsById.TryGetValue(targetNode.Id, out var sigList))
-                {
-                    sigList = [];
-                    formAttestationsById[targetNode.Id] = sigList;
-                }
-
-                sigList.Add(att);
-            }
-            else
-            {
-                subjectAttestations.Add(att);
-            }
-        }
-
-        var formsByEvent = casebook.Forms
-            .GroupBy(f => f.PlannedActivityId ?? "unscheduled", StringComparer.Ordinal)
-            .ToList();
-
-        foreach (var eventGroup in formsByEvent)
-        {
-            await xml.WriteStartElementAsync(null, "StudyEventData", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "StudyEventOID", null, $"SE.{SanitizeOid(eventGroup.Key)}").ConfigureAwait(false);
-
-            foreach (var form in eventGroup)
-            {
-                var specToken = SanitizeOid(form.CollectionSpecId);
-                await xml.WriteStartElementAsync(null, "FormData", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "FormOID", null, $"FORM.{specToken}").ConfigureAwait(false);
-                if (!form.Masked && !string.Equals(form.Ref, "masked", StringComparison.Ordinal))
-                {
-                    await xml.WriteAttributeStringAsync(null, "FormRepeatKey", null, form.Ref).ConfigureAwait(false);
-                }
-
-                await xml.WriteStartElementAsync(null, "ItemGroupData", OdmNamespace).ConfigureAwait(false);
-                await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, $"IG.{specToken}").ConfigureAwait(false);
-
-                if (form.GroupingFormId is { } fGuid && obsByFormId.TryGetValue(fGuid, out var formObs))
-                {
-                    foreach (var obs in formObs)
-                    {
-                        await WriteCasebookOdmItemDataAsync(xml, obs, casebook.SiteCode).ConfigureAwait(false);
-                    }
-                }
-
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-
-                if (form.GroupingFormId is { } sigFormGuid && formAttestationsById.TryGetValue(sigFormGuid, out var formSigs))
-                {
-                    foreach (var sig in formSigs)
-                    {
-                        await WriteCasebookOdmSignatureElementAsync(xml, sig, casebook.SiteCode).ConfigureAwait(false);
-                    }
-                }
-
-                await xml.WriteEndElementAsync().ConfigureAwait(false);
-            }
-
-            if (string.Equals(eventGroup.Key, "unscheduled", StringComparison.Ordinal) && unlinkedObs.Count > 0)
-            {
-                await WriteUnlinkedCasebookObservationsAsync(xml, unlinkedObs, casebook.SiteCode).ConfigureAwait(false);
-                unlinkedObs.Clear();
-            }
-
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-
-        if (unlinkedObs.Count > 0)
-        {
-            await xml.WriteStartElementAsync(null, "StudyEventData", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "StudyEventOID", null, "SE.unscheduled").ConfigureAwait(false);
-            await WriteUnlinkedCasebookObservationsAsync(xml, unlinkedObs, casebook.SiteCode).ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-
-        foreach (var sig in subjectAttestations)
-        {
-            await WriteCasebookOdmSignatureElementAsync(xml, sig, casebook.SiteCode).ConfigureAwait(false);
-        }
-    }
-
-    private static async Task WriteUnlinkedCasebookObservationsAsync(
-        XmlWriter xml,
-        IReadOnlyList<KernelCasebookObservationView> observations,
-        string siteCode)
-    {
-        foreach (var specGroup in observations.GroupBy(o => o.CollectionSpecId ?? "unscheduled", StringComparer.Ordinal))
-        {
-            var specToken = SanitizeOid(specGroup.Key);
-            await xml.WriteStartElementAsync(null, "FormData", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "FormOID", null, $"FORM.{specToken}").ConfigureAwait(false);
-            await xml.WriteStartElementAsync(null, "ItemGroupData", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, $"IG.{specToken}").ConfigureAwait(false);
-            foreach (var obs in specGroup)
-            {
-                await WriteCasebookOdmItemDataAsync(xml, obs, siteCode).ConfigureAwait(false);
-            }
-
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-    }
-
-    private static async Task WriteCasebookOdmItemDataAsync(
-        XmlWriter xml,
-        KernelCasebookObservationView obs,
-        string siteCode)
-    {
-        await xml.WriteStartElementAsync(null, "ItemData", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "ItemOID", null, $"IT.{SanitizeOid(obs.ItemId ?? obs.ConceptCode)}").ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "Value", null, obs.DisplayValue).ConfigureAwait(false);
-        if (obs.Unit is not null && !obs.Masked)
-        {
-            await xml.WriteAttributeStringAsync("cadence", "Unit", CadenceNamespace, obs.Unit).ConfigureAwait(false);
-        }
-
-        if (obs.EffectiveLock is not null)
-        {
-            await xml.WriteAttributeStringAsync("cadence", "LockState", CadenceNamespace, obs.EffectiveLock).ConfigureAwait(false);
-        }
-
-        if (obs.Masked)
-        {
-            await xml.WriteAttributeStringAsync("cadence", "Masked", CadenceNamespace, "true").ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync("cadence", "MaskReason", CadenceNamespace, obs.Mask ?? "Blinded").ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-            return;
-        }
-
-        foreach (var rev in obs.Revisions)
-        {
-            await xml.WriteStartElementAsync(null, "AuditRecord", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteStartElementAsync(null, "UserRef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "UserOID", null, rev.RecordedBy ?? "masked").ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-            await xml.WriteStartElementAsync(null, "LocationRef", OdmNamespace).ConfigureAwait(false);
-            await xml.WriteAttributeStringAsync(null, "LocationOID", null, siteCode).ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-            await xml.WriteElementStringAsync(null, "DateTimeStamp", OdmNamespace, FormatInstant(rev.RecordedAt)).ConfigureAwait(false);
-            await xml.WriteElementStringAsync(null, "ReasonForChange", OdmNamespace, rev.ReasonForChange ?? string.Empty).ConfigureAwait(false);
-            await xml.WriteElementStringAsync(null, "SourceID", OdmNamespace, $"{obs.Ref}#rev-{rev.Revision.ToString(CultureInfo.InvariantCulture)}").ConfigureAwait(false);
-            await xml.WriteEndElementAsync().ConfigureAwait(false);
-        }
-
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-    }
-
-    private static async Task WriteCasebookOdmSignatureElementAsync(
-        XmlWriter xml,
-        KernelCasebookAttestationView att,
-        string siteCode)
-    {
-        await xml.WriteStartElementAsync(null, "Signature", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteStartElementAsync(null, "UserRef", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "UserOID", null, att.SignerId).ConfigureAwait(false);
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-        await xml.WriteStartElementAsync(null, "LocationRef", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "LocationOID", null, siteCode).ConfigureAwait(false);
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-        await xml.WriteStartElementAsync(null, "SignatureRef", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "SignatureOID", null, FormatCasebookSignatureOid(att.Ref)).ConfigureAwait(false);
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-        await xml.WriteElementStringAsync(null, "DateTimeStamp", OdmNamespace, FormatInstant(att.SignedAt)).ConfigureAwait(false);
-        await xml.WriteEndElementAsync().ConfigureAwait(false);
-    }
-
-    private static string FormatCasebookSignatureOid(string attestationRef) =>
-        NodeRef.TryParse(attestationRef, out var parsed)
-            ? $"SD.{parsed.Id:D}"
-            : $"SD.{SanitizeOid(attestationRef)}";
-
     private static void TryCopyCompiledMetaDataChildren(
         XmlWriter xml,
         string compiledOdmXml,
@@ -1833,6 +1473,467 @@ internal static class KernelExportStreamer
         {
             return null;
         }
+    }
+
+    private static List<CasebookOdmFormBucket> BuildCasebookOdmFormBuckets(KernelCasebookResponse casebook)
+    {
+        if (casebook.Masked)
+        {
+            return [];
+        }
+
+        var buckets = new List<CasebookOdmFormBucket>(casebook.Forms.Count + 1);
+        var byGroupingId = new Dictionary<Guid, CasebookOdmFormBucket>();
+        var byFormRef = new Dictionary<string, CasebookOdmFormBucket>(StringComparer.Ordinal);
+        var bySpecId = new Dictionary<string, CasebookOdmFormBucket>(StringComparer.Ordinal);
+
+        foreach (var form in casebook.Forms)
+        {
+            var eventKey = form.PlannedActivityId ?? "unscheduled";
+            var eventOid = $"SE.{SanitizeOid(eventKey)}";
+            var eventName = form.PlannedActivityName ?? (form.PlannedActivityId ?? "Unscheduled");
+            var specId = string.IsNullOrWhiteSpace(form.CollectionSpecId) ? "unscheduled" : form.CollectionSpecId;
+            var formOid = $"FORM.{SanitizeOid(specId)}";
+            var igOid = $"IG.{SanitizeOid(specId)}";
+            var repeatKey = !form.Masked && !string.Equals(form.Ref, "masked", StringComparison.Ordinal)
+                ? form.Ref
+                : null;
+            var bucket = new CasebookOdmFormBucket(
+                EventOid: eventOid,
+                EventName: eventName,
+                IsScheduled: form.PlannedActivityId is not null,
+                SpecId: specId,
+                FormOid: formOid,
+                ItemGroupOid: igOid,
+                FormName: form.Title,
+                FormRepeatKey: repeatKey,
+                FormMasked: form.Masked,
+                FormMaskReason: form.Mask,
+                Observations: []);
+            buckets.Add(bucket);
+            if (form.GroupingFormId is { } groupingGuid)
+            {
+                byGroupingId.TryAdd(groupingGuid, bucket);
+            }
+
+            if (repeatKey is not null)
+            {
+                byFormRef.TryAdd(repeatKey, bucket);
+            }
+
+            bySpecId.TryAdd(specId, bucket);
+        }
+
+        foreach (var obs in casebook.Observations)
+        {
+            var specId = string.IsNullOrWhiteSpace(obs.CollectionSpecId) ? "unscheduled" : obs.CollectionSpecId!;
+            CasebookOdmFormBucket? target = null;
+            if (obs.GroupingFormId is { } obsGroupingGuid)
+            {
+                byGroupingId.TryGetValue(obsGroupingGuid, out target);
+            }
+
+            if (target is null && obs.CollectionInstanceRef is { } ciRef)
+            {
+                byFormRef.TryGetValue(ciRef, out target);
+            }
+
+            if (target is null)
+            {
+                bySpecId.TryGetValue(specId, out target);
+            }
+
+            if (target is null)
+            {
+                target = new CasebookOdmFormBucket(
+                    EventOid: "SE.unscheduled",
+                    EventName: "Unscheduled",
+                    IsScheduled: false,
+                    SpecId: specId,
+                    FormOid: $"FORM.{SanitizeOid(specId)}",
+                    ItemGroupOid: $"IG.{SanitizeOid(specId)}",
+                    FormName: specId,
+                    FormRepeatKey: obs.CollectionInstanceRef,
+                    FormMasked: false,
+                    FormMaskReason: null,
+                    Observations: []);
+                buckets.Add(target);
+                bySpecId[specId] = target;
+                if (obs.CollectionInstanceRef is { } adhocRef)
+                {
+                    byFormRef.TryAdd(adhocRef, target);
+                }
+            }
+
+            target.Observations.Add(obs);
+        }
+
+        return buckets;
+    }
+
+    private static List<(KernelCasebookAttestationView Attestation, string SignatureOid)> BuildCasebookSignatureDefinitions(
+        IReadOnlyList<KernelCasebookAttestationView> attestations)
+    {
+        var result = new List<(KernelCasebookAttestationView, string)>(attestations.Count);
+        var usedOids = new HashSet<string>(StringComparer.Ordinal);
+        var maskedCounter = 0;
+        foreach (var att in attestations)
+        {
+            string candidate;
+            if (string.Equals(att.Ref, "masked", StringComparison.Ordinal))
+            {
+                maskedCounter++;
+                candidate = $"SD.masked.{maskedCounter.ToString(CultureInfo.InvariantCulture)}";
+            }
+            else
+            {
+                candidate = $"SD.{SanitizeOid(att.Ref)}";
+            }
+
+            var sigOid = candidate;
+            var suffix = 2;
+            while (!usedOids.Add(sigOid))
+            {
+                sigOid = $"{candidate}.{suffix.ToString(CultureInfo.InvariantCulture)}";
+                suffix++;
+            }
+
+            result.Add((att, sigOid));
+        }
+
+        return result;
+    }
+
+    private static async Task WriteCasebookOdmStudyMetadataAsync(
+        XmlWriter xml,
+        KernelCasebookResponse casebook,
+        int versionNumber,
+        ProtocolDesign? design,
+        string? compiledOdmXml,
+        IReadOnlyList<CasebookOdmFormBucket> clinicalForms)
+    {
+        var numText = versionNumber.ToString(CultureInfo.InvariantCulture);
+        await xml.WriteStartElementAsync(null, "Study", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "OID", null, casebook.StudyCode).ConfigureAwait(false);
+
+        await xml.WriteStartElementAsync(null, "GlobalVariables", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteElementStringAsync(null, "StudyName", OdmNamespace, casebook.StudyCode).ConfigureAwait(false);
+        await xml.WriteElementStringAsync(null, "StudyDescription", OdmNamespace, casebook.StudyTitle).ConfigureAwait(false);
+        await xml.WriteElementStringAsync(null, "ProtocolName", OdmNamespace, casebook.StudyCode).ConfigureAwait(false);
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+
+        await xml.WriteStartElementAsync(null, "MetaDataVersion", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "OID", null, $"MDV.{numText}").ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "Name", null, $"Version {numText}").ConfigureAwait(false);
+
+        if (design is null && !string.IsNullOrWhiteSpace(compiledOdmXml))
+        {
+            var copiedItemOids = new HashSet<string>(StringComparer.Ordinal);
+            var copiedFormOids = new HashSet<string>(StringComparer.Ordinal);
+            var copiedIgOids = new HashSet<string>(StringComparer.Ordinal);
+            var copiedEventOids = new HashSet<string>(StringComparer.Ordinal);
+            TryCopyCompiledMetaDataChildren(xml, compiledOdmXml, copiedItemOids, copiedFormOids, copiedIgOids, copiedEventOids);
+            if (copiedFormOids.Count > 0)
+            {
+                foreach (var bucket in clinicalForms)
+                {
+                    foreach (var obs in bucket.Observations)
+                    {
+                        var rawItemId = obs.ItemId ?? obs.ConceptCode;
+                        var itemOid = $"IT.{SanitizeOid(rawItemId)}";
+                        if (copiedItemOids.Add(itemOid))
+                        {
+                            await xml.WriteStartElementAsync(null, "ItemDef", OdmNamespace).ConfigureAwait(false);
+                            await xml.WriteAttributeStringAsync(null, "OID", null, itemOid).ConfigureAwait(false);
+                            await xml.WriteAttributeStringAsync(null, "Name", null, obs.ConceptLabel).ConfigureAwait(false);
+                            await xml.WriteAttributeStringAsync(null, "DataType", null, !obs.Masked && obs.NumericValue is not null ? "decimal" : "text").ConfigureAwait(false);
+                            await xml.WriteEndElementAsync().ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+                return;
+            }
+        }
+
+        var eventDefs = new List<(string EventOid, string EventName, bool IsScheduled, List<string> FormOids)>();
+        var eventIndexByOid = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (design is not null)
+        {
+            foreach (var activity in design.PlannedActivities)
+            {
+                var eOid = $"SE.{SanitizeOid(activity.Id)}";
+                if (!eventIndexByOid.ContainsKey(eOid))
+                {
+                    eventIndexByOid[eOid] = eventDefs.Count;
+                    eventDefs.Add((eOid, activity.Name, true, activity.CollectionSpecIds.Select(id => $"FORM.{SanitizeOid(id)}").Distinct(StringComparer.Ordinal).ToList()));
+                }
+            }
+        }
+
+        foreach (var bucket in clinicalForms)
+        {
+            if (!eventIndexByOid.TryGetValue(bucket.EventOid, out var idx))
+            {
+                eventIndexByOid[bucket.EventOid] = eventDefs.Count;
+                eventDefs.Add((bucket.EventOid, bucket.EventName, bucket.IsScheduled, [bucket.FormOid]));
+            }
+            else if (!eventDefs[idx].FormOids.Contains(bucket.FormOid, StringComparer.Ordinal))
+            {
+                eventDefs[idx].FormOids.Add(bucket.FormOid);
+            }
+        }
+
+        if (eventDefs.Count > 0)
+        {
+            await xml.WriteStartElementAsync(null, "Protocol", OdmNamespace).ConfigureAwait(false);
+            foreach (var ev in eventDefs)
+            {
+                await xml.WriteStartElementAsync(null, "StudyEventRef", OdmNamespace).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "StudyEventOID", null, ev.EventOid).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Mandatory", null, ev.IsScheduled ? "Yes" : "No").ConfigureAwait(false);
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+
+            foreach (var ev in eventDefs)
+            {
+                await xml.WriteStartElementAsync(null, "StudyEventDef", OdmNamespace).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "OID", null, ev.EventOid).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Name", null, ev.EventName).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Type", null, ev.IsScheduled ? "Scheduled" : "Unscheduled").ConfigureAwait(false);
+                foreach (var fOid in ev.FormOids)
+                {
+                    await xml.WriteStartElementAsync(null, "FormRef", OdmNamespace).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "FormOID", null, fOid).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "Mandatory", null, ev.IsScheduled ? "Yes" : "No").ConfigureAwait(false);
+                    await xml.WriteEndElementAsync().ConfigureAwait(false);
+                }
+
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+        }
+
+        var formDefs = new List<(string FormOid, string IgOid, string Name, List<(string ItemOid, bool Mandatory)> ItemRefs)>();
+        var formIndexByOid = new Dictionary<string, int>(StringComparer.Ordinal);
+        var itemDefs = new List<(string ItemOid, string Name, string DataType, string? ConceptText)>();
+        var seenItemOids = new HashSet<string>(StringComparer.Ordinal);
+
+        if (design is not null)
+        {
+            foreach (var spec in design.CollectionSpecs)
+            {
+                var sanitizedSpec = SanitizeOid(spec.Id);
+                var fOid = $"FORM.{sanitizedSpec}";
+                var igOid = $"IG.{sanitizedSpec}";
+                var itemRefs = new List<(string ItemOid, bool Mandatory)>(spec.Items.Count);
+                foreach (var item in spec.Items)
+                {
+                    var itemOid = $"IT.{SanitizeOid(item.Id)}";
+                    if (itemRefs.All(ir => !string.Equals(ir.ItemOid, itemOid, StringComparison.Ordinal)))
+                    {
+                        itemRefs.Add((itemOid, item.Required));
+                    }
+
+                    if (seenItemOids.Add(itemOid))
+                    {
+                        var dataType = MapItemDataType(item.ValueKind, item.Unit);
+                        itemDefs.Add((itemOid, item.Id, dataType, item.Concept.ToString()));
+                    }
+                }
+
+                if (!formIndexByOid.ContainsKey(fOid))
+                {
+                    formIndexByOid[fOid] = formDefs.Count;
+                    formDefs.Add((fOid, igOid, spec.Name, itemRefs));
+                }
+            }
+        }
+
+        foreach (var bucket in clinicalForms)
+        {
+            if (!formIndexByOid.TryGetValue(bucket.FormOid, out var fIdx))
+            {
+                fIdx = formDefs.Count;
+                formIndexByOid[bucket.FormOid] = fIdx;
+                formDefs.Add((bucket.FormOid, bucket.ItemGroupOid, bucket.FormName, []));
+            }
+
+            foreach (var obs in bucket.Observations)
+            {
+                var rawItemId = obs.ItemId ?? obs.ConceptCode;
+                var itemOid = $"IT.{SanitizeOid(rawItemId)}";
+                if (formDefs[fIdx].ItemRefs.All(ir => !string.Equals(ir.ItemOid, itemOid, StringComparison.Ordinal)))
+                {
+                    formDefs[fIdx].ItemRefs.Add((itemOid, false));
+                }
+
+                if (seenItemOids.Add(itemOid))
+                {
+                    var dataType = !obs.Masked && obs.NumericValue is not null ? "decimal" : "text";
+                    var conceptText = string.Equals(obs.ConceptRef, "masked", StringComparison.Ordinal) ? null : obs.ConceptRef;
+                    itemDefs.Add((itemOid, obs.ConceptLabel, dataType, conceptText));
+                }
+            }
+        }
+
+        if (formDefs.Count == 0)
+        {
+            formDefs.Add(("FORM.casebook", "IG.casebook", "Participant Casebook", []));
+        }
+
+        foreach (var formDef in formDefs)
+        {
+            await xml.WriteStartElementAsync(null, "FormDef", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "OID", null, formDef.FormOid).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Name", null, formDef.Name).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
+            await xml.WriteStartElementAsync(null, "ItemGroupRef", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "ItemGroupOID", null, formDef.IgOid).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Mandatory", null, formDef.ItemRefs.Count > 0 ? "Yes" : "No").ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+        }
+
+        foreach (var formDef in formDefs)
+        {
+            await xml.WriteStartElementAsync(null, "ItemGroupDef", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "OID", null, formDef.IgOid).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Name", null, formDef.Name).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Repeating", null, "No").ConfigureAwait(false);
+            foreach (var (itemOid, mandatory) in formDef.ItemRefs)
+            {
+                await xml.WriteStartElementAsync(null, "ItemRef", OdmNamespace).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "ItemOID", null, itemOid).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Mandatory", null, mandatory ? "Yes" : "No").ConfigureAwait(false);
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+        }
+
+        foreach (var itemDef in itemDefs)
+        {
+            await xml.WriteStartElementAsync(null, "ItemDef", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "OID", null, itemDef.ItemOid).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "Name", null, itemDef.Name).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "DataType", null, itemDef.DataType).ConfigureAwait(false);
+            if (itemDef.ConceptText is not null)
+            {
+                await xml.WriteStartElementAsync(null, "Alias", OdmNamespace).ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Context", null, "Cadence.Concept").ConfigureAwait(false);
+                await xml.WriteAttributeStringAsync(null, "Name", null, itemDef.ConceptText).ConfigureAwait(false);
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+        }
+
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+    }
+
+    private static string MapItemDataType(ObservationValueKind? kind, string? unit)
+    {
+        if (unit is not null)
+        {
+            return "decimal";
+        }
+
+        return kind switch
+        {
+            ObservationValueKind.Quantity => "decimal",
+            ObservationValueKind.Boolean => "boolean",
+            ObservationValueKind.DateTime => "datetime",
+            _ => "text",
+        };
+    }
+
+    private static async Task WriteCasebookOdmItemDataAsync(
+        XmlWriter xml,
+        KernelCasebookObservationView obs,
+        string siteCode)
+    {
+        var itemOid = $"IT.{SanitizeOid(obs.ItemId ?? obs.ConceptCode)}";
+        await xml.WriteStartElementAsync(null, "ItemData", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "ItemOID", null, itemOid).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "Value", null, obs.DisplayValue).ConfigureAwait(false);
+        if (!obs.Masked && obs.Unit is not null)
+        {
+            await xml.WriteAttributeStringAsync("cadence", "Unit", CadenceNamespace, obs.Unit).ConfigureAwait(false);
+        }
+
+        if (obs.EffectiveLock is not null)
+        {
+            await xml.WriteAttributeStringAsync("cadence", "LockState", CadenceNamespace, obs.EffectiveLock).ConfigureAwait(false);
+        }
+
+        if (obs.Masked)
+        {
+            await xml.WriteAttributeStringAsync("cadence", "Masked", CadenceNamespace, "true").ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync("cadence", "MaskReason", CadenceNamespace, obs.Mask ?? "Blinded").ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+            return;
+        }
+
+        if (obs.Revisions.Count > 0)
+        {
+            var latestRev = obs.Revisions[^1];
+            await xml.WriteStartElementAsync(null, "AuditRecord", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteStartElementAsync(null, "UserRef", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "UserOID", null, latestRev.RecordedBy ?? "system").ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+            await xml.WriteStartElementAsync(null, "LocationRef", OdmNamespace).ConfigureAwait(false);
+            await xml.WriteAttributeStringAsync(null, "LocationOID", null, siteCode).ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+            await xml.WriteElementStringAsync(null, "DateTimeStamp", OdmNamespace, FormatInstant(latestRev.RecordedAt)).ConfigureAwait(false);
+            await xml.WriteElementStringAsync(null, "ReasonForChange", OdmNamespace, latestRev.ReasonForChange ?? string.Empty).ConfigureAwait(false);
+            await xml.WriteElementStringAsync(null, "SourceID", OdmNamespace, obs.Ref).ConfigureAwait(false);
+            await xml.WriteEndElementAsync().ConfigureAwait(false);
+
+            if (obs.Revisions.Count > 1)
+            {
+                await xml.WriteStartElementAsync("cadence", "Revisions", CadenceNamespace).ConfigureAwait(false);
+                foreach (var rev in obs.Revisions)
+                {
+                    await xml.WriteStartElementAsync("cadence", "Revision", CadenceNamespace).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "Number", null, rev.Revision.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "Value", null, rev.DisplayValue).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "RecordedBy", null, rev.RecordedBy ?? "system").ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "RecordedAt", null, FormatInstant(rev.RecordedAt)).ConfigureAwait(false);
+                    await xml.WriteAttributeStringAsync(null, "ReasonForChange", null, rev.ReasonForChange ?? string.Empty).ConfigureAwait(false);
+                    await xml.WriteEndElementAsync().ConfigureAwait(false);
+                }
+
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+            }
+        }
+
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+    }
+
+    private static async Task WriteCasebookOdmSignatureElementAsync(
+        XmlWriter xml,
+        KernelCasebookAttestationView att,
+        string signatureOid,
+        string siteCode)
+    {
+        await xml.WriteStartElementAsync(null, "Signature", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteStartElementAsync(null, "UserRef", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "UserOID", null, att.SignerId).ConfigureAwait(false);
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+        await xml.WriteStartElementAsync(null, "LocationRef", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "LocationOID", null, siteCode).ConfigureAwait(false);
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+        await xml.WriteStartElementAsync(null, "SignatureRef", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "SignatureOID", null, signatureOid).ConfigureAwait(false);
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
+        await xml.WriteElementStringAsync(null, "DateTimeStamp", OdmNamespace, FormatInstant(att.SignedAt)).ConfigureAwait(false);
+        await xml.WriteEndElementAsync().ConfigureAwait(false);
     }
 
     private static (List<ExportAttestationSnapshot> Visible, HashSet<AttestationId> BlindedSignatures) FilterStudyOdmAttestations(
@@ -2509,7 +2610,10 @@ internal static class KernelExportStreamer
         var collectionEnrollmentMap = snapshot.Collections.ToDictionary(c => c.CollectionInstanceId.Value, c => (c.EnrollmentId, c.StudySiteId));
         var obsEnrollmentMap = snapshot.Observations.ToDictionary(o => o.ObservationId.Value, o => (o.EnrollmentId, o.StudySiteId, o.IsBlindedTreatment));
 
-        var maskByAggregateId = new Dictionary<string, MaskReason?>(StringComparer.Ordinal);
+        var maskByAggregateId = new Dictionary<string, MaskReason?>(StringComparer.Ordinal)
+        {
+            [snapshot.StudyId.ToString()] = null,
+        };
         var maskByTargetGuid = new Dictionary<Guid, MaskReason?>
         {
             [snapshot.StudyId.Value] = null,
@@ -2517,11 +2621,14 @@ internal static class KernelExportStreamer
         foreach (var protocol in snapshot.ProtocolVersions)
         {
             maskByTargetGuid[protocol.ProtocolVersionId.Value] = null;
+            maskByAggregateId[protocol.ProtocolVersionId.ToString()] = null;
         }
 
         foreach (var site in snapshot.StudySites)
         {
-            maskByTargetGuid[site.StudySiteId.Value] = export.Visibility.Masks.For(NodeRef.For(site.StudySiteId));
+            var siteMask = export.Visibility.Masks.For(NodeRef.For(site.StudySiteId));
+            maskByTargetGuid[site.StudySiteId.Value] = siteMask;
+            maskByAggregateId[site.StudySiteId.ToString()] = siteMask;
         }
 
         foreach (var enrollment in snapshot.Enrollments)
@@ -2530,6 +2637,7 @@ internal static class KernelExportStreamer
                 ?? export.Visibility.Masks.For(NodeRef.For(enrollment.StudySiteId));
             maskByTargetGuid[enrollment.EnrollmentId.Value] = eMask;
             maskByAggregateId[enrollment.EnrollmentId.ToString()] = eMask;
+            maskByAggregateId[enrollment.ParticipantId.ToString()] = eMask;
         }
 
         var designs = snapshot.ProtocolVersions.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
@@ -2610,7 +2718,15 @@ internal static class KernelExportStreamer
             }
         }
 
-        var hasUnrevealedBlindedObs = blindedObsIds.Count > 0;
+        var hasUnrevealedBlindedObs = snapshot.Observations.Any(o =>
+                export.VisibleEnrollmentIds.Contains(o.EnrollmentId)
+                && o.IsBlindedTreatment
+                && !export.Visibility.UnblindedEnrollments.Contains(o.EnrollmentId))
+            || snapshot.Locks.Any(l =>
+                l.BlindedScope
+                && (l.EnrollmentId is null
+                    || (export.VisibleEnrollmentIds.Contains(l.EnrollmentId.Value)
+                        && !export.Visibility.UnblindedEnrollments.Contains(l.EnrollmentId.Value))));
         var blindedSequences = snapshot.BlindedAuditSequences;
         var aggregateIdsBySequence = snapshot.AuditAggregateIdsBySequence;
         var entries = new List<BundleAuditEntryView>(snapshot.AuditEntries.Count);
@@ -2624,7 +2740,16 @@ internal static class KernelExportStreamer
             {
                 if (aggregateIdsBySequence is not null && aggregateIdsBySequence.TryGetValue(audit.Sequence, out var aggId))
                 {
-                    maskByAggregateId.TryGetValue(aggId, out entryMask);
+                    if (!maskByAggregateId.TryGetValue(aggId, out entryMask))
+                    {
+                        if (fallbackHiddenReason is { } unmappedHidden)
+                        {
+                            hiddenReasons.Add(unmappedHidden);
+                        }
+
+                        continue;
+                    }
+
                     if (entryMask is null && hasUnrevealedBlindedObs && blindedSequences?.Contains(audit.Sequence) is true)
                     {
                         entryMask = MaskReason.Blinded;
@@ -3084,11 +3209,28 @@ internal static class KernelExportStreamer
 
     private sealed record PdfStyledLine(PdfFontKind Font, int FontSize, string Text);
 
+    private sealed record CasebookOdmFormBucket(
+        string EventOid,
+        string EventName,
+        bool IsScheduled,
+        string SpecId,
+        string FormOid,
+        string ItemGroupOid,
+        string FormName,
+        string? FormRepeatKey,
+        bool FormMasked,
+        string? FormMaskReason,
+        List<KernelCasebookObservationView> Observations);
+
     private sealed record CollectionTableSlice(
         string TableName,
         string SpecId,
         string Label,
         IReadOnlyList<ProjectedObservationRow> Rows);
+
+    private sealed record BundleHiddenScopesView(
+        bool MoreExist,
+        IReadOnlyList<string> Reasons);
 
     private sealed record StudyExportBundleManifest(
         string Producer,
@@ -3102,6 +3244,7 @@ internal static class KernelExportStreamer
         string GeneratedAt,
         string RequestedBy,
         KernelHiddenContentResponse Hidden,
+        BundleHiddenScopesView HiddenScopes,
         IReadOnlyList<BundleManifestFileEntry> Files,
         IReadOnlyList<BundleManifestCasebookEntry> Casebooks);
 

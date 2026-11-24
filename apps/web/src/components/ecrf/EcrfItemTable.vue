@@ -222,7 +222,7 @@
                       <input
                         :id="`ecrf-sdv-select-${item.item_id}`"
                         type="checkbox"
-                        :checked="sdv.selectedSdvItems.includes(item.item_id)"
+                        :checked="sdv.isSdvSelected(item.item_id)"
                         :value="item.item_id"
                         :disabled="sdv.sdvBusy || formState.assertionsLocked"
                         :aria-label="`Select ${item.item_id} for source verification`"
@@ -718,6 +718,10 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 </script>
 
 <style scoped>
+#ecrf-form-page {
+  min-width: 0;
+  max-width: 100%;
+}
 .ecrf-form-row {
   display: flex;
   flex-wrap: wrap;
@@ -726,8 +730,10 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   margin: 8px 0;
 }
 .ecrf-table-scroll {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
+  min-width: 0;
   padding: 4px;
 }
 .ecrf-table-scroll:focus-visible {

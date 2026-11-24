@@ -1,4 +1,7 @@
 using System;
+using System.Text.Json.Serialization;
+
+using Cadence.Kernel;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -40,8 +43,30 @@ public sealed class SyntheticSiteRegistration
     /// <summary>Public string field, also forbidden.</summary>
     public string ParticipantId = string.Empty;
 
+    /// <summary>Expanded central identity string properties (Subject and Tenant).</summary>
+    public string SubjectId { get; set; } = string.Empty;
+
+    public string TenantId { get; set; } = string.Empty;
+
     /// <summary>A const is a name (e.g. a header), not an ID value, so it is allowed.</summary>
     public const string HeaderSiteId = "X-Site-Id";
+}
+
+/// <summary>
+/// Synthetic wire DTO attempting to smuggle central identities under disguised C# member names via
+/// <see cref="JsonPropertyNameAttribute"/>, paired with compliant kernel-typed and non-identity controls.
+/// </summary>
+public sealed record SyntheticWirePayload(
+    [property: JsonPropertyName("study_id")] string DisguisedStudyRef,
+    [property: JsonPropertyName("owningSiteId")] Guid DisguisedSiteGuid,
+    [property: JsonPropertyName("subject_id")] string ConstructorOnlySubjectRef,
+    [property: JsonPropertyName("tenantId")] Guid DisguisedTenantGuid,
+    [property: JsonPropertyName("studyId")] StudyId CanonicalStudy,
+    [property: JsonPropertyName("tenant_id")] TenantId CanonicalTenant,
+    [property: JsonPropertyName("compositeId")] string CompositeCorrelation)
+{
+    [JsonPropertyName("participant_id")]
+    public string? DisguisedParticipantField;
 }
 
 /// <summary>Synthetic module DbContext mapping the fixtures above (K-MOD-1).</summary>
@@ -58,9 +83,12 @@ public sealed class SyntheticModuleDbContext(DbContextOptions<SyntheticModuleDbC
             entity.Ignore(e => e.TypedStudyId);
             entity.Property(e => e.PrimarySiteId);
             entity.Property(e => e.ParticipantId);
+            entity.Property(e => e.SubjectId);
+            entity.Property(e => e.TenantId);
         });
 
-        // Shadow column: no CLR member, still a duplicated kernel identity column.
+        // Shadow columns: no CLR member, still duplicated kernel identity columns.
         modelBuilder.Entity<Site>().Property<Guid>("LegacySiteId");
+        modelBuilder.Entity<Site>().Property<Guid>("LegacyTenantId");
     }
 }

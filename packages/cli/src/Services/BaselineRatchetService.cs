@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -10,17 +11,22 @@ namespace Cadence.Cli.Services;
 
 /// <summary>
 /// The <c>baseline-ratchet</c> gate (#5318): a ratchet baseline may only shrink. Every tracked ratchet baseline (the
-/// kernel-boundary baseline, <c>.deid-baseline.txt</c>, <c>.secrets.baseline</c> and any other <c>*.baseline.txt</c> or
-/// <c>*-baseline.txt</c> file) is checked across every commit in <c>compareBase..HEAD</c> and in the working tree.
-/// Any commit that grows a baseline must carry a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c> trailer for each
-/// baseline file it grew, and dirty working-tree baseline growth is always rejected. In <c>--pre-commit</c>, staged
-/// baseline growth is compared against <c>HEAD</c> (and <c>MERGE_HEAD</c> during a merge) and admitted only when
-/// <c>CADENCE_BASELINE_GROWTH</c> is set.
+/// kernel-boundary shards, kernel-rule-coverage shards, <c>baselines/deid/*.baseline.txt</c> shards,
+/// <c>baselines/secrets/*.secrets.baseline.json</c> shards, and any standalone <c>*.baseline.txt</c> or
+/// <c>*-baseline.txt</c> file) is aggregated per gate as one multiset across every commit in <c>compareBase..HEAD</c>
+/// and in the working tree. Any commit that grows a baseline gate must carry a file-and-count-scoped
+/// <c>Baseline-Growth: &lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c> trailer, and dirty working-tree baseline growth
+/// is always rejected. In <c>--pre-commit</c>, staged baseline growth is compared against <c>HEAD</c> (and
+/// <c>MERGE_HEAD</c> during a merge) and admitted only when <c>CADENCE_BASELINE_GROWTH</c> supplies matching
+/// <c>&lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c> approval(s).
 /// </summary>
 public static class BaselineRatchetService
 {
     /// <summary>The ref a branch is compared with, as in <c>cadence ci</c>.</summary>
     public const string DefaultBaseRef = GitRevisionScopeService.DefaultBaseRef;
+
+    /// <summary>Fallback local branch ref used when <c>origin/main</c> is absent.</summary>
+    public const string FallbackLocalBaseRef = "refs/heads/main";
 
     /// <summary>The commit trailer that admits baseline growth on a commit.</summary>
     public const string TrailerKey = "Baseline-Growth";
@@ -28,33 +34,100 @@ public static class BaselineRatchetService
     /// <summary>Admits staged baseline growth in the pre-commit hook, before the commit (and its trailer) exists.</summary>
     public const string GrowthEnvironmentVariable = "CADENCE_BASELINE_GROWTH";
 
+    public const string KernelBoundariesGate = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries";
+    public const string KernelRuleCoverageGate = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage";
+    public const string DeidGate = BaselinesRootPrefix + "deid";
+    public const string SecretsGate = SecretsBaselineCleanerService.SecretsDirectory;
+
+    private const string BaselinesRootPrefix = "baselines/";
     private const string Tag = "[BASELINE RATCHET]";
-    private const string SecretsBaseline = ".secrets.baseline";
+    private const string LegacySecretsBaseline = ".secrets.baseline";
+    private const string LegacyDeidBaseline = ".deid-baseline.txt";
+    private const string LegacyKernelBoundariesBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt";
+    private const string LegacyKernelRuleCoverageBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt";
     private const int MaxListed = 20;
 
-    /// <summary>One baseline file that gained entries.</summary>
-    /// <param name="Path">The file, relative to the repository root.</param>
+    /// <summary>One baseline file or gate that gained entries.</summary>
+    /// <param name="Path">The baseline shard or gate path, relative to the repository root.</param>
     /// <param name="Added">The entries it gained, once per added occurrence.</param>
-    public sealed record Growth(string Path, IReadOnlyList<string> Added);
+    public sealed record Growth(string Path, IReadOnlyList<string> Added)
+    {
+        /// <summary>Individual shard paths within the gate whose file-level additions contributed to <see cref="Added"/>.</summary>
+        public IReadOnlyList<string> GrownShards { get; init; } = [];
+
+        /// <summary>Per-shard net added entry counts for <see cref="GrownShards"/>.</summary>
+        public IReadOnlyDictionary<string, int> GrownShardCounts { get; init; } = new Dictionary<string, int>(StringComparer.Ordinal);
+    }
 
     /// <summary>One commit's unadmitted or admitted baseline growth.</summary>
     public sealed record CommitGrowthViolation(string CommitSha, Growth Growth);
 
-    /// <summary>Whether <paramref name="path"/> names a ratchet baseline the gate checks.</summary>
+    /// <summary>Whether <paramref name="path"/> names a ratchet baseline file or shard the gate checks.</summary>
     public static bool IsRatchetBaseline(string path)
     {
-        string name = Path.GetFileName(NormalizeBaselinePath(path));
-        return name.Equals(SecretsBaseline, StringComparison.Ordinal)
+        string normalized = NormalizeBaselinePath(path);
+        string name = Path.GetFileName(normalized);
+        return name.Equals(LegacySecretsBaseline, StringComparison.Ordinal)
+            || (normalized.StartsWith(SecretsGate + "/", StringComparison.Ordinal)
+                && name.EndsWith(SecretsBaselineCleanerService.ShardSuffix, StringComparison.Ordinal))
             || name.EndsWith(".baseline.txt", StringComparison.Ordinal)
             || name.EndsWith("-baseline.txt", StringComparison.Ordinal);
     }
 
+    /// <summary>Maps a baseline file or shard path to its owning gate key for multiset aggregation.</summary>
+    public static string GetGateKey(string path)
+    {
+        string normalized = NormalizeBaselinePath(path);
+        if (normalized.Equals(LegacyKernelBoundariesBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(KernelBoundariesGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(KernelBoundariesGate + "/", StringComparison.Ordinal))
+        {
+            return KernelBoundariesGate;
+        }
+
+        if (normalized.Equals(LegacyKernelRuleCoverageBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(KernelRuleCoverageGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(KernelRuleCoverageGate + "/", StringComparison.Ordinal))
+        {
+            return KernelRuleCoverageGate;
+        }
+
+        if (normalized.Equals(LegacyDeidBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(DeidGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(DeidGate + "/", StringComparison.Ordinal))
+        {
+            return DeidGate;
+        }
+
+        if (normalized.Equals(LegacySecretsBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(SecretsGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(SecretsGate + "/", StringComparison.Ordinal))
+        {
+            return SecretsGate;
+        }
+
+        return normalized;
+    }
+
+    public static bool IsKnownGateKey(string path)
+    {
+        string normalized = NormalizeBaselinePath(path);
+        return normalized is KernelBoundariesGate or KernelRuleCoverageGate or DeidGate or SecretsGate;
+    }
+
     /// <summary>
-    /// Parses a <c>Baseline-Growth</c> trailer value of the form <c>&lt;path&gt; - &lt;reason&gt;</c>.
+    /// Parses a file-and-count-scoped <c>Baseline-Growth</c> trailer value of the form
+    /// <c>&lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c>. Rejects unscoped reasons, count-less trailers, and
+    /// non-positive counts.
     /// </summary>
-    public static bool TryParseTrailer(string? rawTrailerValue, out string baselinePath, out string reason)
+    public static bool TryParseTrailer(
+        string? rawTrailerValue,
+        out string baselinePath,
+        out int approvedCount,
+        out string reason)
     {
         baselinePath = "";
+        approvedCount = 0;
         reason = "";
         if (string.IsNullOrWhiteSpace(rawTrailerValue))
         {
@@ -68,23 +141,47 @@ public static class BaselineRatchetService
             return false;
         }
 
-        string candidatePath = NormalizeBaselinePath(trimmed[..separator]);
+        string left = trimmed[..separator].Trim();
         string candidateReason = trimmed[(separator + 3)..].Trim();
-        if (candidatePath.Length == 0 || candidateReason.Length == 0 || !IsRatchetBaseline(candidatePath))
+        if (left.Length == 0 || candidateReason.Length == 0)
+        {
+            return false;
+        }
+
+        int countSeparator = left.LastIndexOf(' ');
+        if (countSeparator <= 0)
+        {
+            return false;
+        }
+
+        string countToken = left[(countSeparator + 1)..].Trim();
+        if (countToken.Length < 2 ||
+            countToken[0] != '+' ||
+            !int.TryParse(countToken.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out int parsedCount) ||
+            parsedCount <= 0)
+        {
+            return false;
+        }
+
+        string candidatePath = NormalizeBaselinePath(left[..countSeparator]);
+        if (candidatePath.Length == 0 ||
+            candidatePath.Contains(' ', StringComparison.Ordinal) ||
+            (!IsRatchetBaseline(candidatePath) && !IsKnownGateKey(candidatePath)))
         {
             return false;
         }
 
         baselinePath = candidatePath;
+        approvedCount = parsedCount;
         reason = candidateReason;
         return true;
     }
 
     /// <summary>
     /// The entries of a baseline: one per non-blank line that is not a <c>#</c> comment, or, for
-    /// <c>.secrets.baseline</c>, one <c>filename|type|hashed_secret</c> per allowlisted secret.
+    /// <c>.secrets.baseline</c> / <c>*.secrets.baseline.json</c>, one <c>filename|type|hashed_secret</c> per allowlisted secret.
     /// </summary>
-    /// <exception cref="JsonException"><c>.secrets.baseline</c> is not valid JSON.</exception>
+    /// <exception cref="JsonException">A secrets baseline JSON file is not valid JSON.</exception>
     public static IReadOnlyList<string> Entries(string path, string? content)
     {
         if (string.IsNullOrEmpty(content))
@@ -92,7 +189,9 @@ public static class BaselineRatchetService
             return [];
         }
 
-        if (Path.GetFileName(path).Equals(SecretsBaseline, StringComparison.Ordinal))
+        string name = Path.GetFileName(path);
+        if (name.Equals(LegacySecretsBaseline, StringComparison.Ordinal) ||
+            name.EndsWith(SecretsBaselineCleanerService.ShardSuffix, StringComparison.Ordinal))
         {
             return SecretEntries(content);
         }
@@ -133,9 +232,11 @@ public static class BaselineRatchetService
 
     /// <summary>
     /// Checks every ratchet baseline: in <c>--pre-commit</c>, compares staged copies against <c>HEAD</c> and honours
-    /// <c>CADENCE_BASELINE_GROWTH</c>; otherwise rejects dirty working-tree growth and requires every commit in
-    /// <c>compareBase..HEAD</c> that grows a baseline file to carry a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c>
-    /// trailer for that file. Missing <paramref name="baseRef"/> fails closed both locally and in CI.
+    /// file-and-count-scoped <c>CADENCE_BASELINE_GROWTH</c>; otherwise rejects dirty working-tree growth and requires
+    /// every commit in <c>compareBase..HEAD</c> that grows a baseline gate to carry a
+    /// <c>Baseline-Growth: &lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c> trailer matching the added count for that
+    /// gate. Falls back from <c>origin/main</c> to <c>refs/heads/main</c> when <c>origin/main</c> is absent, and fails
+    /// closed when neither ref exists.
     /// </summary>
     public static int Check(
         string repoRoot,
@@ -169,19 +270,20 @@ public static class BaselineRatchetService
                 }
                 else
                 {
-                    compareBase = GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef) ?? headCommit;
-                    scopeLabel = effectiveBaseRef;
+                    compareBase = ResolveBranchCompareBaseWithFallback(repoRoot, effectiveBaseRef, out scopeLabel);
                 }
             }
             else
             {
-                compareBase = GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
-                scopeLabel = effectiveBaseRef;
+                compareBase = ResolveBranchCompareBaseWithFallback(repoRoot, effectiveBaseRef, out scopeLabel);
             }
 
             if (string.IsNullOrEmpty(compareBase))
             {
-                Console.WriteLine($"{Tag} {effectiveBaseRef} not found or shares no history with HEAD, so the baselines cannot be compared.");
+                string fallbackNote = string.Equals(effectiveBaseRef, DefaultBaseRef, StringComparison.Ordinal)
+                    ? $" (and fallback '{FallbackLocalBaseRef}')"
+                    : "";
+                Console.WriteLine($"{Tag} {effectiveBaseRef}{fallbackNote} not found or shares no history with HEAD, so the baselines cannot be compared.");
                 Console.WriteLine("  Fetch it with full history (actions/checkout 'fetch-depth: 0', or 'git fetch origin main').");
                 return 1;
             }
@@ -203,10 +305,10 @@ public static class BaselineRatchetService
             if (admitted.Count > 0)
             {
                 Console.WriteLine($"{Tag} Baseline growth admitted by per-commit '{TrailerKey}:' trailers:");
-                foreach (var (commitSha, path, reason) in admitted)
+                foreach (var (commitSha, path, count, reason) in admitted)
                 {
                     string shortSha = commitSha[..Math.Min(12, commitSha.Length)];
-                    Console.WriteLine($"  {shortSha}: {TrailerKey}: {path} - {reason}");
+                    Console.WriteLine($"  {shortSha}: {TrailerKey}: {path} +{count} - {reason}");
                 }
 
                 return 0;
@@ -217,12 +319,35 @@ public static class BaselineRatchetService
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"{Tag} {SecretsBaseline} is not valid JSON: {ex.Message}");
+            Console.WriteLine($"{Tag} Secrets baseline JSON is not valid: {ex.Message}");
             return 1;
         }
     }
 
-    private static int EvaluatePreCommit(IReadOnlyList<Growth> stagedGrowth, string? stagedReason)
+    private static string? ResolveBranchCompareBaseWithFallback(string repoRoot, string effectiveBaseRef, out string scopeLabel)
+    {
+        string? primary = GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
+        if (!string.IsNullOrEmpty(primary))
+        {
+            scopeLabel = effectiveBaseRef;
+            return primary;
+        }
+
+        if (string.Equals(effectiveBaseRef, DefaultBaseRef, StringComparison.Ordinal))
+        {
+            string? localMain = GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, FallbackLocalBaseRef);
+            if (!string.IsNullOrEmpty(localMain))
+            {
+                scopeLabel = FallbackLocalBaseRef;
+                return localMain;
+            }
+        }
+
+        scopeLabel = effectiveBaseRef;
+        return null;
+    }
+
+    private static int EvaluatePreCommit(IReadOnlyList<Growth> stagedGrowth, string? stagedApproval)
     {
         if (stagedGrowth.Count == 0)
         {
@@ -231,13 +356,13 @@ public static class BaselineRatchetService
         }
 
         string summary = string.Join(", ", stagedGrowth.Select(g => $"{g.Path} +{g.Added.Count}"));
-        if (TryAdmitStagedGrowth(stagedGrowth, stagedReason, out var reasonByPath))
+        if (TryAdmitStagedGrowth(stagedGrowth, stagedApproval, out var matchedAdmissions))
         {
             Console.WriteLine($"{Tag} {GrowthEnvironmentVariable} admits the staged baseline growth ({summary}).");
-            Console.WriteLine("  Include these trailers in this commit's message ('cadence check' and CI require them per file):");
-            foreach (string path in stagedGrowth.Select(file => file.Path))
+            Console.WriteLine("  Include these trailers in this commit's message ('cadence check' and CI require them per file and count):");
+            foreach (var (path, count, reason) in matchedAdmissions)
             {
-                Console.WriteLine($"    {TrailerKey}: {path} - {reasonByPath[path]}");
+                Console.WriteLine($"    {TrailerKey}: {path} +{count} - {reason}");
             }
 
             return 0;
@@ -246,59 +371,64 @@ public static class BaselineRatchetService
         Console.WriteLine($"{Tag} These staged ratchet baselines grew relative to HEAD, but a baseline may only shrink:");
         PrintGrowthList(stagedGrowth);
         Console.WriteLine("  Fix the new violations instead of recording them. If the debt must be accepted:");
-        foreach (string path in stagedGrowth.Select(file => file.Path))
+        foreach (var file in stagedGrowth)
         {
-            Console.WriteLine($"    git commit --trailer \"{TrailerKey}: {path} - <reason>\"");
+            Console.WriteLine($"    git commit --trailer \"{TrailerKey}: {file.Path} +{file.Added.Count} - <reason>\"");
         }
 
-        Console.WriteLine($"    with {GrowthEnvironmentVariable}=\"<reason>\" set for the pre-commit hook.");
+        string exampleEnv = string.Join("; ", stagedGrowth.Select(f => $"{f.Path} +{f.Added.Count} - <reason>"));
+        Console.WriteLine($"    with {GrowthEnvironmentVariable}=\"{exampleEnv}\" set for the pre-commit hook.");
         return 1;
     }
 
     private static bool TryAdmitStagedGrowth(
         IReadOnlyList<Growth> stagedGrowth,
-        string? stagedReason,
-        out Dictionary<string, string> reasonByPath)
+        string? stagedApproval,
+        out List<(string Path, int Count, string Reason)> matchedAdmissions)
     {
-        reasonByPath = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (string.IsNullOrWhiteSpace(stagedReason))
+        matchedAdmissions = [];
+        if (string.IsNullOrWhiteSpace(stagedApproval))
         {
             return false;
         }
 
-        var lines = stagedReason
+        var lines = stagedApproval
             .Split(['\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        var parsedScoped = new Dictionary<string, string>(StringComparer.Ordinal);
-        bool anyScoped = false;
-        foreach (string line in lines)
+        if (lines.Length == 0)
         {
-            if (TryParseTrailer(line, out string path, out string reason))
-            {
-                anyScoped = true;
-                parsedScoped[path] = reason;
-            }
+            return false;
         }
 
-        if (anyScoped)
+        var parsedByPath = new Dictionary<string, List<(int Count, string Reason)>>(StringComparer.Ordinal);
+        string trailerPrefix = $"{TrailerKey}:";
+        foreach (string rawLine in lines)
         {
-            foreach (string path in stagedGrowth.Select(growth => growth.Path))
+            string line = rawLine.StartsWith(trailerPrefix, StringComparison.OrdinalIgnoreCase)
+                ? rawLine[trailerPrefix.Length..].Trim()
+                : rawLine;
+            if (!TryParseTrailer(line, out string path, out int count, out string reason))
             {
-                if (!parsedScoped.TryGetValue(path, out string? reason))
-                {
-                    return false;
-                }
-
-                reasonByPath[path] = reason;
+                return false;
             }
 
-            return true;
+            if (!parsedByPath.TryGetValue(path, out var list))
+            {
+                list = [];
+                parsedByPath[path] = list;
+            }
+
+            list.Add((count, reason));
         }
 
-        string fallbackReason = stagedReason.Trim();
-        foreach (string path in stagedGrowth.Select(growth => growth.Path))
+        foreach (var growth in stagedGrowth)
         {
-            reasonByPath[path] = fallbackReason;
+            if (!TryResolveAdmittingReasons(parsedByPath, growth, out var growthAdmissions))
+            {
+                matchedAdmissions.Clear();
+                return false;
+            }
+
+            matchedAdmissions.AddRange(growthAdmissions);
         }
 
         return true;
@@ -326,7 +456,7 @@ public static class BaselineRatchetService
         string[] parents = ResolveActiveParents(repoRoot, headCommit);
         var paths = CollectRatchetPathsFromCommits(repoRoot, parents);
 
-        foreach (string path in GitRevisionScopeService.GetStagedFiles(repoRoot, includeDeletions: false))
+        foreach (string path in GitRevisionScopeService.GetStagedFiles(repoRoot, includeDeletions: true))
         {
             string normalized = NormalizeBaselinePath(path);
             if (IsRatchetBaseline(normalized))
@@ -335,19 +465,20 @@ public static class BaselineRatchetService
             }
         }
 
-        var growth = new List<Growth>();
-        foreach (string path in paths)
+        foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-files", "-z") ?? [])
         {
-            var beforeEntries = MaxEntriesAcrossParents(repoRoot, parents, path);
-            string? after = GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path);
-            var added = Additions(beforeEntries, Entries(path, after));
-            if (added.Count > 0)
+            string normalized = NormalizeBaselinePath(path);
+            if (IsRatchetBaseline(normalized))
             {
-                growth.Add(new Growth(path, added));
+                paths.Add(normalized);
             }
         }
 
-        return growth;
+        return ComputeAggregatedGrowth(
+            paths,
+            gatePaths => MaxGateEntriesAcrossParents(repoRoot, parents, gatePaths),
+            path => MaxGateEntriesAcrossParents(repoRoot, parents, [path]),
+            path => GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path));
     }
 
     private static List<Growth> FindDirtyWorkingTreeGrowth(string repoRoot, string? headCommit)
@@ -364,7 +495,7 @@ public static class BaselineRatchetService
             }
         }
 
-        foreach (string path in GitRevisionScopeService.GetWorkingTreeChanges(repoRoot, includeDeletions: false, includeUntracked: true))
+        foreach (string path in GitRevisionScopeService.GetWorkingTreeChanges(repoRoot, includeDeletions: true, includeUntracked: true))
         {
             string normalized = NormalizeBaselinePath(path);
             if (IsRatchetBaseline(normalized))
@@ -373,21 +504,37 @@ public static class BaselineRatchetService
             }
         }
 
-        var growth = new List<Growth>();
-        foreach (string path in paths)
-        {
-            var parentEntries = MaxEntriesAcrossParents(repoRoot, parents, path);
-            var workingAdded = Additions(parentEntries, Entries(path, ReadWorkingTree(repoRoot, path)));
-            var stagedAdded = Additions(parentEntries, Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path)));
+        var workingGrowth = ComputeAggregatedGrowth(
+            paths,
+            gatePaths => MaxGateEntriesAcrossParents(repoRoot, parents, gatePaths),
+            path => MaxGateEntriesAcrossParents(repoRoot, parents, [path]),
+            path => ReadWorkingTree(repoRoot, path));
+        var stagedGrowth = ComputeAggregatedGrowth(
+            paths,
+            gatePaths => MaxGateEntriesAcrossParents(repoRoot, parents, gatePaths),
+            path => MaxGateEntriesAcrossParents(repoRoot, parents, [path]),
+            path => GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path));
 
-            var combined = CombinePerEntryMax(workingAdded, stagedAdded);
+        var allGrowthPaths = workingGrowth.Select(g => g.Path)
+            .Concat(stagedGrowth.Select(g => g.Path))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal);
+        var workDict = workingGrowth.ToDictionary(g => g.Path, g => g.Added, StringComparer.Ordinal);
+        var stagedDict = stagedGrowth.ToDictionary(g => g.Path, g => g.Added, StringComparer.Ordinal);
+
+        var merged = new List<Growth>();
+        foreach (string path in allGrowthPaths)
+        {
+            var combined = CombinePerEntryMax(
+                workDict.GetValueOrDefault(path) ?? [],
+                stagedDict.GetValueOrDefault(path) ?? []);
             if (combined.Count > 0)
             {
-                growth.Add(new Growth(path, combined));
+                merged.Add(new Growth(path, combined));
             }
         }
 
-        return growth;
+        return merged;
     }
 
     private static SortedSet<string> CollectRatchetPathsFromCommits(string repoRoot, IReadOnlyList<string> commits)
@@ -408,12 +555,12 @@ public static class BaselineRatchetService
         return paths;
     }
 
-    private static (List<CommitGrowthViolation> Violations, List<(string CommitSha, string Path, string Reason)> Admitted) EvaluateCommitRange(
+    private static (List<CommitGrowthViolation> Violations, List<(string CommitSha, string Path, int Count, string Reason)> Admitted) EvaluateCommitRange(
         string repoRoot,
         string compareBase)
     {
         var violations = new List<CommitGrowthViolation>();
-        var admitted = new List<(string CommitSha, string Path, string Reason)>();
+        var admitted = new List<(string CommitSha, string Path, int Count, string Reason)>();
 
         foreach (string commit in GitRevisionScopeService.GetCommitRange(repoRoot, compareBase, "HEAD"))
         {
@@ -426,11 +573,11 @@ public static class BaselineRatchetService
             var trailers = ParseCommitTrailers(repoRoot, commit);
             foreach (var fileGrowth in commitGrowth)
             {
-                if (trailers.TryGetValue(fileGrowth.Path, out var reasons) && reasons.Count > 0)
+                if (TryResolveAdmittingReasons(trailers, fileGrowth, out var matchedAdmissions))
                 {
-                    foreach (string reason in reasons)
+                    foreach (var (matchedKey, count, reason) in matchedAdmissions)
                     {
-                        admitted.Add((commit, fileGrowth.Path, reason));
+                        admitted.Add((commit, matchedKey, count, reason));
                     }
                 }
                 else
@@ -441,6 +588,44 @@ public static class BaselineRatchetService
         }
 
         return (violations, admitted);
+    }
+
+    private static bool TryResolveAdmittingReasons(
+        Dictionary<string, List<(int Count, string Reason)>> trailers,
+        Growth fileGrowth,
+        out List<(string Path, int Count, string Reason)> matchedAdmissions)
+    {
+        int expectedCount = fileGrowth.Added.Count;
+        if (trailers.TryGetValue(fileGrowth.Path, out var exactEntries) &&
+            exactEntries.Count > 0 &&
+            exactEntries.Sum(e => e.Count) == expectedCount)
+        {
+            matchedAdmissions = [.. exactEntries.Select(e => (fileGrowth.Path, e.Count, e.Reason))];
+            return true;
+        }
+
+        string gateKey = GetGateKey(fileGrowth.Path);
+        if (!string.Equals(gateKey, fileGrowth.Path, StringComparison.Ordinal) &&
+            trailers.TryGetValue(gateKey, out var gateEntries) &&
+            gateEntries.Count > 0 &&
+            gateEntries.Sum(e => e.Count) == expectedCount)
+        {
+            matchedAdmissions = [.. gateEntries.Select(e => (gateKey, e.Count, e.Reason))];
+            return true;
+        }
+
+        if (fileGrowth.GrownShards.Count > 1 &&
+            fileGrowth.GrownShards.All(shard => trailers.TryGetValue(shard, out var shardEntries) && shardEntries.Count > 0) &&
+            fileGrowth.GrownShards.Sum(shard => trailers[shard].Sum(e => e.Count)) == expectedCount &&
+            (fileGrowth.GrownShardCounts.Values.Sum() != expectedCount ||
+             fileGrowth.GrownShards.All(shard => trailers[shard].Sum(e => e.Count) == fileGrowth.GrownShardCounts.GetValueOrDefault(shard))))
+        {
+            matchedAdmissions = [.. fileGrowth.GrownShards.SelectMany(shard => trailers[shard].Select(e => (shard, e.Count, e.Reason)))];
+            return true;
+        }
+
+        matchedAdmissions = [];
+        return false;
     }
 
     private static List<Growth> FindCommitGrowth(string repoRoot, string commit)
@@ -454,56 +639,130 @@ public static class BaselineRatchetService
         string[] parts = revLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         string[] parents = parts.Length > 1 ? parts[1..] : [];
 
-        IEnumerable<string> rawCandidates;
-        if (parents.Length == 0)
-        {
-            rawCandidates = GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", commit) ?? [];
-        }
-        else
-        {
-            rawCandidates = GitRevisionScopeService.GetChangedFilesBetweenCommits(repoRoot, parents[0], commit, includeDeletions: false);
-        }
+        IEnumerable<string> changedCandidates = parents.Length == 0
+            ? GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", commit) ?? []
+            : GitRevisionScopeService.GetChangedFilesBetweenCommits(repoRoot, parents[0], commit, includeDeletions: true);
 
-        var baselinePaths = rawCandidates
+        var touchedGates = changedCandidates
             .Select(NormalizeBaselinePath)
             .Where(IsRatchetBaseline)
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal);
-
-        var growth = new List<Growth>();
-        foreach (string path in baselinePaths)
+            .Select(GetGateKey)
+            .ToHashSet(StringComparer.Ordinal);
+        if (touchedGates.Count == 0)
         {
-            var afterEntries = Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, commit, path));
-            var beforeEntries = MaxEntriesAcrossParents(repoRoot, parents, path);
-            var added = Additions(beforeEntries, afterEntries);
-            if (added.Count > 0)
+            return [];
+        }
+
+        var allGatePaths = CollectRatchetPathsFromCommits(repoRoot, [.. parents, commit])
+            .Where(p => touchedGates.Contains(GetGateKey(p)))
+            .ToList();
+
+        return ComputeAggregatedGrowth(
+            allGatePaths,
+            gatePaths => MaxGateEntriesAcrossParents(repoRoot, parents, gatePaths),
+            path => MaxGateEntriesAcrossParents(repoRoot, parents, [path]),
+            path => GitRevisionScopeService.ReadFileAtRevision(repoRoot, commit, path));
+    }
+
+    private static List<Growth> ComputeAggregatedGrowth(
+        IEnumerable<string> candidatePaths,
+        Func<IReadOnlyList<string>, List<string>> readBeforeGateEntries,
+        Func<string, List<string>> readBeforeFileEntries,
+        Func<string, string?> readAfterFileContent)
+    {
+        var growth = new List<Growth>();
+        var groupedByGate = candidatePaths
+            .Distinct(StringComparer.Ordinal)
+            .GroupBy(GetGateKey, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal);
+
+        foreach (var gateGroup in groupedByGate)
+        {
+            string gateKey = gateGroup.Key;
+            var gatePaths = gateGroup.Order(StringComparer.Ordinal).ToList();
+            var beforeGateEntries = readBeforeGateEntries(gatePaths);
+
+            var afterEntriesByPath = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+            var afterGateEntries = new List<string>();
+            foreach (string path in gatePaths)
             {
-                growth.Add(new Growth(path, added));
+                var fileEntries = Entries(path, readAfterFileContent(path));
+                afterEntriesByPath[path] = fileEntries;
+                afterGateEntries.AddRange(fileEntries);
             }
+
+            var gateAdded = Additions(beforeGateEntries, afterGateEntries);
+            if (gateAdded.Count == 0)
+            {
+                continue;
+            }
+
+            if (!IsKnownGateKey(gateKey))
+            {
+                growth.Add(new Growth(gatePaths[0], gateAdded)
+                {
+                    GrownShards = [gatePaths[0]],
+                    GrownShardCounts = new Dictionary<string, int>(StringComparer.Ordinal) { [gatePaths[0]] = gateAdded.Count },
+                });
+                continue;
+            }
+
+            var gateAddedSet = gateAdded.ToHashSet(StringComparer.Ordinal);
+            var grownShardCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (string path in gatePaths)
+            {
+                int shardNetAdded = Additions(readBeforeFileEntries(path), afterEntriesByPath[path]).Count(gateAddedSet.Contains);
+                if (shardNetAdded > 0)
+                {
+                    grownShardCounts[path] = shardNetAdded;
+                }
+            }
+
+            var grownShards = grownShardCounts.Keys.Order(StringComparer.Ordinal).ToList();
+            string reportedPath = grownShards.Count == 1
+                ? grownShards[0]
+                : gateKey;
+            growth.Add(new Growth(reportedPath, gateAdded)
+            {
+                GrownShards = grownShards,
+                GrownShardCounts = grownShardCounts,
+            });
         }
 
         return growth;
     }
 
-    private static List<string> MaxEntriesAcrossParents(string repoRoot, string[] parents, string path)
+    private static List<string> MaxGateEntriesAcrossParents(
+        string repoRoot,
+        string[] parents,
+        IReadOnlyList<string> gatePaths)
     {
-        if (parents.Length == 0)
+        if (parents.Length == 0 || gatePaths.Count == 0)
         {
             return [];
         }
 
         if (parents.Length == 1)
         {
-            return [.. Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, parents[0], path))];
+            var singleParentEntries = new List<string>();
+            foreach (string path in gatePaths)
+            {
+                singleParentEntries.AddRange(Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, parents[0], path)));
+            }
+
+            return singleParentEntries;
         }
 
         var maxCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (string parent in parents)
         {
             var parentCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (string entry in Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, parent, path)))
+            foreach (string path in gatePaths)
             {
-                parentCounts[entry] = parentCounts.GetValueOrDefault(entry) + 1;
+                foreach (string entry in Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, parent, path)))
+                {
+                    parentCounts[entry] = parentCounts.GetValueOrDefault(entry) + 1;
+                }
             }
 
             foreach (var (entry, count) in parentCounts)
@@ -557,9 +816,9 @@ public static class BaselineRatchetService
         return [.. maxCounts.OrderBy(kv => kv.Key, StringComparer.Ordinal).SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value))];
     }
 
-    private static Dictionary<string, List<string>> ParseCommitTrailers(string repoRoot, string commit)
+    private static Dictionary<string, List<(int Count, string Reason)>> ParseCommitTrailers(string repoRoot, string commit)
     {
-        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var result = new Dictionary<string, List<(int Count, string Reason)>>(StringComparer.Ordinal);
         var rawLines = GitRevisionScopeService.RunGitLines(
             repoRoot,
             "log",
@@ -569,18 +828,18 @@ public static class BaselineRatchetService
 
         foreach (string line in rawLines)
         {
-            if (!TryParseTrailer(line, out string path, out string reason))
+            if (!TryParseTrailer(line, out string path, out int count, out string reason))
             {
                 continue;
             }
 
-            if (!result.TryGetValue(path, out var reasons))
+            if (!result.TryGetValue(path, out var entries))
             {
-                reasons = [];
-                result[path] = reasons;
+                entries = [];
+                result[path] = entries;
             }
 
-            reasons.Add(reason);
+            entries.Add((count, reason));
         }
 
         return result;
@@ -590,16 +849,16 @@ public static class BaselineRatchetService
     {
         Console.WriteLine($"{Tag} Dirty working-tree or uncommitted baseline growth is not allowed; baselines may only shrink:");
         PrintGrowthList(dirtyGrowth);
-        Console.WriteLine("  Revert the uncommitted baseline entries or commit intentional debt with a per-file trailer:");
-        foreach (string path in dirtyGrowth.Select(file => file.Path))
+        Console.WriteLine("  Revert the uncommitted baseline entries or commit intentional debt with a file-and-count-scoped trailer:");
+        foreach (var file in dirtyGrowth)
         {
-            Console.WriteLine($"    git commit --trailer \"{TrailerKey}: {path} - <reason>\"");
+            Console.WriteLine($"    git commit --trailer \"{TrailerKey}: {file.Path} +{file.Added.Count} - <reason>\"");
         }
     }
 
     private static void PrintCommitViolations(IReadOnlyList<CommitGrowthViolation> violations, string scopeLabel)
     {
-        Console.WriteLine($"{Tag} Commits since {scopeLabel} grew ratchet baselines without a matching '{TrailerKey}: <path> - <reason>' trailer:");
+        Console.WriteLine($"{Tag} Commits since {scopeLabel} grew ratchet baselines without a matching '{TrailerKey}: <path> +<count> - <reason>' trailer:");
         foreach (var violation in violations)
         {
             string shortSha = violation.CommitSha[..Math.Min(12, violation.CommitSha.Length)];
@@ -617,7 +876,7 @@ public static class BaselineRatchetService
         }
 
         Console.WriteLine("  Fix the violations instead of recording them. If debt must be accepted, each commit that grows a baseline");
-        Console.WriteLine($"  must carry '{TrailerKey}: <path> - <reason>' for every baseline file it grows.");
+        Console.WriteLine($"  must carry '{TrailerKey}: <path> +<count> - <reason>' matching the exact added entry count for every baseline file or gate it grows.");
     }
 
     private static void PrintGrowthList(IReadOnlyList<Growth> growth)

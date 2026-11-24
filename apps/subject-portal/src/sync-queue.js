@@ -648,6 +648,7 @@ export async function queueSubmission({
     const store = tx.objectStore("submissions");
     store.put(submission);
     tx.oncomplete = () => {
+      hasPotentialUnsyncedLocalRecords = true;
       if (inMemorySessionKey === sessionKeySnapshot && inMemorySessionKey) {
         const dbCache = getDbSubmissionCache(db.name, true);
         const normalizedAnswers =
@@ -968,6 +969,16 @@ export async function clearAllSubmissions() {
   });
 }
 
+let hasPotentialUnsyncedLocalRecords = false;
+
+export function hasTrackedLocalQueueActivity() {
+  return hasPotentialUnsyncedLocalRecords;
+}
+
+export function setTrackedLocalQueueActivity(active) {
+  hasPotentialUnsyncedLocalRecords = Boolean(active);
+}
+
 export function getInMemorySessionKey() {
   return inMemorySessionKey;
 }
@@ -1056,6 +1067,7 @@ export async function clearLockedOfflineData(userId) {
     configStore.delete("pbkdf2_salt");
     configStore.delete("session_key");
     tx.oncomplete = () => {
+      hasPotentialUnsyncedLocalRecords = false;
       clearDecryptedSubmissionCache(db.name);
       resolve();
     };
@@ -1111,6 +1123,7 @@ export async function flagLockedEntriesForPinReset(userId) {
     };
     /* v8 ignore stop */
     tx.oncomplete = () => {
+      hasPotentialUnsyncedLocalRecords = false;
       clearDecryptedSubmissionCache(db.name);
       resolve({ flaggedCount });
     };
@@ -1152,13 +1165,13 @@ export async function saveDraft(assignmentId, answers) {
   const cryptoKey = await getActiveCryptoKey();
   if (!cryptoKey) {
     console.warn("No active session key. Cannot save draft.");
-    return null;
+    return false;
   }
   try {
     const aad = new TextEncoder().encode(assignmentId);
     const encryptedAnswers = await encryptAESGCM(answers, cryptoKey, 1, aad);
     const db = await openDatabase();
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const tx = db.transaction("drafts", "readwrite");
       const store = tx.objectStore("drafts");
       store.put({
@@ -1167,15 +1180,18 @@ export async function saveDraft(assignmentId, answers) {
         updated_at: new Date().toISOString(),
       });
       tx.oncomplete = () => {
-        resolve();
+        hasPotentialUnsyncedLocalRecords = true;
+        resolve(true);
       };
+      /* v8 ignore start */
       tx.onerror = () => {
         reject(tx.error);
       };
+      /* v8 ignore stop */
     });
   } catch (err) {
     console.error("Failed to save draft:", err);
-    return null;
+    return false;
   }
 }
 

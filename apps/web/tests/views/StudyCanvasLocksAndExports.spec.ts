@@ -687,7 +687,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const wrapper = mount(ParticipantRecord, {
       props: {
@@ -723,6 +723,15 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       enrollmentRef: ENROLLMENT_REF,
       format: "pdf",
     });
+    expect(
+      wrapper.find("[data-testid='participant-casebook-sha256']").text()
+    ).toContain(sha);
+
+    // Trigger a second casebook download for the same participant and cut (AC 8)
+    await wrapper.find("#btn-export-casebook").trigger("click");
+    await flushPromises();
+
+    expect(mockStreamEnrollmentCasebook).toHaveBeenCalledTimes(2);
     expect(
       wrapper.find("[data-testid='participant-casebook-sha256']").text()
     ).toContain(sha);
@@ -898,6 +907,53 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
     expect(wizardView.find("#study-exports-section").exists()).toBe(true);
+
+    for (const [fmt, ext, sha] of [
+      [
+        "csv",
+        "csv",
+        "1111111111111111111111111111111111111111111111111111111111111111",
+      ],
+      [
+        "dataset_json",
+        "dataset.json",
+        "2222222222222222222222222222222222222222222222222222222222222222",
+      ],
+      [
+        "odm_xml",
+        "odm.xml",
+        "3333333333333333333333333333333333333333333333333333333333333333",
+      ],
+    ] as const) {
+      mockStreamStudyExport.mockResolvedValueOnce({
+        blob: new Blob(["payload"], { type: "text/plain" }),
+        filename: `CAD-101-locked_only.${ext}`,
+        contentType: "text/plain",
+        contentSha256: sha,
+        hiddenScopes: { moreExist: true, reasons: ["NotPermitted"] },
+      });
+      await wizardView.find("#study-export-format").setValue(fmt);
+      await wizardView.find("#study-exports-form").trigger("submit");
+      await flushPromises();
+
+      expect(mockStreamStudyExport).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          studyRef: STUDY_REF,
+          format: fmt,
+          lockFilter: "locked_only",
+        })
+      );
+      expect(
+        wizardView.find("[data-testid='study-exports-sha256']").text()
+      ).toContain(sha);
+      expect(
+        wizardView.find("[data-testid='study-exports-hidden-scopes']").text()
+      ).toContain(
+        "Additional clinical scopes outside your access were excluded"
+      );
+    }
+
+    await expectNoAxeViolations(wizardView.element);
     wizardView.unmount();
   });
 
@@ -1207,7 +1263,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const wrapper = mount(ParticipantRecord, {
       props: {
@@ -1421,9 +1477,16 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
     expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
     expect(wrapper.html()).not.toContain('placeholder="kind:uuid"');
-    expect(wrapper.find('[data-testid="study-locks-table"]').text()).toContain(
-      "DM-01 · Dr. Morgan Vance"
+    const locksScroll = wrapper.find(
+      '[data-testid="study-locks-table-scroll"]'
     );
+    expect(locksScroll.exists()).toBe(true);
+    expect(locksScroll.attributes("role")).toBe("region");
+    expect(locksScroll.attributes("aria-label")).toBe("Study locks");
+    expect(locksScroll.attributes("tabindex")).toBe("0");
+    expect(
+      locksScroll.find('[data-testid="study-locks-table"]').text()
+    ).toContain("DM-01 · Dr. Morgan Vance");
 
     await wrapper.find("#lock-apply-scope-kind").setValue("enrollment");
     await flushPromises();
@@ -1539,7 +1602,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     store.studyCode = "CAD-101";
     store.record.enrollmentId = ENROLLMENT_ID;
     store.record.loading = false;
-    store.record.error = null;
+    store.record.error = false;
 
     const recordWrapper = mount(ParticipantRecord, {
       props: {
@@ -1612,5 +1675,276 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await expectNoAxeViolations(recordWrapper.element);
     recordWrapper.unmount();
+  });
+
+  it("renders all six readiness gate counts, category badges, owners, masked placeholders, NodeRefChip deep-links, and actions while keeping Frozen enabled", async () => {
+    const QUERY_REF = "assertion:01960000-0000-7000-8000-000000000071";
+    const FINDING_REF =
+      "validation_finding:01960000-0196-7000-8000-000000000072".replace(
+        "01960000-0196",
+        "01960000-0000"
+      );
+    mockGetStudyLockReadiness.mockResolvedValue({
+      study_ref: STUDY_REF,
+      study_code: "CAD-101",
+      scope_ref: STUDY_REF,
+      scope_kind: "study",
+      ready_for_lock: false,
+      can_freeze: true,
+      open_query_count: 1,
+      missing_required_item_count: 1,
+      unverified_value_count: 2,
+      unsigned_form_count: 1,
+      unopened_visit_count: 1,
+      open_error_finding_count: 1,
+      blocker_count: 7,
+      blockers: [
+        {
+          kind: "OpenQuery",
+          owner: "Site coordinator / investigator",
+          target_ref: OBS_REF,
+          target_kind: "observation",
+          subject_code: "SUBJ-01",
+          collection_spec_id: "VS",
+          collection_title: "Vital Signs",
+          item_id: "SYSBP",
+          item_label: "Systolic BP",
+          query_ref: QUERY_REF,
+          query_text: "Confirm seated reading against monitor strip.",
+          answered: false,
+          next_action: `Answer and close ${QUERY_REF} on ${OBS_REF}.`,
+          next_capability: "query.answer",
+          masked: false,
+          mask: null,
+          signature_superseded: false,
+        },
+        {
+          kind: "MissingRequiredItem",
+          owner: "Site coordinator / investigator",
+          target_ref: FORM_REF,
+          target_kind: "collection_instance",
+          subject_code: "SUBJ-01",
+          collection_spec_id: "VS",
+          collection_title: "Vital Signs",
+          item_id: "DIABP",
+          item_label: "Diastolic BP",
+          query_ref: null,
+          query_text: null,
+          answered: false,
+          next_action: `Record required item DIABP on ${FORM_REF}.`,
+          next_capability: "observation.record",
+          masked: false,
+          mask: null,
+          signature_superseded: false,
+        },
+        {
+          kind: "UnverifiedValue",
+          owner: "Clinical research associate / data manager",
+          target_ref: OBS_REF,
+          target_kind: "observation",
+          subject_code: "SUBJ-01",
+          collection_spec_id: "VS",
+          collection_title: "Vital Signs",
+          item_id: "SYSBP",
+          item_label: "Systolic BP",
+          query_ref: null,
+          query_text: null,
+          answered: false,
+          current_revision: 2,
+          next_action: `Verify revision 2 of ${OBS_REF} against source worksheet.`,
+          next_capability: "observation.verify",
+          masked: false,
+          mask: null,
+          signature_superseded: false,
+        },
+        {
+          kind: "UnsignedForm",
+          owner: "Principal investigator",
+          target_ref: FORM_REF,
+          target_kind: "collection_instance",
+          subject_code: "SUBJ-01",
+          collection_spec_id: "VS",
+          collection_title: "Vital Signs",
+          item_id: null,
+          item_label: null,
+          query_ref: null,
+          query_text: null,
+          answered: false,
+          signature_superseded: true,
+          next_action: `Re-sign amended form ${FORM_REF} after value correction.`,
+          next_capability: "collection.sign",
+          masked: false,
+          mask: null,
+        },
+        {
+          kind: "UnopenedVisit",
+          owner: "Site coordinator / investigator",
+          target_ref: ENROLLMENT_REF,
+          target_kind: "enrollment",
+          subject_code: "SUBJ-01",
+          collection_spec_id: "VS",
+          collection_title: "Vital Signs",
+          item_id: null,
+          item_label: null,
+          query_ref: null,
+          query_text: null,
+          answered: false,
+          planned_activity_id: "act.day28",
+          planned_activity_name: "Day 28 Follow-up",
+          planned_date: "2026-05-20",
+          window_end: "2026-05-24",
+          next_action: `Open scheduled Day 28 Follow-up form on ${ENROLLMENT_REF}.`,
+          next_capability: "collection.open",
+          masked: false,
+          mask: null,
+          signature_superseded: false,
+        },
+        {
+          kind: "ErrorFinding",
+          owner: "Clinical research associate / data manager",
+          target_ref: FORM_REF,
+          target_kind: "collection_instance",
+          subject_code: "SUBJ-01",
+          collection_spec_id: "VS",
+          collection_title: "Vital Signs",
+          item_id: "SYSBP",
+          item_label: "Systolic BP",
+          query_ref: null,
+          query_text: null,
+          finding_ref: FINDING_REF,
+          rule_id: "VS_SYSBP_RANGE",
+          detail: "Error finding [VS_SYSBP_RANGE]: Systolic BP exceeds 220.",
+          answered: false,
+          next_action: `Resolve or disposition ${FINDING_REF} before locking.`,
+          next_capability: "validation_finding.investigate",
+          masked: false,
+          mask: null,
+          signature_superseded: false,
+        },
+        {
+          kind: "UnverifiedValue",
+          owner: "Unblinded pharmacist",
+          target_ref: null,
+          target_kind: "observation",
+          subject_code: null,
+          collection_spec_id: null,
+          collection_title: null,
+          item_id: null,
+          item_label: null,
+          query_ref: null,
+          query_text: null,
+          answered: false,
+          next_action:
+            "Unblinded pharmacist: resolve blinded unverified observation revision before locking.",
+          next_capability: "observation.verify",
+          masked: true,
+          mask: "Blinded",
+          signature_superseded: false,
+        },
+      ],
+      explanation: {
+        subject: STUDY_REF,
+        claim: "Study is blocked across all six readiness gates.",
+        producer: "kernel.lock_readiness",
+        steps: [],
+        conditions: [],
+        next_actions: [],
+      },
+    });
+
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const wrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      global: { plugins: [pinia] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    // All 6 gate count chips render accurately
+    expect(
+      wrapper.find("[data-testid='readiness-gate-open_queries']").text()
+    ).toContain("1 open query");
+    expect(
+      wrapper
+        .find("[data-testid='readiness-gate-missing_required_items']")
+        .text()
+    ).toContain("1 missing required item");
+    expect(
+      wrapper.find("[data-testid='readiness-gate-unverified_values']").text()
+    ).toContain("2 unverified values");
+    expect(
+      wrapper.find("[data-testid='readiness-gate-unsigned_forms']").text()
+    ).toContain("1 unsigned form");
+    expect(
+      wrapper.find("[data-testid='readiness-gate-unopened_visits']").text()
+    ).toContain("1 unopened visit");
+    expect(
+      wrapper.find("[data-testid='readiness-gate-error_findings']").text()
+    ).toContain("1 error finding");
+
+    // Category badges, deep-links, details, and masked placeholder
+    const blockersList = wrapper.find(
+      "[data-testid='study-locks-readiness-blockers']"
+    );
+    expect(blockersList.text()).toContain("Open query");
+    expect(blockersList.text()).toContain("Missing required item");
+    expect(blockersList.text()).toContain("Unverified value");
+    expect(blockersList.text()).toContain("Signature superseded");
+    expect(blockersList.text()).toContain("Unopened visit");
+    expect(blockersList.text()).toContain("Error finding");
+    expect(blockersList.text()).toContain("Day 28 Follow-up");
+    expect(blockersList.text()).toContain(
+      "Revision 2 awaiting source verification"
+    );
+    expect(blockersList.text()).toContain("Masked (Blinded)");
+    expect(blockersList.html()).toContain(QUERY_REF);
+    expect(blockersList.html()).toContain(FINDING_REF);
+
+    // Quick Freeze stays enabled while Quick Lock is disabled; Sign & apply Locked disabled while Frozen enabled
+    expect(
+      (wrapper.find(".btn-mini-freeze").element as HTMLButtonElement).disabled
+    ).toBe(false);
+    expect(
+      (wrapper.find(".btn-mini-lock").element as HTMLButtonElement).disabled
+    ).toBe(true);
+
+    await wrapper.find("#lock-apply-reason").setValue("Interim freeze");
+    await wrapper.find("#lock-apply-kind").setValue("Locked");
+    expect(
+      (wrapper.find("#btn-apply-study-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+    await wrapper.find("#lock-apply-kind").setValue("Frozen");
+    expect(
+      (wrapper.find("#btn-apply-study-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+
+    await expectNoAxeViolations(wrapper.element);
+    wrapper.unmount();
+
+    // Also verify ScopeLockControls renders all 6 gate counts and category badges
+    const inlineWrapper = mount(ScopeLockControls, {
+      props: {
+        studyRef: STUDY_REF,
+        scopeRef: FORM_REF,
+        scopeLabel: "form",
+        idPrefix: "form-six-gate",
+      },
+      global: { plugins: [pinia] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    const inlineText = inlineWrapper
+      .find("[data-testid='form-six-gate-readiness']")
+      .text();
+    expect(inlineText).toContain("2 unverified values");
+    expect(inlineText).toContain("1 unsigned form");
+    expect(inlineText).toContain("1 unopened visit");
+    expect(inlineText).toContain("1 error finding");
+    expect(inlineText).toContain("Freeze form remains available");
+    await expectNoAxeViolations(inlineWrapper.element);
+    inlineWrapper.unmount();
   });
 });

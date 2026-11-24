@@ -716,6 +716,7 @@ export interface components {
       /** Format: int32 */
       sequenceNumber?: null | number | string;
       idempotencyKey?: null | string;
+      syncVerificationToken?: null | string;
       studyId?: null | string;
       siteId?: null | string;
       subjectId?: null | string;
@@ -749,6 +750,8 @@ export interface components {
       subjectId?: null | string;
       walletId?: null | string;
       idempotencyKey?: null | string;
+      ocrToken?: null | string;
+      receiptImageBase64?: null | string;
     };
     Payments_SignRemittanceRequest: {
       signature_reason?: null | string;
@@ -770,6 +773,8 @@ export interface components {
       receiptOcrData?: unknown;
       /** Format: double */
       ocrConfidence?: null | number | string;
+      ocrToken?: null | string;
+      receiptImageBase64?: null | string;
     };
     Payments_SubmitW9RequestDto: {
       fullLegalName: string;

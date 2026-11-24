@@ -142,9 +142,10 @@
       </div>
 
       <p class="privacy-note">
-        Direct participant identifiers stay protected; records outside your
-        visible scope are omitted, and blinded treatment arms appear as explicit
-        <code>masked</code> placeholders in place.
+        Direct participant identifiers stay protected; unauthorized sites and
+        enrollments collapse into one hidden-scope indicator without record
+        counts, while blinded treatment values stay <code>masked</code> in place
+        without observation handles.
       </p>
 
       <div class="exports-actions">
@@ -195,6 +196,10 @@
             ? ` (${outcome.hidden.reasons.join(", ")})`
             : ""
         }}.
+        <span data-testid="study-exports-hidden-scopes">
+          Additional clinical scopes outside your access were excluded without
+          count disclosure.
+        </span>
       </p>
     </form>
   </section>
@@ -296,7 +301,14 @@ async function downloadSnapshot() {
       message: `Streamed ${result.filename} (${result.blob.size} bytes).`,
       sha256: result.contentSha256,
       generatedAt: result.generatedAt ?? null,
-      hidden: result.hidden,
+      hidden:
+        result.hidden ??
+        (result.hiddenScopes
+          ? {
+              moreExist: result.hiddenScopes.moreExist,
+              reasons: result.hiddenScopes.reasons,
+            }
+          : undefined),
     };
   } catch (err) {
     outcome.value = {

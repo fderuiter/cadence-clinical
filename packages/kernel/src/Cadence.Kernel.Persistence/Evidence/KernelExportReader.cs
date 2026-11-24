@@ -110,21 +110,30 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
 
         collectionsRaw = [.. collectionsRaw.Where(c => includedEnrollmentIds.Contains(c.EnrollmentId))];
 
-        var observationsRaw = await db.Observations.AsNoTracking()
+        var observationsRaw = new List<Observation>();
+        var observationStream = db.Observations.AsNoTracking()
             .Include(o => o.Revisions)
             .Where(o => o.StudyId == study && o.ObservedAt <= validAt)
             .OrderBy(o => o.ObservedAt)
             .ThenBy(o => o.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .AsAsyncEnumerable();
+        await foreach (var obs in observationStream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            if (includedEnrollmentIds.Contains(obs.EnrollmentId))
+            {
+                observationsRaw.Add(obs);
+            }
+        }
 
-        observationsRaw = [.. observationsRaw.Where(o => includedEnrollmentIds.Contains(o.EnrollmentId))];
-
-        var assertionsRaw = await db.Assertions.AsNoTracking()
+        var assertionsRaw = new List<Assertion>();
+        var assertionStream = db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == study && a.AssertedAt <= knownAt)
             .OrderBy(a => a.AssertedAt)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .AsAsyncEnumerable();
+        await foreach (var assertion in assertionStream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            assertionsRaw.Add(assertion);
+        }
 
         var appliedLocks = assertionsRaw.Where(a => a.IsLock && a.RetractsId is null).ToList();
         var releasesByLock = assertionsRaw
@@ -231,20 +240,26 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-        var observationsRaw = statusAtCut is null
-            ? []
-            : await db.Observations.AsNoTracking()
+        var observationsRaw = new List<Observation>();
+        if (statusAtCut is not null)
+        {
+            var observationStream = db.Observations.AsNoTracking()
                 .Include(o => o.Revisions)
                 .Where(o => o.EnrollmentId == enrollment && o.ObservedAt <= validAt)
                 .OrderBy(o => o.ObservedAt)
                 .ThenBy(o => o.Id)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+                .AsAsyncEnumerable();
+            await foreach (var obs in observationStream.WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                observationsRaw.Add(obs);
+            }
+        }
 
         var studyUuid = foundStudy.Id.Value;
         var siteUuid = foundEnrollment.StudySiteId.Value;
         var enrollmentUuid = enrollment.Value;
-        var assertionsRaw = await db.Assertions.AsNoTracking()
+        var assertionsRaw = new List<Assertion>();
+        var assertionStream = db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == foundStudy.Id
                 && a.AssertedAt <= knownAt
                 && (a.EnrollmentId == enrollment
@@ -253,8 +268,11 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
                     || a.TargetId == enrollmentUuid
                     || a.TargetKind == NodeKinds.Assertion))
             .OrderBy(a => a.AssertedAt)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .AsAsyncEnumerable();
+        await foreach (var assertion in assertionStream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            assertionsRaw.Add(assertion);
+        }
 
         var appliedLocks = assertionsRaw.Where(a => a.IsLock && a.RetractsId is null).ToList();
         var releasesByLock = assertionsRaw
@@ -312,6 +330,18 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         var blindedAuditKeys = BuildBlindedAuditKeys(collectionSnapshots, observationSnapshots, lockEntries, attestations, designs);
         var (audit, blindedAuditSequences, _) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
 
+        var canonicalCutAt = ComputeEnrollmentCanonicalCut(
+            foundStudy,
+            studySite,
+            foundEnrollment,
+            collectionSnapshots,
+            observationSnapshots,
+            obsAssertionViews,
+            lockEntries,
+            attestations,
+            audit,
+            knownAt);
+
         return new EnrollmentCasebookSnapshot(
             foundStudy.Id,
             foundStudy.StudyCode,
@@ -332,7 +362,84 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             lockEntries,
             attestations,
             audit,
-            blindedAuditSequences);
+            blindedAuditSequences,
+            canonicalCutAt);
+    }
+
+    private static DateTimeOffset ComputeEnrollmentCanonicalCut(
+        Study study,
+        StudySite studySite,
+        Enrollment enrollment,
+        IReadOnlyList<ExportCollectionSnapshot> collections,
+        IReadOnlyList<ExportObservationSnapshot> observations,
+        IReadOnlyList<AssertionView> assertions,
+        IReadOnlyList<StudyLockEntry> locks,
+        IReadOnlyList<ExportAttestationSnapshot> attestations,
+        IReadOnlyList<ObservationAuditView> audit,
+        DateTimeOffset knownAt)
+    {
+        var watermark = new DateTimeOffset(DateTime.SpecifyKind(enrollment.CreatedAt, DateTimeKind.Utc));
+        MaxBounded(ref watermark, new DateTimeOffset(DateTime.SpecifyKind(study.CreatedAt, DateTimeKind.Utc)), knownAt);
+        MaxBounded(ref watermark, new DateTimeOffset(DateTime.SpecifyKind(studySite.CreatedAt, DateTimeKind.Utc)), knownAt);
+
+        foreach (var period in enrollment.Periods)
+        {
+            MaxBounded(ref watermark, period.Period.Recorded.Start, knownAt);
+            MaxBounded(ref watermark, period.Period.Valid.Start, knownAt);
+        }
+
+        foreach (var coll in collections)
+        {
+            MaxBounded(ref watermark, coll.OpenedAt, knownAt);
+            MaxBounded(ref watermark, coll.CollectedAt, knownAt);
+        }
+
+        foreach (var obs in observations)
+        {
+            MaxBounded(ref watermark, obs.ObservedAt, knownAt);
+            foreach (var rev in obs.Revisions)
+            {
+                MaxBounded(ref watermark, rev.RecordedAt, knownAt);
+            }
+        }
+
+        foreach (var assertion in assertions)
+        {
+            MaxBounded(ref watermark, assertion.AssertedAt, knownAt);
+            if (assertion.RetractedAt is { } retractedAt)
+            {
+                MaxBounded(ref watermark, retractedAt, knownAt);
+            }
+        }
+
+        foreach (var lk in locks)
+        {
+            MaxBounded(ref watermark, lk.LockedAt, knownAt);
+            if (lk.ReleasedAt is { } releasedAt)
+            {
+                MaxBounded(ref watermark, releasedAt, knownAt);
+            }
+        }
+
+        foreach (var att in attestations)
+        {
+            MaxBounded(ref watermark, att.RecordedAt, knownAt);
+        }
+
+        foreach (var entry in audit)
+        {
+            MaxBounded(ref watermark, entry.RecordedAt, knownAt);
+        }
+
+        return watermark;
+    }
+
+    private static void MaxBounded(ref DateTimeOffset current, DateTimeOffset candidate, DateTimeOffset ceiling)
+    {
+        if (candidate <= ceiling && candidate > current)
+        {
+            current = candidate;
+        }
     }
 
     internal static async Task<IReadOnlyList<ExportProtocolSnapshot>> ReadProtocolsAsync(
@@ -439,27 +546,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             return [];
         }
 
-        bool anyApproved = reconstructed.Exists(r => r.Status is ProtocolVersionStatus.Approved or ProtocolVersionStatus.Superseded);
         var filtered = reconstructed
-            .Where(r =>
-            {
-                if (referencedVersionIds.Contains(r.Id) || effectiveVersionIds.Contains(r.Id))
-                {
-                    return true;
-                }
-
-                if (effectiveVersionIds.Count > 0)
-                {
-                    return false;
-                }
-
-                if (anyApproved && r.Status is not (ProtocolVersionStatus.Approved or ProtocolVersionStatus.Superseded))
-                {
-                    return false;
-                }
-
-                return r.Status != ProtocolVersionStatus.Withdrawn;
-            })
+            .Where(r => referencedVersionIds.Contains(r.Id) || effectiveVersionIds.Contains(r.Id))
             .ToList();
 
         return filtered

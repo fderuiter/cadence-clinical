@@ -99,6 +99,11 @@ internal static class FormSignatureEndpoints
             return TypedResults.Problem(title: "Not found", detail: $"Form {formId:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (record.Locks.Any(l => l.Kind == LockKind.Locked))
+        {
+            return KernelErrorEndpoints.Problem(AssertionErrors.Locked);
+        }
+
         var trimmedHash = request.ContentHash.Trim();
         if (contexts is not null
             && access is not null
@@ -140,6 +145,11 @@ internal static class FormSignatureEndpoints
                     errors["missing_required"] = [.. missing];
                 }
 
+                if (record.OpenErrorFindingCount > 0)
+                {
+                    errors["error_findings"] = [$"count={record.OpenErrorFindingCount}"];
+                }
+
                 return KernelErrorEndpoints.Problem(
                     CollectionErrors.NotReadyToSign.WithMessage(string.Join(" ", blockers)) with { Errors = errors });
             }
@@ -164,31 +174,31 @@ internal static class FormSignatureEndpoints
             return KernelErrorEndpoints.Problem(error);
         }
 
-        var signed = await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false);
+        var unblinded = access is not null
+            && await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var signed = await forms.FindForReaderAsync(tenant, id, unblinded, cancellationToken).ConfigureAwait(false);
         var view = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
             ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
 
-        System.Collections.Generic.HashSet<string>? blindedItemIds = null;
-        System.Collections.Generic.HashSet<ObservationId>? blindedObservationIds = null;
-        if (signed is not null)
+        System.Collections.Generic.IReadOnlySet<string>? blindedItemIds = signed!.BlindedItemIds;
+        System.Collections.Generic.IReadOnlySet<ObservationId>? blindedObservationIds = signed.BlindedObservationIds;
+        if (access is not null)
         {
-            var enrollmentNode = NodeRef.For(signed.EnrollmentId);
-            System.Collections.Generic.IReadOnlyDictionary<NodeRef, MaskReason> masks = access is not null
-                ? await access.MaskAsync(tenant, FormEndpoints.CollectFormNodes(signed), cancellationToken).ConfigureAwait(false)
-                : new System.Collections.Generic.Dictionary<NodeRef, MaskReason>();
-            var canUnblind = access is not null
-                && await access.CanExerciseAsync(
-                    tenant,
-                    FormEndpoints.EnrollmentUnblindCapability,
-                    enrollmentNode,
-                    cancellationToken).ConfigureAwait(false);
-            (blindedItemIds, blindedObservationIds) = await FormEndpoints.ResolveBlindedFormTargetsAsync(
+            var masks = await access.MaskAsync(tenant, FormEndpoints.CollectFormNodes(signed), cancellationToken).ConfigureAwait(false);
+            var (resolvedItems, resolvedObservations) = await FormEndpoints.ResolveBlindedFormTargetsAsync(
                 tenant,
                 signed,
                 masks,
-                canUnblind,
+                unblinded,
                 context.RequestServices,
                 cancellationToken).ConfigureAwait(false);
+            if (signed.BlindedObservationIds is not null)
+            {
+                resolvedObservations.UnionWith(signed.BlindedObservationIds);
+            }
+
+            blindedItemIds = resolvedItems;
+            blindedObservationIds = resolvedObservations;
         }
 
         return TypedResults.Created(

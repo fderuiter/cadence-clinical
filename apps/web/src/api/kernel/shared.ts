@@ -45,6 +45,8 @@ export interface KernelHiddenContent {
   reasons: string[];
 }
 
+export type KernelHiddenScopesHeader = KernelHiddenContent;
+
 export interface KernelStreamedArtifact {
   blob: Blob;
   filename: string;
@@ -52,6 +54,7 @@ export interface KernelStreamedArtifact {
   contentSha256: string | null;
   generatedAt?: string | null;
   hidden?: KernelHiddenContent;
+  hiddenScopes?: KernelHiddenScopesHeader | null;
 }
 
 /** Extracts the kernel error code (`K.Assertion.Locked`, …) from a failed call, or null. */
@@ -199,6 +202,26 @@ function parseDispositionFilename(
   return match?.[1]?.trim() || fallback;
 }
 
+function parseHiddenScopesHeader(
+  raw: string | null
+): KernelHiddenScopesHeader | null {
+  if (!raw) return null;
+  let moreExist = false;
+  let reasons: string[] = [];
+  for (const part of raw.split(";")) {
+    const [key, val] = part.split("=").map((s) => s.trim());
+    if (key === "more_exist") {
+      moreExist = val === "true";
+    } else if (key === "reasons" && val) {
+      reasons = val
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+    }
+  }
+  return { moreExist, reasons };
+}
+
 export async function streamKernelDownload(
   pathAndQuery: string,
   fallbackFilename: string
@@ -242,23 +265,38 @@ export async function streamKernelDownload(
   );
   const contentSha256 = response.headers.get("x-content-sha256");
   const generatedAt = response.headers.get("x-generated-at");
-  const hiddenMoreExist =
-    response.headers.get("x-hidden-more-exist")?.toLowerCase() === "true";
-  const rawReasons = response.headers.get("x-hidden-reasons") ?? "";
-  const hiddenReasons = rawReasons
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+  const parsedHiddenScopes = parseHiddenScopesHeader(
+    response.headers.get("x-cadence-hidden-scopes")
+  );
+  const rawHiddenMoreExist = response.headers.get("x-hidden-more-exist");
+  let hidden: KernelHiddenContent;
+  if (rawHiddenMoreExist !== null) {
+    const moreExist = rawHiddenMoreExist.toLowerCase() === "true";
+    const rawReasons = response.headers.get("x-hidden-reasons") ?? "";
+    const reasons = rawReasons
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    hidden = {
+      moreExist,
+      reasons:
+        reasons.length > 0 ? reasons : (parsedHiddenScopes?.reasons ?? []),
+    };
+  } else if (parsedHiddenScopes !== null) {
+    hidden = parsedHiddenScopes;
+  } else {
+    hidden = { moreExist: false, reasons: [] };
+  }
+  const hiddenScopes =
+    parsedHiddenScopes ?? (rawHiddenMoreExist !== null ? hidden : null);
   return {
     blob,
     filename,
     contentType,
     contentSha256,
     generatedAt,
-    hidden: {
-      moreExist: hiddenMoreExist,
-      reasons: hiddenReasons,
-    },
+    hidden,
+    hiddenScopes,
   };
 }
 

@@ -24,7 +24,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 - `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md), [ADR-2625](../../docs/adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()`, `ModuleTenantIsolationSql`, `ModuleBitemporalSql` (`KT001` trigger + `btree_gist` exclusion helper), `ModuleInsertOnlySql` (`KA001` trigger), and `HasModuleBitemporalPeriod` for a module's own records; `AddModuleMigrations<TContext>()` for its schema migrations and `AddModuleTenantContext<TContext>()` for its tenant-scoped reads; and, for its endpoints, the tenant resolution the host provides (`IKernelTenantResolver`, `KernelTenantFilter`, `KernelRequestTenant`), the signed change reason (`IKernelChangeReason`), whether the caller may see a kernel object as kernel reads decide it (`IKernelReadAccess`, implemented by `KernelReadAccess` in `Cadence.Kernel.Api`) and `KernelErrorEndpoints`; and, for signatures over its own records, `IAttestationVerifier`, `IAttestationTargetCheck` and `AddModuleAttestationTarget<TCheck>()` (ADR-2631). A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and the kernel's command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
-- `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream), observation writes (`KernelObservationEndpoints`), execution enrollment screening (`KernelExecutionEndpoints`), and proposals (`KernelProposalEndpoints`) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
+- `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream), self-service study, site, study-site and synchronous protocol draft import endpoints (`KernelStudyImportEndpoints`), observation writes (`KernelObservationEndpoints`), execution enrollment screening (`KernelExecutionEndpoints`), and proposals (`KernelProposalEndpoints`) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
 - `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds, and holds the .NET `IMappingEngine` (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
 - `Cadence.Rules`: the rule expression language, rule packs and the `IRuleEvaluator` port with its .NET implementation (see [its README](src/Cadence.Rules/README.md) and [Rule packs](../../docs/kernel/RULE_PACKS.md)). References only `Cadence.Kernel.Abstractions`. Its benchmark is `benchmarks/Cadence.Rules.Benchmarks`.
 
@@ -430,7 +430,8 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
 - A correction changes one aggregate (K-TX-1). Record and correct are refused (423) while a lock covers the
   observation (see below).
 - `IObservationRecords` reads an observation with its revisions, the locks covering it, the assertions about it and
-  its kernel audit entries.
+  its kernel audit entries under one tenant connection lease and the composite
+  `(tenant_id, aggregate_type, aggregate_id, sequence)` audit index.
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
 - The value is a typed `ObservationValue` (`Evidence/ObservationValue.cs`, ADR-2623): `quantity` (UCUM unit,
   optional comparator), `coded` (code-system version and code), `text`, `boolean`, `dateTime` (partial ISO 8601) or
@@ -458,12 +459,19 @@ in `Commands/AssertionCommands.cs`:
 - A lock's signer attests the canonical `LockStatement.Apply` (or `.Release`) for the assertion id first, meaning
   `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
   decision is signed (K-FIND-2), and the command recomputes the hash from its own inputs.
-- Both lock kinds refuse `RecordObservation` and `CorrectObservation` in their scope; `Locked` also refuses new
-  assertions about the observations there, while `Frozen` still allows review. `ApplyLock` with `LockKind.Locked`
-  evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409 `K.Assertion.ScopeNotReady` (carrying a
-  structured `Explanation` naming each blocker owner, target `NodeRef` and next action) when any open `Queried`
-  assertion or missing required `CollectionItem` remains in the target scope; `Frozen` skips this gate so sites can
-  answer and monitors can close queries first.
+- Both lock kinds refuse `RecordObservation`, `CorrectObservation`, `OpenCollectionInstance`, `RecordCollectedValues`,
+  `RecordUnaskedCollectionItem`, `ScreenParticipant`, `ChangeEnrollmentStatus`, `WithdrawParticipant`, `LinkSiteToStudy`,
+  `ActivateStudySite`, `DeclareEffectivity`, and `ChangeEffectivityStatus` in their covering scope (`423 K.Observation.Locked`);
+  `Locked` also refuses new assertions (`423 K.Assertion.Locked`) and form signatures (`SignCollectionInstance`), while
+  `Frozen` still allows queries, SDV verifications, retractions, and investigator form signing (`collection.sign`).
+  `ApplyLock` with `LockKind.Locked` evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409
+  `K.Assertion.ScopeNotReady` (carrying a structured `Explanation` naming each blocker owner, target `NodeRef` and next
+  action) when any of the six readiness gates has unresolved blockers in the target scope: open queries (`OpenQuery`),
+  missing required items (`MissingRequiredItem`), unverified observation revisions (`UnverifiedValue`), unsigned or
+  signature-superseded forms (`UnsignedForm`), due/overdue scheduled visits without opened forms (`UnopenedVisit`,
+  excluding `ScreenFailed` enrollments and post-withdrawal visits), or active `Error`-severity validation findings
+  (`ErrorFinding`). `Frozen` skips these gates (`can_freeze = true`) so review, SDV, query closure, and signing can
+  proceed before hard lock.
 - Concurrency: a write that a lock can cover takes shared advisory locks on its covering scopes, widest first
   (`IKernelUnitOfWork.ShareScopesAsync`, `LockScopes.Covering`), then reads the locks in force; `ApplyLock` and
   `ReleaseLock` take the exclusive lock on their own scope (`LockScopeAsync`). Either the write commits before the lock
@@ -471,7 +479,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), and signed scoped locks with readiness checks and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), signed scoped locks with `K-AUTH-4`-masked readiness checks (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`), synchronous covering write-lock queries for standalone services (`GET /api/v1/kernel/locks/in-force`, #5376), and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
 
 ## Form instances and page saves (ADR-2622)
 
@@ -490,8 +498,10 @@ the enrollment:
 
 - The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
   enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the
-  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The
-  version is a `GovernedBy` lineage input of the form and of every observation version a save writes. When the
+  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The form
+  records `CollectedBy` lineage inputs from its governing `CollectionSpec` (and `PlannedActivity`, when scheduled)
+  `protocol_element` nodes, and every observation version a save writes records a `CollectedBy` input from its
+  governing `CollectionItem` `protocol_element` node. When the
   enrollment has an `Enrolled` period and the planned activity has a timing, `OpenCollectionInstance` also evaluates
   `ExpectedSchedule.Compute` and `ExpectedSchedule.Assess` from `CollectedAt` and the `Enrolled` start date without
   reading a wall clock (K-TIME-3, K-TIME-7) and returns the optional `VisitTimingAssessment` on
@@ -514,7 +524,9 @@ the enrollment:
 - The form is a lock scope (spec §10.5): a lock on it refuses saves, and corrections and assertions of its values made
   one at a time. `ICollectionInstanceRecords` reads a form's items (the CollectionSpec's, in the governing version's
   order) with hydrated codelist options, its values with their revisions, the assertions about them, the signatures over the form and the locks in
-  force in one call.
+  force in one call (`FindAsync`), enrollment summaries with active/answered query assertion ids (`ListForEnrollmentAsync`),
+  and narrow projections for headers (`FindHeaderAsync`, `FindHeadersAsync`), query targets (`FindQueryTargetsAsync`),
+  lock/revision scope state (`FindScopeStateAsync`), and rule inputs (`ListRuleInputsForEnrollmentAsync`).
 - Events: `CollectionInstanceOpened` and `CollectedValuesSaved` (Evidence), besides each value's `ObservationRecorded`
   or `ObservationCorrected`. Nothing consumes `CollectedValuesSaved` yet; edit checks will (#5368).
 - `KernelCollectionPostgresTests` covers atomicity at every commit stage, per-value 409, concurrent saves, the
@@ -667,8 +679,12 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   delegation under the grant stops counting.
 - **Evaluation.** `AuthorityEvaluator` permits when a grant held by the actor carries the capability (directly or
   through its role), covers the resource's scope path and is in effect at `(at, known_at)` with every grant above
-  it. Automation agents are denied Execute and Approve. Platform operators (`svc:` accounts) hold only
-  `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through the pipeline.
+  it; when `ResolveVisibilityBatchAsync` classifies an `observation`, `validation_finding`, `assertion`, or `form_query`
+  resource as blinded treatment data (K-AUTH-4), non-unblinding capabilities also require an in-effect
+  `enrollment.unblind` grant and current K-AUTH-5 qualifications over the evidence scope, denying with the uniform
+  `grant.active` condition otherwise. Automation agents are denied Execute and Approve. Platform operators (`svc:`
+  accounts) hold only `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through
+  the pipeline.
 - **Recording.** Each decision names its conditions (`grant.active`, `grant.delegable`, `grant.delegator`,
   `actor.platform_operator`, `actor.agent_verb`). The command's provenance activity stores them in
   `authorization`.
@@ -799,8 +815,9 @@ context.Work.Add(mapping);
 context.Work.LinkInput(NodeRef.For(command.Concept.ConceptId, command.Concept.Version), LineageEdgeKind.DefinedBy);
 ```
 
-- The edge runs from the input to the aggregate at the version the commit stamps. It is written in the command's
-  transaction, together with a `lineage_nodes` row for that version.
+- The edge runs from the input to the aggregate at the version the commit stamps (or to the specific changed aggregate
+  named by `target` in multi-aggregate commits such as form saves). It is written in the command's transaction,
+  together with a `lineage_nodes` row for that version.
 - Updates get a `Supersedes` edge from the previous version automatically.
 - Mark an aggregate `[DerivedObject]` when every version must have inputs. The commit then throws `K-LIN-1` if a
   handler declared none.
