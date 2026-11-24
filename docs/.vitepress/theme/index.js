@@ -36,9 +36,10 @@ function escapeSequenceDiagramSemicolons(source) {
   return escaped === source ? null : escaped;
 }
 
-function removeMermaidTempNode(renderId) {
+function removeMermaidTempNode(renderId, includeRenderNode = true) {
   if (typeof document === "undefined") return;
-  for (const id of [renderId, `d${renderId}`]) {
+  const ids = includeRenderNode ? [renderId, `d${renderId}`] : [`d${renderId}`];
+  for (const id of ids) {
     const node = document.getElementById(id);
     if (node && node.parentNode) {
       node.parentNode.removeChild(node);
@@ -50,9 +51,10 @@ async function renderDiagramSvg(mermaid, source) {
   const renderId = `cadence-mermaid-${++mermaidRenderSeq}`;
   try {
     const { svg } = await mermaid.render(renderId, source);
+    removeMermaidTempNode(renderId, false);
     return svg;
   } catch (firstErr) {
-    removeMermaidTempNode(renderId);
+    removeMermaidTempNode(renderId, true);
     const fallbackSource = escapeSequenceDiagramSemicolons(source);
     if (!fallbackSource) {
       console.error("Failed to render Mermaid diagram:", firstErr);
@@ -61,9 +63,10 @@ async function renderDiagramSvg(mermaid, source) {
     const retryId = `cadence-mermaid-${++mermaidRenderSeq}`;
     try {
       const { svg } = await mermaid.render(retryId, fallbackSource);
+      removeMermaidTempNode(retryId, false);
       return svg;
     } catch (retryErr) {
-      removeMermaidTempNode(retryId);
+      removeMermaidTempNode(retryId, true);
       console.error("Failed to render Mermaid diagram:", retryErr);
       return null;
     }
@@ -79,6 +82,7 @@ export default {
   setup() {
     const route = useRoute();
     const activeCleanups = new Set();
+    const activeObservers = new Set();
     let themeObserver = null;
     let activeRenderToken = 0;
 
@@ -93,12 +97,37 @@ export default {
       activeCleanups.clear();
     };
 
-    onUnmounted(() => {
-      clearAllActiveDrags();
+    const disconnectAllObservers = () => {
+      activeObservers.forEach((entry) => {
+        try {
+          entry.observer.disconnect();
+        } catch {
+          // Ignore observer disconnect errors during teardown.
+        }
+      });
+      activeObservers.clear();
       if (themeObserver) {
         themeObserver.disconnect();
         themeObserver = null;
       }
+    };
+
+    const pruneDisconnectedObservers = () => {
+      activeObservers.forEach((entry) => {
+        if (!entry.container.isConnected) {
+          try {
+            entry.observer.disconnect();
+          } catch {
+            // Ignore observer disconnect errors during teardown.
+          }
+          activeObservers.delete(entry);
+        }
+      });
+    };
+
+    onUnmounted(() => {
+      clearAllActiveDrags();
+      disconnectAllObservers();
     });
 
     const enhanceDiagramContainer = (container) => {
@@ -125,16 +154,33 @@ export default {
       let panY = 0;
       let isDragging = false;
 
-      const getSvg = () => container.querySelector("svg");
+      const getLiveSvg = () => container.querySelector("svg");
 
       const updateTransform = () => {
-        const svg = getSvg();
-        if (svg) {
-          svg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-        }
+        const svg = getLiveSvg();
+        if (!svg) return;
+        svg.style.transition = isDragging ? "none" : "";
+        svg.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
       };
 
       container.__applyMermaidTransform = updateTransform;
+
+      if (typeof MutationObserver !== "undefined") {
+        let observerEntry = null;
+        const containerObserver = new MutationObserver(() => {
+          if (!container.isConnected) {
+            containerObserver.disconnect();
+            if (observerEntry) {
+              activeObservers.delete(observerEntry);
+            }
+            return;
+          }
+          updateTransform();
+        });
+        observerEntry = { container, observer: containerObserver };
+        containerObserver.observe(container, { childList: true });
+        activeObservers.add(observerEntry);
+      }
 
       const toolbar = document.createElement("div");
       toolbar.className = "mermaid-toolbar";
@@ -275,7 +321,7 @@ export default {
         activePointers.clear();
         lastSinglePointerPos = null;
         wrapper.classList.remove("active");
-        const svg = getSvg();
+        const svg = getLiveSvg();
         if (svg) {
           svg.style.transition = "";
         }
@@ -295,7 +341,7 @@ export default {
 
         isDragging = true;
         activePointers.set(e.pointerId, e);
-        const svg = getSvg();
+        const svg = getLiveSvg();
         if (svg) {
           svg.style.transition = "none";
         }
@@ -449,6 +495,7 @@ export default {
       () => route.path,
       () => {
         clearAllActiveDrags();
+        pruneDisconnectedObservers();
         scheduleDiagramCheck();
       }
     );
