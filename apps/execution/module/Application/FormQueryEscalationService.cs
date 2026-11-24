@@ -149,18 +149,36 @@ internal sealed class FormQueryEscalationService(
             return CommandResult<FormQueryEscalationPassResult>.Success(new FormQueryEscalationPassResult(newlyEscalated, []));
         }
 
-        // Ensure site/subject codes are resolved via form records if any enrollment lacked a site header.
-        foreach (var formId in escalatedOpenQueries.Select(q => q.FormId).Distinct())
+        // Ensure site/subject codes are resolved via narrow form headers if any enrollment lacked a site header.
+        var unresolvedFormIds = escalatedOpenQueries
+            .Where(q => !enrollmentMeta.TryGetValue(q.EnrollmentId, out var existing) || existing.SiteId is null)
+            .Select(q => q.FormId)
+            .Distinct()
+            .ToList();
+        if (unresolvedFormIds.Count > 0)
         {
-            if (await forms.FindAsync(tenantId, formId, cancellationToken).ConfigureAwait(false) is { } record
-                && (!enrollmentMeta.TryGetValue(record.EnrollmentId, out var existing) || existing.SiteId is null))
+            var headers = await forms.FindHeadersAsync(tenantId, unresolvedFormIds, cancellationToken).ConfigureAwait(false);
+            var nodesToResolve = headers.Values
+                .SelectMany(h => h.StudySiteId.IsEmpty
+                    ? new[] { NodeRef.For(h.EnrollmentId) }
+                    : new[] { NodeRef.For(h.StudySiteId), NodeRef.For(h.EnrollmentId) })
+                .Distinct()
+                .ToList();
+            var summaries = nodesToResolve.Count > 0
+                ? await navigator.ResolveManyAsync(tenantId, nodesToResolve, cancellationToken).ConfigureAwait(false)
+                : new Dictionary<NodeRef, NodeSummary>();
+            foreach (var header in headers.Values)
             {
-                var siteSummary = await navigator.ResolveAsync(tenantId, NodeRef.For(record.StudySiteId), cancellationToken).ConfigureAwait(false);
-                var enrSummary = await navigator.ResolveAsync(tenantId, NodeRef.For(record.EnrollmentId), cancellationToken).ConfigureAwait(false);
-                enrollmentMeta[record.EnrollmentId] = (
-                    record.StudySiteId,
-                    siteSummary?.Code ?? siteSummary?.Title ?? record.StudySiteId.ToString(),
-                    enrSummary?.Code ?? enrSummary?.Title ?? record.EnrollmentId.ToString());
+                if (!enrollmentMeta.TryGetValue(header.EnrollmentId, out var existing) || existing.SiteId is null)
+                {
+                    var siteSummary = header.StudySiteId.IsEmpty ? null : summaries.GetValueOrDefault(NodeRef.For(header.StudySiteId));
+                    var enrSummary = summaries.GetValueOrDefault(NodeRef.For(header.EnrollmentId));
+                    StudySiteId? resolvedSiteId = header.StudySiteId.IsEmpty ? null : header.StudySiteId;
+                    enrollmentMeta[header.EnrollmentId] = (
+                        resolvedSiteId,
+                        siteSummary?.Code ?? siteSummary?.Title ?? header.StudySiteId.ToString(),
+                        enrSummary?.Code ?? enrSummary?.Title ?? header.EnrollmentId.ToString());
+                }
             }
         }
 

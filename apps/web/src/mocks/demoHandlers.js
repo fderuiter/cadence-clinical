@@ -9,6 +9,7 @@ import {
 } from "./demoPolicy.js";
 import { webDemoStore } from "./demoStore.js";
 import { parseDemoProtocolImportRequest } from "./demoStudyImport.js";
+import { buildUsdmSoaSchedule } from "../stores/demo/usdmSoaSchedule";
 
 const DEFAULT_STUDY_REF = "study:00000000-0000-0000-0000-000000000001"; // deid-ignore
 
@@ -614,9 +615,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
         store.getProtocolVersion(decodeURIComponent(String(params.versionRef)))
       )
     ),
-    http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
-      HttpResponse.json(store.listProposals())
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/proposals", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listProposals({
+          status: url.searchParams.get("status") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        })
+      );
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/locks",
       ({ params, request }) => {
@@ -884,13 +891,21 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ),
     http.post(
       "*/api/v1/kernel/proposals/:proposalRef/rejection",
-      ({ params, request }) =>
-        HttpResponse.json(
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const caller = resolveDemoCaller(request);
+        const reason =
+          readRequiredReasonHeader(request) ||
+          (typeof body?.reason === "string" ? body.reason.trim() : "") ||
+          decodeReasonHeader(request);
+        return HttpResponse.json(
           store.rejectProposal(
             decodeURIComponent(String(params.proposalRef)),
-            decodeReasonHeader(request)
+            reason,
+            caller
           )
-        )
+        );
+      }
     ),
     http.get("*/api/v1/kernel/activity", ({ request }) => {
       const url = new URL(request.url);
@@ -2609,91 +2624,8 @@ export function createWebDemoHandlers(store = webDemoStore) {
 
     // USDM Interactive SoA Builder Mutations (stateful in-memory demo projection)
     ...(() => {
-      const createInitialSoaState = () => ({
-        arms: [
-          { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
-          { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
-        ],
-        epochs: [
-          { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
-          {
-            epoch_id: "EP-TRT-A",
-            epoch_name: "Treatment Phase",
-            sequence: 2,
-            arm_id: "ARM-A",
-          },
-          {
-            epoch_id: "EP-TRT-B",
-            epoch_name: "Treatment Phase",
-            sequence: 2,
-            arm_id: "ARM-B",
-          },
-        ],
-        encounters: [
-          {
-            encounter_id: "V-SCR",
-            encounter_name: "Day -7 to -1",
-            epoch_id: "EP-SCR",
-            sequence: 1,
-          },
-          {
-            encounter_id: "V-TRT-A1",
-            encounter_name: "Week 2",
-            epoch_id: "EP-TRT-A",
-            sequence: 2,
-          },
-          {
-            encounter_id: "V-TRT-A2",
-            encounter_name: "Week 4",
-            epoch_id: "EP-TRT-A",
-            sequence: 3,
-          },
-          {
-            encounter_id: "V-TRT-B1",
-            encounter_name: "Week 2",
-            epoch_id: "EP-TRT-B",
-            sequence: 4,
-          },
-        ],
-        rows: [
-          {
-            activity_id: "ACT-DEM",
-            activity_name: "Informed Consent & Demographics",
-            cells: [
-              {
-                encounter_id: "V-SCR",
-                is_applicable: true,
-                details: "Mandatory",
-              },
-              { encounter_id: "V-TRT-A1", is_applicable: false },
-              { encounter_id: "V-TRT-A2", is_applicable: false },
-              { encounter_id: "V-TRT-B1", is_applicable: false },
-            ],
-          },
-          {
-            activity_id: "ACT-VS",
-            activity_name: "Vital Signs (BP & Pulse)",
-            cells: [
-              { encounter_id: "V-SCR", is_applicable: true, details: "Day -7" },
-              {
-                encounter_id: "V-TRT-A1",
-                is_applicable: true,
-                details: "Within 10 mins",
-              },
-              {
-                encounter_id: "V-TRT-A2",
-                is_applicable: true,
-                details: "Conditional",
-              },
-              {
-                encounter_id: "V-TRT-B1",
-                is_applicable: true,
-                details: "Within 10 mins",
-              },
-            ],
-          },
-        ],
-      });
+      const createInitialSoaState = () =>
+        buildUsdmSoaSchedule(["ACT-DEM", "ACT-VS"]);
 
       let soaState = createInitialSoaState();
       resetSoaState = () => {
