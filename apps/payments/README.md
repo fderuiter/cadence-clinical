@@ -92,7 +92,11 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   manual field edits and duplicate receipt SHA-256 digests held in `PENDING_REVIEW`) / IRS `$600.00` verified W-9
   auto-approval policy, persists `(WalletId, IdempotencyKey)` deduplication keys across `/participant/me/expenses` and
   `/participant/me/disburse` so retries never double-credit or double-debit balances, and computes diary synchronization
-  stipends strictly from server-side `ParticipantStipendRule` rows (`400` if a request supplies an `amount`). Staff
+  stipends strictly from eligible (`RequiresVerification = false`, `IsMilestone = false`) server-side
+  `ParticipantStipendRule` rows gated on a single-use `GATEWAY_SECRET`-derived HMAC `SyncVerificationToken` bound to
+  `(caller.UserId, StudyId, DiaryId, AssignmentId, SequenceNumber, ExpiresAtUnix)`, `AntiCoercionCap`,
+  `AutoDisbursementThreshold`, and IRS `$600.00` W-9 compliance (`400` if a request supplies an `amount`;
+  `FLAGGED_FOR_REVIEW` with `$0.00` credited on missing, invalid, or replayed sync tokens or exceeded thresholds). Staff
   `POST /participant/expenses` applies the same server-computed OCR confidence, receipt deduplication, and `$75.00` meal
   per-diem cap rules without trusting client `OcrConfidence`, `ReceiptOcrData`, or `PerDiemCap`.
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
