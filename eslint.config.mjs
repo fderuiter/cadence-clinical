@@ -2392,7 +2392,6 @@ export default [
       "**/bin/**",
       "**/obj/**",
       "**/.claude/worktrees/**",
-      "scripts/**",
       "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
@@ -2480,6 +2479,16 @@ export default [
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
       "custom-vue/require-tabular-nums": "error",
+    },
+  },
+  {
+    files: ["scripts/**/*.{js,mjs,cjs}"],
+    rules: {
+      "no-alert": "error",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
@@ -2586,6 +2595,7 @@ export default [
       "packages/*/*.config.{js,mjs,cjs}",
       "apps/*/scripts/**/*.{js,mjs,cjs}",
       "packages/*/scripts/**/*.{js,mjs,cjs}",
+      "scripts/**/*.{js,mjs,cjs}",
       ".claude/**/*.{js,mjs,cjs}",
       "docs/**/*.mjs",
       "tests/**/*.{js,mjs,cjs}",
@@ -2598,7 +2608,11 @@ export default [
     },
   },
   {
-    files: ["apps/web/scripts/**/*.js", "packages/ui/scripts/**/*.js"],
+    files: [
+      "apps/web/scripts/**/*.js",
+      "packages/ui/scripts/**/*.js",
+      "scripts/**/*.js",
+    ],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "commonjs",

@@ -520,14 +520,44 @@ public sealed class LocalCiEnvironment
                 path => !path.Contains("/.venv/", StringComparison.Ordinal)
                     && !path.Contains("/.cadence/", StringComparison.Ordinal)
                     && !path.Contains("/node_modules/", StringComparison.Ordinal)),
-            CiFileSource.ShellScripts => FindUnderRoot(repoRoot, "*.sh",
-                path => !path.Contains("/.venv/", StringComparison.Ordinal)
-                    && !path.Contains("/.cadence/", StringComparison.Ordinal)
-                    && !path.Contains("/node_modules/", StringComparison.Ordinal)),
+            CiFileSource.ShellScripts => DiscoverShellScripts(repoRoot),
             _ => [],
         };
 
         return [.. files];
+    }
+
+    private static IEnumerable<string> DiscoverShellScripts(string repoRoot)
+    {
+        static bool KeepPath(string path) =>
+            !path.Contains("/.git/", StringComparison.Ordinal)
+            && !path.Contains("/.venv/", StringComparison.Ordinal)
+            && !path.Contains("/.cadence/", StringComparison.Ordinal)
+            && !path.Contains("/node_modules/", StringComparison.Ordinal);
+
+        var scripts = FindUnderRoot(repoRoot, "*.sh", KeepPath);
+        string gitHooksDir = Path.Combine(repoRoot, ".githooks");
+        if (!Directory.Exists(gitHooksDir))
+        {
+            return scripts;
+        }
+
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+            MatchCasing = MatchCasing.CaseSensitive,
+        };
+
+        var hooks = Directory.EnumerateFiles(gitHooksDir, "*", options)
+            .Select(path => "./" + Path.GetRelativePath(repoRoot, path).Replace('\\', '/'))
+            .Where(KeepPath);
+
+        return scripts
+            .Concat(hooks)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal);
     }
 
     /// <summary>Like <c>find . -type f -name pattern</c>: regular files only, symbolic links are not followed.</summary>
