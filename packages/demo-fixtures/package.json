@@ -21,6 +21,10 @@
     }
   },
   "scripts": {
-    "lint": "eslint --max-warnings 0 --config ../../eslint.config.mjs src/"
+    "lint": "eslint --max-warnings 0 --config ../../eslint.config.mjs src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
   }
 }

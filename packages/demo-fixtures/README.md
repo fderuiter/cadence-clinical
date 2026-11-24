@@ -13,10 +13,11 @@ Canonical synthetic trial catalog and MSW-free payload builders shared across th
 - `packages/demo-fixtures/demo-seed.json` (canonical `CADENCE-101` study, sponsor, sites with `complianceStage`, participants, roles, and user grants embedded and loaded via source-generated `System.Text.Json` in `apps/kernel-api/src/DevelopmentDemoData.cs` and `apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs`; ADR-2543, ADR-2549)
 - `docker/cadence-realm.json`
 
-Verify in-memory parity between `demo-seed.json` and `docker/cadence-realm.json` (also run by `pnpm cadence check`):
+Verify in-memory parity between `demo-seed.json` and `docker/cadence-realm.json` along with declaration types without modifying files (also run by `pnpm cadence check` and `pnpm typecheck`):
 
 ```bash
 pnpm cadence check demo-manifest
+pnpm --filter demo-fixtures typecheck
 ```
 
 ## Subpath Exports and Production Bundle Isolation

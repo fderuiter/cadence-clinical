@@ -2,6 +2,7 @@ import { DEMO_STUDY } from "demo-fixtures";
 import { isCallerBlinded, isSitePermitted } from "../demoPolicy.js";
 import {
   DEFAULT_FORM_UUID,
+  STUDY_REF,
   VERSION_V1_REF,
   VERSION_V2_REF,
   buildDecision,

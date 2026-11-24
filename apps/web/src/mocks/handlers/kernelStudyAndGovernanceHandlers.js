@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { demoNowIso } from "../../utils/demoMode.js";
 import { resolveDemoCaller } from "../demoPolicy.js";
 import { parseDemoProtocolImportRequest } from "../demoStudyImport.js";
 import {
@@ -9,10 +10,37 @@ import {
   readRequiredReasonHeader,
 } from "./shared.js";
 
-const EMPTY_CONTENT_DIGEST_HEADER = {
-  "X-Content-Sha256":
-    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
-};
+async function sha256Hex(bytes) {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function resolveExportCutWindow(url) {
+  const generatedAt = demoNowIso();
+  const cutAt =
+    url.searchParams.get("known_at") ||
+    url.searchParams.get("as_of") ||
+    generatedAt;
+  const validAt = url.searchParams.get("valid_at") || cutAt;
+  return { generatedAt, cutAt, validAt };
+}
+
+async function buildSignedTextHeaders(
+  bodyText,
+  contentType,
+  generatedAt,
+  extra = {}
+) {
+  const bytes = new TextEncoder().encode(bodyText);
+  return {
+    "Content-Type": contentType,
+    "X-Content-Sha256": await sha256Hex(bytes),
+    "X-Generated-At": generatedAt,
+    ...extra,
+  };
+}
 
 export function createKernelStudyAndGovernanceHandlers(store) {
   return [
@@ -183,6 +211,7 @@ export function createKernelStudyAndGovernanceHandlers(store) {
           valid_at: now,
           known_at: now,
           locks: store.listKernelLocks(activeOnly),
+          hidden: { more_exist: false, reasons: [] },
         });
       }
     ),
@@ -243,30 +272,38 @@ export function createKernelStudyAndGovernanceHandlers(store) {
     ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
-      ({ params, request }) => {
+      async ({ params, request }) => {
         const url = new URL(request.url);
         const format = (url.searchParams.get("format") || "csv").toLowerCase();
         const studyRef = decodeURIComponent(String(params.studyRef));
+        const { generatedAt, cutAt, validAt } = resolveExportCutWindow(url);
+        const studyExportHeaders = (bodyText, contentType, extra = {}) =>
+          buildSignedTextHeaders(bodyText, contentType, generatedAt, {
+            "X-Hidden-More-Exist": "false",
+            ...extra,
+          });
         if (format === "odm_xml" || format === "odm" || format === "xml") {
-          return new HttpResponse(
-            `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="DEMO" CreationDateTime="${new Date().toISOString()}" ODMVersion="1.3.2"><Study OID="${studyRef}"/></ODM>`,
-            {
-              headers: {
-                "Content-Type": "application/xml",
-                ...EMPTY_CONTENT_DIGEST_HEADER,
-              },
-            }
-          );
+          const xml = `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="DEMO.${studyRef}" CreationDateTime="${cutAt}" ODMVersion="1.3.2"><Study OID="${studyRef}"/></ODM>`;
+          return new HttpResponse(xml, {
+            headers: await studyExportHeaders(xml, "application/xml"),
+          });
         }
         if (
           format === "dataset_json" ||
           format === "dataset-json" ||
           format === "json"
         ) {
-          return HttpResponse.json(
-            { study_ref: studyRef, records: [] },
-            { headers: EMPTY_CONTENT_DIGEST_HEADER }
-          );
+          const jsonText = JSON.stringify({
+            datasetJSONCreationDateTime: cutAt,
+            study_ref: studyRef,
+            valid_at: validAt,
+            known_at: cutAt,
+            hidden: { more_exist: false, reasons: [] },
+            itemGroupData: {},
+          });
+          return new HttpResponse(jsonText, {
+            headers: await studyExportHeaders(jsonText, "application/json"),
+          });
         }
         if (
           format === "sas_bundle" ||
@@ -282,61 +319,58 @@ export function createKernelStudyAndGovernanceHandlers(store) {
             headers: {
               "Content-Type": "application/zip",
               "Content-Disposition": `attachment; filename="CAD-ONC-2026.${format}.zip"`,
-              ...EMPTY_CONTENT_DIGEST_HEADER,
+              "X-Content-Sha256": await sha256Hex(eocd),
+              "X-Generated-At": generatedAt,
+              "X-Hidden-More-Exist": "false",
             },
           });
         }
-        return new HttpResponse("STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-1001\n", {
-          headers: {
-            "Content-Type": "text/csv",
-            ...EMPTY_CONTENT_DIGEST_HEADER,
-          },
+        const csvText = "STUDYID,USUBJID\nCAD-ONC-2026,SUBJ-1001\n";
+        return new HttpResponse(csvText, {
+          headers: await studyExportHeaders(csvText, "text/csv"),
         });
       }
     ),
     http.get(
       "*/api/v1/kernel/enrollments/:enrollmentRef/casebook",
-      ({ params, request }) => {
+      async ({ params, request }) => {
         const url = new URL(request.url);
         const format = (url.searchParams.get("format") || "json").toLowerCase();
         const enrollmentRef = decodeURIComponent(String(params.enrollmentRef));
+        const { generatedAt, cutAt, validAt } = resolveExportCutWindow(url);
+        const casebookHeaders = (bodyText, contentType, extra = {}) =>
+          buildSignedTextHeaders(bodyText, contentType, generatedAt, extra);
         if (format === "odm_xml" || format === "odm" || format === "xml") {
-          return new HttpResponse(
-            `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="CASEBOOK-DEMO" CreationDateTime="${new Date().toISOString()}" ODMVersion="1.3.2"><ClinicalData StudyOID="CAD-ONC-2026" MetaDataVersionOID="MDV.1"><SubjectData SubjectKey="${enrollmentRef}"/></ClinicalData></ODM>`,
-            {
-              headers: {
-                "Content-Type": "application/xml",
-                ...EMPTY_CONTENT_DIGEST_HEADER,
-              },
-            }
-          );
+          const xml = `<?xml version="1.0" encoding="UTF-8"?><ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot" FileOID="CASEBOOK.${enrollmentRef}" CreationDateTime="${cutAt}" ODMVersion="1.3.2"><Study OID="CAD-ONC-2026"><GlobalVariables><StudyName>CAD-ONC-2026</StudyName><StudyDescription>CAD-ONC-2026</StudyDescription><ProtocolName>CAD-ONC-2026</ProtocolName></GlobalVariables><MetaDataVersion OID="MDV.1" Name="Protocol v1"/></Study><ClinicalData StudyOID="CAD-ONC-2026" MetaDataVersionOID="MDV.1"><SubjectData SubjectKey="${enrollmentRef}"/></ClinicalData></ODM>`;
+          return new HttpResponse(xml, {
+            headers: await casebookHeaders(xml, "application/xml"),
+          });
         }
         if (format === "html") {
-          return new HttpResponse(
-            `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Casebook ${enrollmentRef}</title></head><body><h1>Participant Casebook</h1><p>${enrollmentRef}</p></body></html>`,
-            {
-              headers: {
-                "Content-Type": "text/html; charset=utf-8",
-                ...EMPTY_CONTENT_DIGEST_HEADER,
-              },
-            }
-          );
+          const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Casebook ${enrollmentRef}</title></head><body><h1>Participant Casebook</h1><p>${enrollmentRef}</p><p>Known at ${cutAt}</p></body></html>`;
+          return new HttpResponse(html, {
+            headers: await casebookHeaders(html, "text/html; charset=utf-8"),
+          });
         }
         if (format === "pdf") {
           // deid-ignore: PDF-1.7 10-digit xref byte offsets are structural PDF syntax, not telephone numbers
           const pdfText = `%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [] /Count 0 >> endobj\nxref\n0 3\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \ntrailer << /Size 3 /Root 1 0 R >>\nstartxref\n115\n%%EOF\n`; // deid-ignore
           return new HttpResponse(pdfText, {
-            headers: {
-              "Content-Type": "application/pdf",
+            headers: await casebookHeaders(pdfText, "application/pdf", {
               "Content-Disposition": `attachment; filename="CAD-ONC-2026.${enrollmentRef.replace(/[^a-zA-Z0-9_-]/g, "_")}.casebook.pdf"`,
-              ...EMPTY_CONTENT_DIGEST_HEADER,
-            },
+            }),
           });
         }
-        return HttpResponse.json(
-          { enrollment_ref: enrollmentRef, observations: [] },
-          { headers: EMPTY_CONTENT_DIGEST_HEADER }
-        );
+        const jsonText = JSON.stringify({
+          enrollment_ref: enrollmentRef,
+          valid_at: validAt,
+          known_at: cutAt,
+          generated_at: cutAt,
+          observations: [],
+        });
+        return new HttpResponse(jsonText, {
+          headers: await casebookHeaders(jsonText, "application/json"),
+        });
       }
     ),
     http.get("*/api/v1/kernel/proposals/:proposalRef", ({ params }) =>

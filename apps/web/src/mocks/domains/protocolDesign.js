@@ -263,9 +263,10 @@ export function createProtocolDesignDomain(ctx) {
           (acc, v) => Math.max(acc, Number(v.number || 0)),
           0
         );
-        const parent = existingVersions.find(
-          (v) => String(v.status).toUpperCase() === "PUBLISHED"
-        );
+        const parent = existingVersions.find((v) => {
+          const upper = String(v.status).toUpperCase();
+          return upper === "APPROVED" || upper === "PUBLISHED";
+        });
         const vIdx = nextCounter();
         targetVersion = {
           ref: `protocol_version:${makeUuidFromIndex("00000150", vIdx)}@1`,
@@ -274,7 +275,7 @@ export function createProtocolDesignDomain(ctx) {
           parent_version: parent ? parent.ref : null,
           status: "Draft",
           content_hash: null,
-          amendment_intent: reason,
+          amendment_intent: parent ? "Protocol design import" : null,
           approval_attestation: null,
           withdrawal_reason: null,
           mask: null,
@@ -284,6 +285,26 @@ export function createProtocolDesignDomain(ctx) {
         state.importedProtocolVersions.set(foundStudy.code, list);
       }
 
+      const prevSummaryForAmendment = state.protocolDesignSummaries.get(
+        targetVersion.ref
+      );
+      const amendment = targetVersion.parent_version
+        ? {
+            intent: targetVersion.amendment_intent || "Protocol design import",
+            rationale: reason,
+            classification:
+              parsedRequest.amendmentClassification ||
+              prevSummaryForAmendment?.amendment?.classification ||
+              "NonSubstantial",
+            summary_of_changes: `Imported ${mergedForms.length} protocol form specification(s) (${mergedForms.length} impacted element(s)).`,
+            impacted_elements: mergedForms.map((f) => f.id),
+            transition_policy:
+              parsedRequest.transitionPolicy ||
+              prevSummaryForAmendment?.amendment?.transition_policy ||
+              "NewParticipantsOnly",
+          }
+        : null;
+
       const summary = {
         version: cloneJson(targetVersion),
         title: built.title,
@@ -291,6 +312,7 @@ export function createProtocolDesignDomain(ctx) {
         item_count: mergedForms.reduce((acc, f) => acc + f.item_count, 0),
         forms: cloneJson(mergedForms),
         import_notes: cloneJson(mergedNotes),
+        amendment: cloneJson(amendment),
       };
       state.protocolDesignSummaries.set(targetVersion.ref, summary);
       ctx.recordActivity(
