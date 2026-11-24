@@ -4,12 +4,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Coding;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -121,7 +124,8 @@ public static class SynonymEndpoints
     public static async Task<IResult> ImportSynonymFileAsync(
         HttpContext httpContext,
         ISynonymImportService synonymService,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!HasImportAuthorization(caller))
@@ -172,6 +176,12 @@ public static class SynonymEndpoints
             return TypedResults.Problem(
                 detail: "A valid reason for change is required for 21 CFR Part 11 audit compliance.",
                 statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (!IsGlobalScope(scope)
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, studyId, cancellationToken: cancellationToken).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         using var ms = new MemoryStream();
@@ -244,7 +254,8 @@ public static class SynonymEndpoints
         Guid id,
         HttpContext httpContext,
         ISynonymImportService synonymService,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!HasImportAuthorization(caller))
@@ -266,6 +277,13 @@ public static class SynonymEndpoints
         if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (existing is not null
+            && !IsGlobalScope(existing.Scope)
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, existing.StudyId, cancellationToken: cancellationToken).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         string? changeReason = httpContext.Request.Query["reason_for_change"].FirstOrDefault() ??

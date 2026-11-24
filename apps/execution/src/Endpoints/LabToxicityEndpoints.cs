@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
@@ -95,7 +96,8 @@ public static class LabToxicityEndpoints
         StagedAdverseEventActionRequest request,
         HttpContext httpContext,
         ILabToxicityGovernanceService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
         {
@@ -115,6 +117,17 @@ public static class LabToxicityEndpoints
         if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (existing is not null
+            && await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                existing.StudyId,
+                existing.SiteId,
+                existing.SubjectId,
+                ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is { UserId.Length: > 0 } p

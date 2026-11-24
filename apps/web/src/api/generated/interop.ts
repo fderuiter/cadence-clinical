@@ -269,7 +269,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ProgramListResponseDto"];
+          };
         };
       };
     };
@@ -287,12 +289,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Created */
+        201: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ProgramResponseDto"];
+          };
         };
       };
     };
@@ -325,7 +329,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ProgramResponseDto"];
+          };
         };
       };
     };
@@ -364,7 +370,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ValidateLockfileResponseDto"];
+          };
         };
       };
     };
@@ -397,7 +405,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_LockTokenListResponseDto"];
+          };
         };
       };
     };
@@ -415,12 +425,14 @@ export interface paths {
         };
       };
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Created */
+        201: {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_LockTokenResponseDto"];
+          };
         };
       };
     };
@@ -457,7 +469,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": Record<string, never>;
+          };
         };
       };
     };
@@ -494,7 +508,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ExecuteProgramResponseDto"];
+          };
         };
       };
     };
@@ -529,7 +545,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ExecutionRunListResponseDto"];
+          };
         };
       };
     };
@@ -564,7 +582,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_ExecutionRunDetailResponseDto"];
+          };
         };
       };
     };
@@ -601,7 +621,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Interop_VerifyManifestResponseDto"];
+          };
         };
       };
     };
@@ -635,7 +657,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": Record<string, never>;
+          };
         };
       };
     };
@@ -672,6 +696,18 @@ export interface components {
       target_domain?: null | string;
       /** @default Initial program authoring */
       reason_for_change: string;
+    };
+    Interop_DatabaseLockAuthTokenDto: {
+      token_id: string;
+      study_id: string;
+      lock_id: string;
+      milestone: string;
+      issued_to: string;
+      authorized_roles: string[];
+      issued_at: string;
+      expires_at: string;
+      signature_hash: string;
+      is_revoked: boolean;
     };
     Interop_EhrCandidateItemDto: {
       id: string;
@@ -840,6 +876,13 @@ export interface components {
       rejectionReason: string;
       changeReason: null | string;
     };
+    Interop_ElectronicSignatureBlockDto: {
+      signer_id: string;
+      signer_role: string;
+      signed_at: string;
+      signature_meaning: string;
+      hmac_signature: string;
+    };
     Interop_ExecuteProgramRequestDto: {
       study_id: string;
       program_id: string;
@@ -851,6 +894,50 @@ export interface components {
         null | components["schemas"]["Interop_ExecutionSandboxConfigDto"];
       /** @default Statistical analysis execution run */
       reason_for_execution: string;
+    };
+    Interop_ExecuteProgramResponseDto: {
+      manifest: components["schemas"]["Interop_ExecutionRunManifestDto"];
+    };
+    Interop_ExecutionRunDetailResponseDto: {
+      run: components["schemas"]["Interop_ExecutionRunManifestDto"];
+    };
+    Interop_ExecutionRunListResponseDto: {
+      study_id: string;
+      /** Format: int32 */
+      total: number | string;
+      runs: components["schemas"]["Interop_ExecutionRunManifestDto"][];
+    };
+    Interop_ExecutionRunManifestDto: {
+      manifest_id: string;
+      run_id: string;
+      study_id: string;
+      program_id: string;
+      program_name: string;
+      program_version: string;
+      snapshot_id: string;
+      snapshot_version_tag: string;
+      snapshot_digest: string;
+      language: string;
+      script_code_digest: string;
+      lockfile_digest: string;
+      container_image_digest: string;
+      execution_start: string;
+      execution_end: string;
+      /** Format: double */
+      duration_ms: number | string;
+      /** Format: int32 */
+      exit_code: number | string;
+      status: string;
+      stdout_capture: string;
+      stderr_capture: string;
+      output_artifacts: components["schemas"]["Interop_OutputArtifactSchemaDto"][];
+      output_artifacts_digest: string;
+      is_unblinded_run: boolean;
+      database_lock_token_id: null | string;
+      executed_by: string;
+      executed_by_role: string;
+      signature_block: components["schemas"]["Interop_ElectronicSignatureBlockDto"];
+      manifest_sha256_seal: string;
     };
     Interop_ExecutionSandboxConfigDto: {
       /**
@@ -916,6 +1003,45 @@ export interface components {
        */
       expires_in_hours: number | string;
     };
+    Interop_LockfileValidationResultSchemaDto: {
+      lock_type: string;
+      status: string;
+      lock_digest: string;
+      /** Format: int32 */
+      package_count: number | string;
+      packages: components["schemas"]["Interop_PackageEntrySchemaDto"][];
+      is_qualified: boolean;
+      unqualified_packages: string[];
+      details: string;
+    };
+    Interop_LockTokenListResponseDto: {
+      study_id: string;
+      /** Format: int32 */
+      total: number | string;
+      tokens: components["schemas"]["Interop_DatabaseLockAuthTokenDto"][];
+    };
+    Interop_LockTokenResponseDto: {
+      token: components["schemas"]["Interop_DatabaseLockAuthTokenDto"];
+    };
+    Interop_OutputArtifactSchemaDto: {
+      artifact_id: string;
+      name: string;
+      artifact_type: string;
+      file_path: string;
+      mime_type: string;
+      /** Format: int64 */
+      size_bytes: number | string;
+      sha256_digest: string;
+      content_preview?: null | string;
+    };
+    Interop_PackageEntrySchemaDto: {
+      name: string;
+      version: string;
+      checksum?: null | string;
+      repository?: null | string;
+      /** @default true */
+      is_qualified: boolean;
+    };
     Interop_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -923,6 +1049,15 @@ export interface components {
       status?: null | number | string;
       detail?: null | string;
       instance?: null | string;
+    };
+    Interop_ProgramListResponseDto: {
+      study_id: string;
+      /** Format: int32 */
+      total: number | string;
+      programs: components["schemas"]["Interop_StatisticalProgramDto"][];
+    };
+    Interop_ProgramResponseDto: {
+      program: components["schemas"]["Interop_StatisticalProgramDto"];
     };
     Interop_SmartAssertionRequest: {
       endpointId: string;
@@ -951,12 +1086,36 @@ export interface components {
       expiresAt: string;
       errorMessage: null | string;
     };
+    Interop_StatisticalProgramDto: {
+      program_id: string;
+      study_id: string;
+      name: string;
+      title: string;
+      description: string;
+      language: string;
+      version: string;
+      source_code: string;
+      code_hash: string;
+      lockfile_content: null | string;
+      lock_type: string;
+      lock_digest: string;
+      target_domain: null | string;
+      created_by: string;
+      created_at: string;
+      reason_for_change: string;
+    };
     Interop_ValidateLockfileRequestDto: {
       lock_type: string;
       content: string;
       expected_digest?: null | string;
       /** @default false */
       strict_qualification: boolean;
+    };
+    Interop_ValidateLockfileResponseDto: {
+      result: components["schemas"]["Interop_LockfileValidationResultSchemaDto"];
+    };
+    Interop_VerifyManifestResponseDto: {
+      result: Record<string, never>;
     };
   };
   responses: never;

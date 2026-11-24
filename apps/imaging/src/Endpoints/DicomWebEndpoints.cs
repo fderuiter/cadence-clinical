@@ -31,6 +31,8 @@ namespace Cadence.Apps.Imaging.Endpoints;
 public static class DicomWebEndpoints
 {
     public const long MaxBatchSizeBytes = 2_147_483_648L; // 2 GB
+    public const long MaxSingleInstanceSizeBytes = BatchArchiveQuotas.DefaultMaxEntryUncompressedBytes; // 128 MB
+    public const long MaxFrameSizeBytes = DicomIngestionService.MaxFrameSizeBytes; // 64 MB
 
     public static IEndpointRouteBuilder MapDicomWebEndpoints(this IEndpointRouteBuilder routes)
     {
@@ -43,6 +45,7 @@ public static class DicomWebEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<IngestionResult>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
             .DisableAntiforgery();
 
         group.MapPost("/studies/batch", StoreBatchInstancesAsync)
@@ -66,7 +69,8 @@ public static class DicomWebEndpoints
             .RequirePermission("imaging_study:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapGet("/certificates/{certificateId}", GetCertificateByIdAsync)
             .WithName("GetDeidCertificate")
@@ -78,9 +82,9 @@ public static class DicomWebEndpoints
         return routes;
     }
 
-    private static IResult PayloadTooLargeResult() =>
+    private static IResult PayloadTooLargeResult(string? detail = null) =>
         TypedResults.Problem(
-            detail: "Payload exceeds maximum 2 GB batch size limit.",
+            detail: string.IsNullOrWhiteSpace(detail) ? BatchPayloadTooLargeException.DefaultMessage : detail,
             statusCode: StatusCodes.Status413PayloadTooLarge);
 
     private static IResult EmptyBatchPayloadResult() =>
@@ -91,27 +95,45 @@ public static class DicomWebEndpoints
         IDicomIngestionService ingestionService,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(ingestionService);
+
+        if (request.ContentLength.HasValue && request.ContentLength.Value > MaxSingleInstanceSizeBytes)
+        {
+            return PayloadTooLargeResult($"Payload exceeds maximum {MaxSingleInstanceSizeBytes / (1024 * 1024)} MB single-instance size limit.");
+        }
+
         string subjectId = request.Query["subjectId"].ToString();
         string siteId = request.Query["siteId"].ToString();
         string studyId = request.Query["studyId"].ToString();
 
-        byte[] payloadBytes;
-
-        if (request.HasFormContentType && request.Form.Files.Count > 0)
+        await using var pooledPayload = new PooledBlockStream();
+        try
         {
-            var file = request.Form.Files[0];
-            using var ms = new MemoryStream();
-            await file.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-            payloadBytes = ms.ToArray();
+            if (request.HasFormContentType && request.Form.Files.Count > 0)
+            {
+                var file = request.Form.Files[0];
+                if (file.Length > MaxSingleInstanceSizeBytes)
+                {
+                    return PayloadTooLargeResult($"Payload exceeds maximum {MaxSingleInstanceSizeBytes / (1024 * 1024)} MB single-instance size limit.");
+                }
+
+                await using var fileStream = file.OpenReadStream();
+                using var countingStream = new MaxBytesReadStream(fileStream, MaxSingleInstanceSizeBytes);
+                await BatchStreamHelpers.CopyPooledAsync(countingStream, pooledPayload, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                using var countingStream = new MaxBytesReadStream(request.Body, MaxSingleInstanceSizeBytes);
+                await BatchStreamHelpers.CopyPooledAsync(countingStream, pooledPayload, cancellationToken).ConfigureAwait(false);
+            }
         }
-        else
+        catch (Exception ex) when (TryGetPayloadTooLargeDetail(ex, out string? detail))
         {
-            using var ms = new MemoryStream();
-            await request.Body.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-            payloadBytes = ms.ToArray();
+            return PayloadTooLargeResult(detail);
         }
 
-        if (payloadBytes.Length == 0)
+        if (pooledPayload.Length == 0)
         {
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
         }
@@ -120,6 +142,10 @@ public static class DicomWebEndpoints
         {
             return ClinicalScopeGuard.OutsideStudy();
         }
+
+        pooledPayload.Position = 0;
+        byte[] payloadBytes = new byte[(int)pooledPayload.Length];
+        await pooledPayload.ReadExactlyAsync(payloadBytes, cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -133,7 +159,11 @@ public static class DicomWebEndpoints
 
             return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (TryGetPayloadTooLargeDetail(ex, out string? detail))
+        {
+            return PayloadTooLargeResult(detail);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return TypedResults.BadRequest(new { code = "DICOM_INGESTION_FAILED", message = ex.Message });
         }
@@ -204,9 +234,9 @@ public static class DicomWebEndpoints
                 ingestionService,
                 cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (IsPayloadTooLargeException(ex))
+        catch (Exception ex) when (TryGetPayloadTooLargeDetail(ex, out string? detail))
         {
-            return PayloadTooLargeResult();
+            return PayloadTooLargeResult(detail);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -772,7 +802,7 @@ public static class DicomWebEndpoints
         return TypedResults.Ok(study);
     }
 
-    private static async Task<IResult> GetInstanceFramesAsync(
+    public static async Task<IResult> GetInstanceFramesAsync(
         string studyUid,
         string seriesUid,
         string instanceUid,
@@ -786,13 +816,14 @@ public static class DicomWebEndpoints
         _ = frameList;
 
         var instance = await dbContext.ImagingInstanceEnvelopes
+            .AsNoTracking()
             .FirstOrDefaultAsync(i => i.SopInstanceUid == instanceUid || i.Id == instanceUid, cancellationToken)
             .ConfigureAwait(false);
 
         var parentStudy = instance == null
             ? null
-            : await (from series in dbContext.ImagingSeriesEnvelopes
-                     join study in dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
+            : await (from series in dbContext.ImagingSeriesEnvelopes.AsNoTracking()
+                     join study in dbContext.ImagingStudyEnvelopes.AsNoTracking() on series.StudyEnvelopeId equals study.Id
                      where series.Id == instance.SeriesEnvelopeId
                      select new { study.StudyId, study.SiteId })
                 .FirstOrDefaultAsync(cancellationToken)
@@ -805,7 +836,19 @@ public static class DicomWebEndpoints
             return TypedResults.NotFound(new { code = "INSTANCE_NOT_FOUND", message = $"Instance '{instanceUid}' not found." });
         }
 
-        byte[] frameBytes = new byte[instance.Rows * instance.Columns * 2];
+        long frameByteLength = instance.Rows > 0 && instance.Columns > 0
+            ? (long)instance.Rows * instance.Columns * 2L
+            : 0L;
+
+        if (instance.Rows <= 0 || instance.Columns <= 0 || frameByteLength <= 0 || frameByteLength > MaxFrameSizeBytes)
+        {
+            return TypedResults.Problem(
+                title: "Invalid DICOM frame dimensions",
+                detail: $"Instance '{instanceUid}' frame dimensions ({instance.Rows}x{instance.Columns}) must be positive and require at most {MaxFrameSizeBytes / (1024 * 1024)} MB.",
+                statusCode: StatusCodes.Status422UnprocessableEntity);
+        }
+
+        byte[] frameBytes = new byte[(int)frameByteLength];
         new Random(instanceUid.GetHashCode()).NextBytes(frameBytes);
 
         return TypedResults.Bytes(frameBytes, contentType: "application/octet-stream");
@@ -868,18 +911,30 @@ public static class DicomWebEndpoints
         public int NextFileIndex { get; set; }
     }
 
-    private static bool IsPayloadTooLargeException(Exception exception)
+    private static bool TryGetPayloadTooLargeDetail(Exception exception, out string? detail)
     {
         for (Exception? current = exception; current is not null; current = current.InnerException)
         {
-            if (current is BatchPayloadTooLargeException
-                || current is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge }
-                || (current is InvalidDataException && current.Message.Contains("Multipart body length limit", StringComparison.OrdinalIgnoreCase)))
+            if (current is BatchPayloadTooLargeException quotaException)
             {
+                detail = quotaException.Message;
+                return true;
+            }
+
+            if (current is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } badRequest)
+            {
+                detail = badRequest.Message;
+                return true;
+            }
+
+            if (current is InvalidDataException && current.Message.Contains("Multipart body length limit", StringComparison.OrdinalIgnoreCase))
+            {
+                detail = BatchPayloadTooLargeException.DefaultMessage;
                 return true;
             }
         }
 
+        detail = null;
         return false;
     }
 

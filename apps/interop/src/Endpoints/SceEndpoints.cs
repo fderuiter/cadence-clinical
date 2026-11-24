@@ -266,7 +266,7 @@ public static class SceEndpoints
 
             var dtos = programs.Select(ToProgramDto).ToList();
             return Results.Ok(new ProgramListResponseDto(study_id, dtos.Count, dtos));
-        }).RequirePermission("sce_program:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_program:read").RequireCallerStudyScope().Produces<ProgramListResponseDto>(StatusCodes.Status200OK);
 
         // 2. Create / register statistical program
         group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
@@ -304,7 +304,7 @@ public static class SceEndpoints
 
             var dto = ToProgramDto(entity);
             return Results.Created($"/api/v1/interop/sce/programs/{entity.Id}", new ProgramResponseDto(dto));
-        }).RequirePermission("sce_program:create").RequireCallerStudyScope();
+        }).RequirePermission("sce_program:create").RequireCallerStudyScope().Produces<ProgramResponseDto>(StatusCodes.Status201Created);
 
         // 3. Get statistical program by ID
         group.MapGet("/programs/{program_id}", async (string program_id, InteropDbContext db, HttpContext httpContext) =>
@@ -319,7 +319,7 @@ public static class SceEndpoints
             }
 
             return Results.Ok(new ProgramResponseDto(ToProgramDto(program)));
-        }).RequirePermission("sce_program:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_program:read").RequireCallerStudyScope().Produces<ProgramResponseDto>(StatusCodes.Status200OK);
 
         // 4. Validate package lockfile
         group.MapPost("/validate-lockfile", (ValidateLockfileRequestDto req, ILockfileValidatorService validator) =>
@@ -339,7 +339,7 @@ public static class SceEndpoints
             );
 
             return Results.Ok(new ValidateLockfileResponseDto(schemaResult));
-        }).RequirePermission("sce_program:read").RequireTenantScope();
+        }).RequirePermission("sce_program:read").RequireTenantScope().Produces<ValidateLockfileResponseDto>(StatusCodes.Status200OK);
 
         // 5. List active database lock tokens
         group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock, HttpContext httpContext) =>
@@ -364,7 +364,7 @@ public static class SceEndpoints
 
             var dtos = tokens.Select(ToLockTokenDto).ToList();
             return Results.Ok(new LockTokenListResponseDto(study_id, dtos.Count, dtos));
-        }).RequirePermission("sce_lock_token:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_lock_token:read").RequireCallerStudyScope().Produces<LockTokenListResponseDto>(StatusCodes.Status200OK);
 
         // 6. Issue database lock token
         group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
@@ -428,7 +428,7 @@ public static class SceEndpoints
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/v1/interop/sce/lock-tokens", new LockTokenResponseDto(ToLockTokenDto(tokenEntity)));
-        }).RequirePermission("sce_lock_token:issue").RequireCallerStudyScope();
+        }).RequirePermission("sce_lock_token:issue").RequireCallerStudyScope().Produces<LockTokenResponseDto>(StatusCodes.Status201Created);
 
         // 7. Revoke database lock token
         group.MapPost("/lock-tokens/{token_id}/revoke", async (string token_id, string? reason, InteropDbContext db, IClock clock, HttpContext httpContext) =>
@@ -480,7 +480,7 @@ public static class SceEndpoints
                 ["revoked_at"] = now.ToString("O"),
                 ["reason"] = revocationReason
             });
-        }).RequirePermission("sce_lock_token:revoke").RequireCallerStudyScope();
+        }).RequirePermission("sce_lock_token:revoke").RequireCallerStudyScope().Produces<Dictionary<string, object>>(StatusCodes.Status200OK);
 
         // 8. Execute statistical program in sandbox
         group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
@@ -696,7 +696,7 @@ public static class SceEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new ExecuteProgramResponseDto(manifestDto));
-        }).RequirePermission("sce_run:execute").RequireCallerStudyScope();
+        }).RequirePermission("sce_run:execute").RequireCallerStudyScope().Produces<ExecuteProgramResponseDto>(StatusCodes.Status200OK);
 
         // 9. List historical execution runs for a study
         group.MapGet("/runs", async (string study_id, string? program_id, string? snapshot_id, InteropDbContext db, HttpContext httpContext) =>
@@ -727,7 +727,7 @@ public static class SceEndpoints
             var manifests = runs.Select(ToManifestDto).ToList();
 
             return Results.Ok(new ExecutionRunListResponseDto(study_id, manifests.Count, manifests));
-        }).RequirePermission("sce_run:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_run:read").RequireCallerStudyScope().Produces<ExecutionRunListResponseDto>(StatusCodes.Status200OK);
 
         // 10. Get execution run by ID
         group.MapGet("/runs/{run_id}", async (string run_id, InteropDbContext db, HttpContext httpContext) =>
@@ -743,7 +743,7 @@ public static class SceEndpoints
             }
 
             return Results.Ok(new ExecutionRunDetailResponseDto(ToManifestDto(run)));
-        }).RequirePermission("sce_run:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_run:read").RequireCallerStudyScope().Produces<ExecutionRunDetailResponseDto>(StatusCodes.Status200OK);
 
         // 11. Verify execution run manifest seal
         group.MapPost("/runs/{run_id}/verify", async (string run_id, InteropDbContext db, IClock clock, HttpContext httpContext) =>
@@ -789,7 +789,7 @@ public static class SceEndpoints
             };
 
             return Results.Ok(new VerifyManifestResponseDto(verificationResult));
-        }).RequirePermission("sce_run:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_run:read").RequireCallerStudyScope().Produces<VerifyManifestResponseDto>(StatusCodes.Status200OK);
 
         // 12. Get generated artifact content & preview
         group.MapGet("/runs/{run_id}/artifacts/{artifact_id}", async (string run_id, string artifact_id, InteropDbContext db, HttpContext httpContext) =>
@@ -824,7 +824,7 @@ public static class SceEndpoints
                 ["sha256_digest"] = artifact.Sha256Digest,
                 ["content_preview"] = artifact.ContentPreview
             });
-        }).RequirePermission("sce_run:read").RequireCallerStudyScope();
+        }).RequirePermission("sce_run:read").RequireCallerStudyScope().Produces<Dictionary<string, object?>>(StatusCodes.Status200OK);
 
         return routes;
     }

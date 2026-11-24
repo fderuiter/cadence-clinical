@@ -380,9 +380,96 @@ public class ParticipantStipendDisbursementTests
         var wallet = await dbContext.ParticipantWallets.FirstOrDefaultAsync(w => w.SubjectId == "SUBJ-DIRECT-01", TestContext.Current.CancellationToken);
         wallet.Should().NotBeNull();
         wallet!.CurrentBalance.Should().Be(50.00m);
+        wallet.LifetimeStipends.Should().Be(50.00m);
+        wallet.TaxableYtd.Should().Be(50.00m);
+        wallet.LifetimeDisbursements.Should().Be(0m);
+
+        var tx = await dbContext.ParticipantTransactions.FirstOrDefaultAsync(
+            t => t.WalletId == wallet.Id && t.IdempotencyKey == "KEY-123456",
+            TestContext.Current.CancellationToken);
+        tx.Should().NotBeNull();
+        tx!.TransactionType.Should().Be("STIPEND_CREDIT");
+        tx.Amount.Should().Be(50.00m);
+        tx.BalanceAfter.Should().Be(50.00m);
 
         var audit = await dbContext.PaymentAuditLogs.FirstOrDefaultAsync(l => l.Action == "AUTO_STIPEND_DISBURSEMENT", TestContext.Current.CancellationToken);
         audit.Should().NotBeNull();
+
+        File.Delete(dbPath);
+    }
+
+    [Fact]
+    public async Task DirectDisburse_EnforcesAmountCapTaxHoldAndPerWalletIdempotency()
+    {
+        string dbPath = NewTempDbPath();
+        await using var dbContext = await CreateDbContextAsync(dbPath);
+        var ct = TestContext.Current.CancellationToken;
+        var secondReviewer = TestSecurityContext.CreateScopedPrincipal(
+            "pi-1", TestSecurityContext.AllStudies, ["SITE-101"], "investigator");
+        var secondReviewerContext = new DefaultHttpContext { User = secondReviewer };
+
+        var disburseMethod = typeof(PaymentEndpoints)
+            .GetMethod("DisburseStipendDirect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var submitW9Method = typeof(PaymentEndpoints)
+            .GetMethod("SubmitW9Form", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var verifyW9Method = typeof(PaymentEndpoints)
+            .GetMethod("VerifyW9Form", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+
+        // 1. Negative or zero stipend amounts fail with 400 Bad Request
+        var negReq = new DisburseStipendRequest("SUBJ-GUARD-01", "STUDY-DCT-001", "SITE-101", 1, null, null, -10.00m, "k-neg", null);
+        var negResult = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [negReq, dbContext, SiteCoordinatorContext()])!;
+        negResult.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(400);
+
+        // 2. Short idempotency key "1" on Subject A does NOT collide with Subject B (even when Subject A's audit JSON contains "1")
+        var subjAReq = new DisburseStipendRequest("SUBJ-GUARD-A", "STUDY-DCT-001", "SITE-101", 1, "A-1", "D-1", 50.00m, "1", null);
+        var subjARes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [subjAReq, dbContext, SiteCoordinatorContext()])!;
+        subjARes.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.Status.Should().Be("COMPLETED");
+
+        var subjAReplay = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [subjAReq, dbContext, SiteCoordinatorContext()])!;
+        subjAReplay.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.Status.Should().Be("DUPLICATE_SKIPPED");
+
+        var subjBReq = new DisburseStipendRequest("SUBJ-GUARD-B", "STUDY-DCT-001", "SITE-101", 1, "A-1", "D-1", 50.00m, "1", null);
+        var subjBRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [subjBReq, dbContext, SiteCoordinatorContext()])!;
+        subjBRes.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.Status.Should().Be("COMPLETED");
+
+        // 3. Stipend reaching $600 YTD without verified W-9 is rejected with 409 Conflict; once dual-verified, it succeeds and sets Is1099ThresholdExceeded
+        var walletB = await dbContext.ParticipantWallets.SingleAsync(w => w.SubjectId == "SUBJ-GUARD-B", ct);
+        walletB.AntiCoercionCap = 600.00m;
+        walletB.AutoDisbursementThreshold = 600.00m;
+        await dbContext.SaveChangesAsync(ct);
+
+        var overCapReq = new DisburseStipendRequest("SUBJ-GUARD-B", "STUDY-DCT-001", "SITE-101", 2, null, null, 650.00m, "k-cap", null);
+        var overCapRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [overCapReq, dbContext, SiteCoordinatorContext()])!;
+        overCapRes.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(422);
+
+        var reach600Req = new DisburseStipendRequest("SUBJ-GUARD-B", "STUDY-DCT-001", "SITE-101", 3, null, null, 550.00m, "k-600", null);
+        var holdRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [reach600Req, dbContext, SiteCoordinatorContext()])!;
+        holdRes.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(409);
+
+        var submitRes = await (Task<Microsoft.AspNetCore.Http.IResult>)submitW9Method.Invoke(
+            null, [walletB.Id, new SubmitW9RequestDto("Participant B", "4321", "100 Clinical Way", true), dbContext, SiteCoordinatorContext()])!;
+        submitRes.Should().BeOfType<Ok<WalletResponse>>();
+
+        var selfVerifyRes = await (Task<Microsoft.AspNetCore.Http.IResult>)verifyW9Method.Invoke(
+            null, [walletB.Id, new VerifyW9RequestDto("self-verify"), dbContext, SiteCoordinatorContext()])!;
+        selfVerifyRes.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(409);
+
+        var dualVerifyRes = await (Task<Microsoft.AspNetCore.Http.IResult>)verifyW9Method.Invoke(
+            null, [walletB.Id, new VerifyW9RequestDto("dual-verify"), dbContext, secondReviewerContext])!;
+        dualVerifyRes.Should().BeOfType<Ok<WalletResponse>>().Which.Value!.W9Status.Should().Be("VERIFIED");
+
+        var unlockedRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [reach600Req, dbContext, SiteCoordinatorContext()])!;
+        unlockedRes.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.NewBalance.Should().Be(600.00m);
+
+        var refreshedWalletB = await dbContext.ParticipantWallets.AsNoTracking().SingleAsync(w => w.Id == walletB.Id, ct);
+        refreshedWalletB.TaxableYtd.Should().Be(600.00m);
+        refreshedWalletB.Is1099ThresholdExceeded.Should().BeTrue();
+        refreshedWalletB.LifetimeStipends.Should().Be(600.00m);
+        refreshedWalletB.LifetimeDisbursements.Should().Be(0m);
 
         File.Delete(dbPath);
     }

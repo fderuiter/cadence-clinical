@@ -5,14 +5,17 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -183,11 +186,17 @@ public static class LabRangeEndpoints
         LabReferenceRangeCreateRequest request,
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, request.StudyId, request.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         string createdBy = ResolveActorId(httpContext);
@@ -203,11 +212,19 @@ public static class LabRangeEndpoints
         LabReferenceRangeUpdateRequest request,
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (await GuardStoredRangeAsync(id, httpContext, labRangeImportService, ct) is { } denied)
+        var (denied, existing) = await GuardAndLoadStoredRangeAsync(id, httpContext, labRangeImportService, ct).ConfigureAwait(false);
+        if (denied is not null)
         {
             return denied;
+        }
+
+        if (existing is not null
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, existing.StudyId, existing.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         string updatedBy = ResolveActorId(httpContext);
@@ -226,11 +243,19 @@ public static class LabRangeEndpoints
         Guid id,
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (await GuardStoredRangeAsync(id, httpContext, labRangeImportService, ct) is { } denied)
+        var (denied, existing) = await GuardAndLoadStoredRangeAsync(id, httpContext, labRangeImportService, ct).ConfigureAwait(false);
+        if (denied is not null)
         {
             return denied;
+        }
+
+        if (existing is not null
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, existing.StudyId, existing.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         string updatedBy = ResolveActorId(httpContext);
@@ -310,7 +335,8 @@ public static class LabRangeEndpoints
     private static async Task<IResult> CommitImportAsync(
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
@@ -361,6 +387,10 @@ public static class LabRangeEndpoints
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, request.StudyId, request.SiteId, cancellationToken: ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         string submittedBy = ResolveActorId(httpContext);
@@ -450,7 +480,7 @@ public static class LabRangeEndpoints
         return TypedResults.Ok(response);
     }
 
-    private static async Task<IResult?> GuardStoredRangeAsync(
+    private static async Task<(IResult? Denied, LabReferenceRangeResponse? Range)> GuardAndLoadStoredRangeAsync(
         Guid id,
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService,
@@ -458,13 +488,14 @@ public static class LabRangeEndpoints
     {
         if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
         {
-            return tenantDenied;
+            return (tenantDenied, null);
         }
 
         var existing = await labRangeImportService.GetReferenceRangeByIdAsync(id, ct).ConfigureAwait(false);
-        return existing is not null
+        var denied = existing is not null
             ? ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, existing.StudyId, existing.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
             : ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
+        return (denied, existing);
     }
 
     private static string ResolveActorId(HttpContext httpContext) =>

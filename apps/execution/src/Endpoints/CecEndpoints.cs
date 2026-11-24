@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -14,6 +15,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -65,7 +67,8 @@ public static class CecEndpoints
         ICecApplicationService cecService,
         ICecRepository repository,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
         {
@@ -81,6 +84,17 @@ public static class CecEndpoints
                 requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (existing is not null
+            && await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                existing.StudyId,
+                existing.SiteId,
+                existing.SubjectId,
+                cancellationToken).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is { UserId.Length: > 0 } p
