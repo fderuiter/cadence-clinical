@@ -99,6 +99,11 @@ internal static class FormSignatureEndpoints
             return TypedResults.Problem(title: "Not found", detail: $"Form {formId:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (record.Locks.Any(l => l.Kind == LockKind.Locked))
+        {
+            return KernelErrorEndpoints.Problem(AssertionErrors.Locked);
+        }
+
         var trimmedHash = request.ContentHash.Trim();
         if (contexts is not null
             && access is not null

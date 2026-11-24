@@ -45,4 +45,8 @@ public interface IRandomizationApplicationService
     /// <summary>Resolves a participant's study and site codes without mutating state, for endpoint scope checks.</summary>
     Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
         Task.FromResult<(StudyCode StudyId, SiteCode? SiteId)?>(null);
+
+    /// <summary>Resolves a participant's study, optional site, and canonical subject code for kernel lock checks.</summary>
+    Task<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?> GetSubjectLockScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
+        Task.FromResult<(StudyCode StudyCode, SiteCode? SiteCode, SubjectCode SubjectCode)?>(null);
 }
