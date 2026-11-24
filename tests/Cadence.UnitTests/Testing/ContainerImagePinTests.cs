@@ -406,6 +406,42 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+
+        FindDuplicateDependabotIgnores(dependabot).Should().BeEmpty(
+            "Dependabot requires every ignore entry within an updates ecosystem block to have a unique combination of dependency-name and versions/update-types");
+    }
+
+    [Fact]
+    public void DependabotIgnoreUniqueness_DetectsDuplicateVersionsUpdateTypesAndBareRules()
+    {
+        const string duplicateFixture = """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "OpenTelemetry*"
+                    versions: [">= 1.21.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "MassTransit*"
+                    update-types: ["version-update:semver-major"]
+                  - dependency-name: "MassTransit*"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                        "version-update:semver-minor",
+                      ]
+                  - dependency-name: "LegacyPkg"
+                  - dependency-name: "LegacyPkg"
+            """;
+
+        FindDuplicateDependabotIgnores(duplicateFixture).Should().Equal(
+            "#/updates/0/ignore/2/versions (SonarAnalyzer.CSharp: >= 10.7.0)",
+            "#/updates/0/ignore/4/update-types (MassTransit*: version-update:semver-major)",
+            "#/updates/0/ignore/6/dependency-name (LegacyPkg)");
     }
 
     [Fact]
@@ -620,6 +656,187 @@ public sealed partial class ContainerImagePinTests
 
         return result;
     }
+
+    private sealed record DependabotIgnoreEntry(string DependencyName, List<string> Versions, List<string> UpdateTypes);
+
+    private static List<string> FindDuplicateDependabotIgnores(string dependabotYaml)
+    {
+        var duplicates = new List<string>();
+        var updates = ParseDependabotUpdateIgnores(dependabotYaml);
+
+        for (int uIdx = 0; uIdx < updates.Count; uIdx++)
+        {
+            var seenVersions = new HashSet<(string Dep, string Version)>();
+            var seenUpdateTypes = new HashSet<(string Dep, string UpdateType)>();
+            var seenBare = new HashSet<string>(StringComparer.Ordinal);
+            var ignores = updates[uIdx];
+
+            for (int iIdx = 0; iIdx < ignores.Count; iIdx++)
+            {
+                var entry = ignores[iIdx];
+                foreach (string version in entry.Versions)
+                {
+                    if (!seenVersions.Add((entry.DependencyName, version)))
+                    {
+                        duplicates.Add($"#/updates/{uIdx}/ignore/{iIdx}/versions ({entry.DependencyName}: {version})");
+                    }
+                }
+
+                foreach (string updateType in entry.UpdateTypes)
+                {
+                    if (!seenUpdateTypes.Add((entry.DependencyName, updateType)))
+                    {
+                        duplicates.Add($"#/updates/{uIdx}/ignore/{iIdx}/update-types ({entry.DependencyName}: {updateType})");
+                    }
+                }
+
+                if (entry.Versions.Count == 0 && entry.UpdateTypes.Count == 0 && !seenBare.Add(entry.DependencyName))
+                {
+                    duplicates.Add($"#/updates/{uIdx}/ignore/{iIdx}/dependency-name ({entry.DependencyName})");
+                }
+            }
+        }
+
+        return duplicates;
+    }
+
+    private static List<List<DependabotIgnoreEntry>> ParseDependabotUpdateIgnores(string dependabotYaml)
+    {
+        var updates = new List<List<DependabotIgnoreEntry>>();
+        List<DependabotIgnoreEntry>? currentIgnores = null;
+        DependabotIgnoreEntry? currentEntry = null;
+        List<string>? activeList = null;
+        bool inIgnoreSection = false;
+        int ignoreIndent = -1;
+
+        string[] lines = dependabotYaml.ReplaceLineEndings("\n").Split('\n');
+        for (int idx = 0; idx < lines.Length; idx++)
+        {
+            string raw = lines[idx];
+            string trimmed = raw.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+            {
+                continue;
+            }
+
+            int indent = raw.Length - raw.TrimStart(' ').Length;
+            if (trimmed.StartsWith("- package-ecosystem:", StringComparison.Ordinal))
+            {
+                currentIgnores = [];
+                updates.Add(currentIgnores);
+                currentEntry = null;
+                activeList = null;
+                inIgnoreSection = false;
+                continue;
+            }
+
+            if (currentIgnores is null)
+            {
+                continue;
+            }
+
+            if (string.Equals(trimmed, "ignore:", StringComparison.Ordinal))
+            {
+                inIgnoreSection = true;
+                ignoreIndent = indent;
+                currentEntry = null;
+                activeList = null;
+                continue;
+            }
+
+            if (!inIgnoreSection)
+            {
+                continue;
+            }
+
+            if (indent <= ignoreIndent)
+            {
+                inIgnoreSection = false;
+                currentEntry = null;
+                activeList = null;
+                continue;
+            }
+
+            ParseDependabotIgnoreLine(trimmed, currentIgnores, ref currentEntry, ref activeList);
+        }
+
+        return updates;
+    }
+
+    private static void ParseDependabotIgnoreLine(
+        string trimmed,
+        List<DependabotIgnoreEntry> currentIgnores,
+        ref DependabotIgnoreEntry? currentEntry,
+        ref List<string>? activeList)
+    {
+        if (trimmed.StartsWith("- dependency-name:", StringComparison.Ordinal))
+        {
+            string depName = UnquoteYamlScalar(trimmed["- dependency-name:".Length..]);
+            currentEntry = new DependabotIgnoreEntry(depName, [], []);
+            currentIgnores.Add(currentEntry);
+            activeList = null;
+            return;
+        }
+
+        if (currentEntry is null)
+        {
+            return;
+        }
+
+        if (trimmed.StartsWith("versions:", StringComparison.Ordinal))
+        {
+            activeList = currentEntry.Versions;
+            CollectYamlListTokens(trimmed["versions:".Length..], activeList);
+            return;
+        }
+
+        if (trimmed.StartsWith("update-types:", StringComparison.Ordinal))
+        {
+            activeList = currentEntry.UpdateTypes;
+            CollectYamlListTokens(trimmed["update-types:".Length..], activeList);
+            return;
+        }
+
+        if (activeList is not null)
+        {
+            CollectYamlListTokens(trimmed, activeList);
+        }
+    }
+
+    private static void CollectYamlListTokens(string fragment, List<string> target)
+    {
+        string cleaned = fragment.Trim();
+        if (cleaned.Length == 0)
+        {
+            return;
+        }
+
+        if (cleaned.StartsWith("- ", StringComparison.Ordinal))
+        {
+            string item = UnquoteYamlScalar(cleaned[2..]);
+            if (item.Length > 0)
+            {
+                target.Add(item);
+            }
+
+            return;
+        }
+
+        foreach (Match match in QuotedYamlString().Matches(cleaned))
+        {
+            string val = match.Groups["dq"].Success ? match.Groups["dq"].Value : match.Groups["sq"].Value;
+            if (val.Length > 0)
+            {
+                target.Add(val);
+            }
+        }
+    }
+
+    private static string UnquoteYamlScalar(string raw) =>
+        raw.Trim().Trim(',').Trim().Trim('"', '\'');
+
+    [GeneratedRegex(@"""(?<dq>[^""]+)""|'(?<sq>[^']+)'")]
+    private static partial Regex QuotedYamlString();
 
     [GeneratedRegex(@"<TargetFramework>net(\d+)\.\d+</TargetFramework>")]
     private static partial Regex TargetFrameworkMajor();
