@@ -1,7 +1,11 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
-import { alignActiveScrollItem, handoffFocus } from "ui";
+import {
+  alignActiveScrollItem,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+} from "ui";
 import { isScreenAvailable } from "../router/availability.js";
 import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
@@ -31,13 +35,16 @@ function escapeSelectorId(id) {
 
 function hasActiveModalOrDrawer() {
   return Boolean(
+    (typeof hasActiveModalFocusTrap === "function" &&
+      hasActiveModalFocusTrap()) ||
     state.signatureModalOpen ||
     state.reconsentModalOpen ||
     state.isSyncDrawerOpen ||
     state.disburseModalOpen ||
     state.questionnaireCancelConfirmOpen ||
-    state.session?.pinSetup?.isOpen ||
-    state.session?.pinUnlock?.isOpen
+    state.peekRecord ||
+    state.pinSetup?.isOpen ||
+    state.pinUnlock?.isOpen
   );
 }
 

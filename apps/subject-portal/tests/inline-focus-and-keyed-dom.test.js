@@ -561,5 +561,24 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
     expect(navTabs.scrollLeft).toBe(440);
     expect(walletTab.getAttribute("aria-selected")).toBe("true");
     expect(document.activeElement?.id).toBe("wallet-view-heading");
+
+    // When PinUnlockModal is open, showView still aligns .nav-tabs without stealing focus from #unlock-pin
+    scrollLeftValue = 0;
+    scrollToSpy.mockClear();
+
+    const session = useSessionStore();
+    showView("view-tasks", { immediateScroll: true });
+    await settle();
+    session.pinUnlock.isOpen = true;
+    await settle();
+    expect(document.activeElement?.id).toBe("unlock-pin");
+
+    showView("view-wallet", { immediateScroll: true });
+    await settle();
+
+    expect(navTabs.scrollLeft).toBe(440);
+    expect(document.activeElement?.id).toBe("unlock-pin");
+    session.pinUnlock.isOpen = false;
+    await settle();
   });
 });

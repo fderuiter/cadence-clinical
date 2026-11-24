@@ -117,7 +117,7 @@ describe("ClinicalContextBar", () => {
         return () =>
           h(
             "a",
-            { ...attrs, href, "data-router-link": "true" },
+            { href, ...attrs, "data-router-link": "true" },
             slots.default?.()
           );
       },
@@ -139,6 +139,7 @@ describe("ClinicalContextBar", () => {
       host.querySelectorAll<HTMLAnchorElement>('a[data-router-link="true"]')
     );
     expect(links).toHaveLength(4);
+    expect(links.every((l) => Boolean(l.getAttribute("href")))).toBe(true);
     expect(links[3].getAttribute("aria-current")).toBe("page");
     expect(links[0].getAttribute("aria-current")).toBeNull();
 

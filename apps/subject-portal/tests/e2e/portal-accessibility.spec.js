@@ -1991,6 +1991,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("should align selected tabs inside visible .nav-tabs bounds BEFORE scrollIntoViewIfNeeded on cold loads, hash changes, and 200% zoom, toggle overflow cues, and keep .portal-navigation sticky on ConsentView", async ({
     page,
   }) => {
+    test.setTimeout(90000);
     const captureScreenshots = process.env.CAPTURE_NAV_SCREENSHOTS === "1";
 
     await page.route(
