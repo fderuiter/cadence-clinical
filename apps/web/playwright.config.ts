@@ -48,7 +48,7 @@ const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
 
 const accessibilityProject = {
   name: "accessibility",
-  testMatch: /web-accessibility\.spec\.ts/,
+  testMatch: /(?:web-accessibility|drawer-reflow)\.spec\.ts/,
   use: {
     ...devices["Desktop Chrome"],
     channel: "chromium",
@@ -121,7 +121,8 @@ export default defineConfig({
     },
     {
       name: "chromium",
-      testIgnore: /(?:web-accessibility|staged-demo-subpath)\.spec\.ts/,
+      testIgnore:
+        /(?:web-accessibility|drawer-reflow|staged-demo-subpath)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         channel: "chromium",

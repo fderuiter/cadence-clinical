@@ -1,213 +1,230 @@
 <!-- apps/web/src/components/etmf/ExportJobDrawer.vue -->
 <template>
-  <div
-    v-if="isOpen"
-    class="export-drawer-overlay"
-    role="presentation"
-    @click.self="handleClose"
+  <ClinicalDrawer
+    :model-value="isOpen"
+    :teleport="false"
+    size="md"
+    overlay-class="export-drawer-overlay"
+    panel-class="export-drawer"
+    aria-label="Study binder export progress"
+    @close="handleClose"
   >
-    <div
-      ref="drawerRef"
-      class="export-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Study binder export progress"
-      tabindex="-1"
-    >
+    <template #header>
       <div class="drawer-header">
         <div class="header-title-group">
-          <span class="header-icon" aria-hidden="true">📦</span>
-          <div>
-            <h3 class="drawer-title">eTMF Study Binder Export</h3>
-            <p class="drawer-subtitle">
-              Prepare and download complete eTMF study binder archives
-            </p>
-          </div>
+          <Archive :size="18" class="header-icon" aria-hidden="true" />
+          <h3 class="drawer-title">eTMF Study Binder Export</h3>
         </div>
         <button
+          type="button"
           class="btn-close-drawer"
           aria-label="Close export drawer"
           @click="handleClose"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
+    </template>
 
-      <div class="drawer-body">
-        <div
-          v-if="downloadError"
-          id="export-download-error"
-          class="error-box"
-          role="alert"
-        >
-          ❌ {{ downloadError }}
-        </div>
-        <p
-          v-if="!canExport"
-          id="export-drawer-role-note"
-          class="expiration-notice"
-          role="note"
-        >
-          {{ ETMF_EXPORT_ROLE_REASON }}
-        </p>
+    <div class="drawer-body">
+      <p class="drawer-subtitle">
+        Prepare and download complete eTMF study binder archives
+      </p>
 
-        <!-- Active Job Section -->
-        <div v-if="activeJob" class="active-job-card">
-          <div class="card-header">
-            <div>
-              <span class="job-id-tag">Study Binder Export</span>
-              <span class="study-id-text">Study: {{ activeJob.study_id }}</span>
-            </div>
-            <span
-              :class="getStatusBadgeClass(activeJob.status)"
-              class="status-badge"
-            >
-              {{ formatClinicalStatus(activeJob.status) }}
-            </span>
+      <div
+        v-if="downloadError"
+        id="export-download-error"
+        class="error-box"
+        role="alert"
+      >
+        <AlertCircle :size="15" class="inline-icon" aria-hidden="true" />
+        <span>{{ downloadError }}</span>
+      </div>
+      <p
+        v-if="!canExport"
+        id="export-drawer-role-note"
+        class="expiration-notice"
+        role="note"
+      >
+        {{ ETMF_EXPORT_ROLE_REASON }}
+      </p>
+
+      <!-- Active Job Section -->
+      <div v-if="activeJob" class="active-job-card">
+        <div class="card-header">
+          <div class="card-header-meta">
+            <span class="job-id-tag">Study Binder Export</span>
+            <span class="study-id-text">Study: {{ activeJob.study_id }}</span>
           </div>
+          <span
+            :class="getStatusBadgeClass(activeJob.status)"
+            class="status-badge"
+          >
+            {{ formatClinicalStatus(activeJob.status) }}
+          </span>
+        </div>
 
-          <div class="progress-container" style="margin-top: 14px">
-            <div class="progress-info">
-              <span class="progress-label">Export Progress</span>
-              <span class="progress-value"
-                >{{ Math.round(activeJob.progress_percentage) }}%</span
-              >
-            </div>
-            <div
-              class="progress-bar-track"
-              role="progressbar"
-              :aria-valuenow="Math.round(activeJob.progress_percentage)"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              :aria-label="`Export progress: ${Math.round(activeJob.progress_percentage)} percent`"
+        <div class="progress-container">
+          <div class="progress-info">
+            <span class="progress-label">Export Progress</span>
+            <span class="progress-value"
+              >{{ Math.round(activeJob.progress_percentage) }}%</span
             >
-              <div
-                class="progress-bar-fill"
-                :class="{ 'is-animated': activeJob.status === 'PROCESSING' }"
-                :style="{ width: `${activeJob.progress_percentage}%` }"
-              />
-            </div>
-            <div class="progress-details">
-              <span>
-                Processed
-                <strong>{{ activeJob.processed_documents }}</strong> of
-                <strong>{{ activeJob.total_documents }}</strong> documents
-              </span>
-              <span v-if="activeJob.created_at" class="created-at">
-                Requested {{ formatDate(activeJob.created_at) }}
-              </span>
-            </div>
-            <SupportDetails
-              v-if="activeJob.job_id"
-              summary-label="Export reference"
-              :reference="activeJob.job_id"
+          </div>
+          <div
+            class="progress-bar-track"
+            role="progressbar"
+            :aria-valuenow="Math.round(activeJob.progress_percentage)"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-label="`Export progress: ${Math.round(activeJob.progress_percentage)} percent`"
+          >
+            <div
+              class="progress-bar-fill"
+              :class="{ 'is-animated': activeJob.status === 'PROCESSING' }"
+              :style="{ width: `${activeJob.progress_percentage}%` }"
             />
           </div>
+          <div class="progress-details">
+            <span>
+              Processed
+              <strong>{{ activeJob.processed_documents }}</strong> of
+              <strong>{{ activeJob.total_documents }}</strong> documents
+            </span>
+            <span v-if="activeJob.created_at" class="created-at">
+              Requested {{ formatDate(activeJob.created_at) }}
+            </span>
+          </div>
+          <SupportDetails
+            v-if="activeJob.job_id"
+            summary-label="Export reference"
+            :reference="activeJob.job_id"
+          />
+        </div>
 
-          <!-- Download Action Area -->
-          <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
-            <div class="completion-message">
-              <span
-                >✅ Study binder archive is ready for download with complete
-                document index and verification inventory.</span
-              >
-            </div>
-            <button
-              v-if="activeJob.download_url || activeJob.job_id"
-              type="button"
-              class="btn-download"
-              :disabled="!canExport || downloadingJobId === activeJob.job_id"
-              :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
-              @click="handleDownload(activeJob)"
-            >
-              <span v-if="downloadingJobId === activeJob.job_id">
-                Downloading Export Package...
-              </span>
-              <span v-else>⬇️ Download Export Package (.zip)</span>
-            </button>
-            <p v-if="activeJob.expires_at" class="expiration-notice">
-              ⏱️ Temporary download link expires at
+        <!-- Download Action Area -->
+        <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
+          <div class="completion-message">
+            <CheckCircle2 :size="15" class="inline-icon" aria-hidden="true" />
+            <span>
+              Study binder archive is ready for download with complete document
+              index and verification inventory.
+            </span>
+          </div>
+          <button
+            v-if="activeJob.download_url || activeJob.job_id"
+            type="button"
+            class="btn-download"
+            :disabled="!canExport || downloadingJobId === activeJob.job_id"
+            :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
+            @click="handleDownload(activeJob)"
+          >
+            <span v-if="downloadingJobId === activeJob.job_id">
+              Downloading Export Package...
+            </span>
+            <template v-else>
+              <Download :size="15" aria-hidden="true" />
+              <span>Download Export Package (.zip)</span>
+            </template>
+          </button>
+          <p v-if="activeJob.expires_at" class="expiration-notice">
+            <Clock :size="13" class="inline-icon" aria-hidden="true" />
+            <span>
+              Temporary download link expires at
               {{ formatDate(activeJob.expires_at) }} (24h validity).
-            </p>
-          </div>
-
-          <!-- Failure Alert -->
-          <div v-else-if="activeJob.status === 'FAILED'" class="error-box">
-            ❌ Background export job failed. Please verify document storage
-            connectivity or retry export.
-          </div>
-        </div>
-
-        <!-- No Active Job State -->
-        <div v-else class="empty-active-job">
-          <p>No export job currently in progress.</p>
-        </div>
-
-        <!-- Export Job History Section -->
-        <div class="history-section">
-          <h4 class="history-title">Export Job History</h4>
-          <div v-if="exportJobs && exportJobs.length > 0" class="history-list">
-            <div
-              v-for="job in exportJobs"
-              :key="job.job_id"
-              class="history-item"
-              :class="{
-                'is-active': activeJob && activeJob.job_id === job.job_id,
-              }"
-            >
-              <div class="history-item-header">
-                <span class="history-job-id"
-                  >Binder archive · {{ job.total_documents }} documents</span
-                >
-                <span
-                  :class="getStatusBadgeClass(job.status)"
-                  class="status-badge-sm"
-                >
-                  {{ formatClinicalStatus(job.status) }}
-                </span>
-              </div>
-              <div class="history-item-meta">
-                <span>Requested {{ formatDate(job.created_at) }}</span>
-              </div>
-              <SupportDetails
-                v-if="job.job_id"
-                summary-label="Export reference"
-                :reference="job.job_id"
-              />
-              <div
-                v-if="
-                  job.status === 'COMPLETED' && (job.download_url || job.job_id)
-                "
-                class="history-item-action"
-              >
-                <button
-                  type="button"
-                  class="history-download-link"
-                  :disabled="!canExport || downloadingJobId === job.job_id"
-                  :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
-                  @click="handleDownload(job)"
-                >
-                  {{
-                    downloadingJobId === job.job_id
-                      ? "Downloading..."
-                      : "Download .zip"
-                  }}
-                </button>
-              </div>
-            </div>
-          </div>
-          <p v-else class="empty-history-text">
-            No previous export history found.
+            </span>
           </p>
         </div>
+
+        <!-- Failure Alert -->
+        <div v-else-if="activeJob.status === 'FAILED'" class="error-box">
+          <AlertCircle :size="15" class="inline-icon" aria-hidden="true" />
+          <span>
+            Background export job failed. Please verify document storage
+            connectivity or retry export.
+          </span>
+        </div>
+      </div>
+
+      <!-- No Active Job State -->
+      <div v-else class="empty-active-job">
+        <p>No export job currently in progress.</p>
+      </div>
+
+      <!-- Export Job History Section -->
+      <div class="history-section">
+        <h4 class="history-title">Export Job History</h4>
+        <div v-if="exportJobs && exportJobs.length > 0" class="history-list">
+          <div
+            v-for="job in exportJobs"
+            :key="job.job_id"
+            class="history-item"
+            :class="{
+              'is-active': activeJob && activeJob.job_id === job.job_id,
+            }"
+          >
+            <div class="history-item-header">
+              <span class="history-job-id"
+                >Binder archive &middot;
+                {{ job.total_documents }} documents</span
+              >
+              <span
+                :class="getStatusBadgeClass(job.status)"
+                class="status-badge-sm"
+              >
+                {{ formatClinicalStatus(job.status) }}
+              </span>
+            </div>
+            <div class="history-item-meta">
+              <span>Requested {{ formatDate(job.created_at) }}</span>
+            </div>
+            <SupportDetails
+              v-if="job.job_id"
+              summary-label="Export reference"
+              :reference="job.job_id"
+            />
+            <div
+              v-if="
+                job.status === 'COMPLETED' && (job.download_url || job.job_id)
+              "
+              class="history-item-action"
+            >
+              <button
+                type="button"
+                class="history-download-link"
+                :disabled="!canExport || downloadingJobId === job.job_id"
+                :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
+                @click="handleDownload(job)"
+              >
+                <Download :size="13" aria-hidden="true" />
+                <span>{{
+                  downloadingJobId === job.job_id
+                    ? "Downloading..."
+                    : "Download .zip"
+                }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p v-else class="empty-history-text">
+          No previous export history found.
+        </p>
       </div>
     </div>
-  </div>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDrawer } from "ui";
+import {
+  AlertCircle,
+  Archive,
+  CheckCircle2,
+  Clock,
+  Download,
+  X,
+} from "lucide-vue-next";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
@@ -221,7 +238,6 @@ import { formatClinicalStatus } from "../../utils/clinicalLabels";
 const store = useEtmfStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
-const drawerRef = ref(null);
 const downloadingJobId = ref("");
 const downloadError = ref("");
 
@@ -264,11 +280,6 @@ function handleClose() {
   store.toggleExportDrawer(false);
 }
 
-useFocusTrap(drawerRef, {
-  isOpen,
-  onEscape: handleClose,
-});
-
 function getStatusBadgeClass(status) {
   switch (status) {
     case "COMPLETED":
@@ -296,103 +307,54 @@ function formatDate(dt) {
 }
 </script>
 
+<style scoped src="../shared/drawerHeaderChrome.css"></style>
+
 <style scoped>
-.export-drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 1050;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.export-drawer {
-  width: 480px;
-  max-width: 90vw;
-  height: 100%;
-  background: var(--semantic-color-surface);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.drawer-header {
-  padding: 16px 20px;
-  background: var(--semantic-color-surface);
-  border-bottom: 1px solid var(--semantic-color-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-title-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-icon {
-  font-size: 24px;
-}
-
-.drawer-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--semantic-color-text);
-}
-
 .drawer-subtitle {
-  margin: 2px 0 0 0;
-  font-size: 11px;
+  margin: 0;
+  font-size: 0.8125rem;
   color: var(--semantic-color-text-secondary);
 }
 
-.btn-close-drawer {
-  background: transparent;
-  border: none;
-  font-size: 18px;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.btn-close-drawer:hover {
+.btn-close-drawer:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text);
 }
 
 .drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .active-job-card {
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px;
+  min-width: 0;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .job-id-tag {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
@@ -400,13 +362,12 @@ function formatDate(dt) {
 }
 
 .study-id-text {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
-  margin-left: 8px;
 }
 
 .status-badge {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
@@ -414,7 +375,7 @@ function formatDate(dt) {
 }
 
 .status-badge-sm {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
@@ -445,10 +406,14 @@ function formatDate(dt) {
   color: var(--semantic-color-text-secondary);
 }
 
+.progress-container {
+  margin-top: 14px;
+}
+
 .progress-info {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   margin-bottom: 6px;
   color: var(--semantic-color-text-body);
@@ -468,29 +433,27 @@ function formatDate(dt) {
 }
 
 .progress-bar-fill.is-animated {
-  background: linear-gradient(
-    90deg,
-    var(--semantic-color-interactive-primary),
-    var(--semantic-color-interactive-primary),
-    var(--semantic-color-interactive-primary)
-  );
-  background-size: 200% 100%;
   animation: progressPulse 1.5s infinite linear;
 }
 
 @keyframes progressPulse {
   0% {
-    background-position: 200% 0;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
   }
   100% {
-    background-position: -200% 0;
+    opacity: 1;
   }
 }
 
 .progress-details {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.6875rem;
   color: var(--semantic-color-text-secondary);
   margin-top: 6px;
 }
@@ -505,7 +468,10 @@ function formatDate(dt) {
 }
 
 .completion-message {
-  font-size: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.75rem;
   color: var(--semantic-color-success-dark);
   background: var(--semantic-color-success-bg-soft);
   padding: 8px 12px;
@@ -513,14 +479,21 @@ function formatDate(dt) {
   border: 1px solid var(--semantic-color-success-border-soft);
 }
 
+.inline-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .btn-download {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  min-height: 44px;
   background: var(--semantic-color-success);
   color: var(--semantic-color-surface);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 10px 16px;
   border: none;
   border-radius: 6px;
@@ -534,24 +507,25 @@ function formatDate(dt) {
   cursor: not-allowed;
 }
 
-.btn-download:hover {
-  background: var(--semantic-color-success);
-}
-
 .expiration-notice {
   margin: 0;
-  font-size: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
 
 .error-box {
-  margin-top: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   padding: 10px 12px;
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);
-  font-size: 12px;
+  font-size: 0.75rem;
   border-radius: 6px;
 }
 
@@ -561,7 +535,7 @@ function formatDate(dt) {
   background: var(--semantic-color-surface-muted);
   border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--semantic-color-text-secondary);
 }
 
@@ -572,7 +546,7 @@ function formatDate(dt) {
 
 .history-title {
   margin: 0 0 12px 0;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -588,7 +562,8 @@ function formatDate(dt) {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
+  min-width: 0;
 }
 
 .history-item.is-active {
@@ -600,11 +575,13 @@ function formatDate(dt) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 4px;
 }
 
 .history-job-id {
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -612,24 +589,32 @@ function formatDate(dt) {
 .history-item-meta {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
   color: var(--semantic-color-text-secondary);
-  font-size: 11px;
+  font-size: 0.6875rem;
 }
 
 .history-item-action {
   margin-top: 8px;
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .history-download-link {
   background: transparent;
-  border: none;
-  padding: 0;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  min-height: 44px;
+  padding: 6px 12px;
   cursor: pointer;
   color: var(--semantic-color-interactive-primary);
   font-weight: 600;
   text-decoration: none;
-  font-size: 11px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .history-download-link:disabled {
@@ -638,11 +623,11 @@ function formatDate(dt) {
 }
 
 .history-download-link:hover {
-  text-decoration: underline;
+  background: var(--semantic-color-surface-muted);
 }
 
 .empty-history-text {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }

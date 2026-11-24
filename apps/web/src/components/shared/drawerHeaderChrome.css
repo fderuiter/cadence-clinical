@@ -1,0 +1,77 @@
+.drawer-header,
+.drawer-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.header-title-wrap,
+.header-title-group,
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.header-icon,
+.drawer-icon {
+  flex-shrink: 0;
+  color: var(--semantic-color-interactive-primary);
+}
+
+.drawer-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.close-btn,
+.btn-close,
+.btn-close-drawer,
+.btn-close-batch-drawer {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--semantic-color-text-secondary);
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.close-btn:hover:not(:disabled),
+.btn-close:hover:not(:disabled),
+.btn-close-drawer:hover:not(:disabled) {
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
+}
+
+.close-btn:disabled,
+.btn-close:disabled,
+.btn-close-drawer:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-height: 540px) {
+  .close-btn,
+  .btn-close,
+  .btn-close-drawer,
+  .btn-close-batch-drawer {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}

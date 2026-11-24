@@ -25,14 +25,23 @@ On viewports with `max-height: 480px` (such as `320x256` WCAG 2.1 SC 1.4.10 refl
 
 ## ClinicalDrawer Props
 
-| Prop              | Type      | Default   | Description                                                              |
-| :---------------- | :-------- | :-------- | :----------------------------------------------------------------------- |
-| `open` / `isOpen` | `Boolean` | `false`   | Controls slide-over visibility (`modelValue` also supported).            |
-| `title`           | `String`  | `''`      | Drawer header title bound via `aria-labelledby`.                         |
-| `size`            | `String`  | `'md'`    | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens. |
-| `position`        | `String`  | `'right'` | Slide-in edge (`right` or `left`).                                       |
-| `dismissible`     | `Boolean` | `true`    | Locks `Escape`, close button, and backdrop dismissal when `false`.       |
-| `teleport`        | `Boolean` | `true`    | Teleports the drawer overlay to `document.body` when `true`.             |
+| Prop                                        | Type                        | Default                   | Description                                                                                                  |
+| :------------------------------------------ | :-------------------------- | :------------------------ | :----------------------------------------------------------------------------------------------------------- |
+| `modelValue` / `open` / `isOpen`            | `Boolean`                   | `false`                   | Controls slide-over visibility across `v-model` and prop bindings.                                           |
+| `docked`                                    | `Boolean`                   | `false`                   | Renders a non-modal desktop inspector panel (`>= 1280px`) without backdrop dimming or focus trap (ADR-2663). |
+| `keepMounted`                               | `Boolean`                   | `false`                   | Keeps closed drawer DOM mounted (`display: none`, `inert`, `aria-hidden="true"`).                            |
+| `title` / `subtitle`                        | `String`                    | `''`                      | Built-in `#header` title and optional subtitle (hidden on `@media (max-height: 540px)`).                     |
+| `ariaLabel` / `ariaLabelledby`              | `String`                    | `undefined`               | Explicit accessible name or custom `#header` heading ID override.                                            |
+| `id` / `overlayId`                          | `String`                    | `undefined`               | Optional DOM IDs applied to `.clinical-drawer-panel` and `.clinical-drawer-backdrop`.                        |
+| `overlayClass` / `panelClass` / `bodyClass` | `String \| Array \| Object` | `''`                      | Optional CSS classes appended to backdrop, panel, or `.clinical-drawer-body`.                                |
+| `size`                                      | `String`                    | `'md'`                    | Width tier (`sm`, `md`, `lg`, `xl`) mapped to `--drawer-width-*` tokens.                                     |
+| `position`                                  | `String`                    | `'right'`                 | Slide-in edge (`right`, `left`, or `bottom`).                                                                |
+| `mobileBottomSheet`                         | `Boolean`                   | `false`                   | Adds mobile bottom-sheet drag handle styling on narrow viewports (ADR-2657).                                 |
+| `showHeader` / `closeLabel`                 | `Boolean` / `String`        | `true` / `'Close drawer'` | Toggles header chrome or customizes the `44x44px` Lucide `X` close button `aria-label`.                      |
+| `dismissible` / `closeOnBackdrop`           | `Boolean`                   | `true`                    | Locks `Escape`, close button, and backdrop dismissal during Part 11 / GxP submissions.                       |
+| `teleport`                                  | `Boolean \| String`         | `true`                    | Teleports the drawer overlay to `document.body` (or inline when `false`).                                    |
+
+`ClinicalDrawer` bounds persistent chrome to a single `#header` slot and one optional `#footer` slot (plus `#after-panel` for nested `ClinicalModal` overlays), sizes panels with `100dvh` (`100vh` fallback) and `min-height: 0` on `.clinical-drawer-body`, presents as a `90dvh` bottom sheet with `env(safe-area-inset-bottom)` at `<= 480px` width, and switches to panel-level vertical scrolling with compact `<= 52px` headers on `@media (max-height: 540px)` short viewports (ADR-2674).
 
 ## Overlay & Inline Focus Composables (`useFocusTrap`, `hasActiveModalFocusTrap`, `trapTabFocus`, `handoffFocus`, `useInlineFocusHandoff` & `useEscapeClose`)
 

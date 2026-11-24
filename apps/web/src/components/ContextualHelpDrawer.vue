@@ -6,6 +6,7 @@
       :is-open="knowledgeStore.isOpen && !knowledgeStore.isEscalating"
       :restore-focus="() => !knowledgeStore.isEscalating"
       :teleport="false"
+      size="sm"
       overlay-id="contextual-help-drawer-overlay"
       overlay-class="drawer-overlay"
       panel-class="drawer-panel"
@@ -14,131 +15,125 @@
       @close="knowledgeStore.closeDrawer()"
     >
       <template #header>
-        <div class="drawer-header">
-          <div class="header-main-row">
-            <div class="header-title-group">
-              <span class="header-icon" aria-hidden="true">
-                <BookOpen :size="20" />
-              </span>
-              <div>
-                <h3 id="help-drawer-title" class="drawer-title">
-                  Clinical Guidance &amp; SOPs
-                </h3>
-                <div class="context-badges">
-                  <span class="context-badge route-badge" title="Active Route">
-                    <MapPin :size="12" aria-hidden="true" />
-                    <span>{{ knowledgeStore.currentRoute }}</span>
-                  </span>
-                  <span
-                    class="context-badge persona-badge"
-                    title="Active Persona"
-                  >
-                    {{ activePersonaLabel }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div class="header-actions">
-              <ClinicalIconButton
-                v-if="knowledgeStore.activeDrawerTab === 'guidance'"
-                class="btn-icon-toggle"
-                variant="ghost"
-                size="sm"
-                :class="{ active: isSearchOpen }"
-                :aria-pressed="isSearchOpen ? 'true' : 'false'"
-                label="Toggle Search SOPs"
-                title="Toggle Search SOPs"
-                @click="toggleSearch"
-              >
-                <Search :size="16" aria-hidden="true" />
-              </ClinicalIconButton>
-              <ClinicalIconButton
-                class="btn-close"
-                variant="ghost"
-                size="sm"
-                label="Close Help Drawer"
-                @click="knowledgeStore.closeDrawer()"
-              >
-                <X :size="18" aria-hidden="true" />
-              </ClinicalIconButton>
-            </div>
+        <!-- Compact Single-Row Header -->
+        <header class="drawer-header">
+          <div class="header-title-group">
+            <span class="header-icon" aria-hidden="true">
+              <BookOpen :size="18" aria-hidden="true" />
+            </span>
+            <h3 id="help-drawer-title" class="drawer-title">
+              Clinical Guidance &amp; SOPs
+            </h3>
           </div>
 
-          <!-- Inline Drawer View Tabs -->
-          <div
-            class="drawer-tabs"
-            role="tablist"
-            aria-label="Contextual assistance views"
-          >
-            <button
-              id="tab-contextual-guidance"
-              type="button"
-              role="tab"
-              class="drawer-tab-btn"
-              :class="{ active: knowledgeStore.activeDrawerTab === 'guidance' }"
-              :aria-selected="
-                knowledgeStore.activeDrawerTab === 'guidance' ? 'true' : 'false'
-              "
-              aria-controls="panel-contextual-guidance"
-              @click="switchTab('guidance')"
-            >
-              <BookOpen :size="14" aria-hidden="true" />
-              <span>SOP Guidance</span>
-            </button>
-            <button
-              id="tab-contextual-tickets"
-              type="button"
-              role="tab"
-              class="drawer-tab-btn"
-              :class="{ active: knowledgeStore.activeDrawerTab === 'tickets' }"
-              :aria-selected="
-                knowledgeStore.activeDrawerTab === 'tickets' ? 'true' : 'false'
-              "
-              aria-controls="panel-contextual-tickets"
-              @click="switchTab('tickets')"
-            >
-              <Ticket :size="14" aria-hidden="true" />
-              <span>Support Tickets</span>
-              <span
-                v-if="knowledgeStore.hasLoadedDrawerTickets"
-                class="tab-count-pill"
-              >
-                {{ knowledgeStore.drawerTickets.length }}
-              </span>
-            </button>
-          </div>
-
-          <!-- Inline Search Bar (Guidance Tab Only) -->
-          <div
-            v-if="knowledgeStore.activeDrawerTab === 'guidance' && isSearchOpen"
-            class="search-bar-row"
-          >
-            <label for="help-search-input" class="sr-only">
-              Search clinical SOPs, guidelines, or topics
-            </label>
-            <input
-              id="help-search-input"
-              ref="searchInputRef"
-              v-model="searchInput"
-              type="text"
-              class="search-input"
-              placeholder="Search SOPs, guidelines, or topics..."
-              @input="onSearchInput"
-            />
+          <div class="header-actions">
             <ClinicalIconButton
-              v-if="searchInput"
-              class="btn-clear-search"
+              v-if="knowledgeStore.activeDrawerTab === 'guidance'"
+              class="btn-icon-toggle"
               variant="ghost"
               size="sm"
-              label="Clear SOP search"
-              @click="clearSearch"
+              :class="{ active: isSearchOpen }"
+              :aria-pressed="isSearchOpen ? 'true' : 'false'"
+              label="Toggle Search SOPs"
+              title="Toggle Search SOPs"
+              @click="toggleSearch"
             >
-              <X :size="14" aria-hidden="true" />
+              <Search :size="16" aria-hidden="true" />
+            </ClinicalIconButton>
+            <ClinicalIconButton
+              class="btn-close"
+              variant="ghost"
+              size="sm"
+              label="Close Help Drawer"
+              @click="knowledgeStore.closeDrawer()"
+            >
+              <X :size="18" aria-hidden="true" />
             </ClinicalIconButton>
           </div>
-        </div>
+        </header>
       </template>
+
+      <!-- Secondary Context Badges, View Tabs & Search Bar inside Scroll Body -->
+      <div class="context-badges">
+        <span class="context-badge route-badge" title="Active Route">
+          <MapPin :size="12" aria-hidden="true" />
+          <span>{{ knowledgeStore.currentRoute }}</span>
+        </span>
+        <span class="context-badge persona-badge" title="Active Persona">
+          {{ activePersonaLabel }}
+        </span>
+      </div>
+
+      <div
+        class="drawer-tabs"
+        role="tablist"
+        aria-label="Contextual assistance views"
+      >
+        <button
+          id="tab-contextual-guidance"
+          type="button"
+          role="tab"
+          class="drawer-tab-btn"
+          :class="{ active: knowledgeStore.activeDrawerTab === 'guidance' }"
+          :aria-selected="
+            knowledgeStore.activeDrawerTab === 'guidance' ? 'true' : 'false'
+          "
+          aria-controls="panel-contextual-guidance"
+          @click="switchTab('guidance')"
+        >
+          <BookOpen :size="14" aria-hidden="true" />
+          <span>SOP Guidance</span>
+        </button>
+        <button
+          id="tab-contextual-tickets"
+          type="button"
+          role="tab"
+          class="drawer-tab-btn"
+          :class="{ active: knowledgeStore.activeDrawerTab === 'tickets' }"
+          :aria-selected="
+            knowledgeStore.activeDrawerTab === 'tickets' ? 'true' : 'false'
+          "
+          aria-controls="panel-contextual-tickets"
+          @click="switchTab('tickets')"
+        >
+          <Ticket :size="14" aria-hidden="true" />
+          <span>Support Tickets</span>
+          <span
+            v-if="knowledgeStore.hasLoadedDrawerTickets"
+            class="tab-count-pill"
+          >
+            {{ knowledgeStore.drawerTickets.length }}
+          </span>
+        </button>
+      </div>
+
+      <div
+        v-if="knowledgeStore.activeDrawerTab === 'guidance' && isSearchOpen"
+        class="search-bar-row"
+      >
+        <label for="help-search-input" class="sr-only">
+          Search clinical SOPs, guidelines, or topics
+        </label>
+        <input
+          id="help-search-input"
+          ref="searchInputRef"
+          v-model="searchInput"
+          type="text"
+          class="search-input"
+          placeholder="Search SOPs, guidelines, or topics..."
+          @input="onSearchInput"
+        />
+        <ClinicalIconButton
+          v-if="searchInput"
+          class="btn-clear-search"
+          variant="ghost"
+          size="sm"
+          label="Clear SOP search"
+          @click="clearSearch"
+        >
+          <X :size="14" aria-hidden="true" />
+        </ClinicalIconButton>
+      </div>
 
       <!-- ================================================================ -->
       <!-- TAB 1: SOP GUIDANCE                                              -->
@@ -737,7 +732,8 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/knowledge')"
               >
-                Browse SOP Hub
+                <Library :size="13" aria-hidden="true" />
+                <span>Browse SOP Hub</span>
               </button>
               <span class="hub-link-sep" aria-hidden="true">·</span>
               <button
@@ -746,7 +742,8 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/tickets')"
               >
-                Support Queue
+                <Ticket :size="13" aria-hidden="true" />
+                <span>Support Queue</span>
               </button>
             </div>
           </div>
@@ -782,7 +779,6 @@ const TicketCreateModal = defineLazyOverlay(
 
 <script setup>
 import {
-  h,
   ref,
   computed,
   watch,
@@ -792,6 +788,20 @@ import {
   getCurrentInstance,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BookOpen,
+  Clock,
+  Library,
+  Lock,
+  MapPin,
+  RefreshCw,
+  Search,
+  Target,
+  Ticket,
+  X,
+} from "lucide-vue-next";
 import {
   ClinicalDrawer,
   ClinicalIconButton,
@@ -819,106 +829,6 @@ import {
   isEditableOrFormControl,
 } from "../utils/lazyOverlay.js";
 import { useTicketMutationPermission } from "../utils/ticketPermissions";
-
-function makeLucideIcon(nodes) {
-  const Icon = (props, { attrs }) =>
-    h(
-      "svg",
-      {
-        xmlns: "http://www.w3.org/2000/svg",
-        width: props.size || 16,
-        height: props.size || 16,
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        "stroke-width": "2",
-        "stroke-linecap": "round",
-        "stroke-linejoin": "round",
-        "aria-hidden": "true",
-        ...attrs,
-      },
-      nodes.map(([tag, nodeAttrs]) => h(tag, nodeAttrs))
-    );
-  Icon.props = ["size"];
-  return Icon;
-}
-
-const AlertTriangle = makeLucideIcon([
-  [
-    "path",
-    {
-      d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
-    },
-  ],
-  ["path", { d: "M12 9v4" }],
-  ["path", { d: "M12 17h.01" }],
-]);
-const ArrowLeft = makeLucideIcon([
-  ["path", { d: "m12 19-7-7 7-7" }],
-  ["path", { d: "M19 12H5" }],
-]);
-const BookOpen = makeLucideIcon([
-  ["path", { d: "M12 7v14" }],
-  [
-    "path",
-    {
-      d: "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
-    },
-  ],
-]);
-const Clock = makeLucideIcon([
-  ["circle", { cx: "12", cy: "12", r: "10" }],
-  ["polyline", { points: "12 6 12 12 16 14" }],
-]);
-const Library = makeLucideIcon([
-  ["path", { d: "m16 6 4 14" }],
-  ["path", { d: "M12 6v14" }],
-  ["path", { d: "M8 8v12" }],
-  ["path", { d: "M4 4v16" }],
-]);
-const Lock = makeLucideIcon([
-  ["rect", { width: "18", height: "11", x: "3", y: "11", rx: "2", ry: "2" }],
-  ["path", { d: "M7 11V7a5 5 0 0 1 10 0v4" }],
-]);
-const MapPin = makeLucideIcon([
-  [
-    "path",
-    {
-      d: "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0",
-    },
-  ],
-  ["circle", { cx: "12", cy: "10", r: "3" }],
-]);
-const RefreshCw = makeLucideIcon([
-  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }],
-  ["path", { d: "M21 3v5h-5" }],
-  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }],
-  ["path", { d: "M8 16H3v5" }],
-]);
-const Search = makeLucideIcon([
-  ["circle", { cx: "11", cy: "11", r: "8" }],
-  ["path", { d: "m21 21-4.3-4.3" }],
-]);
-const Target = makeLucideIcon([
-  ["circle", { cx: "12", cy: "12", r: "10" }],
-  ["circle", { cx: "12", cy: "12", r: "6" }],
-  ["circle", { cx: "12", cy: "12", r: "2" }],
-]);
-const Ticket = makeLucideIcon([
-  [
-    "path",
-    {
-      d: "M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z",
-    },
-  ],
-  ["path", { d: "M13 5v2" }],
-  ["path", { d: "M13 17v2" }],
-  ["path", { d: "M13 11v2" }],
-]);
-const X = makeLucideIcon([
-  ["path", { d: "M18 6 6 18" }],
-  ["path", { d: "m6 6 12 12" }],
-]);
 
 const CLINICAL_ACRONYMS = {
   ecrf: "eCRF",
@@ -1573,30 +1483,10 @@ onUnmounted(() => {
 
 <style scoped>
 :deep(.drawer-overlay) {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.45);
-  display: flex;
-  justify-content: flex-end;
   z-index: 1050;
-  backdrop-filter: blur(2px);
 }
 
 :deep(.drawer-panel) {
-  background-color: var(--semantic-color-surface);
-  width: var(
-    --semantic-drawer-width-sm,
-    var(--drawer-width-sm, min(100vw, 440px))
-  );
-  max-width: 100vw;
-  height: 100vh;
-  box-shadow: var(--semantic-shadow-xl);
-  display: flex;
-  flex-direction: column;
-  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(
     --font,
     -apple-system,
@@ -1608,66 +1498,60 @@ onUnmounted(() => {
   color: var(--primary);
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
 .drawer-header {
-  padding: 16px 20px 12px;
+  padding: 8px 16px;
+  min-height: 48px;
   border-bottom: 1px solid var(--border);
   background-color: var(--semantic-color-surface-muted);
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.header-main-row {
-  display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .header-title-group {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
 }
 
 .header-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   color: var(--accent);
-  margin-top: 2px;
 }
 
 .drawer-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .context-badges {
   display: flex;
   gap: 6px;
-  margin-top: 4px;
   flex-wrap: wrap;
 }
 
 .context-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  max-width: 100%;
+  word-break: break-word;
 }
 
 .route-badge {
@@ -1689,18 +1573,16 @@ onUnmounted(() => {
   gap: 6px;
 }
 
-.btn-icon-toggle {
+.btn-icon-toggle,
+.btn-close {
+  min-width: 44px;
+  min-height: 44px;
   font-size: 0.95rem;
 }
 
 .btn-icon-toggle.active {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
-}
-
-.btn-close {
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .sr-only {
@@ -1730,6 +1612,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-height: 38px;
+  min-width: 0;
   padding: 6px 10px;
   border: none;
   border-radius: 4px;
@@ -1765,8 +1649,9 @@ onUnmounted(() => {
 
 .search-input {
   width: 100%;
-  min-height: 36px;
-  padding: 8px 38px 8px 10px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 44px 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 1rem;
@@ -1782,16 +1667,15 @@ onUnmounted(() => {
 .btn-clear-search {
   position: absolute;
   right: 4px;
-  font-size: 0.85rem;
+  min-width: 36px;
+  min-height: 36px;
 }
 
 :deep(.drawer-body) {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   background-color: var(--semantic-color-surface);
 }
 
@@ -2477,13 +2361,16 @@ onUnmounted(() => {
 }
 
 .drawer-footer {
-  padding: 14px 20px;
+  width: 100%;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   background-color: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .drawer-footer-primary {
@@ -2491,7 +2378,8 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .auditor-readonly-note {
@@ -2513,9 +2401,13 @@ onUnmounted(() => {
 }
 
 .btn-hub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--semantic-control-target-min, 24px);
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 4px;
   color: var(--semantic-color-interactive-primary);
   font-size: 0.78rem;
   font-weight: 600;
@@ -2532,6 +2424,7 @@ onUnmounted(() => {
 }
 
 .btn {
+  min-height: 44px;
   padding: 8px 14px;
   font-size: 0.84rem;
   font-weight: 600;
@@ -2540,7 +2433,9 @@ onUnmounted(() => {
   transition: all 0.15s;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  box-sizing: border-box;
 }
 
 .btn-secondary {
@@ -2571,5 +2466,20 @@ onUnmounted(() => {
 
 .btn-icon {
   flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .drawer-tabs,
+  .ticket-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drawer-tab-btn {
+    min-height: 44px;
+  }
+
+  .tickets-toolbar {
+    flex-wrap: wrap;
+  }
 }
 </style>

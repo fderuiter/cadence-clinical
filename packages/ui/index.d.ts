@@ -348,6 +348,7 @@ export const ClinicalDrawer: DefineSlotsComponent<
     isOpen?: boolean;
     open?: boolean;
     docked?: boolean;
+    keepMounted?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -385,7 +386,6 @@ export const ClinicalDrawer: DefineSlotsComponent<
   {
     default?: (props: Record<string, never>) => any;
     header?: (props: { titleId: string; close: () => void }) => any;
-    subheader?: (props: Record<string, never>) => any;
     footer?: (props: { close: () => void }) => any;
     "after-panel"?: (props: Record<string, never>) => any;
   }

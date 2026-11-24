@@ -1,45 +1,50 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="closeDrawer"
+  <ClinicalDrawer
+    :model-value="isOpen"
+    :teleport="false"
+    size="xl"
+    :dismissible="!isSubmitting"
+    :initial-focus="() => barcodeInputRef"
+    overlay-class="drawer-backdrop"
+    panel-class="bulk-ip-reconciliation-drawer"
+    aria-labelledby="drawer-heading"
+    @close="closeDrawer"
   >
-    <aside
-      ref="drawerRef"
-      class="bulk-ip-reconciliation-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-heading"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
-      <header class="drawer-header">
-        <div class="header-titles">
-          <div class="badge-row">
-            <span class="badge badge-gxp">21 CFR Part 11</span>
-            <span class="badge badge-rtsm">RTSM Supply Chain</span>
-            <span class="badge badge-atomic">Atomic Transaction</span>
-          </div>
+    <template #header>
+      <div class="drawer-header">
+        <div class="header-title-wrap">
+          <ScanBarcode :size="18" class="header-icon" aria-hidden="true" />
           <h2 id="drawer-heading" class="drawer-title">
             Bulk IP Kit Reconciliation &amp; Batch Disposition Drawer
           </h2>
-          <p class="drawer-subtitle">
-            Continuous optical barcode scanning, real-time lot discrepancy
-            validation, residual volume recording, and atomic Part 11 inventory
-            status commitment.
-          </p>
         </div>
 
         <button
+          id="btn-close-bulk-ip-drawer"
           type="button"
           class="btn-close"
-          aria-label="Close Reconciliation Drawer"
+          aria-label="Close Bulk IP Kit Reconciliation Drawer"
+          :disabled="isSubmitting"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
-      </header>
+      </div>
+    </template>
+
+    <div class="drawer-body">
+      <div class="intro-meta-block">
+        <div class="badge-row">
+          <span class="badge badge-gxp">21 CFR Part 11</span>
+          <span class="badge badge-rtsm">RTSM Supply Chain</span>
+          <span class="badge badge-atomic">Atomic Transaction</span>
+        </div>
+        <p class="drawer-subtitle">
+          Continuous optical barcode scanning, real-time lot discrepancy
+          validation, residual volume recording, and atomic Part 11 inventory
+          status commitment.
+        </p>
+      </div>
 
       <!-- Context Bar -->
       <div class="context-bar">
@@ -64,7 +69,8 @@
             :disabled="isLoadingInventory"
             @click="loadInventory"
           >
-            🔄 Refresh Inventory
+            <RefreshCw :size="14" aria-hidden="true" />
+            <span>Refresh Inventory</span>
           </button>
         </div>
       </div>
@@ -74,8 +80,8 @@
         <div class="scanner-card">
           <div class="scanner-header">
             <label for="barcode-scanner-input" class="scanner-label">
-              <span class="scanner-icon">📷</span> Multi-Barcode Scanner Buffer
-              Input
+              <ScanBarcode :size="16" aria-hidden="true" />
+              <span>Multi-Barcode Scanner Buffer Input</span>
             </label>
             <span class="focus-indicator badge badge-active"
               >Auto-Focus Active</span
@@ -113,7 +119,7 @@
           class="alert-banner alert-warning"
           role="alert"
         >
-          <span class="alert-icon">⚠️</span>
+          <AlertTriangle :size="16" class="alert-icon" aria-hidden="true" />
           <span class="alert-text">{{ warningMessage }}</span>
           <button
             type="button"
@@ -121,7 +127,7 @@
             aria-label="Dismiss warning"
             @click="warningMessage = ''"
           >
-            ✕
+            <X :size="16" aria-hidden="true" />
           </button>
         </div>
       </section>
@@ -186,201 +192,211 @@
         </button>
       </div>
 
-      <!-- Main Drawer Body: Scanned Kits Buffer Table -->
-      <div class="drawer-body">
-        <div v-if="scannedItems.length === 0" class="empty-state-box">
-          <div class="empty-icon">📦</div>
-          <h3>Scan Buffer Empty</h3>
-          <p>
-            Scan kit barcodes with an optical scanner or enter kit numbers
-            manually above to populate the reconciliation batch table.
-          </p>
+      <!-- Scanned Kits Buffer Table / Mobile Stacked Record Cards -->
+      <div v-if="scannedItems.length === 0" class="empty-state-box">
+        <div class="empty-icon">
+          <Package :size="36" aria-hidden="true" />
         </div>
-
-        <div v-else class="table-container">
-          <table
-            class="batch-table"
-            role="grid"
-            aria-label="Scanned Kits Reconciliation Buffer"
-          >
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Kit Barcode</th>
-                <th>Scanned Lot</th>
-                <th>Expected Inventory Lot</th>
-                <th>Residual Vol (mL / %)</th>
-                <th>Disposition Action</th>
-                <th>Disposition Reason</th>
-                <th>Validation Flags</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(item, index) in scannedItems"
-                :key="item.kitNumber"
-                class="kit-row"
-                :class="{
-                  'row-quarantine':
-                    item.disposition === 'QUARANTINED_FOR_DESTRUCTION' ||
-                    item.dispositionReason === 'DAMAGED_SEAL' ||
-                    item.hasLotMismatch,
-                  'row-lot-mismatch': item.hasLotMismatch,
-                }"
-              >
-                <td class="col-index">
-                  {{ index + 1 }}
-                </td>
-                <td class="col-kit mono fw-bold">
-                  {{ item.kitNumber }}
-                </td>
-                <td class="col-lot mono">
-                  {{ item.scannedLotNumber }}
-                </td>
-                <td class="col-expected-lot mono">
-                  {{ item.expectedLotNumber }}
-                  <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
-                    >LOT MISMATCH</span
-                  >
-                </td>
-                <td class="col-volume">
-                  <div class="volume-inputs">
-                    <input
-                      v-model.number="item.residualVolumeMl"
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      class="input-sm volume-input"
-                      placeholder="mL"
-                      aria-label="Residual volume in mL"
-                    />
-                    <input
-                      v-model.number="item.residualVolumePercentage"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      class="input-sm volume-input"
-                      placeholder="%"
-                      aria-label="Residual percentage"
-                    />
-                  </div>
-                </td>
-                <td class="col-disposition">
-                  <select
-                    v-model="item.disposition"
-                    class="select-sm disposition-select"
-                    :class="`disp-${item.disposition.toLowerCase()}`"
-                    aria-label="Disposition Action"
-                  >
-                    <option value="RETURNED_TO_SITE">Returned to Site</option>
-                    <option value="QUARANTINED_FOR_DESTRUCTION">
-                      Quarantined for Destruction
-                    </option>
-                    <option value="RETURNED_TO_DEPOT">Returned to Depot</option>
-                  </select>
-                </td>
-                <td class="col-reason">
-                  <select
-                    v-model="item.dispositionReason"
-                    class="select-sm reason-select"
-                    aria-label="Disposition Reason"
-                  >
-                    <option value="NORMAL_RETURN">Normal Return</option>
-                    <option value="PATIENT_RETURN">
-                      Patient Return / Adherence
-                    </option>
-                    <option value="DAMAGED_SEAL">
-                      Damaged Seal / Tampered
-                    </option>
-                    <option value="EXPIRED">Expired Lot</option>
-                    <option value="LOT_MISMATCH">Lot Mismatch</option>
-                    <option value="OTHER">Other / Notes</option>
-                  </select>
-                </td>
-                <td class="col-flags">
-                  <span
-                    v-if="item.hasLotMismatch"
-                    class="status-flag flag-warning"
-                    >⚠️ Lot Mismatch</span
-                  >
-                  <span
-                    v-else-if="
-                      item.disposition === 'QUARANTINED_FOR_DESTRUCTION'
-                    "
-                    class="status-flag flag-quarantine"
-                    >🔒 Quarantined</span
-                  >
-                  <span v-else class="status-flag flag-valid">✓ Valid</span>
-                </td>
-                <td class="col-action">
-                  <ClinicalIconButton
-                    class="btn-icon btn-remove"
-                    :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
-                    title="Remove item"
-                    @click="removeItem(index)"
-                  >
-                    ✕
-                  </ClinicalIconButton>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- 21 CFR Part 11 Electronic Signature / Change Rationale -->
-        <section v-if="scannedItems.length > 0" class="esign-section">
-          <div class="esign-card">
-            <h4 class="esign-title">
-              ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Rationale
-            </h4>
-            <div class="esign-form-grid">
-              <div class="form-group">
-                <label for="pharmacist-signature-id" class="form-label"
-                  >Signer Identity / User ID: *</label
-                >
-                <input
-                  id="pharmacist-signature-id"
-                  v-model="signerUserId"
-                  type="text"
-                  class="input-text"
-                  placeholder="e.g. site_pharmacist_01"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="reason-for-change-input" class="form-label"
-                  >Audit Change Rationale (X-Change-Reason): *</label
-                >
-                <input
-                  id="reason-for-change-input"
-                  v-model="reasonForChange"
-                  type="text"
-                  class="input-text"
-                  placeholder="e.g. Shipment return carton batch reconciliation intake"
-                />
-              </div>
-
-              <div class="form-group form-group-full">
-                <label for="batch-notes-input" class="form-label"
-                  >Pharmacist Notes / Shipment Reference:</label
-                >
-                <textarea
-                  id="batch-notes-input"
-                  v-model="batchNotes"
-                  class="textarea-input"
-                  rows="2"
-                  placeholder="Additional observations, courier tracking numbers, or carton condition..."
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+        <h3>Scan Buffer Empty</h3>
+        <p>
+          Scan kit barcodes with an optical scanner or enter kit numbers
+          manually above to populate the reconciliation batch table.
+        </p>
       </div>
 
-      <!-- Drawer Footer Action Bar -->
-      <footer class="drawer-footer">
+      <div v-else class="table-container">
+        <table
+          class="batch-table"
+          role="grid"
+          aria-label="Scanned Kits Reconciliation Buffer"
+        >
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Kit Barcode</th>
+              <th>Scanned Lot</th>
+              <th>Expected Inventory Lot</th>
+              <th>Residual Vol (mL / %)</th>
+              <th>Disposition Action</th>
+              <th>Disposition Reason</th>
+              <th>Validation Flags</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(item, index) in scannedItems"
+              :key="item.kitNumber"
+              class="kit-row"
+              :class="{
+                'row-quarantine':
+                  item.disposition === 'QUARANTINED_FOR_DESTRUCTION' ||
+                  item.dispositionReason === 'DAMAGED_SEAL' ||
+                  item.hasLotMismatch,
+                'row-lot-mismatch': item.hasLotMismatch,
+              }"
+            >
+              <td data-label="Kit #" class="col-index">
+                {{ index + 1 }}
+              </td>
+              <td data-label="Kit Barcode" class="col-kit mono fw-bold">
+                {{ item.kitNumber }}
+              </td>
+              <td data-label="Scanned Lot" class="col-lot mono">
+                {{ item.scannedLotNumber }}
+              </td>
+              <td
+                data-label="Expected Inventory Lot"
+                class="col-expected-lot mono"
+              >
+                <span>{{ item.expectedLotNumber }}</span>
+                <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
+                  >LOT MISMATCH</span
+                >
+              </td>
+              <td data-label="Residual Vol (mL / %)" class="col-volume">
+                <div class="volume-inputs">
+                  <input
+                    v-model.number="item.residualVolumeMl"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    class="input-sm volume-input"
+                    placeholder="mL"
+                    aria-label="Residual volume in mL"
+                  />
+                  <input
+                    v-model.number="item.residualVolumePercentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    class="input-sm volume-input"
+                    placeholder="%"
+                    aria-label="Residual percentage"
+                  />
+                </div>
+              </td>
+              <td data-label="Disposition Action" class="col-disposition">
+                <select
+                  v-model="item.disposition"
+                  class="select-sm disposition-select"
+                  :class="`disp-${item.disposition.toLowerCase()}`"
+                  aria-label="Disposition Action"
+                >
+                  <option value="RETURNED_TO_SITE">Returned to Site</option>
+                  <option value="QUARANTINED_FOR_DESTRUCTION">
+                    Quarantined for Destruction
+                  </option>
+                  <option value="RETURNED_TO_DEPOT">Returned to Depot</option>
+                </select>
+              </td>
+              <td data-label="Disposition Reason" class="col-reason">
+                <select
+                  v-model="item.dispositionReason"
+                  class="select-sm reason-select"
+                  aria-label="Disposition Reason"
+                >
+                  <option value="NORMAL_RETURN">Normal Return</option>
+                  <option value="PATIENT_RETURN">
+                    Patient Return / Adherence
+                  </option>
+                  <option value="DAMAGED_SEAL">Damaged Seal / Tampered</option>
+                  <option value="EXPIRED">Expired Lot</option>
+                  <option value="LOT_MISMATCH">Lot Mismatch</option>
+                  <option value="OTHER">Other / Notes</option>
+                </select>
+              </td>
+              <td data-label="Validation Flags" class="col-flags">
+                <span
+                  v-if="item.hasLotMismatch"
+                  class="status-flag flag-warning"
+                >
+                  <AlertTriangle :size="13" aria-hidden="true" />
+                  <span>Lot Mismatch</span>
+                </span>
+                <span
+                  v-else-if="item.disposition === 'QUARANTINED_FOR_DESTRUCTION'"
+                  class="status-flag flag-quarantine"
+                >
+                  <Lock :size="13" aria-hidden="true" />
+                  <span>Quarantined</span>
+                </span>
+                <span v-else class="status-flag flag-valid">
+                  <Check :size="13" aria-hidden="true" />
+                  <span>Valid</span>
+                </span>
+              </td>
+              <td data-label="Action" class="col-action">
+                <ClinicalIconButton
+                  class="btn-icon btn-remove"
+                  :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
+                  title="Remove item"
+                  @click="removeItem(index)"
+                >
+                  <X :size="16" aria-hidden="true" />
+                </ClinicalIconButton>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 21 CFR Part 11 Electronic Signature / Change Rationale -->
+      <section v-if="scannedItems.length > 0" class="esign-section">
+        <div class="esign-card">
+          <h4 class="esign-title">
+            <FileSignature :size="16" aria-hidden="true" />
+            <span
+              >21 CFR Part 11 Electronic Signature &amp; Audit Rationale</span
+            >
+          </h4>
+          <div class="esign-form-grid">
+            <div class="form-group">
+              <label for="pharmacist-signature-id" class="form-label"
+                >Signer Identity / User ID: *</label
+              >
+              <input
+                id="pharmacist-signature-id"
+                v-model="signerUserId"
+                type="text"
+                class="input-text"
+                placeholder="e.g. site_pharmacist_01"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="reason-for-change-input" class="form-label"
+                >Audit Change Rationale (X-Change-Reason): *</label
+              >
+              <input
+                id="reason-for-change-input"
+                v-model="reasonForChange"
+                type="text"
+                class="input-text"
+                placeholder="e.g. Shipment return carton batch reconciliation intake"
+              />
+            </div>
+
+            <div class="form-group form-group-full">
+              <label for="batch-notes-input" class="form-label"
+                >Pharmacist Notes / Shipment Reference:</label
+              >
+              <textarea
+                id="batch-notes-input"
+                v-model="batchNotes"
+                class="textarea-input"
+                rows="2"
+                placeholder="Additional observations, courier tracking numbers, or carton condition..."
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <template #footer>
+      <div class="drawer-footer">
         <div class="footer-summary">
           <span v-if="scannedItems.length > 0" class="summary-text">
             Ready to reconcile <strong>{{ scannedItems.length }}</strong> kit(s)
@@ -392,7 +408,12 @@
         </div>
 
         <div class="footer-buttons">
-          <button type="button" class="btn btn-secondary" @click="closeDrawer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="closeDrawer"
+          >
             Cancel
           </button>
           <button
@@ -406,127 +427,150 @@
             "
             @click="submitBatchReconciliation"
           >
-            <span v-if="isSubmitting" class="spinner">⏳</span>
-            <span v-else
-              >🔒 Commit Batch Reconciliation ({{ scannedItems.length }})</span
-            >
+            <Loader2
+              v-if="isSubmitting"
+              :size="16"
+              class="spin-icon"
+              aria-hidden="true"
+            />
+            <template v-else>
+              <Lock :size="15" aria-hidden="true" />
+              <span
+                >Commit Batch Reconciliation ({{ scannedItems.length }})</span
+              >
+            </template>
           </button>
         </div>
-      </footer>
+      </div>
+    </template>
+  </ClinicalDrawer>
 
-      <!-- Certificate Modal View Upon Successful Commitment -->
-      <div
-        v-if="showCertificateModal && certificateData"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="showCertificateModal = false"
-      >
-        <div
-          ref="certificateModalRef"
-          class="modal-card modal-lg cert-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cert-modal-title"
-          tabindex="-1"
-        >
-          <header class="cert-modal-header">
-            <div class="cert-badge">📜 21 CFR Part 11 Digital Certificate</div>
-            <h3 id="cert-modal-title" class="cert-modal-title">
-              Digital IP Kit Reconciliation Certificate
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close certificate dialog"
-              @click="showCertificateModal = false"
-            >
-              ✕
-            </button>
-          </header>
-
-          <div class="cert-body">
-            <div class="cert-header-grid">
-              <div class="cert-meta-item">
-                <span class="lbl">Certificate ID:</span>
-                <span class="val mono fw-bold">{{
-                  certificateData.certificate_id
-                }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Batch Number:</span>
-                <span class="val mono">{{ certificateData.batch_number }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Study / Site:</span>
-                <span class="val"
-                  >{{ certificateData.study_id }} /
-                  {{ certificateData.site_id }}</span
-                >
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Issued Timestamp:</span>
-                <span class="val">{{
-                  formatDate(certificateData.issued_at)
-                }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Issued By:</span>
-                <span class="val">{{ certificateData.issued_by }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Total Reconciled Kits:</span>
-                <span class="val fw-bold">{{
-                  certificateData.kit_numbers?.length || 0
-                }}</span>
-              </div>
-            </div>
-
-            <div class="cert-section">
-              <h4>Reconciled Kit Catalog</h4>
-              <div class="cert-kit-tags">
-                <span
-                  v-for="kit in certificateData.kit_numbers"
-                  :key="kit"
-                  class="cert-kit-chip mono"
-                >
-                  📦 {{ kit }}
-                </span>
-              </div>
-            </div>
-
-            <div class="cert-signature-box">
-              <span class="sig-label">Cryptographic Seal (SHA-256):</span>
-              <code class="sig-hash">{{
-                certificateData.digital_signature
-              }}</code>
-            </div>
+  <!-- Sibling Certificate Modal View Upon Successful Commitment -->
+  <ClinicalModal
+    :model-value="Boolean(showCertificateModal && certificateData)"
+    :teleport="false"
+    size="lg"
+    :show-close="false"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card modal-lg cert-modal"
+    aria-labelledby="cert-modal-title"
+    @close="showCertificateModal = false"
+  >
+    <template #header>
+      <header class="cert-modal-header">
+        <div class="cert-header-titles">
+          <div class="cert-badge">
+            <Award :size="14" aria-hidden="true" />
+            <span>21 CFR Part 11 Digital Certificate</span>
           </div>
+          <h3 id="cert-modal-title" class="cert-modal-title">
+            Digital IP Kit Reconciliation Certificate
+          </h3>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close certificate dialog"
+          @click="showCertificateModal = false"
+        >
+          <X :size="18" aria-hidden="true" />
+        </button>
+      </header>
+    </template>
 
-          <footer class="cert-modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="printCertificate"
-            >
-              🖨️ Print Certificate
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              @click="closeDrawerAndReset"
-            >
-              Done &amp; Close
-            </button>
-          </footer>
+    <div v-if="certificateData" class="cert-body">
+      <div class="cert-header-grid">
+        <div class="cert-meta-item">
+          <span class="lbl">Certificate ID:</span>
+          <span class="val mono fw-bold">{{
+            certificateData.certificate_id
+          }}</span>
+        </div>
+        <div class="cert-meta-item">
+          <span class="lbl">Batch Number:</span>
+          <span class="val mono">{{ certificateData.batch_number }}</span>
+        </div>
+        <div class="cert-meta-item">
+          <span class="lbl">Study / Site:</span>
+          <span class="val"
+            >{{ certificateData.study_id }} /
+            {{ certificateData.site_id }}</span
+          >
+        </div>
+        <div class="cert-meta-item">
+          <span class="lbl">Issued Timestamp:</span>
+          <span class="val">{{ formatDate(certificateData.issued_at) }}</span>
+        </div>
+        <div class="cert-meta-item">
+          <span class="lbl">Issued By:</span>
+          <span class="val">{{ certificateData.issued_by }}</span>
+        </div>
+        <div class="cert-meta-item">
+          <span class="lbl">Total Reconciled Kits:</span>
+          <span class="val fw-bold">{{
+            certificateData.kit_numbers?.length || 0
+          }}</span>
         </div>
       </div>
-    </aside>
-  </div>
+
+      <div class="cert-section">
+        <h4>Reconciled Kit Catalog</h4>
+        <div class="cert-kit-tags">
+          <span
+            v-for="kit in certificateData.kit_numbers"
+            :key="kit"
+            class="cert-kit-chip mono"
+          >
+            <Package :size="13" aria-hidden="true" />
+            <span>{{ kit }}</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="cert-signature-box">
+        <span class="sig-label">Cryptographic Seal (SHA-256):</span>
+        <code class="sig-hash">{{ certificateData.digital_signature }}</code>
+      </div>
+    </div>
+
+    <template #footer>
+      <footer class="cert-modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="printCertificate"
+        >
+          <Printer :size="15" aria-hidden="true" />
+          <span>Print Certificate</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="closeDrawerAndReset"
+        >
+          Done &amp; Close
+        </button>
+      </footer>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalDrawer, ClinicalIconButton, ClinicalModal } from "ui";
+import {
+  AlertTriangle,
+  Award,
+  Check,
+  FileSignature,
+  Loader2,
+  Lock,
+  Package,
+  Printer,
+  RefreshCw,
+  ScanBarcode,
+  X,
+} from "lucide-vue-next";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;
@@ -567,8 +611,6 @@ const emit = defineEmits<{
   (e: "reconciled", batchResult: any): void;
 }>();
 
-const drawerRef = ref<HTMLElement | null>(null);
-const certificateModalRef = ref<HTMLElement | null>(null);
 const barcodeInputRef = ref<HTMLInputElement | null>(null);
 const barcodeInputValue = ref("");
 const scannedItems = ref<ScannedKitBufferItem[]>([]);
@@ -811,19 +853,6 @@ function closeDrawer() {
   emit("close");
 }
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  initialFocus: () => barcodeInputRef.value,
-  onEscape: closeDrawer,
-});
-
-useFocusTrap(certificateModalRef, {
-  isOpen: () => Boolean(showCertificateModal.value && certificateData.value),
-  onEscape: () => {
-    showCertificateModal.value = false;
-  },
-});
-
 function formatDate(iso: string) {
   if (!iso) return "";
   return new Date(iso).toLocaleString();
@@ -837,58 +866,79 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-}
+<style scoped src="../shared/drawerHeaderChrome.css"></style>
 
-.bulk-ip-reconciliation-drawer {
-  width: 100%;
-  max-width: 1100px;
-  height: 100vh;
+<style scoped>
+:deep(.bulk-ip-reconciliation-drawer) {
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  border-left-color: var(--semantic-color-border-inverse);
 }
 
-.drawer-header {
-  padding: 20px 24px;
+:deep(.bulk-ip-reconciliation-drawer > .clinical-drawer-header) {
   background: var(--semantic-color-surface-elevated);
-  border-bottom: 1px solid var(--semantic-color-border-inverse);
+  border-bottom-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
+}
+
+:deep(.bulk-ip-reconciliation-drawer > .clinical-drawer-footer) {
+  background: var(--semantic-color-surface-elevated);
+  border-top-color: var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
+}
+
+:deep(.cert-modal) {
+  background: var(--semantic-color-surface-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
+}
+
+:deep(.cert-modal > .clinical-modal-header) {
+  background: var(--semantic-color-surface-elevated);
+  border-bottom-color: var(--semantic-color-border-inverse);
+}
+
+:deep(.cert-modal > .clinical-modal-footer) {
+  background: var(--semantic-color-surface-elevated);
+  border-top-color: var(--semantic-color-border-inverse);
+}
+
+.drawer-title {
+  color: var(--semantic-color-text-inverse);
+}
+
+.btn-close:hover:not(:disabled) {
+  color: var(--semantic-color-text-inverse);
+  background: var(--semantic-color-border-inverse);
+}
+
+.drawer-body {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .badge-row {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .badge {
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 .badge-gxp {
@@ -915,89 +965,66 @@ onMounted(() => {
   margin-left: 6px;
 }
 
-.drawer-title {
-  margin: 0 0 6px 0;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--semantic-color-text-inverse);
-}
-
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.88rem;
-  color: var(--semantic-color-text-secondary);
-  max-width: 800px;
-}
-
-.btn-close {
-  background: transparent;
-  border: none;
-  color: var(--semantic-color-text-secondary);
-  font-size: 1.5rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.btn-close:hover {
-  color: var(--semantic-color-text-inverse);
-  background: var(--semantic-color-border-inverse);
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-inverse-muted);
+  line-height: 1.4;
 }
 
 .context-bar {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 12px 24px;
-  background: var(--semantic-color-surface-inverse);
-  border-bottom: 1px solid var(--semantic-color-text-dark);
-  font-size: 0.88rem;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 10px 14px;
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
+  border-radius: 8px;
+  font-size: 0.85rem;
 }
 
 .context-item {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 .context-label {
-  color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }
 .context-value {
-  color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-text-inverse);
   font-weight: 600;
 }
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, monospace);
 }
 
 .context-actions {
   margin-left: auto;
 }
 
-.scanner-section {
-  padding: 16px 24px;
-  background: var(--semantic-color-surface-elevated);
-  border-bottom: 1px solid var(--semantic-color-border-inverse);
-}
-
 .scanner-card {
-  background: var(--semantic-color-surface-inverse);
+  background: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-interactive-primary);
   border-radius: 8px;
-  padding: 14px 18px;
+  padding: 14px;
 }
 
 .scanner-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 10px;
 }
 
 .scanner-label {
   font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--semantic-color-primary);
+  font-size: 0.9rem;
+  color: var(--semantic-color-accent-inverse);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1005,18 +1032,22 @@ onMounted(() => {
 
 .scanner-input-row {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .barcode-input {
-  flex: 1;
-  background: var(--semantic-color-surface-elevated);
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 44px;
+  background: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   color: var(--semantic-color-text-inverse);
-  font-size: 1.05rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1rem;
+  font-family: var(--font-mono, monospace);
+  box-sizing: border-box;
 }
 
 .barcode-input:focus-visible {
@@ -1025,8 +1056,9 @@ onMounted(() => {
 
 .scanner-help {
   margin: 8px 0 0 0;
-  font-size: 0.8rem;
-  color: var(--semantic-color-text-secondary);
+  font-size: 0.78rem;
+  color: var(--semantic-color-text-inverse-muted);
+  word-break: break-word;
 }
 
 .scanner-help code {
@@ -1037,13 +1069,17 @@ onMounted(() => {
 }
 
 .alert-banner {
-  margin-top: 12px;
-  padding: 10px 14px;
+  margin-top: 10px;
+  padding: 10px 12px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+}
+
+.alert-icon {
+  flex-shrink: 0;
 }
 
 .alert-warning {
@@ -1057,36 +1093,42 @@ onMounted(() => {
   background: transparent;
   border: none;
   color: inherit;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  padding: 16px 24px;
-  background: var(--semantic-color-surface-inverse);
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 10px;
 }
 
 .metric-card {
   background: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
-  padding: 10px 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
+  min-width: 0;
 }
 
 .metric-num {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
 }
 
 .metric-label {
-  font-size: 0.72rem;
-  color: var(--semantic-color-text-secondary);
+  font-size: 0.7rem;
+  color: var(--semantic-color-text-inverse-muted);
   text-transform: uppercase;
   font-weight: 600;
   margin-top: 2px;
@@ -1106,65 +1148,66 @@ onMounted(() => {
 }
 
 .toolbar {
-  padding: 10px 24px;
+  padding: 10px 14px;
   background: var(--semantic-color-surface-elevated);
-  border-top: 1px solid var(--semantic-color-border-inverse);
-  border-bottom: 1px solid var(--semantic-color-border-inverse);
+  border: 1px solid var(--semantic-color-border-inverse);
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .bulk-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .toolbar-label {
-  font-size: 0.82rem;
-  color: var(--semantic-color-text-secondary);
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
-}
-
-.drawer-body {
-  flex: 1;
-  padding: 20px 24px;
-  overflow-y: auto;
 }
 
 .empty-state-box {
   text-align: center;
-  padding: 48px 24px;
+  padding: 32px 16px;
   background: var(--semantic-color-surface-elevated);
   border: 2px dashed var(--semantic-color-border-inverse);
   border-radius: 8px;
 }
 
 .empty-icon {
-  font-size: 3rem;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  color: var(--semantic-color-text-inverse-muted);
+  display: flex;
+  justify-content: center;
 }
+
 .empty-state-box h3 {
   margin: 0 0 8px 0;
   color: var(--semantic-color-text-inverse);
 }
+
 .empty-state-box p {
-  margin: 0;
-  color: var(--semantic-color-text-secondary);
-  max-width: 500px;
   margin: 0 auto;
-  font-size: 0.9rem;
+  color: var(--semantic-color-text-inverse-muted);
+  max-width: 500px;
+  font-size: 0.875rem;
 }
 
 .table-container {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .batch-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   background: var(--semantic-color-surface-elevated);
   border-radius: 8px;
   overflow: hidden;
@@ -1174,21 +1217,17 @@ onMounted(() => {
   background: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse-muted);
   text-align: left;
-  padding: 12px 14px;
+  padding: 10px 12px;
   font-weight: 700;
   border-bottom: 2px solid var(--semantic-color-border-inverse);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
 }
 
 .batch-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--semantic-color-text-body);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
   vertical-align: middle;
-}
-
-.kit-row:hover {
-  background: var(--semantic-color-surface-elevated);
 }
 
 .row-quarantine {
@@ -1202,25 +1241,31 @@ onMounted(() => {
 .volume-inputs {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .input-sm {
-  width: 64px;
+  width: 72px;
+  min-height: 44px;
   background: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
-  border-radius: 4px;
-  padding: 4px 6px;
+  border-radius: 6px;
+  padding: 6px 8px;
   color: var(--semantic-color-text-inverse);
-  font-size: 0.82rem;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .select-sm {
+  min-height: 44px;
+  max-width: 100%;
   background: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 6px 8px;
   color: var(--semantic-color-text-inverse);
-  font-size: 0.82rem;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .disp-returned_to_site {
@@ -1237,88 +1282,92 @@ onMounted(() => {
 }
 
 .status-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.78rem;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
 }
 
 .flag-valid {
   color: var(--semantic-color-success);
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.12);
 }
 .flag-warning {
   color: var(--semantic-color-error);
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.16);
 }
 .flag-quarantine {
   color: var(--semantic-color-warning);
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(245, 158, 11, 0.16);
 }
 
 .btn-icon {
   background: transparent;
   border: none;
-  color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-text-inverse-muted);
   cursor: pointer;
-  font-size: 1rem;
-  padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .btn-icon:hover {
   color: var(--semantic-color-error);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.esign-section {
-  margin-top: 24px;
+  background: rgba(239, 68, 68, 0.12);
 }
 
 .esign-card {
   background: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-interactive-primary);
   border-radius: 8px;
-  padding: 18px 20px;
+  padding: 16px;
 }
 
 .esign-title {
-  margin: 0 0 14px 0;
-  font-size: 0.98rem;
-  color: var(--semantic-color-primary);
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: var(--semantic-color-accent-inverse);
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .esign-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .form-group-full {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .form-label {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-text-inverse-muted);
 }
 
 .input-text,
 .textarea-input {
+  width: 100%;
+  min-height: 44px;
   background: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 12px;
   color: var(--semantic-color-text-inverse);
-  font-size: 0.88rem;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .input-text:focus-visible,
@@ -1327,17 +1376,17 @@ onMounted(() => {
 }
 
 .drawer-footer {
-  padding: 16px 24px;
-  background: var(--semantic-color-surface-elevated);
-  border-top: 1px solid var(--semantic-color-border-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .summary-text {
-  font-size: 0.88rem;
-  color: var(--semantic-color-text-secondary);
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-inverse-muted);
 }
 .summary-text strong {
   color: var(--semantic-color-text-inverse);
@@ -1345,16 +1394,22 @@ onMounted(() => {
 
 .footer-buttons {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .btn {
-  padding: 8px 16px;
+  min-height: 44px;
+  padding: 8px 14px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   cursor: pointer;
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   transition: all 0.15s ease;
 }
 
@@ -1362,23 +1417,14 @@ onMounted(() => {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
 }
-.btn-primary:hover {
-  background: var(--semantic-color-interactive-primary);
-}
 .btn-success {
   background: var(--semantic-color-success);
   color: var(--semantic-color-surface);
-}
-.btn-success:hover {
-  background: var(--semantic-color-success);
 }
 .btn-secondary {
   background: var(--semantic-color-border-inverse);
   color: var(--semantic-color-text-inverse);
   border-color: var(--semantic-color-border-control);
-}
-.btn-secondary:hover {
-  background: var(--semantic-color-text-secondary);
 }
 
 .btn-outline-success {
@@ -1386,77 +1432,74 @@ onMounted(() => {
   border-color: var(--semantic-color-success);
   color: var(--semantic-color-success);
 }
-.btn-outline-success:hover {
-  background: rgba(16, 185, 129, 0.1);
-}
 .btn-outline-warning {
   background: transparent;
   border-color: var(--semantic-color-warning-border-strong);
   color: var(--semantic-color-warning);
-}
-.btn-outline-warning:hover {
-  background: rgba(245, 158, 11, 0.1);
 }
 .btn-outline-primary {
   background: transparent;
   border-color: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-interactive-primary);
 }
-.btn-outline-primary:hover {
-  background: rgba(59, 130, 246, 0.1);
-}
-
 .btn-ghost-danger {
   background: transparent;
   color: var(--semantic-color-error);
   border: 1px solid transparent;
 }
-.btn-ghost-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: var(--semantic-color-error);
-}
-
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.cert-modal {
-  background: var(--semantic-color-surface-inverse);
-  border: 1px solid var(--semantic-color-border-inverse);
-  border-radius: 12px;
-  max-width: 700px;
-  width: 90%;
-  padding: 24px;
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .cert-modal-header {
-  border-bottom: 1px solid var(--semantic-color-text-body);
-  padding-bottom: 12px;
-  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cert-header-titles {
+  min-width: 0;
 }
 
 .cert-badge {
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--semantic-color-success);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
+
 .cert-modal-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.05rem;
   color: var(--semantic-color-text-inverse);
 }
 
 .cert-header-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   background: var(--semantic-color-surface-elevated);
   padding: 14px;
   border-radius: 8px;
-  margin-bottom: 18px;
-  font-size: 0.88rem;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
 }
 
 .cert-meta-item {
@@ -1465,7 +1508,7 @@ onMounted(() => {
   gap: 2px;
 }
 .cert-meta-item .lbl {
-  color: var(--semantic-color-text-secondary);
+  color: var(--semantic-color-text-inverse-muted);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -1474,12 +1517,12 @@ onMounted(() => {
 }
 
 .cert-section {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .cert-section h4 {
   margin: 0 0 8px 0;
-  color: var(--semantic-color-text-secondary);
-  font-size: 0.88rem;
+  color: var(--semantic-color-text-inverse-muted);
+  font-size: 0.82rem;
   text-transform: uppercase;
 }
 
@@ -1490,6 +1533,9 @@ onMounted(() => {
 }
 
 .cert-kit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-border-inverse);
   padding: 4px 8px;
@@ -1514,15 +1560,114 @@ onMounted(() => {
   text-transform: uppercase;
 }
 .sig-hash {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, monospace);
   font-size: 0.78rem;
   word-break: break-all;
 }
 
 .cert-modal-footer {
-  margin-top: 20px;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .esign-form-grid,
+  .cert-header-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scanner-input-row,
+  .drawer-footer,
+  .footer-buttons,
+  .cert-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-scan-add,
+  .footer-buttons .btn,
+  .cert-modal-footer .btn {
+    width: 100%;
+  }
+
+  .context-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .context-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Stacked kit record cards at <= 480px (Req 6) */
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-container {
+    overflow-x: visible;
+  }
+
+  .batch-table,
+  .batch-table tbody,
+  .batch-table tr,
+  .batch-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .batch-table {
+    background: transparent;
+  }
+
+  .batch-table thead {
+    display: none;
+  }
+
+  .batch-table tr.kit-row {
+    background: var(--semantic-color-surface-elevated);
+    border: 1px solid var(--semantic-color-border-inverse);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .batch-table td {
+    border-bottom: none;
+    padding: 5px 0;
+  }
+
+  .batch-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--semantic-color-text-inverse-muted);
+    margin-bottom: 2px;
+  }
+
+  .select-sm,
+  .input-sm {
+    width: 100%;
+  }
+
+  .volume-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 340px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

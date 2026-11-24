@@ -3,6 +3,7 @@
     <ClinicalDrawer
       :is-open="onboardingStore.isDrawerOpen"
       :teleport="false"
+      size="sm"
       id="onboarding-checklist-drawer"
       overlay-id="onboarding-checklist-drawer-overlay"
       overlay-class="drawer-overlay"
@@ -12,63 +13,60 @@
       @close="onboardingStore.closeDrawer()"
     >
       <template #header>
-        <!-- Header -->
-        <div class="drawer-header">
-          <div class="header-main-row">
-            <div class="header-title-group">
-              <span class="header-icon">🚀</span>
-              <div>
-                <h3 id="checklist-drawer-title" class="drawer-title">
-                  Workspace Setup Checklist
-                </h3>
-                <p class="drawer-subtitle">
-                  Complete core study configuration milestones
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close Setup Checklist Drawer"
-              @click="onboardingStore.closeDrawer()"
-            >
-              ✕
-            </button>
+        <!-- Compact Single-Row Header -->
+        <header class="drawer-header">
+          <div class="header-title-group">
+            <span class="header-icon" aria-hidden="true">
+              <Rocket :size="18" aria-hidden="true" />
+            </span>
+            <h3 id="checklist-drawer-title" class="drawer-title">
+              Workspace Setup Checklist
+            </h3>
           </div>
-
-          <!-- Overall Progress Bar Card -->
-          <div class="progress-section">
-            <div class="progress-info-row">
-              <span class="progress-percentage">
-                {{ onboardingStore.progressPercentage }}% Complete
-              </span>
-              <span class="progress-counts">
-                {{ onboardingStore.completedTasksCount }} of
-                {{ onboardingStore.totalTasksCount }} Tasks Completed
-              </span>
-            </div>
-            <div
-              class="progress-bar-track"
-              role="progressbar"
-              :aria-valuenow="onboardingStore.progressPercentage"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              :aria-label="`Setup Progress: ${onboardingStore.progressPercentage}%`"
-            >
-              <div
-                class="progress-bar-fill"
-                :style="{ width: onboardingStore.progressPercentage + '%' }"
-              />
-            </div>
-            <div
-              v-if="onboardingStore.isChecklistComplete"
-              class="complete-banner"
-            >
-              🎉 All setup milestones completed! Study configuration ready.
-            </div>
-          </div>
-        </div>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close Setup Checklist Drawer"
+            @click="onboardingStore.closeDrawer()"
+          >
+            <X :size="18" aria-hidden="true" />
+          </button>
+        </header>
       </template>
+
+      <p class="drawer-subtitle">
+        Complete core study configuration milestones
+      </p>
+
+      <!-- Overall Progress Bar Card inside Scroll Body -->
+      <div class="progress-section">
+        <div class="progress-info-row">
+          <span class="progress-percentage">
+            {{ onboardingStore.progressPercentage }}% Complete
+          </span>
+          <span class="progress-counts">
+            {{ onboardingStore.completedTasksCount }} of
+            {{ onboardingStore.totalTasksCount }} Tasks Completed
+          </span>
+        </div>
+        <div
+          class="progress-bar-track"
+          role="progressbar"
+          :aria-valuenow="onboardingStore.progressPercentage"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-label="`Setup Progress: ${onboardingStore.progressPercentage}%`"
+        >
+          <div
+            class="progress-bar-fill"
+            :style="{ width: onboardingStore.progressPercentage + '%' }"
+          />
+        </div>
+        <div v-if="onboardingStore.isChecklistComplete" class="complete-banner">
+          <CheckCircle2 :size="15" aria-hidden="true" />
+          All setup milestones completed! Study configuration ready.
+        </div>
+      </div>
 
       <!-- Body Content / Task List -->
       <div class="task-list-container">
@@ -113,7 +111,8 @@
               :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
-              Go to Task ↗
+              <ArrowUpRight :size="14" aria-hidden="true" />
+              Go to Task
             </button>
           </div>
         </div>
@@ -164,6 +163,7 @@
 <script setup>
 import { computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { ArrowUpRight, CheckCircle2, Rocket, X } from "lucide-vue-next";
 import { ClinicalDrawer } from "ui";
 import {
   buildScopedWorkflowPath,
@@ -317,86 +317,72 @@ async function startGuidedTour() {
 
 <style scoped>
 :deep(.drawer-overlay) {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(2px);
   z-index: 1050;
-  display: flex;
-  justify-content: flex-end;
 }
 
 :deep(.drawer-panel) {
-  width: 420px;
-  max-width: 100vw;
-  height: 100%;
-  background-color: var(--semantic-color-surface);
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  z-index: 1051;
   font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
 }
 
 .drawer-header {
-  padding: 20px;
+  padding: 8px 16px;
+  min-height: 48px;
   background-color: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--semantic-color-border);
-}
-
-.header-main-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .header-title-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 
 .header-icon {
-  font-size: 1.6rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--semantic-color-interactive-primary);
 }
 
 .drawer-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--semantic-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawer-subtitle {
-  margin: 2px 0 0 0;
+  margin: 0;
   font-size: 0.8rem;
   color: var(--semantic-color-text-secondary);
 }
 
 .btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
   background: none;
   border: none;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 6px;
   transition:
     background-color 0.15s,
     color 0.15s;
@@ -455,13 +441,18 @@ async function startGuidedTour() {
   font-size: 0.78rem;
   font-weight: 600;
   border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   text-align: center;
 }
 
 :deep(.drawer-body) {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 20px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .task-list-container {
@@ -557,8 +548,12 @@ async function startGuidedTour() {
 }
 
 .btn-navigate-task {
-  font-size: 0.75rem;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: 0.78rem;
+  padding: 6px 12px;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
   border: 1px solid var(--semantic-color-border-control);
@@ -580,15 +575,22 @@ async function startGuidedTour() {
 }
 
 .drawer-footer {
-  padding: 16px 20px;
+  width: 100%;
+  padding: 10px 16px;
   background-color: var(--semantic-color-surface-muted);
   border-top: 1px solid var(--semantic-color-border);
+  box-sizing: border-box;
 }
 
 .footer-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.footer-actions .btn {
+  min-height: 44px;
 }
 
 @media (prefers-reduced-motion: reduce) {

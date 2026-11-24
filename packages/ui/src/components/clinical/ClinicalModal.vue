@@ -1,7 +1,12 @@
 <script setup>
-import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { Teleport, computed, h, ref, useAttrs, useId, useSlots } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
+
+const MaybeTeleport = (tpProps, { slots: tpSlots }) =>
+  tpProps.disabled
+    ? tpSlots.default?.()
+    : h(Teleport, { to: tpProps.to }, tpSlots.default?.());
 
 defineOptions({
   inheritAttrs: false,
@@ -168,7 +173,7 @@ useFocusTrap(dialogRef, {
 </script>
 
 <template>
-  <Teleport :to="teleportTarget" :disabled="!teleport">
+  <MaybeTeleport :to="teleportTarget" :disabled="!teleport">
     <div
       v-if="modalOpen"
       :id="overlayId"
@@ -231,7 +236,7 @@ useFocusTrap(dialogRef, {
         </div>
       </div>
     </div>
-  </Teleport>
+  </MaybeTeleport>
 </template>
 
 <style scoped>
