@@ -19,8 +19,9 @@ requirement as qualified.
 | `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                              |
 
 `dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` applies
-`Category!=Integration` across the solution. `make verify` runs the quality gates and the .NET suites.
-Use `pnpm test` (`pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [CI and local verification](CI.md#workflows) for the full workflow.
+`Category!=Integration` across the solution. `make verify` runs the quality gates (`pnpm cadence check`),
+the frontend and VitePress Vitest suites (`pnpm test`), and the .NET suites (`pnpm cadence test`).
+Use `pnpm test` (`pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests without pre-building `packages/ui/dist/` ([ADR-2658](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md)), and see [CI and local verification](CI.md#workflows) for the full workflow.
 
 Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
 Fakes and fixtures that both the unit and integration projects need live in `tests/Cadence.TestSupport`, a class
