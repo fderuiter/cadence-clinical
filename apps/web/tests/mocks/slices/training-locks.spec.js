@@ -12,6 +12,14 @@ describe("MSW domain slice: training-locks", () => {
     expect(readiness.status).toBe(200);
     expect(readiness.data.ready_for_lock).toBe(false);
     expect(readiness.data.open_query_count).toBeGreaterThanOrEqual(1);
+    expect(readiness.data.unverified_value_count).toBeGreaterThanOrEqual(1);
+    expect(readiness.data.unsigned_form_count).toBeGreaterThanOrEqual(1);
+    expect(readiness.data.explanation.conditions.map((c) => c.code)).toEqual([
+      "lock.queries_closed",
+      "lock.required_items_complete",
+      "lock.observations_verified",
+      "lock.forms_signed",
+    ]);
 
     const blockedHardLock = await api.requestJson("/api/v1/kernel/locks", {
       method: "POST",

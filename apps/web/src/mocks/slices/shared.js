@@ -154,6 +154,32 @@ export function resolveSiteCodeFromRef(
   return raw.toUpperCase().startsWith("SITE-") ? raw.toUpperCase() : "SITE-101";
 }
 
+export function subjectEnrollmentRef(subject) {
+  const raw = String(subject?.enrollment_ref || "").split("@")[0];
+  return raw.startsWith("enrollment:") ? raw : `enrollment:${subject.id}`;
+}
+
+export function subjectEnrollmentUuid(subject) {
+  return subjectEnrollmentRef(subject).replace(/^enrollment:/, "");
+}
+
+export function resolveSubjectByEnrollmentOrId(subjects, rawId) {
+  const cleanId = String(rawId || "")
+    .replace(
+      /^(enrollment|participant|allocation|randomization|treatment_arm|arm):/,
+      ""
+    )
+    .split("@")[0];
+  return (
+    (subjects || []).find(
+      (s) =>
+        s.id === cleanId ||
+        subjectEnrollmentUuid(s) === cleanId ||
+        String(s.subject_id || "").toUpperCase() === cleanId.toUpperCase()
+    ) || null
+  );
+}
+
 export function decodeReasonHeader(request) {
   const raw =
     request.headers.get("X-Change-Reason") ||

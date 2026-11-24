@@ -23,6 +23,7 @@ import {
   readJsonBody,
   resolveCollectionTitle,
   resolveSiteUuid,
+  resolveSubjectByEnrollmentOrId,
 } from "./shared.js";
 
 function createInitialForm() {
@@ -267,13 +268,14 @@ export function createExecutionEcrfSliceStore(ctx) {
   function reset() {
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
     const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
-      id: participant.enrollmentUuid,
+      id: participant.participantUuid || participant.enrollmentUuid,
       subject_id: participant.subjectCode,
       study_id: canonicalStudyCode,
       site_id: participant.siteCode,
       status: participant.status || "ENROLLED",
       active_protocol_version: "1.0",
       enrollment_index: idx + 1,
+      enrollment_ref: participant.enrollmentRef,
       treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
     }));
 
@@ -287,6 +289,7 @@ export function createExecutionEcrfSliceStore(ctx) {
         status: "ENROLLED",
         active_protocol_version: "2.0",
         enrollment_index: 1,
+        enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
         treatment_group: "ARM-A",
       },
       {
@@ -297,6 +300,7 @@ export function createExecutionEcrfSliceStore(ctx) {
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: 2,
+        enrollment_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
         treatment_group: null,
       },
     ];
@@ -366,6 +370,7 @@ export function createExecutionEcrfSliceStore(ctx) {
             status: s.status,
             active_protocol_version: s.active_protocol_version || "2.0",
             enrollment_index: s.enrollment_index,
+            enrollment_ref: s.enrollment_ref || `enrollment:${s.id}`,
           }))
         ),
         total: filtered.length,
@@ -423,19 +428,23 @@ export function createExecutionEcrfSliceStore(ctx) {
           status: existing.status,
           active_protocol_version: existing.active_protocol_version,
           encrypted_demographics: null,
+          enrollment_ref:
+            existing.enrollment_ref || `enrollment:${existing.id}`,
         };
       }
 
       ctx.ensureStudyByCode(studyCode);
       const idx = nextCounter();
+      const createdId = makeUuidFromIndex("00001000", idx);
       const created = {
-        id: makeUuidFromIndex("00001000", idx),
+        id: createdId,
         subject_id: subjectCode,
         study_id: studyCode,
         site_id: siteCode,
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: state.subjects.length + 1,
+        enrollment_ref: `enrollment:${createdId}`,
         treatment_group: null,
       };
       state.subjects.push(created);
@@ -443,7 +452,7 @@ export function createExecutionEcrfSliceStore(ctx) {
         "execution.subject.registered",
         "execution",
         "enrollment",
-        `enrollment:${created.id}`,
+        created.enrollment_ref,
         "usr-crc-01"
       );
 
@@ -455,15 +464,21 @@ export function createExecutionEcrfSliceStore(ctx) {
         status: created.status,
         active_protocol_version: created.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: created.enrollment_ref,
       };
     },
 
     getSubjectDetail(subjectId, caller = null) {
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       const found =
         state.subjects.find(
           (s) =>
-            s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-            s.id === subjectId
+            s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+            s.id === normalizedKey ||
+            s.enrollment_ref === `enrollment:${normalizedKey}`
         ) || state.subjects[0];
       const shouldBlind =
         Boolean(caller) &&
@@ -486,6 +501,7 @@ export function createExecutionEcrfSliceStore(ctx) {
             ? "BLINDED"
             : null
           : (found.investigational_product_id ?? null),
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -493,10 +509,15 @@ export function createExecutionEcrfSliceStore(ctx) {
       const nextStatus = String(
         body?.status || body?.state || body?.target || "ENROLLED"
       ).toUpperCase();
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       let found = state.subjects.find(
         (s) =>
-          s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-          s.id === subjectId
+          s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+          s.id === normalizedKey ||
+          s.enrollment_ref === `enrollment:${normalizedKey}`
       );
       if (!found) {
         const created = methods.createSubject({
@@ -517,7 +538,7 @@ export function createExecutionEcrfSliceStore(ctx) {
         "execution.subject.state_changed",
         "execution",
         "enrollment",
-        `enrollment:${found.id}`,
+        found.enrollment_ref || `enrollment:${found.id}`,
         "usr-crc-01"
       );
       return {
@@ -528,6 +549,7 @@ export function createExecutionEcrfSliceStore(ctx) {
         status: found.status,
         active_protocol_version: found.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -597,14 +619,17 @@ export function createExecutionEcrfSliceStore(ctx) {
         },
       ];
 
-      const subjMatch = state.subjects.find((s) => s.id === enrollmentId);
+      const subjMatch = resolveSubjectByEnrollmentOrId(
+        state.subjects,
+        enrollmentId
+      );
       const siteUuid = resolveSiteUuid(subjMatch?.site_id || "SITE-101");
       const collectionTitle = resolveCollectionTitle(collectionSpecId);
 
       const created = {
         form_id: formId,
         enrollment_id: enrollmentId,
-        participant_id: makeUuidFromIndex("00005000", idx),
+        participant_id: subjMatch?.id || makeUuidFromIndex("00005000", idx),
         study_id: STUDY_UUID,
         study_site_id: siteUuid,
         protocol_version_id: VERSION_V2_UUID,
@@ -1163,8 +1188,9 @@ export function createExecutionEcrfSliceStore(ctx) {
         body?.text || "Verify recorded value against source."
       );
       const rev = Number(body?.revision ?? item?.revision ?? 1);
-      const subjectMatch = state.subjects.find(
-        (s) => s.id === form.enrollment_id
+      const subjectMatch = resolveSubjectByEnrollmentOrId(
+        state.subjects,
+        form.enrollment_id
       );
 
       const created = {

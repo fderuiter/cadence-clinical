@@ -261,6 +261,107 @@ public class DomainEngineUnitTests
         }
     }
 
+    [Fact]
+    public void DuplicationDetectorService_RejectsTypeScriptVueAndCssDuplicates_WithoutExemptedPairs()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-multilang-{Guid.NewGuid():N}");
+        try
+        {
+            string webDir = Path.Combine(tempRoot, "apps", "web", "src");
+            string portalDir = Path.Combine(tempRoot, "apps", "subject-portal", "src");
+            string execDir = Path.Combine(tempRoot, "apps", "execution", "src");
+            string designerDir = Path.Combine(tempRoot, "apps", "designer", "src");
+            Directory.CreateDirectory(webDir);
+            Directory.CreateDirectory(portalDir);
+            Directory.CreateDirectory(execDir);
+            Directory.CreateDirectory(designerDir);
+
+            // 1. TypeScript (.ts)
+            string tsA = Path.Combine(webDir, "scheduleA.ts");
+            string tsB = Path.Combine(portalDir, "scheduleB.ts");
+            string tsDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  const activityRow{i}: string = `ACT-${{seed}}-{i}`;"));
+            File.WriteAllText(tsA, $"export function buildRows(seed: string): string[] {{\n{tsDup}\n  return [activityRow16];\n}}\n");
+            File.WriteAllText(tsB, $"export function buildRows(seed: string): string[] {{\n{tsDup}\n  return [activityRow16];\n}}\n");
+            DuplicationDetectorService.DetectDuplication([tsA, tsB], tempRoot, preCommit: true).Should().Be(1);
+
+            // 2. Vue (.vue)
+            string vueA = Path.Combine(webDir, "PanelA.vue");
+            string vueB = Path.Combine(webDir, "PanelB.vue");
+            string vueDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  .banner-item-{i} {{ padding: {i}px; color: var(--text-primary); }}"));
+            File.WriteAllText(vueA, $"<template><div>A</div></template>\n<style scoped>\n{vueDup}\n</style>\n");
+            File.WriteAllText(vueB, $"<template><div>B</div></template>\n<style scoped>\n{vueDup}\n</style>\n");
+            DuplicationDetectorService.DetectDuplication([vueA, vueB], tempRoot, preCommit: true).Should().Be(1);
+
+            // 3. CSS (.css) including formerly exempted style.css pair
+            string cssA = Path.Combine(webDir, "style.css");
+            string cssB = Path.Combine(portalDir, "style.css");
+            string cssDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  --clinical-token-{i}: #{i:X2}3344;"));
+            File.WriteAllText(cssA, $":root {{\n{cssDup}\n}}\n");
+            File.WriteAllText(cssB, $":root {{\n{cssDup}\n}}\n");
+            DuplicationDetectorService.DetectDuplication([cssA, cssB], tempRoot, preCommit: true).Should().Be(1);
+
+            // 4. C# (.cs) including formerly exempted service host Program.cs pair
+            string csA = Path.Combine(execDir, "Program.cs");
+            string csB = Path.Combine(designerDir, "Program.cs");
+            string csDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"builder.Services.AddSingleton(\"svc-{i}\");"));
+            File.WriteAllText(csA, csDup + "\n");
+            File.WriteAllText(csB, csDup + "\n");
+            DuplicationDetectorService.DetectDuplication([csA, csB], tempRoot, preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void DuplicationDetectorService_IgnoresGeneratedAndAmbientTypeScriptFiles()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-excluded-ts-{Guid.NewGuid():N}");
+        try
+        {
+            string generatedA = Path.Combine(tempRoot, "apps", "web", "src", "generated", "clientA.ts");
+            string generatedB = Path.Combine(tempRoot, "packages", "ui", "src", "generated", "clientB.ts");
+            string dtsA = Path.Combine(tempRoot, "apps", "web", "src", "env.d.ts");
+            string dtsB = Path.Combine(tempRoot, "packages", "ui", "src", "index.d.ts");
+            string webApiTypes = Path.Combine(tempRoot, "apps", "web", "src", "api", "types.ts");
+            string uiCdashTypes = Path.Combine(tempRoot, "packages", "ui", "src", "types", "cdash.ts");
+            string liveTs = Path.Combine(tempRoot, "apps", "web", "src", "composables", "liveConsumer.ts");
+
+            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes, liveTs })
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            }
+
+            string sharedTypeBlock = string.Join(
+                "\n",
+                Enumerable.Range(1, 20).Select(i => $"  readonly field_{i}: string;"));
+            string payload = $"export interface GeneratedContract {{\n{sharedTypeBlock}\n}}\n";
+
+            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes, liveTs })
+            {
+                File.WriteAllText(file, payload);
+            }
+
+            // Even with a single live .ts file sharing the exact 20-line block with all excluded files, 0 duplicates are reported.
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(0);
+            DuplicationDetectorService.DetectDuplication(
+                [generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes],
+                tempRoot,
+                preCommit: true).Should().Be(0);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         string? dir = AppContext.BaseDirectory;

@@ -1,6 +1,7 @@
 import {
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
+  compileSopMarkdownToHtml,
   getFallbackContextualHelp,
 } from "../../api/knowledge";
 import {
@@ -288,6 +289,11 @@ export function createKnowledgeTicketsSliceHandlers(
     }),
     http.post("*/api/v1/knowledge/articles", async ({ request }) => {
       const body = await readJsonBody(request);
+      const compiledHtml =
+        body?.body_html ||
+        (body?.body_markdown
+          ? compileSopMarkdownToHtml(String(body.body_markdown))
+          : null);
       const created = {
         id: `art-${Date.now()}`,
         slug: `sop-demo-${Date.now()}`,
@@ -298,23 +304,40 @@ export function createKnowledgeTicketsSliceHandlers(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...body,
+        ...(compiledHtml ? { body_html: compiledHtml } : {}),
       };
       store.state.knowledgeArticles.push(created);
       return HttpResponse.json(created, { status: 201 });
     }),
-    http.get("*/api/v1/knowledge/articles/:articleId/versions", ({ params }) =>
-      HttpResponse.json([
-        {
-          id: `ver-${params.articleId}`,
-          version_index: 1,
-          version_label: "1.0",
-          status_at_snapshot: "PUBLISHED",
-          is_locked: true,
-          created_by: "qa_director",
-          reason_for_change: "Published controlled SOP",
-          created_at: "2026-06-01T11:15:00Z", // deid-ignore
-        },
-      ])
+    http.get(
+      "*/api/v1/knowledge/articles/:articleId/versions",
+      ({ params }) => {
+        const found =
+          store.state.knowledgeArticles.find(
+            (a) => a.id === params.articleId || a.slug === params.articleId
+          ) || null;
+        const bodyMarkdown = found?.body_markdown ?? null;
+        const bodyHtml =
+          found?.body_html ||
+          (bodyMarkdown
+            ? compileSopMarkdownToHtml(String(bodyMarkdown))
+            : null);
+        return HttpResponse.json([
+          {
+            id: `ver-${params.articleId}`,
+            article_id: found?.id || String(params.articleId),
+            version_index: found?.version_index ?? 1,
+            version_label: found?.version_label || "1.0",
+            body_markdown: bodyMarkdown,
+            body_html: bodyHtml,
+            status_at_snapshot: found?.status || "PUBLISHED",
+            is_locked: true,
+            created_by: found?.approved_by || "qa_director",
+            reason_for_change: "Published controlled SOP",
+            created_at: "2026-06-01T11:15:00Z", // deid-ignore
+          },
+        ]);
+      }
     ),
     http.get("*/api/v1/knowledge/articles/:articleId/audit-log", ({ params }) =>
       HttpResponse.json([

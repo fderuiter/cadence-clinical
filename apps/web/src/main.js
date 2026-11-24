@@ -11,7 +11,6 @@ import {
   setSessionEndedHandler,
 } from "./auth/sessionCoordinator.js";
 import { vKeyboardClick } from "./directives/keyboardClick";
-import { i18n } from "./i18n/index.js";
 import { router } from "./router";
 import { useAuthStore } from "./stores/auth";
 import { stateTrackingPlugin } from "./stores/plugins.js";
@@ -19,7 +18,6 @@ import { isDemoBuild } from "./utils/demoMode";
 
 const app = createApp(App);
 app.directive("keyboard-click", vKeyboardClick);
-app.use(i18n);
 
 const pinia = createPinia();
 pinia.use(stateTrackingPlugin);
@@ -51,6 +49,8 @@ const handleSessionEnded = (ctx) => {
 };
 
 async function bootstrapApp() {
+  const i18nPromise = import("./i18n/index.js");
+
   // The MSW mock gateway runs only in a demo build, or when explicitly enabled for local UI work; it must never
   // answer in place of the real API unannounced, and in demo builds it must be ready before any view mounts (ADR-2329).
   if (
@@ -102,6 +102,8 @@ async function bootstrapApp() {
       await router.replace(savedReturnUrl || currentTarget);
     }
   } finally {
+    const { i18n } = await i18nPromise;
+    app.use(i18n);
     app.use(router);
     await router.isReady();
     app.mount("#app");

@@ -82,4 +82,44 @@ public sealed class SubjectListPostgresTests(ExecutionPostgresFixture fixture) :
             [SubjectState.Enrolled] = 1,
         });
     }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task KernelEnrollmentId_PersistsInPostgres_AndDemoSeedDerivesCanonicalEnrollmentIds()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var study = new StudyCode($"STUDY-ENR-{Guid.NewGuid():N}");
+        var site = new SiteCode("SITE-101");
+        var enrollmentGuid = Guid.CreateVersion7();
+
+        await using (var context = ExecutionPostgresFixture.CreateDbContext(fixture.ConnectionString!))
+        {
+            var repository = new SubjectRepository(context);
+            var subject = ClinicalSubject.Create(
+                new SubjectCode($"{study.Value}-001"),
+                study,
+                site,
+                enrollmentIndex: 0,
+                encryptedDemographics: null,
+                stratFactors: null,
+                kernelEnrollmentId: enrollmentGuid);
+            await repository.AddAsync(subject, ct);
+            await repository.SaveChangesAsync(ct);
+        }
+
+        await using var readContext = ExecutionPostgresFixture.CreateDbContext(fixture.ConnectionString!);
+        var reader = new SubjectRepository(readContext);
+
+        var loaded = await reader.GetByKernelEnrollmentIdAsync(enrollmentGuid, ct);
+        loaded.Should().NotBeNull();
+        loaded!.KernelEnrollmentId.Should().Be(enrollmentGuid);
+        loaded.SubjectCode.Value.Should().Be($"{study.Value}-001");
+
+        var demoTenantId = Cadence.Database.Tenancy.DeterministicTenantCodeResolver.ComputeDeterministicGuid("cadence-local");
+        var demoParticipantId = Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbSeeder.DeriveDemoGuid(demoTenantId, "participant", "SUBJ-101-001");
+        var demoEnrollmentId = Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbSeeder.DeriveDemoGuid(demoTenantId, "enrollment", "SUBJ-101-001");
+        demoParticipantId.Should().NotBe(Guid.Empty).And.NotBe(demoEnrollmentId);
+        demoEnrollmentId.ToString("D")[14].Should().Be('8');
+    }
 }
