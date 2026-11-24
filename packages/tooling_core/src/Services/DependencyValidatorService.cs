@@ -244,128 +244,143 @@ public static class DependencyValidatorService
             return 1;
         }
 
+        var contentErrors = ValidateDependabotContent(content);
+        foreach (string contentError in contentErrors)
+        {
+            Console.WriteLine($"[ERROR] {relativePath}: {contentError}");
+        }
+
+        return contentErrors.Count;
+    }
+
+    public static IReadOnlyList<string> ValidateDependabotContent(string content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
         var updates = ParseDependabotUpdates(content);
         if (updates.Count == 0)
         {
-            Console.WriteLine($"[ERROR] {relativePath} must define at least one entry under 'updates'.");
-            return 1;
+            return ["Manifest must define at least one entry under 'updates'."];
         }
 
-        int errors = 0;
+        var errors = new List<string>();
         var seenEcosystemDirs = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < updates.Count; i++)
         {
-            errors += ValidateDependabotUpdate(updates[i], i, seenEcosystemDirs, relativePath);
+            ValidateDependabotUpdate(updates[i], i, seenEcosystemDirs, errors);
         }
 
         return errors;
     }
 
-    private static int ValidateDependabotUpdate(
+    private static void ValidateDependabotUpdate(
         DependabotUpdateEntry update,
         int updateIdx,
         HashSet<string> seenEcosystemDirs,
-        string relativePath)
+        List<string> errors)
     {
-        int errors = 0;
         if (string.IsNullOrWhiteSpace(update.PackageEcosystem))
         {
-            Console.WriteLine($"[ERROR] {relativePath}: '#/updates/{updateIdx}' must specify a non-empty 'package-ecosystem'.");
-            errors++;
+            errors.Add($"'#/updates/{updateIdx}' must specify a non-empty 'package-ecosystem'.");
         }
 
         if (update.Directories.Count == 0)
         {
-            Console.WriteLine($"[ERROR] {relativePath}: '#/updates/{updateIdx}' must specify 'directory' or 'directories'.");
-            errors++;
+            errors.Add($"'#/updates/{updateIdx}' must specify 'directory' or 'directories'.");
         }
         else if (!string.IsNullOrWhiteSpace(update.PackageEcosystem))
         {
             foreach (string dir in update.Directories)
             {
-                string key = $"{update.PackageEcosystem}\u001F{dir}";
-                if (!seenEcosystemDirs.Add(key))
+                if (!seenEcosystemDirs.Add($"{update.PackageEcosystem}\u001F{dir}"))
                 {
-                    Console.WriteLine($"[ERROR] {relativePath}: '#/updates/{updateIdx}' duplicates package-ecosystem '{update.PackageEcosystem}' for directory '{dir}'.");
-                    errors++;
+                    errors.Add($"'#/updates/{updateIdx}' duplicates package-ecosystem '{update.PackageEcosystem}' for directory '{dir}'.");
                 }
             }
         }
 
-        errors += ValidateDependabotIgnores(update.Ignores, updateIdx, relativePath);
-        return errors;
+        ValidateDependabotIgnores(update.Ignores, updateIdx, errors);
     }
 
-    private static int ValidateDependabotIgnores(
+    private static void ValidateDependabotIgnores(
         IReadOnlyList<DependabotIgnoreEntry> ignores,
         int updateIdx,
-        string relativePath)
+        List<string> errors)
     {
-        int errors = 0;
         var seenVersions = new HashSet<string>(StringComparer.Ordinal);
         var seenUpdateTypes = new HashSet<string>(StringComparer.Ordinal);
         var seenBlanket = new HashSet<string>(StringComparer.Ordinal);
 
         for (int j = 0; j < ignores.Count; j++)
         {
-            errors += ValidateSingleDependabotIgnore(
+            ValidateSingleDependabotIgnore(
                 ignores[j],
                 updateIdx,
                 j,
                 seenVersions,
                 seenUpdateTypes,
                 seenBlanket,
-                relativePath);
+                errors);
         }
-
-        return errors;
     }
 
-    private static int ValidateSingleDependabotIgnore(
+    private static void ValidateSingleDependabotIgnore(
         DependabotIgnoreEntry ignore,
         int updateIdx,
         int ignoreIdx,
         HashSet<string> seenVersions,
         HashSet<string> seenUpdateTypes,
         HashSet<string> seenBlanket,
-        string relativePath)
+        List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ignore.DependencyName))
         {
-            Console.WriteLine($"[ERROR] {relativePath}: '#/updates/{updateIdx}/ignore/{ignoreIdx}' must specify a non-empty 'dependency-name'.");
-            return 1;
+            errors.Add($"'#/updates/{updateIdx}/ignore/{ignoreIdx}' must specify a non-empty 'dependency-name'.");
+            return;
         }
 
-        int errors = 0;
         string dep = ignore.DependencyName;
-        string updateTypesScope = string.Join("\u001E", ignore.UpdateTypes.OrderBy(u => u, StringComparer.Ordinal));
-
-        foreach (string version in ignore.Versions)
+        if (ignore.Versions.Count == 0 && ignore.UpdateTypes.Count == 0)
         {
-            if (!seenVersions.Add($"{dep}\u001F{updateTypesScope}\u001F{version}"))
+            if (!seenBlanket.Add(dep))
             {
-                Console.WriteLine($"[ERROR] {relativePath}: The property '#/updates/{updateIdx}/ignore/{ignoreIdx}/versions' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'versions'.");
-                errors++;
+                errors.Add($"The property '#/updates/{updateIdx}/ignore/{ignoreIdx}/dependency-name' includes a duplicate.");
+            }
+
+            return;
+        }
+
+        RecordDuplicatePropertyValues(
+            dep,
+            ignore.Versions,
+            seenVersions,
+            $"The property '#/updates/{updateIdx}/ignore/{ignoreIdx}/versions' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'versions'",
+            errors);
+
+        RecordDuplicatePropertyValues(
+            dep,
+            ignore.UpdateTypes,
+            seenUpdateTypes,
+            $"The property '#/updates/{updateIdx}/ignore/{ignoreIdx}/update-types' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'update-types'",
+            errors);
+    }
+
+    private static void RecordDuplicatePropertyValues(
+        string dependencyName,
+        IReadOnlyList<string> values,
+        HashSet<string> seenPairs,
+        string duplicateMessage,
+        List<string> errors)
+    {
+        bool reported = false;
+        foreach (string value in values)
+        {
+            if (!seenPairs.Add($"{dependencyName}\u001F{value}") && !reported)
+            {
+                errors.Add(duplicateMessage);
+                reported = true;
             }
         }
-
-        string versionsScope = string.Join("\u001E", ignore.Versions.OrderBy(v => v, StringComparer.Ordinal));
-        foreach (string updateType in ignore.UpdateTypes)
-        {
-            if (!seenUpdateTypes.Add($"{dep}\u001F{versionsScope}\u001F{updateType}"))
-            {
-                Console.WriteLine($"[ERROR] {relativePath}: The property '#/updates/{updateIdx}/ignore/{ignoreIdx}/update-types' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'update-types'.");
-                errors++;
-            }
-        }
-
-        if (ignore.Versions.Count == 0 && ignore.UpdateTypes.Count == 0 && !seenBlanket.Add(dep))
-        {
-            Console.WriteLine($"[ERROR] {relativePath}: The property '#/updates/{updateIdx}/ignore/{ignoreIdx}' includes a duplicate blanket ignore for '{dep}'.");
-            errors++;
-        }
-
-        return errors;
     }
 
     private static List<DependabotUpdateEntry> ParseDependabotUpdates(string content)
