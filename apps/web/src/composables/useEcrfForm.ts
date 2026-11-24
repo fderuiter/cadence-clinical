@@ -29,6 +29,7 @@ import {
 import {
   formatObservationValue,
   isUnrecordedValue,
+  MISSING_REASONS,
   parseFormEntry,
   type KernelObservationValue,
 } from "../api/observationValue";
@@ -52,6 +53,21 @@ export interface EcrfUnsavedItem {
   text: string;
   missing: string;
   unit: string | null;
+}
+
+/** One saved browser draft item skipped on load because committed server revisions advanced. */
+export interface EcrfStaleDraftItem {
+  item_id: string;
+  draft_display: string;
+  draft_revision: number;
+  current_revision: number | null;
+}
+
+/** One unapplied browser draft item preserved in read-only state when a locked or frozen form loads. */
+export interface EcrfLockedDraftItem {
+  item_id: string;
+  draft_display: string;
+  committed_display: string;
 }
 
 /** Metadata recorded when `saveValues` returns an inline hydrated `FormResponse` in 1 RTT. */
@@ -172,8 +188,19 @@ export function useEcrfForm(
   let lastRequestedFormId: string | null = null;
   let loadRequest = 0;
 
+  const restoredDraftItemIds = ref<string[]>([]);
+  const comparingBaseline = ref(false);
+  const staleDraftItems = ref<EcrfStaleDraftItem[]>([]);
+  const lockedDraftItems = ref<EcrfLockedDraftItem[]>([]);
+
   const items = computed<EcrfFormItem[]>(() => form.value?.items ?? []);
   const locked = computed(() => (form.value?.locks.length ?? 0) > 0);
+  const lockSummaryLabel = computed(() => {
+    const kinds = [
+      ...new Set((form.value?.locks ?? []).map((held) => held.kind)),
+    ];
+    return kinds.join(" / ") || "Locked";
+  });
   const assertionsLocked = computed(() =>
     (form.value?.locks ?? []).some(
       (held) => held.kind.toLowerCase() === "locked"
@@ -222,6 +249,11 @@ export function useEcrfForm(
     cancelDraftSave();
     draftSaved = false;
     draftCleared = true;
+    if (!formId || formId === form.value?.form_id) {
+      restoredDraftItemIds.value = [];
+      comparingBaseline.value = false;
+      lockedDraftItems.value = [];
+    }
     const key = getDraftStorageKey(formId);
     if (!key) return;
     removeDraftKey(key);
@@ -255,6 +287,35 @@ export function useEcrfForm(
     return value.type === "quantity"
       ? `${value.comparator ?? ""}${value.value}`
       : formatObservationValue(value);
+  }
+
+  function missingReasonLabel(reasonCode: string): string {
+    const found = MISSING_REASONS.find((opt) => opt.reason === reasonCode);
+    return found ? found.text : reasonCode;
+  }
+
+  /** Human-readable committed server baseline for inline draft comparison and locked-form recovery banners. */
+  function formatCommittedBaseline(item: EcrfFormItem): string {
+    if (!item.value || isUnrecordedValue(item.value)) {
+      return "No recorded value";
+    }
+    if (item.value.type === "missing") {
+      return `Missing (${missingReasonLabel(String(item.value.reason))})`;
+    }
+    return formatObservationValue(item.value);
+  }
+
+  function formatDraftEntryDisplay(
+    saved: Partial<EcrfEntry>,
+    item?: EcrfFormItem
+  ): string {
+    const missing = typeof saved.missing === "string" ? saved.missing : "";
+    if (missing) {
+      return `Missing (${missingReasonLabel(missing)})`;
+    }
+    const text = typeof saved.text === "string" ? saved.text.trim() : "";
+    if (!text) return "Blank";
+    return item?.unit ? `${text} ${item.unit}` : text;
   }
 
   const initialTextByItemId = computed(() => {
@@ -295,6 +356,30 @@ export function useEcrfForm(
 
   const editedItems = computed(() => items.value.filter(isEdited));
   const dirty = computed(() => editedItems.value.length > 0);
+  const draftRestored = computed(
+    () => restoredDraftItemIds.value.length > 0 && dirty.value
+  );
+
+  function toggleBaselineComparison() {
+    comparingBaseline.value = !comparingBaseline.value;
+  }
+
+  /** Discards restored/unsaved draft edits and reverts form entries to committed server values. */
+  function discardDraft() {
+    clearDraft(form.value?.form_id);
+    outcome.value = null;
+    resetEntries();
+  }
+
+  function dismissStaleDraftNotice() {
+    staleDraftItems.value = [];
+  }
+
+  /** Explicitly removes preserved unapplied draft values for a locked or frozen form. */
+  function clearLockedDraft() {
+    clearDraft(form.value?.form_id);
+    lockedDraftItems.value = [];
+  }
 
   /** Writes the current dirty entries and their base revisions under `key`. */
   function persistDraft(formId: string, key: string) {
@@ -324,9 +409,14 @@ export function useEcrfForm(
     }
   }
 
-  /** Restores saved draft items whose revision matches the loaded form, discarding locked or stale items. */
+  /** Restores saved draft items whose revision matches the loaded form, surfacing stale skips and preserving locked drafts. */
   function restoreDraft(loaded: EcrfForm) {
     draftSaved = false;
+    restoredDraftItemIds.value = [];
+    comparingBaseline.value = false;
+    staleDraftItems.value = [];
+    lockedDraftItems.value = [];
+
     const key = getDraftStorageKey(loaded.form_id);
     if (!key) return;
     const ls = browserStorage();
@@ -339,11 +429,6 @@ export function useEcrfForm(
       return;
     }
     if (!raw) return;
-
-    if ((loaded.locks?.length ?? 0) > 0) {
-      removeDraftKey(key);
-      return;
-    }
 
     let parsed: Partial<EcrfFormDraft> | null;
     try {
@@ -362,28 +447,75 @@ export function useEcrfForm(
       return;
     }
 
-    let discardedAny = false;
     const byId = new Map(loaded.items.map((item) => [item.item_id, item]));
+
+    if ((loaded.locks?.length ?? 0) > 0) {
+      const unapplied: EcrfLockedDraftItem[] = [];
+      for (const [itemId, saved] of Object.entries(parsed.items)) {
+        if (!saved || typeof saved !== "object") continue;
+        const savedText = typeof saved.text === "string" ? saved.text : "";
+        const savedMissing =
+          typeof saved.missing === "string" ? saved.missing : "";
+        const item = byId.get(itemId);
+        const committedEntry = entries[itemId];
+        const differs = item
+          ? savedMissing !== (committedEntry?.missing ?? "") ||
+            savedText.trim() !== (committedEntry?.text ?? "").trim()
+          : Boolean(savedMissing || savedText.trim());
+        if (!differs) continue;
+        unapplied.push({
+          item_id: itemId,
+          draft_display: formatDraftEntryDisplay(saved, item),
+          committed_display: item
+            ? formatCommittedBaseline(item)
+            : "Not present on form",
+        });
+      }
+      if (unapplied.length === 0) {
+        removeDraftKey(key);
+        return;
+      }
+      lockedDraftItems.value = unapplied;
+      return;
+    }
+
+    let discardedAny = false;
+    const skippedStale: EcrfStaleDraftItem[] = [];
+    const restoredIds: string[] = [];
     for (const [itemId, saved] of Object.entries(parsed.items)) {
-      const item = byId.get(itemId);
-      if (
-        !item ||
-        !saved ||
-        typeof saved !== "object" ||
-        Number(saved.revision) !== Number(item.revision)
-      ) {
+      if (!saved || typeof saved !== "object") {
         discardedAny = true;
+        continue;
+      }
+      const item = byId.get(itemId);
+      if (!item || Number(saved.revision) !== Number(item.revision)) {
+        discardedAny = true;
+        skippedStale.push({
+          item_id: itemId,
+          draft_display: formatDraftEntryDisplay(saved, item),
+          draft_revision: Number.isFinite(Number(saved.revision))
+            ? Number(saved.revision)
+            : 0,
+          current_revision: item ? Number(item.revision) : null,
+        });
         continue;
       }
       entries[itemId] = {
         text: typeof saved.text === "string" ? saved.text : "",
         missing: typeof saved.missing === "string" ? saved.missing : "",
       };
+      if (isEdited(item)) {
+        restoredIds.push(itemId);
+      }
     }
+
+    staleDraftItems.value = skippedStale;
+    restoredDraftItemIds.value = restoredIds;
 
     if (!dirty.value) {
       removeDraftKey(key);
       draftSaved = false;
+      restoredDraftItemIds.value = [];
     } else {
       draftSaved = true;
       if (discardedAny) {
@@ -603,6 +735,10 @@ export function useEcrfForm(
       loadedScopeKey = scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE);
       draftCleared = false;
       lastHydratedSave.value = null;
+      restoredDraftItemIds.value = [];
+      comparingBaseline.value = false;
+      staleDraftItems.value = [];
+      lockedDraftItems.value = [];
       form.value = loaded;
       resetEntries();
       if (restoreFromStorage) {
@@ -779,6 +915,7 @@ export function useEcrfForm(
         idempotencyKey: pendingSave.key,
       });
       pendingSave = null;
+      staleDraftItems.value = [];
       clearDraft(current.form_id);
       const hydratedForm = (saved as EcrfFormSaved & { form?: EcrfForm | null })
         .form;
@@ -937,6 +1074,10 @@ export function useEcrfForm(
     loadRequest++;
     loadedScopeKey = null;
     lastHydratedSave.value = null;
+    restoredDraftItemIds.value = [];
+    comparingBaseline.value = false;
+    staleDraftItems.value = [];
+    lockedDraftItems.value = [];
     form.value = null;
     loading.value = false;
     loadError.value = null;
@@ -983,10 +1124,21 @@ export function useEcrfForm(
     signOutcome,
     canSign,
     locked,
+    lockSummaryLabel,
     assertionsLocked,
     dirty,
     editedItems,
     isEdited,
+    draftRestored,
+    restoredDraftItemIds,
+    comparingBaseline,
+    toggleBaselineComparison,
+    discardDraft,
+    staleDraftItems,
+    dismissStaleDraftNotice,
+    lockedDraftItems,
+    clearLockedDraft,
+    formatCommittedBaseline,
     getDraftStorageKey,
     flushDraft,
     clearDraft,
