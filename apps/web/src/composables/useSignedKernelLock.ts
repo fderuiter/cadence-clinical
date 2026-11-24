@@ -7,6 +7,8 @@ import {
   LOCK_RELEASE_SEMANTIC_ACTION,
   lockReleaseAction,
   type KernelLock,
+  type KernelLockBlocker,
+  type KernelLockBlockerKind,
   type KernelLockKind,
   type KernelLockMeaning,
   type KernelLockReadiness,
@@ -14,6 +16,205 @@ import {
 import { useAuthStore } from "../stores/auth.js";
 
 export const LOCK_SIGNING_REASONS: string[] = ["Approved", "Responsibility"];
+
+export type LockReadinessGateKey =
+  | "open_queries"
+  | "missing_required_items"
+  | "unverified_values"
+  | "unsigned_forms"
+  | "unopened_visits"
+  | "error_findings";
+
+export interface LockReadinessGateSummary {
+  key: LockReadinessGateKey;
+  kind: KernelLockBlockerKind;
+  count: number;
+  singular: string;
+  plural: string;
+  label: string;
+}
+
+export function toReadinessCount(
+  value: number | string | null | undefined
+): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 0;
+}
+
+export function normalizeLockBlockerKind(
+  rawKind: string | null | undefined
+): KernelLockBlockerKind {
+  const normalized = String(rawKind ?? "")
+    .trim()
+    .replaceAll("_", "")
+    .toLowerCase();
+  switch (normalized) {
+    case "openquery":
+      return "OpenQuery";
+    case "missingrequireditem":
+      return "MissingRequiredItem";
+    case "unverifiedvalue":
+      return "UnverifiedValue";
+    case "unsignedform":
+      return "UnsignedForm";
+    case "unopenedvisit":
+      return "UnopenedVisit";
+    case "errorfinding":
+      return "ErrorFinding";
+    default:
+      return "MissingRequiredItem";
+  }
+}
+
+export function formatLockBlockerKindLabel(
+  rawKind: string | null | undefined,
+  signatureSuperseded = false
+): string {
+  switch (normalizeLockBlockerKind(rawKind)) {
+    case "OpenQuery":
+      return "Open query";
+    case "MissingRequiredItem":
+      return "Missing required item";
+    case "UnverifiedValue":
+      return "Unverified value";
+    case "UnsignedForm":
+      return signatureSuperseded ? "Signature superseded" : "Unsigned form";
+    case "UnopenedVisit":
+      return "Unopened visit";
+    case "ErrorFinding":
+      return "Error finding";
+  }
+}
+
+export function formatLockBlockerFallbackTitle(
+  blocker: Partial<KernelLockBlocker>
+): string | undefined {
+  return (
+    blocker.item_label ||
+    blocker.collection_title ||
+    blocker.planned_activity_name ||
+    blocker.subject_code ||
+    blocker.collection_spec_id ||
+    blocker.planned_activity_id ||
+    undefined
+  );
+}
+
+export function formatLockBlockerDetail(
+  blocker: Partial<KernelLockBlocker>
+): string | null {
+  if (blocker.masked) {
+    return blocker.detail && blocker.detail.trim()
+      ? blocker.detail.trim()
+      : null;
+  }
+  if (blocker.detail && blocker.detail.trim()) {
+    return blocker.detail.trim();
+  }
+  if (blocker.query_text && blocker.query_text.trim()) {
+    return blocker.query_text.trim();
+  }
+  const kind = normalizeLockBlockerKind(blocker.kind);
+  if (kind === "UnverifiedValue") {
+    if (blocker.current_revision != null) {
+      const itemPrefix = blocker.item_label ? `${blocker.item_label} · ` : "";
+      return `${itemPrefix}Revision ${blocker.current_revision} awaiting source verification`;
+    }
+    return blocker.item_label ?? null;
+  }
+  if (kind === "UnsignedForm") {
+    const formTitle =
+      blocker.collection_title || blocker.collection_spec_id || null;
+    const status = blocker.signature_superseded
+      ? "Investigator signature superseded by subsequent edit"
+      : "Awaiting investigator signature";
+    return formTitle ? `${formTitle} (${status})` : status;
+  }
+  if (kind === "UnopenedVisit") {
+    const visitParts = [
+      blocker.planned_activity_name || blocker.planned_activity_id || null,
+      blocker.planned_date ? `target ${blocker.planned_date}` : null,
+      blocker.window_end ? `window closes ${blocker.window_end}` : null,
+    ].filter(Boolean);
+    return visitParts.length > 0 ? visitParts.join(" · ") : null;
+  }
+  if (kind === "ErrorFinding" && blocker.rule_id) {
+    return `[${blocker.rule_id}]`;
+  }
+  return blocker.item_label ?? null;
+}
+
+export function formatMaskedBlockerOwner(
+  blocker: Partial<KernelLockBlocker>
+): string | null {
+  const owner = blocker.owner?.trim();
+  if (!owner) return null;
+  const nextAction = blocker.next_action?.trim() ?? "";
+  if (nextAction.toLowerCase().startsWith(`${owner.toLowerCase()}:`)) {
+    return null;
+  }
+  return owner;
+}
+
+export function buildLockReadinessGates(
+  current: Partial<KernelLockReadiness> | null | undefined
+): LockReadinessGateSummary[] {
+  if (!current) return [];
+  const specs: Array<{
+    key: LockReadinessGateKey;
+    kind: KernelLockBlockerKind;
+    count: number;
+    singular: string;
+    plural: string;
+  }> = [
+    {
+      key: "open_queries",
+      kind: "OpenQuery",
+      count: toReadinessCount(current.open_query_count),
+      singular: "open query",
+      plural: "open queries",
+    },
+    {
+      key: "missing_required_items",
+      kind: "MissingRequiredItem",
+      count: toReadinessCount(current.missing_required_item_count),
+      singular: "missing required item",
+      plural: "missing required items",
+    },
+    {
+      key: "unverified_values",
+      kind: "UnverifiedValue",
+      count: toReadinessCount(current.unverified_value_count),
+      singular: "unverified value",
+      plural: "unverified values",
+    },
+    {
+      key: "unsigned_forms",
+      kind: "UnsignedForm",
+      count: toReadinessCount(current.unsigned_form_count),
+      singular: "unsigned form",
+      plural: "unsigned forms",
+    },
+    {
+      key: "unopened_visits",
+      kind: "UnopenedVisit",
+      count: toReadinessCount(current.unopened_visit_count),
+      singular: "unopened visit",
+      plural: "unopened visits",
+    },
+    {
+      key: "error_findings",
+      kind: "ErrorFinding",
+      count: toReadinessCount(current.open_error_finding_count),
+      singular: "error finding",
+      plural: "error findings",
+    },
+  ];
+  return specs.map((spec) => ({
+    ...spec,
+    label: `${spec.count} ${spec.count === 1 ? spec.singular : spec.plural}`,
+  }));
+}
 
 export interface SignedLockOutcome {
   kind: "ok" | "error";
@@ -89,6 +290,12 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
 
   const isLockBlockedByReadiness = computed(
     () => readiness.value !== null && !readiness.value.ready_for_lock
+  );
+  const canFreezeByReadiness = computed(
+    () => readiness.value === null || readiness.value.can_freeze !== false
+  );
+  const readinessGates = computed(() =>
+    buildLockReadinessGates(readiness.value)
   );
 
   const signerUsername = computed(
@@ -341,6 +548,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     canRelease,
     readiness,
     readinessLoading,
+    readinessGates,
+    canFreezeByReadiness,
     isLockBlockedByReadiness,
     busy,
     outcome,
