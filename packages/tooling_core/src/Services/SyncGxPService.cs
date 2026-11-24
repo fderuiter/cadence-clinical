@@ -31,60 +31,69 @@ public static class SyncGxPService
     /// runs no tests and writes nothing: it validates the tags, the integrity stamps and, in snapshot mode, that the
     /// committed snapshot's mapping is current.
     /// </summary>
-    public static int SyncCompliance(bool dryRun = false, bool commit = false, bool draft = false, bool snapshot = false, string? repoRoot = null, string? resultsDir = null)
+    public static int SyncCompliance(
+        bool dryRun = false,
+        bool commit = false,
+        bool draft = false,
+        bool snapshot = false,
+        string? repoRoot = null,
+        string? resultsDir = null,
+        Func<string, string?>? environment = null,
+        TextWriter? output = null)
     {
+        TextWriter writer = output ?? Console.Out;
         repoRoot ??= FindRepoRoot();
         string command = snapshot ? "pnpm cadence gxp snapshot" : "pnpm cadence gxp sync";
-        Console.WriteLine("Cadence Clinical — Native GxP Compliance Sync");
-        Console.WriteLine(new string('=', 60));
+        writer.WriteLine("Cadence Clinical — Native GxP Compliance Sync");
+        writer.WriteLine(new string('=', 60));
 
-        if (dryRun) Console.WriteLine("Mode: VALIDATE (no tests run, no files written)");
-        else if (snapshot) Console.WriteLine(commit ? "Mode: SNAPSHOT + COMMIT (writes and commits docs/SDLC)" : "Mode: SNAPSHOT (writes and stages docs/SDLC)");
-        else Console.WriteLine($"Mode: BRANCH (writes a preview to {GxpSnapshotPolicy.PreviewDir}; docs/SDLC is the baseline's snapshot and is left alone)");
+        if (dryRun) writer.WriteLine("Mode: VALIDATE (no tests run, no files written)");
+        else if (snapshot) writer.WriteLine(commit ? "Mode: SNAPSHOT + COMMIT (writes and commits docs/SDLC)" : "Mode: SNAPSHOT (writes and stages docs/SDLC)");
+        else writer.WriteLine($"Mode: BRANCH (writes a preview to {GxpSnapshotPolicy.PreviewDir}; docs/SDLC is the baseline's snapshot and is left alone)");
 
         // A snapshot is validation evidence: it always comes from a full test run, never from a draft (#5324).
         if (snapshot && draft)
         {
-            Console.WriteLine("[ERROR] A snapshot can't be a draft: it runs every test against PostgreSQL. Run `pnpm cadence gxp snapshot` without --draft.");
+            writer.WriteLine("[ERROR] A snapshot can't be a draft: it runs every test against PostgreSQL. Run `pnpm cadence gxp snapshot` without --draft.");
             return 1;
         }
 
         if (dryRun)
         {
             return RtmGeneratorService.GenerateRtm(
-                draft: true, validateOnly: true, repoRoot: repoRoot, requireCurrentSnapshot: snapshot || GxpSnapshotPolicy.IsSnapshotMode(),
+                draft: true, validateOnly: true, repoRoot: repoRoot, requireCurrentSnapshot: snapshot || GxpSnapshotPolicy.IsSnapshotMode(environment),
                 requireRecordedEvidence: true);
         }
 
         if (resultsDir is not null && string.IsNullOrWhiteSpace(resultsDir))
         {
-            Console.WriteLine("[ERROR] --results-dir requires a non-empty directory path.");
+            writer.WriteLine("[ERROR] --results-dir requires a non-empty directory path.");
             return 1;
         }
 
         // Step 1: Tests
-        Console.WriteLine("\n============================================================");
-        Console.WriteLine("STEP 1 / 3 — Running test suite");
-        Console.WriteLine("============================================================");
+        writer.WriteLine("\n============================================================");
+        writer.WriteLine("STEP 1 / 3 — Running test suite");
+        writer.WriteLine("============================================================");
 
         string relativeOrFullResultsDir = string.IsNullOrWhiteSpace(resultsDir) ? RtmGeneratorService.DefaultResultsDir : resultsDir;
         string resolvedResultsDir = Path.GetFullPath(relativeOrFullResultsDir, repoRoot);
-        bool writeToSdlc = snapshot || GxpSnapshotPolicy.IsSnapshotMode();
+        bool writeToSdlc = snapshot || GxpSnapshotPolicy.IsSnapshotMode(environment);
         int testExitCode = 0;
 
         if (draft)
         {
-            Console.WriteLine("⏭ [draft] Skipping live test execution.");
+            writer.WriteLine("⏭ [draft] Skipping live test execution.");
         }
         else if (!string.IsNullOrWhiteSpace(resultsDir))
         {
             if (!Directory.Exists(resolvedResultsDir))
             {
-                Console.WriteLine($"[ERROR] Test results directory not found: {resolvedResultsDir}");
+                writer.WriteLine($"[ERROR] Test results directory not found: {resolvedResultsDir}");
                 return 1;
             }
 
-            Console.WriteLine($"Using existing test results and database evidence from {resultsDir}.");
+            writer.WriteLine($"Using existing test results and database evidence from {resultsDir}.");
             if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot, requireBrowserEvidence: true))
             {
                 return 1;
@@ -114,7 +123,7 @@ public static class SyncGxPService
             testExitCode = proc?.ExitCode ?? 1;
             if (testExitCode != 0)
             {
-                Console.WriteLine("\n[ERROR] Test suite execution failed. The documents are still generated so the failures are visible, but nothing is staged.");
+                writer.WriteLine("\n[ERROR] Test suite execution failed. The documents are still generated so the failures are visible, but nothing is staged.");
             }
             else if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot, requireBrowserEvidence: true))
             {
@@ -123,9 +132,9 @@ public static class SyncGxPService
         }
 
         // Step 2: Generate
-        Console.WriteLine("\n============================================================");
-        Console.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
-        Console.WriteLine("============================================================");
+        writer.WriteLine("\n============================================================");
+        writer.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
+        writer.WriteLine("============================================================");
 
         string outputDir = writeToSdlc ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
         var evidence = RtmEvidenceContext.Capture(repoRoot, command, SystemClock.Instance);
@@ -149,13 +158,13 @@ public static class SyncGxPService
         }
 
         // Step 3: Stage (snapshot only)
-        Console.WriteLine("\n============================================================");
-        Console.WriteLine("STEP 3 / 3 — Staging compliance docs");
-        Console.WriteLine("============================================================");
+        writer.WriteLine("\n============================================================");
+        writer.WriteLine("STEP 3 / 3 — Staging compliance docs");
+        writer.WriteLine("============================================================");
 
         if (!snapshot)
         {
-            Console.WriteLine($"✔ Tags and results are valid. Preview: {GxpSnapshotPolicy.PreviewDir}/. Nothing is staged: the integration owner takes the next snapshot (ADR-2532).");
+            writer.WriteLine($"✔ Tags and results are valid. Preview: {GxpSnapshotPolicy.PreviewDir}/. Nothing is staged: the integration owner takes the next snapshot (ADR-2532).");
             return 0;
         }
 
@@ -172,12 +181,12 @@ public static class SyncGxPService
             pGit?.WaitForExit();
             if ((pGit?.ExitCode ?? 1) != 0)
             {
-                Console.WriteLine("[ERROR] Failed to stage GxP snapshot files with git add.");
+                writer.WriteLine("[ERROR] Failed to stage GxP snapshot files with git add.");
                 return 1;
             }
         }
 
-        Console.WriteLine("✔ Files staged.");
+        writer.WriteLine("✔ Files staged.");
 
         if (commit)
         {
@@ -197,23 +206,23 @@ public static class SyncGxPService
             pCommit?.WaitForExit();
             if ((pCommit?.ExitCode ?? 1) != 0)
             {
-                Console.WriteLine("[ERROR] Failed to commit GxP snapshot.");
+                writer.WriteLine("[ERROR] Failed to commit GxP snapshot.");
                 return 1;
             }
 
-            Console.WriteLine($"✔ Committed with '{GxpSnapshotPolicy.SnapshotTrailer}' trailer.");
+            writer.WriteLine($"✔ Committed with '{GxpSnapshotPolicy.SnapshotTrailer}' trailer.");
         }
         else
         {
-            Console.WriteLine(
+            writer.WriteLine(
                 $"Commit with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1 and a '{GxpSnapshotPolicy.SnapshotTrailer}' trailer " +
                 $"(for example: git commit -m \"{GxpSnapshotPolicy.SnapshotCommitSubject}\" -m \"{GxpSnapshotPolicy.SnapshotTrailer}\") " +
                 "so the pre-commit snapshot guard and CI snapshot provenance gate admit the documents.");
         }
 
-        Console.WriteLine("\n============================================================");
-        Console.WriteLine("✔ GxP snapshot complete.");
-        Console.WriteLine("============================================================");
+        writer.WriteLine("\n============================================================");
+        writer.WriteLine("✔ GxP snapshot complete.");
+        writer.WriteLine("============================================================");
         return 0;
     }
 

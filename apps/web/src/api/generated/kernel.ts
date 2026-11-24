@@ -1211,6 +1211,8 @@ export interface components {
       retracted_by: null | components["schemas"]["Kernel_AssertionId"];
       /** Format: date-time */
       retracted_at: null | string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_AttestationId: unknown;
     Kernel_CodelistOptionView: {
@@ -2329,6 +2331,8 @@ export interface components {
       locked_at: string;
       locked_by: string;
       reason_for_change: string;
+      /** @default false */
+      masked: boolean;
     };
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;

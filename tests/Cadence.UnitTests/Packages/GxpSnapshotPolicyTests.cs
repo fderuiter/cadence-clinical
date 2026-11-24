@@ -331,24 +331,15 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
         Git("commit", "-q", "-m", "initial commit");
         string initialHead = Git("rev-parse", "HEAD").Trim();
 
-        TextWriter originalOut = Console.Out;
-        string stdout;
-        try
-        {
-            using var writer = new StringWriter();
-            Console.SetOut(writer);
-            int stageOnlyExit = SyncGxPService.SyncCompliance(
-                snapshot: true,
-                commit: false,
-                repoRoot: _dir,
-                resultsDir: "TestResults/gxp");
-            stageOnlyExit.Should().Be(0);
-            stdout = writer.ToString();
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
+        using var writer = new StringWriter();
+        int stageOnlyExit = SyncGxPService.SyncCompliance(
+            snapshot: true,
+            commit: false,
+            repoRoot: _dir,
+            resultsDir: "TestResults/gxp",
+            output: writer);
+        stageOnlyExit.Should().Be(0);
+        string stdout = writer.ToString();
 
         stdout.Should().Contain(GxpSnapshotPolicy.SnapshotTrailer);
 
@@ -509,91 +500,84 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
                 prHeadRepo: "",
                 prUserLogin: "").Should().BeTrue();
 
-            string? prevSnapshotEnv = Environment.GetEnvironmentVariable(GxpSnapshotPolicy.SnapshotEnvironmentVariable);
-            try
+            static string? SnapshotEnv(string name) =>
+                name == GxpSnapshotPolicy.SnapshotEnvironmentVariable ? "1" : Environment.GetEnvironmentVariable(name);
+
+            // Missing browser TRX evidence fails compliance sync in snapshot mode!
+            Directory.Delete(Path.Combine(_dir, "TestResults", "gxp", "browser"), recursive: true);
+            SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp", environment: SnapshotEnv).Should().Be(1);
+
+            // Restore browser TRX evidence, then delete database fixture metadata -> fails compliance sync!
+            WriteEvidenceArtifacts(includeBrowserEvidence: true, includeSecondTest: true);
+            foreach (string dbFile in Directory.EnumerateFiles(Path.Combine(_dir, "TestResults", "gxp"), "*.database.txt", SearchOption.AllDirectories))
             {
-                Environment.SetEnvironmentVariable(GxpSnapshotPolicy.SnapshotEnvironmentVariable, "1");
-
-                // Missing browser TRX evidence fails compliance sync in snapshot mode!
-                Directory.Delete(Path.Combine(_dir, "TestResults", "gxp", "browser"), recursive: true);
-                SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp").Should().Be(1);
-
-                // Restore browser TRX evidence, then delete database fixture metadata -> fails compliance sync!
-                WriteEvidenceArtifacts(includeBrowserEvidence: true, includeSecondTest: true);
-                foreach (string dbFile in Directory.EnumerateFiles(Path.Combine(_dir, "TestResults", "gxp"), "*.database.txt", SearchOption.AllDirectories))
-                {
-                    File.Delete(dbFile);
-                }
-
-                SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp").Should().Be(1);
-
-                // With both PostgreSQL and browser TRX evidence present, compliance sync regenerates docs/SDLC and gxp-snapshot diff passes (0)!
-                WriteEvidenceArtifacts(includeBrowserEvidence: true, includeSecondTest: true);
-                SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp").Should().Be(0);
-                GxpSnapshotGuardService.Check(
-                    _dir,
-                    preCommit: false,
-                    snapshotMode: true,
-                    baseRef: "origin/main",
-                    eventName: "pull_request",
-                    gitRef: "refs/pull/102/merge").Should().Be(0);
-
-                // Fast-forward main and verify post-merge push (ancestor BEFORE_SHA) and 40-zero new release/* push both authorize and pass!
-                Git("checkout", "-q", "main");
-                Git("merge", "-q", "--ff-only", "owner-snapshot");
-                EvaluateWorkflowSnapshotAuthorization(
-                    eventName: "push",
-                    refName: "refs/heads/main",
-                    baseRef: "main",
-                    beforeSha: beforeMainPush,
-                    repoFullName: "fderuiter/cadence-clinical",
-                    repoOwner: "fderuiter",
-                    prHeadRepo: "",
-                    prUserLogin: "").Should().BeTrue();
-                GxpSnapshotGuardService.Check(
-                    _dir,
-                    preCommit: false,
-                    snapshotMode: true,
-                    pushBefore: beforeMainPush,
-                    eventName: "push",
-                    gitRef: "refs/heads/main").Should().Be(0);
-
-                Git("checkout", "-q", "-b", "release/1.0");
-                EvaluateWorkflowSnapshotAuthorization(
-                    eventName: "push",
-                    refName: "refs/heads/release/1.0",
-                    baseRef: "main",
-                    beforeSha: GitRevisionScopeService.AllZeroSha,
-                    repoFullName: "fderuiter/cadence-clinical",
-                    repoOwner: "fderuiter",
-                    prHeadRepo: "",
-                    prUserLogin: "").Should().BeTrue();
-                GxpSnapshotGuardService.Check(
-                    _dir,
-                    preCommit: false,
-                    snapshotMode: true,
-                    pushBefore: GitRevisionScopeService.AllZeroSha,
-                    eventName: "push",
-                    gitRef: "refs/heads/release/1.0").Should().Be(0);
-
-                // Tamper with the committed snapshot in Git index/HEAD while SyncCompliance regenerates the true report -> GxpDocsDiffService.Compare fails (1)!
-                string rtmPath = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
-                File.WriteAllText(rtmPath, File.ReadAllText(rtmPath).Replace("Widget", "TamperedWidget", StringComparison.Ordinal));
-                Git("add", "docs/SDLC/Requirements_Traceability_Matrix.md");
-                Git("commit", "-q", "-m", $"tampered snapshot\n\n{GxpSnapshotPolicy.SnapshotTrailer}");
-                SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp").Should().Be(0);
-                GxpSnapshotGuardService.Check(
-                    _dir,
-                    preCommit: false,
-                    snapshotMode: true,
-                    pushBefore: beforeMainPush,
-                    eventName: "push",
-                    gitRef: "refs/heads/main").Should().Be(1);
+                File.Delete(dbFile);
             }
-            finally
-            {
-                Environment.SetEnvironmentVariable(GxpSnapshotPolicy.SnapshotEnvironmentVariable, prevSnapshotEnv);
-            }
+
+            SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp", environment: SnapshotEnv).Should().Be(1);
+
+            // With both PostgreSQL and browser TRX evidence present, compliance sync regenerates docs/SDLC and gxp-snapshot diff passes (0)!
+            WriteEvidenceArtifacts(includeBrowserEvidence: true, includeSecondTest: true);
+            SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp", environment: SnapshotEnv).Should().Be(0);
+            GxpSnapshotGuardService.Check(
+                _dir,
+                preCommit: false,
+                snapshotMode: true,
+                baseRef: "origin/main",
+                eventName: "pull_request",
+                gitRef: "refs/pull/102/merge").Should().Be(0);
+
+            // Fast-forward main and verify post-merge push (ancestor BEFORE_SHA) and 40-zero new release/* push both authorize and pass!
+            Git("checkout", "-q", "main");
+            Git("merge", "-q", "--ff-only", "owner-snapshot");
+            EvaluateWorkflowSnapshotAuthorization(
+                eventName: "push",
+                refName: "refs/heads/main",
+                baseRef: "main",
+                beforeSha: beforeMainPush,
+                repoFullName: "fderuiter/cadence-clinical",
+                repoOwner: "fderuiter",
+                prHeadRepo: "",
+                prUserLogin: "").Should().BeTrue();
+            GxpSnapshotGuardService.Check(
+                _dir,
+                preCommit: false,
+                snapshotMode: true,
+                pushBefore: beforeMainPush,
+                eventName: "push",
+                gitRef: "refs/heads/main").Should().Be(0);
+
+            Git("checkout", "-q", "-b", "release/1.0");
+            EvaluateWorkflowSnapshotAuthorization(
+                eventName: "push",
+                refName: "refs/heads/release/1.0",
+                baseRef: "main",
+                beforeSha: GitRevisionScopeService.AllZeroSha,
+                repoFullName: "fderuiter/cadence-clinical",
+                repoOwner: "fderuiter",
+                prHeadRepo: "",
+                prUserLogin: "").Should().BeTrue();
+            GxpSnapshotGuardService.Check(
+                _dir,
+                preCommit: false,
+                snapshotMode: true,
+                pushBefore: GitRevisionScopeService.AllZeroSha,
+                eventName: "push",
+                gitRef: "refs/heads/release/1.0").Should().Be(0);
+
+            // Tamper with the committed snapshot in Git index/HEAD while SyncCompliance regenerates the true report -> GxpDocsDiffService.Compare fails (1)!
+            string rtmPath = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
+            File.WriteAllText(rtmPath, File.ReadAllText(rtmPath).Replace("Widget", "TamperedWidget", StringComparison.Ordinal));
+            Git("add", "docs/SDLC/Requirements_Traceability_Matrix.md");
+            Git("commit", "-q", "-m", $"tampered snapshot\n\n{GxpSnapshotPolicy.SnapshotTrailer}");
+            SyncGxPService.SyncCompliance(snapshot: false, repoRoot: _dir, resultsDir: "TestResults/gxp", environment: SnapshotEnv).Should().Be(0);
+            GxpSnapshotGuardService.Check(
+                _dir,
+                preCommit: false,
+                snapshotMode: true,
+                pushBefore: beforeMainPush,
+                eventName: "push",
+                gitRef: "refs/heads/main").Should().Be(1);
         }
         finally
         {
