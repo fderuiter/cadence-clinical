@@ -11,6 +11,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Persistence.Bitemporal;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
 
@@ -223,6 +224,64 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
                 ct);
             (await act.Should().ThrowAsync<PostgresException>($"{level} {country}")).Which.SqlState.Should().Be(expected);
         }
+    }
+
+    /// <summary>
+    /// Covering <see cref="LockKind.Frozen"/> and <see cref="LockKind.Locked"/> locks reject
+    /// <see cref="DeclareEffectivity"/>, <see cref="ChangeEffectivityStatus"/>, and <see cref="ActivateStudySite"/>
+    /// with <see cref="ObservationErrors.Locked"/>.
+    /// </summary>
+    [Fact(DisplayName = "EffectivityAndSiteActivation_RejectMutationsUnderCoveringFrozenOrLockedLock")]
+    public async Task EffectivityAndSiteActivationRejectMutationsUnderCoveringFrozenOrLockedLock()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var (version, _) = await _scenario.ApprovedAsync(tenant, study, ct);
+        var boston = await AddStudySiteAsync(tenant, study, "US", ct);
+        var berlin = await AddStudySiteAsync(tenant, study, "DE", ct);
+        var approval = await RegisterAsync(tenant, ArtifactKind.EthicsApproval, study, ct);
+
+        var usEffectivity = EffectivityId.New();
+        await _scenario.OkAsync(Declare(tenant, usEffectivity, version.ProtocolVersionId, EffectivityScope.InCountry("US"), Tick()), ct);
+        await _scenario.OkAsync(ChangeStatus(tenant, usEffectivity, EffectivityStatus.Effective, Tick(), approval), ct);
+
+        var deEffectivity = EffectivityId.New();
+        await _scenario.OkAsync(Declare(tenant, deEffectivity, version.ProtocolVersionId, EffectivityScope.InCountry("DE"), Tick()), ct);
+
+        var observations = new KernelObservationScenario(fixture);
+        foreach (var lockKind in new[] { LockKind.Frozen, LockKind.Locked })
+        {
+            var studyScope = NodeRef.For(study);
+            var applied = await _scenario.OkAsync(
+                await observations.LockAsync(tenant, study, studyScope, ct, lockKind),
+                ct);
+
+            (await SendAsync(Declare(tenant, EffectivityId.New(), version.ProtocolVersionId, EffectivityScope.At(berlin), Tick()), ct))
+                .Error.Should().Be(ObservationErrors.Locked);
+            (await SendAsync(ChangeStatus(tenant, deEffectivity, EffectivityStatus.Effective, Tick(), approval), ct))
+                .Error.Should().Be(ObservationErrors.Locked);
+            (await ActivateAsync(tenant, boston, ct))
+                .Error.Should().Be(ObservationErrors.Locked);
+
+            await _scenario.OkAsync(
+                await observations.ReleaseAsync(tenant, study, applied.LockId, ct),
+                ct);
+        }
+
+        // Study-site-level lock also blocks site-scoped DeclareEffectivity and ActivateStudySite on that site.
+        var bostonScope = NodeRef.For(boston);
+        var siteFrozen = await _scenario.OkAsync(
+            await observations.LockAsync(tenant, study, bostonScope, ct, LockKind.Frozen),
+            ct);
+        (await SendAsync(Declare(tenant, EffectivityId.New(), version.ProtocolVersionId, EffectivityScope.At(boston), Tick()), ct))
+            .Error.Should().Be(ObservationErrors.Locked);
+        (await ActivateAsync(tenant, boston, ct)).Error.Should().Be(ObservationErrors.Locked);
+
+        await _scenario.OkAsync(
+            await observations.ReleaseAsync(tenant, study, siteFrozen.LockId, ct),
+            ct);
+        (await ActivateAsync(tenant, boston, ct)).IsSuccess.Should().BeTrue();
     }
 
     private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));

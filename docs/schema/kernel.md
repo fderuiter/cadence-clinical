@@ -224,6 +224,37 @@ Indexes:
 - `IX_audit_entries_tenant_id_aggregate_type_aggregate_id_sequence`: (`tenant_id`, `aggregate_type`, `aggregate_id`, `sequence`)
 - `IX_audit_entries_tenant_id_sequence`: unique (`tenant_id`, `sequence`)
 
+## kernel.biostat_export_audit_logs
+
+Entity: `BiostatExportAuditLog`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `action` | `character varying(64)` | no |  |  |
+| `activity_id` | `uuid` | no |  |  |
+| `artifact_id` | `uuid` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `details_json` | `jsonb` | no |  |  |
+| `enrollment_id` | `uuid` | yes |  |  |
+| `format` | `character varying(64)` | no |  |  |
+| `is_unblinded` | `boolean` | no |  |  |
+| `known_at` | `timestamp with time zone` | no |  |  |
+| `lock_filter` | `character varying(64)` | yes |  |  |
+| `outcome` | `character varying(32)` | no |  |  |
+| `sha256_hash` | `character varying(64)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `timestamp` | `timestamp with time zone` | no |  |  |
+| `user_id` | `character varying(256)` | no |  |  |
+| `valid_at` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_biostat_export_audit_logs_activity_id`: (`activity_id`)
+- `IX_biostat_export_audit_logs_tenant_id_study_id_timestamp`: (`tenant_id`, `study_id`, `timestamp`)
+- `IX_biostat_export_audit_logs_tenant_id_timestamp`: (`tenant_id`, `timestamp`)
+
 ## kernel.code_system_entries
 
 Entity: `CodeSystemEntry`
