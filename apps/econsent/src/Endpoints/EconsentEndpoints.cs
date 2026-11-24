@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Econsent.Endpoints;
 
@@ -260,15 +261,6 @@ public static class EconsentEndpoints
         return app;
     }
 
-    private static string Caller(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eConsent request has no signed caller.");
-
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static IResult CrossParticipantDenied() =>
         TypedResults.Problem(
             title: "Cross-participant access denied",
@@ -326,7 +318,7 @@ public static class EconsentEndpoints
         {
             if (matchingById.Any(t => !ClinicalScopeGuard.CanAccessStudy(httpContext, t.StudyId)))
             {
-                return OutsideStudy();
+                return ClinicalScopeGuard.OutsideStudy();
             }
 
             return TypedResults.NotFound(new { detail = $"No published consent template found for '{template_id}'." });
@@ -350,7 +342,7 @@ public static class EconsentEndpoints
 
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, template.StudyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var studyClauses = await dbContext.ConsentClauses
@@ -426,7 +418,7 @@ public static class EconsentEndpoints
 
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, template.StudyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var check = await ResolveLatestComprehensionCheckAsync(template.TemplateId, version_index, dbContext, cancellationToken);
@@ -469,7 +461,7 @@ public static class EconsentEndpoints
             });
         }
 
-        string callerId = Caller(httpContext);
+        string callerId = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
         if (!string.IsNullOrWhiteSpace(request.SubjectPseudonym)
             && !string.Equals(request.SubjectPseudonym.Trim(), callerId, StringComparison.Ordinal))
         {
@@ -485,7 +477,7 @@ public static class EconsentEndpoints
 
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, template.StudyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var check = await ResolveLatestComprehensionCheckAsync(template.TemplateId, version_index, dbContext, cancellationToken);
@@ -571,7 +563,7 @@ public static class EconsentEndpoints
             return studyDenied;
         }
 
-        string callerId = Caller(httpContext);
+        string callerId = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
         if (!string.IsNullOrWhiteSpace(subject_pseudonym)
             && !string.Equals(subject_pseudonym.Trim(), callerId, StringComparison.Ordinal))
         {
@@ -641,7 +633,7 @@ public static class EconsentEndpoints
             return callerScopeDenied;
         }
 
-        string callerId = Caller(httpContext);
+        string callerId = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
         if (!string.IsNullOrWhiteSpace(request?.SubjectPseudonym)
             && !string.Equals(request.SubjectPseudonym.Trim(), callerId, StringComparison.Ordinal))
         {
@@ -658,7 +650,7 @@ public static class EconsentEndpoints
 
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, requirement.StudyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         if (!string.IsNullOrWhiteSpace(requirement.SiteId)
@@ -867,7 +859,7 @@ public static class EconsentEndpoints
                     VersionIndex: requirement.NewVersionIndex,
                     SignedAt: now,
                     ConsentId: consentRecord.Id,
-                    TenantId: tenantId,
+                    TenantCode: tenantId,
                     ReasonForChange: meaning),
                 cancellationToken);
         }
@@ -891,6 +883,8 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
+        IOptions<BiometricLivenessOptions> livenessOptions,
+        ISigTokenUseStore sigTokenUseStore,
         IClock clock,
         IEconsentExecutionWebhookPublisher webhookPublisher,
         CancellationToken cancellationToken)
@@ -901,6 +895,8 @@ public static class EconsentEndpoints
             request,
             dbContext,
             httpContext,
+            livenessOptions,
+            sigTokenUseStore,
             clock,
             cancellationToken,
             webhookPublisher);
@@ -911,6 +907,8 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
+        IOptions<BiometricLivenessOptions> livenessOptions,
+        ISigTokenUseStore sigTokenUseStore,
         IClock clock,
         IEconsentExecutionWebhookPublisher webhookPublisher,
         CancellationToken cancellationToken)
@@ -921,6 +919,8 @@ public static class EconsentEndpoints
             request,
             dbContext,
             httpContext,
+            livenessOptions,
+            sigTokenUseStore,
             clock,
             cancellationToken,
             webhookPublisher);
@@ -932,10 +932,15 @@ public static class EconsentEndpoints
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
         HttpContext httpContext,
+        IOptions<BiometricLivenessOptions> livenessOptions,
+        ISigTokenUseStore sigTokenUseStore,
         IClock clock,
         CancellationToken cancellationToken,
         IEconsentExecutionWebhookPublisher? webhookPublisher = null)
     {
+        ArgumentNullException.ThrowIfNull(livenessOptions);
+        ArgumentNullException.ThrowIfNull(sigTokenUseStore);
+
         if (request is null)
         {
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>
@@ -959,7 +964,7 @@ public static class EconsentEndpoints
                 return selfScopeDenied;
             }
 
-            string callerUserId = Caller(httpContext);
+            string callerUserId = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
             if (!string.IsNullOrWhiteSpace(request.SubjectPseudonym)
                 && !string.Equals(request.SubjectPseudonym.Trim(), callerUserId, StringComparison.Ordinal))
             {
@@ -1002,7 +1007,7 @@ public static class EconsentEndpoints
 
         if (existingTemplate is not null && !ClinicalScopeGuard.CanAccessStudy(httpContext, existingTemplate.StudyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var errors = new Dictionary<string, string[]>();
@@ -1033,13 +1038,19 @@ public static class EconsentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
+        byte[] livenessSecret = livenessOptions.Value.DecodeKey();
 
         BiometricLivenessTokenData? livenessData = null;
         if (string.IsNullOrWhiteSpace(request.LivenessToken))
         {
             errors["liveness_token"] = ["Valid liveness token is required."];
         }
-        else if (!BiometricLivenessTokenService.VerifyToken(request.LivenessToken, request.SubjectPseudonym, out livenessData, now: now))
+        else if (!BiometricLivenessTokenService.VerifyToken(
+            request.LivenessToken,
+            request.SubjectPseudonym,
+            out livenessData,
+            secret: livenessSecret,
+            now: now))
         {
             errors["liveness_token"] = ["Liveness token is invalid or expired."];
         }
@@ -1089,7 +1100,18 @@ public static class EconsentEndpoints
             }
         }
 
-        string capturedBy = Caller(httpContext);
+        DateTimeOffset retainUntil = DateTimeOffset.FromUnixTimeSeconds(livenessData!.ExpiresAtUnix) + BiometricLivenessTokenService.ClockSkew;
+        string useStoreKey = $"{BiometricLivenessTokenService.UseStoreKeyPrefix}{livenessData.Jti}";
+        if (!await sigTokenUseStore.TryRecordFirstUseAsync(useStoreKey, retainUntil, cancellationToken))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["liveness_token"] = ["Liveness token has already been used."]
+            });
+        }
+
+        // The participant or representative signs; the record is attributed to the signed-in caller who captured it.
+        string capturedBy = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
         string studyId = request.StudyId!.Trim();
         string siteId = effectiveSiteId ?? string.Empty;
         string digestHash = request.DigestSha256!;
@@ -1227,7 +1249,7 @@ public static class EconsentEndpoints
                     VersionIndex: versionIndex,
                     SignedAt: now,
                     ConsentId: consentRecord.Id,
-                    TenantId: tenantId,
+                    TenantCode: tenantId,
                     ReasonForChange: meaning),
                 cancellationToken);
         }
@@ -1301,10 +1323,10 @@ public static class EconsentEndpoints
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, targetStudy)
             || (template is not null && !ClinicalScopeGuard.CanAccessStudy(httpContext, template.StudyId)))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        string actorId = Caller(httpContext);
+        string actorId = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
         if (template is null)
         {
             template = new ConsentTemplate

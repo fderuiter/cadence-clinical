@@ -2,13 +2,16 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application;
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -38,13 +41,19 @@ public static class EconsentWebhookEndpoints
         EconsentWebhookPayload payload,
         IEconsentWebhookApplicationService svc,
         CancellationToken ct,
-        HttpContext? http = null)
+        HttpContext? http = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyCode, payload.SiteCode) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(http, payload.StudyCode, payload.SiteCode, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, payload.StudyCode, payload.SiteCode, payload.SubjectCode, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         var result = await svc.ApplyConsentSignedAsync(payload, ct).ConfigureAwait(false);

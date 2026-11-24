@@ -339,6 +339,28 @@ export function getPortalRouter() {
     ],
   });
 
+  let explicitNavInFlight = 0;
+  const rawPush = router.push.bind(router);
+  const rawReplace = router.replace.bind(router);
+  router.push = (to) => {
+    const trackExplicit = !pushingFromViewState && !syncingRouteQuery;
+    if (trackExplicit) explicitNavInFlight += 1;
+    return rawPush(to).finally(() => {
+      if (trackExplicit) {
+        explicitNavInFlight = Math.max(0, explicitNavInFlight - 1);
+      }
+    });
+  };
+  router.replace = (to) => {
+    const trackExplicit = !pushingFromViewState && !syncingRouteQuery;
+    if (trackExplicit) explicitNavInFlight += 1;
+    return rawReplace(to).finally(() => {
+      if (trackExplicit) {
+        explicitNavInFlight = Math.max(0, explicitNavInFlight - 1);
+      }
+    });
+  };
+
   router.beforeEach((to, from) => {
     hydrateSessionScopeFromRouteQuery(to.query);
     const initialTestTarget = memoryHistory
@@ -408,6 +430,7 @@ export function getPortalRouter() {
       state.unavailableScreen = to.query?.screen
         ? String(to.query.screen)
         : null;
+      return;
     }
 
     // Validate /questionnaire on EVERY navigation (initial load, cold reload, and browser Back/Forward).
@@ -471,14 +494,26 @@ export function getPortalRouter() {
   router.afterEach((to, _from, failure) => {
     if (failure) return;
     const wasStatePush = pushingFromViewState || syncingRouteQuery;
-    if (to.meta.viewId && to.meta.viewId !== state.currentView) {
+    if (
+      !syncingRouteQuery &&
+      to.meta.viewId &&
+      to.meta.viewId !== state.currentView
+    ) {
       showView(to.meta.viewId);
     }
     void syncActiveRouteEntities(to, { fromStatePush: wasStatePush });
   });
 
   registerPeekQuerySync((record) => {
-    if (!router || !portalMounted || syncingRouteQuery) return;
+    if (
+      !router ||
+      !portalMounted ||
+      syncingRouteQuery ||
+      pushingFromViewState ||
+      explicitNavInFlight
+    ) {
+      return;
+    }
     const current = router.currentRoute.value;
     if (!current || current === START_LOCATION || !current.name) return;
 
@@ -520,9 +555,19 @@ export function getPortalRouter() {
       state.session?.siteId || null,
     ],
     () => {
-      if (!router || !portalMounted || syncingRouteQuery) return;
+      if (
+        !router ||
+        !portalMounted ||
+        syncingRouteQuery ||
+        pushingFromViewState ||
+        explicitNavInFlight
+      ) {
+        return;
+      }
       const current = router.currentRoute.value;
       if (!current || current === START_LOCATION || !current.name) return;
+      const expectedRoute = findRouteForView(state.currentView);
+      if (expectedRoute && expectedRoute.name !== current.name) return;
       const desiredQuery = {
         ...current.query,
         ...buildScopedQuery(current.query),
@@ -581,6 +626,7 @@ export function getPortalRouter() {
           screenAvailable &&
           current.name === "unavailable" &&
           !pushingFromViewState &&
+          !explicitNavInFlight &&
           state.currentView === "view-unavailable"
         ) {
           const requested = current.query?.screen
@@ -647,7 +693,13 @@ export function getPortalRouter() {
       if (!route) return;
 
       if (route.name !== "unavailable" && !isScreenAvailable(route.name)) {
-        state.unavailableScreen = String(route.name);
+        if (route.name === "tasks" && isScreenAvailable("wallet")) {
+          state.unavailableScreen = null;
+          state.currentView = "view-wallet";
+          return;
+        }
+        state.unavailableScreen =
+          route.name === "tasks" ? null : String(route.name);
         state.currentView = "view-unavailable";
         return;
       }
@@ -655,7 +707,14 @@ export function getPortalRouter() {
       const effectiveCurrentName = pendingRouteName ?? current.name;
 
       if (route.name === "unavailable") {
-        if (effectiveCurrentName !== "unavailable") {
+        const currentQueryScreen = router.currentRoute.value.query?.screen
+          ? String(router.currentRoute.value.query.screen)
+          : null;
+        if (
+          effectiveCurrentName !== "unavailable" ||
+          (pendingRouteName === null &&
+            currentQueryScreen !== (state.unavailableScreen || null))
+        ) {
           syncPushRoute(
             {
               name: "unavailable",

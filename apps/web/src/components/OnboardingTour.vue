@@ -105,12 +105,19 @@
 <script setup>
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useFocusTrap, useEscapeClose } from "ui";
+import {
+  handoffFocus,
+  useEscapeClose,
+  useFocusTrap,
+  useInlineFocusHandoff,
+} from "ui";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
@@ -140,6 +147,7 @@ const emit = defineEmits(["update:activeTab"]);
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const canvasStore = useStudyCanvasStore();
 let router;
 let route;
 
@@ -247,14 +255,57 @@ const showArrow = computed(() =>
   )
 );
 
+const tourHandoff = useInlineFocusHandoff({
+  closeFallback: [".btn-start-tour", "#btn-onboarding-checklist-trigger"],
+});
+let launchedFromChecklistDrawer = false;
+let pendingAnchoredFocus = false;
+
 useFocusTrap(popoverRef, {
   isOpen: isModalStep,
+  restoreFocus: false,
   onEscape: () => onboardingStore.dismissTour(),
 });
 
 useEscapeClose(() => onboardingStore.dismissTour(), {
   isOpen: () => isTourOpen.value && !isModalStep.value,
 });
+
+watch(
+  isTourOpen,
+  (open, prevOpen) => {
+    if (open && !prevOpen) {
+      const activeEl =
+        typeof document !== "undefined" ? document.activeElement : null;
+      launchedFromChecklistDrawer = Boolean(
+        onboardingStore.isDrawerOpen ||
+        (activeEl &&
+          activeEl !== document.body &&
+          (activeEl.id === "btn-drawer-start-tour" ||
+            activeEl.id === "btn-onboarding-checklist-trigger" ||
+            activeEl.closest?.(
+              ".checklist-drawer, #onboarding-checklist-drawer"
+            )))
+      );
+      tourHandoff.rememberTrigger(
+        launchedFromChecklistDrawer
+          ? "#btn-onboarding-checklist-trigger"
+          : activeEl && activeEl !== document.body
+            ? activeEl
+            : null
+      );
+      pendingAnchoredFocus = Boolean(currentStepConfig.value?.targetSelector);
+    } else if (!open && prevOpen) {
+      pendingAnchoredFocus = false;
+      const fallbackOrder = launchedFromChecklistDrawer
+        ? ["#btn-onboarding-checklist-trigger", ".btn-start-tour"]
+        : [".btn-start-tour", "#btn-onboarding-checklist-trigger"];
+      launchedFromChecklistDrawer = false;
+      void tourHandoff.restoreTrigger(fallbackOrder);
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
 
 function buildCenteredPopoverStyle(cssZoomScale = 1) {
   const style = {
@@ -389,9 +440,40 @@ async function syncStepRoute() {
         return;
       }
       if (route.name !== targetRouteName) {
+        const scope = resolveActiveWorkspaceScope(route, canvasStore);
         const query = config.query
           ? { ...route.query, ...config.query }
           : { ...route.query };
+        if (targetRouteName === "study") {
+          delete query.studyId;
+          delete query.siteId;
+          if (scope.siteId && !query.site) {
+            query.site = scope.siteId;
+          }
+          if (scope.studyCode) {
+            await router.push({
+              name: targetRouteName,
+              params: { studyCode: scope.studyCode },
+              query,
+            });
+            return;
+          }
+        } else if (
+          targetRouteName === "ecrf" ||
+          targetRouteName === "ctms" ||
+          targetRouteName === "ssu" ||
+          targetRouteName === "training" ||
+          targetRouteName === "tickets" ||
+          targetRouteName === "etmf"
+        ) {
+          delete query.site;
+          if (scope.studyCode && !query.studyId) {
+            query.studyId = scope.studyCode;
+          }
+          if (scope.siteId && !query.siteId) {
+            query.siteId = scope.siteId;
+          }
+        }
         await router.push({ name: targetRouteName, query });
         return;
       }
@@ -607,8 +689,16 @@ const updatePosition = () => {
           nextStyle.maxHeight = `${maxAllowedHeight}px`;
         }
         popoverStyle.value = nextStyle;
+        const wasTargetElement = hasTargetElement.value;
         hasTargetElement.value = true;
         currentRafId = null;
+        if ((!wasTargetElement || pendingAnchoredFocus) && !isModalStep.value) {
+          pendingAnchoredFocus = false;
+          void handoffFocus(popoverRef, {
+            scrollIfOffscreen: false,
+            includeDefaultFallbacks: false,
+          });
+        }
         return;
       }
     }
@@ -621,6 +711,13 @@ const updatePosition = () => {
       isArrowDetached.value = true;
       popoverStyle.value = buildCenteredPopoverStyle(zoomScale);
       currentRafId = null;
+      if (pendingAnchoredFocus && !isModalStep.value) {
+        pendingAnchoredFocus = false;
+        void handoffFocus(popoverRef, {
+          scrollIfOffscreen: false,
+          includeDefaultFallbacks: false,
+        });
+      }
     }
   };
 
@@ -663,6 +760,16 @@ const handleComplete = () => {
   onboardingStore.nextStep(stepTargetDescription.value);
   onboardingStore.disableTour();
 };
+
+watch(
+  currentStep,
+  (step, prevStep) => {
+    if (step !== prevStep && isTourOpen.value) {
+      pendingAnchoredFocus = Boolean(currentStepConfig.value?.targetSelector);
+    }
+  },
+  { flush: "sync" }
+);
 
 watch(currentStep, async () => {
   if (popoverRef.value) {

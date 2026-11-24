@@ -323,9 +323,15 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
         `${origin}/api/v1/execution/forms/${openedForm.form_id}`
       );
       const formDetail = await formDetailRes.json();
-      const firstObs = formDetail.items.find(
-        (item: { observation_id?: string }) => Boolean(item.observation_id)
+      const recordedItems = formDetail.items.filter(
+        (item: {
+          item_id: string;
+          observation_id?: string;
+          revision?: number;
+        }) => Boolean(item.observation_id)
       );
+      expect(recordedItems.length).toBeGreaterThanOrEqual(2);
+      const firstObs = recordedItems[0];
 
       // Site CRC can obtain a signature token and save/sign SITE-101 forms
       const crcSigTokenRes = await fetch(
@@ -375,7 +381,10 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       );
       expect(crcWrongSiteRes.status).toBe(403);
 
-      for (const reviewerPersona of ["cra_monitor", "data_manager"] as const) {
+      for (const [idx, reviewerPersona] of (
+        ["cra_monitor", "data_manager"] as const
+      ).entries()) {
+        const targetObs = recordedItems[idx];
         authStore.switchPersona(reviewerPersona);
 
         const subjectWriteRes = await fetch(
@@ -408,8 +417,8 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
             body: JSON.stringify({
               values: [
                 {
-                  item_id: firstObs.item_id,
-                  expected_revision: firstObs.revision,
+                  item_id: targetObs.item_id,
+                  expected_revision: targetObs.revision,
                   value: { type: "quantity", value: "118", unit: "mmHg" },
                 },
               ],
@@ -419,7 +428,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
         expect(formPutRes.status).toBe(403);
 
         const sdvRes = await fetch(
-          `${origin}/api/v1/kernel/observations/observation:${firstObs.observation_id}@1/verifications`,
+          `${origin}/api/v1/kernel/observations/observation:${targetObs.observation_id}@1/verifications`,
           {
             method: "POST",
             headers: {
@@ -440,7 +449,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
               "X-Change-Reason": "Raise discrepancy query",
             },
             body: JSON.stringify({
-              item_id: firstObs.item_id,
+              item_id: targetObs.item_id,
               text: `Verify measurement unit (${reviewerPersona})`,
               priority: "normal",
             }),
@@ -453,6 +462,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
     it("applies K-AUTH-4 blinding and PX-20 site masking for site_crc while leaving super_admin unmasked", async () => {
       const authStore = useAuthStore();
       const site101Participant = DEMO_PARTICIPANTS[0];
+      const site102Participant = DEMO_PARTICIPANTS[2];
       const site102Ref = DEMO_SITES.find(
         (s) => s.code === "SITE-102"
       )!.studySiteRef;
@@ -473,6 +483,22 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       const allocNode = await allocNodeRes.json();
       expect(allocNode.mask).toBe("Blinded");
 
+      const ownEnrollmentNodeRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site101Participant.enrollmentRef)}`
+      );
+      expect(ownEnrollmentNodeRes.status).toBe(200);
+      const ownEnrollmentNode = await ownEnrollmentNodeRes.json();
+      expect(ownEnrollmentNode.mask).toBeNull();
+      expect(ownEnrollmentNode.code).toBe(site101Participant.subjectCode);
+
+      const otherSiteEnrollmentNodeRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Participant.enrollmentRef)}`
+      );
+      expect(otherSiteEnrollmentNodeRes.status).toBe(200);
+      const otherSiteEnrollmentNode = await otherSiteEnrollmentNodeRes.json();
+      expect(otherSiteEnrollmentNode.mask).toBe("NotPermitted");
+      expect(otherSiteEnrollmentNode.title).toBeNull();
+
       const otherSiteNodeRes = await fetch(
         `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Ref)}`
       );
@@ -492,6 +518,13 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
         `${origin}/api/v1/kernel/nodes/${encodeURIComponent(`allocation:${site101Participant.enrollmentUuid}`)}`
       );
       expect((await unmaskedAllocRes.json()).mask).toBeNull();
+
+      const unmaskedOtherEnrollmentRes = await fetch(
+        `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Participant.enrollmentRef)}`
+      );
+      const unmaskedOtherEnrollment = await unmaskedOtherEnrollmentRes.json();
+      expect(unmaskedOtherEnrollment.mask).toBeNull();
+      expect(unmaskedOtherEnrollment.code).toBe(site102Participant.subjectCode);
 
       const unmaskedSiteRes = await fetch(
         `${origin}/api/v1/kernel/nodes/${encodeURIComponent(site102Ref)}`

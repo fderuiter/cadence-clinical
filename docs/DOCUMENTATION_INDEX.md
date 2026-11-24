@@ -185,7 +185,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2321: Implement class-based touch target optimization for dense layouts](adr/2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md) | Current | Also known as: ADR-254 (former number) |
 | [ADR-2322: Implement native uv workspaces with service-specific Dockerfiles](adr/2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md) | Historical | Also known as: ADR-255 (former number) |
 | [ADR-253: Lightweight Path Pattern Boundary Linter](adr/2026-08-03-lightweight-path-pattern-boundary-linter.md) | Historical | - Status: Accepted |
-| [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](adr/2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) | Current | Also known as: ADR-254 (former number) |
+| [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](adr/2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) | Historical | Also known as: ADR-254 (former number) |
 | [ADR-256: Native Interval Filtering and Custom Name Matching](adr/2026-08-03-native-interval-filtering-and-custom-name-matching.md) | Historical | - Status: Accepted |
 | [ADR-2324: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](adr/2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md) | Current | Also known as: ADR-254 (former number) |
 | [ADR-135: Resolve RBAC Duplicate Key Static Lint Failures](adr/2026-08-03-resolve-rbac-duplicate-key-static-lint-failures.md) | Historical | - Status: Accepted |
@@ -609,6 +609,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](adr/2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) | Current | - Status: Accepted |
 | [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
 | [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](adr/2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) | Current | - Status: Accepted |
+| [ADR-2661: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](adr/2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) | Current | - Status: Accepted |
 | [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](adr/2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) | Current | - Status: Accepted |
 | [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
 | [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
@@ -617,8 +618,17 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) | Current | - Status: Accepted |
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
+| [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](adr/2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) | Current | - Status: Accepted |
+| [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
+| [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) | Current | - Status: Accepted |
+| [ADR-2662: Enforce Verified Trial-Tenant Writes Centrally and Switch Ticket Comments to a Sponsor Allowlist](adr/2026-11-23-enforce-trial-tenant-writes-and-sponsor-comment-allowlist.md) | Current | - Status: Accepted |
 | [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
-| [ADR-2658: Unify Participant eConsent APIs and Shared Signing Modals](adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md) | Current | - Status: Accepted |
+| [ADR-2553: Unify Root ESLint Gates, Explicit Runtime Globals, and Demo-Fixtures Typechecking](adr/2026-11-23-unify-root-eslint-gates-globals-and-demo-fixtures-typecheck.md) | Current | - Status: Accepted |
+| [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
+| [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
+| [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](adr/2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) | Current | - Status: Accepted |
+| [ADR-2626: Observation Assertion Audit Coverage, SDV Precondition Guards, and CRA Modification Alerts](adr/2026-11-23-observation-assertions-sdv-guards-and-cra-alerts.md) | Current | - Status: Accepted |
+| [ADR-2671: Unify Participant eConsent APIs and Shared Signing Modals](adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -632,7 +642,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
-| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/` |
+| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm cadence sync-openapi-spec`); legacy aggregate snapshot in `openapi/legacy/cdisc_openapi.json` |
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
 | [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |

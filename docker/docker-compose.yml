@@ -417,6 +417,8 @@ services:
       EXECUTION_SERVICE_URL: http://execution:8080
       # Local-only AES-256 key for field encryption (#4770); generate a real one with `openssl rand -base64 32`.
       FIELD_ENCRYPTION_KEY: bG9jYWwtZGV2LW9ubHktZmllbGQtZW5jcnlwdC1rZXk= # pragma: allowlist secret
+      # Local-only HMAC-SHA256 key shared with kernel for biometric liveness tokens (ADR-2660); generate a real one with `openssl rand -base64 32`.
+      CADENCE_BIOMETRIC_LIVENESS_KEY: bG9jYWwtZGV2LWJpb21ldHJpYy1saXZlbmVzcy1rZXk= # pragma: allowlist secret
     depends_on: *db-depends
 
   org:
@@ -512,6 +514,8 @@ services:
       KeycloakAdmin__Realm: cadence
       KeycloakAdmin__AdminUsername: admin
       KeycloakAdmin__AdminPassword: admin_password # pragma: allowlist secret
+      # Local-only HMAC-SHA256 key shared with econsent for biometric liveness tokens (ADR-2660); generate a real one with `openssl rand -base64 32`.
+      CADENCE_BIOMETRIC_LIVENESS_KEY: bG9jYWwtZGV2LWJpb21ldHJpYy1saXZlbmVzcy1rZXk= # pragma: allowlist secret
     depends_on: *db-depends
 
   dotnet-dev:

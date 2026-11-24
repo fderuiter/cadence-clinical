@@ -176,6 +176,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/forms/{formId}/queries/{queryId}/reassign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reassigns an open or answered query's assignee or responsible role with audited bitemporal history (execution.query.manage). */
+    post: operations["ExecutionReassignFormQuery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/forms/{formId}/queries/{queryId}/close": {
     parameters: {
       query?: never;
@@ -204,6 +221,23 @@ export interface paths {
     put?: never;
     /** Cancels an open or answered query raised in error (execution.query.manage). */
     post: operations["ExecutionCancelFormQuery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/forms/sdv-alerts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists active CRA SDV modification alerts for a study or enrollment, omitting observations once monitors verify the latest revision. */
+    get: operations["ExecutionListFormSdvAlerts"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -409,6 +443,7 @@ export interface components {
     };
     ExecutionForms_FormQueryTextRequest: {
       text: string;
+      assignee?: null | string;
     };
     ExecutionForms_FormResponse: {
       /** Format: uuid */
@@ -475,6 +510,38 @@ export interface components {
       /** Format: int32 */
       revision: number | string;
       changed: boolean;
+    };
+    ExecutionForms_FormSdvAlertResponse: {
+      /** Format: uuid */
+      alert_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: null | string;
+      /** Format: uuid */
+      enrollment_id: string;
+      /** Format: uuid */
+      form_id: null | string;
+      /** Format: uuid */
+      observation_id: string;
+      study_code: null | string;
+      site_code: null | string;
+      subject_code: null | string;
+      collection_spec_id: null | string;
+      planned_activity_id: null | string;
+      item_id: null | string;
+      /** Format: int32 */
+      superseded_revision: number | string;
+      /** Format: int32 */
+      current_revision: number | string;
+      verified_by: string;
+      /** Format: date-time */
+      verified_at: string;
+      modified_by: string;
+      /** Format: date-time */
+      modified_at: string;
+      reason_for_change: string;
+      message: string;
     };
     ExecutionForms_FormSignatureResponse: {
       /** Format: uuid */
@@ -732,6 +799,11 @@ export interface components {
       owner_role?: null | string;
       priority?: null | string;
       assignee?: null | string;
+    };
+    ExecutionForms_ReassignFormQueryRequest: {
+      assignee: null | string;
+      owner_role?: null | string;
+      text?: null | string;
     };
     ExecutionForms_SaveFormValuesRequest: {
       values: components["schemas"]["ExecutionForms_FormValueRequest"][];
@@ -1081,6 +1153,7 @@ export interface operations {
         origin?: string;
         priority?: string;
         escalated?: boolean;
+        assignee?: string;
         site?: string;
         participant?: string;
         value_changed?: boolean;
@@ -1214,7 +1287,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
-      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. Kernel errors: `K.Actor.Unresolved`. */
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
       401: {
         headers: {
           [name: string]: unknown;
@@ -1223,7 +1296,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
-      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
       403: {
         headers: {
           [name: string]: unknown;
@@ -1241,7 +1314,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1250,7 +1323,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -1574,6 +1647,96 @@ export interface operations {
       };
     };
   };
+  ExecutionReassignFormQuery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        formId: string;
+        queryId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExecutionForms_ReassignFormQueryRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExecutionForms_FormQueryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+    };
+  };
   ExecutionCloseFormQuery: {
     parameters: {
       query?: never;
@@ -1736,6 +1899,56 @@ export interface operations {
       };
     };
   };
+  ExecutionListFormSdvAlerts: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExecutionForms_FormSdvAlertResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+    };
+  };
   ExecutionSignForm: {
     parameters: {
       query?: never;
@@ -1807,6 +2020,15 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Collection.SignatureMeaningInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
         headers: {
           [name: string]: unknown;
         };

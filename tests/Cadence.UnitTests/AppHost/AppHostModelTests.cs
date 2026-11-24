@@ -64,7 +64,8 @@ public sealed class AppHostModelTests
         }
 
         (await EnvironmentNamesAsync(projects["execution"])).Should().Contain("DemographicsEncryption__KeyBase64");
-        (await EnvironmentNamesAsync(projects["econsent"])).Should().Contain("FIELD_ENCRYPTION_KEY");
+        (await EnvironmentNamesAsync(projects["econsent"])).Should().Contain(["EXECUTION_SERVICE_URL", "FIELD_ENCRYPTION_KEY", "CADENCE_BIOMETRIC_LIVENESS_KEY"]);
+        (await EnvironmentNamesAsync(projects["kernel"])).Should().Contain("CADENCE_BIOMETRIC_LIVENESS_KEY");
         (await EnvironmentNamesAsync(projects["payments"])).Should().Contain("FIELD_ENCRYPTION_KEY");
         (await EnvironmentNamesAsync(projects["interop"])).Should().Contain(["FIELD_LOOKUP_HASH_KEY", "CADENCE_SCE_SIGNING_KEY"]);
         (await EnvironmentNamesAsync(projects["imaging"]))
@@ -137,6 +138,8 @@ public sealed class AppHostModelTests
         }
         (await EnvironmentAsync(projects["execution"])).Keys
             .Should().Contain(["GATEWAY_SECRET", "AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "DemographicsEncryption__KeyBase64"]);
+        (await EnvironmentAsync(projects["kernel"])).Keys
+            .Should().Contain("CADENCE_BIOMETRIC_LIVENESS_KEY");
         (await EnvironmentAsync(projects["etmf"]))["EXECUTION_SERVICE_URL"]
             .Should().BeOfType<EndpointReference>().Which.Resource.Name.Should().Be("execution");
     }

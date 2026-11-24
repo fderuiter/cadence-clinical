@@ -10,9 +10,12 @@
     <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
     <ProjectReference Include="..\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
     <ProjectReference Include="..\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
+    <ProjectReference Include="..\Cadence.Rules\Cadence.Rules.csproj" />
+    <ProjectReference Include="..\Cadence.Standards\Cadence.Standards.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.Kernel.Persistence" />
     <InternalsVisibleTo Include="Cadence.UnitTests" />
     <InternalsVisibleTo Include="Cadence.IntegrationTests" />
   </ItemGroup>

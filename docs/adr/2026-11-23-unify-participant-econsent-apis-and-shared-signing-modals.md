@@ -1,4 +1,4 @@
-# ADR-2658: Unify Participant eConsent APIs and Shared Signing Modals
+# ADR-2671: Unify Participant eConsent APIs and Shared Signing Modals
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -14,7 +14,7 @@ Authenticated participants using `apps/subject-portal` outside synthetic demo bu
 
 1. **Availability & startup re-consent gating:** `AUTHENTICATED_SCREENS` in `apps/subject-portal/src/router/availability.js` only included `wallet`, redirecting authenticated participants visiting `/consent` to `/unavailable` and skipping `checkPendingReconsent()` on startup outside demo builds.
 2. **OIDC `preferred_username` vs. `sub` conflation:** `apps/subject-portal/src/features/auth.js` stored only the OIDC `sub` UUID on `state.session.userId`. Step-up password verification (`POST /api/v1/auth/signature-verification` in `apps/gateway`) authenticates against the human-readable Keycloak `preferred_username` (for example `subject.site101`), whereas encrypted IndexedDB draft scoping (`transitionParticipantScope`) and `subject_pseudonym` persistence in `apps/econsent` require the immutable `sub` claim.
-3. **Participant RBAC & caller-bound eConsent endpoints:** `ROLE_SUBJECT` needed least-privilege self-service permissions (`econsent_self_consent:read|verify|sign`, `econsent_self_reconsent:read|sign`) with zero staff authoring or staff consent capture grants, and `apps/econsent` needed caller-bound comprehension grading, initial consent capture, pending amendment lookup, and re-consent completion enforcing `subject_pseudonym == Caller(httpContext)`.
+3. **Participant RBAC & caller-bound eConsent endpoints:** `ROLE_SUBJECT` needed least-privilege self-service permissions (`econsent_self_consent:read|verify|sign`, `econsent_self_reconsent:read|sign`) with zero staff authoring or staff consent capture grants, and `apps/econsent` needed caller-bound comprehension grading, initial consent capture, pending amendment lookup, and re-consent completion enforcing `subject_pseudonym == CallerScope.RequiredUserId(httpContext)`.
 4. **Dual-request single-use token replay & missing Execution sync:** `apps/subject-portal/src/features/reconsent.js` previously requested one single-use `X-Sig-Token`, posted to an unmounted `/api/v1/execution/amendments/reconsent` path, and replayed the same consumed token against `/api/v1/econsent/reconsent/complete/{requirement_id}`, while `apps/econsent` had no signed service-to-service webhook to synchronize signed consents into `apps/execution`.
 5. **Custom portal signing modal shells:** `SignatureModal.vue` and `ReconsentModal.vue` maintained custom dialog and alert markup instead of composing `ClinicalModal` and `ModalErrorAlert` from `packages/ui`.
 

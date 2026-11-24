@@ -19,6 +19,8 @@ export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
 export const ASSERTION_SCOPE_NOT_READY = "K.Assertion.ScopeNotReady";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
+export const ASSERTION_QUERY_OPEN = "K.Assertion.QueryOpen";
+export const ASSERTION_ALREADY_VERIFIED = "K.Assertion.AlreadyVerified";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
 export const KERNEL_SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
@@ -40,16 +42,20 @@ export interface KernelLineageWindow {
   knownAt?: string;
 }
 
-export interface KernelHiddenScopesHeader {
+export interface KernelHiddenContent {
   moreExist: boolean;
   reasons: string[];
 }
+
+export type KernelHiddenScopesHeader = KernelHiddenContent;
 
 export interface KernelStreamedArtifact {
   blob: Blob;
   filename: string;
   contentType: string;
   contentSha256: string | null;
+  generatedAt?: string | null;
+  hidden?: KernelHiddenContent;
   hiddenScopes?: KernelHiddenScopesHeader | null;
 }
 
@@ -260,10 +266,40 @@ export async function streamKernelDownload(
     fallbackFilename
   );
   const contentSha256 = response.headers.get("x-content-sha256");
-  const hiddenScopes = parseHiddenScopesHeader(
+  const generatedAt = response.headers.get("x-generated-at");
+  const parsedHiddenScopes = parseHiddenScopesHeader(
     response.headers.get("x-cadence-hidden-scopes")
   );
-  return { blob, filename, contentType, contentSha256, hiddenScopes };
+  const rawHiddenMoreExist = response.headers.get("x-hidden-more-exist");
+  let hidden: KernelHiddenContent;
+  if (rawHiddenMoreExist !== null) {
+    const moreExist = rawHiddenMoreExist.toLowerCase() === "true";
+    const rawReasons = response.headers.get("x-hidden-reasons") ?? "";
+    const reasons = rawReasons
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    hidden = {
+      moreExist,
+      reasons:
+        reasons.length > 0 ? reasons : (parsedHiddenScopes?.reasons ?? []),
+    };
+  } else if (parsedHiddenScopes !== null) {
+    hidden = parsedHiddenScopes;
+  } else {
+    hidden = { moreExist: false, reasons: [] };
+  }
+  const hiddenScopes =
+    parsedHiddenScopes ?? (rawHiddenMoreExist !== null ? hidden : null);
+  return {
+    blob,
+    filename,
+    contentType,
+    contentSha256,
+    generatedAt,
+    hidden,
+    hiddenScopes,
+  };
 }
 
 /** Triggers a browser file download from an in-memory streamed Blob. */

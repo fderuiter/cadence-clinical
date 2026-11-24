@@ -178,7 +178,6 @@ describe("Portal Availability Guards and PIN Security", () => {
       status: 200,
       json: async () => [],
     });
-
     await initializeApp();
     const router = getPortalRouter();
     await router.isReady();
@@ -234,22 +233,24 @@ describe("Portal Availability Guards and PIN Security", () => {
       );
       expect(returnLink).not.toBeNull();
       expect(returnLink.getAttribute("href")).toContain("/wallet");
+      expect(returnLink.textContent).toContain("Go to My Wallet");
       returnLink.click();
       await settle();
       expect(router.currentRoute.value.path).toBe("/wallet");
       expect(state.currentView).toBe("view-wallet");
     }
 
-    // Unauthenticated participant outside demo mode lands on /unavailable with a valid /unavailable link
+    // Unauthenticated participant outside demo mode lands on /unavailable with Sign In action (no self-looping link)
+    state.session.userId = null;
     state.session.token = null;
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
-    const unauthReturnLink = document.getElementById(
-      "btn-unavailable-return-tasks"
-    );
-    expect(unauthReturnLink?.getAttribute("href")).toContain("/unavailable");
+    expect(document.getElementById("btn-unavailable-return-tasks")).toBeNull();
+    expect(document.getElementById("btn-unavailable-signin")).not.toBeNull();
 
-    // LaySummariesView and WalletView contain zero dead receipt/disburse buttons or fake card digits
+    // Verify LaySummariesView and WalletView contain zero dead receipt/disburse buttons or fake card digits
+    await router.push("/lay-summaries");
+    await settle();
     expect(document.body.innerHTML).not.toContain("4821");
     expect(document.body.innerHTML).not.toContain("Disburse Available Balance");
     expect(document.body.innerHTML).not.toContain(

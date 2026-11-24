@@ -6,6 +6,7 @@ using Cadence.Apps.Econsent.Services;
 using Cadence.Database;
 using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
@@ -23,6 +24,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 // Signer e-mail addresses are encrypted at rest; FIELD_ENCRYPTION_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceFieldEncryption();
+// Biometric liveness tokens are verified with CADENCE_BIOMETRIC_LIVENESS_KEY, validated at startup (ADR-2660).
+builder.Services.AddCadenceBiometricLiveness();
 builder.AddCadencePostgresDbContext<EconsentDbContext>();
 // Consent capture is e-signed; each token is single use across instances and restarts (ADR-2515, #5434).
 builder.Services.AddCadenceDurableSigTokenStore<EconsentDbContext>();

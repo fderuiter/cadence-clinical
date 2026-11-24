@@ -21,13 +21,13 @@ namespace Cadence.Apps.Econsent.Services;
 
 public sealed record EconsentSignedSyncMessage(
     string SubjectPseudonym,
-    [property: JsonPropertyName("study_id")] string StudyCode,
-    [property: JsonPropertyName("site_id")] string? SiteCode,
+    string StudyCode,
+    string? SiteCode,
     string ProtocolVersion,
     int VersionIndex,
     DateTimeOffset SignedAt,
     string ConsentId,
-    string? TenantId,
+    string? TenantCode,
     string ReasonForChange);
 
 public interface IEconsentExecutionWebhookPublisher
@@ -88,8 +88,8 @@ public sealed class HttpEconsentExecutionWebhookPublisher(
             return;
         }
 
-        string? resolvedTenantId = !string.IsNullOrWhiteSpace(message.TenantId)
-            ? message.TenantId
+        string? resolvedTenantId = !string.IsNullOrWhiteSpace(message.TenantCode)
+            ? message.TenantCode
             : callerPrincipal?.TenantId;
 
         IReadOnlyList<string>? families = null;

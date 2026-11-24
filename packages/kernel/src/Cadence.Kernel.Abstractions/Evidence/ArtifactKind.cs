@@ -42,4 +42,7 @@ public enum ArtifactKind
 
     /// <summary>A professional credential, such as a licence or a registration: evidence for a qualification (K-AUTH-5).</summary>
     Credential,
+
+    /// <summary>A saved bitemporal simulation impact report over a candidate specification version (K-SIM-5, K-PROT-2).</summary>
+    SimulationReport,
 }

@@ -97,6 +97,9 @@ export const ClinicalInput: DefineComponent<
     id: string;
     label: string;
     modelValue?: string | number;
+    type?: string;
+    inputmode?: string;
+    tabularNums?: boolean;
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
@@ -163,6 +166,8 @@ export const ClinicalTabs: DefineComponent<
   {
     modelValue: string | number;
     tabs: ClinicalTabItem[];
+    variant?: "underline" | "pills" | "segmented";
+    overflow?: "scroll" | "wrap";
     ariaLabel?: string;
     ariaLabelledby?: string;
     orientation?: "horizontal" | "vertical";

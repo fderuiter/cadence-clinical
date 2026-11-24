@@ -1,6 +1,6 @@
 # eConsent service
 
-Electronic informed consent and protocol amendment re-consent service. It owns the consent persistence model (documents, templates, clauses, translations, subject consents, Part 11 signatures, comprehension checks, withdrawals, and re-consent requirements), serves staff template publishing and staff/participant consent capture and amendment re-consent endpoints, and synchronizes signed consents to `apps/execution` over gateway-signed HTTP ([ADR-2658](../../docs/adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md)).
+Electronic informed consent and protocol amendment re-consent service. It owns the consent persistence model (documents, templates, clauses, translations, subject consents, Part 11 signatures, comprehension checks, withdrawals, and re-consent requirements), serves staff template publishing and staff/participant consent capture and amendment re-consent endpoints, and synchronizes signed consents to `apps/execution` over gateway-signed HTTP ([ADR-2671](../../docs/adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md)).
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
@@ -31,7 +31,7 @@ Electronic informed consent and protocol amendment re-consent service. It owns t
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
-Publishing a template needs `econsent_template:publish` (sponsor data management and study build) and staff consent capture needs `econsent_consent:capture` (site coordinators and investigators). `ROLE_SUBJECT` holds strictly self-service grants (`econsent_self_consent:read`, `econsent_self_consent:verify`, `econsent_self_consent:sign`, `econsent_self_reconsent:read`, `econsent_self_reconsent:sign`) and zero staff permissions (`PermissionMatrix.Econsent.cs`, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md), [ADR-2658](../../docs/adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md)). Participant-facing endpoints enforce caller-bound `subject_pseudonym == Caller(httpContext)` isolation (failing closed with HTTP `403` on cross-participant access) and require a passed `ComprehensionCheck` before signing when a template defines comprehension questions. Initial consent capture and amendment re-consent completion require a single-use e-signature step-up token (`econsent.consent.capture` or `econsent.reconsent.sign`) recorded in `econsent.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore`, #5434, [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
+Publishing a template needs `econsent_template:publish` (sponsor data management and study build) and staff consent capture needs `econsent_consent:capture` (site coordinators and investigators). `ROLE_SUBJECT` holds strictly self-service grants (`econsent_self_consent:read`, `econsent_self_consent:verify`, `econsent_self_consent:sign`, `econsent_self_reconsent:read`, `econsent_self_reconsent:sign`) and zero staff permissions (`PermissionMatrix.Econsent.cs`, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md), [ADR-2671](../../docs/adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md)). Participant-facing endpoints enforce caller-bound `subject_pseudonym == CallerScope.RequiredUserId(httpContext)` isolation (failing closed with HTTP `403` on cross-participant access) and require a passed `ComprehensionCheck` before signing when a template defines comprehension questions. Initial consent capture verifies HMAC-SHA256 biometric liveness tokens (`CADENCE_BIOMETRIC_LIVENESS_KEY`, single-use `liveness:{jti}`, [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)), and both initial consent capture and amendment re-consent completion require a single-use e-signature step-up token (`econsent.consent.capture` or `econsent.reconsent.sign`) recorded in `econsent.consumed_signature_tokens` (`AddCadenceDurableSigTokenStore`, #5434, [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
 
 ## Persistence
 
@@ -44,10 +44,11 @@ Publishing a template needs `econsent_template:publish` (sponsor data management
 
 ## Configuration and secrets at rest
 
-| Setting                 | Purpose                                                                                                                                                                     |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FIELD_ENCRYPTION_KEY`  | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default.  |
-| `EXECUTION_SERVICE_URL` | Optional upstream URL for `apps/execution` so `HttpEconsentExecutionWebhookPublisher` delivers signed `POST /api/v1/execution/webhooks/econsent` synchronization callbacks. |
+| Setting                          | Purpose                                                                                                                                                                                                                                                                                                                |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FIELD_ENCRYPTION_KEY`           | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default.                                                                                                                                             |
+| `CADENCE_BIOMETRIC_LIVENESS_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) shared with `kernel` to verify 15-minute biometric liveness tokens and consume `liveness:{jti}` once in `econsent.consumed_signature_tokens` ([ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)). |
+| `EXECUTION_SERVICE_URL`          | Optional upstream URL for `apps/execution` so `HttpEconsentExecutionWebhookPublisher` delivers signed `POST /api/v1/execution/webhooks/econsent` synchronization callbacks.                                                                                                                                            |
 
 Consent signatures (`consent_signatures`, #4770):
 
@@ -69,6 +70,8 @@ Consent signatures (`consent_signatures`, #4770):
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export FIELD_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+export CADENCE_BIOMETRIC_LIVENESS_KEY="$(openssl rand -base64 32)"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/econsent/src/Cadence.Apps.Econsent.csproj
 ```

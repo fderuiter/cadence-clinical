@@ -345,7 +345,7 @@ public sealed record KernelObservationStateResponse(string Ref, string Enrollmen
 /// <param name="Locks">The locks in force at its study, study site, enrollment or itself, widest scope first (ADR-2621); empty when none covers it.</param>
 /// <param name="Revisions">Every revision, oldest first.</param>
 /// <param name="Assertions">Verifications, queries and answers about it, retracted ones included, oldest first.</param>
-/// <param name="Audit">The kernel audit-chain entries about the observation, oldest first.</param>
+/// <param name="Audit">The kernel audit-chain entries about the observation and its covering assertions, oldest first.</param>
 /// <param name="FormRef">Owning collection instance NodeRef when the observation belongs to an eCRF form.</param>
 /// <param name="ItemId">Owning collection item identifier when the observation belongs to an eCRF form.</param>
 /// <param name="ExpectedValueKind">Expected value kind declared by the owning collection item.</param>

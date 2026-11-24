@@ -237,7 +237,13 @@ public sealed class ParticipantEconsentAndWebhookTests : IDisposable
             .Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
 
         // 3. Signing before passing comprehension check is rejected with 400
-        string livenessToken = BiometricLivenessTokenService.IssueToken(SubjectSubA, 0.99m, isLive: true, now: now);
+        string livenessToken = BiometricLivenessTokenService.IssueToken(
+            SubjectSubA,
+            0.99m,
+            isLive: true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: now);
+        var sigTokenUseStore = new ReplayCache(_clock);
         var webhookPublisher = Substitute.For<IEconsentExecutionWebhookPublisher>();
         var captureReq = new CaptureConsentRequest(
             SubjectPseudonym: SubjectSubA,
@@ -255,7 +261,16 @@ public sealed class ParticipantEconsentAndWebhookTests : IDisposable
             DeviceTimestamp: now);
 
         var prematureCapture = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "template-icf", 1, captureReq, db, subjectContext, _clock, ct, webhookPublisher);
+            "template-icf",
+            1,
+            captureReq,
+            db,
+            subjectContext,
+            TestSecurityContext.BiometricLivenessOptions,
+            sigTokenUseStore,
+            _clock,
+            ct,
+            webhookPublisher);
         prematureCapture.Should().BeOfType<ValidationProblem>()
             .Which.ProblemDetails.Errors.Should().ContainKey("comprehension");
 
@@ -266,6 +281,8 @@ public sealed class ParticipantEconsentAndWebhookTests : IDisposable
             captureReq with { SubjectPseudonym = SubjectSubB },
             db,
             subjectContext,
+            TestSecurityContext.BiometricLivenessOptions,
+            sigTokenUseStore,
             _clock,
             ct,
             webhookPublisher);
@@ -296,7 +313,16 @@ public sealed class ParticipantEconsentAndWebhookTests : IDisposable
             .Which.Value!.Passed.Should().BeTrue();
 
         var validCapture = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "template-icf", 1, captureReq, db, subjectContext, _clock, ct, webhookPublisher);
+            "template-icf",
+            1,
+            captureReq,
+            db,
+            subjectContext,
+            TestSecurityContext.BiometricLivenessOptions,
+            sigTokenUseStore,
+            _clock,
+            ct,
+            webhookPublisher);
         validCapture.Should().BeOfType<Ok<CaptureConsentResponse>>()
             .Which.Value!.Status.Should().Be("ACTIVE");
 

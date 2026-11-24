@@ -6,7 +6,10 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -172,6 +175,70 @@ internal sealed class ExportEnrollmentCasebookHandler : ICommandHandler<ExportEn
     }
 }
 
+/// <summary>Handles <see cref="SaveSimulationReport"/> (ADR-2480, K-SIM-5).</summary>
+internal sealed class SaveSimulationReportHandler : ICommandHandler<SaveSimulationReport, ArtifactState>
+{
+    public async Task<CommandResult<ArtifactState>> HandleAsync(SaveSimulationReport command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.ExistsAsync<Artifact>(command.ArtifactId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (await context.Work.ReadAsync<Study>(command.StudyId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return EvidenceErrors.StudyUnknown;
+        }
+
+        if (command.Result is not { } result)
+        {
+            return EvidenceErrors.SimulationReportInvalid.WithMessage("A simulation result is required.");
+        }
+
+        if (result.Scope != NodeRef.For(command.StudyId))
+        {
+            return EvidenceErrors.SimulationReportInvalid.WithMessage(
+                $"The simulation result is scoped to {result.Scope}, not study {command.StudyId}.");
+        }
+
+        if (result.Masked.Count > 0)
+        {
+            return EvidenceErrors.SimulationReportInvalid.WithMessage(
+                "A masked simulation result cannot be saved as an attestable governance artifact (K-SIM-5).");
+        }
+
+        if (SimulationArtifactBinding.ToArtifactContent(result) is not { } content)
+        {
+            return EvidenceErrors.SimulationReportInvalid;
+        }
+
+        var registered = Artifact.Register(
+            command.ArtifactId,
+            command.TenantId,
+            ArtifactKind.SimulationReport,
+            command.StudyId,
+            command.Title,
+            command.ArtifactVersionId,
+            content,
+            context.RecordedAt);
+        if (registered.Value is not { } artifact)
+        {
+            return registered.Error!;
+        }
+
+        var version = artifact.LatestVersion;
+        context.Work.Add(artifact);
+        if (result.Candidate.Version is { Version: not null } candidateRef)
+        {
+            context.Work.LinkInput(candidateRef, LineageEdgeKind.DerivedFrom);
+        }
+
+        context.Work.Raise(new ArtifactRegistered(
+            artifact.TenantId, artifact.Id, version.Id, artifact.Kind, artifact.StudyId, version.ContentHash, version.MediaType, version.SizeBytes));
+        return ArtifactStates.Of(artifact);
+    }
+}
+
 /// <summary>Shared steps of the evidence handlers.</summary>
 internal static class ArtifactStates
 {
@@ -193,6 +260,7 @@ public static class EvidenceServiceCollectionExtensions
         services.AddTransient<ICommandHandler<AddArtifactVersion, ArtifactState>, AddArtifactVersionHandler>();
         services.AddTransient<ICommandHandler<ExportStudySnapshot, ArtifactState>, ExportStudySnapshotHandler>();
         services.AddTransient<ICommandHandler<ExportEnrollmentCasebook, ArtifactState>, ExportEnrollmentCasebookHandler>();
+        services.AddTransient<ICommandHandler<SaveSimulationReport, ArtifactState>, SaveSimulationReportHandler>();
         return services;
     }
 }

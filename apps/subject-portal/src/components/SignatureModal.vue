@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   ClinicalModal,
   ModalErrorAlert,
@@ -155,6 +155,7 @@ import {
   closeSignatureModal,
   verifyAndSubmitSignature,
 } from "../features/signature.js";
+import { checkOnline } from "../features/sync-status.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 
@@ -169,6 +170,7 @@ const OFFLINE_SECURITY_PIN_INPUT_ATTRS = Object.freeze({
 });
 
 const selectedReason = ref("Initial Questionnaire Completion");
+const isBrowserOnline = ref(checkOnline());
 const sessionStore = useSessionStore();
 const ui = useUiStore();
 
@@ -178,11 +180,35 @@ const modalTitle = computed(() =>
     : "Electronic Signature Required"
 );
 
+function refreshOnlineState() {
+  isBrowserOnline.value = checkOnline();
+}
+
+onMounted(() => {
+  refreshOnlineState();
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", refreshOnlineState);
+    window.addEventListener("offline", refreshOnlineState);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("online", refreshOnlineState);
+    window.removeEventListener("offline", refreshOnlineState);
+  }
+});
+
 const isOfflinePinMode = computed(() => {
   void sessionStore.session?.token;
   void sessionStore.session?.isOfflineMode;
   void sessionStore.session?.isDemoMode;
-  return ui.pendingSignableAction === "epro" && !isAuthenticatedSession();
+  void ui.signatureModalOpen;
+  const onlineNow = isBrowserOnline.value && checkOnline();
+  return (
+    ui.pendingSignableAction === "epro" &&
+    (!isAuthenticatedSession() || !onlineNow)
+  );
 });
 
 const credentialLabel = computed(() =>

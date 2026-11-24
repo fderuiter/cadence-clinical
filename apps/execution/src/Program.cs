@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
@@ -187,10 +188,18 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // this slice yet).
 if (builder.Configuration[HttpKernelEnrollmentSynchronizer.ConfigurationKey] is { Length: > 0 } kernelServiceUrl)
 {
+    var kernelBaseUri = new Uri(kernelServiceUrl.TrimEnd('/'));
     builder.Services.AddHttpClient<IKernelEnrollmentSynchronizer, HttpKernelEnrollmentSynchronizer>(client =>
     {
-        client.BaseAddress = new Uri(kernelServiceUrl.TrimEnd('/'));
+        client.BaseAddress = kernelBaseUri;
     });
+    builder.Services.AddScoped<IKernelLockGuard>(sp => ActivatorUtilities.CreateInstance<HttpKernelLockGuard>(
+        sp,
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(IKernelEnrollmentSynchronizer))));
+}
+else
+{
+    builder.Services.AddSingleton<IKernelLockGuard>(NoOpKernelLockGuard.Instance);
 }
 
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();

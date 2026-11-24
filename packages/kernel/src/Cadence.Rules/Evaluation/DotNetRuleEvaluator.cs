@@ -49,6 +49,117 @@ public sealed class DotNetRuleEvaluator : IRuleEvaluator
         return violations;
     }
 
+    /// <inheritdoc/>
+    public void Evaluate(RulePack pack, RuleEvaluationContext context, IRuleRecordCursor records, IRuleViolationSink sink)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(records);
+        ArgumentNullException.ThrowIfNull(sink);
+
+        var applicable = FilterApplicable(_compiled.GetValue(pack, CompilePack), context);
+        if (applicable.Length == 0)
+        {
+            return;
+        }
+
+        var maxVariables = MaxVariables(applicable);
+        RuleObservedValue[]? observedBuffer = null;
+        var byDataset = new Dictionary<string, CompiledRule[]>(StringComparer.Ordinal);
+        string? lastDataset = null;
+        CompiledRule[]? lastRules = null;
+
+        while (records.MoveNext())
+        {
+            var dataset = records.Dataset;
+            if (!ReferenceEquals(dataset, lastDataset) && !string.Equals(dataset, lastDataset, StringComparison.Ordinal))
+            {
+                if (!byDataset.TryGetValue(dataset, out lastRules))
+                {
+                    lastRules = FilterByDataset(applicable, dataset);
+                    byDataset.Add(dataset, lastRules);
+                }
+
+                lastDataset = dataset;
+            }
+
+            var rules = lastRules!;
+            string? recordKey = null;
+            for (var i = 0; i < rules.Length; i++)
+            {
+                var rule = rules[i];
+                if (rule.Condition(records).IsTrue)
+                {
+                    recordKey ??= records.Key;
+                    EmitViolation(rule, dataset, recordKey, records, ref observedBuffer, maxVariables, sink);
+                }
+            }
+        }
+    }
+
+    private static int MaxVariables(CompiledRule[] rules)
+    {
+        var max = 0;
+        for (var i = 0; i < rules.Length; i++)
+        {
+            var count = rules[i].Variables.Length;
+            if (count > max)
+            {
+                max = count;
+            }
+        }
+
+        return max;
+    }
+
+    private static void EmitViolation(
+        CompiledRule rule,
+        string dataset,
+        string recordKey,
+        IRuleVariables variables,
+        ref RuleObservedValue[]? observedBuffer,
+        int maxVariables,
+        IRuleViolationSink sink)
+    {
+        var names = rule.Variables;
+        if (names.Length == 0)
+        {
+            sink.OnViolation(new RuleViolationHit(
+                rule.Rule.Id,
+                rule.Rule.Version,
+                rule.Rule.Severity,
+                dataset,
+                recordKey,
+                rule.Rule.Explanation,
+                ReadOnlySpan<RuleObservedValue>.Empty));
+            return;
+        }
+
+        observedBuffer ??= new RuleObservedValue[Math.Max(maxVariables, names.Length)];
+        var slice = observedBuffer.AsSpan(0, names.Length);
+        for (var i = 0; i < names.Length; i++)
+        {
+            var variable = names[i];
+            slice[i] = new RuleObservedValue(variable, variables[variable]);
+        }
+
+        try
+        {
+            sink.OnViolation(new RuleViolationHit(
+                rule.Rule.Id,
+                rule.Rule.Version,
+                rule.Rule.Severity,
+                dataset,
+                recordKey,
+                rule.Rule.Explanation,
+                slice));
+        }
+        finally
+        {
+            slice.Clear();
+        }
+    }
+
     private static void EvaluateRecord(
         RuleRecord record,
         CompiledRule[] applicable,
