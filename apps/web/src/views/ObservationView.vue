@@ -536,8 +536,8 @@ function resolveCanonicalParticipantParam(
   const candidate = rawCandidate.trim();
   if (!candidate) return "";
   const parsed = parseNodeRef(candidate);
-  if (parsed?.kind === "participant") {
-    return formatNodeRef(parsed);
+  if (parsed?.kind === "enrollment" || parsed?.kind === "participant") {
+    return formatNodeRef({ kind: parsed.kind, id: parsed.id });
   }
   const stateRoot = getActivePinia()?.state.value as
     | {
@@ -545,7 +545,12 @@ function resolveCanonicalParticipantParam(
           studyCode?: string;
           knownParticipants?: Record<
             string,
-            { id?: string; subject_id?: string; study_id?: string }
+            {
+              id?: string;
+              subject_id?: string;
+              study_id?: string;
+              enrollment_ref?: string | null;
+            }
           >;
         };
       }
@@ -559,6 +564,10 @@ function resolveCanonicalParticipantParam(
           item.study_id === studyCodeValue ||
           stateRoot?.studyCanvas?.studyCode === studyCodeValue)
     );
+    const enrollmentNode = parseNodeRef(matched?.enrollment_ref);
+    if (enrollmentNode?.kind === "enrollment") {
+      return formatNodeRef({ kind: "enrollment", id: enrollmentNode.id });
+    }
     const node = matched?.id ? tryNodeRef("participant", matched.id) : null;
     if (node) {
       return formatNodeRef(node);

@@ -6,7 +6,7 @@ import {
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
-import { isScreenAvailable } from "../router/availability";
+import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
@@ -31,6 +31,16 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const ETMF_ROLES = [
+  "cra",
+  "monitor",
+  "data_manager",
+  "site_investigator",
+  "crc",
+  "auditor",
+  "tmf_auditor",
+  "sponsor_admin",
+];
 const NON_ONBOARDING_ROUTES = new Set([
   "landing",
   "login",
@@ -69,14 +79,18 @@ function normalizeTaskRouteName(task) {
   if (task?.routeName) return task.routeName;
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
-  if (rawRoute === "/studies" || rawRoute.startsWith("/studies/")) {
+  const cleanPath = rawRoute.split("?")[0];
+  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
     return "study";
   }
-  if (rawRoute === "/overview") return "overview";
-  if (rawRoute === "/ecrf") return "ecrf";
-  if (rawRoute === "/ctms") return "ctms";
-  if (rawRoute === "/ssu") return "ssu";
-  return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
+  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
+    return "observation";
+  }
+  if (cleanPath === "/overview") return "overview";
+  if (cleanPath === "/ecrf") return "ecrf";
+  if (cleanPath === "/ctms") return "ctms";
+  if (cleanPath === "/ssu") return "ssu";
+  return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
 }
 
 function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
@@ -250,14 +264,41 @@ export function resolveAuthorizedTaskRoute(
         })
       : null;
   }
+  if (routeName === "knowledge") {
+    return isScreenAvailable("knowledge")
+      ? buildScopedWorkflowPath("/knowledge", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
+      : null;
+  }
   if (routeName === "etmf") {
-    return isScreenAvailable("etmf")
+    return isScreenAvailable("etmf") && hasRequiredRole(userRoles, ETMF_ROLES)
       ? buildScopedWorkflowPath("/etmf", {
           studyCode,
           siteId,
           subjectCode,
         })
       : null;
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    if (!isScreenAvailable(routeName)) return null;
+    if (
+      catalogEntry.requiresRole.length > 0 &&
+      !hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    ) {
+      return null;
+    }
+    if (catalogEntry.routeName === "observation") {
+      return catalogEntry.defaultPath;
+    }
+    return buildScopedWorkflowPath(catalogEntry.defaultPath, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   return null;
 }
@@ -271,11 +312,12 @@ export function isTourRouteAuthorized(routeName, userRoles) {
     return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
   }
   if (routeName === "observation") {
-    return hasRequiredRole(userRoles, [
+    const obsRoles = DEMO_MODULE_CATALOG.observation?.requiresRole || [
       "site_investigator",
       "crc",
       "data_manager",
-    ]);
+    ];
+    return hasRequiredRole(userRoles, obsRoles);
   }
   if (routeName === "ctms") {
     return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
@@ -285,6 +327,23 @@ export function isTourRouteAuthorized(routeName, userRoles) {
       ...SITE_READINESS_SPONSOR_ROLES,
       ...SITE_READINESS_SITE_ROLES,
     ]);
+  }
+  if (
+    routeName === "training" ||
+    routeName === "tickets" ||
+    routeName === "knowledge"
+  ) {
+    return true;
+  }
+  if (routeName === "etmf") {
+    return hasRequiredRole(userRoles, ETMF_ROLES);
+  }
+  const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
+  if (catalogEntry) {
+    return (
+      catalogEntry.requiresRole.length === 0 ||
+      hasRequiredRole(userRoles, catalogEntry.requiresRole)
+    );
   }
   return false;
 }

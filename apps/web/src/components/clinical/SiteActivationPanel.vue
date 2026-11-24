@@ -259,6 +259,7 @@
         v-if="compliance.is_activated"
         id="site-activated-summary"
         class="activated-banner"
+        tabindex="-1"
       >
         <span class="activated-badge">Activated</span>
         <span>
@@ -393,6 +394,7 @@
           v-if="matchedKernelSite.status === 'Active'"
           id="kernel-site-active-banner"
           class="activated-banner"
+          tabindex="-1"
         >
           <span class="activated-badge">Kernel Active</span>
           <span>
@@ -774,6 +776,12 @@ async function linkSiteInKernel() {
     await refreshKernelSites(studyCode.value);
     void loadKernelLinkedSites();
     kernelSiteFeedback.value = `Linked site ${linked.site_code || site} to study (${linked.status}).`;
+    kernelBusy.value = false;
+    void handoffFocus([
+      "#kernel-site-active-banner",
+      "#kernel-site-activate-reason",
+      "#site-activation-title",
+    ]);
   } catch (err) {
     kernelSiteError.value = describeKernelError(err);
   } finally {
@@ -804,6 +812,8 @@ async function activateKernelSite() {
     kernelSiteReason.value = "";
     await refreshKernelSites(studyCode.value);
     kernelSiteFeedback.value = `Activated kernel study site ${activated.site_code || siteCode.value.trim()}.`;
+    kernelBusy.value = false;
+    void handoffFocus(["#kernel-site-active-banner", "#site-activation-title"]);
   } catch (err) {
     kernelSiteError.value = describeKernelError(err);
   } finally {
@@ -942,6 +952,7 @@ async function submitQuickSite() {
     newSiteName.value = "";
     newSiteInstitution.value = "";
     newSiteReason.value = "";
+    creatingQuickSite.value = false;
     void handoffFocus([
       "#site-activation-site-picker",
       "#site-activation-site",
@@ -1104,6 +1115,7 @@ async function activate() {
         activated_by: authStore.userId || current.activated_by || null,
       };
     }
+    void handoffFocus(["#site-activated-summary", "#site-activation-title"]);
   } catch (err) {
     if (isForbiddenScopeError(err)) {
       scopeGuidance.value = formatScopeForbiddenGuidance(err, {
@@ -1114,6 +1126,7 @@ async function activate() {
         hasAllStudiesScope: authStore.hasAllStudiesScope,
       });
       compliance.value = null;
+      void handoffFocus("#site-activation-title");
     } else {
       toasts.apiError(`Site ${current.site_id} was not activated`, err);
     }

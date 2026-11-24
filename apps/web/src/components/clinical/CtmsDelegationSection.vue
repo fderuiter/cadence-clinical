@@ -92,6 +92,7 @@
                     canSignOff &&
                     delegationStatus(rec) === 'PENDING_PI_SIGNATURE'
                   "
+                  :id="`btn-doa-signoff-${rec.record_id}`"
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
@@ -102,6 +103,7 @@
                 </button>
                 <button
                   v-if="canManage && delegationStatus(rec) !== 'REVOKED'"
+                  :id="`btn-doa-revoke-${rec.record_id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="prepareRevoke(rec)"
@@ -156,7 +158,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffRecord = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -185,11 +187,7 @@
           >
             {{ saving ? "Revoking..." : "Confirm revocation" }}
           </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="activeRevokeRecord = null"
-          >
+          <button type="button" class="btn btn-secondary" @click="cancelRevoke">
             Cancel
           </button>
         </div>
@@ -251,9 +249,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useInlineFocusHandoff } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -261,18 +263,7 @@ import {
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-    lockStudy?: boolean;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-    lockStudy: undefined,
-  }
-);
+const props = defineProps(scopedWorkspaceSectionProps);
 
 const {
   authStore,
@@ -307,9 +298,19 @@ const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
 const signOffReason = ref("");
+const signOffHandoff = useInlineFocusHandoff({
+  openTarget: "#doa-signoff-reason",
+  closeFallback: "#ctms-delegation-title",
+  scrollIfOffscreen: true,
+});
 
 const activeRevokeRecord = ref<DelegationRecord | null>(null);
 const revokeReason = ref("");
+const revokeHandoff = useInlineFocusHandoff({
+  openTarget: "#doa-revoke-reason",
+  closeFallback: "#ctms-delegation-title",
+  scrollIfOffscreen: true,
+});
 
 function delegationStatus(
   rec: DelegationRecord
@@ -382,8 +383,23 @@ async function submitDelegation() {
 }
 
 function prepareSignOff(rec: DelegationRecord) {
+  signOffHandoff.rememberTrigger(`[id="btn-doa-signoff-${rec.record_id}"]`);
+  activeRevokeRecord.value = null;
   activeSignOffRecord.value = rec;
   signOffReason.value = "";
+  void signOffHandoff.handoff("#doa-signoff-reason", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelSignOff() {
+  const recordId = activeSignOffRecord.value?.record_id;
+  activeSignOffRecord.value = null;
+  signOffReason.value = "";
+  void signOffHandoff.restoreTrigger([
+    recordId ? `[id="btn-doa-signoff-${recordId}"]` : null,
+    "#ctms-delegation-title",
+  ]);
 }
 
 async function confirmSignOff() {
@@ -408,6 +424,15 @@ async function confirmSignOff() {
       message: `Delegation active for ${rec.staff_user_id}.`,
     });
     await loadDoaLog();
+    saving.value = false;
+    void signOffHandoff.handoff([
+      `[id="btn-doa-revoke-${rec.record_id}"]`,
+      () =>
+        document.querySelector<HTMLElement>(
+          "#doa-staff-table button:not([disabled])"
+        ),
+      "#ctms-delegation-title",
+    ]);
   } catch (err) {
     toasts.apiError("PI sign-off failed", err);
   } finally {
@@ -416,8 +441,23 @@ async function confirmSignOff() {
 }
 
 function prepareRevoke(rec: DelegationRecord) {
+  revokeHandoff.rememberTrigger(`[id="btn-doa-revoke-${rec.record_id}"]`);
+  activeSignOffRecord.value = null;
   activeRevokeRecord.value = rec;
   revokeReason.value = "";
+  void revokeHandoff.handoff("#doa-revoke-reason", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelRevoke() {
+  const recordId = activeRevokeRecord.value?.record_id;
+  activeRevokeRecord.value = null;
+  revokeReason.value = "";
+  void revokeHandoff.restoreTrigger([
+    recordId ? `[id="btn-doa-revoke-${recordId}"]` : null,
+    "#ctms-delegation-title",
+  ]);
 }
 
 async function confirmRevoke() {
@@ -442,6 +482,14 @@ async function confirmRevoke() {
       message: `Delegation revoked for ${rec.staff_user_id}.`,
     });
     await loadDoaLog();
+    saving.value = false;
+    void revokeHandoff.handoff([
+      () =>
+        document.querySelector<HTMLElement>(
+          "#doa-staff-table button:not([disabled])"
+        ),
+      "#ctms-delegation-title",
+    ]);
   } catch (err) {
     toasts.apiError("Revocation failed", err);
   } finally {

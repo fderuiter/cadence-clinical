@@ -41,6 +41,7 @@ import {
   readRouteScopeQuery,
   replaceRouteQueryParams,
   resolveRouteAndRouter,
+  shouldSuppressUnsavedNavigationGuard,
 } from "../composables/useRouteScopeSync";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
@@ -232,23 +233,7 @@ function onFormPanelClosed() {
 }
 
 function shouldSuppressUnsavedGuard(to) {
-  if (
-    !authStore.isAuthenticated ||
-    authStore.sessionExpired ||
-    authStore.isLoggingOut
-  ) {
-    return true;
-  }
-  if (
-    to &&
-    (to.name === "forbidden" ||
-      to.path === "/forbidden" ||
-      to.name === "login" ||
-      to.path === "/login")
-  ) {
-    return true;
-  }
-  return false;
+  return shouldSuppressUnsavedNavigationGuard(authStore, to);
 }
 
 function handleBeforeUnload(event) {

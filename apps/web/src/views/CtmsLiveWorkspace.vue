@@ -5,10 +5,9 @@
       id="ctms-live-tabs"
       v-model="liveTab"
       :tabs="liveTabsWithIds"
+      variant="pills"
       aria-label="Site readiness workspaces"
       id-prefix="ctms-live"
-      list-class="live-tabs"
-      tab-class="live-tab-btn"
     />
 
     <div
@@ -161,31 +160,8 @@ defineExpose({ liveTab });
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.live-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  padding-bottom: 10px;
-}
-
-.live-tab-btn {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--semantic-color-border-control);
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text-body);
-  font-weight: 600;
-  font-size: 0.88rem;
-  cursor: pointer;
-}
-
-.live-tab-btn.active {
-  background: var(--semantic-color-primary);
-  border-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-on-primary);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .live-unbacked-note {

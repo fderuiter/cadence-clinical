@@ -17,6 +17,21 @@ export interface ScopedWorkspaceSectionProps {
   lockStudy?: boolean;
 }
 
+export const scopedWorkspaceSectionProps = {
+  studyCode: {
+    type: String,
+    default: "",
+  },
+  siteId: {
+    type: String,
+    default: "",
+  },
+  lockStudy: {
+    type: Boolean,
+    default: undefined,
+  },
+} as const;
+
 export function useScopedWorkspaceSection(
   props: ScopedWorkspaceSectionProps,
   options: {
@@ -54,6 +69,7 @@ export function useScopedWorkspaceSection(
       clinicalStore.activeSiteId ||
       (assignedSites.value.length ? assignedSites.value[0] : "")
   );
+  const newSiteId = ref(siteInput.value);
 
   const loading = ref(false);
   const loaded = ref(false);
@@ -75,6 +91,7 @@ export function useScopedWorkspaceSection(
     (val) => {
       if (val === undefined) return;
       siteInput.value = val;
+      if (val) newSiteId.value = val;
       options.onSitePropChange?.(val);
     }
   );
@@ -84,7 +101,10 @@ export function useScopedWorkspaceSection(
       clinicalStore.activeStudyId = study;
       syncActiveStudyScope(study);
     }
-    if (site) clinicalStore.activeSiteId = site;
+    if (site) {
+      clinicalStore.activeSiteId = site;
+      newSiteId.value = site;
+    }
     syncWorkspaceScope({
       ...(study ? { studyId: study } : {}),
       ...(site !== undefined && (site || study) ? { siteId: site } : {}),
@@ -120,6 +140,7 @@ export function useScopedWorkspaceSection(
     assignedSites,
     studyInput,
     siteInput,
+    newSiteId,
     loading,
     loaded,
     saving,
