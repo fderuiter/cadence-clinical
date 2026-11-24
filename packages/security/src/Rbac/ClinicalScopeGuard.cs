@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 using Cadence.Security.Authentication;
 
@@ -15,9 +16,9 @@ namespace Cadence.Security.Rbac;
 /// <summary>
 /// Shared fail-closed tenant, study, and site scope guard for standalone clinical service handlers.
 /// Enforces identical fail-closed tenant, study, and site boundaries across standalone services
-/// (PRD-CRF-013, PRD-SYS-053, PRD-SYS-192, ADR-2514, ADR-2516, ADR-2548, ADR-2552, ADR-2661).
+/// (PRD-CRF-013, PRD-SYS-053, PRD-SYS-192, ADR-2514, ADR-2516, ADR-2548, ADR-2552, ADR-2661, ADR-2662).
 /// </summary>
-public static class ClinicalScopeGuard
+public static partial class ClinicalScopeGuard
 {
     public const string TenantAccessDeniedDetail = "The caller does not carry an active verified tenant scope.";
     public const string StudyAccessDeniedDetail = "The caller is not assigned to the requested study.";
@@ -31,6 +32,31 @@ public static class ClinicalScopeGuard
 
     private static readonly MethodInfo StringToUpperMethod =
         typeof(string).GetMethod(nameof(string.ToUpper), Type.EmptyTypes)!;
+
+    private static readonly HashSet<string> UnscopedSponsorAndOversightRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        RoleNormalization.ROLE_SYSADMIN,
+        RoleNormalization.ROLE_SPONSOR_DESIGNER,
+        RoleNormalization.ROLE_SPONSOR_DM,
+        RoleNormalization.ROLE_SPONSOR_MM,
+        RoleNormalization.ROLE_SPONSOR_STATISTICIAN,
+        RoleNormalization.ROLE_REVIEWER,
+        RoleNormalization.ROLE_FINANCE_OFFICER,
+        RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        RoleNormalization.ROLE_UNBLINDED_STATISTICIAN,
+        RoleNormalization.ROLE_IDMC,
+        RoleNormalization.ROLE_EMERGENCY_UNBLINDER,
+    };
+
+    [GeneratedRegex("^trial-[0-9a-f]{12}\\z", RegexOptions.CultureInvariant)]
+    private static partial Regex VerifiedTrialTenantPattern();
+
+    /// <summary>
+    /// True when <paramref name="tenantId"/> matches a verified self-service <c>trial-*</c> workspace identifier
+    /// (<c>^trial-[0-9a-f]{12}\z</c>).
+    /// </summary>
+    public static bool IsVerifiedTrialTenant(string? tenantId) =>
+        tenantId is not null && VerifiedTrialTenantPattern().IsMatch(tenantId);
 
     /// <summary>
     /// Resolves the caller <see cref="Principal"/> from <see cref="CallerScope.Principal"/>,
@@ -151,8 +177,9 @@ public static class ClinicalScopeGuard
     }
 
     /// <summary>
-    /// True when the caller carries site-scoped roles (<see cref="SiteAccessEvaluator.SITE_SCOPED_ROLES"/>)
-    /// or has explicit site assignments on their signed identity.
+    /// True when the caller carries site-scoped roles (<see cref="SiteAccessEvaluator.SITE_SCOPED_ROLES"/>),
+    /// carries <see cref="RoleNormalization.ROLE_TRIAL_COORDINATOR"/> outside a verified <c>trial-*</c> tenant
+    /// without an unscoped sponsor or oversight role, or has explicit site assignments on their signed identity.
     /// </summary>
     public static bool IsSiteBound(Principal? principal)
     {
@@ -161,11 +188,24 @@ public static class ClinicalScopeGuard
             return true;
         }
 
-        bool hasSiteRole = principal.Roles
-            .Select(RoleNormalization.NormalizeRole)
-            .Any(role => SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains(role));
+        if (principal.AssignedSites.Count > 0)
+        {
+            return true;
+        }
 
-        return hasSiteRole || principal.AssignedSites.Count > 0;
+        var normalizedRoles = RoleNormalization.GetNormalizedRoles(principal.Roles.Concat(principal.RawRoles));
+        if (normalizedRoles.Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains))
+        {
+            return true;
+        }
+
+        if (!IsVerifiedTrialTenant(principal.TenantId)
+            && normalizedRoles.Contains(RoleNormalization.ROLE_TRIAL_COORDINATOR, StringComparer.OrdinalIgnoreCase))
+        {
+            return !normalizedRoles.Any(UnscopedSponsorAndOversightRoles.Contains);
+        }
+
+        return false;
     }
 
     /// <summary>

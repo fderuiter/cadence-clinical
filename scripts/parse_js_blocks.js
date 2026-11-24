@@ -25,7 +25,7 @@ function getBabelParser() {
   }
   try {
     return require("@babel/parser");
-  } catch (e) {
+  } catch {
     const repoRoot = path.dirname(__dirname);
     const webNodeModules = path.join(
       repoRoot,
