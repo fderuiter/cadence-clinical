@@ -201,7 +201,7 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     : new ScopeNode(
                         new NodeSummary(
                             NodeRef.For(snapshotId, snapshot.VersionIndex),
-                            $"Form snapshot {snapshot.FormId} (v{snapshot.ProtocolVersion})",
+                            $"Form version snapshot {snapshot.FormId}",
                             snapshot.FormId),
                         NodeRef.For(snapshot.ProtocolVersionId),
                         FallbackParent: NodeRef.For(snapshot.StudyId));
