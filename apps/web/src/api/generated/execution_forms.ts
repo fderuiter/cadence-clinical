@@ -227,6 +227,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/forms/sdv-alerts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists active CRA SDV modification alerts for a study or enrollment, omitting observations once monitors verify the latest revision. */
+    get: operations["ExecutionListFormSdvAlerts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/forms/{formId}/signatures": {
     parameters: {
       query?: never;
@@ -493,6 +510,38 @@ export interface components {
       /** Format: int32 */
       revision: number | string;
       changed: boolean;
+    };
+    ExecutionForms_FormSdvAlertResponse: {
+      /** Format: uuid */
+      alert_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: null | string;
+      /** Format: uuid */
+      enrollment_id: string;
+      /** Format: uuid */
+      form_id: null | string;
+      /** Format: uuid */
+      observation_id: string;
+      study_code: null | string;
+      site_code: null | string;
+      subject_code: null | string;
+      collection_spec_id: null | string;
+      planned_activity_id: null | string;
+      item_id: null | string;
+      /** Format: int32 */
+      superseded_revision: number | string;
+      /** Format: int32 */
+      current_revision: number | string;
+      verified_by: string;
+      /** Format: date-time */
+      verified_at: string;
+      modified_by: string;
+      /** Format: date-time */
+      modified_at: string;
+      reason_for_change: string;
+      message: string;
     };
     ExecutionForms_FormSignatureResponse: {
       /** Format: uuid */
@@ -1841,6 +1890,56 @@ export interface operations {
       };
       /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
       423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecutionListFormSdvAlerts: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExecutionForms_FormSdvAlertResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Trust;
 using Cadence.TestSupport.Kernel.Protocol;
 
@@ -63,8 +66,43 @@ internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
             new Attest(tenant, AttestationId.New(), meaning, target, fixture.Clock.UtcNow.AddMinutes(-1), "pwd+otp", Key(), $"Signing as {meaning}"),
             cancellationToken: ct);
 
-    public Task<CommandResult<ProtocolVersionState>> ApproveAsync(TenantId tenant, ProtocolVersionId id, AttestationId attestation, CancellationToken ct) =>
-        fixture.Sender.SendAsync(new ApproveProtocolVersion(tenant, id, attestation, Key(), Reason), cancellationToken: ct);
+    public Task<CommandResult<ProtocolVersionState>> ApproveAsync(
+        TenantId tenant,
+        ProtocolVersionId id,
+        AttestationId attestation,
+        CancellationToken ct,
+        AttestationId? reviewAttestation = null) =>
+        fixture.Sender.SendAsync(new ApproveProtocolVersion(tenant, id, attestation, Key(), Reason, reviewAttestation), cancellationToken: ct);
+
+    /// <summary>
+    /// Runs an unmasked simulation of <paramref name="draftVersionId"/>, saves the <see cref="ArtifactKind.SimulationReport"/>,
+    /// and signs an <see cref="AttestationMeaning.Reviewed"/> attestation over its frozen artifact version (K-PROT-2, K-SIM-5).
+    /// </summary>
+    public async Task<(SimulationResult Simulation, ArtifactState Report, AttestationId ReviewAttestation)> SimulateAndAttestReviewAsync(
+        TenantId tenant, StudyId study, ProtocolVersionId draftVersionId, CancellationToken ct)
+    {
+        var sim = await fixture.Simulation.SimulateAsync(
+            tenant,
+            new SimulationRequest(SimulationCandidate.StoredProtocolVersion(draftVersionId)),
+            ct);
+        sim.IsSuccess.Should().BeTrue(sim.Error?.Message);
+
+        var report = await OkAsync(
+            new SaveSimulationReport(
+                tenant,
+                study,
+                ArtifactId.New(),
+                ArtifactVersionId.New(),
+                $"Simulation report for {draftVersionId}",
+                sim.Value!,
+                Key(),
+                Reason),
+            ct);
+
+        var reviewTarget = new AttestationTarget(NodeKinds.ArtifactVersion, report.LatestVersionId.Value, report.LatestContentHash);
+        var reviewAttestation = await OkAsync(AttestCommand(tenant, AttestationMeaning.Reviewed, reviewTarget), ct);
+        return (sim.Value!, report, reviewAttestation);
+    }
 
     /// <summary>A study's first version, submitted for review; returns its state.</summary>
     public async Task<ProtocolVersionState> InReviewAsync(TenantId tenant, StudyId study, CancellationToken ct)

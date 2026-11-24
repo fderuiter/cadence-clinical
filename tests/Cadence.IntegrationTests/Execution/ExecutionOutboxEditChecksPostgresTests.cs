@@ -616,6 +616,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             (Actor.Person(DataManager), ["concept.define", "protocol.draft", "protocol.amend", "protocol.revise_draft", "library_item.draft", "library_item.approve", "attestation.sign", "standard.register", "standard.approve", "study.declare_standards"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount(AlertMonitorOnVerifiedObservationCorrected.Name), ["execution.query.manage"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
         })
         {
