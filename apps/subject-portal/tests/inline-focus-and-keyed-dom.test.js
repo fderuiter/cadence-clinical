@@ -504,6 +504,91 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
     expect(document.activeElement).toBe(firstSummary);
   });
 
+  it("aligns off-screen selected tab inside .nav-tabs on showView while preserving main-heading focus handoff", async () => {
+    const navTabs = document.querySelector(".nav-tabs");
+    const walletTab = document.getElementById("btn-tab-btn-wallet");
+    expect(navTabs).not.toBeNull();
+    expect(walletTab).not.toBeNull();
+
+    let scrollLeftValue = 0;
+    Object.defineProperty(navTabs, "clientWidth", {
+      configurable: true,
+      get: () => 320,
+    });
+    Object.defineProperty(navTabs, "scrollWidth", {
+      configurable: true,
+      get: () => 780,
+    });
+    Object.defineProperty(navTabs, "scrollLeft", {
+      configurable: true,
+      get: () => scrollLeftValue,
+      set: (val) => {
+        scrollLeftValue = val;
+      },
+    });
+    const scrollToSpy = vi.fn((arg) => {
+      if (typeof arg === "number") scrollLeftValue = arg;
+      else if (arg && typeof arg.left === "number") scrollLeftValue = arg.left;
+    });
+    navTabs.scrollTo = scrollToSpy;
+
+    navTabs.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 320,
+      bottom: 56,
+      width: 320,
+      height: 56,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    walletTab.getBoundingClientRect = () => {
+      const visibleLeft = 540 - scrollLeftValue;
+      return {
+        left: visibleLeft,
+        top: 0,
+        right: visibleLeft + 120,
+        bottom: 56,
+        width: 120,
+        height: 56,
+        x: visibleLeft,
+        y: 0,
+        toJSON: () => ({}),
+      };
+    };
+
+    showView("view-wallet", { immediateScroll: true });
+    await settle();
+
+    expect(scrollToSpy).toHaveBeenCalledWith({
+      left: 440,
+      behavior: "auto",
+    });
+    expect(navTabs.scrollLeft).toBe(440);
+    expect(walletTab.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement?.id).toBe("wallet-view-heading");
+
+    // When PinUnlockModal is open, showView still aligns .nav-tabs without stealing focus from #unlock-pin
+    scrollLeftValue = 0;
+    scrollToSpy.mockClear();
+
+    const session = useSessionStore();
+    showView("view-tasks", { immediateScroll: true });
+    await settle();
+    session.pinUnlock.isOpen = true;
+    await settle();
+    expect(document.activeElement?.id).toBe("unlock-pin");
+
+    showView("view-wallet", { immediateScroll: true });
+    await settle();
+
+    expect(navTabs.scrollLeft).toBe(440);
+    expect(document.activeElement?.id).toBe("unlock-pin");
+    session.pinUnlock.isOpen = false;
+    await settle();
+  });
+
   it("hands off focus from #btn-retry-inbox to loaded inbox controls, heading on empty, or #btn-retry-inbox on repeated failure", async () => {
     const session = useSessionStore();
     session.session.isDemoMode = false;

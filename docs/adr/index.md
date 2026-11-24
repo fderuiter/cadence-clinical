@@ -472,6 +472,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
 - [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
 - [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
+- [ADR-2673: Active-Item Scroll Alignment, Overflow Cues, and Sticky Navigation Bars](2026-11-23-active-scroll-alignment-overflow-cues-and-sticky-navigation.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 

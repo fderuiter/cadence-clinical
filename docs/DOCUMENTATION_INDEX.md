@@ -637,6 +637,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2626: Observation Assertion Audit Coverage, SDV Precondition Guards, and CRA Modification Alerts](adr/2026-11-23-observation-assertions-sdv-guards-and-cra-alerts.md) | Current | - Status: Accepted |
 | [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](adr/2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) | Current | - Status: Accepted |
 | [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](adr/2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) | Current | - Status: Accepted |
+| [ADR-2673: Active-Item Scroll Alignment, Overflow Cues, and Sticky Navigation Bars](adr/2026-11-23-active-scroll-alignment-overflow-cues-and-sticky-navigation.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
