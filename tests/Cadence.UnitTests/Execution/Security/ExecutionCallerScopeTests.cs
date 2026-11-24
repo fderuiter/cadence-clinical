@@ -446,6 +446,73 @@ public sealed class ExecutionCallerScopeTests : IDisposable
         (await piClient.SendAsync(toxReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    /// <summary>
+    /// Unassigned pharmacist (and dual sponsor + pharmacist) callers fail closed with 403 on RTSM IP kit routes,
+    /// while an assigned pharmacist reaches only their assigned site.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task UnassignedPharmacist_FailsClosedWith403AcrossIpKitRoutes_WhileAssignedPharmacistReachesOnlyAssignedSite()
+    {
+        var unassignedPharmacist = new GatewayIdentity(
+            UserId: "pharm-unassigned",
+            Roles: [RoleNormalization.ROLE_PHARMACIST],
+            SiteIds: [],
+            TenantId: "tenant-01",
+            StudyIds: ["STUDY-01"],
+            UnblindedAccess: true,
+            ChangeReason: Reason);
+
+        const string unassignedInventoryPath = "/api/v1/execution/rtsm/kits/inventory/STUDY-01/SITE-99"; // pragma: allowlist secret
+
+        using (var unassignedClient = _factory.CreateSignedClient(unassignedPharmacist))
+        {
+            (await unassignedClient.GetAsync(unassignedInventoryPath, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await unassignedClient.PostAsJsonAsync(
+                "/api/v1/execution/rtsm/kits/validate-scan",
+                new IpKitScanValidateRequest("KIT-01", "STUDY-01", "SITE-99"),
+                ExecutionApiFactory.JsonOptions,
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await unassignedClient.GetAsync("/api/v1/execution/rtsm/kits/certificates/CERT-01", Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await unassignedClient.PostAsJsonAsync(
+                "/api/v1/execution/rtsm/kits/reconcile-batch",
+                new IpKitBatchReconciliationRequest(
+                    "STUDY-01",
+                    "SITE-99",
+                    [new IpKitItemReconcileRequest("KIT-01", "LOT-1", "LOT-1", 0, 0, "RETURNED", "Unused")],
+                    ReasonForChange: Reason),
+                ExecutionApiFactory.JsonOptions,
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        var dualRoleUnassigned = unassignedPharmacist with
+        {
+            UserId = "pharm-dm-unassigned",
+            Roles = [RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_PHARMACIST],
+        };
+        using (var dualClient = _factory.CreateSignedClient(dualRoleUnassigned))
+        {
+            (await dualClient.GetAsync(unassignedInventoryPath, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        var assignedPharmacist = unassignedPharmacist with
+        {
+            UserId = "pharm-site01",
+            SiteIds = [Site01],
+        };
+        using var assignedClient = _factory.CreateSignedClient(assignedPharmacist);
+        (await assignedClient.GetAsync($"/api/v1/execution/rtsm/kits/inventory/STUDY-01/{Site01}", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await assignedClient.GetAsync(unassignedInventoryPath, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private static MultipartFormDataContent BuildEnterpriseSynonymForm()
     {
         var form = new MultipartFormDataContent();

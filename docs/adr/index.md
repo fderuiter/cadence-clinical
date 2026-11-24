@@ -291,6 +291,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-101: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md) (2026-08-24)
 - [ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md) (2026-08-25)
 - [ADR-2437: Decommission Legacy V1 Signatures and Standalone Rendering Engine](2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md) (2026-09-08)
+- [ADR-2834: Fail-Closed Site Scope for Pharmacist and Subject Roles](2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) (2026-11-23)
 
 ### 3. Clinical Data Interoperability & Standards
 

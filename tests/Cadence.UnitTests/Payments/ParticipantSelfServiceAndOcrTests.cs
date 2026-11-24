@@ -231,7 +231,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             await seed.SaveChangesAsync(Ct);
         }
 
-        using var client = SubjectClient("SUBJ-LIVE-01");
+        using var client = SubjectClient("SUBJ-LIVE-01", "SITE-LIVE");
         using var resp = await client.GetAsync("/api/v1/payments/participant/me/wallet", Ct);
 
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -830,7 +830,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         }
 
         // 1. Canary proof: unverified clinician visit claim + unverified diary loop credit $0.00 and fail ACH payout with 409 Conflict
-        using var subjectClient = SubjectClient("SUBJ-CANARY-01");
+        using var subjectClient = SubjectClient("SUBJ-CANARY-01", "SITE-CANARY-01");
 
         // Clinician-verified milestone rule ($250, RequiresVerification = true, IsMilestone = true, AutoDisbursementThreshold = 100m)
         using var selfVisitResp = await subjectClient.PostAsJsonAsync(
@@ -1498,8 +1498,105 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         svgBase64Scan.OcrToken.Should().NotBeNullOrWhiteSpace();
     }
 
-    private HttpClient SubjectClient(string subjectId) =>
-        _factory.CreateSignedClient(TestSecurityContext.Identity(subjectId, "subject"));
+    [Fact]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task UnassignedOrCrossSiteSubject_FailsClosedWith403AcrossSelfServiceRoutes_WithZeroMutations()
+    {
+        await EnsureDbCreatedAsync();
+        await using (var seed = OpenDb())
+        {
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            seed.ParticipantWallets.Add(new ParticipantWallet
+            {
+                Id = "wallet-scoped-subj",
+                SubjectId = "SUBJ-SCOPED-01",
+                StudyId = "STUDY-01",
+                SiteId = "SITE-01",
+                CurrentBalance = 90.00m,
+                LifetimeStipends = 90.00m,
+                Currency = "USD",
+                Status = "ACTIVE",
+                W9Status = "NOT_REQUIRED",
+                CreatedAt = now,
+                CreatedBy = "crc-1",
+                UpdatedAt = now,
+            });
+            seed.ParticipantStipendRules.Add(new ParticipantStipendRule
+            {
+                StudyId = "STUDY-01",
+                VisitCode = "DIARY",
+                VisitName = "Daily ePRO Diary",
+                Amount = 25.00m,
+                AntiCoercionCap = 500.00m,
+                IsActive = true,
+                CreatedAt = now,
+                CreatedBy = "finance-1",
+                UpdatedAt = now,
+            });
+            await seed.SaveChangesAsync(Ct);
+        }
+
+        string snapshotBefore = await SnapshotAsync();
+
+        var unassignedExisting = TestSecurityContext.Identity("SUBJ-SCOPED-01", "subject") with { SiteIds = [] };
+        var unassignedNew = TestSecurityContext.Identity("SUBJ-UNASSIGNED-NEW", "subject") with { SiteIds = [] };
+        var wrongSiteExisting = TestSecurityContext.Identity("SUBJ-SCOPED-01", "subject") with { SiteIds = ["SITE-99"] };
+
+        foreach (var identity in new[] { unassignedExisting, unassignedNew, wrongSiteExisting })
+        {
+            using var client = _factory.CreateSignedClient(identity);
+
+            (await client.GetAsync("/api/v1/payments/participant/me/wallet", Ct))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            if (identity.SiteIds.Count == 0)
+            {
+                (await client.PostAsJsonAsync(
+                    "/api/v1/payments/participant/me/expenses/ocr-extract",
+                    new OcrExtractRequestDto(RawText: "METRO\nFare Paid: $10.00"),
+                    Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            }
+
+            (await client.PostAsJsonAsync(
+                "/api/v1/payments/participant/me/expenses",
+                new SelfServiceSubmitExpenseRequestDto(
+                    Category: "TRANSIT",
+                    MerchantName: "Metro",
+                    GrossAmount: 18.00m,
+                    ExpenseDate: "2026-08-23",
+                    OcrConfidence: 0.96,
+                    StudyCode: "STUDY-01",
+                    SiteCode: "SITE-01"),
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await client.PostAsJsonAsync(
+                "/api/v1/payments/participant/me/disburse",
+                new SelfServiceDisburseRequestDto(DisbursementType: "DIRECT_ACH"),
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            string validDiarySyncToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+                callerUserId: identity.UserId,
+                studyCode: "STUDY-01",
+                diaryId: "vas-01",
+                assignmentId: null,
+                sequenceNumber: 1,
+                issuedAt: SystemClock.Instance.UtcNow,
+                gatewaySecret: TestSecurityContext.GatewaySecret);
+
+            (await client.PostAsJsonAsync(
+                "/api/v1/payments/participant/me/diary-stipend",
+                new { studyId = "STUDY-01", siteId = "SITE-01", diaryId = "vas-01", sequenceNumber = 1, syncVerificationToken = validDiarySyncToken },
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        (await SnapshotAsync()).Should().Be(snapshotBefore, "unassigned or cross-site subject calls must fail closed without mutating ledger rows");
+    }
+
+    private HttpClient SubjectClient(string subjectId, params string[] siteIds) =>
+        _factory.CreateSignedClient(TestSecurityContext.Identity(subjectId, "subject") with
+        {
+            SiteIds = siteIds.Length > 0 ? siteIds : ["SITE-01"],
+        });
 
     private PaymentsDbContext OpenDb() =>
         _factory.Services.CreateScope().ServiceProvider.GetRequiredService<PaymentsDbContext>();

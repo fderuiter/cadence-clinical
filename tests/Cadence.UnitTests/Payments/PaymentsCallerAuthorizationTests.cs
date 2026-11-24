@@ -249,6 +249,8 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     [Fact]
     public async Task W9Verification_RequiresValidSubmission_AndEnforcesSeparationOfDuties()
     {
+        const string unsubmittedWalletId = "W-CANARY-UNSUB";
+        const string selfSubmittedWalletId = "W-CANARY-SELF";
         await SeedAsync();
         await using (var seed = OpenDb())
         {
@@ -256,7 +258,7 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
             seed.ParticipantWallets.AddRange(
                 new ParticipantWallet
                 {
-                    Id = "W-CANARY-UNSUB",
+                    Id = unsubmittedWalletId,
                     SubjectId = "SUBJ-CANARY-UNSUB",
                     StudyId = "S-1",
                     SiteId = "SITE-1",
@@ -271,7 +273,7 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
                 },
                 new ParticipantWallet
                 {
-                    Id = "W-CANARY-SELF",
+                    Id = selfSubmittedWalletId,
                     SubjectId = "SUBJ-CANARY-SELF",
                     StudyId = "S-1",
                     SiteId = "SITE-1",
@@ -292,7 +294,7 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
 
         // 1. Unsubmitted W-9 (W9Status = "REQUIRED", TaxIdLastFour = null) must fail verification:
         using var unsubResp = await crcAlpha.PostAsJsonAsync(
-            "/api/v1/payments/participant/wallets/W-CANARY-UNSUB/verify-w9",
+            $"/api/v1/payments/participant/wallets/{unsubmittedWalletId}/verify-w9",
             new { notes = "canary-verify-without-w9-submission" },
             Ct);
         unsubResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -306,39 +308,39 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
 
         // Invalid W-9 submissions (blank legal name or malformed TIN suffix) must be rejected:
         using var blankNameResp = await crcAlpha.PostAsJsonAsync(
-            "/api/v1/payments/participant/wallets/W-CANARY-SELF/submit-w9",
+            $"/api/v1/payments/participant/wallets/{selfSubmittedWalletId}/submit-w9",
             new { fullLegalName = "   ", taxIdLastFour = "1234", certifyAccurate = true },
             Ct);
         blankNameResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
 
         using var invalidTinResp = await crcAlpha.PostAsJsonAsync(
-            "/api/v1/payments/participant/wallets/W-CANARY-SELF/submit-w9",
+            $"/api/v1/payments/participant/wallets/{selfSubmittedWalletId}/submit-w9",
             new { fullLegalName = "Canary Participant", taxIdLastFour = "12A4", certifyAccurate = true },
             Ct);
         invalidTinResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
 
         // 2. Single CRC submitting and self-verifying W-9 must fail separation of duties:
         using var submitResp = await crcAlpha.PostAsJsonAsync(
-            "/api/v1/payments/participant/wallets/W-CANARY-SELF/submit-w9",
+            $"/api/v1/payments/participant/wallets/{selfSubmittedWalletId}/submit-w9",
             new { fullLegalName = "Canary Participant", taxIdLastFour = "1234", certifyAccurate = true },
             Ct);
         submitResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var selfVerifyResp = await crcAlpha.PostAsJsonAsync(
-            "/api/v1/payments/participant/wallets/W-CANARY-SELF/verify-w9",
+            $"/api/v1/payments/participant/wallets/{selfSubmittedWalletId}/verify-w9",
             new { notes = "canary-self-verified-by-submitter" },
             Ct);
         selfVerifyResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         // At single-coordinator sites, an assigned site investigator holds payments_w9:verify and can verify the CRC's submission:
         using var dualVerifyResp = await sitePi.PostAsJsonAsync(
-            "/api/v1/payments/participant/wallets/W-CANARY-SELF/verify-w9",
+            $"/api/v1/payments/participant/wallets/{selfSubmittedWalletId}/verify-w9",
             new { notes = "dual-verified-by-investigator" },
             Ct);
         dualVerifyResp.StatusCode.Should().Be(HttpStatusCode.OK);
 
         await using var db = OpenDb();
-        var verifiedWallet = await db.ParticipantWallets.AsNoTracking().SingleAsync(w => w.Id == "W-CANARY-SELF", Ct);
+        var verifiedWallet = await db.ParticipantWallets.AsNoTracking().SingleAsync(w => w.Id == selfSubmittedWalletId, Ct);
         verifiedWallet.W9Status.Should().Be("VERIFIED");
         verifiedWallet.TaxIdLastFour.Should().Be("1234");
         verifiedWallet.W9VerifiedAt.Should().NotBeNull();
@@ -441,6 +443,44 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         var audit = await db.PaymentAuditLogs.AsNoTracking().SingleAsync(a => a.Action == "EXPENSE_CLAIM_REJECTED", Ct);
         audit.UserId.Should().Be("pi-3");
         audit.UserRoles.Should().Be("principal_investigator");
+    }
+
+    [Theory]
+    [InlineData("pharmacist")]
+    [InlineData("subject")]
+    public async Task UnassignedPharmacistOrSubjectRole_BindsPaymentsCallerSiteFilterToEmptySet_AndFailsClosed(string siteScopedRole)
+    {
+        await SeedAsync();
+        string before = await SnapshotAsync();
+
+        // Even alongside finance_officer, holding pharmacist or subject with SiteIds = [] binds PaymentsCaller.SiteFilter
+        // to an empty set instead of null, narrowing InScope queries to zero rows, hiding out-of-scope IDs as 404,
+        // and rejecting site-targeted writes with 403 Forbidden.
+        using var unassignedClient = Client($"unassigned-{siteScopedRole}", "finance_officer", siteScopedRole);
+
+        (await unassignedClient.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        (await unassignedClient.GetAsync($"/api/v1/payments/participant/wallets/{WalletId}/balance", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        (await unassignedClient.PostAsJsonAsync(
+            "/api/v1/payments/invoices/compile",
+            new { study_id = "S-1", site_id = "SITE-1" },
+            Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await SnapshotAsync()).Should().Be(before);
+
+        // Positive controls: assigning SITE-1 restores reachability to SITE-1, while a pure sponsor finance_officer stays global.
+        using var assignedClient = SiteClient($"assigned-{siteScopedRole}", "SITE-1", "finance_officer", siteScopedRole);
+        (await assignedClient.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await assignedClient.GetAsync($"/api/v1/payments/participant/wallets/{WalletId}/balance", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var pureSponsorFinance = Client("pure-finance", "finance_officer");
+        (await pureSponsorFinance.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     private HttpClient Client(string userId, params string[] roles) =>
