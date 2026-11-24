@@ -62,6 +62,15 @@ public sealed class KernelReadAccess(
     }
 
     /// <inheritdoc />
+    public ValueTask<bool> CoversScopeAsync(
+        TenantId tenant,
+        NodeRef scope,
+        CancellationToken cancellationToken) =>
+        actor.Actor is { } reader
+            ? visibility.CoversScopeAsync(tenant, reader, scope, cancellationToken)
+            : ValueTask.FromResult(false);
+
+    /// <inheritdoc />
     public async ValueTask<bool> CanExerciseAsync(
         TenantId tenant,
         Capability capability,

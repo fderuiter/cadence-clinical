@@ -13,11 +13,13 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Validates JSON, XML, and YAML dependency manifests, lockstep MSBuild and <c>pnpm</c> catalog cohorts,
-/// <c>.github/dependabot.yml</c> group and ignore guardrails, synchronized <c>PostgresTestImage</c> <c>@sha256</c>
-/// digests, and forbidden client-side crypto or runtime test-harness packages across the workspace or staged Git index.
+/// <c>.github/dependabot.yml</c> target/ignore uniqueness and group/ignore guardrails, synchronized
+/// <c>PostgresTestImage</c> <c>@sha256</c> digests, and forbidden client-side crypto or runtime test-harness packages
+/// across the workspace or staged Git index.
 /// </summary>
 public static partial class DependencyValidatorService
 {
+    private const string DependabotRelativePath = ".github/dependabot.yml";
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private static readonly string[] WorkspaceContainers = ["apps", "packages"];
     private static readonly string[] ForbiddenPackages = ["node-forge", "elliptic", "jose"];
@@ -44,7 +46,7 @@ public static partial class DependencyValidatorService
         "Directory.Packages.props",
         ".config/dotnet-tools.json",
         "pnpm-workspace.yaml",
-        ".github/dependabot.yml",
+        DependabotRelativePath,
         "packages/testing/src/Persistence/PostgresTestImage.cs",
         "docker/docker-compose.yml",
         ".github/workflows/ci.yml",
@@ -177,13 +179,7 @@ public static partial class DependencyValidatorService
 
             try
             {
-                ReadOnlySpan<byte> span = bytes;
-                if (span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF)
-                {
-                    span = span[3..];
-                }
-
-                text = StrictUtf8.GetString(span);
+                text = StrictUtf8.GetString(StripBom(bytes));
                 return true;
             }
             catch (DecoderFallbackException ex)
@@ -197,22 +193,43 @@ public static partial class DependencyValidatorService
     private sealed class DependabotGroup
     {
         public HashSet<string> Patterns { get; } = new(StringComparer.Ordinal);
+
         public HashSet<string> ExcludePatterns { get; } = new(StringComparer.Ordinal);
     }
 
-    private sealed class DependabotIgnore
+    private sealed class ParsedDependabotConfig
     {
-        public string DependencyName { get; set; } = string.Empty;
-        public HashSet<string> UpdateTypes { get; } = new(StringComparer.Ordinal);
-        public HashSet<string> Versions { get; } = new(StringComparer.Ordinal);
+        public string? Version { get; set; }
+
+        public List<DependabotUpdateEntry> Updates { get; } = [];
     }
 
-    private sealed class DependabotUpdateBlock
+    private sealed class DependabotUpdateEntry
     {
-        public string Ecosystem { get; set; } = string.Empty;
-        public string Directory { get; set; } = string.Empty;
+        public string? PackageEcosystem { get; set; }
+
+        public string? Directory { get; set; }
+
+        public List<string> Directories { get; } = [];
+
+        public string? TargetBranch { get; set; }
+
         public Dictionary<string, DependabotGroup> Groups { get; } = new(StringComparer.Ordinal);
-        public List<DependabotIgnore> Ignores { get; } = [];
+
+        public List<DependabotIgnoreEntry> Ignores { get; } = [];
+    }
+
+    private sealed class DependabotIgnoreEntry
+    {
+        public string? DependencyName { get; set; }
+
+        public bool HasVersions { get; set; }
+
+        public List<string> Versions { get; } = [];
+
+        public bool HasUpdateTypes { get; set; }
+
+        public List<string> UpdateTypes { get; } = [];
     }
 
     public static int ValidateDependencies(
@@ -233,7 +250,7 @@ public static partial class DependencyValidatorService
             bool hasDotnetTools = snapshot.Exists(".config/dotnet-tools.json");
             bool hasBuildProps = snapshot.Exists("Directory.Build.props");
             bool hasPackagesProps = snapshot.Exists("Directory.Packages.props");
-            bool hasDependabot = snapshot.Exists(".github/dependabot.yml");
+            bool hasDependabot = snapshot.Exists(DependabotRelativePath);
             bool hasPostgresImageSource = snapshot.Exists("packages/testing/src/Persistence/PostgresTestImage.cs");
             bool hasDockerCompose = snapshot.Exists("docker/docker-compose.yml");
 
@@ -397,7 +414,7 @@ public static partial class DependencyValidatorService
 
         foreach (string rawLine in GitIndexReader.SplitLines(text))
         {
-            string trimmed = StripYamlComment(rawLine).Trim();
+            string trimmed = StripYamlLineComment(rawLine).Trim();
             if (trimmed.Length == 0)
             {
                 continue;
@@ -409,19 +426,12 @@ public static partial class DependencyValidatorService
                 continue;
             }
 
-            if (!inCatalog)
+            if (!inCatalog || !TrySplitMapping(trimmed, out string key, out string rawVal))
             {
                 continue;
             }
 
-            int colonIndex = trimmed.IndexOf(':');
-            if (colonIndex <= 0)
-            {
-                continue;
-            }
-
-            string key = UnquoteYamlScalar(trimmed[..colonIndex]);
-            string value = UnquoteYamlScalar(trimmed[(colonIndex + 1)..]);
+            string value = UnquoteYamlScalar(rawVal);
             if (key.Length == 0 || value.Length == 0)
             {
                 Console.WriteLine($"[ERROR] {relativePath} catalog entry '{rawLine.Trim()}' must specify a non-empty package name and version.");
@@ -1079,14 +1089,13 @@ public static partial class DependencyValidatorService
 
     private static int ValidateDependabotConfig(RepoSnapshot snapshot)
     {
-        const string relativePath = ".github/dependabot.yml";
-        if (!snapshot.TryReadBytes(relativePath, out byte[] bytes, out string? readError))
+        if (!snapshot.TryReadBytes(DependabotRelativePath, out byte[] bytes, out string? readError))
         {
-            Console.WriteLine($"[ERROR] Failed to read {relativePath}: {readError}");
+            Console.WriteLine($"[ERROR] Failed to read {DependabotRelativePath}: {readError}");
             return 1;
         }
 
-        var yamlErrors = YamlSyntaxValidatorService.ValidateBytes(bytes, relativePath);
+        var yamlErrors = YamlSyntaxValidatorService.ValidateBytes(bytes, DependabotRelativePath);
         if (yamlErrors.Count > 0)
         {
             foreach (string err in yamlErrors)
@@ -1097,26 +1106,208 @@ public static partial class DependencyValidatorService
             return yamlErrors.Count;
         }
 
-        var blocks = ParseDependabotUpdates(StrictUtf8.GetString(StripBom(bytes)));
+        string content = StrictUtf8.GetString(StripBom(bytes));
+        var parseErrors = new List<string>();
+        var parsed = ParseDependabotConfig(content, parseErrors);
+        if (parseErrors.Count > 0)
+        {
+            foreach (string parseError in parseErrors)
+            {
+                Console.WriteLine($"[ERROR] {DependabotRelativePath}: {parseError}");
+            }
+
+            return parseErrors.Count;
+        }
+
         int errors = 0;
-        errors += ValidateNugetDependabotBlock(relativePath, FindDependabotBlock(blocks, "nuget", "/"));
-        errors += ValidateNpmDependabotBlock(relativePath, FindDependabotBlock(blocks, "npm", "/"));
-        errors += ValidateDockerDotnetDependabotBlock(relativePath, FindDependabotBlock(blocks, "docker", "/docker"));
-        errors += ValidateDockerSceDependabotBlock(relativePath, FindDependabotBlock(blocks, "docker", "/docker/sce/python"), "/docker/sce/python", "python", ScePythonIgnoredUpdateTypes);
-        errors += ValidateDockerSceDependabotBlock(relativePath, FindDependabotBlock(blocks, "docker", "/docker/sce/r"), "/docker/sce/r", "r-base", SceRIgnoredUpdateTypes);
-        errors += ValidateDockerComposeDependabotBlock(relativePath, FindDependabotBlock(blocks, "docker-compose", "/docker"));
+        if (!string.Equals(parsed.Version, "2", StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[ERROR] {DependabotRelativePath}: Top-level 'version' must be 2.");
+            errors++;
+        }
+
+        if (parsed.Updates.Count == 0)
+        {
+            Console.WriteLine($"[ERROR] {DependabotRelativePath}: 'updates' must define at least one package-ecosystem entry.");
+            return errors + 1;
+        }
+
+        var seenTargets = new HashSet<string>(StringComparer.Ordinal);
+        for (int u = 0; u < parsed.Updates.Count; u++)
+        {
+            errors += ValidateDependabotUpdateEntry(parsed.Updates[u], u, seenTargets);
+        }
+
+        errors += ValidateNugetDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "nuget", "/"));
+        errors += ValidateNpmDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "npm", "/"));
+        errors += ValidateDockerDotnetDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker", "/docker"));
+        errors += ValidateDockerSceDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/python"), "/docker/sce/python", "python", ScePythonIgnoredUpdateTypes);
+        errors += ValidateDockerSceDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/r"), "/docker/sce/r", "r-base", SceRIgnoredUpdateTypes);
+        errors += ValidateDockerComposeDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker-compose", "/docker"));
+
         return errors;
     }
 
-    private static DependabotUpdateBlock? FindDependabotBlock(
-        IReadOnlyList<DependabotUpdateBlock> blocks,
+    private static int ValidateDependabotUpdateEntry(
+        DependabotUpdateEntry update,
+        int updateIndex,
+        HashSet<string> seenTargets)
+    {
+        int errors = 0;
+        if (string.IsNullOrWhiteSpace(update.PackageEcosystem))
+        {
+            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}' is missing a non-empty 'package-ecosystem'.");
+            errors++;
+        }
+
+        var directories = ResolveUpdateDirectories(update);
+        if (directories.Count == 0)
+        {
+            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}' must specify 'directory' or 'directories'.");
+            errors++;
+        }
+
+        string targetBranch = update.TargetBranch ?? string.Empty;
+        foreach (string dir in directories)
+        {
+            string targetKey = $"{update.PackageEcosystem}\0{dir}\0{targetBranch}";
+            if (!seenTargets.Add(targetKey))
+            {
+                Console.WriteLine($"[DEPENDABOT VIOLATION] {DependabotRelativePath}: '#/updates/{updateIndex}' duplicates package-ecosystem '{update.PackageEcosystem}' and directory '{dir}'.");
+                errors++;
+            }
+        }
+
+        var seenVersionIgnores = new HashSet<string>(StringComparer.Ordinal);
+        var seenUpdateTypeIgnores = new HashSet<string>(StringComparer.Ordinal);
+        var seenBareIgnores = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < update.Ignores.Count; i++)
+        {
+            errors += ValidateDependabotIgnoreEntry(
+                update.Ignores[i],
+                updateIndex,
+                i,
+                seenVersionIgnores,
+                seenUpdateTypeIgnores,
+                seenBareIgnores);
+        }
+
+        return errors;
+    }
+
+    private static List<string> ResolveUpdateDirectories(DependabotUpdateEntry update)
+    {
+        if (update.Directories.Count > 0)
+        {
+            return update.Directories;
+        }
+
+        if (!string.IsNullOrWhiteSpace(update.Directory))
+        {
+            return [update.Directory!];
+        }
+
+        return [];
+    }
+
+    private static int ValidateDependabotIgnoreEntry(
+        DependabotIgnoreEntry ignore,
+        int updateIndex,
+        int ignoreIndex,
+        HashSet<string> seenVersionIgnores,
+        HashSet<string> seenUpdateTypeIgnores,
+        HashSet<string> seenBareIgnores)
+    {
+        if (string.IsNullOrWhiteSpace(ignore.DependencyName))
+        {
+            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}/ignore/{ignoreIndex}' is missing a non-empty 'dependency-name'.");
+            return 1;
+        }
+
+        int errors = 0;
+        string depName = ignore.DependencyName!;
+
+        if (ignore.HasVersions)
+        {
+            errors += ValidateIgnoreListUniqueness(
+                depName,
+                ignore.Versions,
+                propertyName: "versions",
+                updateIndex,
+                ignoreIndex,
+                seenVersionIgnores);
+        }
+
+        if (ignore.HasUpdateTypes)
+        {
+            errors += ValidateIgnoreListUniqueness(
+                depName,
+                ignore.UpdateTypes,
+                propertyName: "update-types",
+                updateIndex,
+                ignoreIndex,
+                seenUpdateTypeIgnores);
+        }
+
+        if (!ignore.HasVersions && !ignore.HasUpdateTypes && !seenBareIgnores.Add(depName))
+        {
+            Console.WriteLine(
+                $"[DEPENDABOT VIOLATION] {DependabotRelativePath}: The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/dependency-name' includes a duplicate ignore for '{depName}'.");
+            errors++;
+        }
+
+        return errors;
+    }
+
+    private static int ValidateIgnoreListUniqueness(
+        string depName,
+        List<string> values,
+        string propertyName,
+        int updateIndex,
+        int ignoreIndex,
+        HashSet<string> seenCombinations)
+    {
+        if (values.Count == 0)
+        {
+            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' must not be empty.");
+            return 1;
+        }
+
+        int errors = 0;
+        var uniqueItems = new HashSet<string>(values, StringComparer.Ordinal);
+        if (uniqueItems.Count != values.Count)
+        {
+            Console.WriteLine(
+                $"[DEPENDABOT VIOLATION] {DependabotRelativePath}: The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' contains duplicate values.");
+            errors++;
+        }
+
+        bool reportedOverlap = false;
+        foreach (string item in uniqueItems)
+        {
+            string itemKey = $"{depName}\0{item}";
+            if (!seenCombinations.Add(itemKey) && !reportedOverlap)
+            {
+                Console.WriteLine(
+                    $"[DEPENDABOT VIOLATION] {DependabotRelativePath}: The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and '{propertyName}'.");
+                errors++;
+                reportedOverlap = true;
+            }
+        }
+
+        return errors;
+    }
+
+    private static DependabotUpdateEntry? FindDependabotBlock(
+        IReadOnlyList<DependabotUpdateEntry> blocks,
         string ecosystem,
         string directory) =>
         blocks.FirstOrDefault(b =>
-            string.Equals(b.Ecosystem, ecosystem, StringComparison.Ordinal) &&
-            string.Equals(b.Directory, directory, StringComparison.Ordinal));
+            string.Equals(b.PackageEcosystem, ecosystem, StringComparison.Ordinal) &&
+            ResolveUpdateDirectories(b).Contains(directory, StringComparer.Ordinal));
 
-    private static int ValidateNugetDependabotBlock(string relativePath, DependabotUpdateBlock? block)
+    private static int ValidateNugetDependabotBlock(string relativePath, DependabotUpdateEntry? block)
     {
         if (block is null)
         {
@@ -1161,8 +1352,8 @@ public static partial class DependencyValidatorService
         {
             if (!block.Ignores.Any(i =>
                     string.Equals(i.DependencyName, dep, StringComparison.Ordinal) &&
-                    i.UpdateTypes.Count == 0 &&
-                    i.Versions.Contains(range)))
+                    !i.HasUpdateTypes &&
+                    i.Versions.Contains(range, StringComparer.Ordinal)))
             {
                 Console.WriteLine(
                     $"[DEPENDENCY VIOLATION] {relativePath} (nuget '/') must ignore versions ['{range}'] for '{dep}'.");
@@ -1173,7 +1364,7 @@ public static partial class DependencyValidatorService
         return errors;
     }
 
-    private static int ValidateNpmDependabotBlock(string relativePath, DependabotUpdateBlock? block)
+    private static int ValidateNpmDependabotBlock(string relativePath, DependabotUpdateEntry? block)
     {
         if (block is null)
         {
@@ -1191,6 +1382,12 @@ public static partial class DependencyValidatorService
             }
         }
 
+        if (block.Groups.TryGetValue("vue-vite", out var vueViteGroup) && !vueViteGroup.Patterns.Contains("vue-tsc"))
+        {
+            Console.WriteLine($"[DEPENDENCY VIOLATION] {relativePath} (npm group 'vue-vite') must include pattern 'vue-tsc'.");
+            errors++;
+        }
+
         if (!HasIgnoreUpdateType(block, "@types/node", "version-update:semver-major"))
         {
             Console.WriteLine($"[DEPENDENCY VIOLATION] {relativePath} (npm '/') must ignore 'version-update:semver-major' for '@types/node'.");
@@ -1200,7 +1397,7 @@ public static partial class DependencyValidatorService
         return errors;
     }
 
-    private static int ValidateDockerDotnetDependabotBlock(string relativePath, DependabotUpdateBlock? block)
+    private static int ValidateDockerDotnetDependabotBlock(string relativePath, DependabotUpdateEntry? block)
     {
         if (block is null)
         {
@@ -1237,7 +1434,7 @@ public static partial class DependencyValidatorService
 
     private static int ValidateDockerSceDependabotBlock(
         string relativePath,
-        DependabotUpdateBlock? block,
+        DependabotUpdateEntry? block,
         string directory,
         string dependencyName,
         string[] requiredUpdateTypes)
@@ -1262,7 +1459,7 @@ public static partial class DependencyValidatorService
         return errors;
     }
 
-    private static int ValidateDockerComposeDependabotBlock(string relativePath, DependabotUpdateBlock? block)
+    private static int ValidateDockerComposeDependabotBlock(string relativePath, DependabotUpdateEntry? block)
     {
         if (block is null)
         {
@@ -1272,8 +1469,8 @@ public static partial class DependencyValidatorService
 
         bool blocksAllPostgresUpdates = block.Ignores.Any(i =>
             string.Equals(i.DependencyName, "postgres", StringComparison.Ordinal) &&
-            i.UpdateTypes.Count == 0 &&
-            (i.Versions.Count == 0 || i.Versions.Contains(">= 0")));
+            !i.HasUpdateTypes &&
+            (i.Versions.Count == 0 || i.Versions.Contains(">= 0", StringComparer.Ordinal)));
 
         if (!blocksAllPostgresUpdates)
         {
@@ -1285,336 +1482,755 @@ public static partial class DependencyValidatorService
         return 0;
     }
 
-    private static bool HasIgnoreUpdateType(DependabotUpdateBlock block, string dependencyName, string updateType) =>
+    private static bool HasIgnoreUpdateType(DependabotUpdateEntry block, string dependencyName, string updateType) =>
         block.Ignores.Any(i =>
             string.Equals(i.DependencyName, dependencyName, StringComparison.Ordinal) &&
-            i.Versions.Count == 0 &&
-            i.UpdateTypes.Contains(updateType));
+            !i.HasVersions &&
+            i.UpdateTypes.Contains(updateType, StringComparer.Ordinal));
 
-    private static List<DependabotUpdateBlock> ParseDependabotUpdates(string yaml)
+    private static ParsedDependabotConfig ParseDependabotConfig(string content, List<string> parseErrors)
     {
-        var blocks = new List<DependabotUpdateBlock>();
-        string[] lines = GitIndexReader.SplitLines(yaml);
-        bool inUpdates = false;
-        DependabotUpdateBlock? currentBlock = null;
-        string currentSection = string.Empty;
-        DependabotGroup? currentGroup = null;
-        string currentGroupList = string.Empty;
-        DependabotIgnore? currentIgnore = null;
-        HashSet<string>? activeFlowTarget = null;
-
-        for (int index = 0; index < lines.Length; index++)
+        string[] rawLines = content.ReplaceLineEndings("\n").Split('\n');
+        string[] lines = new string[rawLines.Length];
+        for (int i = 0; i < rawLines.Length; i++)
         {
-            string rawLine = lines[index];
-            string uncommented = StripYamlComment(rawLine);
-            string trimmed = uncommented.Trim();
-            if (trimmed.Length == 0)
+            lines[i] = StripYamlLineComment(rawLines[i]);
+        }
+
+        var config = new ParsedDependabotConfig();
+        bool inUpdates = false;
+        int updatesIndent = -1;
+        int updateItemIndent = -1;
+        DependabotUpdateEntry? currentUpdate = null;
+
+        bool inGroups = false;
+        int groupsKeyIndent = -1;
+        int groupItemIndent = -1;
+        DependabotGroup? currentGroup = null;
+
+        bool inIgnore = false;
+        int ignoreKeyIndent = -1;
+        int ignoreItemIndent = -1;
+        DependabotIgnoreEntry? currentIgnore = null;
+
+        int lineIdx = 0;
+        while (lineIdx < lines.Length)
+        {
+            string line = lines[lineIdx];
+            if (string.IsNullOrWhiteSpace(line))
             {
+                lineIdx++;
                 continue;
             }
 
-            if (activeFlowTarget is not null)
+            int indent = CountLeadingSpaces(line);
+            string trimmed = line[indent..].TrimEnd();
+            if (trimmed is "---" or "...")
             {
-                if (ConsumeFlowItems(trimmed, activeFlowTarget))
-                {
-                    activeFlowTarget = null;
-                }
-
+                lineIdx++;
                 continue;
             }
 
-            int indent = CountLeadingSpaces(uncommented);
             if (indent == 0)
             {
-                inUpdates = string.Equals(trimmed, "updates:", StringComparison.Ordinal);
-                currentBlock = null;
-                continue;
-            }
-
-            if (!inUpdates)
-            {
-                continue;
-            }
-
-            if (indent == 2 && trimmed.StartsWith("- ", StringComparison.Ordinal))
-            {
-                currentBlock = new DependabotUpdateBlock();
-                blocks.Add(currentBlock);
-                currentSection = string.Empty;
+                inUpdates = false;
+                inGroups = false;
+                inIgnore = false;
+                currentUpdate = null;
                 currentGroup = null;
-                currentGroupList = string.Empty;
                 currentIgnore = null;
-                ApplyBlockProperty(currentBlock, trimmed[2..].Trim());
+
+                if (TrySplitMapping(trimmed, out string rootKey, out string rootVal))
+                {
+                    if (string.Equals(rootKey, "version", StringComparison.Ordinal))
+                    {
+                        config.Version = UnquoteYamlScalar(rootVal);
+                    }
+                    else if (string.Equals(rootKey, "updates", StringComparison.Ordinal))
+                    {
+                        inUpdates = true;
+                        updatesIndent = 0;
+                        updateItemIndent = -1;
+                    }
+                }
+
+                lineIdx++;
                 continue;
             }
 
-            if (currentBlock is null)
+            if (!inUpdates || indent <= updatesIndent)
             {
+                lineIdx++;
                 continue;
             }
 
-            activeFlowTarget = ParseDependabotIndentedLine(
-                currentBlock,
-                indent,
-                trimmed,
-                ref currentSection,
-                ref currentGroup,
-                ref currentGroupList,
-                ref currentIgnore);
+            if (IsSequenceItem(trimmed, out string afterUpdateDash) &&
+                (updateItemIndent == -1 || indent == updateItemIndent))
+            {
+                updateItemIndent = indent;
+                currentUpdate = new DependabotUpdateEntry();
+                config.Updates.Add(currentUpdate);
+                inGroups = false;
+                groupsKeyIndent = -1;
+                groupItemIndent = -1;
+                currentGroup = null;
+                inIgnore = false;
+                ignoreKeyIndent = -1;
+                ignoreItemIndent = -1;
+                currentIgnore = null;
+
+                if (afterUpdateDash.Length > 0)
+                {
+                    int virtualIndent = indent + (trimmed.Length - afterUpdateDash.Length);
+                    ApplyUpdatePropertyLine(
+                        lines,
+                        ref lineIdx,
+                        virtualIndent,
+                        afterUpdateDash,
+                        currentUpdate,
+                        ref inGroups,
+                        ref groupsKeyIndent,
+                        ref groupItemIndent,
+                        ref currentGroup,
+                        ref inIgnore,
+                        ref ignoreKeyIndent,
+                        ref ignoreItemIndent,
+                        parseErrors);
+                }
+
+                lineIdx++;
+                continue;
+            }
+
+            if (currentUpdate is null)
+            {
+                lineIdx++;
+                continue;
+            }
+
+            if (inGroups && indent > groupsKeyIndent)
+            {
+                ApplyGroupSubsectionLine(
+                    lines,
+                    ref lineIdx,
+                    indent,
+                    trimmed,
+                    currentUpdate,
+                    ref groupItemIndent,
+                    ref currentGroup,
+                    parseErrors);
+                lineIdx++;
+                continue;
+            }
+
+            if (inGroups && indent <= groupsKeyIndent)
+            {
+                inGroups = false;
+                currentGroup = null;
+            }
+
+            if (inIgnore && indent > ignoreKeyIndent)
+            {
+                if (IsSequenceItem(trimmed, out string afterIgnoreDash) &&
+                    (ignoreItemIndent == -1 || indent == ignoreItemIndent))
+                {
+                    ignoreItemIndent = indent;
+                    currentIgnore = new DependabotIgnoreEntry();
+                    currentUpdate.Ignores.Add(currentIgnore);
+
+                    if (afterIgnoreDash.Length > 0)
+                    {
+                        int virtualIndent = indent + (trimmed.Length - afterIgnoreDash.Length);
+                        ApplyIgnorePropertyLine(lines, ref lineIdx, virtualIndent, afterIgnoreDash, currentIgnore, parseErrors);
+                    }
+
+                    lineIdx++;
+                    continue;
+                }
+
+                if (currentIgnore is not null && (ignoreItemIndent == -1 || indent > ignoreItemIndent))
+                {
+                    ApplyIgnorePropertyLine(lines, ref lineIdx, indent, trimmed, currentIgnore, parseErrors);
+                }
+
+                lineIdx++;
+                continue;
+            }
+
+            if (inIgnore && indent <= ignoreKeyIndent)
+            {
+                inIgnore = false;
+                currentIgnore = null;
+            }
+
+            if (indent > updateItemIndent)
+            {
+                ApplyUpdatePropertyLine(
+                    lines,
+                    ref lineIdx,
+                    indent,
+                    trimmed,
+                    currentUpdate,
+                    ref inGroups,
+                    ref groupsKeyIndent,
+                    ref groupItemIndent,
+                    ref currentGroup,
+                    ref inIgnore,
+                    ref ignoreKeyIndent,
+                    ref ignoreItemIndent,
+                    parseErrors);
+            }
+
+            lineIdx++;
         }
 
-        return blocks;
+        return config;
     }
 
-    private static HashSet<string>? ParseDependabotIndentedLine(
-        DependabotUpdateBlock currentBlock,
+    private static void ApplyGroupSubsectionLine(
+        string[] lines,
+        ref int lineIdx,
         int indent,
-        string trimmed,
-        ref string currentSection,
+        string trimmedLine,
+        DependabotUpdateEntry update,
+        ref int groupItemIndent,
         ref DependabotGroup? currentGroup,
-        ref string currentGroupList,
-        ref DependabotIgnore? currentIgnore)
+        List<string> parseErrors)
     {
-        if (indent == 4)
+        if (!TrySplitMapping(trimmedLine, out string key, out string val))
         {
-            currentGroup = null;
-            currentGroupList = string.Empty;
-            currentIgnore = null;
-            if (string.Equals(trimmed, "groups:", StringComparison.Ordinal))
-            {
-                currentSection = "groups";
-            }
-            else if (string.Equals(trimmed, "ignore:", StringComparison.Ordinal))
-            {
-                currentSection = "ignore";
-            }
-            else
-            {
-                currentSection = string.Empty;
-                ApplyBlockProperty(currentBlock, trimmed);
-            }
-
-            return null;
+            return;
         }
 
-        if (string.Equals(currentSection, "groups", StringComparison.Ordinal))
+        if (groupItemIndent == -1 || indent == groupItemIndent)
         {
-            return ParseDependabotGroupLine(currentBlock, indent, trimmed, ref currentGroup, ref currentGroupList);
-        }
-
-        if (string.Equals(currentSection, "ignore", StringComparison.Ordinal))
-        {
-            return ParseDependabotIgnoreLine(currentBlock, indent, trimmed, ref currentIgnore);
-        }
-
-        return null;
-    }
-
-    private static HashSet<string>? ParseDependabotGroupLine(
-        DependabotUpdateBlock block,
-        int indent,
-        string trimmed,
-        ref DependabotGroup? currentGroup,
-        ref string currentGroupList)
-    {
-        if (indent == 6 && trimmed.EndsWith(':'))
-        {
-            string groupName = UnquoteYamlScalar(trimmed[..^1]);
-            if (!block.Groups.TryGetValue(groupName, out currentGroup))
+            groupItemIndent = indent;
+            if (!update.Groups.TryGetValue(key, out currentGroup))
             {
                 currentGroup = new DependabotGroup();
-                block.Groups[groupName] = currentGroup;
+                update.Groups[key] = currentGroup;
             }
 
-            currentGroupList = string.Empty;
-            return null;
+            return;
         }
 
-        if (currentGroup is null)
+        if (currentGroup is null || indent <= groupItemIndent)
         {
-            return null;
+            return;
         }
 
-        if (indent == 8 && TrySplitKeyValue(trimmed, out string key, out string rest))
+        switch (key)
         {
-            currentGroupList = key;
-            HashSet<string>? target = key switch
-            {
-                "patterns" => currentGroup.Patterns,
-                "exclude-patterns" => currentGroup.ExcludePatterns,
-                _ => null,
-            };
-            return ParseInlineOrPendingList(rest, target);
-        }
+            case "patterns":
+                foreach (string item in ReadStringListValue(lines, ref lineIdx, indent, val, parseErrors))
+                {
+                    currentGroup.Patterns.Add(item);
+                }
 
-        if (indent >= 8 && trimmed.StartsWith("- ", StringComparison.Ordinal))
-        {
-            string item = UnquoteYamlScalar(trimmed[2..]);
-            if (string.Equals(currentGroupList, "patterns", StringComparison.Ordinal))
-            {
-                currentGroup.Patterns.Add(item);
-            }
-            else if (string.Equals(currentGroupList, "exclude-patterns", StringComparison.Ordinal))
-            {
-                currentGroup.ExcludePatterns.Add(item);
-            }
-        }
+                break;
+            case "exclude-patterns":
+                foreach (string item in ReadStringListValue(lines, ref lineIdx, indent, val, parseErrors))
+                {
+                    currentGroup.ExcludePatterns.Add(item);
+                }
 
-        return null;
+                break;
+        }
     }
 
-    private static HashSet<string>? ParseDependabotIgnoreLine(
-        DependabotUpdateBlock block,
-        int indent,
-        string trimmed,
-        ref DependabotIgnore? currentIgnore)
+    private static void ApplyUpdatePropertyLine(
+        string[] lines,
+        ref int lineIdx,
+        int propIndent,
+        string trimmedLine,
+        DependabotUpdateEntry update,
+        ref bool inGroups,
+        ref int groupsKeyIndent,
+        ref int groupItemIndent,
+        ref DependabotGroup? currentGroup,
+        ref bool inIgnore,
+        ref int ignoreKeyIndent,
+        ref int ignoreItemIndent,
+        List<string> parseErrors)
     {
-        if (indent == 6 && trimmed.StartsWith("- ", StringComparison.Ordinal))
+        if (!TrySplitMapping(trimmedLine, out string key, out string val))
         {
-            currentIgnore = new DependabotIgnore();
-            block.Ignores.Add(currentIgnore);
-            return ApplyIgnoreProperty(currentIgnore, trimmed[2..].Trim(), out string activeListKey)
-                ? ResolveIgnoreTargetSet(currentIgnore, activeListKey)
-                : null;
+            return;
         }
 
-        if (currentIgnore is null)
+        switch (key)
         {
-            return null;
+            case "package-ecosystem":
+                update.PackageEcosystem = ReadScalarValue(lines, ref lineIdx, propIndent, val);
+                break;
+            case "directory":
+                update.Directory = ReadScalarValue(lines, ref lineIdx, propIndent, val);
+                break;
+            case "directories":
+                update.Directories.AddRange(ReadStringListValue(lines, ref lineIdx, propIndent, val, parseErrors));
+                break;
+            case "target-branch":
+                update.TargetBranch = ReadScalarValue(lines, ref lineIdx, propIndent, val);
+                break;
+            case "groups":
+                inGroups = true;
+                groupsKeyIndent = propIndent;
+                groupItemIndent = -1;
+                currentGroup = null;
+                inIgnore = false;
+                break;
+            case "ignore":
+                inIgnore = true;
+                ignoreKeyIndent = propIndent;
+                ignoreItemIndent = -1;
+                inGroups = false;
+                currentGroup = null;
+                break;
         }
-
-        if (indent >= 8 && trimmed.StartsWith('['))
-        {
-            HashSet<string> fallbackTarget = currentIgnore.UpdateTypes;
-            return ConsumeFlowItems(trimmed, fallbackTarget) ? null : fallbackTarget;
-        }
-
-        if (indent == 8)
-        {
-            return ApplyIgnoreProperty(currentIgnore, trimmed, out string activeListKey)
-                ? ResolveIgnoreTargetSet(currentIgnore, activeListKey)
-                : null;
-        }
-
-        return null;
     }
 
-    private static bool ApplyIgnoreProperty(DependabotIgnore ignore, string propLine, out string pendingFlowKey)
+    private static void ApplyIgnorePropertyLine(
+        string[] lines,
+        ref int lineIdx,
+        int propIndent,
+        string trimmedLine,
+        DependabotIgnoreEntry ignore,
+        List<string> parseErrors)
     {
-        pendingFlowKey = string.Empty;
-        if (!TrySplitKeyValue(propLine, out string key, out string rest))
+        if (!TrySplitMapping(trimmedLine, out string key, out string val))
         {
-            return false;
+            return;
         }
 
-        if (string.Equals(key, "dependency-name", StringComparison.Ordinal))
+        switch (key)
         {
-            ignore.DependencyName = UnquoteYamlScalar(rest);
-            return false;
+            case "dependency-name":
+                ignore.DependencyName = ReadScalarValue(lines, ref lineIdx, propIndent, val);
+                break;
+            case "versions":
+                ignore.HasVersions = true;
+                ignore.Versions.AddRange(ReadStringListValue(lines, ref lineIdx, propIndent, val, parseErrors));
+                break;
+            case "update-types":
+                ignore.HasUpdateTypes = true;
+                ignore.UpdateTypes.AddRange(ReadStringListValue(lines, ref lineIdx, propIndent, val, parseErrors));
+                break;
+        }
+    }
+
+    private static string ReadScalarValue(string[] lines, ref int lineIdx, int propIndent, string inlineVal)
+    {
+        if (!string.IsNullOrWhiteSpace(inlineVal))
+        {
+            return UnquoteYamlScalar(inlineVal);
         }
 
-        HashSet<string>? target = ResolveIgnoreTargetSet(ignore, key);
-        if (target is null)
+        int next = PeekNextContentLine(lines, lineIdx + 1);
+        if (next >= 0)
         {
-            return false;
+            int nextIndent = CountLeadingSpaces(lines[next]);
+            string nextTrimmed = lines[next][nextIndent..].Trim();
+            if (nextIndent > propIndent && !nextTrimmed.StartsWith('-') && !TrySplitMapping(nextTrimmed, out _, out _))
+            {
+                lineIdx = next;
+                return UnquoteYamlScalar(nextTrimmed);
+            }
         }
 
-        if (rest.Length == 0)
+        return string.Empty;
+    }
+
+    private static List<string> ReadStringListValue(
+        string[] lines,
+        ref int lineIdx,
+        int propIndent,
+        string inlineVal,
+        List<string> parseErrors)
+    {
+        string trimmedInline = inlineVal.Trim();
+        if (trimmedInline.StartsWith('['))
         {
-            pendingFlowKey = key;
+            return ParseFlowStringArray(lines, ref lineIdx, trimmedInline, parseErrors);
+        }
+
+        if (trimmedInline.Length > 0)
+        {
+            parseErrors.Add($"Expected YAML sequence on line {lineIdx + 1}, found scalar '{trimmedInline}'.");
+            return [];
+        }
+
+        int next = PeekNextContentLine(lines, lineIdx + 1);
+        if (next < 0)
+        {
+            return [];
+        }
+
+        int nextIndent = CountLeadingSpaces(lines[next]);
+        if (nextIndent <= propIndent)
+        {
+            return [];
+        }
+
+        string nextTrimmed = lines[next][nextIndent..].Trim();
+        if (nextTrimmed.StartsWith('['))
+        {
+            lineIdx = next;
+            return ParseFlowStringArray(lines, ref lineIdx, nextTrimmed, parseErrors);
+        }
+
+        var items = new List<string>();
+        int seqIndent = -1;
+        while (true)
+        {
+            int peek = PeekNextContentLine(lines, lineIdx + 1);
+            if (peek < 0)
+            {
+                break;
+            }
+
+            int peekIndent = CountLeadingSpaces(lines[peek]);
+            if (peekIndent <= propIndent)
+            {
+                break;
+            }
+
+            string peekTrimmed = lines[peek][peekIndent..].TrimEnd();
+            if (!IsSequenceItem(peekTrimmed, out string itemText))
+            {
+                break;
+            }
+
+            if (seqIndent == -1)
+            {
+                seqIndent = peekIndent;
+            }
+            else if (peekIndent != seqIndent)
+            {
+                break;
+            }
+
+            lineIdx = peek;
+            items.Add(UnquoteYamlScalar(itemText));
+        }
+
+        return items;
+    }
+
+    private static List<string> ParseFlowStringArray(
+        string[] lines,
+        ref int lineIdx,
+        string initialSegment,
+        List<string> parseErrors)
+    {
+        var combined = new StringBuilder(initialSegment);
+        while (!HasBalancedClosingBracket(combined.ToString()))
+        {
+            if (lineIdx + 1 >= lines.Length)
+            {
+                parseErrors.Add("Unclosed flow sequence '[' in dependabot configuration.");
+                return [];
+            }
+
+            lineIdx++;
+            combined.Append(' ').Append(lines[lineIdx].Trim());
+        }
+
+        string full = combined.ToString().Trim();
+        int closeIdx = FindMatchingCloseBracket(full);
+        if (closeIdx < 0)
+        {
+            parseErrors.Add("Malformed flow sequence '[' in dependabot configuration.");
+            return [];
+        }
+
+        string inner = full[1..closeIdx];
+        var result = new List<string>();
+        var current = new StringBuilder();
+        char quote = '\0';
+
+        int i = 0;
+        while (i < inner.Length)
+        {
+            char c = inner[i];
+            if (quote != '\0')
+            {
+                if (quote == '"' && c == '\\' && i + 1 < inner.Length)
+                {
+                    current.Append(c).Append(inner[i + 1]);
+                    i += 2;
+                    continue;
+                }
+
+                if (quote == '\'' && c == '\'' && i + 1 < inner.Length && inner[i + 1] == '\'')
+                {
+                    current.Append("''");
+                    i += 2;
+                    continue;
+                }
+
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+
+                current.Append(c);
+                i++;
+                continue;
+            }
+
+            if (c is '"' or '\'')
+            {
+                quote = c;
+                current.Append(c);
+                i++;
+                continue;
+            }
+
+            if (c == ',')
+            {
+                string part = current.ToString().Trim();
+                if (part.Length > 0)
+                {
+                    result.Add(UnquoteYamlScalar(part));
+                }
+
+                current.Clear();
+                i++;
+                continue;
+            }
+
+            current.Append(c);
+            i++;
+        }
+
+        string tail = current.ToString().Trim();
+        if (tail.Length > 0)
+        {
+            result.Add(UnquoteYamlScalar(tail));
+        }
+
+        return result;
+    }
+
+    private static bool HasBalancedClosingBracket(string text) => FindMatchingCloseBracket(text) >= 0;
+
+    private static int FindMatchingCloseBracket(string text)
+    {
+        int depth = 0;
+        char quote = '\0';
+        int i = 0;
+        while (i < text.Length)
+        {
+            char c = text[i];
+            if (quote != '\0')
+            {
+                if (quote == '"' && c == '\\' && i + 1 < text.Length)
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (quote == '\'' && c == '\'' && i + 1 < text.Length && text[i + 1] == '\'')
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+
+                i++;
+                continue;
+            }
+
+            if (c is '"' or '\'')
+            {
+                quote = c;
+            }
+            else if (c == '[')
+            {
+                depth++;
+            }
+            else if (c == ']')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return i;
+                }
+            }
+
+            i++;
+        }
+
+        return -1;
+    }
+
+    private static int PeekNextContentLine(string[] lines, int startIdx)
+    {
+        for (int i = startIdx; i < lines.Length; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(lines[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool IsSequenceItem(string trimmed, out string remainder)
+    {
+        if (string.Equals(trimmed, "-", StringComparison.Ordinal))
+        {
+            remainder = string.Empty;
             return true;
         }
 
-        if (rest.StartsWith('[') && !ConsumeFlowItems(rest, target))
+        if (trimmed.Length > 1 && trimmed[0] == '-' && (trimmed[1] == ' ' || trimmed[1] == '\t'))
         {
-            pendingFlowKey = key;
+            remainder = trimmed[1..].TrimStart(' ', '\t');
             return true;
+        }
+
+        remainder = string.Empty;
+        return false;
+    }
+
+    private static bool TrySplitMapping(string segment, out string key, out string value)
+    {
+        key = string.Empty;
+        value = string.Empty;
+        char quote = '\0';
+        int flowDepth = 0;
+
+        int i = 0;
+        while (i < segment.Length)
+        {
+            char c = segment[i];
+            if (quote != '\0')
+            {
+                if (quote == '"' && c == '\\' && i + 1 < segment.Length)
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (quote == '\'' && c == '\'' && i + 1 < segment.Length && segment[i + 1] == '\'')
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+
+                i++;
+                continue;
+            }
+
+            if (c is '"' or '\'')
+            {
+                quote = c;
+            }
+            else if (c is '[' or '{')
+            {
+                flowDepth++;
+            }
+            else if (c is ']' or '}' && flowDepth > 0)
+            {
+                flowDepth--;
+            }
+            else if (flowDepth == 0 && c == ':' && (i + 1 == segment.Length || segment[i + 1] is ' ' or '\t'))
+            {
+                key = UnquoteYamlScalar(segment[..i].Trim());
+                value = segment[(i + 1)..].Trim();
+                return key.Length > 0;
+            }
+
+            i++;
         }
 
         return false;
     }
 
-    private static HashSet<string>? ResolveIgnoreTargetSet(DependabotIgnore ignore, string key) =>
-        key switch
-        {
-            "update-types" => ignore.UpdateTypes,
-            "versions" => ignore.Versions,
-            _ => null,
-        };
-
-    private static HashSet<string>? ParseInlineOrPendingList(string rest, HashSet<string>? target)
+    private static string StripYamlLineComment(string line)
     {
-        if (target is null || rest.Length == 0)
+        char quote = '\0';
+        int i = 0;
+        while (i < line.Length)
         {
-            return null;
-        }
-
-        if (rest.StartsWith('[') && !ConsumeFlowItems(rest, target))
-        {
-            return target;
-        }
-
-        return null;
-    }
-
-    private static bool ConsumeFlowItems(string segment, HashSet<string> target)
-    {
-        string working = segment.Trim();
-        if (working.StartsWith('['))
-        {
-            working = working[1..];
-        }
-
-        int closeIdx = working.IndexOf(']');
-        bool closed = closeIdx >= 0;
-        if (closed)
-        {
-            working = working[..closeIdx];
-        }
-
-        foreach (string rawItem in working.Split(','))
-        {
-            string cleaned = UnquoteYamlScalar(rawItem);
-            if (cleaned.Length > 0)
+            char c = line[i];
+            if (quote != '\0')
             {
-                target.Add(cleaned);
+                if (quote == '"' && c == '\\' && i + 1 < line.Length)
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (quote == '\'' && c == '\'' && i + 1 < line.Length && line[i + 1] == '\'')
+                {
+                    i += 2;
+                    continue;
+                }
+
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+
+                i++;
+                continue;
             }
+
+            if (c is '"' or '\'')
+            {
+                quote = c;
+                i++;
+                continue;
+            }
+
+            if (c == '#' && (i == 0 || line[i - 1] is ' ' or '\t'))
+            {
+                return line[..i].TrimEnd();
+            }
+
+            i++;
         }
 
-        return closed;
+        return line.TrimEnd();
     }
 
-    private static void ApplyBlockProperty(DependabotUpdateBlock block, string propLine)
+    private static string UnquoteYamlScalar(string raw)
     {
-        if (!TrySplitKeyValue(propLine, out string key, out string rest))
+        string trimmed = raw.Trim();
+        if (trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"')
         {
-            return;
+            return trimmed[1..^1].Replace("\\\"", "\"", StringComparison.Ordinal).Replace("\\\\", "\\", StringComparison.Ordinal);
         }
 
-        string value = UnquoteYamlScalar(rest);
-        if (string.Equals(key, "package-ecosystem", StringComparison.Ordinal))
+        if (trimmed.Length >= 2 && trimmed[0] == '\'' && trimmed[^1] == '\'')
         {
-            block.Ecosystem = value;
+            return trimmed[1..^1].Replace("''", "'", StringComparison.Ordinal);
         }
-        else if (string.Equals(key, "directory", StringComparison.Ordinal))
-        {
-            block.Directory = value;
-        }
+
+        return trimmed;
     }
 
-    private static bool TrySplitKeyValue(string text, out string key, out string rest)
+    private static int CountLeadingSpaces(string line)
     {
-        int colon = text.IndexOf(':');
-        if (colon <= 0)
+        int count = 0;
+        while (count < line.Length && line[count] == ' ')
         {
-            key = string.Empty;
-            rest = string.Empty;
-            return false;
+            count++;
         }
 
-        key = UnquoteYamlScalar(text[..colon]);
-        rest = text[(colon + 1)..].Trim();
-        return true;
+        return count;
     }
 
     private static int ValidatePostgresDigestParity(RepoSnapshot snapshot, bool hasSolution)
@@ -1858,54 +2474,6 @@ public static partial class DependencyValidatorService
         return span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF
             ? span[3..]
             : span;
-    }
-
-    private static int CountLeadingSpaces(string line)
-    {
-        int count = 0;
-        while (count < line.Length && line[count] == ' ')
-        {
-            count++;
-        }
-
-        return count;
-    }
-
-    private static string StripYamlComment(string line)
-    {
-        bool inSingle = false;
-        bool inDouble = false;
-        for (int i = 0; i < line.Length; i++)
-        {
-            char c = line[i];
-            if (c == '\'' && !inDouble)
-            {
-                inSingle = !inSingle;
-            }
-            else if (c == '"' && !inSingle && (i == 0 || line[i - 1] != '\\'))
-            {
-                inDouble = !inDouble;
-            }
-            else if (c == '#' && !inSingle && !inDouble && (i == 0 || char.IsWhiteSpace(line[i - 1])))
-            {
-                return line[..i];
-            }
-        }
-
-        return line;
-    }
-
-    private static string UnquoteYamlScalar(string raw)
-    {
-        string trimmed = raw.Trim();
-        if (trimmed.Length >= 2 &&
-            ((trimmed.StartsWith('"') && trimmed.EndsWith('"')) ||
-             (trimmed.StartsWith('\'') && trimmed.EndsWith('\''))))
-        {
-            return trimmed[1..^1];
-        }
-
-        return trimmed;
     }
 
     private static string FindRepoRoot()

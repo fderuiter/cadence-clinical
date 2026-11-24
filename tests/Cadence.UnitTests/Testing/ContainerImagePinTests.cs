@@ -219,7 +219,7 @@ public sealed partial class ContainerImagePinTests
         ReadMsBuildProperty(propsDoc, "IdentityModelVersion").Should().Be("8.23.0");
         ReadMsBuildProperty(propsDoc, "DotNetAiVersion").Should().Be("10.11.1");
         ReadMsBuildProperty(propsDoc, "OpenTelemetryVersion").Should().Be("1.20.1");
-        ReadMsBuildProperty(propsDoc, "OpenTelemetryInstrumentationVersion").Should().Be("1.20.1");
+        ReadMsBuildProperty(propsDoc, "OpenTelemetryInstrumentationVersion").Should().Be("1.20.2");
         ReadMsBuildProperty(propsDoc, "MassTransitVersion").Should().Be("8.5.12");
         ReadMsBuildProperty(propsDoc, "FluentValidationVersion").Should().Be("12.2.0");
 
@@ -367,19 +367,22 @@ public sealed partial class ContainerImagePinTests
         catalog.Should().ContainKeys(
             "@axe-core/playwright",
             "@playwright/test",
+            "@types/node",
             "@typescript-eslint/eslint-plugin",
             "@typescript-eslint/parser",
             "@vitejs/plugin-vue",
             "@vitest/coverage-v8",
             "axe-core",
             "eslint-plugin-vue",
+            "globals",
             "pinia",
             "typescript",
             "typescript-eslint",
             "vite",
             "vitest",
             "vue",
-            "vue-router");
+            "vue-router",
+            "vue-tsc");
 
         catalog["@typescript-eslint/eslint-plugin"].Should().Be("^8.73.0");
         catalog["@typescript-eslint/parser"].Should().Be("^8.73.0");
@@ -568,6 +571,56 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "MassTransit*"
+                    update-types: ["version-update:semver-major"]
+                  - dependency-name: "MassTransit*"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                      ]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0", ">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+              - package-ecosystem: "nuget"
+                directory: "/"
+            """);
 
         foreach (string testPackage in new[]
         {
@@ -665,6 +718,23 @@ public sealed partial class ContainerImagePinTests
                 "- dependency-name: \"postgres\"",
                 "- dependency-name: \"postgres\"\n        update-types: [\"version-update:semver-major\"]",
                 StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "- dependency-name: \"postgres\"",
+                "- dependency-name: \"postgres\"\n      - dependency-name: \"postgres\"",
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent + """
+
+              - package-ecosystem: "github-actions"
+                directory: "/"
+                schedule:
+                  interval: "weekly"
+            """);
 
         VerifyPreCommitIndexValidation(buildPropsContent, packagesPropsContent);
     }

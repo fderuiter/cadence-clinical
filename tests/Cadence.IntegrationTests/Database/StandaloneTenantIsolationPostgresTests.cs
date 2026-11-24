@@ -285,7 +285,7 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         }
 
         // Boot the real Payments host connected strictly as cadence_app and verify wildcard StudyIds = ["*"]
-        // in PaymentsCaller cannot see or mutate another tenant's wallets or site configs, and inactive/missing tenants get 403.
+        // in ClinicalScopeGuard cannot see or mutate another tenant's wallets or site configs, and inactive/missing tenants get 403.
         await using var paymentsHost = new CadenceAppPaymentsHost(cadenceAppConnString);
 
         using var alphaSponsorClient = paymentsHost.CreateSignedClient(new GatewayIdentity(
