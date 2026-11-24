@@ -470,7 +470,10 @@ import {
   APPROVE_RANDOMIZATION_SCHEME_SEMANTIC_ACTION,
   approveRandomizationSchemeAction,
 } from "../../canvas/lifecycle";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
@@ -485,37 +488,23 @@ import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadSupplyOverview(),
+  fallbackErrorTitle: "Supply status could not be loaded",
+  fallbackErrorMessage: "Investigational supply status could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, saving } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
   siteInput,
   loading,
   loaded,
-  saving,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadSupplyOverview();
-  },
-  fallbackErrorTitle: "Supply status could not be loaded",
-  fallbackErrorMessage: "Investigational supply status could not be loaded.",
-});
+} = workspace;
 
 const signerFullName = computed(() => {
   const identity = authStore.user;

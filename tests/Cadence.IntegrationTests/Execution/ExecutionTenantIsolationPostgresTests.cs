@@ -61,7 +61,8 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
             await ExecutionDbSeeder.SeedAsync(db, tenantScope, ct);
         }
 
-        // 1. Demo tenant (cadence-local) sees seeded CADENCE-101 subject SUBJ-101-001 and SITE-101 compliance.
+        // 1. Demo tenant (cadence-local) sees seeded CADENCE-101 subjects (SUBJ-101-001 & SUBJ-101-002 at SITE-101,
+        //    plus SUBJ-102-001 at SITE-102 for study-wide readers) with deterministic enrollment_ref NodeRefs matching demo-seed.json.
         using (var demoClient = factory.CreateSignedClient(new GatewayIdentity(
             UserId: "demo-crc",
             Roles: ["Site Investigator", "Sponsor Admin"],
@@ -74,8 +75,17 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
                 JsonOptions,
                 ct);
             demoList.Should().NotBeNull();
-            demoList!.Total.Should().Be(1);
-            demoList.Items.Should().ContainSingle(i => i.SubjectId_.Value == "SUBJ-101-001");
+            demoList!.Total.Should().Be(2);
+            demoList.Items.Select(i => i.SubjectId_.Value).Should().Equal("SUBJ-101-001", "SUBJ-101-002");
+            demoList.Items.Should().OnlyContain(i => i.EnrollmentRef != null && i.EnrollmentRef.StartsWith("enrollment:", StringComparison.Ordinal));
+
+            var subj101Detail = await demoClient.GetFromJsonAsync<SubjectDetailResponse>(
+                $"/api/v1/execution/subjects/{demoList.Items[0].EnrollmentRef}",
+                JsonOptions,
+                ct);
+            subj101Detail.Should().NotBeNull();
+            subj101Detail!.SubjectId.Value.Should().Be("SUBJ-101-001");
+            subj101Detail.EnrollmentRef.Should().Be(demoList.Items[0].EnrollmentRef);
 
             using var demoCompliance = await demoClient.GetAsync(
                 new Uri("/api/v1/execution/sites/SITE-101/compliance-status?study_id=CADENCE-101&milestone=SITE_ACTIVATION", UriKind.Relative),
@@ -83,6 +93,24 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
             demoCompliance.StatusCode.Should().Be(HttpStatusCode.OK);
             var demoCompJson = JsonDocument.Parse(await demoCompliance.Content.ReadAsStringAsync(ct)).RootElement;
             demoCompJson.GetProperty("is_complete").GetBoolean().Should().BeTrue();
+        }
+
+        using (var demoSponsorClient = factory.CreateSignedClient(new GatewayIdentity(
+            UserId: "demo-sponsor-admin",
+            Roles: ["Sponsor Admin"],
+            SiteIds: [],
+            TenantId: ExecutionDbSeeder.DemoTenantCode,
+            StudyIds: ["CADENCE-101"])))
+        {
+            var allDemoSubjects = await demoSponsorClient.GetFromJsonAsync<SubjectListResponse>(
+                "/api/v1/execution/subjects?study_id=CADENCE-101",
+                JsonOptions,
+                ct);
+            allDemoSubjects.Should().NotBeNull();
+            allDemoSubjects!.Total.Should().Be(3);
+            allDemoSubjects.Items.Select(i => i.SubjectId_.Value)
+                .Should().Equal("SUBJ-101-001", "SUBJ-101-002", "SUBJ-102-001");
+            allDemoSubjects.Items.Select(i => i.EnrollmentRef).Distinct().Should().HaveCount(3);
         }
 
         // 2. Requests without a verified tenant (null or unknown tenant) are rejected with HTTP 403.

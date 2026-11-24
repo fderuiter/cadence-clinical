@@ -6,10 +6,11 @@
  * they never confer clinical data access or bypass kernel Grants, blinding, or consent.
  */
 
-export const PRE_RELEASE_ENVIRONMENT_NOTICE =
-  "Pre-release unvalidated environment — not qualified for live clinical trial conduct.";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "./environmentNotice.js";
 
-export const PRODUCT_FAMILIES = Object.freeze([
+export { PRE_RELEASE_ENVIRONMENT_NOTICE };
+
+export const PRODUCT_FAMILIES = /* @__PURE__ */ Object.freeze([
   {
     code: "Blueprint",
     name: "Blueprint",
@@ -102,7 +103,7 @@ export const PRODUCT_FAMILIES = Object.freeze([
   },
 ]);
 
-export const COMMERCIAL_TIERS = Object.freeze([
+export const COMMERCIAL_TIERS = /* @__PURE__ */ Object.freeze([
   {
     code: "Individual",
     name: "Individual",
@@ -156,7 +157,7 @@ export const COMMERCIAL_TIERS = Object.freeze([
   },
 ]);
 
-export const BASELINE_KERNEL_GUARANTEES = Object.freeze([
+export const BASELINE_KERNEL_GUARANTEES = /* @__PURE__ */ Object.freeze([
   {
     id: "audit",
     title: "Tamper-evident audit trails",
@@ -183,7 +184,7 @@ export const BASELINE_KERNEL_GUARANTEES = Object.freeze([
   },
 ]);
 
-export const MODULAR_SCOPING_BENCHMARK = Object.freeze([
+export const MODULAR_SCOPING_BENCHMARK = /* @__PURE__ */ Object.freeze([
   {
     step: "1. Self-service account & workspace",
     industryPattern:
