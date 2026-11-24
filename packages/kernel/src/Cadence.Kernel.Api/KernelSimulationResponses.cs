@@ -2,8 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Cadence.Kernel.Execution;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Kernel.Api;
 
@@ -17,7 +21,7 @@ public sealed record KernelSimulationAsOfResponse(DateTimeOffset ValidAt, DateTi
 }
 
 /// <summary>The candidate specification a simulation result describes.</summary>
-/// <param name="Kind">The candidate specification kind (<c>ProtocolVersion</c>).</param>
+/// <param name="Kind">The candidate specification kind (<c>ProtocolVersion</c>, <c>MappingSpecification</c>, or <c>RulePack</c>).</param>
 /// <param name="Version">The stored candidate's pinned NodeRef, or null for unsaved content or when masked.</param>
 /// <param name="BaseVersion">The base version's pinned NodeRef, or null when there is none or when masked.</param>
 /// <param name="ContentHash">The candidate content's hash, or null when masked.</param>
@@ -130,19 +134,161 @@ public sealed record KernelMatrixGapFindingResponse(
             finding.Recommendation);
 }
 
-/// <summary>Evaluate-only simulation preview of what a candidate protocol version changes (ADR-2480).</summary>
+/// <summary>Signals whether restricted sites, enrollments, or blinded facts were omitted from simulation counts (ADR-2590).</summary>
+/// <param name="MoreExist">True when at least one object was omitted from the caller's counts.</param>
+/// <param name="Reasons">Distinct string mask reasons (<c>NotPermitted</c>, <c>Blinded</c>, <c>IdentityVault</c>).</param>
+public sealed record KernelHiddenObjectsResponse(bool MoreExist, IReadOnlyList<string> Reasons)
+{
+    internal static KernelHiddenObjectsResponse From(HiddenObjects hidden) =>
+        new(hidden.MoreExist, [.. hidden.Reasons.Select(r => r.ToString())]);
+}
+
+/// <summary>One calendar-dated visit window on a participant's anchored expected schedule (K-TIME-7).</summary>
+public sealed record KernelParticipantPlannedVisitResponse(
+    string VisitId,
+    DateOnly TargetDate,
+    DateOnly WindowStart,
+    DateOnly WindowEnd)
+{
+    internal static KernelParticipantPlannedVisitResponse? From(ParticipantPlannedVisit? visit) =>
+        visit is null
+            ? null
+            : new(visit.VisitId, visit.TargetDate, visit.WindowStart, visit.WindowEnd);
+}
+
+/// <summary>A calendar-anchored schedule shift for one participant (K-TIME-7).</summary>
+public sealed record KernelParticipantScheduleShiftResponse(
+    string ActivityId,
+    string Change,
+    KernelParticipantPlannedVisitResponse? Before,
+    KernelParticipantPlannedVisitResponse? After)
+{
+    internal static KernelParticipantScheduleShiftResponse From(ParticipantScheduleShift shift) =>
+        new(
+            shift.ActivityId,
+            shift.Change.ToString(),
+            KernelParticipantPlannedVisitResponse.From(shift.Before),
+            KernelParticipantPlannedVisitResponse.From(shift.After));
+}
+
+/// <summary>Per-participant operational impact summary (K-TIME-7, K-IDN-1).</summary>
+public sealed record KernelParticipantSimulationImpactResponse(
+    string Enrollment,
+    string SubjectCode,
+    string Status,
+    string Cohort,
+    bool RequiresReconsent,
+    IReadOnlyList<KernelParticipantScheduleShiftResponse> ScheduleShifts)
+{
+    internal static KernelParticipantSimulationImpactResponse From(ParticipantSimulationImpact impact) =>
+        new(
+            impact.Enrollment.ToString(),
+            impact.SubjectCode,
+            impact.Status.ToString(),
+            impact.Cohort.ToString(),
+            impact.RequiresReconsent,
+            [.. impact.ScheduleShifts.Select(KernelParticipantScheduleShiftResponse.From)]);
+}
+
+/// <summary>Operational site and participant impact counts within the reader's visible scope (CLINICAL_CANVAS §4.2, ADR-2590).</summary>
+public sealed record KernelOperationalImpactResponse(
+    int ActiveSiteCount,
+    int PendingSiteCount,
+    int TotalParticipantCount,
+    int AffectedParticipantCount,
+    int ReconsentParticipantCount,
+    IReadOnlyList<KernelParticipantSimulationImpactResponse> ParticipantImpacts,
+    KernelHiddenObjectsResponse Hidden)
+{
+    internal static KernelOperationalImpactResponse From(OperationalImpactSummary impact) =>
+        new(
+            impact.ActiveSiteCount,
+            impact.PendingSiteCount,
+            impact.TotalParticipantCount,
+            impact.AffectedParticipantCount,
+            impact.ReconsentParticipantCount,
+            [.. impact.ParticipantImpacts.Select(KernelParticipantSimulationImpactResponse.From)],
+            KernelHiddenObjectsResponse.From(impact.Hidden));
+}
+
+/// <summary>One bounded sample of a projected dataset record difference (ADR-2480 §4.1, K-PROJ-2).</summary>
+public sealed record KernelProjectionRecordChangeSampleResponse(
+    string RecordKey,
+    string Change,
+    IReadOnlyDictionary<string, string?>? Before,
+    IReadOnlyDictionary<string, string?>? After)
+{
+    internal static KernelProjectionRecordChangeSampleResponse From(ProjectionRecordChangeSample sample) =>
+        new(sample.RecordKey, sample.Change.ToString(), sample.Before, sample.After);
+}
+
+/// <summary>Per-dataset projection change summary produced through <c>IMappingEngine</c> (ADR-2480 §4.1, K-PROJ-2).</summary>
+public sealed record KernelProjectionDatasetChangeResponse(
+    string Dataset,
+    int AddedCount,
+    int RemovedCount,
+    int ChangedCount,
+    IReadOnlyList<KernelProjectionRecordChangeSampleResponse> Samples)
+{
+    internal static KernelProjectionDatasetChangeResponse From(ProjectionDatasetChange change) =>
+        new(
+            change.Dataset,
+            change.AddedCount,
+            change.RemovedCount,
+            change.ChangedCount,
+            [.. change.Samples.Select(KernelProjectionRecordChangeSampleResponse.From)]);
+}
+
+/// <summary>One edit-check finding opening or resolving in a simulation delta (ADR-2480 §4.1, K-RULE-4, K-FIND-1).</summary>
+public sealed record KernelSimulatedValidationFindingResponse(
+    string RuleId,
+    int RuleVersion,
+    string Severity,
+    string Stage,
+    string Dataset,
+    string Subject,
+    string Explanation)
+{
+    internal static KernelSimulatedValidationFindingResponse From(SimulatedValidationFinding finding) =>
+        new(
+            finding.RuleId,
+            finding.RuleVersion,
+            finding.Severity.ToString(),
+            finding.Stage.ToString(),
+            finding.Dataset,
+            finding.Subject,
+            finding.Explanation);
+}
+
+/// <summary>Rule validation finding delta between baseline and candidate evaluations (ADR-2480 §4.1, K-RULE-4, K-FIND-1).</summary>
+public sealed record KernelValidationDeltaResponse(
+    IReadOnlyList<KernelSimulatedValidationFindingResponse> Opening,
+    IReadOnlyList<KernelSimulatedValidationFindingResponse> Resolving,
+    int UnchangedCount)
+{
+    internal static KernelValidationDeltaResponse From(ValidationDeltaSummary delta) =>
+        new(
+            [.. delta.Opening.Select(KernelSimulatedValidationFindingResponse.From)],
+            [.. delta.Resolving.Select(KernelSimulatedValidationFindingResponse.From)],
+            delta.UnchangedCount);
+}
+
+/// <summary>Evaluate-only simulation preview of what a candidate protocol version, mapping specification, or rule pack changes (ADR-2480).</summary>
 /// <param name="Scope">The study NodeRef where the simulation ran.</param>
 /// <param name="AsOf">The pinned time both evaluations read at.</param>
 /// <param name="Candidate">The candidate and its base.</param>
 /// <param name="EngineVersions">The pure functions evaluated, sorted by name.</param>
 /// <param name="InputHash">Hash of the inputs (K-SIM-3).</param>
 /// <param name="ResultHash">Hash of this result without itself (K-SIM-3).</param>
-/// <param name="StructuralDiff">Protocol elements added, removed, or changed, sorted by element id.</param>
+/// <param name="StructuralDiff">Elements added, removed, or changed, sorted by element id.</param>
 /// <param name="ScheduleChanges">Timed activities added, removed, or moved on the expected schedule.</param>
 /// <param name="Masked">Sections withheld from this caller (K-SIM-4).</param>
 /// <param name="Dependents">What depends on the base version's changed elements, or null when unchanged, unbased, or masked.</param>
 /// <param name="MatrixGaps">Schedule matrix gaps and structural findings detected in the candidate design.</param>
 /// <param name="IsEmpty">True when the candidate changes nothing this caller may see.</param>
+/// <param name="OperationalImpact">Bitemporal site and participant operational impact counts and cohorts within the reader's scope.</param>
+/// <param name="ProjectionChanges">Per-dataset projection changes produced through <c>IMappingEngine</c>.</param>
+/// <param name="ValidationDelta">Edit-check finding delta produced through <c>IRuleEvaluator</c>.</param>
 public sealed record KernelSimulationResponse(
     string Scope,
     KernelSimulationAsOfResponse AsOf,
@@ -155,7 +301,10 @@ public sealed record KernelSimulationResponse(
     IReadOnlyList<KernelMaskedPartResponse> Masked,
     KernelDependentsResponse? Dependents,
     IReadOnlyList<KernelMatrixGapFindingResponse> MatrixGaps,
-    bool IsEmpty)
+    bool IsEmpty,
+    KernelOperationalImpactResponse? OperationalImpact = null,
+    IReadOnlyList<KernelProjectionDatasetChangeResponse>? ProjectionChanges = null,
+    KernelValidationDeltaResponse? ValidationDelta = null)
 {
     internal static KernelSimulationResponse From(SimulationResult result) =>
         new(
@@ -170,5 +319,384 @@ public sealed record KernelSimulationResponse(
             [.. result.Masked.Select(KernelMaskedPartResponse.From)],
             result.Dependents is { } dependents ? KernelDependentsResponse.From(dependents) : null,
             [.. (result.MatrixGaps ?? []).Select(KernelMatrixGapFindingResponse.From)],
-            result.IsEmpty);
+            result.IsEmpty,
+            result.OperationalImpact is { } operational ? KernelOperationalImpactResponse.From(operational) : null,
+            result.ProjectionChanges is { } projections ? [.. projections.Select(KernelProjectionDatasetChangeResponse.From)] : null,
+            result.ValidationDelta is { } validation ? KernelValidationDeltaResponse.From(validation) : null);
+
+    internal bool TryToDomain(out SimulationResult? result, out string? error)
+    {
+        result = null;
+        error = null;
+        if (!NodeRef.TryParse(Scope, out var scope) || scope is null)
+        {
+            error = $"Invalid simulation scope '{Scope}'.";
+            return false;
+        }
+
+        if (AsOf is null || Candidate is null)
+        {
+            error = "Simulation AsOf and Candidate are required.";
+            return false;
+        }
+
+        if (!TryParseEnum(Candidate.Kind, "candidate.kind", out CandidateKind kind, out error))
+        {
+            return false;
+        }
+
+        if (!TryParseOptionalNodeRef(Candidate.Version, "candidate.version", out var candidateVersion, out error)
+            || !TryParseOptionalNodeRef(Candidate.BaseVersion, "candidate.base_version", out var baseVersion, out error))
+        {
+            return false;
+        }
+
+        var engines = new List<EngineVersion>();
+        foreach (var engine in EngineVersions ?? [])
+        {
+            if (engine is null || string.IsNullOrWhiteSpace(engine.Name) || string.IsNullOrWhiteSpace(engine.Version))
+            {
+                error = "Engine version entries require name and version.";
+                return false;
+            }
+
+            engines.Add(new EngineVersion(engine.Name, engine.Version));
+        }
+
+        var structuralDiff = new List<ElementChange>();
+        foreach (var item in StructuralDiff ?? [])
+        {
+            if (item is null || !TryParseEnum(item.Change, "structural_diff.change", out ElementChangeKind changeKind, out error))
+            {
+                error ??= "Structural diff entry is invalid.";
+                return false;
+            }
+
+            structuralDiff.Add(new ElementChange(item.ElementId ?? string.Empty, item.InstanceType, changeKind, item.Properties ?? []));
+        }
+
+        var scheduleChanges = new List<ScheduleChange>();
+        foreach (var sc in ScheduleChanges ?? [])
+        {
+            if (sc is null || !TryParseEnum(sc.Change, "schedule_changes.change", out ElementChangeKind scKind, out error))
+            {
+                error ??= "Schedule change entry is invalid.";
+                return false;
+            }
+
+            scheduleChanges.Add(new ScheduleChange(
+                sc.ActivityId ?? string.Empty,
+                scKind,
+                ToDomainPlannedVisit(sc.Before),
+                ToDomainPlannedVisit(sc.After)));
+        }
+
+        var maskedParts = new List<MaskedPart>();
+        foreach (var mp in Masked ?? [])
+        {
+            if (mp is null || !TryParseEnum(mp.Reason, "masked.reason", out MaskReason maskReason, out error))
+            {
+                error ??= "Masked part entry is invalid.";
+                return false;
+            }
+
+            maskedParts.Add(new MaskedPart(mp.Part ?? string.Empty, maskReason));
+        }
+
+        DependentsReport? dependents = null;
+        if (Dependents is not null)
+        {
+            var groups = new List<DependentGroup>();
+            foreach (var group in Dependents.Groups ?? [])
+            {
+                if (group is null)
+                {
+                    error = "Dependent group entry is invalid.";
+                    return false;
+                }
+
+                var objects = new List<LineageNode>();
+                foreach (var obj in group.Objects ?? [])
+                {
+                    if (obj is null || !TryParseOptionalNodeRef(obj.Ref, "dependents.objects.ref", out var objRef, out error))
+                    {
+                        error ??= "Dependent lineage node is invalid.";
+                        return false;
+                    }
+
+                    MaskReason? objMask = null;
+                    if (!string.IsNullOrEmpty(obj.Mask))
+                    {
+                        if (!TryParseEnum(obj.Mask, "dependents.objects.mask", out MaskReason parsedMask, out error))
+                        {
+                            return false;
+                        }
+
+                        objMask = parsedMask;
+                    }
+
+                    objects.Add(new LineageNode(obj.Handle ?? string.Empty, obj.Kind ?? string.Empty, objRef, objMask, obj.Distance));
+                }
+
+                groups.Add(new DependentGroup(group.Kind ?? string.Empty, group.Count, objects));
+            }
+
+            dependents = new DependentsReport(
+                Dependents.Start ?? string.Empty,
+                Dependents.Depth,
+                Dependents.ValidAt,
+                Dependents.KnownAt,
+                groups,
+                Dependents.Total,
+                Dependents.Truncated);
+        }
+
+        IReadOnlyList<MatrixGapFinding>? matrixGaps = null;
+        if (kind == CandidateKind.ProtocolVersion || MatrixGaps is { Count: > 0 })
+        {
+            var gapList = new List<MatrixGapFinding>();
+            foreach (var gap in MatrixGaps ?? [])
+            {
+                if (gap is null
+                    || !TryParseEnum(gap.Kind, "matrix_gaps.kind", out MatrixGapKind gapKind, out error)
+                    || !TryParseEnum(gap.Severity, "matrix_gaps.severity", out MatrixGapSeverity gapSeverity, out error))
+                {
+                    error ??= "Matrix gap finding is invalid.";
+                    return false;
+                }
+
+                gapList.Add(new MatrixGapFinding(
+                    gap.ElementId ?? string.Empty,
+                    gapKind,
+                    gapSeverity,
+                    gap.JsonPointerPath ?? string.Empty,
+                    gap.Description ?? string.Empty,
+                    gap.Recommendation));
+            }
+
+            matrixGaps = gapList;
+        }
+
+        OperationalImpactSummary? operationalImpact = null;
+        if (OperationalImpact is not null)
+        {
+            var participantImpacts = new List<ParticipantSimulationImpact>();
+            foreach (var participant in OperationalImpact.ParticipantImpacts ?? [])
+            {
+                if (participant is null
+                    || !NodeRef.TryParse(participant.Enrollment, out var enrollmentRef)
+                    || enrollmentRef is null
+                    || !TryParseEnum(participant.Status, "operational_impact.participant_impacts.status", out EnrollmentStatus status, out error)
+                    || !TryParseEnum(participant.Cohort, "operational_impact.participant_impacts.cohort", out ParticipantImpactCohort cohort, out error))
+                {
+                    error ??= "Participant simulation impact is invalid.";
+                    return false;
+                }
+
+                var shifts = new List<ParticipantScheduleShift>();
+                foreach (var shift in participant.ScheduleShifts ?? [])
+                {
+                    if (shift is null || !TryParseEnum(shift.Change, "schedule_shifts.change", out ElementChangeKind shiftKind, out error))
+                    {
+                        error ??= "Participant schedule shift is invalid.";
+                        return false;
+                    }
+
+                    shifts.Add(new ParticipantScheduleShift(
+                        shift.ActivityId ?? string.Empty,
+                        shiftKind,
+                        ToDomainParticipantVisit(shift.Before),
+                        ToDomainParticipantVisit(shift.After)));
+                }
+
+                participantImpacts.Add(new ParticipantSimulationImpact(
+                    enrollmentRef,
+                    participant.SubjectCode ?? string.Empty,
+                    status,
+                    cohort,
+                    participant.RequiresReconsent,
+                    shifts));
+            }
+
+            var hiddenReasons = new List<MaskReason>();
+            if (OperationalImpact.Hidden is not null)
+            {
+                foreach (var reasonText in OperationalImpact.Hidden.Reasons ?? [])
+                {
+                    if (!TryParseEnum(reasonText, "operational_impact.hidden.reasons", out MaskReason hiddenReason, out error))
+                    {
+                        return false;
+                    }
+
+                    hiddenReasons.Add(hiddenReason);
+                }
+            }
+
+            var hidden = OperationalImpact.Hidden is { MoreExist: true } || hiddenReasons.Count > 0
+                ? new HiddenObjects(OperationalImpact.Hidden?.MoreExist ?? true, hiddenReasons)
+                : HiddenObjects.None;
+
+            operationalImpact = new OperationalImpactSummary(
+                OperationalImpact.ActiveSiteCount,
+                OperationalImpact.PendingSiteCount,
+                OperationalImpact.TotalParticipantCount,
+                OperationalImpact.AffectedParticipantCount,
+                OperationalImpact.ReconsentParticipantCount,
+                participantImpacts,
+                hidden);
+        }
+
+        IReadOnlyList<ProjectionDatasetChange>? projectionChanges = null;
+        if (ProjectionChanges is not null)
+        {
+            var datasetList = new List<ProjectionDatasetChange>();
+            foreach (var dataset in ProjectionChanges)
+            {
+                if (dataset is null)
+                {
+                    error = "Projection dataset change entry is invalid.";
+                    return false;
+                }
+
+                var samples = new List<ProjectionRecordChangeSample>();
+                foreach (var sample in dataset.Samples ?? [])
+                {
+                    if (sample is null || !TryParseEnum(sample.Change, "projection_changes.samples.change", out ElementChangeKind sampleKind, out error))
+                    {
+                        error ??= "Projection record sample is invalid.";
+                        return false;
+                    }
+
+                    samples.Add(new ProjectionRecordChangeSample(
+                        sample.RecordKey ?? string.Empty,
+                        sampleKind,
+                        sample.Before,
+                        sample.After));
+                }
+
+                datasetList.Add(new ProjectionDatasetChange(
+                    dataset.Dataset ?? string.Empty,
+                    dataset.AddedCount,
+                    dataset.RemovedCount,
+                    dataset.ChangedCount,
+                    samples));
+            }
+
+            projectionChanges = datasetList;
+        }
+
+        ValidationDeltaSummary? validationDelta = null;
+        if (ValidationDelta is not null)
+        {
+            if (!TryToDomainFindings(ValidationDelta.Opening, out var opening, out error)
+                || !TryToDomainFindings(ValidationDelta.Resolving, out var resolving, out error))
+            {
+                return false;
+            }
+
+            validationDelta = new ValidationDeltaSummary(opening, resolving, ValidationDelta.UnchangedCount);
+        }
+
+        error = null;
+        result = new SimulationResult(
+            scope,
+            new SimulationAsOf(AsOf.ValidAt, AsOf.KnownAt),
+            new CandidateSummary(kind, candidateVersion, baseVersion, Candidate.ContentHash, Candidate.BaseContentHash),
+            engines,
+            InputHash ?? string.Empty,
+            ResultHash ?? string.Empty,
+            structuralDiff,
+            scheduleChanges,
+            maskedParts,
+            dependents,
+            matrixGaps,
+            operationalImpact,
+            projectionChanges,
+            validationDelta);
+        return true;
+    }
+
+    private static PlannedVisit? ToDomainPlannedVisit(KernelPlannedVisitResponse? visit) =>
+        visit is null
+            ? null
+            : new PlannedVisit(
+                visit.ActivityId ?? string.Empty,
+                visit.Name ?? string.Empty,
+                visit.EpochId ?? string.Empty,
+                visit.EpochOrder,
+                visit.StudyDay,
+                visit.WindowBefore,
+                visit.WindowAfter);
+
+    private static ParticipantPlannedVisit? ToDomainParticipantVisit(KernelParticipantPlannedVisitResponse? visit) =>
+        visit is null
+            ? null
+            : new ParticipantPlannedVisit(visit.VisitId ?? string.Empty, visit.TargetDate, visit.WindowStart, visit.WindowEnd);
+
+    private static bool TryToDomainFindings(
+        IReadOnlyList<KernelSimulatedValidationFindingResponse>? items,
+        out IReadOnlyList<SimulatedValidationFinding> findings,
+        out string? error)
+    {
+        error = null;
+        var list = new List<SimulatedValidationFinding>();
+        foreach (var item in items ?? [])
+        {
+            if (item is null
+                || !TryParseEnum(item.Severity, "validation_delta.severity", out ValidationSeverity severity, out error)
+                || !TryParseEnum(item.Stage, "validation_delta.stage", out ValidationStage stage, out error))
+            {
+                findings = [];
+                error ??= "Simulated validation finding is invalid.";
+                return false;
+            }
+
+            list.Add(new SimulatedValidationFinding(
+                item.RuleId ?? string.Empty,
+                item.RuleVersion,
+                severity,
+                stage,
+                item.Dataset ?? string.Empty,
+                item.Subject ?? string.Empty,
+                item.Explanation ?? string.Empty));
+        }
+
+        findings = list;
+        error = null;
+        return true;
+    }
+
+    private static bool TryParseOptionalNodeRef(string? raw, string fieldName, out NodeRef? parsed, out string? error)
+    {
+        parsed = null;
+        error = null;
+        if (string.IsNullOrEmpty(raw))
+        {
+            return true;
+        }
+
+        if (!NodeRef.TryParse(raw, out parsed) || parsed is null)
+        {
+            error = $"Invalid NodeRef '{raw}' in {fieldName}.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TryParseEnum<TEnum>(string? raw, string fieldName, out TEnum value, out string? error)
+        where TEnum : struct, Enum
+    {
+        if (!string.IsNullOrWhiteSpace(raw)
+            && Enum.TryParse(raw, ignoreCase: false, out value)
+            && Enum.IsDefined(value))
+        {
+            error = null;
+            return true;
+        }
+
+        value = default;
+        error = $"Invalid value '{raw}' for {fieldName}.";
+        return false;
+    }
 }

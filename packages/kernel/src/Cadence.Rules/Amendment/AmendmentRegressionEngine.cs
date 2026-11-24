@@ -156,6 +156,78 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
             timing)).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Pure multi-pack stage evaluation shared by bitemporal simulation (<c>K-SIM-2</c>, <c>K-RULE-4</c>): streams
+    /// baseline and target rule packs over their respective records at <paramref name="asOf"/> without clock or storage
+    /// side effects.
+    /// </summary>
+    public static (IReadOnlyList<RuleViolation> BaselineViolations, IReadOnlyList<RuleViolation> TargetViolations) EvaluateStageDelta(
+        IRuleEvaluator evaluator,
+        ValidationStage stage,
+        DateOnly asOf,
+        IReadOnlyList<RulePack> baselinePacks,
+        IReadOnlyList<RuleRecord> baselineRecords,
+        IReadOnlyList<RulePack> targetPacks,
+        IReadOnlyList<RuleRecord> targetRecords,
+        IReadOnlyList<(string Standard, string Version)>? declaredStandards = null)
+    {
+        ArgumentNullException.ThrowIfNull(evaluator);
+        ArgumentNullException.ThrowIfNull(baselinePacks);
+        ArgumentNullException.ThrowIfNull(baselineRecords);
+        ArgumentNullException.ThrowIfNull(targetPacks);
+        ArgumentNullException.ThrowIfNull(targetRecords);
+
+        IReadOnlyList<RuleEvaluationContext> contexts = declaredStandards is { Count: > 0 }
+            ? [.. declaredStandards.Select(s => new RuleEvaluationContext(stage, asOf)
+            {
+                Standard = s.Standard,
+                StandardVersion = s.Version,
+            })]
+            : [new RuleEvaluationContext(stage, asOf)];
+
+        return (
+            EvaluatePacksAcrossContexts(evaluator, contexts, baselinePacks, baselineRecords),
+            EvaluatePacksAcrossContexts(evaluator, contexts, targetPacks, targetRecords));
+    }
+
+    private static IReadOnlyList<RuleViolation> EvaluatePacksAcrossContexts(
+        IRuleEvaluator evaluator,
+        IReadOnlyList<RuleEvaluationContext> contexts,
+        IReadOnlyList<RulePack> packs,
+        IReadOnlyList<RuleRecord> records)
+    {
+        if (packs.Count == 0 || records.Count == 0)
+        {
+            return [];
+        }
+
+        var sink = new StageDeltaSink();
+        foreach (var context in contexts)
+        {
+            foreach (var pack in packs)
+            {
+                evaluator.Evaluate(pack, context, new RuleRecordListCursor(records), sink);
+            }
+        }
+
+        return sink.Violations;
+    }
+
+    private sealed class StageDeltaSink : IRuleViolationSink
+    {
+        private readonly HashSet<(string RuleId, int RuleVersion, string Dataset, string RecordKey)> _seen = [];
+
+        public List<RuleViolation> Violations { get; } = [];
+
+        public void OnViolation(RuleViolationHit violation)
+        {
+            if (_seen.Add((violation.RuleId, violation.RuleVersion, violation.Dataset, violation.RecordKey)))
+            {
+                Violations.Add(violation.ToViolation());
+            }
+        }
+    }
+
     private sealed class BaselineRegressionSink(string packKey) : IRuleViolationSink
     {
         public HashSet<(string Dataset, string Key, string RuleId)> Keys { get; } = [];

@@ -34,8 +34,8 @@ public static class ExecutionModule
     /// Registers the module: its commands with the kernel's authorization, its command store, migrations and tenant-scoped
     /// reads in the <c>execution</c> schema, its handlers and validators, the consumer that opens an Execution form when the
     /// kernel opens one, the consumer that states each query step as a kernel assertion, the edit-check and auto-answer
-    /// consumer, the leader-locked 14-day SLA scheduler and de-identified digest alert consumer, and the durable single-use
-    /// store for step-up signature tokens (ADR-2515).
+    /// consumer, the leader-locked 14-day SLA scheduler and de-identified digest alert consumer, the CRA SDV modification
+    /// alert consumer, and the durable single-use store for step-up signature tokens (ADR-2515).
     /// </summary>
     public static IServiceCollection AddCadenceExecutionModule(this IServiceCollection services, string connectionString)
     {
@@ -71,10 +71,13 @@ public static class ExecutionModule
             .AddCommandValidator<EscalateFormQuery, EscalateFormQueryValidator>()
             .AddCommandHandler<GenerateFormQueryAgingDigest, FormQueryAgingDigestState, GenerateFormQueryAgingDigestHandler>()
             .AddCommandValidator<GenerateFormQueryAgingDigest, GenerateFormQueryAgingDigestValidator>()
+            .AddCommandHandler<RecordFormSdvAlert, FormSdvAlertState, RecordFormSdvAlertHandler>()
+            .AddCommandValidator<RecordFormSdvAlert, RecordFormSdvAlertValidator>()
             .AddScoped<IFormQueryEscalationService, FormQueryEscalationService>()
             .AddKernelEventConsumer<MirrorFormQueryToKernel>(MirrorFormQueryToKernel.Name)
             .AddKernelEventConsumer<EvaluateEditChecksOnCollectionChanged>(EvaluateEditChecksOnCollectionChanged.Name)
             .AddKernelEventConsumer<SendFormQueryAgingDigestAlerts>(SendFormQueryAgingDigestAlerts.Name)
+            .AddKernelEventConsumer<AlertMonitorOnVerifiedObservationCorrected>(AlertMonitorOnVerifiedObservationCorrected.Name)
             .AddDbContext<ExecutionSignatureTokenDbContext>(options => options.UseNpgsql(connectionString))
             .AddCadenceDurableSigTokenStore<ExecutionSignatureTokenDbContext>();
 
@@ -92,6 +95,7 @@ public static class ExecutionModule
         var group = endpoints.MapGroup(string.Empty).WithGroupName(OpenApiDocument);
         group.MapFormEndpoints();
         group.MapFormQueryEndpoints();
+        group.MapFormSdvAlertEndpoints();
         group.MapFormSignatureEndpoints();
         return endpoints;
     }
