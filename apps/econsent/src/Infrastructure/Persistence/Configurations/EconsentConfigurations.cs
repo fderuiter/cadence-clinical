@@ -344,7 +344,7 @@ public class BiometricLivenessVerificationConfiguration : IEntityTypeConfigurati
         builder.HasIndex(x => x.SubjectPseudonym);
         builder.Property(x => x.LivenessToken).IsRequired();
         builder.Property(x => x.LivenessTokenHash).HasMaxLength(64).IsRequired();
-        builder.HasIndex(x => x.LivenessTokenHash);
+        builder.HasIndex(x => x.LivenessTokenHash).IsUnique();
         builder.Property(x => x.AntiSpoofScore).HasColumnType("numeric(5,4)").IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();

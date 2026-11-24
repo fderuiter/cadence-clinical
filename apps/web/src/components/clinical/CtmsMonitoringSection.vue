@@ -523,6 +523,7 @@ import {
 } from "../../canvas/authority";
 import {
   formatIsoDateShort,
+  scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
 import apiClient from "../../services/api";
@@ -558,44 +559,26 @@ type MonitoringVisitRow = MonitoringVisit & {
   }> | null;
 };
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
-const newSiteId = ref("");
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadVisits(),
+  fallbackErrorTitle: "Monitoring visits could not be loaded",
+  fallbackErrorMessage: "Monitoring visits could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
   siteInput,
+  newSiteId,
   loading,
   loaded,
   saving,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadVisits();
-  },
-  onSitePropChange: (val) => {
-    if (val) newSiteId.value = val;
-  },
-  fallbackErrorTitle: "Monitoring visits could not be loaded",
-  fallbackErrorMessage: "Monitoring visits could not be loaded.",
-});
+} = workspace;
 
-newSiteId.value = siteInput.value;
 const canSchedule = computed(() => canScheduleMonitoringVisits(authStore));
 const canComplete = computed(() => canCompleteMonitoringVisits(authStore));
 const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));

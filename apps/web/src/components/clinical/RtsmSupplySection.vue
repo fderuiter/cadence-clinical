@@ -449,7 +449,10 @@ import {
   APPROVE_RANDOMIZATION_SCHEME_SEMANTIC_ACTION,
   approveRandomizationSchemeAction,
 } from "../../canvas/lifecycle";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -460,34 +463,9 @@ import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
-const {
-  authStore,
-  toasts,
-  assignedStudies,
-  assignedSites,
-  studyInput,
-  siteInput,
-  loading,
-  saving,
-  loadError,
-  scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadSupplyOverview();
-  },
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadSupplyOverview(),
   onSitePropChange: () => {
     if (studyInput.value.trim()) {
       void loadSupplyOverview();
@@ -496,6 +474,17 @@ const {
   fallbackErrorTitle: "Supply status could not be loaded",
   fallbackErrorMessage: "Investigational supply status could not be loaded.",
 });
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
+const {
+  assignedStudies,
+  assignedSites,
+  studyInput,
+  siteInput,
+  loading,
+  saving,
+  loadError,
+  scopeGuidance,
+} = workspace;
 
 const pharmacistDisplayName = computed(() => {
   const fullName = [authStore.user?.firstName, authStore.user?.lastName]

@@ -36,6 +36,8 @@ var auditLogSecretKey = builder.AddParameter("audit-log-secret-key", secret: tru
 // Execution refuses to start without a base64 AES key of 16, 24 or 32 bytes (`openssl rand -base64 32`).
 var demographicsEncryptionKey = builder.AddParameter("demographics-encryption-key", secret: true);
 var randomizationAllocationKey = builder.AddParameter("randomization-allocation-key", secret: true);
+// Kernel (biometric liveness issuance) and eConsent (consent verification) share a 32-byte base64 HMAC key (ADR-2660).
+var biometricLivenessKey = builder.AddParameter("biometric-liveness-key", secret: true);
 
 // Clinical Kernel Modular Monolith: single relational database with schema partitioning (ADR-2244, ADR-2247).
 // When a cadence connection string is configured, the services use that existing PostgreSQL database and no
@@ -173,7 +175,8 @@ knowledge.WithEnvironment("CTMS_SERVICE_URL", ctms.GetEndpoint("http"));
 // does not inherit the AppHost's environment, so the kernel is given it, and the tenant settings only when that
 // environment is Development.
 var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"))
-    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName);
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", builder.Environment.EnvironmentName)
+    .WithEnvironment("CADENCE_BIOMETRIC_LIVENESS_KEY", biometricLivenessKey);
 useKeycloakAdminOnKernel(kernel);
 execution.WithEnvironment("KERNEL_SERVICE_URL", kernel.GetEndpoint("http"));
 if (builder.Environment.IsDevelopment())
@@ -214,7 +217,8 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Econsent>("econsent"))
-        .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
+        .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey)
+        .WithEnvironment("CADENCE_BIOMETRIC_LIVENESS_KEY", biometricLivenessKey);
     Service(builder.AddProject<Projects.Cadence_Apps_Org>("org"));
     Service(builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"));
     Service(builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"))

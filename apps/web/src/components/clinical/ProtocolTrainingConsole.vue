@@ -119,9 +119,9 @@
       <ClinicalTabs
         :model-value="activeTab"
         :tabs="trainingTabs"
+        variant="underline"
         aria-label="Protocol training workspace sections"
         id-prefix="training-console"
-        list-class="tab-bar"
         tab-class="tab-btn"
         @update:model-value="handleTrainingTabChange"
       />
@@ -1591,30 +1591,6 @@ async function handleExecuteBulkSignOff() {
 
 .status-failed {
   color: var(--semantic-color-error);
-}
-
-.tab-bar {
-  display: flex;
-  gap: 8px;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 16px;
-}
-
-.tab-btn {
-  padding: 10px 18px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-weight: 600;
-  font-size: 0.95rem;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  margin-bottom: -2px;
-}
-
-.tab-btn.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
 }
 
 .modules-layout {
