@@ -904,7 +904,7 @@ function synthesizeProtocol() {
 .badge-category {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 600;
@@ -935,7 +935,7 @@ function synthesizeProtocol() {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;

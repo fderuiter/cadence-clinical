@@ -164,7 +164,7 @@ const filteredLogs = computed(() => {
 }
 
 .part11-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 12px;
@@ -229,7 +229,7 @@ const filteredLogs = computed(() => {
 }
 
 .action-tag {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;

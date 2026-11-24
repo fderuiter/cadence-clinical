@@ -384,6 +384,7 @@ watch(() => props.studyCode, load, { immediate: true });
 .work-queues-total {
   font-weight: 600;
   color: var(--semantic-color-text-dark);
+  font-variant-numeric: tabular-nums;
 }
 
 .work-queues-grid {
@@ -425,7 +426,8 @@ watch(() => props.studyCode, load, { immediate: true });
   margin-top: 2px;
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-size: 0.75rem;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -444,6 +446,7 @@ watch(() => props.studyCode, load, { immediate: true });
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   background: var(--semantic-color-surface-subtle);
   color: var(--semantic-color-text-dark);
 }
@@ -451,7 +454,7 @@ watch(() => props.studyCode, load, { immediate: true });
 .work-queue-truncated {
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-warning-text-dark);
@@ -495,13 +498,15 @@ watch(() => props.studyCode, load, { immediate: true });
 }
 
 .work-item-kind {
-  font-size: 0.74rem;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .work-item-detail {
   margin: 0;
   font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   color: var(--semantic-color-text-secondary);
 }
 

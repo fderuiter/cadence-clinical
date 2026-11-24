@@ -172,7 +172,7 @@
                         --semantic-color-success-interactive
                       );
                       color: var(--semantic-color-text-on-solid);
-                      font-size: 0.7rem;
+                      font-size: var(--font-size-2xs);
                       padding: 4px 8px;
                       border-radius: 4px;
                     "
@@ -451,7 +451,7 @@
               >
                 <span
                   style="
-                    font-family: monospace;
+                    font-family: var(--semantic-font-mono);
                     font-size: 0.85rem;
                     width: 24px;
                     text-align: center;
@@ -574,7 +574,7 @@
                     class="btn btn-remove-step"
                     style="
                       padding: 2px 6px;
-                      font-size: 0.7rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(--semantic-color-error-interactive);
                       color: var(--semantic-color-text-on-solid);
                       border: none;

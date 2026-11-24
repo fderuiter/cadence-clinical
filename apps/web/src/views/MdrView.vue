@@ -176,7 +176,7 @@
                 style="
                   font-size: 0.95rem;
                   color: var(--text-main);
-                  font-family: monospace;
+                  font-family: var(--semantic-font-mono);
                 "
                 >{{ synthesisResult.studyId }}</strong
               >
@@ -1168,7 +1168,11 @@
           class="json-editor"
           spellcheck="false"
           aria-label="CDISC USDM Study Protocol JSON"
-          style="min-height: 220px; font-family: monospace; font-size: 0.85rem"
+          style="
+            min-height: 220px;
+            font-family: var(--semantic-font-mono);
+            font-size: 0.85rem;
+          "
         />
         <div
           style="
@@ -1613,7 +1617,7 @@
           <span
             style="
               font-size: 0.8rem;
-              font-family: monospace;
+              font-family: var(--semantic-font-mono);
               color: var(--semantic-color-text-secondary);
             "
             >Path: /usdm/{{ diff.category }}/{{ diff.id }}</span
@@ -1772,7 +1776,7 @@
             placeholder="Paste CDISC USDM v3.0 / v4.0 JSON structure here..."
             style="
               min-height: 200px;
-              font-family: monospace;
+              font-family: var(--semantic-font-mono);
               font-size: 0.82rem;
               width: 100%;
               box-sizing: border-box;

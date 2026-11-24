@@ -49,7 +49,7 @@
   --spacing-4xl: 64px;
 
   /* Typography Scale */
-  --font-size-2xs: 11px;
+  --font-size-2xs: 12px;
   --font-size-xs: 13px;
   --font-size-sm: 14px;
   --font-size-base: 15px;
@@ -61,9 +61,11 @@
 
   /* Font Stack */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
-  --font-mono: monospace, Courier New, Courier, monospace;
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   --font-variant-numeric-tabular: tabular-nums;
   --semantic-font-variant-numeric-tabular: var(--font-variant-numeric-tabular);
 
@@ -273,7 +275,16 @@
 
   /* Semantic Typography */
   --semantic-font-family: var(--font-sans);
+  --semantic-font-mono: var(--font-mono);
+  --semantic-font-size-2xs: var(--font-size-2xs);
+  --semantic-font-size-xs: var(--font-size-xs);
+  --semantic-font-size-sm: var(--font-size-sm);
   --semantic-font-size-base: var(--font-size-base);
+  --semantic-font-size-md: var(--font-size-md);
+  --semantic-font-size-lg: var(--font-size-lg);
+  --semantic-font-size-xl: var(--font-size-xl);
+  --semantic-font-size-2xl: var(--font-size-2xl);
+  --semantic-font-size-3xl: var(--font-size-3xl);
 
   /* Semantic Spacing Scale */
   --semantic-spacing-2xs: var(--spacing-2xs);
@@ -844,7 +855,19 @@ button.btn[aria-disabled="true"] {
   border-color: var(--semantic-color-border);
 }
 
-/* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */
+/* Shared Clinical Typography Utilities & Tabular Numerals (CLINICAL_CANVAS.md §2.13) */
+code,
+kbd,
+pre,
+samp,
+.font-mono {
+  font-family: var(--semantic-font-mono);
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+}
 table,
 th,
 td,
@@ -871,18 +894,29 @@ input[inputmode="numeric"],
 input[inputmode="decimal"],
 input.tabular-nums,
 select.tabular-nums,
+input.numeric,
+select.numeric,
 input[data-tabular-nums]:not([data-tabular-nums="false"]),
 select[data-tabular-nums]:not([data-tabular-nums="false"]),
 td input:not([type="checkbox"]):not([type="radio"]),
 td select,
+.clinical-table input:not([type="checkbox"]):not([type="radio"]),
+.clinical-table select,
+.clinical-visit-matrix input:not([type="checkbox"]):not([type="radio"]),
+.clinical-visit-matrix select,
+.data-table input:not([type="checkbox"]):not([type="radio"]),
+.data-table select,
 .tabular-nums input:not([type="checkbox"]):not([type="radio"]),
 .tabular-nums select,
+.numeric input:not([type="checkbox"]):not([type="radio"]),
+.numeric select,
 [data-tabular-nums]:not([data-tabular-nums="false"])
   input:not([type="checkbox"]):not([type="radio"]),
 [data-tabular-nums]:not([data-tabular-nums="false"]) select,
 .clinical-input[data-tabular-nums]:not([data-tabular-nums="false"])
   .clinical-input-control,
 .clinical-input-control.tabular-nums,
+.clinical-input-control.numeric,
 .clinical-input-control[data-tabular-nums]:not([data-tabular-nums="false"]) {
   font-variant-numeric: tabular-nums;
   font-variant-numeric: var(--font-variant-numeric-tabular);
@@ -897,7 +931,7 @@ td select,
   min-width: 0;
   max-width: 100%;
   margin-bottom: var(--semantic-spacing-md, 16px);
-  font-family: var(--semantic-font-family, sans-serif);
+  font-family: var(--semantic-font-family);
 }
 
 .clinical-input label,
@@ -975,7 +1009,7 @@ td select,
   min-height: var(--semantic-touch-target-min, 48px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm);
-  font-family: var(--semantic-font-family, sans-serif);
+  font-family: var(--semantic-font-family);
   font-size: var(--semantic-font-size-base, 15px);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);

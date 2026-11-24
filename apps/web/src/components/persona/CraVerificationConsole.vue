@@ -295,7 +295,7 @@
                       getFieldQuery(field.id).response_text
                     "
                     style="
-                      font-size: 0.72rem;
+                      font-size: var(--font-size-2xs);
                       color: var(--semantic-color-info);
                       margin-top: 2px;
                     "

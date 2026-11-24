@@ -106,7 +106,7 @@
         <span
           v-if="selectedItemIds.length > 0"
           class="badge status-approved tabular-nums"
-          style="font-size: 11px"
+          style="font-size: var(--font-size-2xs)"
         >
           {{ selectedItemIds.length }} Selected
         </span>
@@ -200,7 +200,13 @@
           </div>
         </template>
         <template #cell-staged_at="{ row }">
-          <div style="display: flex; flex-direction: column; font-size: 11px">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              font-size: var(--font-size-2xs);
+            "
+          >
             <span>{{ row.staged_by }}</span>
             <span class="text-muted">{{ formatDate(row.staged_at) }}</span>
           </div>
@@ -208,7 +214,11 @@
         <template #cell-taxonomy="{ row }">
           <div
             v-if="row.intelligence_report"
-            style="display: flex; flex-direction: column; font-size: 11px"
+            style="
+              display: flex;
+              flex-direction: column;
+              font-size: var(--font-size-2xs);
+            "
           >
             <span class="font-mono font-bold">{{
               row.intelligence_report.primary_classification.artifact_code
@@ -242,12 +252,15 @@
               v-for="(note, nIdx) in row.discrepancy_notes"
               :key="nIdx"
               class="badge status-hold"
-              style="font-size: 10px"
+              style="font-size: var(--font-size-2xs)"
             >
               {{ note }}
             </span>
           </div>
-          <span v-else class="text-muted" style="font-size: 11px"
+          <span
+            v-else
+            class="text-muted"
+            style="font-size: var(--font-size-2xs)"
             >No discrepancies</span
           >
         </template>
@@ -255,7 +268,7 @@
           <button
             type="button"
             class="btn btn-secondary btn-xs btn-inspect-qc"
-            style="font-size: 11px; padding: 4px 8px"
+            style="font-size: var(--font-size-2xs); padding: 4px 8px"
             @click="openInspectionModal(row)"
           >
             Inspect &amp; Edit<span class="sr-only">

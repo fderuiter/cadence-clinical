@@ -522,13 +522,14 @@ async function exportCasebook() {
 .record-header h2 {
   margin: 0;
   font-size: 1.1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .record-meta,
 .status-line {
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .status-line {
@@ -612,7 +613,7 @@ async function exportCasebook() {
 }
 
 .casebook-digest-code {
-  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-family: var(--semantic-font-mono);
 }
 
 .casebook-outcome {

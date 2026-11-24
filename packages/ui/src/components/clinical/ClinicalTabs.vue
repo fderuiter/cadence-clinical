@@ -582,7 +582,7 @@ defineExpose({
   border-color: transparent;
   background-color: transparent;
   box-shadow: none;
-  font-family: var(--semantic-font-family, inherit);
+  font-family: var(--semantic-font-family);
   font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   line-height: 1.25;

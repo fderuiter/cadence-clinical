@@ -411,7 +411,7 @@ async function downloadSnapshot() {
 }
 
 .digest-code {
-  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+  font-family: var(--semantic-font-mono);
 }
 
 .generated-at-meta {

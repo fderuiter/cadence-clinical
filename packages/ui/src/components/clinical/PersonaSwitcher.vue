@@ -155,7 +155,7 @@ const selectPersona = (persona) => {
 }
 
 .persona-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--semantic-color-surface-header);
@@ -164,7 +164,7 @@ const selectPersona = (persona) => {
 }
 
 .dropdown-arrow {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -183,7 +183,7 @@ const selectPersona = (persona) => {
 
 .menu-header {
   padding: 8px 12px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -230,12 +230,12 @@ const selectPersona = (persona) => {
 }
 
 .item-role {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
 .item-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--semantic-color-surface-header);

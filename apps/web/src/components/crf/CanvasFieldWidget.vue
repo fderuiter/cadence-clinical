@@ -259,7 +259,7 @@
         border-radius: 6px;
         padding: 2px 6px;
         z-index: 10;
-        font-size: 0.72rem;
+        font-size: var(--font-size-2xs);
         box-shadow: var(--shadow-sm);
       "
     >
@@ -322,7 +322,7 @@
         background-color: var(--semantic-color-warning-bg-light);
         border: 1px solid var(--semantic-color-warning-border);
         color: var(--semantic-color-warning-text);
-        font-size: 0.72rem;
+        font-size: var(--font-size-2xs);
         border-radius: 6px;
         padding: 6px 8px;
         margin-top: 8px;
@@ -457,8 +457,8 @@ function selectField() {
 }
 
 .sdtm-tag-badge {
-  font-family: monospace;
-  font-size: 0.7rem;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-primary);
   background-color: var(--semantic-color-primary-light);

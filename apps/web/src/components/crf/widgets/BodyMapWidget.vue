@@ -149,7 +149,7 @@ const clearPins = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   box-shadow: var(--shadow-sm);
   pointer-events: none;

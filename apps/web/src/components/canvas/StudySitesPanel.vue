@@ -636,6 +636,7 @@ async function submitRegisterSite() {
   margin: 2px 0 0;
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .linked-sites-list {
@@ -674,8 +675,11 @@ async function submitRegisterSite() {
   gap: 6px;
 }
 
-.linked-site-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+.linked-site-code,
+#input-site-code,
+#input-site-country,
+#input-institution-code {
+  font-family: var(--semantic-font-mono);
 }
 
 .site-country-badge,

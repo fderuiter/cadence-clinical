@@ -266,7 +266,7 @@ const formatArmType = (type) => {
 }
 
 .epoch-block-index {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -279,7 +279,7 @@ const formatArmType = (type) => {
 }
 
 .epoch-block-type {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   opacity: 0.8;
 }
 
@@ -379,7 +379,7 @@ const formatArmType = (type) => {
 }
 
 .step-type {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

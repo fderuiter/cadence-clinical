@@ -29,7 +29,12 @@
       <template v-if="hasSelection">
         <header class="inspector-header">
           <span class="inspector-kind">{{ headerKind }}</span>
-          <h2 id="canvas-inspector-title" class="inspector-title" tabindex="-1">
+          <h2
+            id="canvas-inspector-title"
+            class="inspector-title"
+            :class="{ 'inspector-title--code': isCodeTitle }"
+            tabindex="-1"
+          >
             {{ headerTitle }}
           </h2>
           <details v-if="activeNodeRef" class="inspector-ref-details">
@@ -455,20 +460,25 @@
               {{ participantStateLabel(participant.status) }}
             </dd>
             <dt>Study</dt>
-            <dd>{{ participant.study_id }}</dd>
+            <dd class="inspector-mono">{{ participant.study_id }}</dd>
             <dt>Site</dt>
-            <dd id="inspector-site">
+            <dd
+              id="inspector-site"
+              :class="{ 'inspector-mono': Boolean(participant.site_id) }"
+            >
               {{ participant.site_id || "Not assigned" }}
             </dd>
             <dt>Protocol version</dt>
-            <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
+            <dd class="numeric">
+              {{ participant.active_protocol_version || "Not recorded" }}
+            </dd>
             <dt>Enrollment number</dt>
             <dd class="numeric">
               {{ participant.enrollment_index }}
             </dd>
             <template v-if="assignedKitDisplay">
               <dt>Assigned kit</dt>
-              <dd id="inspector-assigned-kit">
+              <dd id="inspector-assigned-kit" class="inspector-mono">
                 {{ assignedKitDisplay }}
               </dd>
             </template>
@@ -615,7 +625,9 @@
             <dd id="inspector-generic-kind">{{ genericDisplay.kindLabel }}</dd>
             <template v-if="genericDisplay.code">
               <dt>Code</dt>
-              <dd id="inspector-generic-code">{{ genericDisplay.code }}</dd>
+              <dd id="inspector-generic-code" class="inspector-mono">
+                {{ genericDisplay.code }}
+              </dd>
             </template>
             <template
               v-if="
@@ -631,7 +643,7 @@
               <dd id="inspector-generic-status">{{ genericDisplay.status }}</dd>
             </template>
             <dt>Study</dt>
-            <dd>{{ studyCode }}</dd>
+            <dd class="inspector-mono">{{ studyCode }}</dd>
           </dl>
 
           <router-link
@@ -973,6 +985,14 @@ const headerTitle = computed(() => {
   if (props.protocolVersion) return `Version ${props.protocolVersion.number}`;
   return genericDisplay.value?.label ?? "Record";
 });
+
+const isCodeTitle = computed(() =>
+  Boolean(
+    props.participant ||
+    (genericDisplay.value?.code &&
+      headerTitle.value === genericDisplay.value.code)
+  )
+);
 
 const canonicalParticipantEnrollmentRef = computed(() => {
   if (!props.participant) return "";
@@ -1343,7 +1363,7 @@ watch(aiEnabled, (on) => {
   padding: 8px;
   border-radius: 4px;
   font-size: 0.8rem;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .reasoning-modal-s-2 {
@@ -1502,8 +1522,18 @@ watch(aiEnabled, (on) => {
   overflow-wrap: anywhere;
 }
 
+.inspector-title--code,
+.inspector-mono {
+  font-family: var(--semantic-font-mono);
+}
+
+#inspector-version-forms,
+#inspector-version-notes {
+  font-variant-numeric: tabular-nums;
+}
+
 .inspector-ref {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
@@ -1548,7 +1578,7 @@ watch(aiEnabled, (on) => {
   border-radius: 4px;
   background: transparent;
   color: inherit;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   cursor: pointer;
   box-sizing: border-box;
 }

@@ -186,6 +186,13 @@ const hasComplianceTab = computed(() => {
 </script>
 
 <style scoped>
+#compliance-rate-pct,
+#compliance-completed-count,
+#compliance-pending-count,
+#compliance-overdue-count {
+  font-variant-numeric: tabular-nums;
+}
+
 .history-card {
   min-width: 0;
 }

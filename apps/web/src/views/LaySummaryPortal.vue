@@ -883,9 +883,7 @@ onMounted(() => {
   padding: 24px;
   max-width: 1600px;
   margin: 0 auto;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: var(--semantic-font-family);
   color: var(--semantic-color-text-dark);
 }
 
@@ -1081,7 +1079,7 @@ onMounted(() => {
 }
 
 .item-irb {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--text-main);
   font-weight: 600;
 }
@@ -1236,7 +1234,7 @@ onMounted(() => {
 }
 
 .cert-id {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
 }
@@ -1280,7 +1278,7 @@ onMounted(() => {
 
 .cert-hash-box code {
   word-break: break-all;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .empty-cert-box {
@@ -1342,7 +1340,7 @@ onMounted(() => {
 }
 
 .hash-code {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   color: var(--text-main);
 }

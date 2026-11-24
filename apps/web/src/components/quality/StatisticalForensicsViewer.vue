@@ -2109,14 +2109,7 @@ onMounted(() => {
   gap: 20px;
   width: 100%;
   color: var(--text-main);
-  font-family: var(
-    --font,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif
-  );
+  font-family: var(--semantic-font-family);
 }
 
 /* Header */
@@ -2148,7 +2141,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2487,7 +2480,7 @@ onMounted(() => {
 }
 
 .sub-stat {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
@@ -2544,13 +2537,13 @@ onMounted(() => {
 
 .score-text {
   position: relative;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .risk-tier-pill {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   padding: 3px 8px;
   border-radius: 4px;
@@ -2587,7 +2580,7 @@ onMounted(() => {
 .flag-pill {
   background-color: var(--semantic-color-error-bg);
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 3px;
@@ -2631,7 +2624,7 @@ onMounted(() => {
 }
 
 .stat-tag {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
@@ -2685,7 +2678,7 @@ onMounted(() => {
 }
 
 .bar-label {
-  font-size: 0.6rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-surface);
   transform: rotate(-90deg);
@@ -2693,7 +2686,7 @@ onMounted(() => {
 }
 
 .digit-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
 }
@@ -2812,7 +2805,7 @@ onMounted(() => {
 .gauge-scale {
   display: flex;
   justify-content: space-between;
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-top: 4px;
 }
@@ -2874,8 +2867,8 @@ onMounted(() => {
   color: var(--semantic-color-accent-inverse);
   padding: 12px;
   border-radius: 6px;
-  font-size: 0.72rem;
-  font-family: monospace;
+  font-size: var(--font-size-2xs);
+  font-family: var(--semantic-font-mono);
   overflow-x: auto;
   margin-top: 10px;
 }
@@ -2993,7 +2986,7 @@ onMounted(() => {
 .seal-badge {
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-accent-inverse);
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   letter-spacing: 0.05em;
   padding: 6px 12px;
@@ -3121,7 +3114,7 @@ onMounted(() => {
 }
 
 .subject-role {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -3139,7 +3132,7 @@ onMounted(() => {
 }
 
 .comparison-connector {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   color: var(--text-main);
   text-align: center;
@@ -3304,7 +3297,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface-header);
   padding: 2px 4px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .phash-vs-badge {
@@ -3328,7 +3321,7 @@ onMounted(() => {
 }
 
 .phash-vs-badge span {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   color: var(--semantic-color-text-secondary);
 }

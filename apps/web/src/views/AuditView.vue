@@ -32,7 +32,11 @@
           <span>GxP Execution Ledger Chain Verification</span>
           <button
             class="btn btn-secondary badge"
-            style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+            style="
+              padding: 4px 8px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             :disabled="integrity.loading"
             @click="verifyExecutionIntegrity"
           >
@@ -360,7 +364,11 @@
         <span>eTMF Document Directory &amp; Viewer</span>
         <button
           class="btn btn-secondary badge"
-          style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+          style="
+            padding: 4px 8px;
+            font-size: var(--font-size-2xs);
+            cursor: pointer;
+          "
           :disabled="documentsLoading"
           @click="fetchDocuments"
         >
@@ -435,8 +443,8 @@
               <td
                 style="
                   padding: 10px;
-                  font-family: monospace;
-                  font-size: 11px;
+                  font-family: var(--semantic-font-mono);
+                  font-size: var(--font-size-2xs);
                   max-width: 80px;
                   overflow: hidden;
                   text-overflow: ellipsis;
@@ -462,7 +470,7 @@
                       ? 'badge status-approved'
                       : 'badge status-draft'
                   "
-                  style="font-size: 10px"
+                  style="font-size: var(--font-size-2xs)"
                 >
                   {{ doc.status }}
                 </span>
@@ -480,7 +488,11 @@
                 <button
                   type="button"
                   class="btn btn-secondary btn-preview-doc"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  style="
+                    padding: 4px 8px;
+                    font-size: var(--font-size-2xs);
+                    cursor: pointer;
+                  "
                   @click="previewDocument(doc)"
                 >
                   Preview<span class="sr-only">
@@ -491,7 +503,11 @@
                   v-if="doc.status !== 'SIGNED'"
                   type="button"
                   class="btn btn-primary btn-sign-doc"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  style="
+                    padding: 4px 8px;
+                    font-size: var(--font-size-2xs);
+                    cursor: pointer;
+                  "
                   @click="openSignModal(doc)"
                 >
                   Sign<span class="sr-only">
@@ -501,7 +517,11 @@
                 <button
                   type="button"
                   class="btn btn-secondary btn-download-watermarked"
-                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  style="
+                    padding: 4px 8px;
+                    font-size: var(--font-size-2xs);
+                    cursor: pointer;
+                  "
                   @click="downloadWatermarkedDoc(doc)"
                 >
                   Download (Watermarked)<span class="sr-only">
@@ -541,13 +561,19 @@
             <span style="font-weight: 600"
               >Secure Preview: {{ previewDoc.filename }}</span
             >
-            <span class="badge status-approved" style="font-size: 10px"
+            <span
+              class="badge status-approved"
+              style="font-size: var(--font-size-2xs)"
               >Watermarked Preview active</span
             >
           </div>
           <button
             class="btn btn-secondary btn-close-preview"
-            style="padding: 2px 8px; font-size: 11px; cursor: pointer"
+            style="
+              padding: 2px 8px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             @click="closePreview"
           >
             Close Viewer
@@ -563,7 +589,7 @@
             min-height: 250px;
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text-dark);
-            font-family: monospace;
+            font-family: var(--semantic-font-mono);
             font-size: 13px;
             line-height: 1.5;
             overflow-y: auto;
@@ -641,7 +667,7 @@
             <div
               style="
                 grid-column: span 2;
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
@@ -653,7 +679,7 @@
               v-if="previewDoc.signature_manifestation.signature"
               style="
                 grid-column: span 2;
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 word-break: break-all;
               "
@@ -668,7 +694,7 @@
           style="
             padding: 10px 16px;
             border-top: 1px solid var(--border);
-            font-size: 11px;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             display: flex;
             justify-content: space-between;
@@ -693,7 +719,11 @@
         <div style="display: flex; gap: 8px">
           <button
             class="btn btn-secondary badge btn-refresh-logs"
-            style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+            style="
+              padding: 4px 8px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             :disabled="auditLoading"
             @click="fetchAuditLogs"
           >
@@ -734,7 +764,7 @@
           <label
             for="filter-user-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -765,7 +795,7 @@
           <label
             for="filter-action-select"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -810,7 +840,7 @@
           <label
             for="filter-entity-type-select"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -846,7 +876,7 @@
           <label
             for="filter-start-date-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -876,7 +906,7 @@
           <label
             for="filter-end-date-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -906,7 +936,7 @@
           <label
             for="filter-document-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1018,8 +1048,8 @@
                 <td
                   style="
                     padding: 10px;
-                    font-family: monospace;
-                    font-size: 11px;
+                    font-family: var(--semantic-font-mono);
+                    font-size: var(--font-size-2xs);
                     white-space: nowrap;
                     color: var(--semantic-color-text-secondary);
                   "
@@ -1035,7 +1065,7 @@
                     style="
                       background: var(--semantic-color-surface-header);
                       color: var(--semantic-color-text-secondary);
-                      font-size: 10px;
+                      font-size: var(--font-size-2xs);
                     "
                   >
                     {{ getEntityType(log) }}
@@ -1044,7 +1074,7 @@
                 <td style="padding: 10px">
                   <span
                     :class="getActionBadgeClass(log.action)"
-                    style="font-size: 10px"
+                    style="font-size: var(--font-size-2xs)"
                   >
                     {{ log.action }}
                   </span>
@@ -1056,7 +1086,11 @@
                   <button
                     type="button"
                     class="btn btn-secondary btn-inspect-row"
-                    style="padding: 3px 8px; font-size: 11px; cursor: pointer"
+                    style="
+                      padding: 3px 8px;
+                      font-size: var(--font-size-2xs);
+                      cursor: pointer;
+                    "
                     :aria-expanded="isRowExpanded(log.id) ? 'true' : 'false'"
                     @click.stop="toggleRowDetails(log.id)"
                   >
@@ -1098,13 +1132,17 @@
                     >
                       <div>
                         <strong>21 CFR Part 11 Audit Record:</strong>
-                        <code style="margin-left: 6px; font-size: 11px">{{
-                          log.id
-                        }}</code>
+                        <code
+                          style="
+                            margin-left: 6px;
+                            font-size: var(--font-size-2xs);
+                          "
+                          >{{ log.id }}</code
+                        >
                       </div>
                       <div
                         style="
-                          font-size: 11px;
+                          font-size: var(--font-size-2xs);
                           color: var(--semantic-color-text-secondary);
                         "
                       >
@@ -1177,7 +1215,7 @@
                         <pre
                           style="
                             margin: 0;
-                            font-size: 11px;
+                            font-size: var(--font-size-2xs);
                             white-space: pre-wrap;
                             word-break: break-all;
                             color: var(--semantic-color-text-secondary);
@@ -1215,7 +1253,7 @@
                         <pre
                           style="
                             margin: 0;
-                            font-size: 11px;
+                            font-size: var(--font-size-2xs);
                             white-space: pre-wrap;
                             word-break: break-all;
                             color: var(--semantic-color-text-dark);
@@ -1240,7 +1278,7 @@
                         padding: 8px 12px;
                         border-radius: 6px;
                         border: 1px dashed var(--border);
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                       "
                     >
                       <div style="display: flex; align-items: center; gap: 8px">
@@ -1251,7 +1289,7 @@
                         <code
                           class="hash-code"
                           style="
-                            font-size: 11px;
+                            font-size: var(--font-size-2xs);
                             color: var(--text-main);
                             word-break: break-all;
                           "
@@ -1260,7 +1298,7 @@
                       </div>
                       <span
                         class="badge status-approved"
-                        style="font-size: 10px"
+                        style="font-size: var(--font-size-2xs)"
                         >SEAL VERIFIED</span
                       >
                     </div>
@@ -1317,7 +1355,11 @@
         <span>eTMF Completeness Tracking &amp; Verification</span>
         <button
           class="btn btn-secondary badge btn-check-completeness"
-          style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+          style="
+            padding: 4px 8px;
+            font-size: var(--font-size-2xs);
+            cursor: pointer;
+          "
           :disabled="completenessLoading"
           @click="checkCompleteness"
         >
@@ -1357,7 +1399,7 @@
           <label
             for="completeness-study-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1388,7 +1430,7 @@
           <label
             for="completeness-milestone-select"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1421,7 +1463,7 @@
           <label
             for="completeness-site-id-input"
             style="
-              font-size: 11px;
+              font-size: var(--font-size-2xs);
               font-weight: 600;
               margin-bottom: 2px;
               display: block;
@@ -1607,13 +1649,17 @@
                 <td style="padding: 10px">
                   <span
                     :class="getCompletenessBadgeClass(art.status)"
-                    style="font-size: 10px"
+                    style="font-size: var(--font-size-2xs)"
                   >
                     {{ art.status }}
                   </span>
                 </td>
                 <td
-                  style="padding: 10px; font-family: monospace; font-size: 11px"
+                  style="
+                    padding: 10px;
+                    font-family: var(--semantic-font-mono);
+                    font-size: var(--font-size-2xs);
+                  "
                 >
                   {{ art.document_id || "-" }}
                 </td>
@@ -1629,7 +1675,11 @@
                   <button
                     v-if="art.document_id"
                     class="btn btn-secondary btn-preview-completeness-doc"
-                    style="padding: 3px 6px; font-size: 11px; cursor: pointer"
+                    style="
+                      padding: 3px 6px;
+                      font-size: var(--font-size-2xs);
+                      cursor: pointer;
+                    "
                     @click="
                       previewDocument({
                         id: art.document_id,

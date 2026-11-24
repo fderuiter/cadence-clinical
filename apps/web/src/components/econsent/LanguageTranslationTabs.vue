@@ -167,7 +167,7 @@ const selectLanguage = (langCode) => {
 }
 
 .lang-code-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 1px 4px;
   border-radius: 3px;
